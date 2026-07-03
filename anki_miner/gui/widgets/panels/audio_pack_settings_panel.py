@@ -14,8 +14,12 @@ from PyQt6.QtCore import QPoint, Qt, pyqtSignal
 from PyQt6.QtGui import QShowEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QMenu,
@@ -140,6 +144,73 @@ class _PackRow(QWidget):
 
     def get_enabled(self) -> bool:
         return self.checkbox.isChecked()
+
+
+class _AddSourceDialog(QDialog):
+    """Prompt for a new online audio source: a kind + (for custom kinds) a URL.
+
+    Custom kinds (``custom``/``custom_json``) require a URL template; the scrape
+    kinds take no URL, so the URL row is hidden for them and OK stays enabled.
+    """
+
+    # (kind, English label). Labels go through self.tr at construction.
+    _KINDS: list[tuple[str, str]] = [
+        ("custom", "Custom URL (local-audio-yomichan / any audio URL)"),
+        ("custom_json", "Custom JSON list (audioSourceList)"),
+        ("jpod101_scrape", "JapanesePod101 dictionary (online scrape)"),
+        ("jisho_scrape", "Jisho.org (online scrape)"),
+    ]
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(self.tr("Add Audio Source"))
+        layout = QVBoxLayout(self)
+
+        layout.addWidget(QLabel(self.tr("Source type:")))
+        self._kind_combo = QComboBox()
+        for kind, label in self._KINDS:
+            self._kind_combo.addItem(self.tr(label), kind)
+        self._kind_combo.currentIndexChanged.connect(self._on_kind_changed)
+        layout.addWidget(self._kind_combo)
+
+        self._url_label = QLabel(self.tr("URL template (use {term} and {reading}):"))
+        layout.addWidget(self._url_label)
+        self._url_edit = QLineEdit()
+        self._url_edit.setPlaceholderText("http://localhost:5050/?term={term}&reading={reading}")
+        self._url_edit.textChanged.connect(self._update_ok_enabled)
+        layout.addWidget(self._url_edit)
+
+        self._buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        self._buttons.accepted.connect(self.accept)
+        self._buttons.rejected.connect(self.reject)
+        layout.addWidget(self._buttons)
+
+        self._on_kind_changed()
+
+    def selected_kind(self) -> str:
+        return str(self._kind_combo.currentData())
+
+    def url_value(self) -> str | None:
+        """The entered URL for custom kinds, else None (scrape kinds carry no URL)."""
+        if self.selected_kind() in ("custom", "custom_json"):
+            return self._url_edit.text().strip()
+        return None
+
+    def _is_custom_kind(self) -> bool:
+        return self.selected_kind() in ("custom", "custom_json")
+
+    def _on_kind_changed(self) -> None:
+        custom = self._is_custom_kind()
+        self._url_label.setVisible(custom)
+        self._url_edit.setVisible(custom)
+        self._update_ok_enabled()
+
+    def _update_ok_enabled(self) -> None:
+        ok_button = self._buttons.button(QDialogButtonBox.StandardButton.Ok)
+        if ok_button is None:
+            return
+        # Custom kinds need a non-empty URL; scrape kinds are always addable.
+        ok_button.setEnabled(bool(self._url_edit.text().strip()) if self._is_custom_kind() else True)
 
 
 class AudioPackSettingsPanel(FormPanel):
@@ -300,6 +371,13 @@ class AudioPackSettingsPanel(FormPanel):
         self._add_btn.clicked.connect(self.add_pack_requested.emit)
         buttons.addWidget(self._add_btn)
 
+        self._add_online_btn = QPushButton(self.tr("+ Add Online Source…"))
+        self._add_online_btn.setToolTip(
+            self.tr("Add a custom URL/JSON source (e.g. local-audio-yomichan) or an online scrape source")
+        )
+        self._add_online_btn.clicked.connect(self._on_add_online_source)
+        buttons.addWidget(self._add_online_btn)
+
         self._up_btn = QPushButton("↑")
         self._up_btn.setToolTip(self.tr("Move up in priority"))
         self._up_btn.clicked.connect(lambda: self.move_up(self._list.currentRow()))
@@ -358,8 +436,50 @@ class AudioPackSettingsPanel(FormPanel):
         for i, entry in enumerate(self._chain):
             row = self._row_widget(i)
             enabled = row.get_enabled() if row is not None else entry.enabled
-            out.append(AudioSourceEntry(kind=entry.kind, pack_id=entry.pack_id, enabled=enabled))
+            out.append(AudioSourceEntry(kind=entry.kind, pack_id=entry.pack_id, url=entry.url, enabled=enabled))
         return tuple(out)
+
+    def add_source_entry(self, entry: AudioSourceEntry) -> None:
+        """Append an online audio source to the chain and persist immediately.
+
+        Reads the current enabled/order state off the row widgets first (via
+        ``get_chain``) so an in-progress toggle isn't lost, appends *entry*, then
+        emits ``chain_changed`` which the settings tab persists.
+        """
+        self._chain = [*self.get_chain(), entry]
+        self._rebuild_list()
+        self.chain_changed.emit()
+
+    def _on_add_online_source(self) -> None:
+        """Open the Add-Source dialog and append the chosen custom/scrape entry."""
+        dialog = _AddSourceDialog(self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        self.add_source_entry(
+            AudioSourceEntry(kind=dialog.selected_kind(), url=dialog.url_value(), enabled=True)  # type: ignore[arg-type]
+        )
+
+    def _describe_entry(self, entry: AudioSourceEntry, view: _RegistryView | None) -> tuple[str, str, int, bool]:
+        """Return ``(display, format_label, entry_count, dir_missing)`` for a row."""
+        if entry.kind == "pack":
+            meta = view.get(entry.pack_id) if (view is not None and entry.pack_id) else None
+            return (
+                meta.source if meta else (entry.pack_id or "(missing)"),
+                meta.format if meta else "",
+                meta.entry_count if meta else 0,
+                meta is not None and not meta.pack_dir_exists,
+            )
+        if entry.kind == "googletts":
+            return self.tr("Google Translate (synthetic TTS)"), "online", 0, False
+        if entry.kind == "jpod101_scrape":
+            return self.tr("JapanesePod101 dictionary (scrape)"), "online", 0, False
+        if entry.kind == "jisho_scrape":
+            return self.tr("Jisho.org (scrape)"), "online", 0, False
+        if entry.kind in ("custom", "custom_json"):
+            label = self.tr("Custom JSON") if entry.kind == "custom_json" else self.tr("Custom URL")
+            return (f"{label}: {entry.url}" if entry.url else label), "custom", 0, False
+        # jpod101 (built-in online)
+        return self.tr("JapanesePod101 (online)"), "online", 0, False
 
     def move_up(self, index: int) -> None:
         if index <= 0 or index >= len(self._chain):
@@ -384,11 +504,20 @@ class AudioPackSettingsPanel(FormPanel):
             return
         entry = self._chain[index]
         if entry.kind in ("jpod101", "googletts"):
-            return  # built-in online sources can be disabled but not removed
+            return  # default built-in online sources can be disabled but not removed
+
+        if entry.kind != "pack":
+            # User-added online source (custom/scrape): nothing on disk to delete,
+            # so drop it directly with no destructive-confirmation dialog.
+            new_chain = list(self.get_chain())
+            del new_chain[index]
+            self._chain = new_chain
+            self._rebuild_list()
+            self.chain_changed.emit()
+            return
 
         pack_id = entry.pack_id
-        meta = self._view.get(pack_id) if (self._view is not None and pack_id) else None
-        display = meta.source if meta else (pack_id or "(missing)")
+        display = self._describe_entry(entry, self._view)[0]
         pack_index_dir = (self._packs_root / pack_id) if pack_id else None
 
         reply = QMessageBox.question(
@@ -505,23 +634,7 @@ class AudioPackSettingsPanel(FormPanel):
             # the Settings tab is opened.
             view = self._view  # may be None before first show / scan
             for entry in self._chain:
-                meta: AudioPackMeta | None = None
-                if entry.kind == "pack":
-                    meta = view.get(entry.pack_id) if (view is not None and entry.pack_id) else None
-                    display = meta.source if meta else (entry.pack_id or "(missing)")
-                    fmt = meta.format if meta else ""
-                    count = meta.entry_count if meta else 0
-                    dir_missing = meta is not None and not meta.pack_dir_exists
-                elif entry.kind == "googletts":
-                    display = self.tr("Google Translate (synthetic TTS)")
-                    fmt = "online"
-                    count = 0
-                    dir_missing = False
-                else:  # jpod101
-                    display = self.tr("JapanesePod101 (online)")
-                    fmt = "online"
-                    count = 0
-                    dir_missing = False
+                display, fmt, count, dir_missing = self._describe_entry(entry, view)
                 row = _PackRow(entry, display, fmt, count, dir_missing=dir_missing)
                 row.toggled.connect(self.chain_changed.emit)
                 item = QListWidgetItem()

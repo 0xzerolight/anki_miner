@@ -8,7 +8,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QLabel, QMessageBox
+from PyQt6.QtWidgets import QDialogButtonBox, QLabel, QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.gui.widgets.panels import audio_pack_settings_panel as asp_mod
@@ -1058,3 +1058,123 @@ class TestRescanWhileInFlight:
         assert panel._view is not None
         meta = panel._view.get("latepack")
         assert meta is not None and meta.source == "Late Pack"
+
+
+# ---------------------------------------------------------------------------
+# Custom / scrape source rows (Task 8.1 + 8.2)
+# ---------------------------------------------------------------------------
+
+
+def test_custom_row_shows_url(qapp, qtbot, tmp_path):
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((AudioSourceEntry(kind="custom", url="http://localhost:5050/?t={term}", enabled=True),))
+    row = panel._row_widget(0)
+    assert row is not None
+    texts = [lbl.text() for lbl in row.findChildren(QLabel)]
+    assert any("http://localhost:5050" in t for t in texts), texts
+
+
+def test_scrape_rows_show_display_names(qapp, qtbot, tmp_path):
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(
+        (
+            AudioSourceEntry(kind="jpod101_scrape", enabled=False),
+            AudioSourceEntry(kind="jisho_scrape", enabled=False),
+        )
+    )
+    texts0 = [lbl.text() for lbl in panel._row_widget(0).findChildren(QLabel)]
+    texts1 = [lbl.text() for lbl in panel._row_widget(1).findChildren(QLabel)]
+    assert any("JapanesePod101 dictionary" in t for t in texts0), texts0
+    assert any("Jisho" in t for t in texts1), texts1
+
+
+def test_get_chain_preserves_url(qapp, qtbot, tmp_path):
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    entry = AudioSourceEntry(kind="custom_json", url="http://h/list?t={term}", enabled=True)
+    panel.set_chain((entry, AudioSourceEntry(kind="jpod101", enabled=True)))
+    chain = panel.get_chain()
+    assert chain[0].kind == "custom_json"
+    assert chain[0].url == "http://h/list?t={term}"
+
+
+def test_add_source_entry_appends_and_emits(qapp, qtbot, tmp_path):
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((AudioSourceEntry(kind="jpod101", enabled=True),))
+    with qtbot.waitSignal(panel.chain_changed, timeout=1000):
+        panel.add_source_entry(AudioSourceEntry(kind="jisho_scrape", enabled=True))
+    chain = panel.get_chain()
+    assert [e.kind for e in chain] == ["jpod101", "jisho_scrape"]
+    assert panel._list.count() == 2
+
+
+def test_remove_custom_source_no_confirmation(qapp, qtbot, tmp_path, monkeypatch):
+    # No QMessageBox.question stub: removing an online source must not prompt.
+    def _boom(*a, **kw):
+        raise AssertionError("removing an online source must not show a confirmation dialog")
+
+    monkeypatch.setattr("anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.question", _boom)
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(
+        (
+            AudioSourceEntry(kind="jpod101", enabled=True),
+            AudioSourceEntry(kind="custom", url="http://h/?t={term}", enabled=True),
+        )
+    )
+    with qtbot.waitSignal(panel.chain_changed, timeout=1000):
+        panel.remove(1)
+    assert [e.kind for e in panel.get_chain()] == ["jpod101"]
+
+
+def test_remove_jpod101_scrape_allowed(qapp, qtbot, tmp_path):
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(
+        (
+            AudioSourceEntry(kind="jpod101", enabled=True),
+            AudioSourceEntry(kind="jpod101_scrape", enabled=True),
+        )
+    )
+    panel.remove(1)
+    assert [e.kind for e in panel.get_chain()] == ["jpod101"]
+
+
+def test_remove_builtin_jpod101_blocked(qapp, qtbot, tmp_path):
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((AudioSourceEntry(kind="jpod101", enabled=True),))
+    panel.remove(0)
+    assert [e.kind for e in panel.get_chain()] == ["jpod101"]
+
+
+# ---------------------------------------------------------------------------
+# _AddSourceDialog behaviour
+# ---------------------------------------------------------------------------
+
+
+def test_add_source_dialog_ok_disabled_until_url_for_custom(qapp, qtbot):
+    dialog = asp_mod._AddSourceDialog()
+    qtbot.addWidget(dialog)
+    # Default first kind is "custom" → OK disabled with empty URL.
+    assert dialog.selected_kind() == "custom"
+    ok = dialog._buttons.button(QDialogButtonBox.StandardButton.Ok)
+    assert not ok.isEnabled()
+    dialog._url_edit.setText("http://h/?t={term}")
+    assert ok.isEnabled()
+    assert dialog.url_value() == "http://h/?t={term}"
+
+
+def test_add_source_dialog_scrape_kind_needs_no_url(qapp, qtbot):
+    dialog = asp_mod._AddSourceDialog()
+    qtbot.addWidget(dialog)
+    # Select the jpod101_scrape kind.
+    idx = dialog._kind_combo.findData("jpod101_scrape")
+    dialog._kind_combo.setCurrentIndex(idx)
+    ok = dialog._buttons.button(QDialogButtonBox.StandardButton.Ok)
+    assert ok.isEnabled()
+    assert dialog.url_value() is None
+    assert not dialog._url_edit.isVisible()

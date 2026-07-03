@@ -45,10 +45,31 @@ class AudioSourceEntry:
     JPod101 entries are the always-available online fallback; pack_id is None.
     GoogleTTS entries are a synthetic Google Translate TTS online fallback;
     pack_id is None (like jpod101).
+
+    ``custom`` / ``custom_json`` entries are user-configured URL-template sources
+    (the local-audio-yomichan integration contract). ``url`` holds the template
+    with ``{term}``/``{reading}``/``{language}`` placeholders; ``custom`` fetches
+    the templated URL directly, ``custom_json`` fetches an ``audioSourceList``
+    JSON document and downloads each listed URL in order. ``url`` is None for the
+    non-custom kinds.
+
+    ``jpod101_scrape`` / ``jisho_scrape`` are fragile HTML-scrape online sources
+    (JapanesePod101 dictionary + Jisho.org). They are not part of the default
+    chain — a user adds them explicitly — and mirror Yomitan's swallow-and-
+    return-empty semantics so a site redesign degrades to "no candidates".
     """
 
-    kind: Literal["pack", "jpod101", "googletts"]
+    kind: Literal[
+        "pack",
+        "jpod101",
+        "googletts",
+        "custom",
+        "custom_json",
+        "jpod101_scrape",
+        "jisho_scrape",
+    ]
     pack_id: str | None = None
+    url: str | None = None
     enabled: bool = True
 
 

@@ -13,12 +13,17 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.config import AudioSourceEntry
 from anki_miner.gui.utils import service_factory
 from anki_miner.services.audio_packs.importer import import_audio_pack
+from anki_miner.services.custom_audio_fetcher import CustomAudioFetcher
 from anki_miner.services.expression_audio_fetcher import (
     ChainedExpressionAudioFetcher,
     JPod101AudioFetcher,
 )
 from anki_miner.services.google_translate_audio_fetcher import (
     GoogleTranslateAudioFetcher,
+)
+from anki_miner.services.scrape_audio_fetchers import (
+    JishoScrapeFetcher,
+    JPod101DictionaryScrapeFetcher,
 )
 
 # ---------------------------------------------------------------------------
@@ -360,6 +365,106 @@ class TestBuildExpressionAudioFetcher:
         assert isinstance(fetcher, ChainedExpressionAudioFetcher)
         assert any(isinstance(f, GoogleTranslateAudioFetcher) for f in fetcher._fetchers)
         assert not googletts_cache.exists(), "googletts cache dir must not be created at build time"
+
+    def test_custom_entry_builds_custom_fetcher(self, base_config):
+        """A custom URL entry yields a CustomAudioFetcher after jpod101."""
+        cfg = dataclasses.replace(
+            base_config,
+            expression_audio_chain=(
+                AudioSourceEntry(kind="jpod101", enabled=True),
+                AudioSourceEntry(kind="custom", url="http://localhost:5050/?t={term}&r={reading}", enabled=True),
+            ),
+        )
+        fetcher = service_factory._build_expression_audio_fetcher(cfg)
+        assert len(fetcher._fetchers) == 2
+        assert isinstance(fetcher._fetchers[0], JPod101AudioFetcher)
+        assert isinstance(fetcher._fetchers[1], CustomAudioFetcher)
+        assert fetcher._fetchers[1]._kind == "custom"
+
+    def test_custom_json_entry_builds_custom_fetcher(self, base_config):
+        """A custom_json entry yields a CustomAudioFetcher with kind custom_json."""
+        cfg = dataclasses.replace(
+            base_config,
+            expression_audio_chain=(AudioSourceEntry(kind="custom_json", url="http://h/list?t={term}", enabled=True),),
+        )
+        fetcher = service_factory._build_expression_audio_fetcher(cfg)
+        assert len(fetcher._fetchers) == 1
+        assert isinstance(fetcher._fetchers[0], CustomAudioFetcher)
+        assert fetcher._fetchers[0]._kind == "custom_json"
+
+    def test_custom_entry_missing_url_skipped_warns(self, base_config):
+        """A custom entry with no URL is skipped and surfaces a warning."""
+        cfg = dataclasses.replace(
+            base_config,
+            expression_audio_chain=(
+                AudioSourceEntry(kind="custom", url=None, enabled=True),
+                AudioSourceEntry(kind="jpod101", enabled=True),
+            ),
+        )
+        load_result = service_factory.ServiceLoadResult()
+        fetcher = service_factory._build_expression_audio_fetcher(cfg, load_result)
+        assert len(fetcher._fetchers) == 1
+        assert isinstance(fetcher._fetchers[0], JPod101AudioFetcher)
+        assert any("no URL" in w for w in load_result.warnings)
+
+    def test_custom_cache_dir_is_per_url_slug(self, base_config):
+        """Two custom entries with distinct URLs get distinct per-slug cache dirs."""
+        cfg = dataclasses.replace(
+            base_config,
+            expression_audio_chain=(
+                AudioSourceEntry(kind="custom", url="http://a/?t={term}", enabled=True),
+                AudioSourceEntry(kind="custom", url="http://b/?t={term}", enabled=True),
+            ),
+        )
+        fetcher = service_factory._build_expression_audio_fetcher(cfg)
+        dir_a = fetcher._fetchers[0]._cache_dir
+        dir_b = fetcher._fetchers[1]._cache_dir
+        assert dir_a != dir_b
+        assert dir_a.name.startswith("custom_")
+
+    def test_scrape_entries_build_scrape_fetchers(self, base_config):
+        """jpod101_scrape / jisho_scrape entries yield the scrape fetchers in order."""
+        cfg = dataclasses.replace(
+            base_config,
+            expression_audio_chain=(
+                AudioSourceEntry(kind="jpod101_scrape", enabled=True),
+                AudioSourceEntry(kind="jisho_scrape", enabled=True),
+            ),
+        )
+        fetcher = service_factory._build_expression_audio_fetcher(cfg)
+        assert len(fetcher._fetchers) == 2
+        assert isinstance(fetcher._fetchers[0], JPod101DictionaryScrapeFetcher)
+        assert isinstance(fetcher._fetchers[1], JishoScrapeFetcher)
+
+    def test_disabled_scrape_entry_excluded(self, base_config):
+        """A disabled scrape entry is skipped; jpod101 remains."""
+        cfg = dataclasses.replace(
+            base_config,
+            expression_audio_chain=(
+                AudioSourceEntry(kind="jpod101", enabled=True),
+                AudioSourceEntry(kind="jpod101_scrape", enabled=False),
+                AudioSourceEntry(kind="jisho_scrape", enabled=False),
+            ),
+        )
+        fetcher = service_factory._build_expression_audio_fetcher(cfg)
+        assert len(fetcher._fetchers) == 1
+        assert isinstance(fetcher._fetchers[0], JPod101AudioFetcher)
+
+    def test_scrape_entry_no_disk_io_at_build(self, tmp_path, base_config):
+        """Building a scrape entry creates no cache dir (session-only, lazy dirs)."""
+        import anki_miner.gui.utils.service_factory as sf
+
+        original_home = sf.ANKI_MINER_HOME
+        try:
+            sf.ANKI_MINER_HOME = tmp_path
+            cfg = dataclasses.replace(
+                base_config,
+                expression_audio_chain=(AudioSourceEntry(kind="jpod101_scrape", enabled=True),),
+            )
+            sf._build_expression_audio_fetcher(cfg)
+        finally:
+            sf.ANKI_MINER_HOME = original_home
+        assert not (tmp_path / "audio_cache" / "jpod101_scrape").exists()
 
     def test_duplicate_pack_id_two_fetchers(self, tmp_path, base_config):
         """Two enabled entries with the same pack_id → chain has 2 fetchers (same object twice)."""

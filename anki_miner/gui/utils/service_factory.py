@@ -11,6 +11,7 @@ from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.audio_packs.fetcher import LocalAudioPackFetcher
 from anki_miner.services.audio_packs.registry import AudioPackRegistry
+from anki_miner.services.custom_audio_fetcher import CustomAudioFetcher, custom_audio_slug
 from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.dictionary.registry import DictionaryRegistry
 from anki_miner.services.expression_audio_fetcher import ChainedExpressionAudioFetcher, JPod101AudioFetcher
@@ -20,6 +21,10 @@ from anki_miner.services.google_translate_audio_fetcher import GoogleTranslateAu
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.media_extractor import MediaExtractorService
 from anki_miner.services.pitch_accent_service import PitchAccentService
+from anki_miner.services.scrape_audio_fetchers import (
+    JishoScrapeFetcher,
+    JPod101DictionaryScrapeFetcher,
+)
 from anki_miner.services.stats_service import StatsService
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.services.word_filter import WordFilterService
@@ -154,7 +159,15 @@ def _build_expression_audio_fetcher(
     :class:`~anki_miner.services.expression_audio_fetcher.JPod101AudioFetcher`;
     ``kind="googletts"`` entries become
     :class:`~anki_miner.services.google_translate_audio_fetcher.GoogleTranslateAudioFetcher`;
-    ``kind="pack"`` entries are resolved against :class:`AudioPackRegistry`.
+    ``kind="pack"`` entries are resolved against :class:`AudioPackRegistry`;
+    ``kind="custom"``/``"custom_json"`` entries become
+    :class:`~anki_miner.services.custom_audio_fetcher.CustomAudioFetcher` (cached
+    under a per-URL ``audio_cache/custom_<slug>/`` dir); ``kind="jpod101_scrape"``
+    /``"jisho_scrape"`` become the HTML-scrape fetchers in
+    :mod:`anki_miner.services.scrape_audio_fetchers`.  These online fetchers open
+    only a cheap ``requests.Session`` at build time (no disk scan), so no I/O
+    gating is needed — and none is in the default chain, so a default config
+    never constructs them.
 
     I/O neutrality: ``AudioPackRegistry`` is only constructed + loaded when the
     expression_audio Anki field is mapped (``config.anki_fields["expression_audio"]``
@@ -174,9 +187,12 @@ def _build_expression_audio_fetcher(
         A :class:`ChainedExpressionAudioFetcher` wrapping the resolved list.
         The list may be empty (all entries disabled) — the chain returns None.
     """
-    jpod_cache = ANKI_MINER_HOME / "audio_cache" / "jpod101"
-    googletts_cache = ANKI_MINER_HOME / "audio_cache" / "googletts"
-    pack_cache = ANKI_MINER_HOME / "audio_cache" / "local_packs"
+    audio_cache_root = ANKI_MINER_HOME / "audio_cache"
+    jpod_cache = audio_cache_root / "jpod101"
+    googletts_cache = audio_cache_root / "googletts"
+    pack_cache = audio_cache_root / "local_packs"
+    jpod101_scrape_cache = audio_cache_root / "jpod101_scrape"
+    jisho_scrape_cache = audio_cache_root / "jisho_scrape"
 
     # Build registry only when needed — avoids disk scan for default config
     # and when the expression-audio field is unmapped (fetcher never consulted).
@@ -204,6 +220,37 @@ def _build_expression_audio_fetcher(
             fetchers.append(
                 GoogleTranslateAudioFetcher(
                     cache_dir=googletts_cache,
+                    delay=config.expression_audio_delay,
+                )
+            )
+        elif entry.kind in ("custom", "custom_json"):
+            if not entry.url:
+                msg = f"Skipping {entry.kind} audio chain entry with no URL"
+                logger.warning(msg)
+                if load_result is not None:
+                    load_result.warnings.append(msg)
+                continue
+            slug = custom_audio_slug(entry.url)
+            fetchers.append(
+                CustomAudioFetcher(
+                    url_template=entry.url,
+                    kind=entry.kind,
+                    cache_dir=audio_cache_root / f"custom_{slug}",
+                    file_prefix=f"custom_{slug}",
+                    delay=config.expression_audio_delay,
+                )
+            )
+        elif entry.kind == "jpod101_scrape":
+            fetchers.append(
+                JPod101DictionaryScrapeFetcher(
+                    cache_dir=jpod101_scrape_cache,
+                    delay=config.expression_audio_delay,
+                )
+            )
+        elif entry.kind == "jisho_scrape":
+            fetchers.append(
+                JishoScrapeFetcher(
+                    cache_dir=jisho_scrape_cache,
                     delay=config.expression_audio_delay,
                 )
             )
