@@ -381,3 +381,37 @@ def test_reimport_all_joins_predecessor_before_reassign(tab_for_reimport_all, mo
     # Sanity: the second worker did get launched and is now active.
     assert stubbed_workers["yomitan_factory"].call_count == 2
     assert tab._dict_import_flow._active_import_worker is stubbed_workers["instances"][1]
+
+
+# ---------------------------------------------------------------------------
+# 4.0: trigger_reimport_all — the startup migration-prompt entry point
+# ---------------------------------------------------------------------------
+
+
+def test_trigger_reimport_all_dispatches_both_slot_kinds(tab_for_reimport_all, monkeypatch, stubbed_workers):
+    """The prompt hook (trigger_reimport_all) drives the same reimport_all flow,
+    covering BOTH a yomitan source.zip slot and the legacy JMdict slot."""
+    tab = tab_for_reimport_all
+    dicts_root = tab.config.dicts_root
+    _make_dict_on_disk(dicts_root, "daijirin", fmt="yomitan", source_name="Daijirin", with_source_zip=True)
+    _make_dict_on_disk(
+        dicts_root, "jmdict-english", fmt="jmdict", source_name="JMdict (English)", with_source_zip=False
+    )
+    tab.config.jmdict_path.write_text("<JMdict/>", encoding="utf-8")
+    tab.dictionary_panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="daijirin", enabled=True),
+            ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
+        )
+    )
+    _silence_dialogs(monkeypatch)
+
+    tab.trigger_reimport_all()
+    # Drive both chained workers to completion so the sequence runs end to end.
+    _complete_in_flight_worker(stubbed_workers, idx=0)
+    _complete_in_flight_worker(stubbed_workers, idx=1)
+
+    stubbed_workers["yomitan_factory"].assert_called_once()
+    stubbed_workers["jmdict_factory"].assert_called_once()
+    # Landed on the Dictionaries sub-tab.
+    assert tab.tab_widget.currentIndex() == tab._subtab_index["dictionaries"]
