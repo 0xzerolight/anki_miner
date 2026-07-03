@@ -4,12 +4,8 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <source>Turn Immersion Into Vocabulary</source>
-        <translation>将沉浸转化为词汇</translation>
-    </message>
-    <message>
-        <source>Mine Japanese vocabulary cards straight from video — screenshots, audio, and definitions, automatically into Anki.</source>
-        <translation>直接从视频挖取日语生词卡——截图、音频和释义，自动生成到 Anki。</translation>
+        <source>Mine Japanese vocabulary cards from video into Anki — screenshots, audio, and definitions, automatically.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Switch tabs</source>
@@ -92,8 +88,8 @@
         <translation>近期会话</translation>
     </message>
     <message>
-        <source>No sessions yet. Process an episode to see your history here.</source>
-        <translation>暂无会话。处理一集剧集后，历史记录将显示在这里。</translation>
+        <source>No sessions yet — process an episode to see your history.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Date</source>
@@ -124,8 +120,8 @@
         <translation>系列难度排名</translation>
     </message>
     <message>
-        <source>Difficulty is based on the ratio of unknown words. Lower scores mean easier content for your current level.</source>
-        <translation>难度基于未知单词的比例。分数越低，表示内容对你当前水平越简单。</translation>
+        <source>Share of unknown words per series — lower means easier for your current level.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine multiple series to see difficulty comparisons.</source>
@@ -162,8 +158,8 @@
         <translation>Anki Miner 通过 AnkiConnect 附加组件与 Anki 通信。</translation>
     </message>
     <message>
-        <source>AnkiConnect is a free Anki add-on. In Anki: Tools → Add-ons → Get Add-ons…, paste the code &lt;b&gt;%1&lt;/b&gt;, then restart Anki.</source>
-        <translation>AnkiConnect 是一个免费的 Anki 附加组件。在 Anki 中：工具 → 附加组件 → 获取附加组件…，粘贴代码 &lt;b&gt;%1&lt;/b&gt;，然后重启 Anki。</translation>
+        <source>In Anki: Tools → Add-ons → Get Add-ons…, paste the code &lt;b&gt;%1&lt;/b&gt;, then restart Anki.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Open the AnkiConnect add-on page</source>
@@ -262,42 +258,6 @@
         <translation>向 AnkiConnect 查询此笔记类型的字段并自动填充下方映射。</translation>
     </message>
     <message>
-        <source>Duplicate Handling</source>
-        <translation>重复处理</translation>
-    </message>
-    <message>
-        <source>What counts as a duplicate when adding cards. Collection (default) skips a word if it already exists in any deck. Deck limits the check to the target deck; Deck root limits it to the whole subdeck tree under the deck's root — handy when you card each show into its own subdeck.</source>
-        <translation>添加卡片时的重复判定方式。整个收藏（默认）：只要该单词已存在于任意牌组中就跳过。牌组：仅在目标牌组内检查；牌组根：将检查限定在该牌组根下的整个子牌组树——当你把每部剧各自归入独立子牌组时很有用。</translation>
-    </message>
-    <message>
-        <source>Collection (whole collection)</source>
-        <translation>收藏（整个收藏）</translation>
-    </message>
-    <message>
-        <source>Deck (target deck only)</source>
-        <translation>牌组（仅目标牌组）</translation>
-    </message>
-    <message>
-        <source>Deck root (whole subdeck tree)</source>
-        <translation>牌组根（整个子牌组树）</translation>
-    </message>
-    <message>
-        <source>Duplicate Scope</source>
-        <translation>重复检查范围</translation>
-    </message>
-    <message>
-        <source>Where AnkiConnect looks for an existing copy before adding a card.</source>
-        <translation>AnkiConnect 在添加卡片前查找已有副本的范围。</translation>
-    </message>
-    <message>
-        <source>Check all note types for duplicates</source>
-        <translation>在所有笔记类型中检查重复</translation>
-    </message>
-    <message>
-        <source>Also treat a matching first field in a different note type as a duplicate.</source>
-        <translation>将不同笔记类型中首字段相同的情况也视为重复。</translation>
-    </message>
-    <message>
         <source>Card Field Mappings</source>
         <translation>卡片字段映射</translation>
     </message>
@@ -342,32 +302,20 @@
         <translation>图片字段</translation>
     </message>
     <message>
-        <source>Stores the screenshot.</source>
-        <translation>存储截图。</translation>
-    </message>
-    <message>
         <source>Audio Field</source>
         <translation>音频字段</translation>
-    </message>
-    <message>
-        <source>Stores the sentence audio clip.</source>
-        <translation>存储例句音频片段。</translation>
     </message>
     <message>
         <source>Expression Audio Field</source>
         <translation>表达音频字段</translation>
     </message>
     <message>
-        <source>Stores the word pronunciation audio clip; leave blank to disable. Sources are configured under Audio settings.</source>
-        <translation>存储单词发音音频片段；留空则禁用。音频来源在音频设置中配置。</translation>
+        <source>Word pronunciation audio; blank disables. Configure sources under Audio settings.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Expression Furigana Field</source>
         <translation>表达振假名字段</translation>
-    </message>
-    <message>
-        <source>Stores the expression with furigana readings.</source>
-        <translation>存储带振假名读音的表达。</translation>
     </message>
     <message>
         <source>Expression Reading Field</source>
@@ -380,10 +328,6 @@
     <message>
         <source>Sentence Furigana Field</source>
         <translation>例句振假名字段</translation>
-    </message>
-    <message>
-        <source>Stores the sentence with furigana readings.</source>
-        <translation>存储带振假名读音的例句。</translation>
     </message>
     <message>
         <source>Sentence Reading Field</source>
@@ -438,24 +382,16 @@
         <translation>辅助数据字段</translation>
     </message>
     <message>
-        <source>Need pitch_accent.csv / frequency.csv in ~/.anki_miner/. Blank = skip.</source>
-        <translation>需要在 ~/.anki_miner/ 中放置 pitch_accent.csv / frequency.csv。留空 = 跳过。</translation>
+        <source>Need pitch_accent.csv in ~/.anki_miner/. Blank = skip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Pitch Position Field</source>
         <translation>音调位置字段</translation>
     </message>
     <message>
-        <source>Stores the numeric pitch drop position.</source>
-        <translation>存储音调下降的数字位置。</translation>
-    </message>
-    <message>
         <source>Pitch Category Field</source>
         <translation>音调类别字段</translation>
-    </message>
-    <message>
-        <source>Stores the pitch category label.</source>
-        <translation>存储音调类别标签。</translation>
     </message>
     <message>
         <source>Japanese (平板/頭高/中高/尾高/起伏)</source>
@@ -574,8 +510,8 @@
         <translation>卡片样式</translation>
     </message>
     <message>
-        <source>Anki Miner styles mined-card glossaries with one clean built-in stylesheet (dictionaries that ship their own styles are applied automatically). The styling is embedded in each card, so it works on any note type, on mobile, and in exports — and your note type's own card CSS is never touched.</source>
-        <translation>Anki Miner 使用一套简洁的内置样式表来渲染挖词卡片的词汇表（自带样式的词典会自动应用其样式）。样式内嵌在每张卡片中，因此可在任意笔记类型、移动端以及导出文件中生效——而你笔记类型自身的卡片 CSS 绝不会被改动。</translation>
+        <source>Glossary styles are baked into each mined card, so your note type's CSS is never touched. Dictionaries that ship their own styles are applied automatically.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Custom CSS:</source>
@@ -742,8 +678,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>活动音频来源</translation>
     </message>
     <message>
-        <source>Top entry is tried first. Local audio packs are recommended; they're faster than JPod101 online.</source>
-        <translation>最顶部的条目会最先尝试。推荐使用本地音频包；它们比在线 JPod101 更快。</translation>
+        <source>Top entry is tried first.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>+ Add Audio Pack…</source>
@@ -754,8 +690,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>+ 添加在线来源…</translation>
     </message>
     <message>
-        <source>Add a custom URL/JSON source (e.g. local-audio-yomichan) or an online scrape source</source>
-        <translation>添加自定义 URL/JSON 来源（例如 local-audio-yomichan）或在线抓取来源</translation>
+        <source>Add a custom audio URL or online scrape source</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Move up in priority</source>
@@ -774,8 +710,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>重试缺失的表达音频</translation>
     </message>
     <message>
-        <source>Forget which words JapanesePod101 had no audio for, so the next mining run tries to download them again.</source>
-        <translation>忘记 JapanesePod101 没有音频的那些单词，以便下次挖词运行时再次尝试下载它们。</translation>
+        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Google Translate (synthetic TTS)</source>
@@ -940,6 +876,18 @@ The audio pack was not removed.</source>
         <translation>进度</translation>
     </message>
     <message>
+        <source>Audio file not found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>(none selected)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle file not found: %1</source>
+        <translation type="unfinished">未找到字幕文件：%1</translation>
+    </message>
+    <message>
         <source>Mining unavailable — services not initialized.</source>
         <translation>挖词不可用 — 服务未初始化。</translation>
     </message>
@@ -1039,19 +987,8 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>No matching video/subtitle pairs found.
-
-Files are paired by episode number, so point each folder at a single show:
-- episode_01.mp4 &lt;-&gt; episode_01.ass
-- episode_02.mp4 &lt;-&gt; episode_02.ass
-
-Mixing multiple shows in one folder can mispair episodes that share a number — add each show as its own queue item.</source>
-        <translation>未找到匹配的视频/字幕对。
-
-文件按剧集编号配对，因此请让每个文件夹指向单个节目：
-- episode_01.mp4 &lt;-&gt; episode_01.ass
-- episode_02.mp4 &lt;-&gt; episode_02.ass
-
-在同一文件夹中混放多个节目可能会错配共享同一编号的剧集 — 请将每个节目添加为各自的队列项。</translation>
+Files pair by episode number — point each folder at a single show.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>No matching video/subtitle pairs found</source>
@@ -1149,9 +1086,8 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>
-%1 episode(s) failed - see log for details</source>
-        <translation>
-%1 集失败 - 详情请见日志</translation>
+%1 episode(s) failed</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Batch Processing Complete</source>
@@ -1264,16 +1200,16 @@ Total cards created: %2</source>
         <translation>跳过生僻词（词频截断）</translation>
     </message>
     <message>
-        <source>Ignore words rarer than a chosen frequency rank so you learn common words first.</source>
-        <translation>忽略比所选词频排名更生僻的单词，让你先学常见词。</translation>
+        <source>Ignore words rarer than a chosen frequency rank.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Skip words you already know</source>
         <translation>跳过你已知的单词</translation>
     </message>
     <message>
-        <source>Skip words already in your Anki collection or previously mined, via the known-words DB.</source>
-        <translation>通过已知单词数据库，跳过已在你的 Anki 收藏中或之前已挖取过的单词。</translation>
+        <source>Skip words already in your Anki collection or previously mined.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Exclude specific Anki decks from 'known'</source>
@@ -1296,8 +1232,8 @@ Total cards created: %2</source>
         <translation>排除纯假名单词</translation>
     </message>
     <message>
-        <source>Drop words written only in hiragana or katakana -- useful for kanji-focused decks.</source>
-        <translation>丢弃仅以平假名或片假名书写的单词 -- 对专注汉字的牌组很有用。</translation>
+        <source>Drop words written only in hiragana or katakana.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -1328,8 +1264,8 @@ Total cards created: %2</source>
         <translation>限制句子长度</translation>
     </message>
     <message>
-        <source>Skip sentences that are too long or too short for a good card.</source>
-        <translation>跳过对于制作良好卡片而言太长或太短的句子。</translation>
+        <source>Skip sentences that are too long or too short.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Avoid duplicate cards</source>
@@ -1456,8 +1392,8 @@ Total cards created: %2</source>
         <translation>卡片样式 / CSS</translation>
     </message>
     <message>
-        <source>Apply a built-in card style or your own CSS, synced to Anki automatically.</source>
-        <translation>应用内置卡片样式或你自己的 CSS，自动同步到 Anki。</translation>
+        <source>Apply a built-in card style or your own CSS.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Furigana / readings</source>
@@ -1596,10 +1532,8 @@ Total cards created: %2</source>
         <translation>跳过我 Anki 收藏中已有的单词</translation>
     </message>
     <message>
-        <source>Checked: subtract your known words — good for personal study.
-Unchecked: mine every word — good for building a complete or shareable deck.</source>
-        <translation>勾选：减去你的已知单词——适合个人学习。
-不勾选：挖词所有单词——适合构建完整或可共享的牌组。</translation>
+        <source>Checked: skip your known words; unchecked: mine every word.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Actions</source>
@@ -1610,8 +1544,8 @@ Unchecked: mine every word — good for building a complete or shareable deck.</
         <translation>预览</translation>
     </message>
     <message>
-        <source>Analyse the corpus and preview which words will be included</source>
-        <translation>分析语料并预览将包含哪些单词</translation>
+        <source>Analyze the corpus and preview which words will be included</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Build Deck</source>
@@ -1678,8 +1612,8 @@ Unchecked: mine every word — good for building a complete or shareable deck.</
         <translation>未找到视频/字幕配对。请检查文件夹。</translation>
     </message>
     <message>
-        <source>Analysing corpus…</source>
-        <translation>正在分析语料…</translation>
+        <source>Analyzing corpus…</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Preview ready — %1 cards, ~%2% coverage. Click 'Build Deck' to proceed.</source>
@@ -1964,8 +1898,8 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation>活动词典</translation>
     </message>
     <message>
-        <source>Top entry fills the MainDefinition field. Offline dictionaries are recommended; they're faster than Jisho.</source>
-        <translation>顶部条目填充 MainDefinition 字段。推荐使用离线词典；它们比 Jisho 更快。</translation>
+        <source>Top entry fills the MainDefinition field.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>+ Add Dictionary…</source>
@@ -2164,9 +2098,9 @@ The dictionary was not removed.</source>
         <translation>理解度：%1% 的单词已知</translation>
     </message>
     <message numerus="yes">
-        <source>All %n word(s) from this subtitle are already in your Anki collection — no new cards will be created. Card-format options (bold target word, etc.) only apply to newly mined cards.</source>
-        <translation>
-            <numerusform>此字幕中的全部 %n 个单词都已在你的 Anki 收藏中——不会创建新卡片。卡片格式选项（加粗目标单词等）仅适用于新挖词的卡片。</numerusform>
+        <source>All %n word(s) from this subtitle are already in Anki — no new cards created</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
     <message>
@@ -2222,6 +2156,14 @@ The dictionary was not removed.</source>
         <translation>动画截图不可用——此 ffmpeg 构建没有 AVIF 或 WebP 编码器；请在设置中切换为静态截图。</translation>
     </message>
     <message>
+        <source>Fetching expression audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Expression audio: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Expression audio: %1/%2 available</source>
         <translation>表达音频：%1/%2 可用</translation>
     </message>
@@ -2250,21 +2192,21 @@ The dictionary was not removed.</source>
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n media file(s) could not be stored in Anki; those cards will have no audio or screenshot. Check that Anki/AnkiConnect is running and see the log for details.</source>
-        <translation>
-            <numerusform>有 %n 个媒体文件无法存入 Anki；这些卡片将没有音频或截图。请检查 Anki/AnkiConnect 是否正在运行，并查看日志了解详情。</numerusform>
+        <source>%n media file(s) could not be stored in Anki — those cards have no audio or screenshot</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
     <message numerus="yes">
-        <source>Skipped %n word(s) Anki flagged as duplicates (same Expression as an existing card or another word in this batch).</source>
-        <translation>
-            <numerusform>已跳过 %n 个被 Anki 标记为重复的单词（与现有卡片或本批次中的其他单词有相同的 Expression）。</numerusform>
+        <source>Skipped %n word(s) Anki flagged as duplicates (same Expression)</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
     <message numerus="yes">
-        <source>Updated %n existing duplicate card(s): filled empty fields from this run.</source>
-        <translation>
-            <numerusform>已更新 %n 张已存在的重复卡片：用本次运行的内容填充了空白字段。</numerusform>
+        <source>Updated %n existing duplicate card(s): filled empty fields</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
     <message>
@@ -2280,9 +2222,9 @@ The dictionary was not removed.</source>
         <translation>未选择用于创建卡片的单词</translation>
     </message>
     <message numerus="yes">
-        <source>User selected %n word(s) for card creation</source>
-        <translation>
-            <numerusform>用户选择了 %n 个单词用于创建卡片</numerusform>
+        <source>Mining %n selected word(s)</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
     <message>
@@ -2293,6 +2235,12 @@ The dictionary was not removed.</source>
         <source>Extracted media for %n word(s)</source>
         <translation>
             <numerusform>已为 %n 个单词提取媒体</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
+        <translation type="unfinished">
+            <numerusform />
         </translation>
     </message>
     <message>
@@ -2430,8 +2378,8 @@ The dictionary was not removed.</source>
         <translation>最大词频排名</translation>
     </message>
     <message>
-        <source>Set to 0 for no limit, or e.g. 10000 to only mine top 10,000 words. Words missing from the frequency list are excluded. Applies only when frequency data is enabled (toggle in the Dictionaries tab).</source>
-        <translation>设为 0 表示无限制，或例如设为 10000 只挖掘排名前 10,000 的单词。不在词频列表中的单词将被排除。仅在启用词频数据时生效（在“词典”标签页中切换）。</translation>
+        <source>Words missing from the frequency list are excluded</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Known Words Database</source>
@@ -2440,10 +2388,6 @@ The dictionary was not removed.</source>
     <message>
         <source>Use Local Known Words Database</source>
         <translation>使用本地已知单词数据库</translation>
-    </message>
-    <message>
-        <source>Caches known words locally to skip the Anki query on every run.</source>
-        <translation>在本地缓存已知单词，以便每次运行时跳过对 Anki 的查询。</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -2466,8 +2410,8 @@ The dictionary was not removed.</source>
         <translation>排除的牌组</translation>
     </message>
     <message>
-        <source>Words in these decks (and their subdecks) are NOT treated as already known, so they stay mineable. Useful for kanji-shape decks like Remembering The Kanji that don't teach vocabulary.</source>
-        <translation>这些牌组（及其子牌组）中的单词不会被视为已知，因此仍可被挖掘。适用于像 Remembering The Kanji 这类不教授词汇的汉字字形牌组。</translation>
+        <source>Words in these decks (and their subdecks) stay mineable — not treated as already known.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Add Deck…</source>
@@ -2498,10 +2442,6 @@ The dictionary was not removed.</source>
         <translation>启用黑名单</translation>
     </message>
     <message>
-        <source>Skip words found in the blacklist file</source>
-        <translation>跳过黑名单文件中的单词</translation>
-    </message>
-    <message>
         <source>Select whitelist file...</source>
         <translation>选择白名单文件…</translation>
     </message>
@@ -2516,10 +2456,6 @@ The dictionary was not removed.</source>
     <message>
         <source>Enable Whitelist</source>
         <translation>启用白名单</translation>
-    </message>
-    <message>
-        <source>Always include words found in the whitelist file</source>
-        <translation>始终包含白名单文件中的单词</translation>
     </message>
     <message>
         <source>Name Wordsets</source>
@@ -2558,16 +2494,12 @@ The dictionary was not removed.</source>
         <translation>替换内容</translation>
     </message>
     <message>
-        <source>Text inserted in place of each match (empty deletes the match). Use Python backreferences (\1 \2) for capture groups. Note: NOT $1 $2 syntax like asbplayer; translate when copying patterns.</source>
-        <translation>插入到每个匹配项位置的文本（留空则删除匹配项）。用 Python 反向引用（\1 \2）表示捕获组。注意：不是 asbplayer 那样的 $1 $2 语法；复制模式时需转换。</translation>
+        <source>Inserted in place of each match (empty deletes it). Use Python backreferences \1 \2, not asbplayer's $1 $2.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Enable Subtitle Regex Filter</source>
         <translation>启用字幕正则过滤器</translation>
-    </message>
-    <message>
-        <source>Apply the filter to all parsed subtitle lines (mining and preview).</source>
-        <translation>对所有已解析的字幕行应用过滤器（挖掘和预览）。</translation>
     </message>
     <message>
         <source>Parens (Tanaka)</source>
@@ -2622,8 +2554,8 @@ The dictionary was not removed.</source>
         <translation>排除纯片假名单词</translation>
     </message>
     <message>
-        <source>Skip words written entirely in katakana (e.g. コーヒー). Drops most foreign loanwords.</source>
-        <translation>跳过完全由片假名书写的单词（例如 コーヒー）。会丢弃大多数外来语。</translation>
+        <source>Skip words written entirely in katakana (e.g. コーヒー).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
@@ -2634,8 +2566,8 @@ The dictionary was not removed.</source>
         <translation>仅挖掘 i+1 句子</translation>
     </message>
     <message>
-        <source>Only create cards for words that appear in a sentence with exactly ONE unknown word (the i+1 / immersion learning concept). Drops words whose only examples contain multiple unknowns, so expect significantly fewer cards per episode. Overrides sentence deduplication when enabled.</source>
-        <translation>仅为出现在恰好含有一个未知单词的句子中的单词创建卡片（即 i+1 / 沉浸式学习理念）。会丢弃唯一例句中含有多个未知单词的单词，因此每集卡片数量会明显减少。启用时会覆盖句子去重。</translation>
+        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Sentence Length</source>
@@ -2782,8 +2714,8 @@ The dictionary was not removed.</source>
         <translation>启用词频数据</translation>
     </message>
     <message>
-        <source>Enable to display word frequency rank on cards.</source>
-        <translation>启用后在卡片上显示单词的词频排名。</translation>
+        <source>Show word frequency rank on cards</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Remove frequency source</source>
@@ -2824,10 +2756,6 @@ The frequency source was not removed.</source>
 </context><context>
     <name>HeaderWidget</name>
     <message>
-        <source>Turn Immersion Into Vocabulary</source>
-        <translation>将沉浸转化为词汇</translation>
-    </message>
-    <message>
         <source>Theme:</source>
         <translation>主题：</translation>
     </message>
@@ -2850,8 +2778,8 @@ The frequency source was not removed.</source>
         <translation>本地已知单词</translation>
     </message>
     <message>
-        <source>Words you added from the Word Curator. These are ignored on every mining run, kept when you rebuild the cache, and exportable for re-import into jiten.moe.</source>
-        <translation>你从生词整理器添加的单词。每次挖掘运行时都会忽略这些单词，重建缓存时会保留，并可导出以重新导入到 jiten.moe。</translation>
+        <source>Words you added from the Word Curator — ignored on every run, kept across cache rebuilds, exportable for re-import into jiten.moe.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Filter…</source>
@@ -2906,8 +2834,8 @@ The frequency source was not removed.</source>
         <translation>语言</translation>
     </message>
     <message>
-        <source>Restart Anki Miner to apply the new language.</source>
-        <translation>重启 Anki Miner 以应用新语言。</translation>
+        <source>Restart to apply.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>LogWidget</name>
@@ -3018,8 +2946,8 @@ The frequency source was not removed.</source>
         <translation>打开日志文件夹</translation>
     </message>
     <message>
-        <source>Open the folder containing anki_miner.log in your file manager</source>
-        <translation>在文件管理器中打开包含 anki_miner.log 的文件夹</translation>
+        <source>Open the log folder in your file manager</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Report a Bug / Suggest a Feature</source>
@@ -3062,16 +2990,12 @@ The frequency source was not removed.</source>
         <translation>重新设置挖词卡片样式</translation>
     </message>
     <message>
-        <source>This rewrites the styling field of your mined cards (the glossary field, or the definition field when no glossary field is mapped) to embed the built-in styling directly in each card, so cards you mined earlier match ones mined now. It's safe to run more than once and only adds styling — it never removes card content.
+        <source>Embed the built-in styling into cards you mined earlier so they match new ones. Safe to re-run and only adds styling.
 
-Close Anki's card browser and any open note editor first: updating a note that is open for editing can lose your unsaved edits.
+Close Anki's card browser and any open note editor first — editing an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>这会重写你挖词卡片的样式字段（词汇表字段，或在未映射词汇表字段时使用释义字段），将内置样式直接内嵌到每张卡片中，让你先前挖到的卡片与现在挖到的卡片外观一致。多次运行也是安全的，它只会添加样式——绝不会移除卡片内容。
-
-请先关闭 Anki 的卡片浏览器和所有已打开的笔记编辑器：更新正在编辑中的笔记可能会丢失你未保存的修改。
-
-是否继续？</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restyling mined cards…</source>
@@ -3094,12 +3018,12 @@ Continue?</source>
         <translation>样式重设失败</translation>
     </message>
     <message>
-        <source>These dictionaries need to be re-imported after an app upgrade (their index format changed):</source>
-        <translation>以下词典在应用升级后需要重新导入（其索引格式已更改）：</translation>
+        <source>These dictionaries need re-importing after an app upgrade (their index format changed):</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Until you do, mining is blocked for them so you don't get cards with no definitions. Re-import them now?</source>
-        <translation>在你完成之前，这些词典的挖词将被阻止，以免你得到没有释义的卡片。现在重新导入它们吗？</translation>
+        <source>Mining is blocked for them until you do. Re-import them now?</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Dictionaries need re-importing</source>
@@ -3184,16 +3108,16 @@ Continue?</source>
         <translation>音频填充</translation>
     </message>
     <message>
-        <source>Extra padding before and after the subtitle timing.</source>
-        <translation>在字幕时间前后额外添加的填充。</translation>
+        <source>Extra time before and after the subtitle.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Screenshot Offset</source>
         <translation>截图偏移</translation>
     </message>
     <message>
-        <source>Offset from subtitle start when capturing the screenshot.</source>
-        <translation>截取截图时相对字幕起点的偏移。</translation>
+        <source>Measured from the subtitle start time.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Max Parallel Workers</source>
@@ -3708,16 +3632,8 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>成功！</translation>
     </message>
     <message>
-        <source>Processing completed successfully</source>
-        <translation>处理成功完成</translation>
-    </message>
-    <message>
         <source>Completed with Errors</source>
         <translation>完成，但有错误</translation>
-    </message>
-    <message>
-        <source>Some issues occurred during processing</source>
-        <translation>处理过程中出现了一些问题</translation>
     </message>
     <message>
         <source>Words Discovered</source>
@@ -3980,8 +3896,8 @@ Details: %2</source>
 </context><context>
     <name>SetupWizard</name>
     <message>
-        <source>Anki Miner works best with a frequency list, pitch accent data, and a dictionary. Download the recommended set now?</source>
-        <translation>Anki Miner 配合词频列表、音调数据和词典使用效果最佳。现在下载推荐组合吗？</translation>
+        <source>Download the recommended frequency list, pitch accent data, and dictionary now?</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Anki Miner Setup</source>
@@ -4042,14 +3958,6 @@ Details: %2</source>
         <translation>进度</translation>
     </message>
     <message>
-        <source>Preview discovered words before creating cards (Ctrl+P)</source>
-        <translation>在创建卡片前预览发现的单词（Ctrl+P）</translation>
-    </message>
-    <message>
-        <source>Create Anki cards from the episode (Ctrl+Enter)</source>
-        <translation>从剧集创建 Anki 卡片（Ctrl+Enter）</translation>
-    </message>
-    <message>
         <source>File Selection</source>
         <translation>文件选择</translation>
     </message>
@@ -4080,10 +3988,6 @@ Details: %2</source>
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
         <translation>调整字幕时间轴（正值 = 延后，负值 = 提前）</translation>
-    </message>
-    <message>
-        <source>Adjust if subtitles are out of sync</source>
-        <translation>若字幕不同步则进行调整</translation>
     </message>
     <message>
         <source>Missing Video File</source>
@@ -4159,19 +4063,15 @@ Details: %2</source>
         <source>Ready</source>
         <translation>就绪</translation>
     </message>
-    <message>
-        <source>0 cards this session</source>
-        <translation>本次会话 0 张卡片</translation>
-    </message>
-    <message>
-        <source>Click to view detailed system validation</source>
-        <translation>点击查看详细的系统验证</translation>
-    </message>
     <message numerus="yes">
         <source>%n card(s) this session</source>
         <translation>
             <numerusform>本次会话 %n 张卡片</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Click to view detailed system validation</source>
+        <translation>点击查看详细的系统验证</translation>
     </message>
     <message>
         <source>AnkiConnect is connected</source>
@@ -4436,8 +4336,8 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>未找到 alass；请安装它或在设置中指定其路径以启用重新计时。</translation>
     </message>
     <message>
-        <source>Resync a subtitle file to its video by matching audio. Pick a video and the subtitle to align.</source>
-        <translation>通过匹配音频将字幕文件重新同步到视频。选择一个视频和要对齐的字幕。</translation>
+        <source>Resync a subtitle file to its video by matching audio.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mode:</source>
@@ -4524,8 +4424,8 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>校正帧率差异</translation>
     </message>
     <message>
-        <source>Leave off when the subtitle already matches this video's framerate. Only enable for subs from a different release/framerate.</source>
-        <translation>当字幕已匹配此视频的帧率时请保持关闭。仅对来自不同发布版本/帧率的字幕启用。</translation>
+        <source>Enable only for subtitles from a different-framerate release.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Single offset only (no split)</source>
@@ -4538,10 +4438,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Split penalty:</source>
         <translation>分段惩罚值：</translation>
-    </message>
-    <message>
-        <source>Lower = more cut points for ad breaks; 1–20 is the useful range; default 7</source>
-        <translation>值越低 = 广告间断的切点越多；1–20 为有效范围；默认 7</translation>
     </message>
     <message>
         <source>Lower values create more cut points for ad breaks. Useful range 1–20; default 7.</source>
@@ -4762,8 +4658,8 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>ASR 设备</translation>
     </message>
     <message>
-        <source>Auto uses the GPU when one is available and falls back to CPU. GPU needs an NVIDIA card plus the GPU acceleration pack (bundled installs) or the [asr-cuda] extra (source installs).</source>
-        <translation>自动在有可用 GPU 时使用 GPU，否则回退到 CPU。GPU 需要 NVIDIA 显卡以及 GPU 加速包（打包安装）或 [asr-cuda] 附加组件（源码安装）。</translation>
+        <source>Auto uses the GPU when available, else CPU; GPU needs an NVIDIA card plus the acceleration pack.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Download model</source>
@@ -4870,8 +4766,8 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>macOS 没有发布 alass 二进制文件。请使用 Homebrew 安装：</translation>
     </message>
     <message>
-        <source>ASR engine not installed. Subtitle generation needs the faster-whisper engine. Install it with:</source>
-        <translation>未安装 ASR 引擎。字幕生成需要 faster-whisper 引擎。请使用以下命令安装：</translation>
+        <source>Subtitle generation needs the faster-whisper engine. Install it with:</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Copy</source>
@@ -4928,8 +4824,8 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>缩放</translation>
     </message>
     <message>
-        <source>Restart Anki Miner to apply the new zoom.</source>
-        <translation>重启 Anki Miner 以应用新的缩放。</translation>
+        <source>Restart to apply.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Name</source>
@@ -4944,8 +4840,8 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>打开主题文件夹</translation>
     </message>
     <message>
-        <source>Open %1 in your file manager. Drop Anki Miner theme JSON files here to install them; they appear here on next launch.</source>
-        <translation>在文件管理器中打开 %1 。将 Anki Miner 主题 JSON 文件拖放到此处以安装；它们会在下次启动时显示在这里。</translation>
+        <source>Open %1; drop theme JSON files here to install on next launch.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Revert</source>
@@ -5046,8 +4942,8 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>按任意字段过滤...</translation>
     </message>
     <message>
-        <source>Acts on highlighted rows when 2 or more are selected (Ctrl+Click or Shift+Click to select). Otherwise acts on all visible rows.</source>
-        <translation>当选中 2 行或更多时（Ctrl+点击 或 Shift+点击 进行选择），作用于高亮的行。否则作用于所有可见行。</translation>
+        <source>Acts on 2+ highlighted rows (Ctrl/Shift+Click), else all visible rows.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Select All</source>
@@ -5062,8 +4958,8 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>添加到已知单词</translation>
     </message>
     <message>
-        <source>Permanently ignore the highlighted row(s) — adds them to your local Known Words list so they are never mined again. Falls back to the current row when none are highlighted.</source>
-        <translation>永久忽略高亮的行——将它们添加到你的本地已知单词列表，使其永不再被挖词。未高亮任何行时回退到当前行。</translation>
+        <source>Add highlighted rows to your Known Words list — never mined again.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word (mined)</source>
@@ -5304,8 +5200,8 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Cookie 文件</translation>
     </message>
     <message>
-        <source>Optional. Overrides the browser dropdown above. Export a Netscape cookies.txt with a 'Get cookies.txt LOCALLY' browser extension — works with ANY browser (Safari, Brave, Arc...). Keep the file private; it holds your YouTube login.</source>
-        <translation>可选。会覆盖上方的浏览器下拉选项。用“Get cookies.txt LOCALLY”浏览器扩展导出 Netscape 格式的 cookies.txt——适用于任意浏览器（Safari、Brave、Arc…）。请妥善保管该文件，其中包含你的 YouTube 登录信息。</translation>
+        <source>Overrides the browser dropdown. Keep the file private — it holds your YouTube login.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source> minutes</source>
