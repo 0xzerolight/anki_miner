@@ -9,7 +9,12 @@ from __future__ import annotations
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import CardPayload, MediaData, TokenizedWord
-from anki_miner.services.anki_note_builder import build_cloze_fields, build_note
+from anki_miner.services.anki_note_builder import (
+    _get_root_deck_name,
+    build_cloze_fields,
+    build_duplicate_scope_options,
+    build_note,
+)
 
 
 def _word(**overrides) -> TokenizedWord:
@@ -168,3 +173,110 @@ class TestConjugationField:
         config = _config(conjugation="Conjugation")
         fields = build_note(_payload(_word()), config, set()).note["fields"]
         assert "Conjugation" not in fields
+
+
+class TestGetRootDeckName:
+    def test_unnested_returns_self(self):
+        assert _get_root_deck_name("Mining") == "Mining"
+
+    def test_nested_returns_root(self):
+        assert _get_root_deck_name("Mining::Anime::ShowA") == "Mining"
+
+    def test_single_level_nesting(self):
+        assert _get_root_deck_name("Mining::ShowA") == "Mining"
+
+    def test_empty_string(self):
+        assert _get_root_deck_name("") == ""
+
+
+class TestDuplicateScopeOptions:
+    def test_default_config_omits_options_key(self):
+        # WIRE-FORMAT REGRESSION (omit-at-default): default config (collection
+        # scope, check_all_models off) emits NO options key on the note dict.
+        note = build_note(_payload(_word()), AnkiMinerConfig(manage_card_styling=False), set()).note
+        assert "options" not in note
+
+    def test_deck_builder_object_unchanged(self):
+        # allow_duplicate_cards takes precedence and keeps the pre-7.3 hardcoded
+        # object byte-for-byte.
+        config = AnkiMinerConfig(manage_card_styling=False, allow_duplicate_cards=True)
+        note = build_note(_payload(_word()), config, set()).note
+        assert note["options"] == {"allowDuplicate": True, "duplicateScope": "deck"}
+
+    def test_deck_builder_precedence_over_duplicate_scope(self):
+        # Both allow_duplicate_cards and a non-default duplicate_scope set:
+        # allow_duplicate_cards wins (hardcoded Deck Builder object).
+        config = AnkiMinerConfig(
+            manage_card_styling=False,
+            allow_duplicate_cards=True,
+            duplicate_scope="deck-root",
+            duplicate_check_all_models=True,
+        )
+        note = build_note(_payload(_word()), config, set()).note
+        assert note["options"] == {"allowDuplicate": True, "duplicateScope": "deck"}
+
+    def test_scope_deck_emits_options(self):
+        config = AnkiMinerConfig(manage_card_styling=False, duplicate_scope="deck")
+        note = build_note(_payload(_word()), config, set()).note
+        assert note["options"] == {
+            "allowDuplicate": False,
+            "duplicateScope": "deck",
+            "duplicateScopeOptions": {
+                "deckName": None,
+                "checkChildren": False,
+                "checkAllModels": False,
+            },
+        }
+
+    def test_scope_deck_root_synthesizes_root_and_check_children(self):
+        config = AnkiMinerConfig(
+            manage_card_styling=False,
+            anki_deck_name="Mining::Anime::ShowA",
+            duplicate_scope="deck-root",
+        )
+        note = build_note(_payload(_word()), config, set()).note
+        assert note["options"] == {
+            "allowDuplicate": False,
+            "duplicateScope": "deck",
+            "duplicateScopeOptions": {
+                "deckName": "Mining",
+                "checkChildren": True,
+                "checkAllModels": False,
+            },
+        }
+
+    def test_check_all_models_alone_emits_collection_scope(self):
+        # check_all_models on but scope still collection: an explicit off-default
+        # choice, so the object is emitted with duplicateScope="collection".
+        config = AnkiMinerConfig(manage_card_styling=False, duplicate_check_all_models=True)
+        note = build_note(_payload(_word()), config, set()).note
+        assert note["options"] == {
+            "allowDuplicate": False,
+            "duplicateScope": "collection",
+            "duplicateScopeOptions": {
+                "deckName": None,
+                "checkChildren": False,
+                "checkAllModels": True,
+            },
+        }
+
+    def test_check_all_models_with_deck_scope(self):
+        config = AnkiMinerConfig(
+            manage_card_styling=False,
+            duplicate_scope="deck",
+            duplicate_check_all_models=True,
+        )
+        opts = build_duplicate_scope_options(config)
+        assert opts["duplicateScope"] == "deck"
+        assert opts["duplicateScopeOptions"]["checkAllModels"] is True
+
+    def test_deck_root_at_root_deck_uses_full_name(self):
+        # Un-nested deck name: deck-root resolves to the deck itself.
+        config = AnkiMinerConfig(
+            manage_card_styling=False,
+            anki_deck_name="Mining",
+            duplicate_scope="deck-root",
+        )
+        opts = build_duplicate_scope_options(config)
+        assert opts["duplicateScopeOptions"]["deckName"] == "Mining"
+        assert opts["duplicateScopeOptions"]["checkChildren"] is True

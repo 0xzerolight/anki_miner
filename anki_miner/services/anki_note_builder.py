@@ -105,6 +105,49 @@ def _strip_for_dedup(value: str) -> str:
     return " ".join(text.split())
 
 
+def _get_root_deck_name(deck_name: str) -> str:
+    """Return the root of a ``::``-nested Anki deck name (self if unnested).
+
+    Ported from Yomitan ``ext/js/data/anki-util.js`` ``getRootDeckName``
+    (upstream commit e2ed450). Yomitan synthesizes the deck-root duplicate scope
+    client-side from the target deck name; we do the same so
+    ``duplicate_scope == "deck-root"`` scopes duplicate detection to the whole
+    subdeck tree under the deck root.
+    """
+    index = deck_name.find("::")
+    return deck_name[:index] if index >= 0 else deck_name
+
+
+def build_duplicate_scope_options(config: AnkiMinerConfig) -> dict:
+    """Build the AnkiConnect note ``options`` object for the configured dup scope.
+
+    Ported from Yomitan ``ext/js/data/anki-note-builder.js`` ``createNote``
+    options block (upstream commit e2ed450): ``deck-root`` is synthesized
+    client-side into ``duplicateScope="deck"`` +
+    ``duplicateScopeOptions.deckName=<root>`` + ``checkChildren=True``.
+    ``allowDuplicate`` stays ``False`` so ``addNotes`` remains a within-scope
+    backstop (the pre-add probe has already dropped scoped duplicates); the probe
+    reuses this same object, forcing ``allowDuplicate`` off but keeping the scope,
+    so probe and add always agree.
+    """
+    scope = config.duplicate_scope
+    deck_name: str | None = None
+    check_children = False
+    if scope == "deck-root":
+        scope = "deck"
+        deck_name = _get_root_deck_name(config.anki_deck_name)
+        check_children = True
+    return {
+        "allowDuplicate": False,
+        "duplicateScope": scope,
+        "duplicateScopeOptions": {
+            "deckName": deck_name,
+            "checkChildren": check_children,
+            "checkAllModels": config.duplicate_check_all_models,
+        },
+    }
+
+
 @dataclass(frozen=True)
 class BuiltNote:
     """One AnkiConnect note dict plus bold-path diagnostics.
@@ -255,9 +298,16 @@ def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str
     }
     # Deck Builder: re-card words that already exist elsewhere in the
     # collection. duplicateScope="deck" keeps cross-episode curation's
-    # single-carding meaningful within the new deck.
+    # single-carding meaningful within the new deck. This hardcoded object is
+    # kept as-is; the configurable duplicate_scope path below is normal-mining
+    # only (allow_duplicate_cards takes precedence when both apply).
     if config.allow_duplicate_cards:
         note["options"] = {"allowDuplicate": True, "duplicateScope": "deck"}
+    elif config.duplicate_scope != "collection" or config.duplicate_check_all_models:
+        # Omit-at-default: at duplicate_scope="collection" + check_all_models off
+        # we emit NO options object (AnkiConnect's implicit default — the wire is
+        # byte-identical to pre-7.3). Only an explicit off-default choice emits it.
+        note["options"] = build_duplicate_scope_options(config)
 
     return BuiltNote(
         note=note,

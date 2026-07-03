@@ -29,6 +29,7 @@ the combined work carries the same license.
 | `tests/unit/test_deinflection_cycles.py` | `test/language-transformer-cycles.test.js` |
 | `anki_miner/services/frequency/multi_frequency_service.py` (`lookup_harmonic`) | `ext/js/data/anki-note-data-creator.js` (`getFrequencyHarmonic`) |
 | `anki_miner/services/anki_note_builder.py` (`build_cloze_fields`) | `ext/js/data/anki-note-data-creator.js` (`getCloze`) |
+| `anki_miner/services/anki_note_builder.py` (`_get_root_deck_name`, `build_duplicate_scope_options`) | `ext/js/data/anki-util.js` (`getRootDeckName`), `ext/js/data/anki-note-builder.js` (`createNote` duplicateScope/duplicateScopeOptions block) |
 | `anki_miner/services/deinflection.py` (`find_highlight_end_with_trace` attachment-order chain) | `ext/js/language/language-transformer.js` (`_extendTrace`), `ext/js/language/translator.js` (`inflectionRules` mapping) |
 | `anki_miner/utils/sentence_extract.py` (`extract_sentence`, terminator/quote maps) | `ext/js/dom/text-source-generator.js` (`extractSentence`), `ext/data/schemas/options-schema.json` (default `terminationCharacters`) |
 | `anki_miner/services/frequency/providers/indexed_freq_provider.py` (`_resolve_scoped_rank` reading-scoping) | `ext/js/language/translator.js` (term-meta `freq` case: reading-tagged rows filter by reading, bare rows apply to all readings) |
