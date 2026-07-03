@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from anki_miner.services.frequency.csv_parse import (
     _extract_word_rank,
+    _is_pure_number,
     _is_word_first_header,
+    _normalize_freq_rank_raw,
+    _string_to_rank,
+    classify_categorical,
     extract_envelope_reading,
     normalize_freq_rank,
 )
@@ -138,6 +144,95 @@ class TestExtractWordRankAutoDetect:
     def test_multi_column_finds_word_and_rank(self) -> None:
         """3+ columns with no word-first header: first non-numeric is the word."""
         assert _extract_word_rank(["食べる", "たべる", "100"]) == ("食べる", 100)
+
+
+def _signals(values: list[Any]) -> tuple[set[str], int, int, int]:
+    """Compute classify_categorical's signals from Yomitan ``freq`` values,
+    mirroring the importer's single-pass accumulation."""
+    distinct: set[str] = set()
+    digit_free = 0
+    total_labelled = 0
+    total_considered = 0
+    for data in values:
+        rank = normalize_freq_rank(data)[0]
+        raw = _normalize_freq_rank_raw(data)[1]
+        label = raw.strip() if isinstance(raw, str) and raw.strip() else None
+        if label is not None:
+            total_labelled += 1
+            distinct.add(label)
+            if _string_to_rank(label) is None:
+                digit_free += 1
+        if rank is not None or label is not None:
+            total_considered += 1
+    return distinct, digit_free, total_labelled, total_considered
+
+
+def _is_categorical(values: list[Any]) -> bool:
+    return classify_categorical(*_signals(values))
+
+
+class TestIsPureNumber:
+    def test_integer_and_decimal_and_scientific(self) -> None:
+        assert _is_pure_number("1500") is True
+        assert _is_pure_number("3.9") is True
+        assert _is_pure_number(" 9.5 ") is True
+        assert _is_pure_number("1e5") is True
+
+    def test_decorated_and_labels_are_not_pure(self) -> None:
+        assert _is_pure_number("N5") is False
+        assert _is_pure_number("Basic") is False
+        assert _is_pure_number("3.9位") is False
+        assert _is_pure_number("1,234") is False
+
+
+class TestClassifyCategorical:
+    def test_bare_string_levels_are_categorical(self) -> None:
+        assert _is_categorical(["Basic", "Advanced", "Basic", "Advanced"]) is True
+
+    def test_tiny_digit_free_dict_is_categorical(self) -> None:
+        # Digit-free branch is size-agnostic (it must catch the reported crash).
+        assert _is_categorical(["Basic", "初級"]) is True
+
+    def test_digit_free_over_30_distinct_still_categorical(self) -> None:
+        labels = ["".join("あ" for _ in range(i)) for i in range(1, 41)]  # 40 distinct, no digits
+        assert _is_categorical(labels) is True
+
+    def test_jlpt_style_digit_bearing_is_categorical(self) -> None:
+        assert _is_categorical(["N5", "N4", "N3", "N2", "N1"] * 3) is True
+
+    def test_object_form_level_is_categorical(self) -> None:
+        vals = [{"value": 5, "displayValue": "N5"}, {"value": 4, "displayValue": "N4"}] * 3
+        assert _is_categorical(vals) is True
+
+    def test_envelope_digit_free_is_categorical(self) -> None:
+        vals = [{"reading": "x", "frequency": "高"}, {"reading": "y", "frequency": "低"}]
+        assert _is_categorical(vals) is True
+
+    def test_many_distinct_decorated_numeric_stays_numeric(self) -> None:
+        # JPDB "N位"/"N㋕" style: many distinct -> numeric despite the decoration.
+        assert _is_categorical([f"{i}位" for i in range(1, 41)]) is False
+
+    def test_small_decorated_numeric_stays_numeric_via_repetition_guard(self) -> None:
+        # Few distinct, non-pure, but ~unique per word (no repetition) -> numeric.
+        assert _is_categorical(["80/100", "20/100"]) is False
+        assert _is_categorical(["1099/72000", "3㋕"]) is False
+
+    def test_pure_number_strings_stay_numeric(self) -> None:
+        assert _is_categorical([str(i) for i in range(1, 21)]) is False
+        assert _is_categorical([f"{i}.5" for i in range(1, 10)]) is False
+
+    def test_bare_ints_stay_numeric(self) -> None:
+        assert _is_categorical([1, 2, 3, 4, 5]) is False
+
+    def test_numeric_dict_with_a_few_junk_rows_stays_numeric(self) -> None:
+        # Coverage gate: label-bearing junk is a tiny minority -> real ranks kept.
+        assert _is_categorical([1234] * 10000 + ["unknown", "unknown", "unknown"]) is False
+
+    def test_distinct_boundary_30_vs_31(self) -> None:
+        at_30 = [f"L{i}" for i in range(30)] * 2  # 30 distinct, repeated
+        at_31 = [f"L{i}" for i in range(31)] * 2  # 31 distinct
+        assert _is_categorical(at_30) is True
+        assert _is_categorical(at_31) is False
 
 
 class TestExtractEnvelopeReading:

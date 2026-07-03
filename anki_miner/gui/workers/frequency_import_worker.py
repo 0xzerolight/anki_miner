@@ -92,6 +92,7 @@ class FrequencyImportWorker(CancellableWorker):
                 "format": getattr(result, "format", ""),
                 "skipped_malformed": getattr(result, "skipped_malformed", 0),
                 "converted_to_ranks": getattr(result, "converted_to_ranks", False),
+                "is_categorical": getattr(result, "is_categorical", False),
             }
             self.import_finished.emit(result.source_id, meta)
         except Exception as exc:  # noqa: BLE001 - surface every failure to GUI

@@ -7,6 +7,7 @@ from anki_miner.services.frequency.multi_frequency_service import (
     harmonic_rank,
     min_rank,
 )
+from anki_miner.services.frequency.storage import CATEGORICAL_RANK
 
 
 class _FakeProvider:
@@ -280,3 +281,29 @@ def test_close_suppresses_provider_close_exception():
     # A raising provider must not stop the others from closing.
     MultiFrequencyService([_Boom("boom", {}), good]).close()
     assert good.close_calls == 1
+
+
+class TestCategoricalSentinelExclusion:
+    """Word-based (categorical) sources carry the CATEGORICAL_RANK sentinel; the
+    aggregation helpers exclude it while the per-source breakdown keeps its label."""
+
+    def test_min_rank_excludes_sentinel(self) -> None:
+        assert min_rank([("Freq", 45000, None), ("JLPT", CATEGORICAL_RANK, "N5")]) == 45000
+        # A word ranked ONLY by categorical sources has no numeric rank.
+        assert min_rank([("JLPT", CATEGORICAL_RANK, "N5")]) is None
+
+    def test_harmonic_rank_excludes_sentinel_no_phantom_n(self) -> None:
+        # Without exclusion the phantom second source would inflate n:
+        # floor(2 / (1/45000 + ~0)) == 90000. Excluded -> floor(1/(1/45000)) == 45000.
+        assert harmonic_rank([("Freq", 45000, None), ("JLPT", CATEGORICAL_RANK, "N5")]) == 45000
+        assert harmonic_rank([("JLPT", CATEGORICAL_RANK, "N5")]) is None
+
+    def test_service_categorical_in_lookup_all_but_excluded_from_scalars(self) -> None:
+        numeric = _FakeProvider("Freq", {"猫": 45000})
+        categorical = _FakeProvider("JLPT", {"猫": CATEGORICAL_RANK}, displays={"猫": "N5"})
+        svc = MultiFrequencyService([numeric, categorical])
+        # Both sources appear in the card breakdown, categorical carrying its label.
+        assert svc.lookup_all("猫") == [("Freq", 45000, None), ("JLPT", CATEGORICAL_RANK, "N5")]
+        # But the scalar rank/sort come from the numeric source only.
+        assert svc.lookup_min("猫") == 45000
+        assert svc.lookup_harmonic("猫") == 45000

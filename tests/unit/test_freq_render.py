@@ -3,10 +3,19 @@
 from __future__ import annotations
 
 from anki_miner.services.frequency.render import render_frequency_html
+from anki_miner.services.frequency.storage import CATEGORICAL_RANK
 
 
 def test_empty_list_returns_empty_string():
     assert render_frequency_html([]) == ""
+
+
+def test_categorical_row_renders_label_not_sentinel():
+    # A word-based source carries the CATEGORICAL_RANK sentinel + a truthy label;
+    # the card shows the label and never the sentinel number.
+    html = render_frequency_html([("JLPT", CATEGORICAL_RANK, "N5")])
+    assert html == "<ul><li>JLPT: N5</li></ul>"
+    assert str(CATEGORICAL_RANK) not in html
 
 
 def test_single_source_no_display_uses_rank():

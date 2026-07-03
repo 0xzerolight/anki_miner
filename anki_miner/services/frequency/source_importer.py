@@ -43,6 +43,9 @@ from anki_miner.services.frequency import mode_probe, storage
 from anki_miner.services.frequency.csv_parse import (
     _extract_word_rank,
     _is_word_first_header,
+    _normalize_freq_rank_raw,
+    _string_to_rank,
+    classify_categorical,
     extract_envelope_reading,
     normalize_freq_rank,
 )
@@ -81,6 +84,11 @@ class FreqSourceImportResult:
     # counts were re-ranked to 1..n at import (see mode_probe). Surfaced so the
     # user knows the stored ranks differ from the file's numbers.
     converted_to_ranks: bool = False
+    # True when the source is word-based (categorical): its ``freq`` values are
+    # level labels ("N5", "Basic") stored display-only and excluded from
+    # frequency-rank filtering/sorting. Surfaced so the user knows the source
+    # won't affect the rank cutoff (see storage.CATEGORICAL_RANK).
+    is_categorical: bool = False
 
 
 def import_frequency_source(
@@ -141,9 +149,18 @@ def _import_zip(
         declared_mode = banks.index.frequency_mode
         resolved_id = source_id or _derive_source_id(title)
 
-        # key = (term, reading) -> (best (min) rank, display_value of that row)
+        # Numeric path: key = (term, reading) -> (best (min) rank, display_value).
         ranks: dict[tuple[str, str | None], tuple[int, str | None]] = {}
+        # Categorical path: key = (term, reading) -> level label (first non-empty
+        # wins). Accumulated in the same pass so a word-based source is detected
+        # without a second scan; only one path's rows are ultimately stored.
+        labels: dict[tuple[str, str | None], str] = {}
         skipped_display_only = 0
+        # Categorical-detection signals (see csv_parse.classify_categorical).
+        distinct_labels: set[str] = set()
+        digit_free_count = 0
+        total_labelled = 0
+        total_considered = 0
 
         for bank in banks.iter_banks(progress=progress, cancel_check=cancel_check):
             # Entries are already structurally validated by iter_banks (list,
@@ -152,32 +169,67 @@ def _import_zip(
                 if entry[1] != "freq":
                     continue
                 term = str(entry[0]).strip()
-
                 data = entry[2]
-                rank, display_value = normalize_freq_rank(data)
-                if rank is None:
-                    skipped_display_only += 1
-                    continue
-
                 reading = extract_envelope_reading(data)
-                key = (term, reading)
-                existing = ranks.get(key)
-                if existing is None or rank < existing[0]:
-                    ranks[key] = (rank, display_value)
 
-        if not ranks:
-            raise SetupError(
-                f"'{title}' yielded no usable frequency entries (skipped "
-                f"{skipped_display_only} display-only entries). "
-                "The dictionary may use an unsupported data format."
-            )
+                # Numeric rank via the existing gate (byte-identical to today,
+                # incl. unstripped object-form displayValue); the raw label is
+                # tracked separately so a categorical source can be recognised.
+                rank, display_value = normalize_freq_rank(data)
+                raw_display = _normalize_freq_rank_raw(data)[1]
+                label = raw_display.strip() if isinstance(raw_display, str) and raw_display.strip() else None
 
-        # Sorted by rank for stable, human-scannable storage order.
-        rows = [
-            (term, reading, rank, display_value)
-            for (term, reading), (rank, display_value) in sorted(ranks.items(), key=lambda kv: kv[1][0])
-        ]
-        rows, converted = _apply_direction(rows, declared_mode)
+                if rank is not None:
+                    key = (term, reading)
+                    existing = ranks.get(key)
+                    if existing is None or rank < existing[0]:
+                        ranks[key] = (rank, display_value)
+                else:
+                    skipped_display_only += 1
+
+                if label is not None:
+                    total_labelled += 1
+                    distinct_labels.add(label)
+                    if _string_to_rank(label) is None:
+                        digit_free_count += 1
+                    labels.setdefault((term, reading), label)
+
+                if rank is not None or label is not None:
+                    total_considered += 1
+
+        # A declared Yomitan frequencyMode ("occurrence"/"rank") is the author
+        # asserting the source is numeric, so it overrides categorical detection
+        # (a coarse occurrence dict with few distinct counts would otherwise look
+        # categorical). Categorical level dicts leave frequencyMode undeclared.
+        is_categorical = not declared_mode and classify_categorical(
+            distinct_labels, digit_free_count, total_labelled, total_considered
+        )
+
+        if is_categorical:
+            # Store labels display-only: the sentinel rank keeps every row out of
+            # numeric aggregation; the level shows on the card via display_value.
+            # Direction detection is meaningless for categories, so it is skipped.
+            rows: list[storage.FreqRow] = [
+                (term, reading, storage.CATEGORICAL_RANK, label)
+                for (term, reading), label in sorted(labels.items(), key=lambda kv: kv[0])
+            ]
+            entry_count = len(rows)
+            skipped_display_only = total_considered - total_labelled  # rank-only rows dropped
+            converted = False
+        else:
+            if not ranks:
+                raise SetupError(
+                    f"'{title}' yielded no usable frequency entries (skipped "
+                    f"{skipped_display_only} display-only entries). "
+                    "The dictionary may use an unsupported data format."
+                )
+            # Sorted by rank for stable, human-scannable storage order.
+            rows = [
+                (term, reading, rank, display_value)
+                for (term, reading), (rank, display_value) in sorted(ranks.items(), key=lambda kv: kv[1][0])
+            ]
+            rows, converted = _apply_direction(rows, declared_mode)
+            entry_count = len(rows)
 
         result = _finalize(
             input_path=zip_path,
@@ -187,10 +239,11 @@ def _import_zip(
             source_revision=revision,
             fmt="yomitan-freq",
             rows=rows,
-            entry_count=len(ranks),
+            entry_count=entry_count,
             skipped_display_only=skipped_display_only,
             skipped_malformed=banks.skipped_malformed,
             converted_to_ranks=converted,
+            is_categorical=is_categorical,
         )
 
     logger.info(
@@ -253,7 +306,9 @@ def _import_csv(
     if not ranks:
         raise SetupError(
             f"'{csv_path.name}' yielded no usable frequency entries. "
-            "Expected a CSV/TSV with a word column and a numeric rank column."
+            "Expected a CSV/TSV with a word column and a numeric rank column. "
+            "Word-based / level lists (N5, Basic, 初級) are only supported as "
+            "Yomitan .zip dictionaries — import one of those instead."
         )
 
     rows: list[storage.FreqRow] = [
@@ -340,6 +395,7 @@ def _finalize(
     skipped_display_only: int,
     skipped_malformed: int = 0,
     converted_to_ranks: bool = False,
+    is_categorical: bool = False,
 ) -> FreqSourceImportResult:
     """Build the index under a staging dir, then atomically promote it.
 
@@ -359,6 +415,9 @@ def _finalize(
             "source_revision": source_revision,
             "import_date": datetime.now(UTC).isoformat(),
             "entry_count": str(entry_count),
+            # "1"/"0" (not bool) — read back with an explicit == "1" compare so a
+            # stored "0" never coerces truthy (bool("0") is True).
+            "is_categorical": "1" if is_categorical else "0",
         }
         storage.build_index(db_path, rows, meta)
 
@@ -397,6 +456,7 @@ def _finalize(
         skipped_display_only=skipped_display_only,
         skipped_malformed=skipped_malformed,
         converted_to_ranks=converted_to_ranks,
+        is_categorical=is_categorical,
     )
 
 

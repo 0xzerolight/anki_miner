@@ -83,6 +83,17 @@ class FrequencyImportFlow:
         """Toggle the add-trigger button. Prevents overlapping import workers."""
         self._panel._add_btn.setEnabled(enabled)
 
+    @staticmethod
+    def _categorical_note(meta: dict) -> str:
+        """Note appended to the add/re-import success message for a word-based
+        source, so the changed (excluded-from-rank-filtering) behavior isn't silent."""
+        if not meta.get("is_categorical"):
+            return ""
+        return QCoreApplication.translate(
+            "FrequencyImportFlow",
+            " This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.",
+        )
+
     def _chain_with_new_source_appended(self, source_id: str) -> tuple[FreqEntry, ...]:
         """Return the current chain with ``source_id`` appended (enabled).
 
@@ -164,7 +175,8 @@ class FrequencyImportFlow:
                     meta.get("source_name", source_id),
                 )
                 + skipped_note
-                + converted_note,
+                + converted_note
+                + self._categorical_note(meta),
             )
 
         def on_failed(err: str) -> None:
@@ -244,7 +256,8 @@ class FrequencyImportFlow:
                 tr_format(
                     QCoreApplication.translate("FrequencyImportFlow", "Re-imported %1 successfully."),
                     imported_id,
-                ),
+                )
+                + self._categorical_note(meta),
             )
 
         def on_failed(err: str) -> None:
