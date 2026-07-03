@@ -34,6 +34,15 @@ logger = logging.getLogger(__name__)
 # past v2 must stay additive to keep this backward-read guarantee.
 SCHEMA_VERSION = 2
 
+# Sentinel rank stored for a word-based (categorical) source's rows. Its real
+# level lives in ``display_value``; the rank column only holds this out-of-band
+# value so the row is a no-op in numeric aggregation. Chosen large (2**31 - 1 —
+# well beyond any real frequency rank) so the aggregation helpers exclude it via
+# ``rank < CATEGORICAL_RANK``, and so a consumer that forgets the filter fails
+# safe (the word looks *rarest*, filtered out, never falsely "common"). No
+# schema change: it is an ordinary INTEGER value in the existing ``rank`` column.
+CATEGORICAL_RANK = 2**31 - 1
+
 # Sidecar filename living next to each ``index.sqlite``. Holds the source's
 # ``meta`` rows as JSON so a registry ``load()`` can skip the SQLite open on
 # every app startup. Refreshed whenever ``write_meta`` runs.

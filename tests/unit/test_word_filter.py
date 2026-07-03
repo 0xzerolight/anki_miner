@@ -159,6 +159,18 @@ class TestWordFilterService:
             assert len(result) == 1
             assert result[0].lemma == "の"
 
+        def test_categorical_only_word_dropped_under_cutoff(self, test_config):
+            """A word ranked ONLY by a word-based (categorical) source has
+            frequency_rank None (the sentinel is excluded from min), so an active
+            cutoff drops it — the documented categorical-only + cutoff behavior."""
+            service = WordFilterService(test_config)
+            words = [
+                self._word_with_freq("食べる", 500),
+                create_word("Ｎ５語"),  # categorical-only -> frequency_rank None
+            ]
+            result = service.filter_by_frequency(words, max_rank=5000)
+            assert [w.lemma for w in result] == ["食べる"]
+
         def test_no_filtering_keeps_unranked_words(self, test_config):
             """max_rank=0 disables filtering entirely; unranked words pass through."""
             service = WordFilterService(test_config)

@@ -23,6 +23,7 @@ import math
 from anki_miner.services.frequency.providers.indexed_freq_provider import (
     IndexedFreqProvider,
 )
+from anki_miner.services.frequency.storage import CATEGORICAL_RANK
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +37,11 @@ def min_rank(sources: FreqSources) -> int | None:
 
     Pure derivation over the per-source list so a caller that already holds the
     breakdown (e.g. ``EpisodeProcessor._phase2_filter``) can compute the top-N
-    filter's rank without re-running the per-source SQL.
+    filter's rank without re-running the per-source SQL. Word-based (categorical)
+    sources carry the ``CATEGORICAL_RANK`` sentinel and are excluded — their level
+    labels must not participate in the numeric rank cutoff.
     """
-    ranks = [rank for _name, rank, _display in sources]
+    ranks = [rank for _name, rank, _display in sources if rank < CATEGORICAL_RANK]
     return min(ranks) if ranks else None
 
 
@@ -50,8 +53,10 @@ def harmonic_rank(sources: FreqSources) -> int | None:
     divide-by-zero). ``lookup_all`` yields at most one value per source, so the
     one-value-per-dictionary dedup holds by construction. Pure derivation so the
     sort field can be computed from a single fetch — see :func:`min_rank`.
+    Categorical sources (``CATEGORICAL_RANK`` sentinel) are excluded so they do
+    not inflate the harmonic count ``n``.
     """
-    ranks = [rank for _name, rank, _display in sources if rank > 0]
+    ranks = [rank for _name, rank, _display in sources if 0 < rank < CATEGORICAL_RANK]
     if not ranks:
         return None
     total = sum(1.0 / rank for rank in ranks)

@@ -226,3 +226,77 @@ def _string_to_rank(s: str) -> int | None:
     if not math.isfinite(value):
         return None
     return int(value)
+
+
+# --- Word-based (categorical) frequency source detection -------------------
+#
+# Some Yomitan frequency dictionaries encode a category/level ("N5", "Basic",
+# "初級") in the ``freq`` slot instead of a numeric rank. Those levels form a
+# tiny ordinal scale (1..~6) that must NOT be folded into the numeric rank
+# aggregation — a "level 5" word would masquerade as the 5th most common word
+# and corrupt the whole i+1 frequency filter. The importer detects such a source
+# up front and stores its labels display-only (see source_importer + storage's
+# ``CATEGORICAL_RANK`` sentinel); ``classify_categorical`` is that detector.
+
+# A source is only treated as categorical when its distinct labels are few
+# (a real numeric rank list has thousands of distinct values); this cap also
+# guards the digit-bearing branch below (e.g. "N5".."N1").
+_CATEGORY_MAX_DISTINCT = 30
+
+
+def _is_pure_number(s: str) -> bool:
+    """True when the whole string is a plain number ("1500", "3.9", "1e5").
+
+    Reuses the Yomitan float regex :data:`_NUMBER_RE` with ``fullmatch`` so a
+    label carrying any non-numeric character ("N5", "3.9位", "1,234") is NOT a
+    pure number and therefore counts as categorical evidence.
+    """
+    return bool(_NUMBER_RE.fullmatch(s.strip()))
+
+
+def classify_categorical(
+    distinct_labels: set[str],
+    digit_free_count: int,
+    total_labelled: int,
+    total_considered: int,
+) -> bool:
+    """Decide whether a frequency source is word-based (categorical).
+
+    Args:
+        distinct_labels: The distinct non-empty display labels seen. Never
+            contains ``None``/``""`` (the importer records only non-empty labels).
+        digit_free_count: Count of labelled entries whose label has no extractable
+            number (``_string_to_rank`` is ``None`` — e.g. "Basic", "高").
+        total_labelled: Entries that carried a non-empty display label.
+        total_considered: Entries that yielded a numeric rank (>= 1) OR a
+            non-empty label — i.e. entries that count toward the label-coverage
+            ratio (bare-int rows have no label but do count here).
+
+    Returns:
+        True when the source should be stored display-only (categorical).
+
+    The label-coverage gate (``total_labelled >= 0.5 * total_considered``) keeps
+    a real numeric dict polluted by a few non-numeric junk rows numeric — those
+    rows are a small minority, so its real ranks are not discarded.
+    """
+    if total_labelled == 0 or total_considered == 0:
+        return False
+    if total_labelled < 0.5 * total_considered:
+        return False
+    if digit_free_count >= 0.5 * total_labelled:
+        # Dominated by digit-free labels ("Basic"/"高"/"初級") — categorical at
+        # any cardinality, so even a >30-level digit-free scale imports cleanly.
+        # A digit-free value can never be a numeric rank, so no repetition guard
+        # is needed here (and none is wanted — it must catch tiny all-label dicts).
+        return True
+    # All/most labels are digit-bearing ("N5", "7位"): categorical only when it is
+    # a small, wholly non-pure-number set whose labels REPEAT across many words. A
+    # real level ("N5") is shared by thousands of words (distinct << total); a
+    # numeric rank with a decorated display ("7位", "80/100", "1099/72000") is
+    # ~unique per word (distinct ~= total), so the repetition guard keeps those
+    # numeric. This override corrects the misleading digit extraction ("N5" -> 5).
+    return (
+        len(distinct_labels) <= _CATEGORY_MAX_DISTINCT
+        and total_labelled >= 2 * len(distinct_labels)
+        and all(not _is_pure_number(label) for label in distinct_labels)
+    )
