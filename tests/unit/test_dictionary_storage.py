@@ -1066,3 +1066,48 @@ class TestTermsExist:
             assert found == {f"語{i}" for i in range(1000)}
         finally:
             conn.close()
+
+
+class TestLookupWithRules:
+    """``lookup_with_rules`` — rows plus the rules column for the 5.2 fallback."""
+
+    def test_returns_rules_column(self, tmp_path: Path):
+        from anki_miner.services.dictionary.storage import lookup_with_rules
+
+        db_path = tmp_path / "d.sqlite"
+        create_index(db_path)
+        bulk_insert(db_path, [DictRow(term="食べる", reading="たべる", content="<li>eat</li>", rules="v1", sequence=1)])
+        conn = open_readonly(db_path)
+        try:
+            rows = lookup_with_rules(conn, "食べる")
+            assert rows == [("<li>eat</li>", "", 1, "v1")]
+        finally:
+            conn.close()
+
+    def test_absent_rules_is_empty_string(self, tmp_path: Path):
+        from anki_miner.services.dictionary.storage import lookup_with_rules
+
+        db_path = tmp_path / "d.sqlite"
+        create_index(db_path)
+        # A row inserted without rules gets the schema DEFAULT '' (older-import shape).
+        bulk_insert(db_path, [DictRow(term="犬", reading="いぬ", content="<li>dog</li>", sequence=1)])
+        conn = open_readonly(db_path)
+        try:
+            rows = lookup_with_rules(conn, "犬")
+            assert rows == [("<li>dog</li>", "", 1, "")]
+        finally:
+            conn.close()
+
+    def test_katakana_query_matches_folded_reading(self, tmp_path: Path):
+        from anki_miner.services.dictionary.storage import lookup_with_rules
+
+        db_path = tmp_path / "d.sqlite"
+        create_index(db_path)
+        bulk_insert(db_path, [DictRow(term="猫", reading="ネコ", content="<li>cat</li>", rules="", sequence=1)])
+        conn = open_readonly(db_path)
+        try:
+            # Reading stored folded to ねこ; a katakana query folds too and matches.
+            rows = lookup_with_rules(conn, "ネコ")
+            assert rows == [("<li>cat</li>", "", 1, "")]
+        finally:
+            conn.close()

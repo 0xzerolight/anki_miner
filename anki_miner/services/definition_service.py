@@ -106,10 +106,92 @@ class DefinitionService:
                 logger.warning("Failed to close provider '%s': %s", provider.name, e)
         self._loaded = False
 
+    @staticmethod
+    def _fallback_candidates(word: str, orth_base: str, ctype: str | None) -> list[tuple[str, int]]:
+        """Ordered ``(candidate_text, conditions)`` list for a lookup miss.
+
+        Ported from Yomitan's lookup fan-out (``Translator._getAlgorithmDeinflections``
+        + preprocessor variants, ext/js/language/translator.js, upstream e2ed450):
+        a miss on the exact key is retried against spelling/kana variants and
+        rule-driven deinflection hypotheses. Here:
+
+        * ``orth_base`` (source-orthography dictionary form, e.g. 乞う when the
+          canonical lemma is 請う) and the katakana/hiragana folds of ``word`` are
+          emitted with ``conditions=0`` — pure variants that pass the entry POS
+          check unconditionally.
+        * Deinflection hypotheses come from the already-loaded Japanese
+          deinflector; each carries the terminal ``conditions`` bitmask used for
+          the entry's rules-column POS check. They are pre-filtered by the
+          ``cType`` condition mask (``ctype`` unknown ⇒ mask 0 ⇒ no filter, the
+          user-input case) and ordered fewest-steps-first (Yomitan ranks by
+          shortest inflection chain).
+
+        The exact ``word`` is never re-emitted (already probed) and duplicates
+        collapse to their first, highest-priority occurrence.
+        """
+        from anki_miner.services.deinflection import (
+            conditions_match_mask,
+            get_japanese_deinflector,
+        )
+        from anki_miner.utils.text_utils import hiragana_to_katakana, katakana_to_hiragana
+
+        deinflector = get_japanese_deinflector()
+        mask = deinflector.mask_for_ctype(ctype)
+        candidates: list[tuple[str, int]] = []
+        seen: set[str] = {word}  # never re-probe the exact key
+
+        def _add(text: str, conditions: int) -> None:
+            if text and text not in seen:
+                seen.add(text)
+                candidates.append((text, conditions))
+
+        if orth_base:
+            _add(orth_base, 0)
+        _add(katakana_to_hiragana(word), 0)
+        _add(hiragana_to_katakana(word), 0)
+        for result in sorted(deinflector.transform(word), key=lambda r: len(r.trace)):
+            if conditions_match_mask(result.conditions, mask):
+                _add(result.text, result.conditions)
+        return candidates
+
+    def _fallback_lookup_offline(self, word: str, orth_base: str, ctype: str | None) -> str | None:
+        """First rules-validated fallback hit across offline providers, else None.
+
+        Candidates are tried in priority order (variants, then fewest-step
+        deinflections); for each, offline providers are walked in chain order and
+        the first hit wins (mirrors ``get_definitions_batch`` first-hit-wins).
+        Online providers and providers lacking ``lookup_fallback`` are skipped.
+        Never raises: a provider that throws degrades to "skip + continue".
+        """
+        candidates = self._fallback_candidates(word, orth_base, ctype)
+        if not candidates:
+            return None
+        for cand_text, cand_conditions in candidates:
+            for provider in self._providers:
+                if provider.is_online or not provider.is_available():
+                    continue
+                fb = getattr(provider, "lookup_fallback", None)
+                if not callable(fb):
+                    continue
+                try:
+                    html: str | None = fb(cand_text, cand_conditions)
+                except Exception as e:
+                    logger.warning(
+                        "Provider '%s' raised during lookup_fallback of '%s'; skipping: %s",
+                        provider.name,
+                        cand_text,
+                        e,
+                    )
+                    continue
+                if html:
+                    return html
+        return None
+
     def get_definitions_batch(
         self,
         words: list[tuple[str, str | None]],
         progress_callback: ProgressCallback | None = None,
+        fallback_context: dict[str, tuple[str, str | None]] | None = None,
     ) -> list[str | None]:
         """Resolve definitions for a list of ``(word, reading | None)`` pairs,
         preserving first-hit-wins. The reading is a per-word ranking BOOST
@@ -124,6 +206,13 @@ class DefinitionService:
         provider is consulted, so chain semantics are first-hit-wins across the
         provider order. Providers without ``lookup_many`` (e.g. the online Jisho
         fallback) are consulted per-word for the remaining words.
+
+        Lookup-miss fallback (plan item 5.2): ``fallback_context`` maps a lookup
+        word to its ``(orth_base, cType)``. For any word STILL unresolved after
+        the whole chain, the deinflection/variant fallback is retried against
+        offline providers (miss-only, so the hot path pays nothing). Absent
+        (``None``) ⇒ no fallback, preserving pre-5.2 behavior for callers that
+        don't supply context.
         """
         if progress_callback:
             progress_callback.on_start(len(words), "Fetching definitions")
@@ -193,6 +282,19 @@ class DefinitionService:
                     else:
                         still_remaining.append((word, reading))
                 remaining = still_remaining
+
+        # Miss-only fallback: for words the whole chain left unresolved, retry
+        # deinflection/variant candidates against offline providers. Gated on
+        # fallback_context so the hot path (words that hit) pays nothing.
+        if fallback_context:
+            for word, _reading in remaining:
+                ctx = fallback_context.get(word)
+                if ctx is None:
+                    continue
+                orth_base, ctype = ctx
+                html = self._fallback_lookup_offline(word, orth_base, ctype)
+                if html:
+                    resolved[word] = html
 
         results: list[str | None] = []
         for i, (word, _reading) in enumerate(words, 1):
@@ -505,19 +607,30 @@ class DefinitionService:
         Jisho) are excluded to avoid blocking network I/O during interactive
         in-app dictionary lookup.
 
+        Lookup-miss fallback (plan item 5.2) runs UNCONDITIONALLY here (not
+        miss-only): after the exact-``word`` hit, each provider is also probed
+        with the deinflection/variant candidates, so a pasted inflected form
+        (食べさせられた → 食べる) or an orthography variant surfaces its base
+        entry — reproducing Yomitan's core lookup UX in the in-app dialog. This
+        is user input, so no orth_base/cType is available; the deinflector plus
+        kana folds carry it. Each provider's fallback hits are appended after its
+        exact hit, deduped by rendered HTML so a variant re-rendering the exact
+        entry is not shown twice.
+
         Args:
-            word: Japanese word (typically lemma form).
+            word: Japanese word (raw user input or a lemma form).
 
         Returns:
-            List of (provider_name, html) tuples, one per offline provider
-            that returned a hit, in provider chain order. Empty list if no
-            offline provider returns a hit.
+            List of (provider_name, html) tuples in provider chain order. Empty
+            list if no offline provider returns any (exact or fallback) hit.
         """
         self.ensure_loaded()
+        candidates = self._fallback_candidates(word, "", None)
         out: list[tuple[str, str]] = []
         for p in self._providers:
             if p.is_online or not p.is_available():
                 continue
+            seen_html: set[str] = set()
             try:
                 html = p.lookup(word)
             except Exception as e:
@@ -527,7 +640,25 @@ class DefinitionService:
                     word,
                     e,
                 )
-                continue
+                html = None
             if html:
                 out.append((p.name, html))
+                seen_html.add(html)
+            fb = getattr(p, "lookup_fallback", None)
+            if not callable(fb):
+                continue
+            for cand_text, cand_conditions in candidates:
+                try:
+                    fhtml = fb(cand_text, cand_conditions)
+                except Exception as e:
+                    logger.warning(
+                        "Provider '%s' raised during lookup_fallback of '%s'; skipping: %s",
+                        p.name,
+                        cand_text,
+                        e,
+                    )
+                    continue
+                if fhtml and fhtml not in seen_html:
+                    out.append((p.name, fhtml))
+                    seen_html.add(fhtml)
         return out
