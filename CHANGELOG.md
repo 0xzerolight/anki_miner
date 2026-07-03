@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Word audio "not found" markers now heal themselves.** JPod101 negative-cache markers expire after 180 days, so words JPod101 adds later are eventually retried automatically — and a new Settings → Audio → "Retry missing word audio" button clears them on demand (no more deleting the cache folder by hand).
+- **Kana-only words can be mined (opt-in).** With the new `mine_kana_only_words` setting enabled, pure-hiragana words that an installed offline dictionary attests (ごまかす, しゃべる, うなずく) are mined instead of silently skipped; following Yomitan, the dictionary — not the script — decides wordhood. Off by default; requires an enabled offline dictionary.
 
 ### Changed
 - **Card styling is on by default.** anki_miner writes a Yomitan-faithful managed CSS block into your note type by default; it only ever touches its own marker-delimited block and preserves any hand-written note-type CSS byte-for-byte. Configs last saved by v2.7.6/v2.7.7 (which shipped it off by default) are re-seeded once to on — if you deliberately turned it off in that version, turn it back off in Settings → Anki → Manage card styling. Put custom rules in Settings → Custom CSS so they layer over the managed block instead of being overridden by it.
