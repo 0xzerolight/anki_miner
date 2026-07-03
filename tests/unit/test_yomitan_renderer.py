@@ -807,3 +807,289 @@ class TestStyleCollisionDedup:
         out = structured_content_to_html(node)
         assert "font-size: 0.8em" in out
         assert "color: red" in out
+
+
+class TestTypedGlossaryObjects:
+    """Term-bank v3 glossary items may be typed objects: {type:'text'}, an
+    {type:'image'} object, or {type:'structured-content'}. Before this fix only
+    'structured-content' was dispatched — text/image objects fell through to the
+    empty-<span> path and were silently destroyed at import. Mirrors Yomitan's
+    _formatDictionaryTermGlossaryObject / _formatGlossary."""
+
+    def test_text_object_escaped(self):
+        node = {"type": "text", "text": "to eat"}
+        assert structured_content_to_html(node) == "to eat"
+
+    def test_text_object_html_escaped(self):
+        node = {"type": "text", "text": "<b>x</b>"}
+        assert structured_content_to_html(node) == "&lt;b&gt;x&lt;/b&gt;"
+
+    def test_text_object_newlines_become_br(self):
+        node = {"type": "text", "text": "① a\n② b"}
+        assert structured_content_to_html(node) == "① a<br>② b"
+
+    def test_text_object_crlf_normalized(self):
+        node = {"type": "text", "text": "a\r\nb\rc"}
+        assert structured_content_to_html(node) == "a<br>b<br>c"
+
+    def test_text_object_non_string_text_empty(self):
+        node = {"type": "text", "text": 42}
+        assert structured_content_to_html(node) == ""
+
+    def test_text_object_missing_text_empty(self):
+        node = {"type": "text"}
+        assert structured_content_to_html(node) == ""
+
+    def test_image_object_http_wrapped_in_envelope(self):
+        # Mirrors valid-dictionary1 term_bank_1.json entry 10 shape (px width/height).
+        node = {"type": "image", "path": "https://example.com/x.png", "width": 350, "height": 350}
+        out = structured_content_to_html(node)
+        assert out == (
+            '<a class="gloss-image-link" data-path="https://example.com/x.png">'
+            '<span class="gloss-image-container">'
+            '<img class="gloss-image" src="https://example.com/x.png" '
+            'style="width: 350px; height: 350px">'
+            "</span></a>"
+        )
+        assert DICT_MEDIA_CLASS not in out
+
+    def test_image_object_dict_internal_rewrites_src(self):
+        node = {"type": "image", "path": "image.gif"}
+        collected: set[str] = set()
+        out = structured_content_to_html(node, dict_id="d1", media_collector=collected)
+        assert 'src="d1__image.gif"' in out
+        assert "gloss-image anki-miner-dict-media" in out
+        assert collected == {"image.gif"}
+
+    def test_image_object_keeps_alt_and_title(self):
+        node = {"type": "image", "path": "https://example.com/x.png", "alt": "diagram", "title": "hint"}
+        out = structured_content_to_html(node)
+        assert 'alt="diagram"' in out
+        assert 'title="hint"' in out
+
+    def test_image_object_no_type_key_still_dispatches_by_tag(self):
+        # An SC img node (tag='img', no type) must still take the img path.
+        node = {"tag": "img", "path": "https://example.com/x.png"}
+        out = structured_content_to_html(node)
+        assert out.startswith('<a class="gloss-image-link"')
+
+    def test_unknown_type_renders_empty_not_span(self):
+        # A typed glossary object with an unrecognized `type` must be dropped
+        # outright, NOT fall through to the tag path and emit an empty <span>.
+        node = {"type": "foo"}
+        assert structured_content_to_html(node) == ""
+
+    def test_unknown_type_with_text_payload_dropped(self):
+        # The payload of an unknown-type object is not salvaged as text and does
+        # not leak into an empty span either.
+        node = {"type": "bar", "text": "lost"}
+        out = structured_content_to_html(node)
+        assert out == ""
+        assert "lost" not in out
+        assert "span" not in out
+
+    def test_no_type_tag_node_unchanged(self):
+        # A node WITHOUT a `type` key keeps the existing tag-path behavior.
+        node = {"tag": "span", "content": "x"}
+        assert structured_content_to_html(node) == '<span class="gloss-sc-span">x</span>'
+
+
+class TestDeinflectionGlossaryItem:
+    """Term-bank v3 permits a glossary item to be a deinflection pair
+    [uninflected_term, rule_chain]. Yomitan consumes these to build its
+    deinflection DB, never as prose. Rendering the whole list as SC concatenated
+    the term and rule strings into garbage; we render just the base form."""
+
+    def test_deinflection_pair_renders_uninflected_term_only(self):
+        html = render_glossary_entry([["のたまう", ["past"]]])
+        assert html == ('<li class="gloss-item"><div class="gloss-content">のたまう</div></li>')
+
+    def test_deinflection_pair_escapes_term(self):
+        html = render_glossary_entry([["<x>", ["past"]]])
+        assert html == ('<li class="gloss-item"><div class="gloss-content">&lt;x&gt;</div></li>')
+
+    def test_deinflection_pair_does_not_emit_rule_strings(self):
+        html = render_glossary_entry([["oppidum", ["genitive plural"]]])
+        assert "genitive" not in html
+        assert "oppidum" in html
+
+    def test_deinflection_non_string_term_empty(self):
+        html = render_glossary_entry([[123, ["past"]]])
+        assert html == ('<li class="gloss-item"><div class="gloss-content"></div></li>')
+
+
+class TestInternalQueryLinks:
+    """Yomitan-internal cross-reference links (`href="?query=…"`) are dead
+    inside an Anki webview — there is no Yomitan search page to navigate to.
+    Yomitan's own Anki render path neuters them (prepareLink: internal → '#').
+    Jitendex emits these constantly."""
+
+    def test_internal_query_link_neutered_to_hash(self):
+        node = {"tag": "a", "href": "?query=犬", "content": "犬"}
+        out = structured_content_to_html(node)
+        assert 'href="#"' in out
+        assert "?query" not in out
+        assert out == '<a class="gloss-sc-a" href="#">犬</a>'
+
+    def test_bare_question_mark_neutered(self):
+        node = {"tag": "a", "href": "?", "content": "x"}
+        out = structured_content_to_html(node)
+        assert 'href="#"' in out
+
+    def test_internal_link_with_leading_whitespace_neutered(self):
+        node = {"tag": "a", "href": "  ?query=x", "content": "x"}
+        out = structured_content_to_html(node)
+        assert 'href="#"' in out
+        assert "query=x" not in out
+
+    def test_external_https_link_preserved(self):
+        node = {"tag": "a", "href": "https://example.com/x", "content": "link"}
+        out = structured_content_to_html(node)
+        assert 'href="https://example.com/x"' in out
+
+    def test_external_http_link_preserved(self):
+        node = {"tag": "a", "href": "http://example.com/x", "content": "link"}
+        out = structured_content_to_html(node)
+        assert 'href="http://example.com/x"' in out
+
+    def test_relative_link_still_preserved(self):
+        # Relative paths remain safe (can't execute); only ?-internal is neutered.
+        node = {"tag": "a", "href": "page.html#section", "content": "x"}
+        out = structured_content_to_html(node)
+        assert 'href="page.html#section"' in out
+
+    def test_mailto_link_dropped(self):
+        # The term-bank v3 href schema admits only ^(?:https?:|\?); mailto is not
+        # a valid SC link and is dropped (tightened from the old allowance).
+        node = {"tag": "a", "href": "mailto:x@example.com", "content": "mail"}
+        out = structured_content_to_html(node)
+        assert "mailto" not in out
+        assert out == '<a class="gloss-sc-a">mail</a>'
+
+
+class TestStyleValueSemantics:
+    """Item 4.3: property-aware style-value coercion mirroring Yomitan's
+    _setStructuredContentElementStyle. Directional margins interpret bare
+    numbers as em; textDecorationLine accepts an array (joined); clip-path is
+    allowed."""
+
+    # valid-dictionary1 uses marginTop/Left/Right/Bottom = 1 (bare integers).
+    @pytest.mark.parametrize("side", ["marginTop", "marginLeft", "marginRight", "marginBottom"])
+    def test_numeric_directional_margin_gets_em_unit(self, side):
+        node = {"tag": "div", "style": {side: 1}, "content": "x"}
+        out = structured_content_to_html(node)
+        kebab = {
+            "marginTop": "margin-top",
+            "marginLeft": "margin-left",
+            "marginRight": "margin-right",
+            "marginBottom": "margin-bottom",
+        }[side]
+        assert f"{kebab}: 1em" in out
+        # No bare unitless value survives.
+        assert f"{kebab}: 1;" not in out
+        assert f'{kebab}: 1"' not in out
+
+    def test_fractional_margin_gets_em_unit(self):
+        node = {"tag": "div", "style": {"marginLeft": 0.5}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "margin-left: 0.5em" in out
+
+    def test_integral_float_margin_has_no_trailing_zero(self):
+        node = {"tag": "div", "style": {"marginTop": 2.0}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "margin-top: 2em" in out
+        assert "2.0em" not in out
+
+    def test_string_margin_passes_through_unchanged(self):
+        node = {"tag": "div", "style": {"marginTop": "3px"}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "margin-top: 3px" in out
+
+    def test_numeric_margin_via_top_level_shortcut(self):
+        node = {"tag": "div", "marginBottom": 1, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "margin-bottom: 1em" in out
+
+    def test_non_finite_margin_dropped(self):
+        node = {"tag": "div", "style": {"marginTop": float("inf")}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "margin-top" not in out
+        assert "style=" not in out
+
+    def test_numeric_font_weight_still_unitless(self):
+        # Non-margin numeric props keep their bare value (font-weight: 700 is
+        # valid CSS); only directional margins get the em unit.
+        node = {"tag": "span", "style": {"fontWeight": 700}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "font-weight: 700" in out
+        assert "700em" not in out
+
+    def test_text_decoration_line_string_preserved(self):
+        node = {"tag": "span", "style": {"textDecorationLine": "underline"}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "text-decoration-line: underline" in out
+
+    def test_text_decoration_line_array_joined(self):
+        node = {"tag": "span", "style": {"textDecorationLine": ["underline", "line-through"]}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "text-decoration-line: underline line-through" in out
+
+    def test_text_decoration_line_array_via_shortcut(self):
+        node = {"tag": "span", "textDecorationLine": ["overline", "underline"], "content": "x"}
+        out = structured_content_to_html(node)
+        assert "text-decoration-line: overline underline" in out
+
+    def test_text_decoration_line_non_string_element_dropped(self):
+        node = {"tag": "span", "style": {"textDecorationLine": ["underline", 5]}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "text-decoration-line" not in out
+
+    def test_array_value_on_non_array_prop_dropped(self):
+        node = {"tag": "span", "style": {"color": ["red", "blue"]}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "color" not in out
+
+    def test_clip_path_allowed(self):
+        node = {"tag": "div", "style": {"clipPath": "inset(10px)"}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "clip-path: inset(10px)" in out
+
+    def test_clip_path_via_shortcut(self):
+        node = {"tag": "div", "clipPath": "circle(50%)", "content": "x"}
+        out = structured_content_to_html(node)
+        assert "clip-path: circle(50%)" in out
+
+    def test_clip_path_url_still_scrubbed(self):
+        # url() references are blocked defensively even in clip-path.
+        node = {"tag": "div", "style": {"clipPath": "url(https://evil/x.svg#c)"}, "content": "x"}
+        out = structured_content_to_html(node)
+        assert "evil" not in out
+        assert "url(" not in out
+
+
+class TestStructuredContentTextNodeNewlines:
+    """Item 4.4: newlines inside a structured-content text node become <br> at
+    any depth (Yomitan's _replaceNewlines walks every text node). Before this
+    fix only top-level plain-string glossary items got \\n→<br>; \\n inside SC
+    text collapsed to a space in the Anki webview."""
+
+    def test_top_level_text_node_newline_to_br(self):
+        assert structured_content_to_html("a\nb") == "a<br>b"
+
+    def test_text_node_crlf_and_cr_normalized(self):
+        assert structured_content_to_html("a\r\nb\rc") == "a<br>b<br>c"
+
+    def test_text_node_escaped_then_br(self):
+        assert structured_content_to_html("<b>\nx") == "&lt;b&gt;<br>x"
+
+    def test_newline_inside_element_content(self):
+        node = {"tag": "div", "content": "line1\nline2"}
+        assert structured_content_to_html(node) == '<div class="gloss-sc-div">line1<br>line2</div>'
+
+    def test_newline_in_deeply_nested_text_node(self):
+        node = {"tag": "div", "content": [{"tag": "span", "content": "x\ny"}]}
+        out = structured_content_to_html(node)
+        assert '<span class="gloss-sc-span">x<br>y</span>' in out
+
+    def test_newline_in_list_leaf(self):
+        assert structured_content_to_html(["a\nb", "c"]) == "a<br>bc"
