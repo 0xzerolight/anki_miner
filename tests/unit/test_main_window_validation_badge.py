@@ -20,7 +20,6 @@ from anki_miner.models import ValidationIssue, ValidationResult
 def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
     """Replace config persistence, validation service, and auto-check calls."""
     from anki_miner.gui import main_window as mw_module
-    from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
 
     monkeypatch.setattr(mw_module.GUIConfigManager, "load_config", lambda: test_config)
     monkeypatch.setattr(mw_module.GUIConfigManager, "save_config", lambda cfg: None)
@@ -29,14 +28,6 @@ def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
     monkeypatch.setattr(mw_module.MainWindow, "_check_for_updates", lambda self: None)
     monkeypatch.setattr(mw_module.MainWindow, "_maybe_create_shortcut_on_first_run", lambda self: None)
     monkeypatch.setattr(mw_module.MainWindow, "_maybe_offer_first_run_setup", lambda self: None)
-    # The badge tests call _on_validation_result(ok=True) WITHOUT mocking
-    # notify_anki_connected, so the styling reconcile reaches sync_styling → a
-    # real StylingWorker against live AnkiConnect (tests/_network_tripwire.py) —
-    # and the fixture teardown never joins it (deleteLater only), leaving an
-    # unjoined worker whose connect lands in a random later test's guard
-    # window. Kill the spawn at the controller seam; the reconcile-wiring
-    # tests mock notify_anki_connected itself and are unaffected.
-    monkeypatch.setattr(AnkiProbeController, "_start_styling_write", lambda self, mode: None)
 
 
 @pytest.fixture
@@ -107,32 +98,3 @@ class TestValidationResultUpdatesBadge:
             window._on_validation_result(_result(ankiconnect_ok=True))  # no Settings tab
         finally:
             window.deleteLater()
-
-
-class TestValidationTriggersStylingReconcile:
-    """A reachable AnkiConnect is the cue to reconcile card styling (Issue #44)."""
-
-    def test_passing_validation_reconciles_styling(self, window_with_settings):
-        from unittest.mock import MagicMock
-
-        window, settings_tab = window_with_settings
-        settings_tab.notify_anki_connected = MagicMock()
-
-        window._on_validation_result(_result(ankiconnect_ok=True))
-
-        settings_tab.notify_anki_connected.assert_called_once()
-
-    def test_failing_validation_does_not_reconcile(self, window_with_settings):
-        from unittest.mock import MagicMock
-
-        window, settings_tab = window_with_settings
-        settings_tab.notify_anki_connected = MagicMock()
-
-        window._on_validation_result(
-            _result(
-                ankiconnect_ok=False,
-                issues=[ValidationIssue(component="AnkiConnect", severity="ERROR", message="down")],
-            )
-        )
-
-        settings_tab.notify_anki_connected.assert_not_called()

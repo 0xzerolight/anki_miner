@@ -2,18 +2,18 @@
 
 WHY THIS EXISTS: unit tests must never reach real services. The definitive
 incident (2026-07-01): with Anki open, SettingsTab save/reset tests ran a real
-``StylingWorker`` against AnkiConnect on 127.0.0.1:8765 and stripped the managed
-glossary CSS block from the user's real "Lapis" note type. At the time the
-default was ``manage_card_styling=False`` so the sync ran mode="remove"; since
-v2.7.8 the default is True so the analogous sync runs mode="apply" — either way
-it connects to the real collection, and this tripwire blocks it. Silent on every
-local suite run; invisible in CI (no Anki there → handled connection error).
+card-styling write-worker against AnkiConnect on 127.0.0.1:8765 and stripped the
+user's real "Lapis" note-type CSS. That shared note-type write path has since
+been removed (card styling is now self-contained per card), but the same hazard
+applies to every remaining AnkiConnect worker — fetch fields, fetch decks, and
+the validation probes — so the tripwire stays. Silent on every local suite run;
+invisible in CI (no Anki there → handled connection error).
 ``tests/_home_isolation.py`` guards the data dir; this module is its network
 counterpart.
 
 MECHANISM — record-and-assert, NOT raise-and-propagate. Every AnkiConnect call
 in production runs on a worker QThread inside ``except Exception``
-(``StylingWorker.run``, the validation workers), which swallows ANY exception
+(the fetch and validation workers), which swallows ANY exception
 raised at connect time; even a ``BaseException`` escaping ``QThread.run()`` only
 reaches the worker thread's excepthook and the test stays green (verified
 empirically). So the ``NetworkTripwire`` raise below can only BLOCK the traffic
@@ -81,10 +81,10 @@ def _record_and_raise(address: object) -> None:
     raise NetworkTripwire(
         f"blocked real network connect to {target} during {origin!r}. "
         "Unit tests must not reach live services (AnkiConnect on :8765 once "
-        "stripped the user's real note-type CSS). Stub the seam — "
-        "AnkiProbeController._start_styling_write for SettingsTab/MainWindow "
-        "styling syncs, the per-module post_action copy for direct service "
-        "tests — or mark a genuinely networked test with @pytest.mark.network."
+        "stripped the user's real note-type CSS). Stub the seam — the "
+        "AnkiConnect worker for SettingsTab/MainWindow probes, or the per-module "
+        "post_action copy for direct service tests — or mark a genuinely "
+        "networked test with @pytest.mark.network."
     )
 
 
