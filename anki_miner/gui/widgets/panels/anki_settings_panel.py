@@ -530,10 +530,10 @@ class AnkiSettingsPanel(FormPanel):
 
         styling_helper = QLabel(
             self.tr(
-                "Anki Miner styles mined-card glossaries with one clean built-in stylesheet "
-                "(dictionaries that ship their own styles are applied automatically). The styling "
-                "is embedded in each card, so it works on any note type, on mobile, and in exports — "
-                "and your note type's own card CSS is never touched."
+                "Anki Miner builds one clean set of glossary styles into each mined card — "
+                "so it works on any note type, on mobile, and in exports, and your note "
+                "type's own card CSS is never touched. Dictionaries that ship their own "
+                "styles are applied automatically."
             )
         )
         styling_helper.setObjectName("helper-text")
