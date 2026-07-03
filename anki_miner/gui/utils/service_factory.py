@@ -3,6 +3,8 @@
 import logging
 from dataclasses import dataclass, field
 
+from PyQt6.QtCore import QCoreApplication
+
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
@@ -31,8 +33,14 @@ from anki_miner.services.word_filter import WordFilterService
 from anki_miner.services.word_list_service import WordListService
 from anki_miner.services.wordset_service import WordsetService
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
+
+
+def _tr(text: str) -> str:
+    """Translate a user-facing service-load message under the ServiceFactory context."""
+    return QCoreApplication.translate("ServiceFactory", text)
 
 
 @dataclass
@@ -91,7 +99,7 @@ def _load_dict_registry(
         msg = f"Could not scan dictionaries folder: {e}"
         logger.warning(msg)
         if load_result is not None:
-            load_result.warnings.append(msg)
+            load_result.warnings.append(tr_format(_tr("Couldn't scan dictionaries folder: %1"), e))
     return registry
 
 
@@ -133,17 +141,19 @@ def build_definition_service(
             if load_result is None:
                 raise
             logger.warning("Could not load dictionary chain: %s", e)
-            load_result.warnings.append(f"Could not load dictionary chain: {e}")
+            load_result.warnings.append(tr_format(_tr("Couldn't load dictionary chain: %1"), e))
         else:
             if load_result is not None:
                 available = [p.name for p in providers if p.is_available()]
                 failed = [p.name for p in providers if not p.is_available()]
                 if available:
-                    load_result.info.append(f"Dictionary chain loaded: {', '.join(available)}")
+                    load_result.info.append(tr_format(_tr("Dictionary chain loaded: %1"), ", ".join(available)))
                 if failed:
-                    load_result.warnings.append(f"Provider(s) unavailable, will be skipped: {', '.join(failed)}")
+                    load_result.warnings.append(
+                        tr_format(_tr("Skipping unavailable provider(s): %1"), ", ".join(failed))
+                    )
                 if not available and not failed:
-                    load_result.warnings.append("No offline dictionary index available; lookups will use Jisho only")
+                    load_result.warnings.append(_tr("No offline dictionary index; using Jisho only"))
 
     return definition_service
 
@@ -228,7 +238,7 @@ def _build_expression_audio_fetcher(
                 msg = f"Skipping {entry.kind} audio chain entry with no URL"
                 logger.warning(msg)
                 if load_result is not None:
-                    load_result.warnings.append(msg)
+                    load_result.warnings.append(tr_format(_tr("Skipping %1 audio entry with no URL"), entry.kind))
                 continue
             slug = custom_audio_slug(entry.url)
             fetchers.append(
@@ -260,18 +270,16 @@ def _build_expression_audio_fetcher(
                 # skip silently so a disabled feature surfaces no pack noise.
                 continue
             if entry.pack_id is None:
-                msg = "Skipping audio pack chain entry with null pack_id"
                 # warning already logged by registry.build_fetcher_chain
                 if load_result is not None:
-                    load_result.warnings.append(msg)
+                    load_result.warnings.append(_tr("Skipping audio pack entry with no pack ID"))
                 continue
             resolved_pack = pack_fetchers_by_id.get(entry.pack_id)
             if resolved_pack is None:
                 # Registry skipped it (unknown/missing); warning already logged
                 # there — add to load_result for UI surfacing.
-                msg = f"Audio pack '{entry.pack_id}' not available; skipped in audio chain"
                 if load_result is not None:
-                    load_result.warnings.append(msg)
+                    load_result.warnings.append(tr_format(_tr("Audio pack '%1' unavailable; skipped"), entry.pack_id))
                 continue
             fetchers.append(resolved_pack)  # duplicate pack_ids pass through (same object queried twice)
 
@@ -353,16 +361,15 @@ def create_services(
             pitch_accent_service.load()
             count = pitch_accent_service.entry_count
             if count > 0:
-                load_result.info.append(f"Pitch accent data loaded: {count:,} entries")
+                load_result.info.append(tr_format(_tr("Pitch accent data loaded: %1 entries"), f"{count:,}"))
             else:
                 load_result.warnings.append(
-                    "Pitch accent file loaded but contained 0 valid entries. "
-                    "Expected CSV/TSV format: reading, kanji, pattern (3 columns)."
+                    _tr("Pitch accent file has no valid entries (expected CSV/TSV: reading, kanji, pattern)")
                 )
                 pitch_accent_service = None
         except Exception as e:
             logger.warning(f"Could not load pitch accent data: {e}")
-            load_result.warnings.append(f"Could not load pitch accent data: {e}")
+            load_result.warnings.append(tr_format(_tr("Couldn't load pitch accent data: %1"), e))
             pitch_accent_service = None
 
     frequency_service: MultiFrequencyService | None = None
@@ -380,14 +387,20 @@ def create_services(
                 total_entries = sum(
                     meta.entry_count for p in providers if (meta := registry.get(p.source_id)) is not None
                 )
-                load_result.info.append(f"Frequency data loaded: {len(providers)} source(s), {total_entries:,} entries")
+                load_result.info.append(
+                    tr_format(
+                        _tr("Frequency data loaded: %1 source(s), %2 entries"),
+                        len(providers),
+                        f"{total_entries:,}",
+                    )
+                )
             else:
                 # Nothing enabled / on-disk: no providers loaded. Not an error —
                 # a user can have use_frequency_data on with an empty chain.
                 frequency_service = None
         except Exception as e:
             logger.warning(f"Could not load frequency data: {e}")
-            load_result.warnings.append(f"Could not load frequency data: {e}")
+            load_result.warnings.append(tr_format(_tr("Couldn't load frequency data: %1"), e))
             frequency_service = None
 
     # Always construct the DB: the constructor is I/O-free and the user-curated
@@ -402,7 +415,7 @@ def create_services(
             known_word_db.initialize()
     except Exception as e:
         logger.warning(f"Could not initialize known word database: {e}")
-        load_result.warnings.append(f"Could not initialize known word database: {e}")
+        load_result.warnings.append(tr_format(_tr("Couldn't initialize known word database: %1"), e))
         known_word_db = None
 
     word_list_service = None
@@ -415,7 +428,7 @@ def create_services(
             word_list_service.load()
         except Exception as e:
             logger.warning(f"Could not load word lists: {e}")
-            load_result.warnings.append(f"Could not load word lists: {e}")
+            load_result.warnings.append(tr_format(_tr("Couldn't load word lists: %1"), e))
             word_list_service = None
 
     wordset_service = None
@@ -424,12 +437,14 @@ def create_services(
             wordset_service = WordsetService(enabled_ids=config.excluded_wordsets)
             wordset_service.load()
             if wordset_service.is_available():
-                load_result.info.append(f"Name wordsets loaded: {len(config.excluded_wordsets)} set(s) enabled")
+                load_result.info.append(
+                    tr_format(_tr("Name wordsets loaded: %1 set(s) enabled"), len(config.excluded_wordsets))
+                )
             else:
                 wordset_service = None
         except Exception as e:
             logger.warning(f"Could not load name wordsets: {e}")
-            load_result.warnings.append(f"Could not load name wordsets: {e}")
+            load_result.warnings.append(tr_format(_tr("Couldn't load name wordsets: %1"), e))
             wordset_service = None
 
     return Services(

@@ -57,7 +57,7 @@ class MediaSettingsPanel(FormPanel):
         self.add_field(
             self.tr("Audio Padding"),
             self.audio_padding_spinbox,
-            helper=self.tr("Extra padding before and after the subtitle timing."),
+            helper=self.tr("Extra time before and after the subtitle."),
         )
 
         # Screenshot offset
@@ -68,7 +68,7 @@ class MediaSettingsPanel(FormPanel):
         self.add_field(
             self.tr("Screenshot Offset"),
             self.screenshot_offset_spinbox,
-            helper=self.tr("Offset from subtitle start when capturing the screenshot."),
+            helper=self.tr("Measured from the subtitle start time."),
         )
 
         # Max workers

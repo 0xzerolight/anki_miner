@@ -245,9 +245,7 @@ class SubtitlesSettingsPanel(FormPanel):
             self.tr("ASR device"),
             self.device_combo,
             helper=self.tr(
-                "Auto uses the GPU when one is available and falls back to CPU. "
-                "GPU needs an NVIDIA card plus the GPU acceleration pack (bundled "
-                "installs) or the [asr-cuda] extra (source installs)."
+                "Auto uses the GPU when available, else CPU; GPU needs an NVIDIA card plus the acceleration pack."
             ),
         )
 
@@ -438,7 +436,7 @@ class SubtitlesSettingsPanel(FormPanel):
     def _build_engine_guidance(self) -> QWidget:
         """Build the (initially hidden) 'install the ASR engine' guidance block."""
         guidance = self._build_guidance(
-            self.tr("ASR engine not installed. Subtitle generation needs the faster-whisper engine. Install it with:"),
+            self.tr("Subtitle generation needs the faster-whisper engine. Install it with:"),
             _ASR_INSTALL_COMMAND,
         )
         guidance.setVisible(False)

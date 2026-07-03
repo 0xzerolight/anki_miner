@@ -78,22 +78,14 @@ class FilteringSettingsPanel(FormPanel):
         self.add_field(
             self.tr("Max Frequency Rank"),
             self.max_frequency_spinbox,
-            helper=self.tr(
-                "Set to 0 for no limit, or e.g. 10000 to only mine top 10,000 words. "
-                "Words missing from the frequency list are excluded. Applies only when "
-                "frequency data is enabled (toggle in the Dictionaries tab)."
-            ),
+            helper=self.tr("Words missing from the frequency list are excluded"),
         )
 
         # Known Words Database section
         self.add_section(self.tr("Known Words Database"))
 
         self.use_known_words_db_checkbox = QCheckBox(self.tr("Use Local Known Words Database"))
-        self.add_field(
-            "",
-            self.use_known_words_db_checkbox,
-            helper=self.tr("Caches known words locally to skip the Anki query on every run."),
-        )
+        self.add_field("", self.use_known_words_db_checkbox)
 
         # Rebuild button: clears the local cache so deck exclusions take effect.
         # The cache is additive (never removes), so a deck synced before being
@@ -128,11 +120,7 @@ class FilteringSettingsPanel(FormPanel):
         self.add_section(self.tr("Excluded Decks"))
 
         excluded_helper = QLabel(
-            self.tr(
-                "Words in these decks (and their subdecks) are NOT treated as already "
-                "known, so they stay mineable. Useful for kanji-shape decks like "
-                "Remembering The Kanji that don't teach vocabulary."
-            )
+            self.tr("Words in these decks (and their subdecks) stay mineable — not treated " "as already known.")
         )
         excluded_helper.setObjectName("helper-text")
         excluded_helper.setWordWrap(True)
@@ -166,11 +154,7 @@ class FilteringSettingsPanel(FormPanel):
         )
 
         self.use_blacklist_checkbox = QCheckBox(self.tr("Enable Blacklist"))
-        self.add_field(
-            "",
-            self.use_blacklist_checkbox,
-            helper=self.tr("Skip words found in the blacklist file"),
-        )
+        self.add_field("", self.use_blacklist_checkbox)
 
         self.whitelist_selector = FileSelector(
             label="", file_mode=True, placeholder=self.tr("Select whitelist file...")
@@ -182,11 +166,7 @@ class FilteringSettingsPanel(FormPanel):
         )
 
         self.use_whitelist_checkbox = QCheckBox(self.tr("Enable Whitelist"))
-        self.add_field(
-            "",
-            self.use_whitelist_checkbox,
-            helper=self.tr("Always include words found in the whitelist file"),
-        )
+        self.add_field("", self.use_whitelist_checkbox)
 
         # Name Wordsets section (Issue #59). Bundled proper-noun lists derived
         # from JMnedict; checking one excludes those names from mining. Catches
@@ -238,18 +218,13 @@ class FilteringSettingsPanel(FormPanel):
             self.tr("Replacement"),
             self.subtitle_replacement_edit,
             helper=self.tr(
-                "Text inserted in place of each match (empty deletes the match). "
-                "Use Python backreferences (\\1 \\2) for capture groups. "
-                "Note: NOT $1 $2 syntax like asbplayer; translate when copying patterns."
+                "Inserted in place of each match (empty deletes it). Use Python "
+                "backreferences \\1 \\2, not asbplayer's $1 $2."
             ),
         )
 
         self.use_subtitle_regex_checkbox = QCheckBox(self.tr("Enable Subtitle Regex Filter"))
-        self.add_field(
-            "",
-            self.use_subtitle_regex_checkbox,
-            helper=self.tr("Apply the filter to all parsed subtitle lines (mining and preview)."),
-        )
+        self.add_field("", self.use_subtitle_regex_checkbox)
 
         # Preset buttons row: each click appends its pattern to the regex field
         # joined with `|`. Lets a GUI-only user discover useful patterns without
@@ -302,7 +277,7 @@ class FilteringSettingsPanel(FormPanel):
         self.add_field(
             "",
             self.exclude_katakana_only_checkbox,
-            helper=self.tr("Skip words written entirely in katakana (e.g. コーヒー). Drops most foreign loanwords."),
+            helper=self.tr("Skip words written entirely in katakana (e.g. コーヒー)."),
         )
 
         # i+1 Sentence Filter section
@@ -311,10 +286,8 @@ class FilteringSettingsPanel(FormPanel):
         self.use_i_plus_one_checkbox = QCheckBox(self.tr("Only Mine i+1 Sentences"))
         self.use_i_plus_one_checkbox.setToolTip(
             self.tr(
-                "Only create cards for words that appear in a sentence with exactly ONE "
-                "unknown word (the i+1 / immersion learning concept). Drops words whose "
-                "only examples contain multiple unknowns, so expect significantly fewer "
-                "cards per episode. Overrides sentence deduplication when enabled."
+                "Only mine words in a sentence with exactly one unknown word (i+1); "
+                "overrides sentence deduplication."
             )
         )
         self.add_field("", self.use_i_plus_one_checkbox)

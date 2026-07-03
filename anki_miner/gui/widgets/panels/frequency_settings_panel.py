@@ -331,7 +331,7 @@ class FrequencySettingsPanel(FormPanel):
         self.add_field(
             "",
             self.use_frequency_checkbox,
-            helper=self.tr("Enable to display word frequency rank on cards."),
+            helper=self.tr("Show word frequency rank on cards"),
         )
         self.add_stretch()
 

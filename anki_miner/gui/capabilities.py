@@ -160,9 +160,7 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         id="frequency-rank-filter",
         title=QT_TRANSLATE_NOOP("Capabilities", "Skip rare words (frequency cutoff)"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Ignore words rarer than a chosen frequency rank so you learn common words first."
-        ),
+        description=QT_TRANSLATE_NOOP("Capabilities", "Ignore words rarer than a chosen frequency rank."),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
         keywords=("max rank", "frequency cutoff", "common only", "rare", "threshold", "top n"),
@@ -171,7 +169,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         id="known-words-db",
         title=QT_TRANSLATE_NOOP("Capabilities", "Skip words you already know"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Skip words already in your Anki collection or previously mined, via the known-words DB."
+            "Capabilities", "Skip words already in your Anki collection or previously mined."
         ),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
@@ -200,9 +198,7 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         id="kana-only-exclude",
         title=QT_TRANSLATE_NOOP("Capabilities", "Exclude kana-only words"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Drop words written only in hiragana or katakana -- useful for kanji-focused decks."
-        ),
+        description=QT_TRANSLATE_NOOP("Capabilities", "Drop words written only in hiragana or katakana."),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
         keywords=("kana", "hiragana", "katakana", "kanji only", "script filter"),
@@ -240,7 +236,7 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         id="sentence-length",
         title=QT_TRANSLATE_NOOP("Capabilities", "Limit sentence length"),
-        description=QT_TRANSLATE_NOOP("Capabilities", "Skip sentences that are too long or too short for a good card."),
+        description=QT_TRANSLATE_NOOP("Capabilities", "Skip sentences that are too long or too short."),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
         keywords=("sentence length", "too long", "too short", "duration", "char limit"),
@@ -398,9 +394,7 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         id="card-styling",
         title=QT_TRANSLATE_NOOP("Capabilities", "Card styling / CSS"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Apply a built-in card style or your own CSS, synced to Anki automatically."
-        ),
+        description=QT_TRANSLATE_NOOP("Capabilities", "Apply a built-in card style or your own CSS."),
         category=_CAT_CARDS,
         target=CapabilityTarget("settings", "anki"),
         keywords=("css", "style", "card design", "template", "minimal", "appearance"),

@@ -378,14 +378,7 @@ class DictionarySettingsPanel(FormPanel):
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(
-            QLabel(
-                self.tr(
-                    "Top entry fills the MainDefinition field. "
-                    "Offline dictionaries are recommended; they're faster than Jisho."
-                )
-            )
-        )
+        layout.addWidget(QLabel(self.tr("Top entry fills the MainDefinition field.")))
 
         self._list = QListWidget()
         self._list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)

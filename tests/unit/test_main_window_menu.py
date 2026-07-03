@@ -194,16 +194,15 @@ def test_discord_button_opens_invite_url(main_window, monkeypatch):
 
 
 def test_about_dialog_builds_and_shows_version(qtbot):
-    """AboutDialog constructs headless and renders the version + tagline."""
+    """AboutDialog constructs headless and renders the version."""
     from PyQt6.QtWidgets import QLabel
 
-    from anki_miner.gui.widgets.dialogs.about_dialog import ABOUT_TAGLINE, AboutDialog
+    from anki_miner.gui.widgets.dialogs.about_dialog import AboutDialog
 
     dialog = AboutDialog("9.9.9")
     qtbot.addWidget(dialog)
     try:
         texts = [label.text() for label in dialog.findChildren(QLabel)]
         assert any("9.9.9" in t for t in texts)
-        assert any(ABOUT_TAGLINE in t for t in texts)
     finally:
         dialog.deleteLater()

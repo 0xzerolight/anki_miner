@@ -58,9 +58,8 @@ class KnownWordsManagerDialog(QDialog):
 
         helper = QLabel(
             self.tr(
-                "Words you added from the Word Curator. These are ignored on every "
-                "mining run, kept when you rebuild the cache, and exportable for "
-                "re-import into jiten.moe."
+                "Words you added from the Word Curator — ignored on every run, kept "
+                "across cache rebuilds, exportable for re-import into jiten.moe."
             )
         )
         helper.setObjectName("helper-text")

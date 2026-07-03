@@ -573,9 +573,7 @@ class EpisodeProcessor:
             self.presenter.show_warning(
                 QCoreApplication.translate(
                     "EpisodeProcessor",
-                    "All %n word(s) from this subtitle are already in your Anki collection"
-                    " — no new cards will be created. Card-format options (bold target word,"
-                    " etc.) only apply to newly mined cards.",
+                    "All %n word(s) from this subtitle are already in Anki — no new cards created",
                     "",
                     len(all_words),
                 )
@@ -923,7 +921,10 @@ class EpisodeProcessor:
         if self._expression_audio_active:
             fetched_count = 0
             if progress_callback is not None:
-                progress_callback.on_start(len(media_results), "Fetching expression audio")
+                progress_callback.on_start(
+                    len(media_results),
+                    QCoreApplication.translate("EpisodeProcessor", "Fetching expression audio"),
+                )
             for i, (word, media) in enumerate(media_results):
                 if self.cancelled:
                     if progress_callback is not None:
@@ -942,7 +943,13 @@ class EpisodeProcessor:
                     media.expression_audio_filename = path.name
                     fetched_count += 1
                 if progress_callback is not None:
-                    progress_callback.on_progress(i + 1, f"Expression audio: {word.mined_form}")
+                    progress_callback.on_progress(
+                        i + 1,
+                        tr_format(
+                            QCoreApplication.translate("EpisodeProcessor", "Expression audio: %1"),
+                            word.mined_form,
+                        ),
+                    )
             if progress_callback is not None:
                 progress_callback.on_complete()
             self.presenter.show_info(
@@ -1178,8 +1185,7 @@ class EpisodeProcessor:
             self.presenter.show_warning(
                 QCoreApplication.translate(
                     "EpisodeProcessor",
-                    "%n media file(s) could not be stored in Anki; those cards will have no audio"
-                    " or screenshot. Check that Anki/AnkiConnect is running and see the log for details.",
+                    "%n media file(s) could not be stored in Anki — those cards have no audio or screenshot",
                     "",
                     media_failures,
                 )
@@ -1189,8 +1195,7 @@ class EpisodeProcessor:
             self.presenter.show_warning(
                 QCoreApplication.translate(
                     "EpisodeProcessor",
-                    "Skipped %n word(s) Anki flagged as duplicates (same Expression as an existing"
-                    " card or another word in this batch).",
+                    "Skipped %n word(s) Anki flagged as duplicates (same Expression)",
                     "",
                     skipped_duplicates,
                 )
@@ -1203,7 +1208,7 @@ class EpisodeProcessor:
             self.presenter.show_info(
                 QCoreApplication.translate(
                     "EpisodeProcessor",
-                    "Updated %n existing duplicate card(s): filled empty fields from this run.",
+                    "Updated %n existing duplicate card(s): filled empty fields",
                     "",
                     updated_notes,
                 )
@@ -1406,9 +1411,7 @@ class EpisodeProcessor:
                     )
                     return ctx.build_result(new_words_found=0)
                 self.presenter.show_info(
-                    QCoreApplication.translate(
-                        "EpisodeProcessor", "User selected %n word(s) for card creation", "", len(unknown_words)
-                    )
+                    QCoreApplication.translate("EpisodeProcessor", "Mining %n selected word(s)", "", len(unknown_words))
                 )
 
             if preview_mode:
@@ -1484,7 +1487,12 @@ class EpisodeProcessor:
             partial_ids = list(self.anki_service.last_created_note_ids)
             if partial_ids:
                 ctx.errors.append(
-                    f"Run failed after creating {len(partial_ids)} card(s); " f"they remain in Anki and can be undone."
+                    QCoreApplication.translate(
+                        "EpisodeProcessor",
+                        "Run failed after creating %n card(s); they remain in Anki and can be undone.",
+                        "",
+                        len(partial_ids),
+                    )
                 )
             self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
             return ctx.build_result(
@@ -1499,7 +1507,12 @@ class EpisodeProcessor:
             partial_ids = list(self.anki_service.last_created_note_ids)
             if partial_ids:
                 ctx.errors.append(
-                    f"Run failed after creating {len(partial_ids)} card(s); " f"they remain in Anki and can be undone."
+                    QCoreApplication.translate(
+                        "EpisodeProcessor",
+                        "Run failed after creating %n card(s); they remain in Anki and can be undone.",
+                        "",
+                        len(partial_ids),
+                    )
                 )
             self.presenter.show_error(
                 tr_format(QCoreApplication.translate("EpisodeProcessor", "Unexpected error: %1"), str(e))

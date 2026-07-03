@@ -48,8 +48,7 @@ NOTE_TYPE_HELP_URL = "https://github.com/0xzerolight/anki_miner#recommended-note
 # Moved from welcome_dialog.WELCOME_BLURB (that dialog is retired).
 RESOURCES_BLURB = QT_TRANSLATE_NOOP(
     "SetupWizard",
-    "Anki Miner works best with a frequency list, pitch accent data, and a "
-    "dictionary. Download the recommended set now?",
+    "Download the recommended frequency list, pitch accent data, and dictionary now?",
 )
 RESOURCES_HELP_URL = "https://github.com/0xzerolight/anki_miner#recommended-resources"
 
@@ -77,10 +76,7 @@ class AnkiConnectPage(QWizardPage):
 
         guidance = QLabel(
             tr_format(
-                self.tr(
-                    "AnkiConnect is a free Anki add-on. In Anki: Tools → Add-ons → "
-                    "Get Add-ons…, paste the code <b>%1</b>, then restart Anki."
-                ),
+                self.tr("In Anki: Tools → Add-ons → Get Add-ons…, paste the code " "<b>%1</b>, then restart Anki."),
                 ANKICONNECT_ADDON_CODE,
             )
         )

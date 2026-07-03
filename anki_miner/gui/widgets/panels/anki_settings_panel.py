@@ -246,14 +246,12 @@ class AnkiSettingsPanel(FormPanel):
         # Picture field
         self.picture_field_input = QLineEdit()
         self.picture_field_input.setPlaceholderText("Picture")
-        self.add_field(self.tr("Picture Field"), self.picture_field_input, helper=self.tr("Stores the screenshot."))
+        self.add_field(self.tr("Picture Field"), self.picture_field_input)
 
         # Audio field
         self.audio_field_input = QLineEdit()
         self.audio_field_input.setPlaceholderText("SentenceAudio")
-        self.add_field(
-            self.tr("Audio Field"), self.audio_field_input, helper=self.tr("Stores the sentence audio clip.")
-        )
+        self.add_field(self.tr("Audio Field"), self.audio_field_input)
 
         # Expression audio field (Issue #73). Field-name presence is the on/off
         # switch (like Frequency/Pitch) — leave blank to disable. Sources are
@@ -263,20 +261,13 @@ class AnkiSettingsPanel(FormPanel):
         self.add_field(
             self.tr("Expression Audio Field"),
             self.expression_audio_field_input,
-            helper=self.tr(
-                "Stores the word pronunciation audio clip; leave blank to disable. "
-                "Sources are configured under Audio settings."
-            ),
+            helper=self.tr("Word pronunciation audio; blank disables. Configure sources under Audio settings."),
         )
 
         # Expression Furigana field
         self.expression_furigana_field_input = QLineEdit()
         self.expression_furigana_field_input.setPlaceholderText("ExpressionFurigana")
-        self.add_field(
-            self.tr("Expression Furigana Field"),
-            self.expression_furigana_field_input,
-            helper=self.tr("Stores the expression with furigana readings."),
-        )
+        self.add_field(self.tr("Expression Furigana Field"), self.expression_furigana_field_input)
 
         # Expression Reading field (plain kana)
         self.expression_reading_field_input = QLineEdit()
@@ -290,11 +281,7 @@ class AnkiSettingsPanel(FormPanel):
         # Sentence Furigana field
         self.sentence_furigana_field_input = QLineEdit()
         self.sentence_furigana_field_input.setPlaceholderText("SentenceFurigana")
-        self.add_field(
-            self.tr("Sentence Furigana Field"),
-            self.sentence_furigana_field_input,
-            helper=self.tr("Stores the sentence with furigana readings."),
-        )
+        self.add_field(self.tr("Sentence Furigana Field"), self.sentence_furigana_field_input)
 
         # Sentence Reading field (plain kana)
         self.sentence_reading_field_input = QLineEdit()
@@ -352,7 +339,7 @@ class AnkiSettingsPanel(FormPanel):
         # Auxiliary Data Fields section
         self.add_section(self.tr("Auxiliary Data Fields"))
 
-        auxiliary_helper = QLabel(self.tr("Need pitch_accent.csv / frequency.csv in ~/.anki_miner/. Blank = skip."))
+        auxiliary_helper = QLabel(self.tr("Need pitch_accent.csv in ~/.anki_miner/. Blank = skip."))
         auxiliary_helper.setObjectName("helper-text")
         auxiliary_helper.setWordWrap(True)
         self.add_widget(auxiliary_helper)
@@ -360,20 +347,12 @@ class AnkiSettingsPanel(FormPanel):
         # Pitch Position field
         self.pitch_position_field_input = QLineEdit()
         self.pitch_position_field_input.setPlaceholderText("PitchPosition")
-        self.add_field(
-            self.tr("Pitch Position Field"),
-            self.pitch_position_field_input,
-            helper=self.tr("Stores the numeric pitch drop position."),
-        )
+        self.add_field(self.tr("Pitch Position Field"), self.pitch_position_field_input)
 
         # Pitch Category field
         self.pitch_category_field_input = QLineEdit()
         self.pitch_category_field_input.setPlaceholderText("PitchCategory")
-        self.add_field(
-            self.tr("Pitch Category Field"),
-            self.pitch_category_field_input,
-            helper=self.tr("Stores the pitch category label."),
-        )
+        self.add_field(self.tr("Pitch Category Field"), self.pitch_category_field_input)
 
         # Pitch Category format (jp vs romaji)
         self.pitch_category_format_combo = QComboBox()
@@ -496,10 +475,8 @@ class AnkiSettingsPanel(FormPanel):
 
         styling_helper = QLabel(
             self.tr(
-                "Anki Miner builds one clean set of glossary styles into each mined card — "
-                "so it works on any note type, on mobile, and in exports, and your note "
-                "type's own card CSS is never touched. Dictionaries that ship their own "
-                "styles are applied automatically."
+                "Glossary styles are baked into each mined card, so your note type's CSS is "
+                "never touched. Dictionaries that ship their own styles are applied automatically."
             )
         )
         styling_helper.setObjectName("helper-text")
