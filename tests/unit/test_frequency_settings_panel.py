@@ -54,6 +54,7 @@ def _make_meta(
     entry_count: int = 100,
     schema_ok: bool = True,
     version: int = SCHEMA_VERSION,
+    is_categorical: bool = False,
 ) -> FreqSourceMeta:
     """Build a FreqSourceMeta without touching disk."""
     return FreqSourceMeta(
@@ -64,6 +65,7 @@ def _make_meta(
         schema_ok=schema_ok,
         version=version,
         db_path=Path("/fake/index.sqlite"),
+        is_categorical=is_categorical,
     )
 
 
@@ -115,6 +117,21 @@ def test_row_shows_format_and_entry_count(qapp, qtbot, tmp_path):
     assert any("JPDB" in t for t in texts), texts
     assert any("yomitan-freq" in t for t in texts), texts
     assert any("5,000" in t for t in texts), texts
+    assert not any("word-based" in t for t in texts), texts  # numeric source: no badge
+
+
+def test_word_based_badge_shown_for_categorical_source(qapp, qtbot, tmp_path):
+    meta = _make_meta("jlpt", source_name="JLPT", is_categorical=True)
+    panel = FrequencySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(
+        (FreqEntry(source_id="jlpt", enabled=True),),
+        registry_meta={"jlpt": meta},
+    )
+    row = panel._row_widget(0)
+    assert row is not None
+    texts = [lbl.text() for lbl in row.findChildren(QLabel)]
+    assert any("word-based" in t for t in texts), texts
 
 
 def test_missing_source_badge_shown(qapp, qtbot, tmp_path):
