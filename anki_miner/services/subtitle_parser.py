@@ -32,6 +32,7 @@ from anki_miner.utils import (
     katakana_to_hiragana,
     wrap_target_plain,
 )
+from anki_miner.utils.sentence_extract import extract_sentence
 from anki_miner.utils.text_utils import (
     generate_furigana_from_tokens,
     generate_reading_from_tokens,
@@ -425,6 +426,29 @@ class SubtitleParserService:
         # so reuse the value; a kanji-variant divergence (乞う vs 請う)
         # recomputes the lemma's reading like the surface-mined case.
         lemma_reading = expression_reading if mined == lemma else self._reading(lemma)
+
+        # Opt-in sentence-boundary trimming (3.3). Trim the cue to the sentence
+        # containing the target, then rebase the carried offsets into the trimmed
+        # text so bold/cloze fields stay aligned. Anchor the forward walk on the
+        # full inflected span (bold_end) so a terminator inside the word can't
+        # split it. Sentence furigana/reading are regenerated from the trimmed
+        # text via the per-parse memos, and raw_tokens is re-tokenized so the
+        # bold-furigana path (wrap_target_furigana_from_tokens) sees tokens that
+        # match the trimmed text, not the whole cue. count_lemmas / the line
+        # index are untouched — trimming is emission-only.
+        if self.config.trim_to_sentence:
+            term_end = highlight_end if highlight_end >= 0 else tok_end
+            trimmed, offset = extract_sentence(text, tok_start, term_end)
+            if trimmed != text:
+                shift = tok_start - offset
+                text = trimmed
+                tok_start = offset
+                tok_end -= shift
+                if highlight_end >= 0:
+                    highlight_end -= shift
+                sentence_furigana = self._furigana(text)
+                sentence_reading = self._reading(text)
+                raw_tokens = list(self.tagger(text))
 
         if self.config.bold_target_in_sentence:
             # Bold the full inflected form (verb/adjective + auxiliary
