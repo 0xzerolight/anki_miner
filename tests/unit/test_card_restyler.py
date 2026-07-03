@@ -83,12 +83,30 @@ class TestRestyleMinedCards:
         assert result.skipped_styled == 1
         svc.update_notes_fields.assert_not_called()
 
-    def test_glossary_field_unmapped_is_noop(self):
-        cfg = replace(_cfg(), anki_fields={**_cfg().anki_fields, "glossary": ""})
+    def test_no_styling_field_mapped_is_noop(self):
+        # Noop only when NEITHER glossary NOR definition is mapped — with no
+        # carrier field there is nowhere to attach the card-wide block.
+        cfg = replace(_cfg(), anki_fields={**_cfg().anki_fields, "glossary": "", "definition": ""})
         svc = MagicMock()
         result = restyle_mined_cards(svc, cfg)
         assert result == RestyleResult(0, 0, 0, 0)
         svc.find_notes.assert_not_called()
+
+    def test_definition_field_used_when_glossary_unmapped(self):
+        # Parity with fresh mining: default config maps definition but not
+        # glossary, so the block prepends to the DEFINITION field (a card-wide
+        # <style> in any field), matching EpisodeProcessor._phase5_create.
+        cfg = replace(_cfg(), anki_fields={**_cfg().anki_fields, "glossary": ""})
+        def_field = cfg.anki_fields["definition"]
+        svc = _svc([_note(1, BARE, field=def_field)])
+        result = restyle_mined_cards(svc, cfg)
+        assert result.restyled == 1
+        (updates,), _ = svc.update_notes_fields.call_args
+        nid, fields = updates[0]
+        assert nid == 1
+        assert def_field in fields
+        assert fields[def_field].startswith("<style>")
+        assert fields[def_field].endswith(BARE)  # prepend, original preserved
 
     def test_empty_block_is_noop(self, monkeypatch):
         # Defensive: an empty block would otherwise "restyle" every card forever.

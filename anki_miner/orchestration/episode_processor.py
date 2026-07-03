@@ -34,6 +34,7 @@ from anki_miner.services import (
 )
 from anki_miner.services.definition_service import collect_dictionary_css
 from anki_miner.services.dictionary.card_style_block import build_card_style_block
+from anki_miner.services.frequency.multi_frequency_service import harmonic_rank, min_rank
 from anki_miner.services.frequency.render import render_frequency_html
 from anki_miner.services.pitch_accent.render import (
     render_pitch_graph_field,
@@ -112,11 +113,13 @@ def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | Non
     """Name the dominant expression-audio failure cause, or None.
 
     ``counts`` is a ChainedExpressionAudioFetcher ``stats()`` tally keyed by
-    failure bucket (ssl/connection/timeout/http_status/non_audio). Only surfaces
-    a diagnosis when transient failures DOMINATE the run — a genuine "word not in
-    JPod101" miss is never counted, so a high total means something systemic
-    (expired certificate, outage, rate-limit) rather than words simply being
-    absent. Scattered failures among mostly-successful fetches stay quiet.
+    failure bucket (ssl/connection/timeout/http_status/non_audio), aggregated
+    across every enabled word-audio source (packs, JPod101, custom URL/JSON,
+    scrape, gTTS). Only surfaces a diagnosis when transient failures DOMINATE the
+    run — a genuine "word not in any source" miss is never counted, so a high
+    total means something systemic (expired certificate, outage, rate-limit)
+    rather than words simply being absent. Scattered failures among
+    mostly-successful fetches stay quiet.
 
     Ties resolve to the earliest bucket (ssl first) via ``max`` over a stable
     key order, matching Yomitan's priority on the most actionable cause.
@@ -132,16 +135,16 @@ def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | Non
     if dominant in ("ssl", "connection", "timeout"):
         return QCoreApplication.translate(
             "EpisodeProcessor",
-            "JPod101 certificate/connection failure — audio skipped this run, will retry next run",
+            "Word-audio source connection/certificate failure — audio skipped this run, will retry next run",
         )
     if dominant == "http_status":
         return QCoreApplication.translate(
             "EpisodeProcessor",
-            "JPod101 returned repeated server errors — audio skipped this run, will retry next run",
+            "Word-audio source returned repeated server errors — audio skipped this run, will retry next run",
         )
     return QCoreApplication.translate(
         "EpisodeProcessor",
-        "JPod101 returned non-audio responses (likely rate-limited) — audio skipped this run, will retry next run",
+        "Word-audio source returned non-audio responses (likely rate-limited) — audio skipped this run, will retry next run",
     )
 
 
@@ -482,9 +485,15 @@ class EpisodeProcessor:
                 # the surface reading. Hiragana-normalize so a katakana subtitle
                 # reading matches a hiragana-stored frequency reading.
                 reading = katakana_to_hiragana(word.lemma_reading or word.reading)
-                word.frequency_sources = self.frequency_service.lookup_all(word.lemma, reading)
-                word.frequency_rank = self.frequency_service.lookup_min(word.lemma, reading)
-                word.frequency_harmonic_rank = self.frequency_service.lookup_harmonic(word.lemma, reading)
+                # One per-source fetch, then derive min + harmonic locally: the
+                # service's lookup_min/lookup_harmonic each re-run lookup_all
+                # internally, so calling all three would run the per-source SQL
+                # three times per word. min_rank/harmonic_rank are the same pure
+                # derivations lookup_min/lookup_harmonic wrap.
+                sources = self.frequency_service.lookup_all(word.lemma, reading)
+                word.frequency_sources = sources
+                word.frequency_rank = min_rank(sources)
+                word.frequency_harmonic_rank = harmonic_rank(sources)
             ranked_count = sum(1 for w in all_words if w.frequency_rank is not None)
             self.presenter.show_info(
                 tr_format(
@@ -1051,12 +1060,18 @@ class EpisodeProcessor:
         card_data: list[CardPayload] = []
         # Self-contained per-card glossary styling: assemble the <style> block
         # ONCE per episode (collect_dictionary_css does registry + per-dict SQLite
-        # I/O), gated on the glossary field being mapped so unmapped runs skip the
-        # I/O. Prepended to each card's glossary field below so styling travels
-        # inside the note — no note-type CSS write. Bound unconditionally ("") so
-        # the write-site reference is always safe.
+        # I/O). Built when EITHER the glossary OR the definition field is mapped —
+        # an Anki <style> in any field is card-wide, so the block rides the
+        # glossary field when it's mapped and otherwise prepends to the definition
+        # field. That way the base sheet (dark-theme SVG recolor, tag chips,
+        # structured-content layout) reaches default-config cards too, which map
+        # definition="MainDefinition" but leave glossary unmapped. Skipping the
+        # build only when neither is mapped keeps the no-styling path I/O-free.
+        # Bound unconditionally ("") so the write-site reference is always safe.
+        glossary_mapped = bool(self.config.anki_fields.get("glossary"))
+        definition_mapped = bool(self.config.anki_fields.get("definition"))
         style_block = ""
-        if self.config.anki_fields.get("glossary"):
+        if glossary_mapped or definition_mapped:
             style_block = build_card_style_block(
                 custom_css=self.config.custom_card_css,
                 dict_css=collect_dictionary_css(self.config),
@@ -1119,11 +1134,20 @@ class EpisodeProcessor:
             # non-empty configured field name (anki_fields["source"]).
             extra_fields["source"] = f"{ctx.source_label} @ {_format_timestamp(word.start_time)}"
 
+            # When the glossary field isn't the styling carrier (unmapped), prepend
+            # the style block to the definition field so the card still carries the
+            # base sheet. When glossary IS mapped it already rides the glossary
+            # field above (a card-wide <style> only needs to appear once), so the
+            # definition stays untouched — keeping glossary-mapped output identical.
+            card_definition = definition
+            if style_block and not glossary_mapped:
+                card_definition = style_block + definition
+
             card_data.append(
                 CardPayload(
                     word=word,
                     media=media,
-                    definition=definition,
+                    definition=card_definition,
                     extra_fields=extra_fields if extra_fields else None,
                 )
             )

@@ -64,17 +64,20 @@ def restyle_mined_cards(
 ) -> RestyleResult:
     """Prepend the self-contained ``<style>`` block to miner cards that lack the base sheet.
 
-    Restyles a note's glossary field when it carries the miner markup
+    Restyles a note's styling-carrier field when it carries the miner markup
     (``yomitan-glossary`` and ``data-count``) but not the base sheet
     (``ol[data-count]`` — a CSS-selector token that appears only inside our
     minified base ``<style>``, never in card markup or a legacy per-dict block).
-    Idempotent: a restyled card then contains ``ol[data-count]`` so a re-run skips
-    it. Additive: only prepends; never removes card content, never writes
-    note-type styling. Genuine Yomitan-exported cards (which lack ``data-count``)
-    are left untouched.
+    The carrier field is the glossary field when mapped, else the definition field
+    — matching where fresh mining now attaches the block
+    (``EpisodeProcessor._phase5_create``), so a default-config user (definition
+    mapped, glossary unmapped) still gets old cards restyled. Idempotent: a
+    restyled card then contains ``ol[data-count]`` so a re-run skips it. Additive:
+    only prepends; never removes card content, never writes note-type styling.
+    Genuine Yomitan-exported cards (which lack ``data-count``) are left untouched.
     """
-    glossary_field = config.anki_fields.get("glossary")
-    if not glossary_field:
+    styling_field = config.anki_fields.get("glossary") or config.anki_fields.get("definition")
+    if not styling_field:
         return RestyleResult(0, 0, 0, 0)
 
     block = build_card_style_block(custom_css=config.custom_card_css, dict_css=collect_dictionary_css(config))
@@ -95,10 +98,10 @@ def restyle_mined_cards(
             fields = info.get("fields")
             if not isinstance(note_id, int) or not isinstance(fields, dict):
                 continue  # deleted ({}) / malformed
-            entry = fields.get(glossary_field)
+            entry = fields.get(styling_field)
             if not isinstance(entry, dict):
                 scanned += 1
-                continue  # glossary field absent on this note type instance
+                continue  # styling field absent on this note type instance
             value = entry.get("value", "") or ""
             scanned += 1
             if "yomitan-glossary" not in value or "data-count" not in value:
@@ -107,7 +110,7 @@ def restyle_mined_cards(
             if "ol[data-count]" in value:
                 skipped_styled += 1
                 continue
-            updates.append((note_id, {glossary_field: block + value}))
+            updates.append((note_id, {styling_field: block + value}))
         if updates:
             restyled += anki_service.update_notes_fields(updates)
         if progress:
