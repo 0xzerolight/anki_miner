@@ -23,6 +23,7 @@ from anki_miner.services.audio_packs.storage import (
 # Canonical folder name → canonical pack_id mapping for known local-audio-yomichan packs.
 _CANONICAL_IDS: dict[str, str] = {
     "nhk16_files": "nhk16",
+    "ozk5_files": "ozk5",
     "shinmeikai8_files": "shinmeikai8",
     "forvo_files": "forvo",
     "jpod_files": "jpod",
@@ -70,7 +71,7 @@ def derive_pack_id(folder_name: str) -> str:
 class AudioPackImportResult:
     pack_id: str
     source_name: str  # source string stored in entries rows
-    format: str  # "ajt" | "nhk16" | "forvo" | "jpod_legacy"
+    format: str  # "ajt" | "ozk5" | "nhk16" | "forvo" | "jpod_legacy"
     entry_count: int
 
 

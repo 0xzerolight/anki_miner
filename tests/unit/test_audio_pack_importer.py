@@ -184,6 +184,7 @@ class TestDerivePackId:
         "folder,expected",
         [
             ("nhk16_files", "nhk16"),
+            ("ozk5_files", "ozk5"),
             ("shinmeikai8_files", "shinmeikai8"),
             ("forvo_files", "forvo"),
             ("jpod_files", "jpod"),
