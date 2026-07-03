@@ -82,6 +82,12 @@ class AnkiMinerConfig:
             "frequency_sort": "",
             "source": "",
             "expression_audio": "",
+            # Yomitan getCloze split fields (3.1). All default "" (feature off,
+            # wire byte-identical via the empty-name skip in anki_note_builder).
+            "cloze_prefix": "",
+            "cloze_body": "",
+            "cloze_body_kana": "",
+            "cloze_suffix": "",
         }
     )
     # JP Mining Note-style card-type marker. When card_type is non-empty, an "x"
