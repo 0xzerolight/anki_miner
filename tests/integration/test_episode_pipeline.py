@@ -172,6 +172,13 @@ class TestEpisodePipeline:
                 # Media upload envelope: one result per sub-action.
                 sub = params.get("actions", [])
                 r.json.return_value = {"result": ["stored.jpg"] * len(sub), "error": None}
+            elif action == "canAddNotesWithErrorDetail":
+                # Pre-add duplicate probe: report every note as addable.
+                probe_notes = params.get("notes", [])
+                r.json.return_value = {
+                    "result": [{"canAdd": True, "error": None} for _ in probe_notes],
+                    "error": None,
+                }
             elif action == "addNotes":
                 notes = params.get("notes", [])
                 added_notes.extend(notes)
