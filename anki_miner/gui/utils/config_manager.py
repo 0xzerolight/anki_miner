@@ -259,11 +259,20 @@ class GUIConfigManager:
         for item in raw_chain:
             if isinstance(item, dict):
                 kind = item.get("kind")
-                if kind in ("pack", "jpod101", "googletts"):
+                if kind in (
+                    "pack",
+                    "jpod101",
+                    "googletts",
+                    "custom",
+                    "custom_json",
+                    "jpod101_scrape",
+                    "jisho_scrape",
+                ):
                     chain.append(
                         AudioSourceEntry(
                             kind=kind,
                             pack_id=item.get("pack_id"),
+                            url=item.get("url"),
                             enabled=bool(item.get("enabled", True)),
                         )
                     )
