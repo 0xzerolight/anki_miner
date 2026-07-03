@@ -5,8 +5,10 @@ import pytest
 from anki_miner.exceptions import SetupError
 from anki_miner.services.pitch_accent_service import (
     PitchAccentService,
+    PitchEntry,
     classify_pitch,
     count_mora,
+    downstep_positions,
 )
 
 
@@ -205,7 +207,9 @@ class TestLoad:
         service = PitchAccentService(csv_file)
         assert service.entry_count == 0
         service.load()
-        assert service.entry_count == 4  # 2 kanji + 2 reading entries
+        # entry_count is now distinct (surface, reading) pairs, not doubled by
+        # separate kanji/reading keys (service was re-keyed for reading-scoping).
+        assert service.entry_count == 2
 
     def test_first_entry_wins_on_duplicate_key(self, tmp_path):
         """Test that the first entry wins when keys are duplicated."""
@@ -405,6 +409,178 @@ class TestLookupDetailed:
         # Both are accented verbs → kifuku (NHK convention); 食べる[2] is no
         # longer mislabeled nakadaka.
         assert results == [("2", "kifuku"), ("3", "kifuku")]
+
+
+class TestDownstepPositions:
+    """Port of Yomitan getDownstepPositions — H/L mora string → downstep index."""
+
+    def test_single_downstep(self):
+        # LHL: H→L at index 2.
+        assert downstep_positions("LHL") == [2]
+
+    def test_atamadaka_hl(self):
+        # HLLL: H→L at index 1.
+        assert downstep_positions("HLLL") == [1]
+
+    def test_heiban_starts_low_no_downstep(self):
+        # LHHH: no H→L transition, starts Low → heiban (position 0).
+        assert downstep_positions("LHHH") == [0]
+
+    def test_all_high_unresolvable(self):
+        # HHHH: no downstep and does not start Low → -1 (no resolvable downstep).
+        assert downstep_positions("HHHH") == [-1]
+
+    def test_multiple_downsteps(self):
+        # LHLHL: H→L at index 2 and index 4.
+        assert downstep_positions("LHLHL") == [2, 4]
+
+
+class TestReadingScopedLookup:
+    """Homographs resolve by the reading passed in, not load order (弾く)."""
+
+    @pytest.fixture
+    def homograph_service(self, tmp_path):
+        csv_file = tmp_path / "pitch.csv"
+        # 弾く: ひく[0] loaded FIRST, はじく[2] second. Old code returned whichever
+        # loaded first for any reading; the fix scopes by reading.
+        csv_file.write_text("ひく,弾く,0\nはじく,弾く,2\n", encoding="utf-8")
+        service = PitchAccentService(csv_file)
+        service.load()
+        return service
+
+    def test_hiku_reading(self, homograph_service):
+        assert homograph_service.lookup("弾く", "ひく") == "0"
+
+    def test_hajiku_reading_not_collided(self, homograph_service):
+        # The bug: this used to return "0" (ひく) because kanji matched first.
+        assert homograph_service.lookup("弾く", "はじく") == "2"
+
+    def test_both_entries_kept(self, homograph_service):
+        assert homograph_service.entry_count == 2
+
+    def test_unknown_reading_does_not_guess(self, homograph_service):
+        # Multiple candidates + a reading matching none exactly → no guess.
+        assert homograph_service.lookup("弾く", "へんな") is None
+
+    def test_no_reading_falls_back_first_wins(self, homograph_service):
+        # With nothing to disambiguate, legacy first-wins behavior applies.
+        assert homograph_service.lookup("弾く") == "0"
+
+    def test_single_candidate_kana_variant_fallback(self, tmp_path):
+        # Only one entry for the surface → pragmatic fallback even if the reading
+        # is a variant that doesn't match exactly.
+        csv_file = tmp_path / "pitch.csv"
+        csv_file.write_text("たべる,食べる,0\n", encoding="utf-8")
+        service = PitchAccentService(csv_file)
+        service.load()
+        assert service.lookup("食べる", "たべ") == "0"
+
+
+class TestFiveColumnCsv:
+    """The enriched 5-column CSV (reading,kanji,pattern,nasal,devoice)."""
+
+    def test_five_column_round_trip(self, tmp_path):
+        csv_file = tmp_path / "pitch.csv"
+        # csv.writer would quote "1,3"; write it quoted here to mirror that.
+        csv_file.write_text(
+            'reading,kanji,pattern,nasal,devoice\nほんばこ,本箱,3,"1,3",2\n',
+            encoding="utf-8",
+        )
+        service = PitchAccentService(csv_file)
+        service.load()
+        entry = service.lookup_entry("本箱", "ほんばこ")
+        assert entry == PitchEntry(pattern="3", nasal=(1, 3), devoice=(2,))
+
+    def test_five_column_empty_nasal_devoice(self, tmp_path):
+        csv_file = tmp_path / "pitch.csv"
+        csv_file.write_text(
+            "reading,kanji,pattern,nasal,devoice\nねこ,猫,1,,\n",
+            encoding="utf-8",
+        )
+        service = PitchAccentService(csv_file)
+        service.load()
+        entry = service.lookup_entry("猫", "ねこ")
+        assert entry == PitchEntry(pattern="1", nasal=(), devoice=())
+
+    def test_hl_string_pattern_categorized(self, tmp_path):
+        csv_file = tmp_path / "pitch.csv"
+        csv_file.write_text(
+            "reading,kanji,pattern,nasal,devoice\nはし,箸,LHL,,\n",
+            encoding="utf-8",
+        )
+        service = PitchAccentService(csv_file)
+        service.load()
+        pos, cat = service.lookup_detailed("箸", "はし")
+        assert pos == "LHL"
+        assert cat == "尾高"  # LHL → downstep 2; はし 2 mora → odaka
+
+
+class TestLegacyCompatibility:
+    """Legacy 3-column files (headerless / headered / comma-delimited) keep working."""
+
+    def test_headerless_three_column(self, tmp_path):
+        csv_file = tmp_path / "pitch.csv"
+        csv_file.write_text("たべる,食べる,0\nのむ,飲む,1\n", encoding="utf-8")
+        service = PitchAccentService(csv_file)
+        service.load()
+        assert service.lookup("食べる") == "0"
+        assert service.lookup("飲む") == "1"
+        # Legacy rows have no nasal/devoice.
+        assert service.lookup_entry("食べる", "たべる") == PitchEntry("0", (), ())
+
+    def test_headered_three_column(self, tmp_path):
+        csv_file = tmp_path / "pitch.csv"
+        csv_file.write_text(
+            "reading,kanji,pattern\nたべる,食べる,0\nのむ,飲む,1\n",
+            encoding="utf-8",
+        )
+        service = PitchAccentService(csv_file)
+        service.load()
+        assert service.lookup("食べる") == "0"
+        assert service.lookup("reading") is None
+
+    def test_comma_delimited_legacy_multi_position_pattern(self, tmp_path):
+        # A HAND-EDITED legacy comma file whose pattern is "0,2" splits into 4 raw
+        # fields. It must be treated as legacy (not the 5-col format) and the
+        # pattern tail rejoined so it reads back as "0,2".
+        csv_file = tmp_path / "pitch.csv"
+        csv_file.write_text("いちがつ,１月,0,2\n", encoding="utf-8")
+        service = PitchAccentService(csv_file)
+        service.load()
+        entry = service.lookup_entry("１月", "いちがつ")
+        assert entry is not None
+        assert entry.pattern == "0,2"
+        # The trailing "2" must NOT be misread as a nasal/devoice column.
+        assert entry.nasal == ()
+        assert entry.devoice == ()
+
+    def test_anomalous_six_field_treated_as_legacy(self, tmp_path):
+        # >= 6 fields (e.g. a hand-edited pattern with 4 positions) → legacy,
+        # tail-rejoined; nasal/devoice stay empty.
+        csv_file = tmp_path / "pitch.csv"
+        csv_file.write_text("よん,四,0,1,2,3\n", encoding="utf-8")
+        service = PitchAccentService(csv_file)
+        service.load()
+        entry = service.lookup_entry("四", "よん")
+        assert entry is not None
+        assert entry.pattern == "0,1,2,3"
+        assert entry.nasal == ()
+        assert entry.devoice == ()
+
+
+class TestLookupEntry:
+    """lookup_entry exposes PitchEntry fidelity (nasal/devoice) for downstream render."""
+
+    def test_returns_none_when_not_loaded(self, tmp_path):
+        service = PitchAccentService(tmp_path / "pitch.csv")
+        assert service.lookup_entry("食べる") is None
+
+    def test_returns_none_for_unknown(self, tmp_path):
+        csv_file = tmp_path / "pitch.csv"
+        csv_file.write_text("たべる,食べる,0\n", encoding="utf-8")
+        service = PitchAccentService(csv_file)
+        service.load()
+        assert service.lookup_entry("存在しない", "ぞんざい") is None
 
 
 class TestIsAvailable:

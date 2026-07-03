@@ -2,7 +2,9 @@
 
 import csv
 import logging
+import re
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
 from anki_miner.exceptions import SetupError
@@ -16,6 +18,11 @@ _COMBINING_KANA = set("ゃゅょぁぃぅぇぉゎャュョァィゥェォヮ")
 # MeCab pos1 markers that make any downstep 起伏 (kifuku), per the NHK convention.
 VERBAL_POS = {"動詞", "形容詞"}
 
+# A pitch position encoded as an H/L mora-level string (e.g. "LHHH"), per the
+# Yomitan term-meta-bank v3 schema ("^[HL]+$"). Distinguished from an integer
+# downstep position so lookups accept either encoding.
+_HL_PATTERN_RE = re.compile(r"^[HL]+$")
+
 ROMAJI_CATEGORY = {
     "平板": "heiban",
     "頭高": "atamadaka",
@@ -23,6 +30,22 @@ ROMAJI_CATEGORY = {
     "尾高": "odaka",
     "起伏": "kifuku",
 }
+
+
+@dataclass(frozen=True)
+class PitchEntry:
+    """A single (kanji, reading) pitch-accent record.
+
+    Carries the fidelity later stages (e.g. the SVG pitch renderer) need:
+    the raw drop-position ``pattern`` (integer positions like ``"0,2"`` or an
+    ``[HL]+`` mora string like ``"LHHH"``), plus the nasal and devoiced mora
+    positions parsed from the enriched 5-column CSV. ``nasal``/``devoice`` are
+    empty for legacy 3-column data that predates the enrichment.
+    """
+
+    pattern: str
+    nasal: tuple[int, ...] = ()
+    devoice: tuple[int, ...] = ()
 
 
 def count_mora(reading: str) -> int:
@@ -39,6 +62,47 @@ def count_mora(reading: str) -> int:
         Number of mora.
     """
     return sum(1 for ch in reading if ch not in _COMBINING_KANA)
+
+
+def downstep_positions(pitch_string: str) -> list[int]:
+    """Convert an ``[HL]+`` mora string to its downstep position(s).
+
+    Ported from Yomitan getDownstepPositions
+    (ext/js/language/ja/japanese.js, upstream commit e2ed450). A downstep is any
+    H→L transition; the position is the index of the L mora. When the string has
+    no H→L transition, the sole "position" is 0 if it starts Low (heiban) else
+    -1 (no resolvable downstep — the caller treats this as no category).
+
+    Args:
+        pitch_string: Mora-level pitch string, H high / L low (e.g. "LHHL").
+
+    Returns:
+        List of downstep positions (mora indices); ``[0]`` for heiban, ``[-1]``
+        when unresolvable.
+    """
+    downsteps: list[int] = []
+    for i in range(len(pitch_string)):
+        if i > 0 and pitch_string[i - 1] == "H" and pitch_string[i] == "L":
+            downsteps.append(i)
+    if not downsteps:
+        downsteps.append(0 if pitch_string.startswith("L") else -1)
+    return downsteps
+
+
+def _token_to_position(token: str) -> int | None:
+    """Resolve one pattern token (int string or ``[HL]+``) to a downstep position.
+
+    Mirrors Yomitan getPitchCategory's ``typeof pitchAccentValue === 'string'``
+    branch: an H/L string is reduced to its first downstep position. Returns None
+    for an unparseable token or an unresolvable H/L string (position ``-1``).
+    """
+    if _HL_PATTERN_RE.match(token):
+        position = downstep_positions(token)[0]
+        return position if position >= 0 else None
+    try:
+        return int(token)
+    except ValueError:
+        return None
 
 
 def classify_pitch(position: int, mora_count: int, pos: str | None = None) -> str:
@@ -72,10 +136,14 @@ def classify_pitch(position: int, mora_count: int, pos: str | None = None) -> st
 
 
 def format_categories(pattern: str, reading: str, pos: str | None, fmt: str) -> str | None:
-    """Map a raw pattern string (e.g. "0,2") to a Yomitan-style category list.
+    """Map a raw pattern string (e.g. "0,2" or "LHHH") to a category list.
+
+    Each comma-separated token is either an integer drop position or an
+    ``[HL]+`` mora string; the H/L form is reduced to its downstep position
+    before classification (following Yomitan getPitchCategory).
 
     Args:
-        pattern: Comma-separated drop positions from the pitch CSV.
+        pattern: Comma-separated drop positions / H-L strings from the pitch CSV.
         reading: Kana reading used to derive mora count.
         pos: Optional MeCab pos1 marker (for kifuku/odaka split).
         fmt: "jp" for 平板/頭高/中高/尾高/起伏, "romaji" for heiban/atamadaka/...
@@ -89,22 +157,85 @@ def format_categories(pattern: str, reading: str, pos: str | None, fmt: str) -> 
         token = raw.strip()
         if not token:
             continue
-        try:
-            position = int(token)
-        except ValueError:
+        position = _token_to_position(token)
+        if position is None:
             continue
         jp = classify_pitch(position, mora, pos)
         out.append(ROMAJI_CATEGORY[jp] if fmt == "romaji" else jp)
     return ",".join(out) if out else None
 
 
+@dataclass
+class _ParsedRow:
+    reading: str
+    kanji: str
+    entry: PitchEntry
+
+
+def _parse_int_field(field_value: str) -> tuple[int, ...]:
+    """Parse a comma-joined integer field (nasal/devoice) into a tuple.
+
+    Non-integer tokens are dropped; an empty field yields ``()``.
+    """
+    out: list[int] = []
+    for tok in field_value.split(","):
+        tok = tok.strip()
+        if not tok:
+            continue
+        try:
+            out.append(int(tok))
+        except ValueError:
+            continue
+    return tuple(out)
+
+
+def _parse_pitch_row(row: list[str]) -> _ParsedRow | None:
+    """Parse one CSV row into a :class:`_ParsedRow`, or None if unusable.
+
+    Column-count driven (the header is optional, so a header sniff can't be
+    trusted for the schema): exactly 5 fields → the enriched
+    ``reading,kanji,pattern,nasal,devoice`` format; exactly 3 → the legacy
+    ``reading,kanji,pattern`` format. Any other count >= 4 is treated as a
+    hand-edited legacy comma file whose pattern held an intra-field comma
+    (``0,2`` splits into 4 raw fields) — the pattern tail is rejoined so it
+    round-trips, and nasal/devoice stay empty (never misread the tail into
+    them). Files written by :func:`atomic_write_csv` always round-trip to
+    exactly 3 or 5 columns, confining the ambiguity to hand-edited legacy files.
+    """
+    n = len(row)
+    if n < 3:
+        return None
+    reading = row[0].strip()
+    kanji = row[1].strip()
+    if n == 5:
+        pattern = row[2].strip()
+        nasal = _parse_int_field(row[3])
+        devoice = _parse_int_field(row[4])
+    elif n == 3:
+        pattern = row[2].strip()
+        nasal = ()
+        devoice = ()
+    else:
+        # Anomalous (n == 4 or n >= 6): hand-edited legacy comma file. Rejoin the
+        # pattern tail so a bare "0,2" reads back as "0,2"; keep nasal/devoice
+        # empty rather than misclassify the tail into them.
+        pattern = ",".join(row[2:])
+        nasal = ()
+        devoice = ()
+    return _ParsedRow(reading=reading, kanji=kanji, entry=PitchEntry(pattern, nasal, devoice))
+
+
 class PitchAccentService:
     """Load and look up pitch accent patterns from CSV/TSV.
 
     Supports Kanjium-format and similar pitch accent files:
-    - reading (kana), kanji, pitch_pattern
-    - Tab or comma separated
-    - Header rows are automatically skipped
+    - Legacy: ``reading, kanji, pitch_pattern`` (3 columns)
+    - Enriched: ``reading, kanji, pattern, nasal, devoice`` (5 columns)
+    - Tab or comma separated; header rows auto-skipped.
+
+    Lookups are reading-scoped: entries are keyed on ``(surface, reading)`` so a
+    homograph (弾く ひく[0] vs はじく[2]) resolves by the reading passed in rather
+    than whichever row loaded first.
     """
 
     def __init__(self, pitch_accent_path: Path):
@@ -114,12 +245,18 @@ class PitchAccentService:
             pitch_accent_path: Path to the pitch accent CSV/TSV file.
         """
         self._path = pitch_accent_path
-        self._data: dict[str, str] | None = None
+        # (surface, reading) -> PitchEntry ; surface = kanji, or reading when
+        # the term is kana-only.
+        self._by_pair: dict[tuple[str, str], PitchEntry] | None = None
+        # surface -> all entries for that surface (homographs keep every reading)
+        self._by_word: dict[str, list[PitchEntry]] = {}
+        # reading -> first-wins entry (reading-only fallback + kana lookups)
+        self._by_reading: dict[str, PitchEntry] = {}
         self._entry_count: int = 0
 
     @property
     def entry_count(self) -> int:
-        """Number of entries loaded."""
+        """Number of distinct (surface, reading) pitch entries loaded."""
         return self._entry_count
 
     def load(self) -> bool:
@@ -137,7 +274,9 @@ class PitchAccentService:
                 f"Download pitch accent data and place it in ~/.anki_miner/"
             )
 
-        data: dict[str, str] = {}
+        by_pair: dict[tuple[str, str], PitchEntry] = {}
+        by_word: dict[str, list[PitchEntry]] = {}
+        by_reading: dict[str, PitchEntry] = {}
         try:
             with open(self._path, encoding="utf-8") as f:
                 sample = f.read(4096)
@@ -153,21 +292,31 @@ class PitchAccentService:
                         first_row = False
                         if is_header_row(row):
                             continue
-                    reading, kanji, pattern = row[0].strip(), row[1].strip(), row[2].strip()
-                    # Store by kanji (primary key) and by reading (fallback)
-                    if kanji and kanji not in data:
-                        data[kanji] = pattern
-                    if reading and reading not in data:
-                        data[reading] = pattern
+                    parsed = _parse_pitch_row(row)
+                    if parsed is None:
+                        continue
+                    reading, kanji, entry = parsed.reading, parsed.kanji, parsed.entry
+                    surface = kanji or reading
+                    if not surface:
+                        continue
+                    key = (surface, reading)
+                    if key in by_pair:
+                        continue  # first occurrence wins
+                    by_pair[key] = entry
+                    by_word.setdefault(surface, []).append(entry)
+                    if reading and reading not in by_reading:
+                        by_reading[reading] = entry
 
-            self._data = data
-            self._entry_count = len(data)
-            logger.info(f"Loaded {len(data)} pitch accent entries from {self._path.name}")
+            self._by_pair = by_pair
+            self._by_word = by_word
+            self._by_reading = by_reading
+            self._entry_count = len(by_pair)
+            logger.info(f"Loaded {len(by_pair)} pitch accent entries from {self._path.name}")
 
-            if len(data) == 0:
+            if not by_pair:
                 logger.warning(
                     f"Pitch accent file {self._path.name} loaded but contained 0 valid entries. "
-                    f"Expected format: reading,kanji,pattern (CSV or TSV with 3+ columns)."
+                    f"Expected format: reading,kanji,pattern[,nasal,devoice] (CSV or TSV, 3 or 5 columns)."
                 )
 
             return True
@@ -177,30 +326,65 @@ class PitchAccentService:
 
     def is_available(self) -> bool:
         """Check if pitch accent data has been loaded."""
-        return self._data is not None
+        return self._by_pair is not None
 
-    def lookup(self, word: str, reading: str = "") -> str | None:
-        """Look up pitch accent pattern for a word.
+    def lookup_entry(self, word: str, reading: str = "") -> PitchEntry | None:
+        """Resolve the full :class:`PitchEntry` for a word, reading-scoped.
+
+        Three-tier resolution (reading-strict, with a pragmatic fallback):
+        1. exact ``(word, reading)`` pair,
+        2. ``(word, *)`` when the surface has exactly one entry (kana-variant
+           mismatch fallback — safe because there's nothing to disambiguate),
+        3. reading-only.
+
+        When a surface has multiple readings and none matches exactly, no entry
+        is guessed (the homograph fix): returning the wrong reading's pattern is
+        worse than returning nothing.
 
         Args:
             word: Word to look up (kanji or kana form).
-            reading: Optional kana reading for fallback lookup.
+            reading: Optional kana reading.
+
+        Returns:
+            The matching :class:`PitchEntry`, or None.
+        """
+        if self._by_pair is None:
+            return None
+
+        if reading:
+            exact = self._by_pair.get((word, reading))
+            if exact is not None:
+                return exact
+
+        candidates = self._by_word.get(word)
+        if candidates:
+            if len(candidates) == 1:
+                return candidates[0]
+            if not reading:
+                # Nothing to disambiguate by — legacy first-wins behavior.
+                return candidates[0]
+            # Multiple readings + a reading that matched none exactly: don't guess.
+
+        if reading:
+            by_reading = self._by_reading.get(reading)
+            if by_reading is not None:
+                return by_reading
+
+        # The word itself may be a reading (kana lookup, or reading fallback).
+        return self._by_reading.get(word)
+
+    def lookup(self, word: str, reading: str = "") -> str | None:
+        """Look up the pitch accent pattern string for a word.
+
+        Args:
+            word: Word to look up (kanji or kana form).
+            reading: Optional kana reading for reading-scoped resolution.
 
         Returns:
             Pitch accent pattern string, or None if not found.
         """
-        if not self._data:
-            return None
-
-        # Try kanji/word first, then reading
-        result = self._data.get(word)
-        if result:
-            return result
-
-        if reading:
-            return self._data.get(reading)
-
-        return None
+        entry = self.lookup_entry(word, reading)
+        return entry.pattern if entry is not None else None
 
     def lookup_detailed(
         self,
