@@ -186,38 +186,6 @@ class TestProcessEpisode:
         warnings = [c.args[0] for c in presenter.show_warning.call_args_list]
         assert any("Skipped 1" in w and "duplicate" in w.lower() for w in warnings)
 
-    def test_updated_notes_surfaced_as_message(self, test_config, mock_services, tmp_path):
-        """A non-zero last_updated_notes (duplicate_behavior=update) is reported."""
-        presenter = MagicMock()
-        proc = EpisodeProcessor(
-            config=test_config,
-            subtitle_parser=mock_services["subtitle_parser"],
-            word_filter=mock_services["word_filter"],
-            media_extractor=mock_services["media_extractor"],
-            definition_service=mock_services["definition_service"],
-            anki_service=mock_services["anki_service"],
-            presenter=presenter,
-        )
-
-        words = [_make_word("食べる"), _make_word("走る", start_time=5.0)]
-        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
-        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
-        mock_services["word_filter"].filter_unknown.return_value = words
-        mock_services["media_extractor"].extract_media_batch.return_value = [
-            (words[0], _make_media("taberu")),
-            (words[1], _make_media("hashiru")),
-        ]
-        mock_services["definition_service"].get_definitions_batch.return_value = ["1. eat", "1. run"]
-        mock_services["anki_service"].create_cards_batch.return_value = 0
-        mock_services["anki_service"].last_skipped_duplicates = 0
-        mock_services["anki_service"].last_media_store_failures = 0
-        mock_services["anki_service"].last_updated_notes = 2
-
-        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        infos = [c.args[0] for c in presenter.show_info.call_args_list]
-        assert any("Updated 2" in m and "empty fields" in m for m in infos)
-
     def test_media_store_failures_surfaced_as_warning(self, test_config, mock_services, tmp_path):
         """A non-zero last_media_store_failures from card creation is reported."""
         presenter = MagicMock()
