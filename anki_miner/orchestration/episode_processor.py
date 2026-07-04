@@ -115,7 +115,7 @@ def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | Non
     ``counts`` is a ChainedExpressionAudioFetcher ``stats()`` tally keyed by
     failure bucket (ssl/connection/timeout/http_status/non_audio), aggregated
     across every enabled word-audio source (packs, JPod101, custom URL/JSON,
-    scrape, gTTS). Only surfaces a diagnosis when transient failures DOMINATE the
+    gTTS). Only surfaces a diagnosis when transient failures DOMINATE the
     run — a genuine "word not in any source" miss is never counted, so a high
     total means something systemic (expired certificate, outage, rate-limit)
     rather than words simply being absent. Scattered failures among
@@ -1127,14 +1127,6 @@ class EpisodeProcessor:
                 extra_fields["frequency_sort"] = (
                     str(word.frequency_harmonic_rank) if word.frequency_harmonic_rank is not None else "9999999"
                 )
-            # Conjugation-chain provenance (3.2): the deinflection trace of the
-            # accepted inflected span, joined dictionary-form-outward with the
-            # Yomitan " « " separator (food « -ます « … reads how Yomitan's
-            # {conjugation} field renders). Gated on the field being mapped AND a
-            # non-empty chain, so default-config notes stay byte-identical and
-            # uninflected words leave the field untouched.
-            if self.config.anki_fields.get("conjugation") and word.inflection_chain:
-                extra_fields["conjugation"] = " « ".join(word.inflection_chain)
             if glossary:
                 extra_fields["glossary"] = (style_block + glossary) if style_block else glossary
             # Stamp the source unconditionally; AnkiService gates the write on a
@@ -1198,19 +1190,6 @@ class EpisodeProcessor:
                     "Skipped %n word(s) Anki flagged as duplicates (same Expression)",
                     "",
                     skipped_duplicates,
-                )
-            )
-        # Duplicate handling = update (7.4): existing duplicate notes whose empty
-        # mapped fields were coalesce-filled from this run. NOT new cards (their
-        # IDs stay out of created_note_ids / Undo); reported as a separate summary.
-        updated_notes = self.anki_service.last_updated_notes
-        if isinstance(updated_notes, int) and updated_notes > 0:
-            self.presenter.show_info(
-                QCoreApplication.translate(
-                    "EpisodeProcessor",
-                    "Updated %n existing duplicate card(s): filled empty fields",
-                    "",
-                    updated_notes,
                 )
             )
 

@@ -147,18 +147,15 @@ class _PackRow(QWidget):
 
 
 class _AddSourceDialog(QDialog):
-    """Prompt for a new online audio source: a kind + (for custom kinds) a URL.
+    """Prompt for a new online audio source: a kind + a URL template.
 
-    Custom kinds (``custom``/``custom_json``) require a URL template; the scrape
-    kinds take no URL, so the URL row is hidden for them and OK stays enabled.
+    Both kinds (``custom``/``custom_json``) require a URL template.
     """
 
     # (kind, English label). Labels go through self.tr at construction.
     _KINDS: list[tuple[str, str]] = [
         ("custom", "Custom URL (local-audio-yomichan / any audio URL)"),
         ("custom_json", "Custom JSON list (audioSourceList)"),
-        ("jpod101_scrape", "JapanesePod101 dictionary (online scrape)"),
-        ("jisho_scrape", "Jisho.org (online scrape)"),
     ]
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -191,7 +188,7 @@ class _AddSourceDialog(QDialog):
         return str(self._kind_combo.currentData())
 
     def url_value(self) -> str | None:
-        """The entered URL for custom kinds, else None (scrape kinds carry no URL)."""
+        """The entered URL for custom kinds, else None."""
         if self.selected_kind() in ("custom", "custom_json"):
             return self._url_edit.text().strip()
         return None
@@ -209,7 +206,7 @@ class _AddSourceDialog(QDialog):
         ok_button = self._buttons.button(QDialogButtonBox.StandardButton.Ok)
         if ok_button is None:
             return
-        # Custom kinds need a non-empty URL; scrape kinds are always addable.
+        # Custom kinds need a non-empty URL.
         ok_button.setEnabled(bool(self._url_edit.text().strip()) if self._is_custom_kind() else True)
 
 
@@ -366,7 +363,7 @@ class AudioPackSettingsPanel(FormPanel):
         buttons.addWidget(self._add_btn)
 
         self._add_online_btn = QPushButton(self.tr("+ Add Online Source…"))
-        self._add_online_btn.setToolTip(self.tr("Add a custom audio URL or online scrape source"))
+        self._add_online_btn.setToolTip(self.tr("Add a custom audio URL source"))
         self._add_online_btn.clicked.connect(self._on_add_online_source)
         buttons.addWidget(self._add_online_btn)
 
@@ -438,7 +435,7 @@ class AudioPackSettingsPanel(FormPanel):
         self.chain_changed.emit()
 
     def _on_add_online_source(self) -> None:
-        """Open the Add-Source dialog and append the chosen custom/scrape entry."""
+        """Open the Add-Source dialog and append the chosen custom entry."""
         dialog = _AddSourceDialog(self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
@@ -458,10 +455,6 @@ class AudioPackSettingsPanel(FormPanel):
             )
         if entry.kind == "googletts":
             return self.tr("Google Translate (synthetic TTS)"), "online", 0, False
-        if entry.kind == "jpod101_scrape":
-            return self.tr("JapanesePod101 dictionary (scrape)"), "online", 0, False
-        if entry.kind == "jisho_scrape":
-            return self.tr("Jisho.org (scrape)"), "online", 0, False
         if entry.kind in ("custom", "custom_json"):
             label = self.tr("Custom JSON") if entry.kind == "custom_json" else self.tr("Custom URL")
             return (f"{label}: {entry.url}" if entry.url else label), "custom", 0, False
@@ -494,7 +487,7 @@ class AudioPackSettingsPanel(FormPanel):
             return  # default built-in online sources can be disabled but not removed
 
         if entry.kind != "pack":
-            # User-added online source (custom/scrape): nothing on disk to delete,
+            # User-added online source (custom): nothing on disk to delete,
             # so drop it directly with no destructive-confirmation dialog.
             new_chain = list(self.get_chain())
             del new_chain[index]

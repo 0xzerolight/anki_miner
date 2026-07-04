@@ -23,10 +23,6 @@ from anki_miner.services.google_translate_audio_fetcher import GoogleTranslateAu
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.media_extractor import MediaExtractorService
 from anki_miner.services.pitch_accent_service import PitchAccentService
-from anki_miner.services.scrape_audio_fetchers import (
-    JishoScrapeFetcher,
-    JPod101DictionaryScrapeFetcher,
-)
 from anki_miner.services.stats_service import StatsService
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.services.word_filter import WordFilterService
@@ -172,11 +168,9 @@ def _build_expression_audio_fetcher(
     ``kind="pack"`` entries are resolved against :class:`AudioPackRegistry`;
     ``kind="custom"``/``"custom_json"`` entries become
     :class:`~anki_miner.services.custom_audio_fetcher.CustomAudioFetcher` (cached
-    under a per-URL ``audio_cache/custom_<slug>/`` dir); ``kind="jpod101_scrape"``
-    /``"jisho_scrape"`` become the HTML-scrape fetchers in
-    :mod:`anki_miner.services.scrape_audio_fetchers`.  These online fetchers open
-    only a cheap ``requests.Session`` at build time (no disk scan), so no I/O
-    gating is needed — and none is in the default chain, so a default config
+    under a per-URL ``audio_cache/custom_<slug>/`` dir).  These online fetchers
+    open only a cheap ``requests.Session`` at build time (no disk scan), so no
+    I/O gating is needed — and none is in the default chain, so a default config
     never constructs them.
 
     I/O neutrality: ``AudioPackRegistry`` is only constructed + loaded when the
@@ -201,8 +195,6 @@ def _build_expression_audio_fetcher(
     jpod_cache = audio_cache_root / "jpod101"
     googletts_cache = audio_cache_root / "googletts"
     pack_cache = audio_cache_root / "local_packs"
-    jpod101_scrape_cache = audio_cache_root / "jpod101_scrape"
-    jisho_scrape_cache = audio_cache_root / "jisho_scrape"
 
     # Build registry only when needed — avoids disk scan for default config
     # and when the expression-audio field is unmapped (fetcher never consulted).
@@ -247,20 +239,6 @@ def _build_expression_audio_fetcher(
                     kind=entry.kind,
                     cache_dir=audio_cache_root / f"custom_{slug}",
                     file_prefix=f"custom_{slug}",
-                    delay=config.expression_audio_delay,
-                )
-            )
-        elif entry.kind == "jpod101_scrape":
-            fetchers.append(
-                JPod101DictionaryScrapeFetcher(
-                    cache_dir=jpod101_scrape_cache,
-                    delay=config.expression_audio_delay,
-                )
-            )
-        elif entry.kind == "jisho_scrape":
-            fetchers.append(
-                JishoScrapeFetcher(
-                    cache_dir=jisho_scrape_cache,
                     delay=config.expression_audio_delay,
                 )
             )
@@ -326,10 +304,8 @@ def create_services(
 
     if subtitle_parser is None:
         # Headword-existence probe: injected iff an indexed offline dict is
-        # enabled AND at least one consumer wants it — compound matching
-        # (services/compound_matcher.py) or kana-only attestation (Task 2.1,
-        # config.mine_kana_only_words). The two features borrow the same
-        # offline_terms_exist seam but gate independently inside the parser, so a
+        # enabled AND compound matching (services/compound_matcher.py) is on —
+        # it borrows the DefinitionService's offline_terms_exist seam, so a
         # Jisho-only config stays I/O-free and behaves exactly as before.
         #
         # Deck Builder parity note: the Deck Builder's base processor flows
@@ -338,9 +314,7 @@ def create_services(
         # line cache. If a future change pre-builds that parser elsewhere, it
         # must wire term_lookup the same way or preview and build diverge.
         term_lookup = None
-        if (config.compound_matching or config.mine_kana_only_words) and any(
-            e.kind == "indexed" and e.enabled for e in config.dictionary_chain
-        ):
+        if config.compound_matching and any(e.kind == "indexed" and e.enabled for e in config.dictionary_chain):
             term_lookup = definition_service.offline_terms_exist
         subtitle_parser = SubtitleParserService(config, term_lookup=term_lookup)
     # Share the parser's tagger with the word filter so i+1 swap can

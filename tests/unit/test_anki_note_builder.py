@@ -1,22 +1,19 @@
 """Unit tests for anki_note_builder.build_note optional-field wiring.
 
-Covers the Phase-3 opt-in card fields: cloze split fields (3.1) and the
-conjugation-chain provenance field (3.2). All default-off via unmapped
-anki_fields keys, so the default wire stays byte-identical.
+Covers the opt-in pitch graph/overline card fields (6.3) and the duplicate
+options wire format. All optional fields default-off via unmapped anki_fields
+keys, so the default wire stays byte-identical.
 """
 
 from __future__ import annotations
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import CardPayload, MediaData, TokenizedWord
-from anki_miner.services.anki_note_builder import (
-    build_cloze_fields,
-    build_note,
-)
+from anki_miner.services.anki_note_builder import build_note
 
 
 def _word(**overrides) -> TokenizedWord:
-    """A verb TokenizedWord with target offsets carried, for cloze tests."""
+    """A verb TokenizedWord with target offsets carried."""
     defaults = {
         "surface": "帰っ",
         "lemma": "帰る",
@@ -55,122 +52,6 @@ def _config(**field_overrides) -> AnkiMinerConfig:
     fields = dict(AnkiMinerConfig().anki_fields)
     fields.update(field_overrides)
     return AnkiMinerConfig(anki_fields=fields)
-
-
-class TestClozeFieldsBuilder:
-    def test_slices_prefix_body_suffix_by_offset(self):
-        out = build_cloze_fields(_word())
-        assert out["cloze_prefix"] == "家に"
-        assert out["cloze_body"] == "帰った"
-        assert out["cloze_suffix"] == "。"
-
-    def test_body_kana_for_inflected_verb(self):
-        # 帰った → かえった (inflected-body reading via distributeFuriganaInflected).
-        assert build_cloze_fields(_word())["cloze_body_kana"] == "かえった"
-
-    def test_uses_offsets_not_string_search_on_repeated_word(self):
-        # 帰る appears twice; the SECOND occurrence is the mined target. Offsets,
-        # not str.find, must pick it so prefix carries the first occurrence.
-        word = _word(
-            sentence="帰って、また帰った。",
-            surface_start=6,  # 帰って、また = 6 chars
-            surface_end=8,
-            highlight_end=9,
-        )
-        out = build_cloze_fields(word)
-        assert out["cloze_prefix"] == "帰って、また"
-        assert out["cloze_body"] == "帰った"
-        assert out["cloze_suffix"] == "。"
-
-    def test_html_escaped(self):
-        word = _word(sentence="<b>家</b>に帰った。", surface_start=9, surface_end=11, highlight_end=12)
-        out = build_cloze_fields(word)
-        assert "&lt;b&gt;" in out["cloze_prefix"]
-        assert "<" not in out["cloze_prefix"]
-
-    def test_untracked_offset_falls_back_to_empty(self):
-        out = build_cloze_fields(_word(surface_start=-1, surface_end=-1, highlight_end=-1))
-        assert out == {
-            "cloze_prefix": "",
-            "cloze_body": "",
-            "cloze_body_kana": "",
-            "cloze_suffix": "",
-        }
-
-
-class TestClozeFieldsInNote:
-    def test_unmapped_omits_cloze_fields(self):
-        note = build_note(_payload(_word()), AnkiMinerConfig(), set()).note
-        for key in ("Cloze", "ClozePrefix", "ClozeBody", "ClozeBodyKana", "ClozeSuffix"):
-            assert key not in note["fields"]
-
-    def test_mapped_populates_cloze_fields(self):
-        config = _config(
-            cloze_prefix="ClozePrefix",
-            cloze_body="ClozeBody",
-            cloze_body_kana="ClozeBodyKana",
-            cloze_suffix="ClozeSuffix",
-        )
-        fields = build_note(_payload(_word()), config, set()).note["fields"]
-        assert fields["ClozePrefix"] == "家に"
-        assert fields["ClozeBody"] == "帰った"
-        assert fields["ClozeBodyKana"] == "かえった"
-        assert fields["ClozeSuffix"] == "。"
-
-    def test_empty_prefix_still_written_when_mapped(self):
-        # Target at sentence start → empty prefix, but the mapped field is still
-        # written (not dropped like frequency), so a cloze template stays valid.
-        word = _word(sentence="帰った。", surface_start=0, surface_end=2, highlight_end=3)
-        config = _config(cloze_prefix="ClozePrefix", cloze_body="ClozeBody")
-        fields = build_note(_payload(word), config, set()).note["fields"]
-        assert fields["ClozePrefix"] == ""
-        assert fields["ClozeBody"] == "帰った"
-
-    def test_default_config_wire_unchanged(self):
-        # Default config maps no cloze fields → byte-identical to a config whose
-        # anki_fields never contained the cloze keys at all.
-        word = _word()
-        default_note = build_note(_payload(word), AnkiMinerConfig(), set()).note
-        legacy_fields = {
-            k: v
-            for k, v in AnkiMinerConfig().anki_fields.items()
-            if k not in ("cloze_prefix", "cloze_body", "cloze_body_kana", "cloze_suffix")
-        }
-        legacy_note = build_note(
-            _payload(word),
-            AnkiMinerConfig(anki_fields=legacy_fields),
-            set(),
-        ).note
-        assert default_note["fields"] == legacy_note["fields"]
-
-
-class TestConjugationField:
-    def test_unmapped_omits_field(self):
-        word = _word(inflection_chain=("-ます", "negative", "-た"))
-        note = build_note(
-            _payload(word, extra_fields={"conjugation": "-ます « negative « -た"}),
-            AnkiMinerConfig(),
-            set(),
-        ).note
-        assert "Conjugation" not in note["fields"]
-
-    def test_mapped_writes_joined_chain(self):
-        config = _config(conjugation="Conjugation")
-        word = _word()
-        fields = build_note(
-            _payload(word, extra_fields={"conjugation": "-ます « negative « -た"}),
-            config,
-            set(),
-        ).note["fields"]
-        assert fields["Conjugation"] == "-ます « negative « -た"
-
-    def test_mapped_but_empty_chain_omits_field(self):
-        # extra_fields carries no "conjugation" key when the chain is empty
-        # (episode_processor gates on word.inflection_chain), so the mapped
-        # field is simply not written.
-        config = _config(conjugation="Conjugation")
-        fields = build_note(_payload(_word()), config, set()).note["fields"]
-        assert "Conjugation" not in fields
 
 
 class TestPitchGraphTextFields:

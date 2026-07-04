@@ -52,11 +52,6 @@ class AudioSourceEntry:
     the templated URL directly, ``custom_json`` fetches an ``audioSourceList``
     JSON document and downloads each listed URL in order. ``url`` is None for the
     non-custom kinds.
-
-    ``jpod101_scrape`` / ``jisho_scrape`` are fragile HTML-scrape online sources
-    (JapanesePod101 dictionary + Jisho.org). They are not part of the default
-    chain — a user adds them explicitly — and mirror Yomitan's swallow-and-
-    return-empty semantics so a site redesign degrades to "no candidates".
     """
 
     kind: Literal[
@@ -65,8 +60,6 @@ class AudioSourceEntry:
         "googletts",
         "custom",
         "custom_json",
-        "jpod101_scrape",
-        "jisho_scrape",
     ]
     pack_id: str | None = None
     url: str | None = None
@@ -107,14 +100,6 @@ class AnkiMinerConfig:
             "frequency_sort": "",
             "source": "",
             "expression_audio": "",
-            # Yomitan getCloze split fields (3.1). All default "" (feature off,
-            # wire byte-identical via the empty-name skip in anki_note_builder).
-            "cloze_prefix": "",
-            "cloze_body": "",
-            "cloze_body_kana": "",
-            "cloze_suffix": "",
-            # Deinflection-chain provenance field (3.2). Default "" = feature off.
-            "conjugation": "",
         }
     )
     # JP Mining Note-style card-type marker. When card_type is non-empty, an "x"
@@ -185,16 +170,6 @@ class AnkiMinerConfig:
     # occurrence. Requires at least one enabled indexed offline dictionary;
     # without one, mining behavior is unchanged.
     compound_matching: bool = True
-    # Kana-only words via dictionary attestation (Yomitan wordhood-by-attestation,
-    # translator.js:470-516). The script gate rejects every pure-hiragana content
-    # word (ごまかす, しゃべる, うなずく, すげぇ); when this is on, such a word is
-    # mined iff a dictionary attests its lemma/orthBase as an exact headword — the
-    # same offline probe (DefinitionService.offline_terms_exist) compound matching
-    # uses. Requires at least one enabled indexed offline dictionary; without one
-    # parsing is byte-identical regardless of this flag. count_lemmas is made
-    # probe-aware in lockstep so Deck Builder previews never over-promise (T-38).
-    # Off by default pending a release of soak; consider flipping thereafter.
-    mine_kana_only_words: bool = False
     # Enabled name-wordset IDs (Issue #59). Each ID maps to a bundled
     # plain-text proper-noun list under resources/wordsets/<id>.txt.
     # Words on any enabled set are dropped from mining unless whitelisted.
@@ -279,17 +254,6 @@ class AnkiMinerConfig:
     # the Deck Builder. Default False preserves the standard dedup behaviour.
     allow_duplicate_cards: bool = False
 
-    # Duplicate handling (7.4, Yomitan duplicateBehavior "overwrite"/coalesce).
-    # "skip" (default) drops every probe-flagged duplicate — byte-identical to
-    # pre-7.4 (no findNotes/notesInfo/updateNoteFields calls are ever made).
-    # "update" coalesce-fills the existing note's EMPTY mapped fields with this
-    # run's values (never overwriting user-edited, non-empty content), letting a
-    # user who later maps expression_audio/pitch/frequency backfill old cards.
-    # Opt-in by design: bulk-updating real user notes is riskier than Yomitan's
-    # interactive one-note-at-a-time flow. Updated notes are NOT new notes, so
-    # they never enter last_created_note_ids and are not reverted by Undo.
-    duplicate_behavior: Literal["skip", "update"] = "skip"
-
     # Script-type filters (Issue #57). When set, words whose card form
     # (mined_form) is written entirely in one kana script are dropped before
     # card creation. Useful for a kanji-focused deck / discarding katakana
@@ -320,16 +284,6 @@ class AnkiMinerConfig:
     # so duplicated surfaces in the same sentence bold only the morpheme
     # that was actually mined. See Issue #20.
     bold_target_in_sentence: bool = False
-
-    # Sentence-boundary trimming (3.3, Yomitan extractSentence). When True, the
-    # card sentence is trimmed to just the sentence containing the target,
-    # splitting multi-sentence cues and narration+「quoted dialog」. Opt-in by
-    # design: sentence audio/screenshots are cut from cue timing, so a trimmed
-    # sentence no longer transcribes the full audio clip — whole-cue stays the
-    # right default for a batch miner. Trimming happens at word emission only
-    # (parser-level); the target's carried offsets are rebased into the trimmed
-    # text so bold/cloze fields stay aligned.
-    trim_to_sentence: bool = False
 
     # Card styling (Issue #44). anki_miner emits definition HTML with its own
     # class scheme (`.yomitan-glossary`, `gloss-sc-*`, `data-sc-*`) and ships one

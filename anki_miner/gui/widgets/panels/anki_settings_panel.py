@@ -292,50 +292,6 @@ class AnkiSettingsPanel(FormPanel):
             helper=self.tr("Stores the sentence as plain kana."),
         )
 
-        # Yomitan getCloze split fields (3.1). The sentence is sliced around the
-        # target word so the note type can build {{c1::}} cloze / colored markup
-        # itself. All default blank (feature off); leave blank to skip.
-        self.cloze_prefix_field_input = QLineEdit()
-        self.cloze_prefix_field_input.setPlaceholderText("ClozePrefix")
-        self.add_field(
-            self.tr("Cloze Prefix Field"),
-            self.cloze_prefix_field_input,
-            helper=self.tr("Stores the sentence text before the target word (Yomitan cloze split)."),
-        )
-
-        self.cloze_body_field_input = QLineEdit()
-        self.cloze_body_field_input.setPlaceholderText("ClozeBody")
-        self.add_field(
-            self.tr("Cloze Body Field"),
-            self.cloze_body_field_input,
-            helper=self.tr("Stores the target word as it appears in the sentence (Yomitan cloze split)."),
-        )
-
-        self.cloze_body_kana_field_input = QLineEdit()
-        self.cloze_body_kana_field_input.setPlaceholderText("ClozeBodyKana")
-        self.add_field(
-            self.tr("Cloze Body Kana Field"),
-            self.cloze_body_kana_field_input,
-            helper=self.tr("Stores the kana reading of the inflected target word (Yomitan cloze split)."),
-        )
-
-        self.cloze_suffix_field_input = QLineEdit()
-        self.cloze_suffix_field_input.setPlaceholderText("ClozeSuffix")
-        self.add_field(
-            self.tr("Cloze Suffix Field"),
-            self.cloze_suffix_field_input,
-            helper=self.tr("Stores the sentence text after the target word (Yomitan cloze split)."),
-        )
-
-        # Deinflection-chain provenance field (3.2). Default blank = feature off.
-        self.conjugation_field_input = QLineEdit()
-        self.conjugation_field_input.setPlaceholderText("Conjugation")
-        self.add_field(
-            self.tr("Conjugation Field"),
-            self.conjugation_field_input,
-            helper=self.tr("Stores the deinflection chain showing how the word was conjugated."),
-        )
-
         # Auxiliary Data Fields section
         self.add_section(self.tr("Auxiliary Data Fields"))
 
@@ -702,11 +658,6 @@ class AnkiSettingsPanel(FormPanel):
             "expression_reading": self.expression_reading_field_input.text().strip(),
             "sentence_furigana": self.sentence_furigana_field_input.text().strip(),
             "sentence_reading": self.sentence_reading_field_input.text().strip(),
-            "cloze_prefix": self.cloze_prefix_field_input.text().strip(),
-            "cloze_body": self.cloze_body_field_input.text().strip(),
-            "cloze_body_kana": self.cloze_body_kana_field_input.text().strip(),
-            "cloze_suffix": self.cloze_suffix_field_input.text().strip(),
-            "conjugation": self.conjugation_field_input.text().strip(),
             "pitch_position": self.pitch_position_field_input.text().strip(),
             "pitch_category": self.pitch_category_field_input.text().strip(),
             "pitch_graph": self.pitch_graph_field_input.text().strip(),
@@ -736,11 +687,6 @@ class AnkiSettingsPanel(FormPanel):
         self.expression_reading_field_input.setText(fields.get("expression_reading", ""))
         self.sentence_furigana_field_input.setText(fields.get("sentence_furigana", "SentenceFurigana"))
         self.sentence_reading_field_input.setText(fields.get("sentence_reading", ""))
-        self.cloze_prefix_field_input.setText(fields.get("cloze_prefix", ""))
-        self.cloze_body_field_input.setText(fields.get("cloze_body", ""))
-        self.cloze_body_kana_field_input.setText(fields.get("cloze_body_kana", ""))
-        self.cloze_suffix_field_input.setText(fields.get("cloze_suffix", ""))
-        self.conjugation_field_input.setText(fields.get("conjugation", ""))
         self.pitch_position_field_input.setText(fields.get("pitch_position", ""))
         self.pitch_category_field_input.setText(fields.get("pitch_category", ""))
         self.pitch_graph_field_input.setText(fields.get("pitch_graph", ""))

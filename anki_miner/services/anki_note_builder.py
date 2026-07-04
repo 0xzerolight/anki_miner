@@ -13,8 +13,6 @@ from dataclasses import dataclass
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import CardPayload
-from anki_miner.models.word import TokenizedWord
-from anki_miner.utils.furigana_distribute import distribute_furigana_inflected
 
 # Field keys every config's ``anki_fields`` must contain (AnkiService
 # validates this at construction time).
@@ -37,11 +35,6 @@ OPTIONAL_FIELD_KEYS = {
     "frequency_sort",
     "source",
     "expression_audio",
-    "cloze_prefix",
-    "cloze_body",
-    "cloze_body_kana",
-    "cloze_suffix",
-    "conjugation",
 }
 
 # Optional fields whose value is pre-rendered HTML/SVG inserted verbatim (like
@@ -49,42 +42,6 @@ OPTIONAL_FIELD_KEYS = {
 # tags into literal text. They follow the skip-when-empty contract: an absent
 # value leaves the field untouched rather than blanking it.
 _RAW_HTML_FIELD_KEYS = ("frequency", "pitch_graph", "pitch_text")
-
-# The four Yomitan getCloze split fields (3.1). Kept in field_data (not the
-# extra_fields pass) so an empty prefix/suffix is still written verbatim rather
-# than dropped like the always-optional frequency field.
-_CLOZE_FIELD_KEYS = ("cloze_prefix", "cloze_body", "cloze_body_kana", "cloze_suffix")
-
-
-def build_cloze_fields(word: TokenizedWord) -> dict[str, str]:
-    """Slice the sentence into Yomitan getCloze prefix/body/bodyKana/suffix.
-
-    Ported from Yomitan ``ext/js/data/anki-note-data-creator.js`` ``getCloze``
-    (upstream commit e2ed450). Yomitan never bakes target styling into the
-    sentence: it exposes the target's surroundings as separate template fields
-    sliced by the carried offsets, letting the note type choose cloze
-    ``{{c1::}}``, color, or custom markup. The slices mirror ``wrap_target_plain``
-    exactly (escape-per-slice, ``bold_end = highlight_end or surface_end``) so
-    the bolded Sentence field and these cloze fields always agree. ``bodyKana``
-    is the reading of the inflected body via ``distributeFuriganaInflected``.
-
-    Returns all-empty strings when the offsets are untracked/degenerate (the
-    ``surface_start >= 0`` guard, matching ``wrap_target_plain``'s fallback).
-    """
-    sentence = word.sentence
-    start = word.surface_start
-    end = word.bold_end
-    if not (start >= 0 and start < end <= len(sentence)):
-        return dict.fromkeys(_CLOZE_FIELD_KEYS, "")
-    body = sentence[start:end]
-    segments = distribute_furigana_inflected(word.mined_form, word.expression_reading, body)
-    body_kana = "".join(seg.reading if seg.reading else seg.text for seg in segments)
-    return {
-        "cloze_prefix": html.escape(sentence[:start]),
-        "cloze_body": html.escape(body),
-        "cloze_body_kana": html.escape(body_kana),
-        "cloze_suffix": html.escape(sentence[end:]),
-    }
 
 
 # Used to normalize a stored first-field value to the same key Anki dedups on.
@@ -205,13 +162,6 @@ def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str
     else:
         sentence_furigana_field = html.escape(word.sentence_furigana)
 
-    # Cloze split fields (3.1): computed only when at least one is mapped so the
-    # default-off path pays no distributeFuriganaInflected cost. Escaped inside
-    # build_cloze_fields, mirroring wrap_target_plain.
-    cloze_fields = dict.fromkeys(_CLOZE_FIELD_KEYS, "")
-    if any(config.anki_fields.get(key) for key in _CLOZE_FIELD_KEYS):
-        cloze_fields = build_cloze_fields(word)
-
     # Build fields, skipping any with empty config mapping
     field_data = {
         "word": html.escape(word.mined_form),
@@ -228,7 +178,6 @@ def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str
         "expression_reading": html.escape(word.expression_reading),
         "sentence_furigana": sentence_furigana_field,
         "sentence_reading": html.escape(word.sentence_reading),
-        **cloze_fields,
     }
     fields = {}
     for key, value in field_data.items():

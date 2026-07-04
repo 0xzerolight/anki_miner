@@ -284,7 +284,6 @@ class SettingsTab(QWidget):
         self.dictionary_panel.reimport_dict_requested.connect(self._dict_import_flow.reimport_dict)
         self.dictionary_panel.reimport_all_requested.connect(self._dict_import_flow.reimport_all)
         self.dictionary_panel.rescan_requested.connect(self._dict_import_flow.restore_unlisted)
-        self.dictionary_panel.check_updates_requested.connect(self._dict_import_flow.check_for_updates)
         # Persist chain immediately after reorder/toggle or destructive remove.
         # Use a NARROW persist of just the chain — NOT the full Save pipeline
         # (T-08): _on_save_clicked has unrelated early-return aborts (bad
