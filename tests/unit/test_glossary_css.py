@@ -68,11 +68,13 @@ class TestLoadGlossaryCss:
         assert "image-rendering: pixelated" in css
 
     def test_carries_structured_content_hooks(self):
-        css = load_glossary_css()
+        css = _no_comments(load_glossary_css())
         # Generic data-sc-* hooks for dicts that ship no styles.css (Issue #87).
         assert 'span[data-sc-class="tag"]' in css
         assert '[data-sc-content="forms"] td' in css
-        assert '[data-sc-content|="example-sentence"]' in css
+        # Exact-match, not |= : the box rule must not hit the -a/-b inner lines.
+        assert '[data-sc-content="example-sentence"]' in css
+        assert '[data-sc-content|="example-sentence"]' not in css
 
     def test_carries_hover_tag_chip_rule(self):
         css = _no_comments(load_glossary_css())
@@ -120,6 +122,51 @@ class TestGlossaryYomitanLeak:
                         assert decl.startswith("--"), (
                             "unguarded .yomitan-glossary rule must only set custom " f"properties, found {decl!r}"
                         )
+
+
+class TestGapFillerGate:
+    """Every data-sc-* presentation gap-filler must be gated to unstyled dicts.
+
+    The renderer stamps ``data-has-styles`` on the ``li[data-dictionary]``
+    envelope when the dictionary ships usable scoped CSS; gap-fillers must carry
+    the ``li[data-dictionary]:not([data-has-styles])`` anchor so they switch off
+    wholesale for such entries (the dictionary's own styles.css governs —
+    Yomitan parity). The anchor must be on the STAMPED element: a bare
+    ``li:not([data-has-styles])`` matches the inner ``li.gloss-item`` (which
+    never carries the stamp) and the gate is inert. It must also sit BEFORE the
+    hook — transposed after it, the selector targets a stamped descendant that
+    never exists and the gap-filler dies for unstyled dicts too.
+    """
+
+    _ANCHOR = "li[data-dictionary]:not([data-has-styles])"
+
+    def test_every_data_sc_selector_carries_anchored_gate(self):
+        css = load_glossary_css()
+        seen = 0
+        for selector_group, _ in _iter_rules(css):
+            for selector in selector_group.split(","):
+                selector = selector.strip()
+                if "data-sc-" not in selector:
+                    continue
+                seen += 1
+                assert self._ANCHOR in selector, f"data-sc rule missing the gate anchor: {selector!r}"
+                assert selector.index(self._ANCHOR) < selector.index(
+                    "data-sc-"
+                ), f"gate anchor transposed after the hook (semantically dead): {selector!r}"
+                assert (
+                    "li:not([data-has-styles])" not in selector
+                ), f"inert bare-li gate (matches inner li.gloss-item): {selector!r}"
+        assert seen >= 20, f"expected the full gap-filler set to be gated, found only {seen}"
+
+    def test_structural_rules_stay_ungated(self):
+        # The gate is for data-sc-* presentation gap-fillers only; structural
+        # rules (our own markup) must keep applying to styled dicts too.
+        css = _no_comments(load_glossary_css())
+        for token in ("ul.gloss-list", ".gloss-sc-ruby", ".gloss-image", ".gloss-tag"):
+            start = css.index(token)
+            selector_start = css.rfind("}", 0, start) + 1
+            selector = css[selector_start:start]
+            assert self._ANCHOR not in selector, f"structural rule {token!r} wrongly gated"
 
 
 class TestThemeAgnostic:

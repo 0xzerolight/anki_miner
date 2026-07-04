@@ -798,6 +798,70 @@ class TestDictionaryCss:
         assert "evil" not in out
 
 
+class TestHasStylesStamp:
+    """``data-has-styles`` gates the base sheet's data-sc-* gap-fillers.
+
+    The envelope is stamped iff the dictionary shipped usable (non-empty after
+    scoping/sanitizing) styles.css, so glossary.css's
+    ``li[data-dictionary]:not([data-has-styles])`` rules switch off exactly for
+    entries the dictionary styles itself.
+    """
+
+    def _seed(self, db_path: Path, *, styles_css: str | None, name: str = "Jitendex.org [2026-06-06]") -> None:
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [DictRow(term="食べる", reading="たべる", content='<li class="gloss-item">eat</li>', sequence=1)],
+        )
+        meta = {"schema_version": str(SCHEMA_VERSION), "source_name": name}
+        if styles_css is not None:
+            meta["styles_css"] = styles_css
+        write_meta(db_path, meta)
+
+    def test_stamped_when_styles_css_present(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed(db, styles_css='span[data-sc-class="tag"] { color: red }')
+        provider = IndexedDictProvider("jitendex", db, display_name="Jitendex.org [2026-06-06]")
+        assert provider.load() is True
+        out = provider.lookup("食べる")
+        assert out is not None
+        assert '<li data-dictionary="Jitendex.org [2026-06-06]" data-has-styles="">' in out
+
+    def test_unstamped_without_styles_css(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed(db, styles_css=None)
+        provider = IndexedDictProvider("jitendex", db, display_name="Jitendex.org [2026-06-06]")
+        assert provider.load() is True
+        out = provider.lookup("食べる")
+        assert out is not None
+        assert '<li data-dictionary="Jitendex.org [2026-06-06]">' in out
+        assert "data-has-styles" not in out
+
+    def test_unstamped_when_sanitizer_rejects_styles_css(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed(db, styles_css="a { background: url(http://evil/x.png) }")
+        provider = IndexedDictProvider("jitendex", db, display_name="Jitendex.org [2026-06-06]")
+        assert provider.load() is True
+        out = provider.lookup("食べる")
+        assert out is not None
+        assert '<li data-dictionary="Jitendex.org [2026-06-06]">' in out
+        assert "data-has-styles" not in out
+
+    def test_mixed_field_stamps_exactly_the_styled_envelope(self, tmp_path: Path):
+        styled_db = tmp_path / "styled.sqlite"
+        plain_db = tmp_path / "plain.sqlite"
+        self._seed(styled_db, styles_css="li { color: red }", name="Styled Dict")
+        self._seed(plain_db, styles_css=None, name="Plain Dict")
+        styled = IndexedDictProvider("styled", styled_db, display_name="Styled Dict")
+        plain = IndexedDictProvider("plain", plain_db, display_name="Plain Dict")
+        assert styled.load() is True
+        assert plain.load() is True
+        field = (styled.lookup("食べる") or "") + (plain.lookup("食べる") or "")
+        assert '<li data-dictionary="Styled Dict" data-has-styles="">' in field
+        assert '<li data-dictionary="Plain Dict">' in field
+        assert field.count("data-has-styles") == 1
+
+
 # ---------------------------------------------------------------------------
 # schema v3: tag chips + lazy tag-meta cache
 # ---------------------------------------------------------------------------

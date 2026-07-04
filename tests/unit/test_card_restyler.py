@@ -14,10 +14,12 @@ from anki_miner.services.card_restyler import RestyleResult, restyle_mined_cards
 # A miner card mined bare (markup, no <style>).
 BARE = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="X">x</li></ol></div>'
 # A v2.7.0–v2.7.7 dict-styled card: per-dict <style> (scoped, no base sheet) — the blocker case.
+# The envelope carries data-dictionary like every real legacy body, so the
+# stamping assertions below can't pass vacuously.
 DICT_STYLED = (
     '<div class="yomitan-glossary">'
     '<style>.yomitan-glossary [data-dictionary="X"]{color:red}</style>'
-    '<ol data-count="1"><li>x</li></ol></div>'
+    '<ol data-count="1"><li data-dictionary="X">x</li></ol></div>'
 )
 # A genuine Yomitan export: yomitan-glossary wrapper but NO data-count.
 YOMITAN_EXPORT = '<div class="yomitan-glossary"><ol><li>x</li></ol></div>'
@@ -153,3 +155,101 @@ class TestRestyleMinedCards:
         restyle_mined_cards(svc, replace(_cfg(), anki_note_type='Core_2k "x"'))
         (query,), _ = svc.find_notes.call_args
         assert query == 'note:"Core\\_2k \\"x\\""'
+
+
+class TestLegacyEnvelopeStamping:
+    """Legacy envelopes governed by scoped dictionary CSS get data-has-styles.
+
+    Without the stamp, the prepended base sheet's gated gap-fillers apply and
+    out-specify the scoped dict CSS — reproducing the tiny+grey bug on the
+    restyle path. Assertions are always envelope-scoped, value-bearing
+    (``data-has-styles=""``): the base sheet itself contains the bare token
+    inside every ``:not([data-has-styles])`` gate, so whole-field token checks
+    would be vacuous.
+    """
+
+    def _written(self, svc):
+        (updates,), _ = svc.update_notes_fields.call_args
+        return updates[0][1]["Glossary"]
+
+    def test_dict_styled_envelope_stamped_from_own_style_block(self):
+        svc = _svc([_note(1, DICT_STYLED)])
+        assert 'data-has-styles=""' not in DICT_STYLED
+        result = restyle_mined_cards(svc, _cfg())
+        assert result.restyled == 1
+        assert '<li data-dictionary="X" data-has-styles="">' in self._written(svc)
+
+    def test_config_side_scoped_css_stamps_envelope(self, monkeypatch):
+        # Envelope with NO scoped block in its own body, but the current config
+        # contributes scoped CSS for that title into the prepended block — the
+        # restyler injects that CSS, so the envelope must be gated too.
+        monkeypatch.setattr(
+            card_restyler,
+            "collect_dictionary_css",
+            lambda config: '.yomitan-glossary [data-dictionary="X"] li {color: red}',
+        )
+        svc = _svc([_note(1, BARE)])
+        result = restyle_mined_cards(svc, _cfg())
+        assert result.restyled == 1
+        assert '<li data-dictionary="X" data-has-styles="">' in self._written(svc)
+
+    def test_unstyled_envelope_stays_unstamped(self):
+        svc = _svc([_note(1, BARE)])
+        result = restyle_mined_cards(svc, _cfg())
+        assert result.restyled == 1
+        # Assert on the <li> itself — the base sheet carries the bare token.
+        assert '<li data-dictionary="X">x' in self._written(svc)
+
+    def test_multi_envelope_body_stamps_exactly_the_styled_one(self):
+        body = (
+            '<div class="yomitan-glossary">'
+            '<style>.yomitan-glossary [data-dictionary="X"]{color:red}</style>'
+            '<ol data-count="1"><li data-dictionary="X">x</li></ol></div>'
+            '<div class="yomitan-glossary">'
+            '<ol data-count="1"><li data-dictionary="Y">y</li></ol></div>'
+        )
+        svc = _svc([_note(1, body)])
+        result = restyle_mined_cards(svc, _cfg())
+        assert result.restyled == 1
+        written = self._written(svc)
+        assert '<li data-dictionary="X" data-has-styles="">' in written
+        assert '<li data-dictionary="Y">y' in written
+
+    def test_escaped_titles_round_trip_through_membership_key(self):
+        # The crux of the restyler key: html.unescape(attr) -> css_string_escape
+        # must reproduce the scoped-CSS selector for names needing HTML escaping.
+        # Envelope built by the real renderer (_scoped_css="" -> faithful
+        # html.escape'd attribute, NO pre-stamp); scoped CSS built by the real
+        # scope_dict_css from the same display name.
+        import html
+
+        from anki_miner.services.dictionary.dict_css_scope import scope_dict_css
+
+        for name in ("A&B Dictionary", 'The "Big" Dictionary'):
+            attr = html.escape(name, quote=True)
+            scoped = scope_dict_css("li { color: red }", name)
+            value = (
+                f'<div class="yomitan-glossary"><style>{scoped}</style>'
+                f'<ol data-count="1"><li data-dictionary="{attr}">x</li></ol></div>'
+            )
+            assert f'<li data-dictionary="{attr}" data-has-styles="">' not in value
+            svc = _svc([_note(1, value)])
+            result = restyle_mined_cards(svc, _cfg())
+            assert result.restyled == 1
+            assert f'<li data-dictionary="{attr}" data-has-styles="">' in self._written(svc)
+
+    def test_stamping_is_idempotent(self):
+        # An already-stamped envelope doesn't match the legacy pattern (extra
+        # attribute before ">"), so re-stamping is a no-op.
+        stamped = '<li data-dictionary="X" data-has-styles="">x</li>'
+        out = card_restyler._stamp_styled_envelopes(stamped, '.yomitan-glossary [data-dictionary="X"] li {color: red}')
+        assert out == stamped
+
+    def test_user_custom_css_never_stamps(self):
+        # custom_css is not part of the membership test: a user's own
+        # [data-dictionary="X"] tweak must not gate dict X's gap-fillers.
+        cfg = replace(_cfg(), custom_card_css='.yomitan-glossary [data-dictionary="X"] li {color: red}')
+        svc = _svc([_note(1, BARE)])
+        result = restyle_mined_cards(svc, cfg)
+        assert result.restyled == 1
+        assert '<li data-dictionary="X">x' in self._written(svc)
