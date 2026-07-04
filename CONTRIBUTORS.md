@@ -19,6 +19,7 @@ This list is generated automatically — see [.github/workflows/contributors.yml
   </tr>
   <tr>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/jsitems"><img src="https://avatars.githubusercontent.com/u/287451076?s=80&v=4" width="80" height="80" alt="@jsitems"/><br/><sub><b>jsitems</b></sub></a></td>
+    <td align="center" valign="top" width="12.50%"><a href="https://github.com/MsWuschel"><img src="https://avatars.githubusercontent.com/u/210858586?s=80&v=4" width="80" height="80" alt="@MsWuschel"/><br/><sub><b>MsWuschel</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/sdobrau"><img src="https://avatars.githubusercontent.com/u/229150011?s=80&v=4" width="80" height="80" alt="@sdobrau"/><br/><sub><b>sdobrau</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/sman68634"><img src="https://avatars.githubusercontent.com/u/68220894?s=80&v=4" width="80" height="80" alt="@sman68634"/><br/><sub><b>sman68634</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/StyraxBenzoin"><img src="https://avatars.githubusercontent.com/u/66492803?s=80&u=be73ed24296a0d599a7d947876ef73c91115eaf5&v=4" width="80" height="80" alt="@StyraxBenzoin"/><br/><sub><b>StyraxBenzoin</b></sub></a></td>
