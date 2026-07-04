@@ -107,12 +107,6 @@ class AnkiMinerConfig:
             "frequency_sort": "",
             "source": "",
             "expression_audio": "",
-            # Yomitan getCloze split fields (3.1). All default "" (feature off,
-            # wire byte-identical via the empty-name skip in anki_note_builder).
-            "cloze_prefix": "",
-            "cloze_body": "",
-            "cloze_body_kana": "",
-            "cloze_suffix": "",
             # Deinflection-chain provenance field (3.2). Default "" = feature off.
             "conjugation": "",
         }
