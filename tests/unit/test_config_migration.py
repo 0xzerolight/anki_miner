@@ -331,29 +331,26 @@ def test_migrate_expression_audio_chain_rebuilds_custom_with_url():
     )
 
 
-def test_migrate_expression_audio_chain_rebuilds_custom_json_and_scrapes():
-    """custom_json + scrape kinds survive the JSON→dataclass rebuild."""
+def test_migrate_expression_audio_chain_rebuilds_custom_json():
+    """custom_json survives the JSON→dataclass rebuild; a removed scrape kind is dropped."""
     data = {
         "expression_audio_chain": [
             {"kind": "custom_json", "url": "http://localhost:5050/list?term={term}", "enabled": False},
-            {"kind": "jpod101_scrape", "enabled": True},
-            {"kind": "jisho_scrape", "enabled": False},
+            {"kind": "jpod101_scrape", "enabled": True},  # removed kind → silently dropped
             {"kind": "jpod101"},
         ]
     }
     result = GUIConfigManager._migrate_expression_audio_chain(data)
     kinds = [e.kind for e in result["expression_audio_chain"]]
-    assert kinds[:4] == ["custom_json", "jpod101_scrape", "jisho_scrape", "jpod101"]
+    # Scrape entry dropped; a default googletts fallback is appended.
+    assert kinds == ["custom_json", "jpod101", "googletts"]
     assert result["expression_audio_chain"][0].url == "http://localhost:5050/list?term={term}"
-    assert result["expression_audio_chain"][1].url is None
 
 
-def test_save_then_load_preserves_custom_and_scrape_entries(tmp_config: Path):
-    """A chain with custom + scrape entries survives a real save/load round-trip."""
+def test_save_then_load_preserves_custom_entries(tmp_config: Path):
+    """A chain with custom entries survives a real save/load round-trip."""
     chain = (
         AudioSourceEntry(kind="custom", url="http://host/?t={term}&r={reading}", enabled=True),
-        AudioSourceEntry(kind="jpod101_scrape", enabled=False),
-        AudioSourceEntry(kind="jisho_scrape", enabled=False),
         AudioSourceEntry(kind="jpod101", enabled=True),
         AudioSourceEntry(kind="googletts", enabled=False),
     )

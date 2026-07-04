@@ -257,8 +257,6 @@ class GUIConfigManager:
                     "googletts",
                     "custom",
                     "custom_json",
-                    "jpod101_scrape",
-                    "jisho_scrape",
                 ):
                     chain.append(
                         AudioSourceEntry(

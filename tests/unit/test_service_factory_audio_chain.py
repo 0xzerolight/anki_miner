@@ -21,10 +21,6 @@ from anki_miner.services.expression_audio_fetcher import (
 from anki_miner.services.google_translate_audio_fetcher import (
     GoogleTranslateAudioFetcher,
 )
-from anki_miner.services.scrape_audio_fetchers import (
-    JishoScrapeFetcher,
-    JPod101DictionaryScrapeFetcher,
-)
 
 # ---------------------------------------------------------------------------
 # Helpers (mirror test_audio_pack_registry.py style)
@@ -421,50 +417,6 @@ class TestBuildExpressionAudioFetcher:
         dir_b = fetcher._fetchers[1]._cache_dir
         assert dir_a != dir_b
         assert dir_a.name.startswith("custom_")
-
-    def test_scrape_entries_build_scrape_fetchers(self, base_config):
-        """jpod101_scrape / jisho_scrape entries yield the scrape fetchers in order."""
-        cfg = dataclasses.replace(
-            base_config,
-            expression_audio_chain=(
-                AudioSourceEntry(kind="jpod101_scrape", enabled=True),
-                AudioSourceEntry(kind="jisho_scrape", enabled=True),
-            ),
-        )
-        fetcher = service_factory._build_expression_audio_fetcher(cfg)
-        assert len(fetcher._fetchers) == 2
-        assert isinstance(fetcher._fetchers[0], JPod101DictionaryScrapeFetcher)
-        assert isinstance(fetcher._fetchers[1], JishoScrapeFetcher)
-
-    def test_disabled_scrape_entry_excluded(self, base_config):
-        """A disabled scrape entry is skipped; jpod101 remains."""
-        cfg = dataclasses.replace(
-            base_config,
-            expression_audio_chain=(
-                AudioSourceEntry(kind="jpod101", enabled=True),
-                AudioSourceEntry(kind="jpod101_scrape", enabled=False),
-                AudioSourceEntry(kind="jisho_scrape", enabled=False),
-            ),
-        )
-        fetcher = service_factory._build_expression_audio_fetcher(cfg)
-        assert len(fetcher._fetchers) == 1
-        assert isinstance(fetcher._fetchers[0], JPod101AudioFetcher)
-
-    def test_scrape_entry_no_disk_io_at_build(self, tmp_path, base_config):
-        """Building a scrape entry creates no cache dir (session-only, lazy dirs)."""
-        import anki_miner.gui.utils.service_factory as sf
-
-        original_home = sf.ANKI_MINER_HOME
-        try:
-            sf.ANKI_MINER_HOME = tmp_path
-            cfg = dataclasses.replace(
-                base_config,
-                expression_audio_chain=(AudioSourceEntry(kind="jpod101_scrape", enabled=True),),
-            )
-            sf._build_expression_audio_fetcher(cfg)
-        finally:
-            sf.ANKI_MINER_HOME = original_home
-        assert not (tmp_path / "audio_cache" / "jpod101_scrape").exists()
 
     def test_duplicate_pack_id_two_fetchers(self, tmp_path, base_config):
         """Two enabled entries with the same pack_id → chain has 2 fetchers (same object twice)."""
