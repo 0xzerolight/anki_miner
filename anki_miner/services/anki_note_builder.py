@@ -35,7 +35,6 @@ OPTIONAL_FIELD_KEYS = {
     "frequency_sort",
     "source",
     "expression_audio",
-    "conjugation",
 }
 
 # Optional fields whose value is pre-rendered HTML/SVG inserted verbatim (like

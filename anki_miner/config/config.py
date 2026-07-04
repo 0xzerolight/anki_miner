@@ -107,8 +107,6 @@ class AnkiMinerConfig:
             "frequency_sort": "",
             "source": "",
             "expression_audio": "",
-            # Deinflection-chain provenance field (3.2). Default "" = feature off.
-            "conjugation": "",
         }
     )
     # JP Mining Note-style card-type marker. When card_type is non-empty, an "x"

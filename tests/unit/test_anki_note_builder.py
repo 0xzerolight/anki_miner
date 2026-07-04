@@ -1,8 +1,8 @@
 """Unit tests for anki_note_builder.build_note optional-field wiring.
 
-Covers the Phase-3 opt-in card fields: the conjugation-chain provenance
-field (3.2). All default-off via unmapped anki_fields keys, so the default
-wire stays byte-identical.
+Covers the opt-in pitch graph/overline card fields (6.3) and the duplicate
+options wire format. All optional fields default-off via unmapped anki_fields
+keys, so the default wire stays byte-identical.
 """
 
 from __future__ import annotations
@@ -52,35 +52,6 @@ def _config(**field_overrides) -> AnkiMinerConfig:
     fields = dict(AnkiMinerConfig().anki_fields)
     fields.update(field_overrides)
     return AnkiMinerConfig(anki_fields=fields)
-
-
-class TestConjugationField:
-    def test_unmapped_omits_field(self):
-        word = _word(inflection_chain=("-ます", "negative", "-た"))
-        note = build_note(
-            _payload(word, extra_fields={"conjugation": "-ます « negative « -た"}),
-            AnkiMinerConfig(),
-            set(),
-        ).note
-        assert "Conjugation" not in note["fields"]
-
-    def test_mapped_writes_joined_chain(self):
-        config = _config(conjugation="Conjugation")
-        word = _word()
-        fields = build_note(
-            _payload(word, extra_fields={"conjugation": "-ます « negative « -た"}),
-            config,
-            set(),
-        ).note["fields"]
-        assert fields["Conjugation"] == "-ます « negative « -た"
-
-    def test_mapped_but_empty_chain_omits_field(self):
-        # extra_fields carries no "conjugation" key when the chain is empty
-        # (episode_processor gates on word.inflection_chain), so the mapped
-        # field is simply not written.
-        config = _config(conjugation="Conjugation")
-        fields = build_note(_payload(_word()), config, set()).note["fields"]
-        assert "Conjugation" not in fields
 
 
 class TestPitchGraphTextFields:

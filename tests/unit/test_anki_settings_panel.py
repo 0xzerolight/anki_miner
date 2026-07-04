@@ -411,12 +411,11 @@ def test_card_type_marker_fields_setter_defaults_missing_keys(qtbot):
 
 
 # ---------------------------------------------------------------------------
-# Conjugation + pitch field inputs (shipped opt-in keys) and unknown-key
+# Pitch graph/overline field inputs (shipped opt-in keys) and unknown-key
 # preservation across a Save round-trip.
 # ---------------------------------------------------------------------------
 
 _NEW_FIELD_KEYS = (
-    "conjugation",
     "pitch_graph",
     "pitch_text",
 )

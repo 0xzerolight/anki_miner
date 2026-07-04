@@ -292,15 +292,6 @@ class AnkiSettingsPanel(FormPanel):
             helper=self.tr("Stores the sentence as plain kana."),
         )
 
-        # Deinflection-chain provenance field (3.2). Default blank = feature off.
-        self.conjugation_field_input = QLineEdit()
-        self.conjugation_field_input.setPlaceholderText("Conjugation")
-        self.add_field(
-            self.tr("Conjugation Field"),
-            self.conjugation_field_input,
-            helper=self.tr("Stores the deinflection chain showing how the word was conjugated."),
-        )
-
         # Auxiliary Data Fields section
         self.add_section(self.tr("Auxiliary Data Fields"))
 
@@ -667,7 +658,6 @@ class AnkiSettingsPanel(FormPanel):
             "expression_reading": self.expression_reading_field_input.text().strip(),
             "sentence_furigana": self.sentence_furigana_field_input.text().strip(),
             "sentence_reading": self.sentence_reading_field_input.text().strip(),
-            "conjugation": self.conjugation_field_input.text().strip(),
             "pitch_position": self.pitch_position_field_input.text().strip(),
             "pitch_category": self.pitch_category_field_input.text().strip(),
             "pitch_graph": self.pitch_graph_field_input.text().strip(),
@@ -697,7 +687,6 @@ class AnkiSettingsPanel(FormPanel):
         self.expression_reading_field_input.setText(fields.get("expression_reading", ""))
         self.sentence_furigana_field_input.setText(fields.get("sentence_furigana", "SentenceFurigana"))
         self.sentence_reading_field_input.setText(fields.get("sentence_reading", ""))
-        self.conjugation_field_input.setText(fields.get("conjugation", ""))
         self.pitch_position_field_input.setText(fields.get("pitch_position", ""))
         self.pitch_category_field_input.setText(fields.get("pitch_category", ""))
         self.pitch_graph_field_input.setText(fields.get("pitch_graph", ""))
