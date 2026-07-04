@@ -60,7 +60,6 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
             "frequency": "Freq",
             "frequency_sort": "FreqSort",
             "source": "Source",
-            "conjugation": "Conjugation",
             "pitch_graph": "PitchGraph",
             "pitch_text": "PitchText",
         },
