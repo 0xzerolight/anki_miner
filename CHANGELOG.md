@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [2.7.8] - 2026-07-04
 
 ### Added
 - **Definitions are found for spelling variants and inflected input.** When a word's exact headword misses, lookup now falls back through its source spelling (乞う vs 請う), kana variants, and Yomitan's deinflection hypotheses validated against each entry's part-of-speech rules — so variant-spelling dictionaries hit, and pasting an inflected form like 食べさせられた into the in-app lookup finds 食べる. Mining pays this cost only for words that would otherwise have no definition.
