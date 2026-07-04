@@ -21,10 +21,6 @@ from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.run_off_thread import join_worker
 from anki_miner.gui.widgets.panels import DictionarySettingsPanel
 from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
-from anki_miner.gui.workers.dictionary_update_check_worker import (
-    DictionaryUpdateCheckWorker,
-    UpdateCheckOutcome,
-)
 from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip
 from anki_miner.services.dictionary.registry import DictionaryRegistry
 from anki_miner.utils.i18n import tr_format
@@ -74,20 +70,17 @@ class DictionaryImportFlow:
         # Long-lived worker reference; DictionaryImportWorker is a QThread and
         # would be destroyed mid-run if it fell out of scope before joining.
         self._active_import_worker: DictionaryImportWorker | None = None
-        # Update-check worker (network, notify-only). Held alive for the same
-        # reason and joined on close alongside the import worker.
-        self._active_update_worker: DictionaryUpdateCheckWorker | None = None
 
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close.
 
-        Returns the active import + update-check workers so
-        ``SettingsTab.iter_close_workers`` can chain them into the single
+        Returns the active import worker so ``SettingsTab.iter_close_workers``
+        can chain it into the single
         ``BackgroundTaskController._join_worker_for_close`` policy (cancel +
         bounded grace join + laggard deferral).  A ``None`` entry (idle flow) is
         filtered by ``_join_worker_for_close``.
         """
-        return (self._active_import_worker, self._active_update_worker)
+        return (self._active_import_worker,)
 
     def _import_notes(self, meta: dict) -> str:
         """Trailing note about malformed-skipped entries and media warnings.
@@ -123,7 +116,6 @@ class DictionaryImportFlow:
         self._panel._add_btn.setEnabled(enabled)
         self._panel._reimport_btn.setEnabled(enabled)
         self._panel._restore_btn.setEnabled(enabled)
-        self._panel._check_updates_btn.setEnabled(enabled)
         self._panel.set_per_row_reimport_enabled(enabled)
 
     def _with_dict_at_top(self, dict_id: str) -> tuple[ChainEntry, ...]:
@@ -648,119 +640,3 @@ class DictionaryImportFlow:
         self._panel.refresh_registry()
         self._panel.set_chain(new_chain)
         self._persist_chain(new_chain)
-
-    def check_for_updates(self) -> None:
-        """Fetch each dictionary's online index and report newer revisions.
-
-        Notify-only (plan 9.2): the check runs on a ``CancellableWorker`` and
-        reports "revision X → revision Y (download URL)" in a dialog. No download
-        or install happens — the user re-imports the new zip via the existing
-        Add/Re-import flow. Only dictionaries whose ``index.json`` declared them
-        updatable (with valid http(s) URLs) are network-checked.
-        """
-        registry = DictionaryRegistry(self._get_config().dicts_root)
-        registry.load()
-
-        # Jobs: (dict_id, display_name, db_path) for every indexed chain slot
-        # present on disk. Non-updatable dicts short-circuit inside the worker
-        # (no network request) so we needn't pre-filter on the GUI thread.
-        jobs: list[tuple[str, str, Path]] = []
-        for entry in self._panel.get_chain():
-            if entry.kind != "indexed" or entry.dict_id is None:
-                continue
-            meta = registry.get(entry.dict_id)
-            if meta is None:
-                continue
-            jobs.append((meta.dict_id, meta.source_name, meta.db_path))
-
-        if not jobs:
-            QMessageBox.information(
-                self._parent,
-                QCoreApplication.translate("DictionaryImportFlow", "Check for Updates"),
-                QCoreApplication.translate("DictionaryImportFlow", "No installed dictionaries to check."),
-            )
-            return
-
-        dlg = QProgressDialog(
-            QCoreApplication.translate("DictionaryImportFlow", "Checking for dictionary updates…"),
-            QCoreApplication.translate("DictionaryImportFlow", "Cancel"),
-            0,
-            len(jobs),
-            self._parent,
-        )
-        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dlg.show()
-
-        worker = DictionaryUpdateCheckWorker(jobs)
-        self._active_update_worker = worker
-        self._set_import_buttons_enabled(False)
-
-        def on_progress(cur: int, total: int) -> None:
-            dlg.setMaximum(total)
-            dlg.setValue(cur)
-
-        def on_finished(outcomes: list) -> None:
-            dlg.close()
-            self._show_update_report(outcomes)
-            self._set_import_buttons_enabled(True)
-
-        def on_failed(err: str) -> None:
-            dlg.close()
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("DictionaryImportFlow", "Update Check Failed"),
-                err,
-            )
-            self._set_import_buttons_enabled(True)
-
-        worker.progress.connect(on_progress)
-        worker.check_finished.connect(on_finished)
-        worker.failed.connect(on_failed)
-        dlg.canceled.connect(worker.cancel)
-        worker.start()
-
-    def _show_update_report(self, outcomes: list[UpdateCheckOutcome]) -> None:
-        """Render the update-check result dialog (updates available + errors)."""
-        updates = [o for o in outcomes if o.info is not None]
-        errors = [o for o in outcomes if o.error is not None]
-
-        if not updates and not errors:
-            QMessageBox.information(
-                self._parent,
-                QCoreApplication.translate("DictionaryImportFlow", "Check for Updates"),
-                QCoreApplication.translate("DictionaryImportFlow", "All dictionaries are up to date."),
-            )
-            return
-
-        lines: list[str] = []
-        if updates:
-            lines.append(QCoreApplication.translate("DictionaryImportFlow", "Updates available:"))
-            for o in updates:
-                assert o.info is not None
-                lines.append(
-                    tr_format(
-                        QCoreApplication.translate("DictionaryImportFlow", "  • %1: revision %2 → %3\n    %4"),
-                        o.display_name,
-                        o.info.current_revision or "?",
-                        o.info.latest_revision,
-                        o.info.download_url,
-                    )
-                )
-            lines.append("")
-            lines.append(
-                QCoreApplication.translate(
-                    "DictionaryImportFlow",
-                    "Download the new zip, then re-import it via the dictionary row's Re-import… menu.",
-                )
-            )
-        if errors:
-            if lines:
-                lines.append("")
-            lines.append(QCoreApplication.translate("DictionaryImportFlow", "Could not check:"))
-            lines.extend(f"  • {o.display_name}: {o.error}" for o in errors)
-
-        QMessageBox.information(
-            self._parent,
-            QCoreApplication.translate("DictionaryImportFlow", "Check for Updates"),
-            "\n".join(lines),
-        )
