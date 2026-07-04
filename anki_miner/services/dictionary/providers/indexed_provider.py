@@ -360,10 +360,24 @@ class IndexedDictProvider:
                 f'<ul class="gloss-list" data-count="{item_count}">{merged}</ul>'
             )
 
+        # data-has-styles gates the base sheet's data-sc-* gap-fillers OFF for
+        # dictionaries that ship a usable styles.css (glossary.css keys every
+        # gap-filler on `li[data-dictionary]:not([data-has-styles])`), so the
+        # dictionary's own scoped CSS governs its structured content — Yomitan
+        # parity. Accepted limitations: (a) non-empty scoped CSS != complete
+        # coverage — a partially sanitized or partially authored styles.css
+        # still stamps, so any hook it doesn't style renders bare (Yomitan
+        # gives such a dict no fallback either); (b) a pathological title
+        # containing </>/control chars has those stripped from its CSS scope
+        # selector (pre-existing css_string_escape fail-safe), so its own
+        # styles.css never matches its markup — such an entry is stamped and
+        # renders fully unstyled, consistently between fresh render and
+        # restyle. Real titles never trip it.
+        stamp = ' data-has-styles=""' if self._scoped_css else ""
         return (
             '<div class="yomitan-glossary">'
             '<ol data-count="1">'
-            f'<li data-dictionary="{escaped_attr}">'
+            f'<li data-dictionary="{escaped_attr}"{stamp}>'
             f"{''.join(blocks)}"
             "</li>"
             "</ol>"
