@@ -115,7 +115,7 @@ def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | Non
     ``counts`` is a ChainedExpressionAudioFetcher ``stats()`` tally keyed by
     failure bucket (ssl/connection/timeout/http_status/non_audio), aggregated
     across every enabled word-audio source (packs, JPod101, custom URL/JSON,
-    scrape, gTTS). Only surfaces a diagnosis when transient failures DOMINATE the
+    gTTS). Only surfaces a diagnosis when transient failures DOMINATE the
     run — a genuine "word not in any source" miss is never counted, so a high
     total means something systemic (expired certificate, outage, rate-limit)
     rather than words simply being absent. Scattered failures among
