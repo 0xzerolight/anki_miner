@@ -166,9 +166,18 @@
 
 /* Example sentences and supplementary notes — the data-sc-* hooks published
  * Jitendex/Yomitan dictionaries emit. Indent + mute so they read as secondary.
- * (Paste `[data-sc-content|="example-sentence"]{display:none}` into your custom
- * CSS to hide them entirely — see the Jitendex "Custom Styles" wiki.) */
-.yomitan-glossary ol[data-count] [data-sc-content|="example-sentence"] {
+ * Gated (like every data-sc-* rule below) to entries whose dictionary shipped
+ * no usable styles.css: the renderer stamps `data-has-styles` on the
+ * `li[data-dictionary]` envelope when scoped dictionary CSS exists, and the
+ * `li[data-dictionary]:not([data-has-styles])` anchor keeps these rules off
+ * such entries entirely so the dictionary's own CSS governs (Yomitan parity).
+ * The anchor must stay on `li[data-dictionary]` — a bare `li:not(...)` would
+ * match the inner `li.gloss-item` and the gate would be inert.
+ * NOTE the gate raises these rules' specificity (~(0,3,1) → ~(0,5,2)); to
+ * override a gap-filler from custom CSS use `!important`, e.g. paste
+ * `[data-sc-content|="example-sentence"]{display:none !important}` to hide
+ * example sentences (see the Jitendex "Custom Styles" wiki). */
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content="example-sentence"] {
   display: block;
   margin: 0.25em 0;
   padding-left: 0.6em;
@@ -177,8 +186,8 @@
   color: var(--am-muted);
 }
 
-.yomitan-glossary ol[data-count] [data-sc-content|="extra-info"],
-.yomitan-glossary ol[data-count] [data-sc-content|="attribution"] {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content|="extra-info"],
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content|="attribution"] {
   font-size: 0.82em;
   color: var(--am-muted);
 }
@@ -289,8 +298,8 @@
 }
 
 /* Frequency / pitch hooks, when a dictionary surfaces them inline. */
-.yomitan-glossary ol[data-count] [data-sc-content|="frequency"],
-.yomitan-glossary ol[data-count] [data-sc-content|="pitch-accent"] {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content|="frequency"],
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content|="pitch-accent"] {
   font-size: 0.85em;
   color: var(--am-muted);
 }
@@ -301,8 +310,11 @@
  * Styles the common Yomitan data-sc-* hooks that published dictionaries —
  * Jitendex, NHK, JMdict-derived monolinguals — produce, so a dictionary that
  * ships NO styles.css still renders tag pills, note boxes, and inflection
- * tables cleanly. When a dictionary DOES ship styles.css, its scoped block sits
- * later in the managed block and wins; these only fill gaps.
+ * tables cleanly. When a dictionary DOES ship styles.css these rules must not
+ * apply at all — source order alone cannot guarantee that (a base rule with a
+ * type selector out-specifies the scoped dict block regardless of order) — so
+ * every rule here carries the `li[data-dictionary]:not([data-has-styles])`
+ * gate and is switched off wholesale for stamped entries.
  *
  * Colors reproduce Yomitan's conventional palette for JMdict-derived content;
  * solid borders so they read without color-mix, tinted backgrounds added only
@@ -311,7 +323,7 @@
 
 /* Inline tag pills — part of speech, misc, field, dialect… A neutral chip by
  * default; the few widely shared semantic kinds get their conventional color. */
-.yomitan-glossary ol[data-count] span[data-sc-class="tag"] {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) span[data-sc-class="tag"] {
   display: inline-block;
   margin-right: 0.4em;
   padding: 0.05em 0.4em;
@@ -339,23 +351,23 @@
   background: var(--am-chip);
   color: var(--am-muted);
 }
-.yomitan-glossary ol[data-count] span[data-sc-content="part-of-speech-info"] {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) span[data-sc-content="part-of-speech-info"] {
   background: #565656;
   color: #fff;
 }
-.yomitan-glossary ol[data-count] span[data-sc-content="misc-info"] {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) span[data-sc-content="misc-info"] {
   background: #7a3b2e;
   color: #fff;
 }
-.yomitan-glossary ol[data-count] span[data-sc-content="field-info"] {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) span[data-sc-content="field-info"] {
   background: #5b3a78;
   color: #fff;
 }
-.yomitan-glossary ol[data-count] span[data-sc-content="dialect-info"] {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) span[data-sc-content="dialect-info"] {
   background: #2f6b39;
   color: #fff;
 }
-.yomitan-glossary ol[data-count] span[data-sc-content="lang-source-wasei"] {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) span[data-sc-content="lang-source-wasei"] {
   background: #b5651d;
   color: #fff;
 }
@@ -363,53 +375,53 @@
 /* Note boxes — info gloss, sense note, cross-references, antonyms, language
  * source. A left rail in the box's accent color (Yomitan also tints the
  * background ~5–8%, added under @supports below). */
-.yomitan-glossary ol[data-count] div[data-sc-class="extra-box"] {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) div[data-sc-class="extra-box"] {
   margin: 0.4em 0;
   padding: 0.25em 0.5em;
   border-left: 3px solid var(--am-faint);
   border-radius: 0.3em;
 }
-.yomitan-glossary ol[data-count] div[data-sc-content="info-gloss"] {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) div[data-sc-content="info-gloss"] {
   border-left-color: #2f8a46;
 }
-.yomitan-glossary ol[data-count] div[data-sc-content="sense-note"] {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) div[data-sc-content="sense-note"] {
   border-left-color: #c79a1e;
 }
-.yomitan-glossary ol[data-count] div[data-sc-content="lang-source"] {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) div[data-sc-content="lang-source"] {
   border-left-color: #7a4fae;
 }
-.yomitan-glossary ol[data-count] div[data-sc-content="xref"] {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) div[data-sc-content="xref"] {
   border-left-color: #1a73e8;
 }
-.yomitan-glossary ol[data-count] div[data-sc-content="antonym"] {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) div[data-sc-content="antonym"] {
   border-left-color: #a4422f;
 }
 
 /* Small labels inside the boxes ("Note", reference labels). */
-.yomitan-glossary ol[data-count] div[data-sc-class="extra-label"],
-.yomitan-glossary ol[data-count] span[data-sc-content="reference-label"] {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) div[data-sc-class="extra-label"],
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) span[data-sc-content="reference-label"] {
   font-size: 0.8em;
   color: var(--am-muted);
 }
 
 /* Example-sentence pair: the Japanese line a touch larger, its translation
  * smaller. (The example block itself is muted/indented above.) */
-.yomitan-glossary ol[data-count] div[data-sc-content="example-sentence-a"] {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) div[data-sc-content="example-sentence-a"] {
   font-size: 1.15em;
 }
-.yomitan-glossary ol[data-count] div[data-sc-content="example-sentence-b"] {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) div[data-sc-content="example-sentence-b"] {
   font-size: 0.85em;
 }
 
 /* Inflection / forms tables: Yomitan inlines per-cell borders that we don't
  * receive, so cells render borderless. Restore them at higher specificity than
  * the generic table rule so forms tables read as a grid. */
-.yomitan-glossary ol[data-count] [data-sc-content="forms"] table {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content="forms"] table {
   border-collapse: collapse;
   margin-top: 0.2em;
 }
-.yomitan-glossary ol[data-count] [data-sc-content="forms"] th,
-.yomitan-glossary ol[data-count] [data-sc-content="forms"] td {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content="forms"] th,
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content="forms"] td {
   border: 1px solid var(--am-faint);
   padding: 0.2em 0.4em;
   text-align: center;
@@ -418,33 +430,33 @@
 
 /* In-sense glossary list — Yomitan renders it inline with " | " separators
  * rather than as a bulleted block. */
-.yomitan-glossary ol[data-count] ul[data-sc-content="glossary"] {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) ul[data-sc-content="glossary"] {
   display: inline;
   list-style: none;
   padding-left: 0;
 }
-.yomitan-glossary ol[data-count] ul[data-sc-content="glossary"] > li {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) ul[data-sc-content="glossary"] > li {
   display: inline;
 }
-.yomitan-glossary ol[data-count] ul[data-sc-content="glossary"] > li:not(:first-child)::before {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) ul[data-sc-content="glossary"] > li:not(:first-child)::before {
   content: " | ";
   color: var(--am-muted);
 }
 
 @supports (color: color-mix(in srgb, red 50%, blue 50%)) {
-  .yomitan-glossary ol[data-count] div[data-sc-content="info-gloss"] {
+  .yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) div[data-sc-content="info-gloss"] {
     background: color-mix(in srgb, #2f8a46 8%, transparent);
   }
-  .yomitan-glossary ol[data-count] div[data-sc-content="sense-note"] {
+  .yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) div[data-sc-content="sense-note"] {
     background: color-mix(in srgb, #c79a1e 8%, transparent);
   }
-  .yomitan-glossary ol[data-count] div[data-sc-content="lang-source"] {
+  .yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) div[data-sc-content="lang-source"] {
     background: color-mix(in srgb, #7a4fae 8%, transparent);
   }
-  .yomitan-glossary ol[data-count] div[data-sc-content="xref"] {
+  .yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) div[data-sc-content="xref"] {
     background: color-mix(in srgb, #1a73e8 8%, transparent);
   }
-  .yomitan-glossary ol[data-count] div[data-sc-content="antonym"] {
+  .yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) div[data-sc-content="antonym"] {
     background: color-mix(in srgb, #a4422f 8%, transparent);
   }
 }

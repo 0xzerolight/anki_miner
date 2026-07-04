@@ -86,7 +86,7 @@ _FORBIDDEN_RE = re.compile(
 )
 
 
-def _css_string_escape(title: str) -> str:
+def css_string_escape(title: str) -> str:
     """Escape a dictionary title for use inside a CSS attribute-selector string.
 
     Backslash and double-quote are escaped per CSS string rules (matching
@@ -251,7 +251,7 @@ def scope_dict_css(styles_css: str, dict_title: str) -> str:
     if len(styles_css) > _MAX_STYLES_BYTES:
         logger.debug("styles.css for %r exceeds %d bytes; skipping", dict_title, _MAX_STYLES_BYTES)
         return ""
-    scope = f'.yomitan-glossary [data-dictionary="{_css_string_escape(dict_title)}"]'
+    scope = f'.yomitan-glossary [data-dictionary="{css_string_escape(dict_title)}"]'
     return _scope_block(styles_css, scope)
 
 
