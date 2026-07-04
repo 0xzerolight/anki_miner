@@ -261,21 +261,6 @@ def test_anki_fields_includes_source_default():
     assert cfg.anki_fields["source"] == ""
 
 
-def test_anki_fields_includes_cloze_defaults():
-    cfg = AnkiMinerConfig()
-    # Yomitan getCloze split fields (3.1): opt-in, default "" = feature off.
-    for key in ("cloze_prefix", "cloze_body", "cloze_body_kana", "cloze_suffix"):
-        assert key in cfg.anki_fields
-        assert cfg.anki_fields[key] == ""
-
-
-def test_anki_fields_includes_conjugation_default():
-    cfg = AnkiMinerConfig()
-    # Deinflection-chain provenance field (3.2): opt-in, default "" = off.
-    assert "conjugation" in cfg.anki_fields
-    assert cfg.anki_fields["conjugation"] == ""
-
-
 class TestExpressionAudioConfig:
     """Tests for expression audio config fields (Issue #73)."""
 

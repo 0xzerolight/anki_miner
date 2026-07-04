@@ -2,7 +2,6 @@
 
 import logging
 import re
-from typing import Any
 
 import requests
 
@@ -72,14 +71,6 @@ class AnkiService:
         #     folded in so a created-vs-submitted gap is never silent
         # Read by the pipeline to report skips.
         self.last_skipped_duplicates: int = 0
-        # Number of existing notes coalesce-updated during the last
-        # create_cards_batch call (config.duplicate_behavior == "update"): a
-        # probe-flagged duplicate whose existing note had >=1 empty mapped field
-        # this run could fill. Stays 0 in the default "skip" mode. Read by the
-        # pipeline to report the "N cards updated" summary. These are NOT new
-        # notes: their IDs never enter last_created_note_ids, so Undo — which
-        # deletes last_created_note_ids — never touches a pre-existing user note.
-        self.last_updated_notes: int = 0
         # Number of media files (screenshots/audio) that could not be stored in
         # Anki during the last create_cards_batch call. Read by the pipeline to
         # warn the user when cards land with empty media fields. Mirrored from
@@ -424,16 +415,13 @@ class AnkiService:
         if not word_data_list:
             self.last_created_note_ids = []
             self.last_skipped_duplicates = 0
-            self.last_updated_notes = 0
             self.last_media_store_failures = 0
             return 0
 
         self.last_created_note_ids = []
         self.last_skipped_duplicates = 0
-        self.last_updated_notes = 0
         self.last_media_store_failures = 0
         skipped_duplicates = 0
-        updated_notes = 0
         all_created_ids: list[int] = []
 
         if progress_callback:
@@ -496,23 +484,9 @@ class AnkiService:
                 submit_notes = [note for note, dup in zip(notes, is_duplicate, strict=True) if not dup]
                 submit_payloads = [item for item, dup in zip(batch, is_duplicate, strict=True) if not dup]
 
-                # Duplicate handling (7.4). Default "skip" counts every
-                # probe-flagged duplicate as skipped, exactly as before. "update"
-                # coalesce-fills each existing note's EMPTY mapped fields (never
-                # clobbering user edits) via update_notes_coalesce; only the
-                # duplicates it could NOT fill — not locatable, or already fully
-                # populated — stay counted as skipped. Updated notes are NOT new
-                # notes: their IDs never enter all_created_ids, so the Undo path
-                # (delete last_created_note_ids) never deletes a pre-existing user
-                # note. Media was uploaded before this loop, so any [sound:]/<img>
-                # ref a filled field carries already resolves.
+                # Every probe-flagged duplicate is counted as skipped.
                 dup_notes = [note for note, dup in zip(notes, is_duplicate, strict=True) if dup]
-                if self.config.duplicate_behavior == "update" and dup_notes:
-                    updated = self.update_notes_coalesce(dup_notes)
-                    updated_notes += updated
-                    skipped_duplicates += len(dup_notes) - updated
-                else:
-                    skipped_duplicates += len(dup_notes)
+                skipped_duplicates += len(dup_notes)
 
                 # Submit only the non-duplicates. `post_action` raises
                 # `AnkiConnectionError` for connection failures, transport errors,
@@ -561,7 +535,6 @@ class AnkiService:
             # re-raises.
             self.last_created_note_ids = all_created_ids
             self.last_skipped_duplicates = skipped_duplicates
-            self.last_updated_notes = updated_notes
             # Incremental merge: if the cache is already populated, union the
             # mined_forms of cards actually CREATED this run into it so subsequent
             # episodes (within the same batch run or the same manual-pair session)
@@ -585,11 +558,6 @@ class AnkiService:
             logger.info(
                 "%d note(s) were not created (likely already in your collection).",
                 skipped_duplicates,
-            )
-        if updated_notes > 0:
-            logger.info(
-                "%d existing note(s) coalesce-updated (empty mapped fields filled from this run).",
-                updated_notes,
             )
         if self.config.bold_target_in_sentence and word_data_list:
             logger.info(
@@ -719,186 +687,6 @@ class AnkiService:
             bool,
         )
         return [w != wo for w, wo in zip(with_dup, without_dup, strict=True)]
-
-    @staticmethod
-    def _coalesce_field(existing_value: str, new_value: str) -> str:
-        """Merge one field in ``coalesce`` mode: a non-empty existing value wins.
-
-        Ported from Yomitan ``DisplayAnki._getOverwrittenField`` ``'coalesce'``
-        case (``ext/js/display/display-anki.js``, upstream e2ed450): the JS
-        ``existingValue || newValue`` — an existing user-edited (non-empty) value
-        is kept verbatim, and only an empty existing field is filled with the new
-        value. Follows JS truthiness exactly, so a whitespace-only existing value
-        is treated as non-empty and kept.
-        """
-        return existing_value or new_value
-
-    @staticmethod
-    def _escape_dup_query(text: str) -> str:
-        """Strip ``"`` from a findNotes query term (Yomitan ``_escapeQuery``).
-
-        Ported from Yomitan ``AnkiConnect._escapeQuery``
-        (``ext/js/comm/anki-connect.js``, upstream e2ed450): the term is wrapped in
-        double quotes, so an embedded quote is removed rather than escaped.
-        """
-        return text.replace('"', "")
-
-    def _find_notes_query_for(self, note: dict) -> str:
-        """Build the findNotes query locating ``note``'s existing duplicate.
-
-        Ported from Yomitan ``AnkiConnect._getNoteQuery`` + ``_fieldsToQuery``
-        (``ext/js/comm/anki-connect.js``, upstream e2ed450): a first-field-only
-        ``"<field>:<value>"`` term (field name lower-cased — Anki field search is
-        case-insensitive on the name), collection-wide so it searches the same
-        universe the pre-add probe used. Returns ``""`` for a fieldless note
-        (never matches; the caller then falls back to skip).
-        """
-        fields = note.get("fields") or {}
-        if not fields:
-            return ""
-        first_key = next(iter(fields))
-        return f'"{first_key.lower()}:{self._escape_dup_query(str(fields[first_key]))}"'
-
-    @staticmethod
-    def _unwrap_multi_result(sub: Any) -> Any:
-        """Normalize one ``multi`` sub-result to its inner payload.
-
-        AnkiConnect versions differ: a sub-action's slot is either the bare result
-        (a list for findNotes, ``None`` for updateNoteFields) or a
-        ``{"result": ..., "error": ...}`` wrapper. Mirrors AnkiMediaStore's dual-form
-        handling: a truthy ``error`` yields ``None``, otherwise the inner ``result``
-        (or the bare value) is returned.
-        """
-        if isinstance(sub, dict):
-            if sub.get("error"):
-                return None
-            return sub.get("result")
-        return sub
-
-    def update_notes_coalesce(self, notes: list[dict]) -> int:
-        """Coalesce-fill existing duplicates' empty fields; return the count updated.
-
-        Ported from Yomitan ``DisplayAnki._getOverwrittenNote``
-        (``ext/js/display/display-anki.js``) + ``AnkiConnect.findNoteIds``
-        (``ext/js/comm/anki-connect.js``), upstream e2ed450. Consumes the built note
-        dicts the pre-add probe (7.2) flagged as duplicates and, in ``coalesce``
-        mode, fills only the EMPTY mapped fields of the existing note with this
-        run's values — a user-edited (non-empty) field is never overwritten.
-
-        Steps (Yomitan ``findNoteIds`` dedup + overwrite merge):
-          1. Build one query per note (:meth:`_find_notes_query_for`), deduplicate
-             identical queries into a single ``findNotes`` action, and issue them in
-             one ``multi`` envelope.
-          2. Take each note's first located id as its overwrite target (Yomitan's
-             ``noteIds.find(id => id !== INVALID_NOTE_ID)``); a note whose query
-             returned nothing falls back to skip (it stays a duplicate). Targets are
-             deduped by id so a repeated first field can't double-update one note.
-          3. ``notesInfo`` the target ids once, merge field-by-field with
-             :meth:`_coalesce_field`, and send ONLY the fields that actually change
-             (an empty existing field gaining a non-empty value) via a single
-             ``multi`` of ``updateNoteFields`` — a fully-populated existing note is
-             left byte-identical and counts as not-updated.
-
-        Updated notes are NOT new notes and are deliberately left out of
-        ``last_created_note_ids``; Undo (which deletes those ids) must never delete
-        or blank a pre-existing user note that was merely coalesced into.
-
-        Args:
-            notes: The built AnkiConnect note dicts flagged as duplicates.
-
-        Returns:
-            The number of existing notes actually updated (>= 1 field filled).
-
-        Raises:
-            AnkiConnectionError: connection/transport failure or a malformed
-                ``notesInfo`` response — consistent with the rest of
-                create_cards_batch, whose ``finally`` still records earlier batches.
-        """
-        if not notes:
-            return 0
-
-        # 1. Deduplicate queries (Yomitan findNoteIds actionsTargetsMap): identical
-        #    first-field/scope queries share a single findNotes action.
-        queries = [self._find_notes_query_for(note) for note in notes]
-        unique_queries: list[str] = []
-        for q in queries:
-            if q and q not in unique_queries:
-                unique_queries.append(q)
-        if not unique_queries:
-            return 0
-
-        find_actions = [{"action": "findNotes", "version": 6, "params": {"query": q}} for q in unique_queries]
-        find_results = post_multi(self.config.ankiconnect_url, find_actions, timeout=60)
-        query_to_ids: dict[str, list[int]] = {}
-        for q, sub in zip(unique_queries, find_results, strict=False):
-            payload = self._unwrap_multi_result(sub)
-            query_to_ids[q] = [i for i in payload if isinstance(i, int)] if isinstance(payload, list) else []
-
-        # 2. First located id per note is the overwrite target; dedup by id.
-        targets: list[tuple[int, dict]] = []  # (note_id, new_fields)
-        seen_ids: set[int] = set()
-        for note, q in zip(notes, queries, strict=True):
-            ids = query_to_ids.get(q, [])
-            if not ids:
-                continue
-            note_id = ids[0]
-            if note_id in seen_ids:
-                continue
-            seen_ids.add(note_id)
-            targets.append((note_id, note.get("fields") or {}))
-        if not targets:
-            return 0
-
-        # 3. Fetch existing fields, merge, update only the fields that change.
-        infos = _expect_list(
-            post_action(
-                self.config.ankiconnect_url,
-                "notesInfo",
-                params={"notes": [note_id for note_id, _ in targets]},
-                timeout=60,
-            )
-            or [],
-            "notesInfo",
-            elem_type=dict,
-        )
-        id_to_fields: dict[int, dict] = {}
-        for info in infos:
-            note_id = info.get("noteId")
-            fields = info.get("fields")
-            if isinstance(note_id, int) and isinstance(fields, dict) and fields:
-                id_to_fields[note_id] = fields
-
-        update_actions: list[dict] = []
-        for note_id, new_fields in targets:
-            existing = id_to_fields.get(note_id)
-            if not existing:
-                # Located by findNotes but gone/deleted by notesInfo time: skip.
-                continue
-            filled: dict[str, str] = {}
-            for field_name, new_value in new_fields.items():
-                existing_entry = existing.get(field_name)
-                if not isinstance(existing_entry, dict):
-                    # Field absent from the existing note (a mapping mismatch): do
-                    # not invent it — coalesce only fills fields Anki already has.
-                    continue
-                existing_value = existing_entry.get("value", "") or ""
-                coalesced = self._coalesce_field(existing_value, str(new_value))
-                if coalesced != existing_value:
-                    filled[field_name] = coalesced
-            if filled:
-                update_actions.append(
-                    {
-                        "action": "updateNoteFields",
-                        "version": 6,
-                        "params": {"note": {"id": note_id, "fields": filled}},
-                    }
-                )
-        if not update_actions:
-            return 0
-
-        update_results = post_multi(self.config.ankiconnect_url, update_actions, timeout=60)
-        errors = sum(1 for sub in update_results[: len(update_actions)] if isinstance(sub, dict) and sub.get("error"))
-        return len(update_actions) - errors
 
     def _store_media_files_batch(
         self,

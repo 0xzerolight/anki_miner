@@ -186,38 +186,6 @@ class TestProcessEpisode:
         warnings = [c.args[0] for c in presenter.show_warning.call_args_list]
         assert any("Skipped 1" in w and "duplicate" in w.lower() for w in warnings)
 
-    def test_updated_notes_surfaced_as_message(self, test_config, mock_services, tmp_path):
-        """A non-zero last_updated_notes (duplicate_behavior=update) is reported."""
-        presenter = MagicMock()
-        proc = EpisodeProcessor(
-            config=test_config,
-            subtitle_parser=mock_services["subtitle_parser"],
-            word_filter=mock_services["word_filter"],
-            media_extractor=mock_services["media_extractor"],
-            definition_service=mock_services["definition_service"],
-            anki_service=mock_services["anki_service"],
-            presenter=presenter,
-        )
-
-        words = [_make_word("食べる"), _make_word("走る", start_time=5.0)]
-        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
-        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
-        mock_services["word_filter"].filter_unknown.return_value = words
-        mock_services["media_extractor"].extract_media_batch.return_value = [
-            (words[0], _make_media("taberu")),
-            (words[1], _make_media("hashiru")),
-        ]
-        mock_services["definition_service"].get_definitions_batch.return_value = ["1. eat", "1. run"]
-        mock_services["anki_service"].create_cards_batch.return_value = 0
-        mock_services["anki_service"].last_skipped_duplicates = 0
-        mock_services["anki_service"].last_media_store_failures = 0
-        mock_services["anki_service"].last_updated_notes = 2
-
-        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        infos = [c.args[0] for c in presenter.show_info.call_args_list]
-        assert any("Updated 2" in m and "empty fields" in m for m in infos)
-
     def test_media_store_failures_surfaced_as_warning(self, test_config, mock_services, tmp_path):
         """A non-zero last_media_store_failures from card creation is reported."""
         presenter = MagicMock()
@@ -1024,47 +992,6 @@ class TestOptionalServices:
         # No per-source breakdown, but the sort field carries the missing sentinel.
         assert "frequency" not in extra_fields
         assert extra_fields["frequency_sort"] == "9999999"
-
-    def test_conjugation_field_joins_chain_when_mapped(self, test_config, mock_services, tmp_path):
-        """Mapped conjugation field: extra_fields carries the chain joined ' « '."""
-        word = _make_word("食べる")
-        word.inflection_chain = ("-ます", "negative", "-た")
-        media = _make_media()
-
-        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
-        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
-        mock_services["word_filter"].filter_unknown.return_value = [word]
-        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
-        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
-
-        config = replace(test_config, anki_fields={**test_config.anki_fields, "conjugation": "Conjugation"})
-        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **mock_services)
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
-        extra_fields = card_data[0].extra_fields or {}
-        assert extra_fields["conjugation"] == "-ます « negative « -た"
-
-    def test_conjugation_field_omitted_when_chain_empty(self, test_config, mock_services, tmp_path):
-        """Mapped field but empty chain: no conjugation key (uninflected word)."""
-        word = _make_word("本")  # inflection_chain defaults to ()
-        media = _make_media()
-
-        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
-        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
-        mock_services["word_filter"].filter_unknown.return_value = [word]
-        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
-        mock_services["definition_service"].get_definitions_batch.return_value = ["1. book"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
-
-        config = replace(test_config, anki_fields={**test_config.anki_fields, "conjugation": "Conjugation"})
-        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **mock_services)
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
-        extra_fields = card_data[0].extra_fields or {}
-        assert "conjugation" not in extra_fields
 
 
 class TestPitchLemmaReading:

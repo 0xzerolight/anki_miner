@@ -411,16 +411,11 @@ def test_card_type_marker_fields_setter_defaults_missing_keys(qtbot):
 
 
 # ---------------------------------------------------------------------------
-# Cloze + conjugation field inputs (shipped opt-in keys) and unknown-key
+# Pitch graph/overline field inputs (shipped opt-in keys) and unknown-key
 # preservation across a Save round-trip.
 # ---------------------------------------------------------------------------
 
 _NEW_FIELD_KEYS = (
-    "cloze_prefix",
-    "cloze_body",
-    "cloze_body_kana",
-    "cloze_suffix",
-    "conjugation",
     "pitch_graph",
     "pitch_text",
 )
@@ -428,7 +423,7 @@ _NEW_FIELD_KEYS = (
 
 @pytest.mark.parametrize("key", _NEW_FIELD_KEYS)
 def test_new_field_get_set_roundtrip(qtbot, key):
-    """Each cloze/conjugation key survives set_card_fields -> get_card_fields."""
+    """Each opt-in field key survives set_card_fields -> get_card_fields."""
     panel = AnkiSettingsPanel()
     qtbot.addWidget(panel)
 
@@ -438,7 +433,7 @@ def test_new_field_get_set_roundtrip(qtbot, key):
 
 @pytest.mark.parametrize("key", _NEW_FIELD_KEYS)
 def test_new_field_default_blank(qtbot, key):
-    """Each cloze/conjugation key defaults to "" when absent from the mapping."""
+    """Each opt-in field key defaults to "" when absent from the mapping."""
     panel = AnkiSettingsPanel()
     qtbot.addWidget(panel)
 

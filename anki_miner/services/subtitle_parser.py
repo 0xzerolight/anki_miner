@@ -14,9 +14,8 @@ from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.word import select_mined_form
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, TermLookup
-from anki_miner.services.deinflection import find_highlight_end_with_trace
+from anki_miner.services.deinflection import find_highlight_end
 from anki_miner.services.morphology import (
-    TokenDecision,
     TokenInclusionRule,
     extract_lemma,
     extract_orth_base,
@@ -32,7 +31,6 @@ from anki_miner.utils import (
     katakana_to_hiragana,
     wrap_target_plain,
 )
-from anki_miner.utils.sentence_extract import extract_sentence
 from anki_miner.utils.text_utils import (
     generate_furigana_from_tokens,
     generate_reading_from_tokens,
@@ -84,13 +82,6 @@ class SubtitleParserService:
         self._compound_matcher: CompoundDictionaryMatcher | None = None
         if term_lookup is not None and config.compound_matching:
             self._compound_matcher = CompoundDictionaryMatcher(term_lookup, self._inclusion_rule)
-        # Kana-only dictionary attestation (Task 2.1). Enabled iff the toggle is
-        # on AND a headword-existence probe was injected (same offline-dict
-        # requirement as compound matching, wired in service_factory); otherwise
-        # the probe is None, every kana candidate is rejected, and parsing is
-        # byte-identical. Independent of compound_matching: the two features
-        # borrow the same offline_terms_exist seam but gate separately.
-        self._kana_probe: TermLookup | None = term_lookup if config.mine_kana_only_words else None
         self._filter_pattern: re.Pattern[str] | None = None
         if config.use_subtitle_regex_filter and config.subtitle_regex_filter:
             try:
@@ -129,9 +120,7 @@ class SubtitleParserService:
         # eviction (pop the oldest key when full). Prevents unbounded growth during
         # large Deck Builder builds while still caching all files touched in Phase 1
         # for Phase 2 reuse when the corpus fits within the cap.
-        self._line_cache: dict[
-            Path, tuple[float, list[tuple[str, list, list, frozenset[str], float, float, float]]]
-        ] = {}
+        self._line_cache: dict[Path, tuple[float, list[tuple[str, list, list, float, float, float]]]] = {}
 
     # ------------------------------------------------------------------
     # Per-parse memoization helpers
@@ -189,22 +178,16 @@ class SubtitleParserService:
 
     def _iter_parsed_lines(
         self, subtitle_file: Path
-    ) -> Iterator[tuple[str, list[Any], list[Any], frozenset[str], float, float, float]]:
+    ) -> Iterator[tuple[str, list[Any], list[Any], float, float, float]]:
         """Yield post-tokenize per-line state for every non-empty subtitle line.
 
-        Yields ``(text, raw_tokens, merged_tokens, attested_kana, start_time,
-        end_time, duration)``. ``text`` is the cleaned + regex-filtered line;
+        Yields ``(text, raw_tokens, merged_tokens, start_time, end_time,
+        duration)``. ``text`` is the cleaned + regex-filtered line;
         ``raw_tokens`` is the direct output of ``self.tagger(text)`` (used by
         ``_from_tokens`` helpers so the sentence is tokenized only once);
         ``merged_tokens`` is the full output of ``_merge_compound_suffixes``
         (callers apply ``_should_include_word`` themselves so the index path and
-        mining path share identical token selection logic). ``attested_kana`` is
-        the per-line set of kana-candidate lemmas a dictionary attests (Task
-        2.1), computed ONCE here and baked into the cached line-state so mining
-        and count_lemmas consult identical sets (T-38) and a cache replay
-        re-issues no probe. It is ``frozenset()`` whenever kana attestation is
-        disabled, so the flag's effect is fully captured in the baked state and
-        a reused parser instance cannot replay a stale variant.
+        mining path share identical token selection logic).
 
         Per-file cache: keyed by resolved path → (mtime, line-state list);
         bounded to ``_LINE_CACHE_MAX_FILES`` entries via oldest-first eviction.
@@ -241,7 +224,7 @@ class SubtitleParserService:
         # mock it with an order-sensitive side_effect). The cache entry is only
         # committed once the generator is fully consumed, so a consumer that
         # abandons iteration early does not leave a truncated entry.
-        line_states: list[tuple[str, list, list, frozenset[str], float, float, float]] = []
+        line_states: list[tuple[str, list, list, float, float, float]] = []
         for line in subs:
             # Skip ASS/SSA Comment events (karaoke, sign TL, staff credits…).
             # pysubs2 SSAEvent.is_comment is a bool; we check ``is True`` (strict
@@ -264,12 +247,7 @@ class SubtitleParserService:
             if self._compound_matcher is not None:
                 merged_tokens = self._compound_matcher.merge_line(text, merged_tokens)
 
-            # One batched dictionary-attestation probe per line (never per-word),
-            # over the FINAL merged tokens the mining loops iterate. Baked into the
-            # line-state so count_lemmas and both mining loops see the same set.
-            attested_kana = self._resolve_kana_candidates(merged_tokens)
-
-            line_state = (text, raw_tokens, merged_tokens, attested_kana, start_time, end_time, duration)
+            line_state = (text, raw_tokens, merged_tokens, start_time, end_time, duration)
             line_states.append(line_state)
             yield line_state
 
@@ -289,53 +267,14 @@ class SubtitleParserService:
         """Single-source token-span locator (see morphology.iter_token_spans)."""
         return iter_token_spans(text, tokens)
 
-    def _find_highlight_end_with_trace(
-        self, text: str, raw_tokens: list, tok_start: int, tok_end: int, word_token: Any
-    ) -> tuple[int, tuple[str, ...]]:
-        """Full-inflected-form end offset + deinflection chain.
+    def _find_highlight_end(self, text: str, raw_tokens: list, tok_start: int, tok_end: int, word_token: Any) -> int:
+        """Full-inflected-form end offset.
 
-        See deinflection.find_highlight_end_with_trace. Both mining passes call
-        this identically so the emitted highlight_end AND inflection_chain stay
-        byte-identical between parse_subtitle_file and _with_index.
+        See deinflection.find_highlight_end. Both mining passes call this
+        identically so the emitted highlight_end stays byte-identical between
+        parse_subtitle_file and _with_index.
         """
-        return find_highlight_end_with_trace(text, raw_tokens, tok_start, tok_end, word_token)
-
-    def _resolve_kana_candidates(self, tokens: list) -> frozenset[str]:
-        """Return the lemmas of this line's kana candidates a dictionary attests.
-
-        A kana candidate is a pure-hiragana content word the script gate would
-        otherwise reject (``TokenDecision.KANA_CANDIDATE``). Each candidate's
-        lemma AND its source-orthography ``orthBase`` are probed in ONE batched
-        ``offline_terms_exist`` round-trip (Yomitan wordhood-by-attestation);
-        UniDic's lemma is kanji-canonical (うなずく→頷く, すげぇ→凄い) while a
-        dictionary may store either the kanji headword or a kana headword
-        (ごまかす), so a candidate attests when EITHER form is a stored headword
-        and its lemma joins the returned set. The probe is term-only by design
-        (``storage.terms_exist``): reading-column matches are excluded, so a
-        kana word keyed only under some kanji headword's *reading* stays
-        unmined — a deliberate narrowing (see Task 2.1 brief).
-
-        Returns an empty set when kana attestation is disabled (flag off / no
-        offline dictionary — ``_kana_probe is None``) or the line has no
-        candidates, so parsing stays byte-identical.
-        """
-        if self._kana_probe is None:
-            return frozenset()
-        candidates: list[tuple[str, str]] = []  # (lemma, orthBase) per candidate
-        probe_terms: list[str] = []
-        for token in tokens:
-            if self._inclusion_rule.classify(token) is not TokenDecision.KANA_CANDIDATE:
-                continue
-            lemma = self._extract_lemma(token)
-            orth = self._extract_orth_base(token)
-            candidates.append((lemma, orth))
-            probe_terms.append(lemma)
-            if orth != lemma:
-                probe_terms.append(orth)
-        if not probe_terms:
-            return frozenset()
-        found = self._kana_probe(probe_terms)
-        return frozenset(lemma for lemma, orth in candidates if lemma in found or orth in found)
+        return find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
 
     def _emit_word(
         self,
@@ -344,7 +283,6 @@ class SubtitleParserService:
         tok_end: int,
         *,
         highlight_end: int,
-        inflection_chain: tuple[str, ...] = (),
         text: str,
         raw_tokens: list,
         start_time: float,
@@ -427,29 +365,6 @@ class SubtitleParserService:
         # recomputes the lemma's reading like the surface-mined case.
         lemma_reading = expression_reading if mined == lemma else self._reading(lemma)
 
-        # Opt-in sentence-boundary trimming (3.3). Trim the cue to the sentence
-        # containing the target, then rebase the carried offsets into the trimmed
-        # text so bold/cloze fields stay aligned. Anchor the forward walk on the
-        # full inflected span (bold_end) so a terminator inside the word can't
-        # split it. Sentence furigana/reading are regenerated from the trimmed
-        # text via the per-parse memos, and raw_tokens is re-tokenized so the
-        # bold-furigana path (wrap_target_furigana_from_tokens) sees tokens that
-        # match the trimmed text, not the whole cue. count_lemmas / the line
-        # index are untouched — trimming is emission-only.
-        if self.config.trim_to_sentence:
-            term_end = highlight_end if highlight_end >= 0 else tok_end
-            trimmed, offset = extract_sentence(text, tok_start, term_end)
-            if trimmed != text:
-                shift = tok_start - offset
-                text = trimmed
-                tok_start = offset
-                tok_end -= shift
-                if highlight_end >= 0:
-                    highlight_end -= shift
-                sentence_furigana = self._furigana(text)
-                sentence_reading = self._reading(text)
-                raw_tokens = list(self.tagger(text))
-
         if self.config.bold_target_in_sentence:
             # Bold the full inflected form (verb/adjective + auxiliary
             # chain), not just the stem morpheme: 蒔いた, not 蒔い.
@@ -477,7 +392,6 @@ class SubtitleParserService:
             surface_start=tok_start,
             surface_end=tok_end,
             highlight_end=highlight_end,
-            inflection_chain=inflection_chain,
             sentence_bolded=sentence_bolded,
             sentence_furigana_bolded=sentence_furigana_bolded,
         )
@@ -534,7 +448,6 @@ class SubtitleParserService:
             text,
             raw_tokens,
             merged_tokens,
-            attested_kana,
             start_time,
             end_time,
             duration,
@@ -550,18 +463,15 @@ class SubtitleParserService:
             # Spans come from the shared locator (Issue #20 / T-38 — see
             # _iter_token_spans for the cursor+find and drop-rule rationale).
             for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-                if not self._should_include_word(word_token, attested_kana):
+                if not self._should_include_word(word_token):
                     continue
 
-                highlight_end, inflection_chain = self._find_highlight_end_with_trace(
-                    text, raw_tokens, tok_start, tok_end, word_token
-                )
+                highlight_end = self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
                 word = self._emit_word(
                     word_token,
                     tok_start,
                     tok_end,
                     highlight_end=highlight_end,
-                    inflection_chain=inflection_chain,
                     text=text,
                     raw_tokens=raw_tokens,
                     start_time=start_time,
@@ -612,7 +522,6 @@ class SubtitleParserService:
             text,
             raw_tokens,
             merged_tokens,
-            attested_kana,
             start_time,
             end_time,
             duration,
@@ -624,22 +533,20 @@ class SubtitleParserService:
             # against the swapped-in line.
             line_lemmas: set[str] = set()
             included_tokens: list = []
-            included_spans: list[tuple[int, int, int, tuple[str, ...]]] = []
+            included_spans: list[tuple[int, int, int]] = []
             lemma_first_span: dict[str, tuple[str, int, int, int]] = {}
             # Spans come from the shared locator — same offset and drop rule
             # as parse_subtitle_file (Issue #20 / T-38, see _iter_token_spans).
             for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-                if not self._should_include_word(word_token, attested_kana):
+                if not self._should_include_word(word_token):
                     continue
                 lemma_here = self._extract_lemma(word_token)
                 line_lemmas.add(lemma_here)
                 included_tokens.append(word_token)
                 # Computed once per token here and reused by the second pass,
                 # so parse_subtitle_file and _with_index stay output-identical.
-                highlight_end, inflection_chain = self._find_highlight_end_with_trace(
-                    text, raw_tokens, tok_start, tok_end, word_token
-                )
-                included_spans.append((tok_start, tok_end, highlight_end, inflection_chain))
+                highlight_end = self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
+                included_spans.append((tok_start, tok_end, highlight_end))
                 lemma_first_span.setdefault(lemma_here, (word_token.surface, tok_start, tok_end, highlight_end))
 
             # A line with zero content words can never be i+1 — skip it from
@@ -669,15 +576,12 @@ class SubtitleParserService:
             )
 
             # Second pass: emit deduped TokenizedWord entries (lemma-keyed).
-            for word_token, (tok_start, tok_end, highlight_end, inflection_chain) in zip(
-                included_tokens, included_spans, strict=True
-            ):
+            for word_token, (tok_start, tok_end, highlight_end) in zip(included_tokens, included_spans, strict=True):
                 word = self._emit_word(
                     word_token,
                     tok_start,
                     tok_end,
                     highlight_end=highlight_end,
-                    inflection_chain=inflection_chain,
                     text=text,
                     raw_tokens=raw_tokens,
                     start_time=start_time,
@@ -710,16 +614,15 @@ class SubtitleParserService:
             SubtitleParseError: If subtitle file cannot be parsed
         """
         counts: collections.Counter[str] = collections.Counter()
-        for text, _raw_tokens, merged_tokens, attested_kana, *_ in self._iter_parsed_lines(subtitle_file):
+        for text, _raw_tokens, merged_tokens, *_ in self._iter_parsed_lines(subtitle_file):
             # Spans come from the SAME locator as the mining loops in
             # parse_subtitle_file* — a token mining drops (find == -1),
             # counting drops too, or the count-vs-mine sets diverge and the
             # Deck Builder preview over-promises (T-38). The cursor+find and
             # drop-rule rationale lives on _iter_token_spans; do not inline a
-            # divergent copy here. ``attested_kana`` is the SAME baked probe set
-            # the mining loops consult, so kana-candidate inclusion agrees too.
+            # divergent copy here.
             for token, _tok_start, _tok_end in self._iter_token_spans(text, merged_tokens):
-                if self._should_include_word(token, attested_kana):
+                if self._should_include_word(token):
                     counts[self._extract_lemma(token)] += 1
         return counts
 
@@ -747,6 +650,6 @@ class SubtitleParserService:
         """Extract kana reading from a token (see morphology.extract_reading)."""
         return extract_reading(word_token)
 
-    def _should_include_word(self, word_token, attested_kana: frozenset[str] | None = None) -> bool:
-        """POS/subtype/kana-attestation inclusion gate (see morphology.TokenInclusionRule.should_include)."""
-        return self._inclusion_rule.should_include(word_token, attested_kana)
+    def _should_include_word(self, word_token) -> bool:
+        """POS/subtype/script inclusion gate (see morphology.TokenInclusionRule.should_include)."""
+        return self._inclusion_rule.should_include(word_token)

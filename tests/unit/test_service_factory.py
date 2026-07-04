@@ -325,34 +325,3 @@ class TestCompoundMatchingInjection:
         services = service_factory.create_services(cfg, subtitle_parser=prebuilt)
         assert services.subtitle_parser is prebuilt
         assert services.subtitle_parser._compound_matcher is None
-
-    def test_kana_probe_injected_when_compound_off(self, base_config):
-        """mine_kana_only_words wires the probe even with compound matching off."""
-        cfg = dataclasses.replace(
-            base_config,
-            compound_matching=False,
-            mine_kana_only_words=True,
-            dictionary_chain=(ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),),
-        )
-        services = service_factory.create_services(cfg)
-        parser = services.subtitle_parser
-        assert parser._compound_matcher is None  # compound feature stays off
-        assert parser._kana_probe == services.definition_service.offline_terms_exist
-
-    def test_kana_probe_not_injected_without_indexed_dict(self, base_config):
-        cfg = dataclasses.replace(
-            base_config,
-            compound_matching=False,
-            mine_kana_only_words=True,
-            dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
-        )
-        services = service_factory.create_services(cfg)
-        assert services.subtitle_parser._kana_probe is None
-
-    def test_kana_probe_off_by_default(self, base_config):
-        cfg = dataclasses.replace(
-            base_config,
-            dictionary_chain=(ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),),
-        )
-        services = service_factory.create_services(cfg)
-        assert services.subtitle_parser._kana_probe is None
