@@ -15,12 +15,15 @@ is purely additive (prepend only) and never touches note-type styling.
 
 from __future__ import annotations
 
+import html
+import re
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from anki_miner.services.definition_service import collect_dictionary_css
 from anki_miner.services.dictionary.card_style_block import build_card_style_block
+from anki_miner.services.dictionary.dict_css_scope import css_string_escape
 
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
@@ -32,6 +35,51 @@ if TYPE_CHECKING:
 _QUERY_ESCAPES = (("\\", "\\\\"), ('"', '\\"'), ("*", "\\*"), ("_", "\\_"))
 
 _CHUNK = 500
+
+# A legacy card body's dictionary envelopes, as the renderer has always emitted
+# them: `<li data-dictionary="TITLE">` with an html.escape'd title and no other
+# attributes. Older bodies never carry the data-has-styles stamp, so the plain
+# `">` terminator matches exactly the envelopes that need stamping.
+_ENVELOPE_RE = re.compile(r'<li data-dictionary="([^"]*)">')
+
+
+def _stamp_styled_envelopes(value: str, dict_css: str) -> str:
+    """Stamp ``data-has-styles`` on legacy envelopes whose dictionary has scoped CSS.
+
+    Fresh mining stamps the ``<li data-dictionary>`` envelope at render time
+    (``IndexedDictProvider._render``) so the base sheet's gated data-sc-*
+    gap-fillers stay off entries governed by their dictionary's own styles.css.
+    Legacy bodies predate the stamp, and the restyler prepends a base sheet
+    whose gap-fillers would out-specify the scoped dictionary CSS — reproducing
+    the very bug the gate fixes — so the envelope must be stamped here too.
+
+    An envelope is stamped iff its dictionary's scoped CSS is present in either
+    stylesheet that will govern the restyled card: the body's own embedded
+    per-dict ``<style>`` (covers renamed/uninstalled dictionaries) or the
+    ``dict_css`` about to be prepended (the restyler injects current-config CSS,
+    so its titles gate too; over-stamping is impossible — the block always
+    carries the matching scoped CSS for any title it contributes). Never matched
+    against custom CSS: a user's own ``[data-dictionary="D"]`` tweak must not
+    gate dict D (the residual case of such a tweak inside a legacy embedded
+    block is a benign accepted edge).
+
+    The membership key re-derives the scoped-CSS selector prefix from the
+    envelope attribute via the same forward escaper ``scope_dict_css`` uses
+    (``html.unescape`` → ``css_string_escape``), so matching is exact for real
+    titles and consistent even on the escaper's lossy ``<``/``>``-stripping
+    path. ``re.sub`` with a replacement function is offset-safe for multi-dict
+    bodies; already-stamped envelopes don't match the pattern (their ``<li``
+    carries a second attribute), so the rewrite is idempotent.
+    """
+
+    def _stamp(match: re.Match[str]) -> str:
+        title = html.unescape(match.group(1))
+        key = f'[data-dictionary="{css_string_escape(title)}"]'
+        if key in value or key in dict_css:
+            return f'<li data-dictionary="{match.group(1)}" data-has-styles="">'
+        return match.group(0)
+
+    return _ENVELOPE_RE.sub(_stamp, value)
 
 
 @dataclass(frozen=True)
@@ -80,7 +128,8 @@ def restyle_mined_cards(
     if not styling_field:
         return RestyleResult(0, 0, 0, 0)
 
-    block = build_card_style_block(custom_css=config.custom_card_css, dict_css=collect_dictionary_css(config))
+    dict_css = collect_dictionary_css(config)
+    block = build_card_style_block(custom_css=config.custom_card_css, dict_css=dict_css)
     if not block.startswith("<style"):
         # Defensive: the bundled base is never empty, but an empty block would
         # otherwise "restyle" every card on every run (no ol[data-count] added).
@@ -110,7 +159,7 @@ def restyle_mined_cards(
             if "ol[data-count]" in value:
                 skipped_styled += 1
                 continue
-            updates.append((note_id, {styling_field: block + value}))
+            updates.append((note_id, {styling_field: block + _stamp_styled_envelopes(value, dict_css)}))
         if updates:
             restyled += anki_service.update_notes_fields(updates)
         if progress:
