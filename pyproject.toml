@@ -36,6 +36,11 @@ dependencies = [
     "psutil>=7.0.0",
     "packaging>=25.0",
     "gtts>=2.5,<3",
+    # Runtime: scrape_audio_fetchers.py parses JPod101/Jisho HTML with lxml.html
+    # (eagerly imported via the audio-fetcher chain, so it must ship in the bundle
+    # and pip installs, not just [dev]). Also used build-time by
+    # scripts/build_name_wordsets.py (JMnedict entity-laden XML, Issue #59).
+    "lxml>=6.1.0",
 ]
 
 [project.optional-dependencies]
@@ -75,9 +80,6 @@ dev = [
     "ruff>=0.9.0",
     "types-requests>=2.31.0",
     "pre-commit>=4.0.0",
-    # Build-time only: scripts/build_name_wordsets.py parses JMnedict's
-    # entity-laden XML (Issue #59). Not a runtime dependency.
-    "lxml>=6.1.0",
     # Soft E2E dep: screenshot baseline-diff in tests/e2e/screenshot_diff.py.
     # PIL is never imported at runtime; the diff degrades gracefully if absent.
     "pillow>=10.0.0",
