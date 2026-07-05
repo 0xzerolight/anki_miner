@@ -65,12 +65,18 @@ def extract_lemma(word_token) -> str:
     except AttributeError:
         lemma = word_token.surface
 
-    # Clean lemma - strip unidic's English-gloss tail
-    # (e.g. "スクランブル-scramble" -> "スクランブル") but leave Japanese
-    # names like "メル-ビル" intact: only split when the tail is ASCII.
+    # Strip unidic's disambiguator tail: an English gloss
+    # ("スクランブル-scramble", "ロック-rock（音楽）" — the fullwidth parens
+    # defeat a plain isascii() check, "メリーゴーランド-merry-go-round" — the
+    # gloss itself is hyphenated, hence splitting on the FIRST hyphen) or the
+    # token's own POS name ("君-代名詞"). Decorated lemmas miss every
+    # lemma-keyed lookup (frequency/pitch/offline-definition existence), which
+    # key on the clean headword. Japanese name segments (メル-ビル) have
+    # neither an ASCII letter nor a POS-name tail and are kept intact.
     if "-" in lemma:
         head, _, tail = lemma.partition("-")
-        if tail.isascii():
+        pos1 = getattr(getattr(word_token, "feature", None), "pos1", None)
+        if head and tail and (any(c.isascii() and c.isalpha() for c in tail) or tail == pos1):
             lemma = head
 
     return str(lemma)
@@ -99,6 +105,80 @@ def extract_orth_base(word_token) -> str:
     if not orth_base:
         return extract_lemma(word_token)
     return str(orth_base)
+
+
+# Potential-verb paradigm (godan e-row + ら抜き) and adjective ク-form pairs:
+# (derived orthBase suffix, base lemma suffix). Mirrors the potential rules in
+# japanese_transforms.py (the "potential" transform); kept as data here because
+# mining folds a HEADWORD (orthBase→lemma), not running the deinflection
+# engine on text.
+_FOLD_SUFFIX_PAIRS = (
+    ("える", "う"),
+    ("ける", "く"),
+    ("げる", "ぐ"),
+    ("せる", "す"),
+    ("てる", "つ"),
+    ("ねる", "ぬ"),
+    ("べる", "ぶ"),
+    ("める", "む"),
+    ("れる", "る"),
+    ("し", "い"),
+)
+
+
+def mining_base(word_token) -> str:
+    """orthBase for the card front, folded to lemma for derived sub-lemma entries.
+
+    unidic gives potential verbs (保てる←保つ), ra-nuki forms (見れる←見る) and
+    archaic i-adjective bases (良し←良い) their own orthBase while lemma points
+    at the parent headword. Mining orthBase makes a 保てる card distinct from an
+    existing 保つ card; folding to lemma dedupes them. Applies only to 動詞 /
+    形容詞 — the only POS whose mined_form reads orth_base (select_mined_form).
+
+    Trigger: the lemma reading (lForm) and orthBase reading (kanaBase) diverge,
+    hiragana-folded. NOTE this is strictly "readings diverge", not "is a
+    conjugated derivative" — polyphonic entries like 言う (イウ vs ユウ) also
+    fire, harmlessly, because lemma and orthBase are the same string.
+
+    Guard: fold only when the lemma is exactly the orthBase with its derived
+    suffix swapped for the paradigm base suffix (``_FOLD_SUFFIX_PAIRS``).
+    Everything outside the conjugating suffix must match the lemma
+    byte-for-byte, so unidic lemma canonicalization can never leak into the
+    card front: kanji swaps (帰れる→lemma 返る, 出逢える→出会う), okurigana
+    variants (表せる→表わす, 行なえる→行う) and modern→archaic じる/ずる
+    (信じる→信ずる) all keep their source orthBase — the same
+    variant-preservation contract as Issues #19/#5 (乞う not 請う, readings
+    equal, never triggers the fold at all).
+
+    Ichidan potential/passive 〜られる never reaches this code: MeCab
+    tokenizes 食べられる as 食べ + られる auxiliary, so Yomitan's
+    potential-vs-passive ambiguity does not exist in this pipeline.
+
+    Missing/'*'/non-string readings (synthetic compound tokens, OOV) never
+    fold. The isinstance(str) checks are load-bearing: MagicMock-based token
+    fakes auto-create truthy attribute objects.
+    """
+    orth_base = extract_orth_base(word_token)
+    feature = getattr(word_token, "feature", None)
+    if getattr(feature, "pos1", None) not in ("動詞", "形容詞"):
+        return orth_base
+    l_form = getattr(feature, "lForm", None)
+    kana_base = getattr(feature, "kanaBase", None)
+    if not isinstance(l_form, str) or not isinstance(kana_base, str):
+        return orth_base
+    if l_form in ("", "*") or kana_base in ("", "*"):
+        return orth_base
+    from anki_miner.utils.text_utils import katakana_to_hiragana
+
+    if katakana_to_hiragana(l_form) == katakana_to_hiragana(kana_base):
+        return orth_base
+    lemma = extract_lemma(word_token)
+    if not lemma or not orth_base:
+        return orth_base
+    for derived, base in _FOLD_SUFFIX_PAIRS:
+        if orth_base.endswith(derived) and len(orth_base) > len(derived) and orth_base[: -len(derived)] + base == lemma:
+            return lemma
+    return orth_base
 
 
 def extract_reading(word_token) -> str:

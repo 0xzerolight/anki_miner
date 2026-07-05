@@ -18,10 +18,10 @@ from anki_miner.services.deinflection import find_highlight_end
 from anki_miner.services.morphology import (
     TokenInclusionRule,
     extract_lemma,
-    extract_orth_base,
     extract_reading,
     iter_token_spans,
     merge_compound_suffixes,
+    mining_base,
 )
 from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.utils import (
@@ -328,7 +328,7 @@ class SubtitleParserService:
         # for nouns (see TokenizedWord.mined_form / select_mined_form for
         # the trade-off).
         pos = word_token.feature.pos1
-        orth_base = self._extract_orth_base(word_token)
+        orth_base = self._mining_base(word_token)
         mined = select_mined_form(pos, orth_base, lemma, surface)
         if mined == surface and getattr(word_token, "compound", False) is not True:
             # Single source of truth for the target reading (Task 1.2). When the
@@ -642,9 +642,10 @@ class SubtitleParserService:
         """Extract lemma (dictionary form) from a token (see morphology.extract_lemma)."""
         return extract_lemma(word_token)
 
-    def _extract_orth_base(self, word_token) -> str:
-        """Extract source-orthography dictionary form (see morphology.extract_orth_base)."""
-        return extract_orth_base(word_token)
+    def _mining_base(self, word_token) -> str:
+        """Source-orthography dictionary form for mining, with derived
+        sub-lemma folding (see morphology.mining_base)."""
+        return mining_base(word_token)
 
     def _extract_reading(self, word_token) -> str:
         """Extract kana reading from a token (see morphology.extract_reading)."""
