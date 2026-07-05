@@ -94,8 +94,8 @@ def test_happy_path_all_three_kinds(tmp_path, monkeypatch):
     dict_calls: list[dict] = []
     freq_calls: list[dict] = []
 
-    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None):
-        dict_calls.append({"zip_path": zip_path, "dest_root": dest_root, "overwrite": overwrite})
+    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
+        dict_calls.append({"zip_path": zip_path, "dest_root": dest_root, "overwrite": overwrite, "dict_id": dict_id})
         return _FakeYomitanResult()
 
     def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None):
@@ -117,8 +117,9 @@ def test_happy_path_all_three_kinds(tmp_path, monkeypatch):
     assert len(summary.succeeded) == 3
     assert summary.failed == []
 
-    # dict routed with overwrite=True; result carries dict_id.
+    # dict routed with overwrite=True AND pinned to the stable catalog slot id.
     assert dict_calls[0]["overwrite"] is True
+    assert dict_calls[0]["dict_id"] == "jitendex"
     dict_result = next(r for r in summary.results if r.spec_id == "jitendex")
     assert dict_result.dict_id == "jitendex-english"
     assert "12345" in dict_result.detail
@@ -145,7 +146,7 @@ def test_per_item_failure_isolation(tmp_path, monkeypatch):
         temp.write_bytes(b"DATA")
         return temp
 
-    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None):
+    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
         return _FakeYomitanResult()
 
     def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None):
@@ -217,7 +218,7 @@ def test_cancellation_stops_loop_early(tmp_path, monkeypatch):
         temp.write_bytes(b"DATA")
         return temp
 
-    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None):
+    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
         return _FakeYomitanResult()
 
     monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
@@ -246,7 +247,7 @@ def test_leftover_temp_cleanup_when_importer_fails(tmp_path, monkeypatch):
         created_temps.append(temp)
         return temp
 
-    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None):
+    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
         raise RuntimeError("import boom")
 
     monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
@@ -309,3 +310,113 @@ def test_summary_properties_filter_results():
     )
     assert [r.spec_id for r in summary.succeeded] == ["a"]
     assert [r.spec_id for r in summary.failed] == ["b"]
+
+
+def _seed_dict_dir(dicts_root: Path, dict_id: str, source_name: str) -> None:
+    """Create dicts_root/<dict_id>/index.sqlite with a source_name meta row."""
+    from anki_miner.services.dictionary.storage import create_index, write_meta
+
+    db = dicts_root / dict_id / "index.sqlite"
+    db.parent.mkdir(parents=True, exist_ok=True)
+    create_index(db)
+    write_meta(db, {"source_name": source_name})
+
+
+def _run_dict_download(tmp_path, monkeypatch, *, imported_source_name: str):
+    """Drive the worker for a single dict spec with a real sweep, fake importer."""
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir(exist_ok=True)
+
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None):
+        temp = Path(dest_dir) / f"{Path(url).name}.part"
+        temp.write_bytes(b"ZIP")
+        return temp
+
+    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
+        # Land the pinned slot on disk so the sweep sees a keep_id dir.
+        _seed_dict_dir(Path(dest_root), dict_id, imported_source_name)
+        return _FakeYomitanResult(dict_id=dict_id, source_name=imported_source_name)
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    monkeypatch.setattr(resource_download_worker, "import_yomitan_zip", fake_dict)
+
+    worker = _make_worker([DICT_SPEC], tmp_path)
+    _done, _progress, summaries = _connect_capture(worker)
+    worker.run()
+    return summaries[0], tmp_path / "dicts"
+
+
+def test_dict_download_sweeps_legacy_date_versioned_copy(tmp_path, monkeypatch):
+    dicts_root = tmp_path / "dicts"
+    # A pre-fix date-versioned Jitendex already installed under its old id.
+    _seed_dict_dir(dicts_root, "jitendex-org-2025-11-05", "Jitendex.org [2025-11-05]")
+
+    summary, dicts_root = _run_dict_download(tmp_path, monkeypatch, imported_source_name="Jitendex.org [2026-06-06]")
+
+    result = next(r for r in summary.results if r.spec_id == "jitendex")
+    assert result.ok is True
+    assert result.removed_dicts == [("jitendex-org-2025-11-05", "Jitendex.org [2025-11-05]")]
+    assert result.failed_removals == []
+    # Legacy dir gone; pinned slot remains.
+    assert not (dicts_root / "jitendex-org-2025-11-05").exists()
+    assert (dicts_root / "jitendex" / "index.sqlite").exists()
+
+
+def test_dict_download_sweep_noop_when_imported_title_has_no_date(tmp_path, monkeypatch):
+    dicts_root = tmp_path / "dicts"
+    # An unrelated dict whose base would collide but the NEW title has no bracket.
+    _seed_dict_dir(dicts_root, "jitendex-org-2025-11-05", "Jitendex.org [2025-11-05]")
+
+    summary, dicts_root = _run_dict_download(tmp_path, monkeypatch, imported_source_name="Jitendex")
+
+    result = next(r for r in summary.results if r.spec_id == "jitendex")
+    assert result.removed_dicts == []
+    # Nothing swept because the imported dict itself is not date-bracketed.
+    assert (dicts_root / "jitendex-org-2025-11-05").exists()
+
+
+def test_dict_download_sweep_survives_corrupt_sibling(tmp_path, monkeypatch):
+    dicts_root = tmp_path / "dicts"
+    _seed_dict_dir(dicts_root, "jitendex-org-2025-11-05", "Jitendex.org [2025-11-05]")
+    # A corrupt/foreign sibling index.sqlite (no meta table) must not abort the sweep.
+    corrupt = dicts_root / "broken-dict" / "index.sqlite"
+    corrupt.parent.mkdir(parents=True, exist_ok=True)
+    corrupt.write_bytes(b"not a database")
+
+    summary, dicts_root = _run_dict_download(tmp_path, monkeypatch, imported_source_name="Jitendex.org [2026-06-06]")
+
+    result = next(r for r in summary.results if r.spec_id == "jitendex")
+    assert result.ok is True  # import not failed by the bad sibling
+    assert result.removed_dicts == [("jitendex-org-2025-11-05", "Jitendex.org [2025-11-05]")]
+    assert not (dicts_root / "jitendex-org-2025-11-05").exists()
+    assert (dicts_root / "broken-dict").exists()  # left untouched
+
+
+def test_sweep_not_invoked_on_freq_or_pitch(tmp_path, monkeypatch):
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None):
+        temp = Path(dest_dir) / f"{Path(url).name}.part"
+        temp.write_bytes(b"PITCH" if url.endswith(".txt") else b"ZIP")
+        return temp
+
+    def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None, source_id=None):
+        return _FakeFreqResult()
+
+    sweep_calls: list[tuple] = []
+
+    def spy_sweep(dicts_root, *, keep_id, imported_source_name):
+        sweep_calls.append((keep_id, imported_source_name))
+        return [], []
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    monkeypatch.setattr(resource_download_worker, "import_frequency_source", fake_freq)
+    monkeypatch.setattr(resource_download_worker, "sweep_superseded_dicts", spy_sweep)
+
+    worker = _make_worker([FREQ_SPEC, PITCH_SPEC], tmp_path)
+    _done, _progress, summaries = _connect_capture(worker)
+    worker.run()
+
+    assert len(summaries[0].succeeded) == 2
+    assert sweep_calls == []  # sweep only fires on the dict route

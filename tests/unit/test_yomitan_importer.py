@@ -788,3 +788,93 @@ class TestAttributionMetadata:
         meta = self._import(tmp_path, {})
         for key in ("author", "attribution", "description"):
             assert key not in meta
+
+
+class TestDictIdOverride:
+    def test_override_pins_on_disk_slot(self, tmp_path: Path):
+        # A title that would derive "jitendex-org-2026-06-06" is pinned to "jitendex".
+        zip_path = build_yomitan_zip(tmp_path / "src" / "j.zip", title="Jitendex.org [2026-06-06]", revision="1")
+        dest_root = tmp_path / "dicts"
+
+        result = import_yomitan_zip(zip_path, dest_root, dict_id="jitendex")
+
+        assert result.dict_id == "jitendex"
+        assert (dest_root / "jitendex" / "index.sqlite").exists()
+        # Display name is still the title, not the slug.
+        assert result.source_name == "Jitendex.org [2026-06-06]"
+
+    def test_same_override_replaces_in_place_across_dates(self, tmp_path: Path):
+        dest_root = tmp_path / "dicts"
+        old = build_yomitan_zip(tmp_path / "src" / "old.zip", title="Jitendex.org [2025-11-05]", revision="1")
+        new = build_yomitan_zip(tmp_path / "src" / "new.zip", title="Jitendex.org [2026-06-06]", revision="2")
+
+        import_yomitan_zip(old, dest_root, dict_id="jitendex")
+        import_yomitan_zip(new, dest_root, dict_id="jitendex", overwrite=True)
+
+        # One directory, latest content (single date-named dir never created).
+        assert [p.name for p in dest_root.iterdir()] == ["jitendex"]
+        meta = read_meta(dest_root / "jitendex" / "index.sqlite")
+        assert meta["source_name"] == "Jitendex.org [2026-06-06]"
+
+    def test_override_clobbers_unrelated_existing_slot(self, tmp_path: Path):
+        # Intentional overwrite semantics: importing dict_id="jitendex" over a
+        # pre-existing unrelated "jitendex" dir replaces it.
+        dest_root = tmp_path / "dicts"
+        other = build_yomitan_zip(tmp_path / "src" / "other.zip", title="Something Else", revision="1")
+        import_yomitan_zip(other, dest_root, dict_id="jitendex")
+
+        real = build_yomitan_zip(tmp_path / "src" / "real.zip", title="Jitendex.org [2026-06-06]", revision="2")
+        import_yomitan_zip(real, dest_root, dict_id="jitendex", overwrite=True)
+
+        meta = read_meta(dest_root / "jitendex" / "index.sqlite")
+        assert meta["source_name"] == "Jitendex.org [2026-06-06]"
+
+    def test_no_override_still_derives_title_id(self, tmp_path: Path):
+        zip_path = build_yomitan_zip(tmp_path / "src" / "t.zip", title="Test Dict", revision="v1")
+        result = import_yomitan_zip(zip_path, tmp_path / "dicts")
+        assert result.dict_id == "test-dict-v1"
+
+    def test_override_media_path_uses_pinned_id(self, tmp_path: Path):
+        # The media/ dir and the rewritten <img src> must both key off the
+        # PINNED slot id, not the title-derived one.
+        svg_bytes = b"<svg xmlns='http://www.w3.org/2000/svg'/>"
+        term_banks = [
+            [
+                [
+                    "走る",
+                    "はしる",
+                    "",
+                    "",
+                    0,
+                    [{"type": "structured-content", "content": {"tag": "img", "path": "svg/accent.svg"}}],
+                    1,
+                    "",
+                ]
+            ]
+        ]
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "m.zip",
+            title="Jitendex.org [2026-06-06]",
+            revision="1",
+            term_banks=term_banks,
+            media_files={"svg/accent.svg": svg_bytes},
+        )
+        dest_root = tmp_path / "dicts"
+
+        import_yomitan_zip(zip_path, dest_root, dict_id="jitendex")
+
+        assert (dest_root / "jitendex" / "media" / "svg_accent.svg").exists()
+        conn = open_readonly(dest_root / "jitendex" / "index.sqlite")
+        try:
+            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("走る",)).fetchone()[0]
+        finally:
+            conn.close()
+        assert 'src="jitendex__svg_accent.svg"' in content
+
+
+class TestReadYomitanTitle:
+    def test_returns_raw_title(self, tmp_path: Path):
+        from anki_miner.services.dictionary.importers.yomitan_importer import read_yomitan_title
+
+        zip_path = build_yomitan_zip(tmp_path / "src" / "t.zip", title="Jitendex.org [2026-06-06]")
+        assert read_yomitan_title(zip_path) == "Jitendex.org [2026-06-06]"

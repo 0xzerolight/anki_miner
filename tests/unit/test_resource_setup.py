@@ -99,6 +99,40 @@ class TestApplyDownloadSummary:
         assert any(e.dict_id == "jmdict-english" for e in result.dictionary_chain)
         assert any(e.kind == "jisho" for e in result.dictionary_chain)
 
+    def test_dict_success_drops_swept_legacy_chain_entries(self) -> None:
+        # Worker swept a date-versioned legacy dir; its chain entry must be
+        # dropped (even when disabled), leaving only the pinned slot.
+        config = replace(
+            create_default_config(),
+            dictionary_chain=(
+                ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),
+                ChainEntry(kind="indexed", dict_id="jitendex-org-2025-11-05", enabled=False),
+            ),
+        )
+        result_obj = _dict_result(dict_id="jitendex")
+        result_obj.removed_dicts = [("jitendex-org-2025-11-05", "Jitendex.org [2025-11-05]")]
+        result = apply_download_summary(config, ResourceDownloadSummary(results=[result_obj]))
+
+        ids = [e.dict_id for e in result.dictionary_chain]
+        assert "jitendex-org-2025-11-05" not in ids  # legacy (disabled) entry dropped
+        assert result.dictionary_chain[0] == ChainEntry(kind="indexed", dict_id="jitendex", enabled=True)
+        assert "jmdict-english" in ids
+
+    def test_dict_success_keeps_failed_removal_chain_entry(self) -> None:
+        # A sweep that could not delete the dir (Windows lock) must NOT drop the
+        # chain entry — otherwise the surviving dir becomes an orphan.
+        config = replace(
+            create_default_config(),
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="jitendex-org-2025-11-05", enabled=True),),
+        )
+        result_obj = _dict_result(dict_id="jitendex")
+        result_obj.failed_removals = [("jitendex-org-2025-11-05", "Jitendex.org [2025-11-05]")]
+        result = apply_download_summary(config, ResourceDownloadSummary(results=[result_obj]))
+
+        ids = [e.dict_id for e in result.dictionary_chain]
+        assert "jitendex-org-2025-11-05" in ids  # kept: dir still on disk
+        assert "jitendex" in ids
+
     def test_freq_success_prepends_chain_entry_and_sets_flag(self) -> None:
         config = create_default_config()
         assert config.use_frequency_data is False

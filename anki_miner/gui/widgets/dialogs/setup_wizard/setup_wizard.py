@@ -46,6 +46,12 @@ class SetupWizard(QWizard):
         super().__init__(parent)
         # Start from a copy so a zero-touch skip returns an equivalent config.
         self._working_config = config
+        # MainWindow's dict-handle release, passed to the resource download so
+        # the in-place slot overwrite + supersede sweep don't hit a Windows
+        # file lock (Issues #30/#32). None when the wizard has no such parent
+        # (e.g. a standalone/first-run launch); the download then skips the
+        # handshake, which is safe because nothing is holding handles.
+        self._release_resources = getattr(parent, "release_dictionary_resources", None)
         self._anki_service: AnkiService | None = None
         # AnkiConnect URL the cached service was built for; rebuild on change.
         self._service_url: str | None = None

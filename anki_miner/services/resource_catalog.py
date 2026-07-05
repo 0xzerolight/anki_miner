@@ -33,6 +33,10 @@ class ResourceSpec:
     license_note: str
 
 
+# For dict resources, ``id`` is the PINNED on-disk slot the importer writes to
+# (dicts_root/<id>/), so re-downloading a title that embeds a changing release
+# date overwrites in place instead of forking a new directory. Pick a stable,
+# collision-free id for any dict spec added here.
 RECOMMENDED_DEFAULT_SET: tuple[ResourceSpec, ...] = (
     ResourceSpec(
         id="jitendex",
@@ -59,3 +63,8 @@ RECOMMENDED_DEFAULT_SET: tuple[ResourceSpec, ...] = (
         license_note="Kanjium pitch accent data — downloaded from upstream source; original license applies.",
     ),
 )
+
+# Pinned on-disk slots for the recommended dict resources. Consumed by the
+# per-row Re-import guard (a catalog slot accepts a newer, same-base zip whose
+# title-derived id would otherwise differ) and available for boundary tests.
+CATALOG_DICT_SLOT_IDS: frozenset[str] = frozenset(s.id for s in RECOMMENDED_DEFAULT_SET if s.kind == "dict")

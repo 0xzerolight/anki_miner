@@ -21,8 +21,11 @@ from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.run_off_thread import join_worker
 from anki_miner.gui.widgets.panels import DictionarySettingsPanel
 from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
-from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip
+from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip, read_yomitan_title
 from anki_miner.services.dictionary.registry import DictionaryRegistry
+from anki_miner.services.dictionary.storage import read_meta
+from anki_miner.services.dictionary.superseded import strip_date_bracket
+from anki_miner.services.resource_catalog import CATALOG_DICT_SLOT_IDS
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -187,6 +190,31 @@ class DictionaryImportFlow:
         dlg.canceled.connect(worker.cancel)
         worker.start()
 
+    def _catalog_slot_base_matches(self, slot_id: str, zip_path: Path) -> bool:
+        """True when ``zip_path`` is a newer, same-dictionary copy of catalog slot.
+
+        Compares the picked zip's title base against the existing slot's stored
+        ``source_name`` base (both stripped of a trailing ``[YYYY-MM-DD]`` tag,
+        both required to have carried one). This lets a fresh Jitendex whose id
+        derives to ``jitendex-org-<newdate>`` re-import into the pinned
+        ``jitendex`` slot while still rejecting an unrelated dictionary. Any read
+        failure (bad zip, missing/corrupt slot index) → False (reject, safe).
+        """
+        try:
+            zip_title = read_yomitan_title(zip_path)
+        except Exception:  # noqa: BLE001 — surfaced to the user as a slot mismatch
+            return False
+        db = self._get_config().dicts_root / slot_id / "index.sqlite"
+        if not db.exists():
+            return False
+        try:
+            existing_name = read_meta(db).get("source_name", "")
+        except Exception:  # noqa: BLE001 — corrupt/locked slot index → reject
+            return False
+        zip_base, zip_had = strip_date_bracket(zip_title)
+        cur_base, cur_had = strip_date_bracket(existing_name)
+        return zip_had and cur_had and zip_base == cur_base
+
     def reimport_dict(self, slot_id: str) -> None:
         """Prompt for a matching Yomitan zip and re-import into an existing slot.
 
@@ -213,7 +241,15 @@ class DictionaryImportFlow:
             )
             return
 
-        if derived_id != slot_id:
+        # A catalog slot is pinned (its on-disk id is a stable id like "jitendex",
+        # not the title-derived one), so a fresh copy of the SAME dictionary
+        # legitimately derives a different id (the title embeds a new date). Accept
+        # it when its title base matches the existing slot's, but still reject a
+        # genuinely different dictionary — otherwise picking the wrong zip would
+        # silently overwrite the slot with unrelated content.
+        if derived_id != slot_id and not (
+            slot_id in CATALOG_DICT_SLOT_IDS and self._catalog_slot_base_matches(slot_id, zip_path)
+        ):
             QMessageBox.warning(
                 self._parent,
                 QCoreApplication.translate("DictionaryImportFlow", "Zip does not match slot"),
@@ -253,7 +289,10 @@ class DictionaryImportFlow:
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
 
-        worker = DictionaryImportWorker.for_yomitan(zip_path, dest_root, overwrite=True)
+        # Pin the existing slot so a same-dictionary zip with a newer date
+        # rebuilds in place (dict_id=slot_id is a no-op for non-catalog slots,
+        # where derived_id already equals slot_id).
+        worker = DictionaryImportWorker.for_yomitan(zip_path, dest_root, overwrite=True, dict_id=slot_id)
         self._active_import_worker = worker  # keep alive across QThread lifetime
         self._set_import_buttons_enabled(False)
 
@@ -539,7 +578,14 @@ class DictionaryImportFlow:
             if kind == "jmdict":
                 worker = DictionaryImportWorker.for_jmdict(source_path, self._get_config().dicts_root)
             else:
-                worker = DictionaryImportWorker.for_yomitan(source_path, self._get_config().dicts_root, overwrite=True)
+                # Pin the existing slot id so a saved source whose title embeds a
+                # changing release date (e.g. Jitendex) rebuilds the index in the
+                # SAME folder instead of forking a new date-named dir — which would
+                # orphan the chained slot and permanently wedge the stale-schema
+                # pre-run gate (it could never clear the old slot).
+                worker = DictionaryImportWorker.for_yomitan(
+                    source_path, self._get_config().dicts_root, overwrite=True, dict_id=dict_id
+                )
             # Join the predecessor before dropping its reference (T-09). This
             # closure runs inside the previous worker's queued finished slot,
             # emitted from run() just before the OS thread exits — so its

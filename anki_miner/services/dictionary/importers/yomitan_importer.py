@@ -66,6 +66,7 @@ def import_yomitan_zip(
     progress: ProgressFn | None = None,
     overwrite: bool = False,
     cancel_check: Callable[[], bool] | None = None,
+    dict_id: str | None = None,
 ) -> YomitanImportResult:
     """Import a Yomitan zip into dest_root/<dict_id>/index.sqlite.
 
@@ -79,6 +80,13 @@ def import_yomitan_zip(
                    on success. If False, raises SetupError.
         cancel_check: Optional zero-arg predicate; if it returns True, the
                       import aborts and partial files are cleaned up.
+        dict_id: Optional on-disk slot override. When given, the dict is stored
+                 under this fixed folder name instead of one derived from the
+                 zip's title+revision. Callers pin a stable slot (e.g. the
+                 recommended-resource id ``"jitendex"`` or an existing slot on
+                 re-import) so a title that embeds a changing release date does
+                 not fork a new directory every download. Display name still
+                 comes from the zip title; only the folder name is pinned.
 
     Raises:
         SetupError: On invalid input, format mismatch, or already-exists when
@@ -114,7 +122,10 @@ def import_yomitan_zip(
         if not title:
             raise SetupError("index.json missing required 'title'")
 
-        dict_id = _derive_dict_id(title, revision)
+        # A caller-supplied slot pins the on-disk folder to a stable name; else
+        # derive it from title+revision (the historical behavior).
+        if dict_id is None:
+            dict_id = _derive_dict_id(title, revision)
 
         # Fail fast on an already-imported dict BEFORE any staging/rendering
         # work (mirrors Yomitan checking dictionaryExists right after reading
@@ -496,11 +507,10 @@ def _derive_dict_id(title: str, revision: str) -> str:
     return _slug(title) + ("-" + _slug(revision) if revision else "")
 
 
-def derive_dict_id_from_zip(zip_path: Path) -> str:
-    """Peek at a Yomitan zip's `index.json` and return its derived `dict_id`.
+def _peek_zip_title_revision(zip_path: Path) -> tuple[str, str]:
+    """Read a Yomitan zip's `index.json` title+revision without full import.
 
-    Used by the Settings UI to validate that a user-picked zip matches the
-    stale slot they're re-importing — without invoking the full importer.
+    Shared by :func:`derive_dict_id_from_zip` and :func:`read_yomitan_title`.
 
     Raises:
         SetupError: zip is missing, corrupt, missing `index.json`, or
@@ -540,7 +550,34 @@ def derive_dict_id_from_zip(zip_path: Path) -> str:
     revision = str(index.get("revision", "")).strip()
     if not title:
         raise SetupError("index.json missing required 'title'")
+    return title, revision
+
+
+def derive_dict_id_from_zip(zip_path: Path) -> str:
+    """Peek at a Yomitan zip's `index.json` and return its derived `dict_id`.
+
+    Used by the Settings UI to validate that a user-picked zip matches the
+    stale slot they're re-importing — without invoking the full importer.
+
+    Raises:
+        SetupError: zip is missing, corrupt, missing `index.json`, or
+                    `index.json` lacks a non-empty `title` field.
+    """
+    title, revision = _peek_zip_title_revision(zip_path)
     return _derive_dict_id(title, revision)
+
+
+def read_yomitan_title(zip_path: Path) -> str:
+    """Return a Yomitan zip's raw `index.json` title (display name, not a slug).
+
+    The reimport-slot guard needs the human title (e.g. ``"Jitendex.org
+    [2026-06-06]"``) to base-match against an existing catalog slot, not the
+    slugified id `derive_dict_id_from_zip` returns.
+
+    Raises: same as :func:`derive_dict_id_from_zip`.
+    """
+    title, _ = _peek_zip_title_revision(zip_path)
+    return title
 
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
