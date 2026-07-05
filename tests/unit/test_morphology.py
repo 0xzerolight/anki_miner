@@ -9,7 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from anki_miner.services.morphology import SyntheticToken, mining_base
+from anki_miner.services.morphology import SyntheticToken, extract_lemma, mining_base
 
 
 def _token(surface, pos1, lemma, orth_base=None, l_form=None, kana_base=None):
@@ -128,3 +128,31 @@ class TestMiningBaseNoTrigger:
         fall back to extract_lemma and never crash."""
         token = SyntheticToken("走り出す", "動詞", "一般", "走り出す", "ハシリダス")
         assert mining_base(token) == "走り出す"
+
+
+class TestExtractLemmaDisambiguatorStrip:
+    """unidic decorator tails must strip so lemma-keyed lookups hit."""
+
+    @pytest.mark.parametrize(
+        ("raw", "pos1", "expected"),
+        [
+            ("スクランブル-scramble", "名詞", "スクランブル"),
+            ("ロック-rock（音楽）", "名詞", "ロック"),
+            ("ライト-light（光）", "名詞", "ライト"),
+            ("メリーゴーランド-merry-go-round", "名詞", "メリーゴーランド"),
+            ("チェックアウト-check-out", "名詞", "チェックアウト"),
+            ("君-代名詞", "代名詞", "君"),
+            ("私-代名詞", "代名詞", "私"),
+        ],
+    )
+    def test_strips_gloss_and_pos_tails(self, raw, pos1, expected):
+        token = _token(expected, pos1, raw, expected)
+        assert extract_lemma(token) == expected
+
+    def test_keeps_japanese_name_segments(self):
+        token = _token("メル", "名詞", "メル-ビル", "メル")
+        assert extract_lemma(token) == "メル-ビル"
+
+    def test_pos_tail_must_match_pos1(self):
+        token = _token("君", "名詞", "君-代名詞", "君")
+        assert extract_lemma(token) == "君-代名詞"

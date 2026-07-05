@@ -1022,6 +1022,32 @@ class TestExtractLemma:
         token = _make_token("メル", "名詞", lemma="メル-ビル")
         assert service._extract_lemma(token) == "メル-ビル"
 
+    def test_strips_gloss_with_fullwidth_decoration(self, service):
+        """Gloss tails carrying non-ASCII decoration (fullwidth parens) must
+        still strip — these defeat a plain tail.isascii() check and used to
+        break every lemma-keyed lookup (frequency/pitch/offline-definition)."""
+        token = _make_token("ロック", "名詞", lemma="ロック-rock（音楽）")
+        assert service._extract_lemma(token) == "ロック"
+
+    def test_strips_hyphenated_gloss_whole(self, service):
+        """A gloss that is itself hyphenated must strip from the FIRST hyphen."""
+        token = _make_token("メリーゴーランド", "名詞", lemma="メリーゴーランド-merry-go-round")
+        assert service._extract_lemma(token) == "メリーゴーランド"
+        token = _make_token("チェックアウト", "名詞", lemma="チェックアウト-check-out")
+        assert service._extract_lemma(token) == "チェックアウト"
+
+    def test_strips_pos_name_disambiguator(self, service):
+        """unidic decorates pronoun homographs with their own POS name."""
+        token = _make_token("君", "代名詞", lemma="君-代名詞")
+        assert service._extract_lemma(token) == "君"
+        token = _make_token("私", "代名詞", lemma="私-代名詞")
+        assert service._extract_lemma(token) == "私"
+
+    def test_pos_tail_only_strips_when_it_matches_pos1(self, service):
+        """A Japanese tail that is not the token's own pos1 stays intact."""
+        token = _make_token("君", "名詞", lemma="君-代名詞")
+        assert service._extract_lemma(token) == "君-代名詞"
+
 
 class TestMiningBase:
     """Tests for _mining_base (source-orthography dictionary form with
@@ -1678,6 +1704,28 @@ def test_real_fugashi_guard_keeps_source_orthography(tmp_path):
     by_surface = {w.surface: w for w in words}
     assert by_surface["帰れる"].mined_form == "帰れる"
     assert by_surface["出逢える"].mined_form == "出逢える"
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+def test_real_fugashi_pronoun_lemma_is_clean(tmp_path):
+    """君 must carry the clean lemma 君 (not 君-代名詞) so lemma-keyed
+    lookups (frequency/pitch) hit, and count_lemmas keys the same string."""
+    srt_file = tmp_path / "pronoun.srt"
+    srt_file.write_text(
+        "1\n" "00:00:01,000 --> 00:00:05,000\n" "君を待つ\n",
+        encoding="utf-8",
+    )
+    config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+    service = SubtitleParserService(config)
+    words = service.parse_subtitle_file(srt_file)
+
+    by_surface = {w.surface: w for w in words}
+    assert "君" in by_surface, f"got surfaces: {set(by_surface)}"
+    assert by_surface["君"].lemma == "君"
+
+    counts = service.count_lemmas(srt_file)
+    assert counts["君"] == 1
+    assert not any("代名詞" in lemma for lemma in counts)
 
 
 # ---------------------------------------------------------------------------
