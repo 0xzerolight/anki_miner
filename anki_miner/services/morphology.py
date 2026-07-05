@@ -65,12 +65,18 @@ def extract_lemma(word_token) -> str:
     except AttributeError:
         lemma = word_token.surface
 
-    # Clean lemma - strip unidic's English-gloss tail
-    # (e.g. "スクランブル-scramble" -> "スクランブル") but leave Japanese
-    # names like "メル-ビル" intact: only split when the tail is ASCII.
+    # Strip unidic's disambiguator tail: an English gloss
+    # ("スクランブル-scramble", "ロック-rock（音楽）" — the fullwidth parens
+    # defeat a plain isascii() check, "メリーゴーランド-merry-go-round" — the
+    # gloss itself is hyphenated, hence splitting on the FIRST hyphen) or the
+    # token's own POS name ("君-代名詞"). Decorated lemmas miss every
+    # lemma-keyed lookup (frequency/pitch/offline-definition existence), which
+    # key on the clean headword. Japanese name segments (メル-ビル) have
+    # neither an ASCII letter nor a POS-name tail and are kept intact.
     if "-" in lemma:
         head, _, tail = lemma.partition("-")
-        if tail.isascii():
+        pos1 = getattr(getattr(word_token, "feature", None), "pos1", None)
+        if head and tail and (any(c.isascii() and c.isalpha() for c in tail) or tail == pos1):
             lemma = head
 
     return str(lemma)

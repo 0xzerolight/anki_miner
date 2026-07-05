@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- **Potential-form verbs no longer duplicate their base verb's card.** 保てる, 読める, ら抜き forms like 見れる/食べれる, and archaic adjective forms like 良かれ used to mine as their own cards even when you already had 保つ/読む/見る/食べる/良い — the card front now folds to the base dictionary form, so they dedup against the base card (and their definitions, which always looked up the base form, finally match the front). The fold is conservative by construction: it only fires when UniDic itself classifies the form as a derivative, and it never rewrites your source's spelling — kanji variants (出逢える), okurigana variants (表せる), and modern spellings like 信じる always mine exactly as written. Lexicalized verbs (見える, 聞こえる, できる) keep their own cards. If you already have cards for potential forms, the base verb will mine once more the next time it appears (one-time; no existing cards are modified or deleted).
+- **Words with UniDic disambiguator tails get frequency and pitch data again.** Loanwords whose UniDic headword carries a decorated gloss (ロック as "ロック-rock（音楽）", ライト, ファン, レース, メリーゴーランド…) and the pronouns 君/私 ("君-代名詞") used to miss every frequency, pitch-accent, and offline-definition-existence lookup because the decorated string never matched your frequency lists or dictionaries. The decoration is now stripped at tokenization, so these words rank, filter, and carry pitch like any other. Japanese compound names containing a hyphen (メル-ビル) are unaffected.
+
 ## [2.7.8] - 2026-07-04
 
 ### Added
