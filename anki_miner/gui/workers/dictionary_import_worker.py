@@ -55,8 +55,14 @@ class DictionaryImportWorker(CancellableWorker):
         zip_path: Path,
         dest_root: Path,
         overwrite: bool = False,
+        dict_id: str | None = None,
     ) -> DictionaryImportWorker:
-        """Build a worker that imports a Yomitan-format zip."""
+        """Build a worker that imports a Yomitan-format zip.
+
+        ``dict_id`` pins the on-disk slot (see ``import_yomitan_zip``); re-import
+        flows pass the existing slot id so a title with a changing date rebuilds
+        the index in place instead of forking a new folder.
+        """
 
         def runner(
             progress_fn: Callable[[int, int, str], None],
@@ -68,6 +74,7 @@ class DictionaryImportWorker(CancellableWorker):
                 progress=progress_fn,
                 cancel_check=cancel_fn,
                 overwrite=overwrite,
+                dict_id=dict_id,
             )
 
         return cls(runner)

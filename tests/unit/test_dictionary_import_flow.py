@@ -71,3 +71,89 @@ def test_import_notes_reports_malformed_and_media():
     assert "malformed" in note
     assert "2" in note
     assert "media" in note.lower()
+
+
+# --- catalog-slot pinned re-import guard --------------------------------------
+
+from anki_miner.services.dictionary.storage import create_index, write_meta  # noqa: E402
+from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip  # noqa: E402
+
+
+def _seed_slot(dicts_root: Path, dict_id: str, source_name: str) -> None:
+    db = dicts_root / dict_id / "index.sqlite"
+    db.parent.mkdir(parents=True, exist_ok=True)
+    create_index(db)
+    write_meta(db, {"source_name": source_name})
+
+
+class TestCatalogSlotBaseMatches:
+    def test_matches_same_base_newer_date(self, tmp_path: Path):
+        flow = _make_flow(tmp_path / "dicts")
+        _seed_slot(tmp_path / "dicts", "jitendex", "Jitendex.org [2025-11-05]")
+        fresh = build_yomitan_zip(tmp_path / "src" / "j.zip", title="Jitendex.org [2026-06-06]")
+        assert flow._catalog_slot_base_matches("jitendex", fresh) is True
+
+    def test_rejects_different_base(self, tmp_path: Path):
+        flow = _make_flow(tmp_path / "dicts")
+        _seed_slot(tmp_path / "dicts", "jitendex", "Jitendex.org [2025-11-05]")
+        wrong = build_yomitan_zip(tmp_path / "src" / "d.zip", title="Daijirin [2026-01-01]")
+        assert flow._catalog_slot_base_matches("jitendex", wrong) is False
+
+    def test_rejects_when_slot_not_on_disk(self, tmp_path: Path):
+        flow = _make_flow(tmp_path / "dicts")
+        fresh = build_yomitan_zip(tmp_path / "src" / "j.zip", title="Jitendex.org [2026-06-06]")
+        assert flow._catalog_slot_base_matches("jitendex", fresh) is False
+
+
+class TestReimportDictCatalogGuard:
+    def test_catalog_slot_accepts_fresh_same_base_zip(self, tmp_path: Path):
+        dicts_root = tmp_path / "dicts"
+        flow = _make_flow(dicts_root)
+        # Block right after the guard so no real worker/QThread runs.
+        flow._panel.request_resource_release.return_value = False
+        _seed_slot(dicts_root, "jitendex", "Jitendex.org [2025-11-05]")
+        fresh = build_yomitan_zip(tmp_path / "src" / "j.zip", title="Jitendex.org [2026-06-06]")
+
+        with (
+            patch(f"{MOD}.QFileDialog.getOpenFileName", return_value=(str(fresh), "")),
+            patch(f"{MOD}.QMessageBox.warning") as warn,
+        ):
+            flow.reimport_dict("jitendex")
+
+        # Guard passed → release was attempted (then blocked). The one warning is
+        # the release-block, NOT a "does not match slot" abort.
+        flow._panel.request_resource_release.assert_called_once()
+        assert warn.call_count == 1
+        assert "match" not in warn.call_args.args[1].lower()
+
+    def test_catalog_slot_rejects_wrong_base_zip(self, tmp_path: Path):
+        dicts_root = tmp_path / "dicts"
+        flow = _make_flow(dicts_root)
+        _seed_slot(dicts_root, "jitendex", "Jitendex.org [2025-11-05]")
+        wrong = build_yomitan_zip(tmp_path / "src" / "d.zip", title="Daijirin [2026-01-01]")
+
+        with (
+            patch(f"{MOD}.QFileDialog.getOpenFileName", return_value=(str(wrong), "")),
+            patch(f"{MOD}.QMessageBox.warning") as warn,
+        ):
+            flow.reimport_dict("jitendex")
+
+        # Aborted at the guard: mismatch warning shown, handles never released.
+        warn.assert_called_once()
+        assert "match" in warn.call_args.args[1].lower()
+        flow._panel.request_resource_release.assert_not_called()
+
+    def test_non_catalog_slot_still_rejects_mismatch(self, tmp_path: Path):
+        dicts_root = tmp_path / "dicts"
+        flow = _make_flow(dicts_root)
+        other = build_yomitan_zip(tmp_path / "src" / "o.zip", title="Other Dict", revision="v1")
+
+        with (
+            patch(f"{MOD}.QFileDialog.getOpenFileName", return_value=(str(other), "")),
+            patch(f"{MOD}.QMessageBox.warning") as warn,
+        ):
+            flow.reimport_dict("some-slot")  # not a catalog slot
+
+        warn.assert_called_once()
+        assert "match" in warn.call_args.args[1].lower()
+        flow._panel.request_resource_release.assert_not_called()

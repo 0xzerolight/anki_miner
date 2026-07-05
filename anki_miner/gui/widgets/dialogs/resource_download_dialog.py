@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import shutil
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -28,17 +29,39 @@ if TYPE_CHECKING:
     from anki_miner.gui.workers.resource_download_worker import ResourceDownloadSummary
 
 
-def run_resource_download(parent: QWidget, config: AnkiMinerConfig) -> AnkiMinerConfig | None:
+def run_resource_download(
+    parent: QWidget,
+    config: AnkiMinerConfig,
+    *,
+    release_resources: Callable[[], bool] | None = None,
+) -> AnkiMinerConfig | None:
     """Download + import the recommended resources behind a modal dialog.
 
     Returns the (possibly mutated) config on completion, or ``None`` if the user
     cancelled before anything downloaded. Per-item failures are isolated by the
     worker; a partial summary still returns an updated config for what succeeded.
+
+    ``release_resources`` drops live dictionary sqlite handles before the worker
+    runs (like the reimport flows). The import now overwrites a pinned slot in
+    place and the sweep deletes superseded dirs, so on Windows an open
+    ``IndexedDictProvider`` connection would make the rename/rmtree fail with
+    "Access denied" (Issues #30/#32). If it returns False a mining run is live —
+    warn and abort without touching disk.
     """
     from anki_miner.gui.utils.resource_setup import apply_download_summary
 
     download_dir = Path(tempfile.mkdtemp(prefix="anki_miner_dl_"))
     try:
+        if release_resources is not None and not release_resources():
+            QMessageBox.warning(
+                parent,
+                QCoreApplication.translate("ResourceDownloadDialog", "Download Blocked"),
+                QCoreApplication.translate(
+                    "ResourceDownloadDialog",
+                    "A mining run is in progress. Stop it before downloading resources.",
+                ),
+            )
+            return None
         summary = _run_download_modal(parent, config, download_dir)
         if summary is None:
             return None
@@ -134,6 +157,24 @@ def _show_results_dialog(parent: QWidget, summary: ResourceDownloadSummary) -> N
                     result.detail,
                 )
             )
+            # Surface the one deletion a download can perform (never silent).
+            for _dict_id, name in result.removed_dicts:
+                lines.append(
+                    tr_format(
+                        QCoreApplication.translate("ResourceDownloadDialog", "   Replaced older copy: %1"),
+                        name,
+                    )
+                )
+            for _dict_id, name in result.failed_removals:
+                lines.append(
+                    tr_format(
+                        QCoreApplication.translate(
+                            "ResourceDownloadDialog",
+                            "   Could not remove older copy: %1 — remove it via Settings → Dictionaries",
+                        ),
+                        name,
+                    )
+                )
         else:
             lines.append(
                 tr_format(

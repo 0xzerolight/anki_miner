@@ -33,6 +33,7 @@ from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
+from anki_miner.services.dictionary.superseded import sweep_superseded_dicts
 from anki_miner.services.frequency.source_importer import import_frequency_source
 from anki_miner.services.resource_downloader import download_to_temp
 
@@ -81,6 +82,12 @@ class ResourceDownloadResult:
     detail: str
     dict_id: str | None = None
     source_id: str | None = None
+    # Date-versioned duplicate dicts superseded by this import (id, source_name).
+    # ``removed_dicts`` were deleted from disk (the config step drops their chain
+    # entries); ``failed_removals`` matched but could not be deleted and are
+    # surfaced to the user, their chain entries left intact (no orphan).
+    removed_dicts: list[tuple[str, str]] = field(default_factory=list)
+    failed_removals: list[tuple[str, str]] = field(default_factory=list)
 
 
 @dataclass
@@ -155,16 +162,30 @@ class ResourceDownloadWorker(CancellableWorker):
 
                 dict_id: str | None = None
                 source_id: str | None = None
+                removed_dicts: list[tuple[str, str]] = []
+                failed_removals: list[tuple[str, str]] = []
                 if spec.kind == "dict":
+                    # Pin the on-disk slot to the stable catalog id so a title
+                    # embedding a changing release date (Jitendex) overwrites in
+                    # place instead of forking a new dir every download.
                     result = import_yomitan_zip(
                         temp,
                         self._dicts_root,
                         overwrite=True,
                         cancel_check=lambda: self.is_cancelled,
                         progress=self._progress_for(spec.id),
+                        dict_id=spec.id,
                     )
                     dict_id = result.dict_id
                     detail = f"{result.entry_count} entries"
+                    # Remove pre-fix date-versioned duplicates now living in
+                    # sibling dirs. Never fails the item — a broken sweep is
+                    # reported, not raised (sweep is structurally total).
+                    removed_dicts, failed_removals = sweep_superseded_dicts(
+                        self._dicts_root,
+                        keep_id=spec.id,
+                        imported_source_name=result.source_name,
+                    )
                 elif spec.kind == "freq":
                     # import_frequency_source dispatches on file suffix (.zip vs
                     # .csv/.tsv/.txt), but download_to_temp always stages a
@@ -201,6 +222,8 @@ class ResourceDownloadWorker(CancellableWorker):
                         detail=detail,
                         dict_id=dict_id,
                         source_id=source_id,
+                        removed_dicts=removed_dicts,
+                        failed_removals=failed_removals,
                     )
                 )
                 self.item_done.emit(spec.id, True, detail)

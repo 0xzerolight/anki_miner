@@ -517,7 +517,9 @@ class ResourcesPage(QWizardPage):
     def _on_download_clicked(self) -> None:
         from anki_miner.gui.widgets.dialogs.resource_download_dialog import run_resource_download
 
-        new_config = run_resource_download(self, self._wizard.working_config())
+        new_config = run_resource_download(
+            self, self._wizard.working_config(), release_resources=self._wizard._release_resources
+        )
         if new_config is not None:
             self._wizard.update_working_config(new_config)
             self.status_label.setText(self.tr("Resources updated."))
