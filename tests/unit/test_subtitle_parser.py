@@ -16,12 +16,26 @@ from anki_miner.utils.text_utils import wrap_target_furigana
 # --- Helpers for building mock MeCab tokens ---
 
 
-def _make_token(surface, pos1, pos2=None, lemma=None, kana=None, orth_base=None):
+def _make_token(
+    surface,
+    pos1,
+    pos2=None,
+    lemma=None,
+    kana=None,
+    orth_base=None,
+    l_form=None,
+    kana_base=None,
+):
     """Build a mock fugashi word token with feature attributes.
 
     ``orthBase`` defaults to the lemma (real UniDic tokens usually agree);
     it must always be set explicitly — an auto-created MagicMock attribute
-    is truthy and would leak into ``mined_form``.
+    is truthy and would leak into ``mined_form``. ``lForm``/``kanaBase``
+    (lemma/orthBase readings — mining_base's fold trigger) are pinned to
+    the given values (default None) for the same reason: an auto-created
+    Mock attribute would be truthy but non-str, silently exercising
+    mining_base's isinstance guard in every test. Set both explicitly when
+    testing the fold.
     """
     token = MagicMock()
     token.surface = surface
@@ -30,6 +44,8 @@ def _make_token(surface, pos1, pos2=None, lemma=None, kana=None, orth_base=None)
     token.feature.lemma = lemma if lemma is not None else surface
     token.feature.kana = kana if kana is not None else surface
     token.feature.orthBase = orth_base if orth_base is not None else token.feature.lemma
+    token.feature.lForm = l_form
+    token.feature.kanaBase = kana_base
     return token
 
 
@@ -1007,8 +1023,9 @@ class TestExtractLemma:
         assert service._extract_lemma(token) == "メル-ビル"
 
 
-class TestExtractOrthBase:
-    """Tests for _extract_orth_base method (source-orthography dictionary form)."""
+class TestMiningBase:
+    """Tests for _mining_base (source-orthography dictionary form with
+    derived-sub-lemma folding — see morphology.mining_base)."""
 
     @pytest.fixture
     def service(self, test_config):
@@ -1018,25 +1035,157 @@ class TestExtractOrthBase:
     def test_returns_orth_base(self, service):
         """orthBase keeps the source kanji variant that lemma normalizes away."""
         token = _make_token("乞わ", "動詞", lemma="請う", orth_base="乞う")
-        assert service._extract_orth_base(token) == "乞う"
+        assert service._mining_base(token) == "乞う"
 
     def test_none_falls_back_to_lemma(self, service):
         """fugashi maps unidic's ``*`` placeholder to None → fall back to lemma."""
         token = _make_token("食べた", "動詞", lemma="食べる")
         token.feature.orthBase = None
-        assert service._extract_orth_base(token) == "食べる"
+        assert service._mining_base(token) == "食べる"
 
     def test_fallback_branch_keeps_gloss_stripping(self, service):
         """The lemma fallback inherits extract_lemma's ASCII-gloss strip."""
         token = _make_token("スクランブル", "名詞", lemma="スクランブル-scramble")
         token.feature.orthBase = None
-        assert service._extract_orth_base(token) == "スクランブル"
+        assert service._mining_base(token) == "スクランブル"
 
     def test_missing_attribute_falls_back(self, service):
         """Synthetic merged-compound tokens have no orthBase attribute
         (_SyntheticToken's SimpleNamespace feature) — must not crash."""
         token = _make_token_no_feature("食べた")
-        assert service._extract_orth_base(token) == "食べた"
+        assert service._mining_base(token) == "食べた"
+
+    # --- derived sub-lemma folding (potential / ra-nuki / adjective ク-form) ---
+
+    def test_folds_godan_potential_to_lemma(self, service):
+        """可能動詞 fold onto the parent verb so they dedup against its card."""
+        token = _make_token("保てる", "動詞", lemma="保つ", orth_base="保てる", l_form="タモツ", kana_base="タモテル")
+        assert service._mining_base(token) == "保つ"
+
+    def test_folds_more_potential_paradigm_rows(self, service):
+        cases = [
+            ("読める", "読む", "ヨム", "ヨメル"),
+            ("話せる", "話す", "ハナス", "ハナセル"),
+            ("書ける", "書く", "カク", "カケル"),
+            ("泳げる", "泳ぐ", "オヨグ", "オヨゲル"),
+            ("掴める", "掴む", "ツカム", "ツカメル"),
+            ("死ねる", "死ぬ", "シヌ", "シネル"),
+            ("呼べる", "呼ぶ", "ヨブ", "ヨベル"),
+            ("買える", "買う", "カウ", "カエル"),
+        ]
+        for orth_base, lemma, l_form, kana_base in cases:
+            token = _make_token(orth_base, "動詞", lemma=lemma, orth_base=orth_base, l_form=l_form, kana_base=kana_base)
+            assert service._mining_base(token) == lemma, orth_base
+
+    def test_folds_ranuki_to_lemma(self, service):
+        """ら抜き potentials (見れる/食べれる) fold via the (れる, る) pair."""
+        token = _make_token("見れる", "動詞", lemma="見る", orth_base="見れる", l_form="ミル", kana_base="ミレル")
+        assert service._mining_base(token) == "見る"
+        token = _make_token(
+            "食べれる", "動詞", lemma="食べる", orth_base="食べれる", l_form="タベル", kana_base="タベレル"
+        )
+        assert service._mining_base(token) == "食べる"
+
+    def test_folds_mid_conjugation_potential_token(self, service):
+        """書けない → token 書け carries orthBase=書ける; still folds to 書く."""
+        token = _make_token("書け", "動詞", lemma="書く", orth_base="書ける", l_form="カク", kana_base="カケル")
+        assert service._mining_base(token) == "書く"
+
+    def test_folds_katakana_verb_potential(self, service):
+        token = _make_token(
+            "サボれる", "動詞", lemma="サボる", orth_base="サボれる", l_form="サボル", kana_base="サボレル"
+        )
+        assert service._mining_base(token) == "サボる"
+
+    def test_folds_adjective_ku_form(self, service):
+        """Archaic i-adjective bases (良かれ → orthBase 良し) fold to the
+        modern dictionary form via the (し, い) pair."""
+        token = _make_token("良かれ", "形容詞", lemma="良い", orth_base="良し", l_form="ヨイ", kana_base="ヨシ")
+        assert service._mining_base(token) == "良い"
+        token = _make_token("無かれ", "形容詞", lemma="無い", orth_base="無し", l_form="ナイ", kana_base="ナシ")
+        assert service._mining_base(token) == "無い"
+
+    # --- suffix-pair guard: lemma canonicalization must never leak ---
+
+    def test_guard_blocks_leading_kanji_swap(self, service):
+        """帰れる's unidic lemma is 返る — folding would mine the wrong verb."""
+        token = _make_token("帰れる", "動詞", lemma="返る", orth_base="帰れる", l_form="カエル", kana_base="カエレル")
+        assert service._mining_base(token) == "帰れる"
+        token = _make_token(
+            "混ぜれる", "動詞", lemma="交ぜる", orth_base="混ぜれる", l_form="マゼル", kana_base="マゼレル"
+        )
+        assert service._mining_base(token) == "混ぜれる"
+
+    def test_guard_blocks_non_leading_kanji_swap(self, service):
+        """逢→会 canonicalization sits mid-word; the byte-exact guard blocks it."""
+        token = _make_token(
+            "出逢える", "動詞", lemma="出会う", orth_base="出逢える", l_form="デアウ", kana_base="デアエル"
+        )
+        assert service._mining_base(token) == "出逢える"
+        token = _make_token(
+            "巡り合える",
+            "動詞",
+            lemma="巡り会う",
+            orth_base="巡り合える",
+            l_form="メグリアウ",
+            kana_base="メグリアエル",
+        )
+        assert service._mining_base(token) == "巡り合える"
+
+    def test_guard_blocks_okurigana_variant(self, service):
+        """Okurigana canonicalization (表せる → lemma 表わす) must keep the
+        source spelling — same kanji, different kana, invisible to any
+        kanji-based guard."""
+        token = _make_token(
+            "表せる", "動詞", lemma="表わす", orth_base="表せる", l_form="アラワス", kana_base="アラワセル"
+        )
+        assert service._mining_base(token) == "表せる"
+        token = _make_token(
+            "行なえる", "動詞", lemma="行う", orth_base="行なえる", l_form="オコナウ", kana_base="オコナエル"
+        )
+        assert service._mining_base(token) == "行なえる"
+        token = _make_token("落せる", "動詞", lemma="落とす", orth_base="落せる", l_form="オトス", kana_base="オトセル")
+        assert service._mining_base(token) == "落せる"
+
+    def test_guard_blocks_jiru_zuru_canonicalization(self, service):
+        """Citation-form 漢語+じる verbs carry the archaic ずる lemma with
+        divergent readings; じる↛ずる is not a paradigm pair, so the modern
+        spelling stays on the card."""
+        token = _make_token(
+            "信じる", "動詞", lemma="信ずる", orth_base="信じる", l_form="シンズル", kana_base="シンジル"
+        )
+        assert service._mining_base(token) == "信じる"
+        token = _make_token(
+            "感じる", "動詞", lemma="感ずる", orth_base="感じる", l_form="カンズル", kana_base="カンジル"
+        )
+        assert service._mining_base(token) == "感じる"
+
+    def test_polyphonic_same_string_is_noop(self, service):
+        """言う: readings diverge (イウ vs ユウ) but lemma==orthBase, so the
+        (う, う)-less pair walk still returns the identical string either way."""
+        token = _make_token("言う", "動詞", lemma="言う", orth_base="言う", l_form="イウ", kana_base="ユウ")
+        assert service._mining_base(token) == "言う"
+
+    def test_no_fold_when_readings_equal(self, service):
+        """Lexicalized potentials (見える/聞こえる/できる) have their own lemma
+        with matching readings — never folded."""
+        token = _make_token("見える", "動詞", lemma="見える", orth_base="見える", l_form="ミエル", kana_base="ミエル")
+        assert service._mining_base(token) == "見える"
+        token = _make_token("できる", "動詞", lemma="出来る", orth_base="できる", l_form="デキル", kana_base="デキル")
+        assert service._mining_base(token) == "できる"
+
+    def test_no_fold_for_non_verb_pos(self, service):
+        """The fold is POS-gated to 動詞/形容詞 — a noun with divergent
+        readings keeps its orthBase untouched."""
+        token = _make_token("山", "名詞", lemma="別", orth_base="山", l_form="ベツ", kana_base="ヤマ")
+        assert service._mining_base(token) == "山"
+
+    def test_no_fold_when_readings_missing_or_placeholder(self, service):
+        """None (factory default) and unidic's '*' placeholder never fold."""
+        token = _make_token("保てる", "動詞", lemma="保つ", orth_base="保てる")
+        assert service._mining_base(token) == "保てる"
+        token = _make_token("保てる", "動詞", lemma="保つ", orth_base="保てる", l_form="*", kana_base="*")
+        assert service._mining_base(token) == "保てる"
 
 
 class TestExtractReading:
@@ -1483,6 +1632,52 @@ def test_real_fugashi_mines_verb_nominalizer(tmp_path):
     # Lemma must be the merged surface, NOT 生きる方.
     by_surface = {w.surface: w for w in words}
     assert by_surface["生き方"].lemma == "生き方"
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+def test_real_fugashi_folds_potential_verb(tmp_path):
+    """保てる must mine as 保つ (可能動詞 fold), with the reading re-derived
+    from the folded form. Guards future unidic bumps changing the feature
+    layout (lForm/kanaBase)."""
+    srt_file = tmp_path / "potential.srt"
+    srt_file.write_text(
+        "1\n" "00:00:01,000 --> 00:00:05,000\n" "秩序を保てるはずがない\n",
+        encoding="utf-8",
+    )
+    config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+    service = SubtitleParserService(config)
+    words = service.parse_subtitle_file(srt_file)
+
+    by_surface = {w.surface: w for w in words}
+    assert "保てる" in by_surface, f"got surfaces: {set(by_surface)}"
+    word = by_surface["保てる"]
+    assert word.mined_form == "保つ"
+    assert word.orth_base == "保つ"
+    assert word.expression_reading == "たもつ"
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+def test_real_fugashi_guard_keeps_source_orthography(tmp_path):
+    """帰れる (lemma 返る) and 出逢える (lemma 出会う) must NOT fold — the
+    suffix-pair guard keeps the source spelling."""
+    srt_file = tmp_path / "guard.srt"
+    srt_file.write_text(
+        "1\n"
+        "00:00:01,000 --> 00:00:05,000\n"
+        "もう帰れるかな\n"
+        "\n"
+        "2\n"
+        "00:00:06,000 --> 00:00:10,000\n"
+        "君に出逢えるなんて\n",
+        encoding="utf-8",
+    )
+    config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+    service = SubtitleParserService(config)
+    words = service.parse_subtitle_file(srt_file)
+
+    by_surface = {w.surface: w for w in words}
+    assert by_surface["帰れる"].mined_form == "帰れる"
+    assert by_surface["出逢える"].mined_form == "出逢える"
 
 
 # ---------------------------------------------------------------------------
