@@ -159,11 +159,15 @@ def test_reimport_all_two_yomitan(tab_for_reimport_all, monkeypatch, stubbed_wor
     assert stubbed_workers["yomitan_factory"].call_count == 2
     _complete_in_flight_worker(stubbed_workers)
 
-    # Both Yomitan workers invoked with overwrite=True and the saved source.zip
+    # Both Yomitan workers invoked with overwrite=True, the saved source.zip,
+    # and the EXISTING slot id pinned so the rebuild lands in place (not a new
+    # date-named dir) — the fork-a-new-dir / stale-gate-wedge fix.
     for call in stubbed_workers["yomitan_factory"].call_args_list:
         args, kwargs = call
         assert Path(args[0]).name == "source.zip"
         assert kwargs.get("overwrite") is True
+        # dict_id pins to the slot whose source.zip is being reimported.
+        assert kwargs.get("dict_id") == Path(args[0]).parent.name
 
     assert len(config_changed_emissions) == 1
     assert summaries, "Summary dialog must be shown"
