@@ -515,7 +515,7 @@ class MainWindow(QMainWindow):
         """Tools-menu handler: run the resource download dialog, apply result."""
         from anki_miner.gui.widgets.dialogs.resource_download_dialog import run_resource_download
 
-        new_config = run_resource_download(self, self.config)
+        new_config = run_resource_download(self, self.config, release_resources=self.release_dictionary_resources)
         if new_config is not None:
             # update_config (not from_settings) propagates via config_refreshed
             # to all tabs incl. Settings, and persists to disk.

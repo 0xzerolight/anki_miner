@@ -48,9 +48,14 @@ def apply_download_summary(config: AnkiMinerConfig, summary: ResourceDownloadSum
 
     for result in succeeded:
         if result.kind == "dict" and result.dict_id:
-            # Drop any existing entry for this dict_id, then prepend a fresh
-            # enabled one — idempotent and always front-of-chain.
-            chain = [e for e in chain if e.dict_id != result.dict_id]
+            # Drop any existing entry for this dict_id AND any date-versioned
+            # duplicate the worker swept from disk (keyed on id, ignoring
+            # enabled so a disabled legacy row is removed too), then prepend a
+            # fresh enabled one — idempotent and always front-of-chain. Failed
+            # removals are deliberately NOT dropped: their dir still exists, so
+            # keeping the entry avoids an orphan.
+            swept_ids = {dict_id for dict_id, _ in result.removed_dicts}
+            chain = [e for e in chain if e.dict_id != result.dict_id and e.dict_id not in swept_ids]
             chain.insert(0, ChainEntry(kind="indexed", dict_id=result.dict_id, enabled=True))
         elif result.kind == "freq" and result.source_id:
             # Mirror the dict path: drop any existing entry for this source_id,
