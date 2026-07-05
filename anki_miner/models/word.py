@@ -32,11 +32,15 @@ class TokenizedWord:
     end_time: float  # End time in seconds
     duration: float  # Duration in seconds
     video_file: Path | None = None  # Source video (for batch processing)
-    # Dictionary form in the sentence's own orthography (UniDic orthBase):
-    # 乞わ → 乞う even when unidic's canonical lemma is 請う. Card-front
-    # source of truth for verbs/adjectives; empty when the token had no
-    # orthBase (synthetic merged compounds, OOV) — mined_form then falls
-    # back to lemma.
+    # Mining base: the dictionary form in the sentence's own orthography
+    # (UniDic orthBase): 乞わ → 乞う even when unidic's canonical lemma is
+    # 請う — folded to the lemma when orthBase is a derived sub-lemma
+    # (potential 保てる→保つ, ra-nuki 見れる→見る, adjective ク-form
+    # 良し→良い; see morphology.mining_base for the reading trigger and the
+    # suffix-pair guard that keeps kanji/okurigana/じる-ずる variants
+    # unfolded). Card-front source of truth for verbs/adjectives; empty when
+    # the token had no orthBase (synthetic merged compounds, OOV) —
+    # mined_form then falls back to lemma.
     orth_base: str = ""
     expression_furigana: str = ""  # Furigana for expression, e.g. "食べる[たべる]"
     expression_reading: str = ""  # Plain kana reading of expression, e.g. "たべる"
@@ -110,6 +114,22 @@ class TokenizedWord:
         kanji-surface variant tokens. Verbs carded before this change
         stored the normalized lemma and will re-card once as the source
         variant (accepted, no migration — see CHANGELOG).
+
+        ``orth_base`` arrives pre-folded by ``morphology.mining_base``:
+        derived sub-lemma entries (potential 保てる, ra-nuki 見れる,
+        adjective ク-form 良し) collapse onto their parent lemma
+        (保つ/見る/良い) so they dedup against the base-form card. The fold
+        boundary is unidic's classification — 思える/起きれる fold to
+        思う/起きる while lexicalized 見える/聞こえる/できる keep their own
+        entries — and the suffix-pair guard keeps every lemma
+        canonicalization unfolded (kanji swaps 帰れる→返る/出逢える→出会う,
+        okurigana variants 表せる→表わす, modern→archaic 信じる→信ずる all
+        mine their source orthBase). Stem tokens like 信じ (from
+        信じられない) still mine 信ずる — pre-existing quirk, readings
+        equal, never triggers the fold. Cards mined as potential forms
+        before this change get a base-lemma sibling next time the word
+        recurs (one-time re-card burst, broader than the orthBase
+        precedent above; accepted — see CHANGELOG).
 
         Nouns and other non-conjugating POS keep the surface form: unidic
         sometimes maps homograph-like nouns to a different headword
