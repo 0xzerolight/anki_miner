@@ -1,0 +1,339 @@
+"""Load one ``.txt`` novel (Aozora Bunko markup or plain text) into units.
+
+Pure stdlib, no chardet dependency. The detector hands a ``txt`` ref whose
+``title`` is a provisional file-stem label; for Aozora files the header title
+here becomes the authoritative document title/episode, so this loader is the
+final say on metadata (series is always the constant ``"Books"``).
+
+Transform order on an Aozora body line is fixed: **gaiji → ruby → annotations**.
+Gaiji must resolve first so a gaiji-produced kanji can anchor a ruby base and so
+its inner ``［＃`` never looks like an annotation; ruby strips before annotations
+so a ``《reading》`` can't confuse the annotation scanner.
+"""
+
+from __future__ import annotations
+
+import re
+import unicodedata
+
+from anki_miner.services.reading.models import (
+    ReadingDocument,
+    ReadingSourceRef,
+    ReadingUnit,
+)
+from anki_miner.services.reading.sentence_splitter import split_sentences
+
+# --- decoding ------------------------------------------------------------
+
+
+def _is_jp(ch: str) -> bool:
+    o = ord(ch)
+    return (
+        0x3040 <= o <= 0x30FF  # hiragana + katakana
+        or 0x3400 <= o <= 0x9FFF  # CJK ideographs (+ ext A)
+        or 0xF900 <= o <= 0xFAFF  # CJK compatibility ideographs
+    )
+
+
+def _jp_ratio(text: str) -> float:
+    return sum(_is_jp(c) for c in text) / len(text) if text else 0.0
+
+
+def _decode(raw: bytes) -> str:
+    """Decode bytes: BOM sniff → strict utf-8 → cp932/euc_jp (JP-ratio tiebreak)."""
+    if raw[:3] == b"\xef\xbb\xbf":
+        return raw.decode("utf-8-sig")
+    if raw[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        return raw.decode("utf-16")  # BOM picks endianness
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        pass
+    candidates: list[str] = []
+    for enc in ("cp932", "euc_jp"):
+        try:
+            candidates.append(raw.decode(enc))
+        except UnicodeDecodeError:
+            continue
+    if not candidates:
+        return raw.decode("cp932", errors="replace")
+    if len(candidates) == 1:
+        return candidates[0]
+    return max(candidates, key=_jp_ratio)
+
+
+# --- gaiji (external characters) -----------------------------------------
+
+_UPLUS_RE = re.compile(r"U\+([0-9A-Fa-f]{4,6})")
+# men-区-点 triple; the trailing 第N水準 is a single number, never a triple, so
+# it can't be mistaken for the men-ku-ten here. Dash class covers full-width /
+# minus-sign / bar variants seen in the wild (NFKC already folds － FF0D).
+_MENKUTEN_RE = re.compile(r"(\d{1,2})[-−―‐](\d{1,3})[-−―‐](\d{1,3})")
+
+_GETA = "〓"  # U+3013, the geta mark used for an unresolvable gaiji
+
+
+def _menkuten_char(men: int, ku: int, ten: int) -> str:
+    if not (1 <= men <= 2 and 1 <= ku <= 94 and 1 <= ten <= 94):
+        return _GETA
+    body = bytes([0xA0 + ku, 0xA0 + ten])
+    if men == 2:
+        body = b"\x8f" + body  # SS3: JIS X 0213 plane 2
+    try:
+        return body.decode("euc_jis_2004")
+    except UnicodeDecodeError:
+        return _GETA
+
+
+def _gaiji_char(control: str) -> str:
+    """Resolve a gaiji marker body to one character (U+ form, then 面区点, else 〓)."""
+    norm = unicodedata.normalize("NFKC", control)
+    m = _UPLUS_RE.search(norm)
+    if m:
+        try:
+            return chr(int(m.group(1), 16))
+        except (ValueError, OverflowError):
+            return _GETA
+    triples = _MENKUTEN_RE.findall(norm)
+    if triples:
+        men, ku, ten = (int(x) for x in triples[-1])
+        return _menkuten_char(men, ku, ten)
+    return _GETA
+
+
+def _find_close(line: str, start: int) -> int:
+    """Index of the ``］`` closing an annotation opened before ``start``.
+
+    Skips ``］`` inside ``「」`` spans (nesting legal); a plain regex can't. -1
+    when unterminated.
+    """
+    depth = 0
+    for i in range(start, len(line)):
+        c = line[i]
+        if c == "「":
+            depth += 1
+        elif c == "」":
+            if depth > 0:
+                depth -= 1
+        elif c == "］" and depth == 0:
+            return i
+    return -1
+
+
+def _resolve_gaiji(line: str) -> str:
+    """Replace every ``※［＃…］`` gaiji marker with its resolved character."""
+    if "※［＃" not in line:
+        return line
+    out: list[str] = []
+    i = 0
+    n = len(line)
+    while i < n:
+        if line.startswith("※［＃", i):
+            close = _find_close(line, i + 3)
+            if close == -1:
+                out.append(line[i])
+                i += 1
+                continue
+            out.append(_gaiji_char(line[i + 3 : close]))
+            i = close + 1
+        else:
+            out.append(line[i])
+            i += 1
+    return "".join(out)
+
+
+# --- ruby ----------------------------------------------------------------
+
+# A ruby span; readings are discarded. Deleting every 《…》 span plus every ｜
+# base-marker is provably equivalent to the "replace base《reading》 with base"
+# semantics: both keep exactly the text before 《. Aozora never uses 《》 for
+# quotation, so an unconditional strip is safe on the Aozora path.
+_RUBY_RE = re.compile(r"《[^》]*》")
+
+
+def _strip_ruby(line: str) -> str:
+    return _RUBY_RE.sub("", line).replace("｜", "")
+
+
+# --- annotations ---------------------------------------------------------
+
+
+def _classify(control: str) -> str:
+    """One of block_start / block_end / inline_heading / other for an annotation."""
+    if "見出し" in control:
+        if control.startswith("ここから"):
+            return "block_start"
+        if control.startswith("ここで") and "終わり" in control:
+            return "block_end"
+        return "inline_heading"
+    return "other"
+
+
+def _strip_annotations(line: str) -> tuple[str, bool, bool, bool]:
+    """Remove every ``［＃…］`` marker, keeping surrounding/inner body text.
+
+    Returns ``(cleaned, inline_heading, block_start, block_end)``. Heading
+    markers only set flags; 傍点/太字/割り注/改ページ and all other forms are
+    removed with their body text left intact.
+    """
+    if "［＃" not in line:
+        return line, False, False, False
+    out: list[str] = []
+    inline = block_start = block_end = False
+    i = 0
+    n = len(line)
+    while i < n:
+        if line.startswith("［＃", i):
+            close = _find_close(line, i + 2)
+            if close == -1:
+                out.append(line[i:])
+                break
+            kind = _classify(line[i + 2 : close])
+            if kind == "block_start":
+                block_start = True
+            elif kind == "block_end":
+                block_end = True
+            elif kind == "inline_heading":
+                inline = True
+            i = close + 1
+        else:
+            out.append(line[i])
+            i += 1
+    return "".join(out), inline, block_start, block_end
+
+
+# --- header / footer -----------------------------------------------------
+
+_RULE_RE = re.compile(r"^-{8,}$")
+_FOOTER_PREFIXES = ("底本：", "底本:", "青空文庫作成ファイル：")
+
+
+def _splitlines(text: str) -> list[str]:
+    """Physical lines only (no splitting on other Unicode line boundaries)."""
+    return text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+
+
+def _cut_footer(lines: list[str]) -> list[str]:
+    """Drop the colophon: everything from the last 底本 (fallbacks) line on."""
+    for prefix in _FOOTER_PREFIXES:
+        cut = None
+        for idx, ln in enumerate(lines):
+            if ln.startswith(prefix):
+                cut = idx
+        if cut is not None:
+            return lines[:cut]
+    return lines
+
+
+def _drop_symbol_block(lines: list[str]) -> list[str]:
+    """Drop the optional ``-{8,}``…``-{8,}`` 記号説明 block (first pair)."""
+    r1 = next((i for i, ln in enumerate(lines) if _RULE_RE.match(ln)), None)
+    if r1 is None:
+        return lines
+    r2 = next((i for i in range(r1 + 1, len(lines)) if _RULE_RE.match(lines[i])), None)
+    if r2 is None:
+        return lines
+    return lines[:r1] + lines[r2 + 1 :]
+
+
+def _is_aozora(text: str) -> bool:
+    if "《" in text or "［＃" in text:
+        return True
+    return any(_RULE_RE.match(ln) for ln in _splitlines(text))
+
+
+def _extract_header(lines: list[str]) -> tuple[str, list[str]]:
+    """Return (header title, body lines) for the Aozora path."""
+    title = _strip_ruby(_resolve_gaiji(lines[0])).strip() if lines else ""
+    i = 0
+    while i < len(lines) and lines[i].strip():  # pre-blank block = header
+        i += 1
+    while i < len(lines) and not lines[i].strip():  # skip the blank gap
+        i += 1
+    return title, _drop_symbol_block(lines[i:])
+
+
+# --- unit emission -------------------------------------------------------
+
+
+def _emit_units(body_lines: list[str]) -> list[ReadingUnit]:
+    units: list[ReadingUnit] = []
+    index = 0
+    para_no = 0
+    current_chapter: str | None = None
+    heading_block = False
+    heading_buf: list[str] = []
+
+    for raw in body_lines:
+        line = raw[1:] if raw.startswith("　") else raw  # strip one indent
+        line = _resolve_gaiji(line)
+        line = _strip_ruby(line)
+        text, inline, block_start, block_end = _strip_annotations(line)
+        stripped = text.strip()
+
+        if block_start:
+            heading_block = True
+            heading_buf = []
+
+        if not stripped:  # blank or marker-only line: a break, no unit
+            if block_end:
+                heading_block = False
+            continue
+
+        if inline or (heading_block and stripped):
+            if heading_block:
+                heading_buf.append(stripped)
+                current_chapter = "".join(heading_buf)
+            else:
+                current_chapter = stripped
+            units.append(
+                ReadingUnit(
+                    text=stripped,
+                    index=index,
+                    location_label=current_chapter,
+                    image_ref=None,
+                )
+            )
+            index += 1
+        else:
+            para_no += 1
+            label = current_chapter if current_chapter else f"¶{para_no}"
+            for sentence in split_sentences(text):
+                units.append(
+                    ReadingUnit(
+                        text=sentence,
+                        index=index,
+                        location_label=label,
+                        image_ref=None,
+                    )
+                )
+                index += 1
+
+        if block_end:
+            heading_block = False
+
+    return units
+
+
+# --- public API ----------------------------------------------------------
+
+
+def load(ref: ReadingSourceRef) -> ReadingDocument:
+    """Load an Aozora or plain-text novel into a book ``ReadingDocument``."""
+    text = _decode(ref.path.read_bytes())
+    lines = _cut_footer(_splitlines(text))
+
+    if _is_aozora(text):
+        title, body_lines = _extract_header(lines)
+        title = title or ref.title
+    else:
+        title = ref.title
+        body_lines = lines
+
+    return ReadingDocument(
+        title=title,
+        kind="book",
+        series="Books",
+        episode=title,
+        units=_emit_units(body_lines),
+    )
