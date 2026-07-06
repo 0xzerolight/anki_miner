@@ -3,7 +3,7 @@
 import collections
 import logging
 import re
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +23,7 @@ from anki_miner.services.morphology import (
     merge_compound_suffixes,
     mining_base,
 )
+from anki_miner.services.reading.models import ReadingUnit
 from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.utils import (
     clean_subtitle_text,
@@ -630,6 +631,77 @@ class SubtitleParserService:
             all_words.extend(line_words)
 
         return all_words, line_index
+
+    def parse_text_units(
+        self,
+        units: Sequence[ReadingUnit],
+        want_line_index: bool,
+    ) -> tuple[list[TokenizedWord], list[LineLemmas] | None, collections.Counter[str]]:
+        """Parse reading-tab text units into mining words, index, and lemma counts.
+
+        The reading pipeline (manga volumes / novels) hands mined text as
+        ``ReadingUnit``s — one paragraph or manga text block each — instead of a
+        subtitle file. Each unit's ``text`` becomes the card sentence *verbatim*:
+        there is no re-windowing, no ``clean_subtitle_text``, no regex filter,
+        no pysubs2 and no per-file line cache on this path. ``unit.index``
+        (document order) doubles as the dummy start AND end time, so
+        ``duration`` is ``0.0`` and every duration-based optional filter is inert
+        by design.
+
+        One tokenize pass per unit: ``_build_line_state`` tokenizes once and both
+        the returned Counter and the emitted words reuse its ``merged_tokens``.
+        The Counter accumulates over ``_iter_token_spans`` (NOT the raw
+        ``merged_tokens``) so a span-undroppable token is excluded from the count
+        exactly as it is from mining — the T-38 mine-vs-count consistency guard
+        (see ``count_lemmas`` / ``_iter_token_spans``). Emission flows through
+        ``_emit_line_words_and_index`` so mining_base folding and lemma-tail
+        stripping are inherited, never re-implemented here.
+
+        Args:
+            units: Ordered reading units (only ``.text``/``.index`` are read).
+            want_line_index: When True, build the per-unit ``LineLemmas`` index
+                (i+1 filter input) alongside the words; when False the index
+                element of the returned tuple is ``None``.
+
+        Returns:
+            ``(words, line_index, counts)``. ``words`` is lemma-deduped
+            (first-occurrence-wins across the whole call, like the subtitle
+            entrypoints); ``line_index`` is the ``LineLemmas`` list when
+            ``want_line_index`` else ``None``; ``counts`` maps lemma → total
+            included occurrences (``count_lemmas`` semantics, no dedup).
+        """
+        # Public parse_* convention: reset the per-parse memo caches so a
+        # multi-volume queue on one shared processor never serves stale
+        # furigana/reading entries and cache growth stays bounded across units.
+        self._reset_caches()
+
+        all_words: list[TokenizedWord] = []
+        line_index: list[LineLemmas] = []
+        seen_lemmas: set[str] = set()
+        counts: collections.Counter[str] = collections.Counter()
+
+        for unit in units:
+            # Dummy timing: the index is both start and end (duration 0.0). No
+            # re-windowing exists — unit.text is the card sentence verbatim.
+            line_state = self._build_line_state(unit.text, float(unit.index), float(unit.index))
+            text, _raw_tokens, merged_tokens, *_ = line_state
+
+            # Count through the SAME locator as the mining loop below (and
+            # count_lemmas): a token mining drops (find == -1) is counted
+            # nowhere it is not mined, or the preview over-promises (T-38 — see
+            # _iter_token_spans for the drop-rule rationale).
+            for token, _tok_start, _tok_end in self._iter_token_spans(text, merged_tokens):
+                if self._should_include_word(token):
+                    counts[self._extract_lemma(token)] += 1
+
+            line_words, line_lemmas_entry = self._emit_line_words_and_index(
+                line_state, seen_lemmas, collect_index=want_line_index
+            )
+            all_words.extend(line_words)
+            if line_lemmas_entry is not None:
+                line_index.append(line_lemmas_entry)
+
+        return all_words, (line_index if want_line_index else None), counts
 
     def count_lemmas(self, subtitle_file: Path) -> collections.Counter[str]:
         """Return raw in-corpus lemma occurrence counts for a subtitle file.
