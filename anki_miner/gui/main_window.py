@@ -410,6 +410,7 @@ class MainWindow(QMainWindow):
         "deckbuilder": "DeckBuilderTab",
         "youtube": "YouTubeTab",
         "audiobook": "AudiobookTab",
+        "reading": "ReadingTab",
         "analytics": "AnalyticsTab",
         "subtitles": "SubtitlesTab",
         "settings": "SettingsTab",

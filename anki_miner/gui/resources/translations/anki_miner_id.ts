@@ -338,46 +338,6 @@
         <translation>Menyimpan kalimat sebagai kana polos.</translation>
     </message>
     <message>
-        <source>Cloze Prefix Field</source>
-        <translation>Bidang Prefiks Cloze</translation>
-    </message>
-    <message>
-        <source>Stores the sentence text before the target word (Yomitan cloze split).</source>
-        <translation>Menyimpan teks kalimat sebelum kata target (pemisahan cloze Yomitan).</translation>
-    </message>
-    <message>
-        <source>Cloze Body Field</source>
-        <translation>Bidang Isi Cloze</translation>
-    </message>
-    <message>
-        <source>Stores the target word as it appears in the sentence (Yomitan cloze split).</source>
-        <translation>Menyimpan kata target seperti yang muncul dalam kalimat (pemisahan cloze Yomitan).</translation>
-    </message>
-    <message>
-        <source>Cloze Body Kana Field</source>
-        <translation>Bidang Kana Isi Cloze</translation>
-    </message>
-    <message>
-        <source>Stores the kana reading of the inflected target word (Yomitan cloze split).</source>
-        <translation>Menyimpan bacaan kana dari kata target yang terinfleksi (pemisahan cloze Yomitan).</translation>
-    </message>
-    <message>
-        <source>Cloze Suffix Field</source>
-        <translation>Bidang Sufiks Cloze</translation>
-    </message>
-    <message>
-        <source>Stores the sentence text after the target word (Yomitan cloze split).</source>
-        <translation>Menyimpan teks kalimat setelah kata target (pemisahan cloze Yomitan).</translation>
-    </message>
-    <message>
-        <source>Conjugation Field</source>
-        <translation>Bidang Konjugasi</translation>
-    </message>
-    <message>
-        <source>Stores the deinflection chain showing how the word was conjugated.</source>
-        <translation>Menyimpan rantai deinfleksi yang menunjukkan bagaimana kata dikonjugasikan.</translation>
-    </message>
-    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Bidang Data Tambahan</translation>
     </message>
@@ -690,8 +650,8 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
         <translation>+ Tambah Sumber Online…</translation>
     </message>
     <message>
-        <source>Add a custom audio URL or online scrape source</source>
-        <translation>Tambahkan URL audio kustom atau sumber scraping online</translation>
+        <source>Add a custom audio URL source</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Move up in priority</source>
@@ -716,14 +676,6 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
     <message>
         <source>Google Translate (synthetic TTS)</source>
         <translation>Google Translate (TTS sintetis)</translation>
-    </message>
-    <message>
-        <source>JapanesePod101 dictionary (scrape)</source>
-        <translation>Kamus JapanesePod101 (kikis)</translation>
-    </message>
-    <message>
-        <source>Jisho.org (scrape)</source>
-        <translation>Jisho.org (kikis)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -1172,6 +1124,14 @@ Total kartu dibuat: %2</translation>
     <message>
         <source>Mine vocabulary from an audiobook or audio file using its transcript.</source>
         <translation>Mining kosakata dari buku audio atau berkas audio menggunakan transkripnya.</translation>
+    </message>
+    <message>
+        <source>Mine from manga or novels</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine vocabulary from manga volumes (mokuro) or novels (EPUB/text).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Generate or re-time subtitles</source>
@@ -1835,44 +1795,6 @@ Dilewati (tidak ada sumber tersimpan — klik kanan baris kamus → Impor ulang�
         <source>Restore from Disk</source>
         <translation>Pulihkan dari Disk</translation>
     </message>
-    <message>
-        <source>Check for Updates</source>
-        <translation>Periksa Pembaruan</translation>
-    </message>
-    <message>
-        <source>No installed dictionaries to check.</source>
-        <translation>Tidak ada kamus terpasang untuk diperiksa.</translation>
-    </message>
-    <message>
-        <source>Checking for dictionary updates…</source>
-        <translation>Memeriksa pembaruan kamus…</translation>
-    </message>
-    <message>
-        <source>Update Check Failed</source>
-        <translation>Pemeriksaan Pembaruan Gagal</translation>
-    </message>
-    <message>
-        <source>All dictionaries are up to date.</source>
-        <translation>Semua kamus sudah versi terbaru.</translation>
-    </message>
-    <message>
-        <source>Updates available:</source>
-        <translation>Pembaruan tersedia:</translation>
-    </message>
-    <message>
-        <source>  • %1: revision %2 → %3
-    %4</source>
-        <translation>  • %1: revisi %2 → %3
-    %4</translation>
-    </message>
-    <message>
-        <source>Download the new zip, then re-import it via the dictionary row's Re-import… menu.</source>
-        <translation>Unduh zip baru, lalu impor ulang lewat menu Impor ulang… di baris kamus.</translation>
-    </message>
-    <message>
-        <source>Could not check:</source>
-        <translation>Tidak dapat memeriksa:</translation>
-    </message>
 </context><context>
     <name>DictionarySettingsPanel</name>
     <message>
@@ -1918,14 +1840,6 @@ Dilewati (tidak ada sumber tersimpan — klik kanan baris kamus → Impor ulang�
     <message>
         <source>Re-add dictionaries found in the storage folder that aren't in the list above (e.g. after a settings reset). No re-import needed.</source>
         <translation>Tambahkan kembali kamus yang ditemukan di folder penyimpanan yang tidak ada dalam daftar di atas (mis. setelah pengaturan disetel ulang). Tidak perlu impor ulang.</translation>
-    </message>
-    <message>
-        <source>Check for Updates</source>
-        <translation>Periksa Pembaruan</translation>
-    </message>
-    <message>
-        <source>Fetch each updatable dictionary's online index and report any newer revisions. No download is performed — re-import the new zip yourself.</source>
-        <translation>Ambil indeks online dari setiap kamus yang dapat diperbarui dan laporkan revisi yang lebih baru. Tidak ada unduhan yang dilakukan — impor ulang zip baru sendiri.</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -2205,12 +2119,6 @@ Kamus tidak dihapus.</translation>
             <numerusform>Melewati %n kata yang ditandai Anki sebagai duplikat (Expression sama)</numerusform>
         </translation>
     </message>
-    <message numerus="yes">
-        <source>Updated %n existing duplicate card(s): filled empty fields</source>
-        <translation>
-            <numerusform>Memperbarui %n kartu duplikat yang sudah ada: mengisi bidang kosong</numerusform>
-        </translation>
-    </message>
     <message>
         <source>No words found in subtitles</source>
         <translation>Tidak ada kata yang ditemukan di subtitel</translation>
@@ -2239,12 +2147,6 @@ Kamus tidak dihapus.</translation>
             <numerusform>Mengekstrak media untuk %n kata</numerusform>
         </translation>
     </message>
-    <message numerus="yes">
-        <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
-        <translation>
-            <numerusform>Proses gagal setelah membuat %n kartu; kartu tersebut tetap ada di Anki dan dapat diurungkan.</numerusform>
-        </translation>
-    </message>
     <message>
         <source>Error: %1</source>
         <translation>Kesalahan: %1</translation>
@@ -2252,6 +2154,32 @@ Kamus tidak dihapus.</translation>
     <message>
         <source>Unexpected error: %1</source>
         <translation>Kesalahan tak terduga: %1</translation>
+    </message>
+    <message numerus="yes">
+        <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
+        <translation>
+            <numerusform>Proses gagal setelah membuat %n kartu; kartu tersebut tetap ada di Anki dan dapat diurungkan.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Step 3/5 — Preparing page images</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preparing page images</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped unsafe image archive %1 — its cards have no page image</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Page image: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Step 1/5 — Parsing text: %1</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ExportDialog</name>
@@ -2604,6 +2532,22 @@ Kamus tidak dihapus.</translation>
         <translation>Menghilangkan kartu yang teks kalimatnya melebihi jumlah karakter ini. Setel ke 0 untuk tanpa batas.</translation>
     </message>
     <message>
+        <source>Reading</source>
+        <translation type="unfinished">Cara Baca</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Minimum Word Occurrences</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Minimum number of times a word must appear in a book or volume to be mined. 1 = no minimum (filter off).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Card Formatting</source>
         <translation>Pemformatan Kartu</translation>
     </message>
@@ -2625,6 +2569,10 @@ Kamus tidak dihapus.</translation>
     </message>
 </context><context>
     <name>FrequencyImportFlow</name>
+    <message>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Choose frequency source</source>
         <translation>Pilih sumber frekuensi</translation>
@@ -2886,6 +2834,10 @@ Sumber frekuensi tidak dihapus.</translation>
     <message>
         <source>Audio</source>
         <translation>Audio</translation>
+    </message>
+    <message>
+        <source>Reading</source>
+        <translation type="unfinished">Cara Baca</translation>
     </message>
     <message>
         <source>Analytics</source>
@@ -3550,7 +3502,147 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation>%1 seri - %2 episode - Siap diproses</translation>
     </message>
 </context><context>
+    <name>ReadingQueueItemWidget</name>
+    <message>
+        <source>%1 cards created</source>
+        <translation type="unfinished">%1 kartu dibuat</translation>
+    </message>
+    <message>
+        <source>Manga</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>EPUB</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove from queue</source>
+        <translation type="unfinished">Hapus dari antrean</translation>
+    </message>
+</context><context>
+    <name>ReadingTab</name>
+    <message>
+        <source>Reading queue</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Manga…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add manga volumes — a .mokuro/.cbz/.zip file, or a whole title folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Book…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add a novel — an .epub or .txt file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add manga or books above, or drag them here.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Review words before mining</source>
+        <translation type="unfinished">Tinjau kata sebelum mining</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup for each source before creating cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation type="unfinished">Pratinjau</translation>
+    </message>
+    <message>
+        <source>Run the queue in preview mode — no cards created.</source>
+        <translation type="unfinished">Jalankan antrean dalam mode pratinjau — tidak ada kartu yang dibuat.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation type="unfinished">Mining</translation>
+    </message>
+    <message>
+        <source>Mine every queued item into Anki cards.</source>
+        <translation type="unfinished">Mining setiap item dalam antrean menjadi kartu Anki.</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation type="unfinished">Bersihkan</translation>
+    </message>
+    <message>
+        <source>Remove every queued item that is not currently mining.</source>
+        <translation type="unfinished">Hapus setiap item antrean yang sedang tidak di-mining.</translation>
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation type="unfinished">Hentikan Semua</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation type="unfinished">Batalkan proses yang aktif.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">Progres</translation>
+    </message>
+    <message>
+        <source>Add Manga</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Book</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not add %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation type="unfinished">Mining tidak tersedia — layanan belum diinisialisasi.</translation>
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation type="unfinished">Proses %1 dimulai — %2 item.</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation type="unfinished">Mining %1 dari %2: %3</translation>
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation type="unfinished">Selesai mining %1: %2 kartu.</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation type="unfinished">Gagal %1: %2.</translation>
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation type="unfinished">Antrean selesai: %1 berhasil, %2 gagal.</translation>
+    </message>
+</context><context>
     <name>ResourceDownloadDialog</name>
+    <message>
+        <source>Download Blocked</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A mining run is in progress. Stop it before downloading resources.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Preparing download…</source>
         <translation>Menyiapkan unduhan…</translation>
@@ -3578,6 +3670,14 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     <message>
         <source>✓ %1 — %2</source>
         <translation>✓ %1 — %2</translation>
+    </message>
+    <message>
+        <source>   Replaced older copy: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>   Could not remove older copy: %1 — remove it via Settings → Dictionaries</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>✗ %1 — %2
@@ -5387,6 +5487,14 @@ Lanjutkan impor?</translation>
     </message>
 </context><context>
     <name>_FreqRow</name>
+    <message>
+        <source>word-based</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Level labels are shown on the card but not used for frequency filtering.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>%1 entries</source>
         <translation>%1 entri</translation>
