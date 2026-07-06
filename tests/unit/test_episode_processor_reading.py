@@ -143,16 +143,19 @@ def _make_processor(
 
 
 class _RecordingProgress:
-    """Captures the global pct values emitted through a StageWeightedProgress."""
+    """Captures the global pct values (and stage/item labels) emitted through a StageWeightedProgress."""
 
     def __init__(self) -> None:
         self.pcts: list[int] = []
+        self.start_descs: list[str] = []
+        self.progress_descs: list[str] = []
 
     def on_start(self, total: int, description: str) -> None:  # noqa: D401
-        pass
+        self.start_descs.append(description)
 
     def on_progress(self, current: int, item_description: str) -> None:
         self.pcts.append(current)
+        self.progress_descs.append(item_description)
 
     def on_complete(self) -> None:
         pass
@@ -517,6 +520,80 @@ def test_zero_image_document_consumes_image_band(test_config):
     assert rec.pcts == sorted(rec.pcts) and rec.pcts[-1] == 100
     # image (2) + defs (2) + cards (2) + 2 boundary label-refreshes + finish (1)
     assert len(rec.pcts) == 3 * len(words) + (3 - 1) + 1
+
+
+def test_book_image_stage_strings(test_config):
+    """T2. Book document → 'card images' wording at all three image-stage sites."""
+    units = [_unit(0, image_ref=ImageRef(Path("/book.epub"), "cover.jpg"))]
+    words = [_word("犬", 0)]
+    counts = collections.Counter({"犬": 1})
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+    presenter = MagicMock(name="Presenter")
+    proc = _make_processor(test_config, subtitle_parser=sp, presenter=presenter)
+
+    rec = _RecordingProgress()
+    with patch(_IMG) as prep:
+        prep.return_value = Path("/tmp/reading_cover.jpg")
+        proc.process_reading(
+            _document(units, kind="book", episode="Novel", title="Novel"),
+            progress_callback=rec,
+        )
+
+    infos = [c.args[0] for c in presenter.show_info.call_args_list]
+    assert "Step 3/5 — Preparing card images" in infos  # step banner
+    assert rec.start_descs[0] == "Preparing card images"  # on_start desc
+    assert f"Card image: {words[0].mined_form}" in rec.progress_descs  # per-word
+    # No manga wording leaks into a book run.
+    assert "Step 3/5 — Preparing page images" not in infos
+    assert "Preparing page images" not in rec.start_descs
+    assert "Page image: 犬" not in rec.progress_descs
+
+
+def test_manga_image_stage_strings_unchanged(test_config):
+    """T2. Manga document keeps 'page images' wording (regression guard)."""
+    units = [_unit(0, image_ref=ImageRef(Path("/vol.cbz"), "p1.jpg"))]
+    words = [_word("犬", 0)]
+    counts = collections.Counter({"犬": 1})
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+    presenter = MagicMock(name="Presenter")
+    proc = _make_processor(test_config, subtitle_parser=sp, presenter=presenter)
+
+    rec = _RecordingProgress()
+    with patch(_IMG) as prep:
+        prep.return_value = Path("/tmp/reading_p.jpg")
+        proc.process_reading(_document(units, kind="manga"), progress_callback=rec)
+
+    infos = [c.args[0] for c in presenter.show_info.call_args_list]
+    assert "Step 3/5 — Preparing page images" in infos  # step banner
+    assert rec.start_descs[0] == "Preparing page images"  # on_start desc
+    assert f"Page image: {words[0].mined_form}" in rec.progress_descs  # per-word
+    assert "Card image: 犬" not in rec.progress_descs
+
+
+def test_book_progress_bands_match_manga(test_config):
+    """T2. Book run emits the same band structure as manga — change is label-only."""
+    words = [_word("犬", 0), _word("猫", 1), _word("鳥", 2)]
+    counts = collections.Counter({"犬": 1, "猫": 1, "鳥": 1})
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+    proc = _make_processor(test_config, subtitle_parser=sp)
+
+    rec = _RecordingProgress()
+    with patch(_IMG) as prep:
+        prep.return_value = Path("/tmp/reading_p.jpg")
+        proc.process_reading(
+            _document([_unit(0), _unit(1), _unit(2)], kind="book", episode="Novel", title="Novel"),
+            progress_callback=rec,
+        )
+
+    assert rec.pcts == sorted(rec.pcts)  # monotonic non-decreasing
+    assert rec.pcts[-1] == 100
+    # Identical band math to manga (test 11): image + defs + cards, one tick per
+    # word, plus a boundary label-refresh per later stage, plus finish.
+    bands = 3
+    assert len(rec.pcts) == bands * len(words) + (bands - 1) + 1
 
 
 def test_warnings_emitted_before_phase1(test_config):
