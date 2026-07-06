@@ -14,6 +14,14 @@ through unchanged. The caller signals the end of the whole sweep with an
 explicit :meth:`finish` — not all stages reliably fire ``on_complete`` (e.g.
 card creation early-returns on an empty batch), so completion must not be
 inferred from per-stage events.
+
+Only the *first* stage's ``on_start`` is forwarded to ``inner`` (it configures
+the bar at max=100 once). A later stage's ``on_start`` must never re-forward
+``on_start`` — that would reset the bar to 0 and drop the percent. Instead it
+emits a single ``on_progress`` at the banked cursor carrying the new stage's
+description, so downstream row labels refresh to the current stage without any
+bar reset (and stay monotone, since the banked cursor is where the prior stage
+left off).
 """
 
 from __future__ import annotations
@@ -54,6 +62,10 @@ class StageWeightedProgress:
         if not self._started:
             self._inner.on_start(100, description)
             self._started = True
+        elif description:
+            # Later stage: refresh the label at the banked cursor via
+            # on_progress (never a second on_start, which would reset the bar).
+            self._inner.on_progress(min(int(self._cursor * 100), 100), description)
 
     def on_progress(self, current: int, item_description: str) -> None:
         frac = current / self._stage_total if self._stage_total > 0 else 1.0

@@ -493,9 +493,11 @@ def test_progress_bands_monotonic_reaches_100(test_config, glossary):
     assert rec.pcts == sorted(rec.pcts)  # monotonic non-decreasing
     assert rec.pcts[-1] == 100
     assert all(0 <= p <= 100 for p in rec.pcts)
-    # bands: image + defs + [gloss] + cards, each ticking once per word, + finish.
+    # bands: image + defs + [gloss] + cards, each ticking once per word, plus
+    # one label-refresh on_progress at each later-stage boundary (bands - 1),
+    # plus finish.
     bands = 4 if glossary else 3
-    assert len(rec.pcts) == bands * len(words) + 1
+    assert len(rec.pcts) == bands * len(words) + (bands - 1) + 1
 
 
 def test_zero_image_document_consumes_image_band(test_config):
@@ -513,8 +515,8 @@ def test_zero_image_document_consumes_image_band(test_config):
 
     prep.assert_not_called()
     assert rec.pcts == sorted(rec.pcts) and rec.pcts[-1] == 100
-    # image (2) + defs (2) + cards (2) + finish (1)
-    assert len(rec.pcts) == 3 * len(words) + 1
+    # image (2) + defs (2) + cards (2) + 2 boundary label-refreshes + finish (1)
+    assert len(rec.pcts) == 3 * len(words) + (3 - 1) + 1
 
 
 def test_warnings_emitted_before_phase1(test_config):
