@@ -579,15 +579,19 @@ def main():
     )
     register_mining_tab(window, audiobook_tab, audiobook_presenter, QCoreApplication.translate("MainWindow", "Audio"))
 
-    # Reading tab (manga volumes + novels). Same lazy-processor pattern as
-    # YouTube/Audiobook: processor=None defers the dictionary-chain build to the
-    # first Mine click; stats_service is threaded through so sessions land in
-    # analytics. Lazy tabs build their own progress callback per run, so — like
-    # Audiobook — no GUIProgressCallback is wired here.
+    # Reading tab: a container nesting the Manga and Novels sub-tabs. Each child
+    # owns its own worker/processor lifecycle and defers its dictionary-chain
+    # build to the first Mine click (no prebuilt processor is shared across the
+    # two concurrently-runnable sub-tabs, so the container takes no processor).
+    # ONE presenter is shared by both children — safe because the reading
+    # sub-tabs never wire presenter signals into their log widgets (presenter
+    # output goes to the window status bar / dialogs only). stats_service is
+    # threaded through so sessions land in analytics; like Audiobook, the
+    # children build their own progress callback per run, so no
+    # GUIProgressCallback is wired here.
     reading_presenter = GUIPresenter(window)
     reading_tab = ReadingTab(
         config=window.get_config(),
-        processor=None,
         presenter=reading_presenter,
         stats_service=stats_service,
     )
