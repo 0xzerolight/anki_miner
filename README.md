@@ -92,13 +92,14 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Deck Builder**: point at a folder of episode/subtitle pairs and mine the full series into one named deck. Ranked by frequency; pick how many to include (all, top N, or a coverage target) and preview before cards are created.
 - **YouTube**: paste one or more URLs, then mine the queue.
 - **Audio**: queue local audio + subtitle/transcript pairs (audiobooks, podcasts, radio, songs, lectures) and mine them audio-only; embedded cover art stands in for screenshots.
+- **Reading**: mine manga and novels instead of video. Point at a mokuro-processed manga volume (an image folder or `.cbz` with its sibling `.mokuro` file) or a novel (`.epub`, or Aozora/plain `.txt`); cards carry the page image or the book cover. Anki Miner reads mokuro's output and does no OCR itself. Word curation and preview work as in the other tabs.
 - **Analytics**: history, series difficulty rankings, milestones, undo.
 - **Subtitles**: generate subtitles from speech with a local Whisper model (no GPU required; optional CUDA/VAD packs install in-app), or retime an out-of-sync subtitle file to your video with alass.
 - **Settings**: Anki, Media, Dictionaries, Audio, Filtering, Frequency, Subtitles, YouTube, Themes. Saved to `~/.anki_miner/gui_config.json`.
 
 ## Other Features
 
-- Extensive filtering options (i+1 filter, frequency limits, word blacklist, subtitle regex filtering, wordset filtering, and more).
+- Extensive filtering options (i+1 filter, frequency limits, word blacklist, subtitle regex filtering, wordset filtering, per-volume minimum word occurrence, and more).
 - Offline Yomitan dictionary import (definitions, pitch accent, frequency data) with priority ordering.
 - Multiple frequency lists chained together, each indexed separately and ordered by priority.
 - Expression (word-level) audio on cards from local audio packs, JapanesePod101, or Google Translate TTS (opt-in, chained).
@@ -177,7 +178,7 @@ List of ideas for future versions of Anki Miner. Not in priority order. Feature 
 - **Features**:
   - [x] UI language selection.
   - [x] Local subtitle creation tab: Opt-in tab to locally generate subtitles.
-  - [ ] Reading tab: Mine manga and books.
+  - [x] Reading tab: Mine manga and books.
   - [ ] Media library: Expand Analytics tab to display local media library across all media forms.
 
 - **Improvements**:
