@@ -1,0 +1,413 @@
+"""Tests for the reading-tab input detector (classification + load dispatch)."""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from anki_miner.exceptions import SetupError
+from anki_miner.services.reading import detector
+from anki_miner.services.reading.models import ReadingSourceRef
+
+_LOADER_MODULES = {
+    "mokuro": "anki_miner.services.reading.mokuro_source",
+    "epub": "anki_miner.services.reading.epub_source",
+    "txt": "anki_miner.services.reading.aozora_source",
+}
+
+
+def _write_mokuro(
+    path: Path,
+    *,
+    title: str = "MyManga",
+    volume: str = "Vol1",
+    extra: dict | None = None,
+) -> None:
+    """Write a schema-valid ``.mokuro`` sidecar."""
+    data = {
+        "version": "0.1.0",
+        "title": title,
+        "title_uuid": "t-uuid",
+        "volume": volume,
+        "volume_uuid": "v-uuid",
+        "pages": [],
+    }
+    if extra:
+        data.update(extra)
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+
+# --------------------------------------------------------------------------- #
+# Case 1: a dropped ``.mokuro`` file → single manga volume.
+# --------------------------------------------------------------------------- #
+
+
+def test_mokuro_file_image_root_is_sibling_dir(tmp_path):
+    mok = tmp_path / "Vol1.mokuro"
+    _write_mokuro(mok, title="MyManga", volume="Vol1")
+    (tmp_path / "Vol1").mkdir()
+
+    refs = detector.detect(mok)
+
+    assert len(refs) == 1
+    ref = refs[0]
+    assert ref.kind == "mokuro"
+    assert ref.path == mok
+    assert ref.image_root == tmp_path / "Vol1"
+    assert ref.title == "MyManga"
+    assert ref.volume == "Vol1"
+
+
+def test_mokuro_file_image_root_is_cbz_archive(tmp_path):
+    mok = tmp_path / "Vol1.mokuro"
+    _write_mokuro(mok)
+    cbz = tmp_path / "Vol1.cbz"
+    cbz.write_bytes(b"PK\x03\x04")
+
+    refs = detector.detect(mok)
+
+    assert refs[0].image_root == cbz
+
+
+def test_mokuro_file_archive_extension_is_case_insensitive(tmp_path):
+    mok = tmp_path / "Vol1.mokuro"
+    _write_mokuro(mok)
+    cbz = tmp_path / "Vol1.CBZ"
+    cbz.write_bytes(b"PK")
+
+    refs = detector.detect(mok)
+
+    assert refs[0].image_root == cbz
+
+
+def test_mokuro_file_zip_archive(tmp_path):
+    mok = tmp_path / "Vol1.mokuro"
+    _write_mokuro(mok)
+    archive = tmp_path / "Vol1.zip"
+    archive.write_bytes(b"PK")
+
+    refs = detector.detect(mok)
+
+    assert refs[0].image_root == archive
+
+
+def test_mokuro_file_dir_beats_archive(tmp_path):
+    mok = tmp_path / "Vol1.mokuro"
+    _write_mokuro(mok)
+    (tmp_path / "Vol1").mkdir()
+    (tmp_path / "Vol1.cbz").write_bytes(b"PK")
+
+    refs = detector.detect(mok)
+
+    assert refs[0].image_root == tmp_path / "Vol1"
+
+
+def test_mokuro_file_cbz_beats_zip(tmp_path):
+    mok = tmp_path / "Vol1.mokuro"
+    _write_mokuro(mok)
+    cbz = tmp_path / "Vol1.cbz"
+    cbz.write_bytes(b"PK")
+    (tmp_path / "Vol1.zip").write_bytes(b"PK")
+
+    refs = detector.detect(mok)
+
+    assert refs[0].image_root == cbz
+
+
+def test_mokuro_file_text_only_when_no_images(tmp_path):
+    mok = tmp_path / "Vol1.mokuro"
+    _write_mokuro(mok)
+
+    refs = detector.detect(mok)
+
+    assert refs[0].image_root is None
+    assert refs[0].kind == "mokuro"
+
+
+# --------------------------------------------------------------------------- #
+# Case 2: a dropped ``.cbz``/``.zip`` → requires a sibling ``.mokuro``.
+# --------------------------------------------------------------------------- #
+
+
+def test_cbz_with_sibling_mokuro(tmp_path):
+    mok = tmp_path / "Vol1.mokuro"
+    _write_mokuro(mok, volume="Vol1")
+    cbz = tmp_path / "Vol1.cbz"
+    cbz.write_bytes(b"PK")
+
+    refs = detector.detect(cbz)
+
+    assert len(refs) == 1
+    ref = refs[0]
+    assert ref.kind == "mokuro"
+    assert ref.path == mok
+    assert ref.image_root == cbz
+    assert ref.volume == "Vol1"
+
+
+def test_zip_with_sibling_mokuro(tmp_path):
+    mok = tmp_path / "Vol1.mokuro"
+    _write_mokuro(mok)
+    archive = tmp_path / "Vol1.zip"
+    archive.write_bytes(b"PK")
+
+    refs = detector.detect(archive)
+
+    assert refs[0].path == mok
+    assert refs[0].image_root == archive
+
+
+def test_cbz_missing_sibling_errors_naming_expected(tmp_path):
+    cbz = tmp_path / "Vol1.cbz"
+    cbz.write_bytes(b"PK")
+
+    with pytest.raises(SetupError) as excinfo:
+        detector.detect(cbz)
+
+    assert "Vol1.mokuro" in str(excinfo.value)
+
+
+# --------------------------------------------------------------------------- #
+# Case 3: a dropped directory → title dir, dropped image dir, or not mokuro.
+# --------------------------------------------------------------------------- #
+
+
+def test_title_dir_yields_volumes_natural_sorted(tmp_path):
+    title_dir = tmp_path / "MyManga"
+    title_dir.mkdir()
+    for vol in ["Vol1", "Vol2", "Vol10"]:
+        _write_mokuro(title_dir / f"{vol}.mokuro", volume=vol)
+
+    refs = detector.detect(title_dir)
+
+    assert [r.volume for r in refs] == ["Vol1", "Vol2", "Vol10"]
+    assert all(r.kind == "mokuro" for r in refs)
+    assert all(r.image_root is None for r in refs)  # text-only, no image roots here
+
+
+def test_title_dir_ignores_junk_entries(tmp_path):
+    title_dir = tmp_path / "MyManga"
+    title_dir.mkdir()
+    _write_mokuro(title_dir / "Vol1.mokuro", volume="Vol1")
+    _write_mokuro(title_dir / "Vol2.mokuro", volume="Vol2")
+    (title_dir / ".DS_Store").write_text("junk")
+    (title_dir / "Thumbs.db").write_text("junk")
+    (title_dir / "__MACOSX").mkdir()
+
+    refs = detector.detect(title_dir)
+
+    assert [r.volume for r in refs] == ["Vol1", "Vol2"]
+
+
+def test_dropped_image_dir_finds_sibling_sidecar(tmp_path):
+    img_dir = tmp_path / "Vol1"
+    img_dir.mkdir()
+    (img_dir / "001.jpg").write_bytes(b"img")
+    mok = tmp_path / "Vol1.mokuro"
+    _write_mokuro(mok, volume="Vol1")
+
+    refs = detector.detect(img_dir)
+
+    assert len(refs) == 1
+    assert refs[0].path == mok
+    # the dropped dir is exactly the sidecar's resolved image root
+    assert refs[0].image_root == img_dir
+
+
+def test_dropped_image_dir_with_dotted_name(tmp_path):
+    # A dir named "Vol1.2" pairs with "Vol1.2.mokuro" (name + suffix, not stem).
+    img_dir = tmp_path / "Vol1.2"
+    img_dir.mkdir()
+    mok = tmp_path / "Vol1.2.mokuro"
+    _write_mokuro(mok, volume="Vol1.2")
+
+    refs = detector.detect(img_dir)
+
+    assert refs[0].path == mok
+
+
+def test_directory_not_mokuro_errors(tmp_path):
+    plain = tmp_path / "random"
+    plain.mkdir()
+    (plain / "notes.txt").write_text("hello")
+
+    with pytest.raises(SetupError):
+        detector.detect(plain)
+
+
+# --------------------------------------------------------------------------- #
+# Case 4: books — classify by extension, no file open, provisional fill.
+# --------------------------------------------------------------------------- #
+
+
+def test_epub_ref_provisional_fill(tmp_path):
+    epub = tmp_path / "My Novel.epub"
+    epub.write_bytes(b"PK")
+
+    refs = detector.detect(epub)
+
+    assert len(refs) == 1
+    ref = refs[0]
+    assert ref.kind == "epub"
+    assert ref.path == epub
+    assert ref.title == "My Novel"
+    assert ref.volume is None
+    assert ref.image_root is None
+
+
+def test_txt_ref_provisional_fill(tmp_path):
+    txt = tmp_path / "aozora.txt"
+    txt.write_text("本文", encoding="utf-8")
+
+    refs = detector.detect(txt)
+
+    ref = refs[0]
+    assert ref.kind == "txt"
+    assert ref.path == txt
+    assert ref.title == "aozora"
+    assert ref.volume is None
+    assert ref.image_root is None
+
+
+def test_epub_ref_does_not_open_the_file(tmp_path):
+    # Extension classification must not read bytes: a nonexistent epub still refs.
+    epub = tmp_path / "ghost.epub"
+    refs = detector.detect(epub)
+    assert refs[0].kind == "epub"
+    assert refs[0].title == "ghost"
+
+
+def test_unknown_extension_errors(tmp_path):
+    movie = tmp_path / "movie.mp4"
+    movie.write_bytes(b"x")
+
+    with pytest.raises(SetupError):
+        detector.detect(movie)
+
+
+# --------------------------------------------------------------------------- #
+# ``.mokuro`` schema validation.
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize(
+    "missing_key",
+    ["version", "title", "title_uuid", "volume", "volume_uuid", "pages"],
+)
+def test_mokuro_missing_required_key_errors(tmp_path, missing_key):
+    data = {
+        "version": "1",
+        "title": "T",
+        "title_uuid": "a",
+        "volume": "V",
+        "volume_uuid": "b",
+        "pages": [],
+    }
+    del data[missing_key]
+    mok = tmp_path / "Vol1.mokuro"
+    mok.write_text(json.dumps(data), encoding="utf-8")
+
+    with pytest.raises(SetupError) as excinfo:
+        detector.detect(mok)
+
+    assert missing_key in str(excinfo.value)
+
+
+def test_mokuro_unknown_keys_accepted(tmp_path):
+    # Community files carry extra keys (chars/spine_width) — ignore them.
+    mok = tmp_path / "Vol1.mokuro"
+    _write_mokuro(mok, extra={"chars": 12345, "spine_width": 3.2})
+
+    refs = detector.detect(mok)
+
+    assert refs[0].title == "MyManga"
+    assert refs[0].volume == "Vol1"
+
+
+def test_mokuro_invalid_json_errors(tmp_path):
+    mok = tmp_path / "Vol1.mokuro"
+    mok.write_text("{not valid json", encoding="utf-8")
+
+    with pytest.raises(SetupError):
+        detector.detect(mok)
+
+
+def test_mokuro_non_dict_json_errors(tmp_path):
+    mok = tmp_path / "Vol1.mokuro"
+    mok.write_text("[1, 2, 3]", encoding="utf-8")
+
+    with pytest.raises(SetupError):
+        detector.detect(mok)
+
+
+def test_mokuro_missing_file_errors(tmp_path):
+    with pytest.raises(SetupError):
+        detector.detect(tmp_path / "ghost.mokuro")
+
+
+# --------------------------------------------------------------------------- #
+# ``load()`` dispatcher — lazy per-kind import to the source loaders.
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("kind", ["mokuro", "epub", "txt"])
+def test_load_dispatches_to_source_module(kind):
+    ref = ReadingSourceRef(
+        kind=kind,  # type: ignore[arg-type]
+        path=Path("whatever"),
+        image_root=None,
+        title="T",
+        volume=None,
+    )
+    fake_module = MagicMock()
+    sentinel = object()
+    fake_module.load.return_value = sentinel
+
+    with patch.dict(sys.modules, {_LOADER_MODULES[kind]: fake_module}):
+        result = detector.load(ref)
+
+    assert result is sentinel
+    fake_module.load.assert_called_once_with(ref)
+
+
+def test_load_does_not_import_sibling_modules():
+    # Dispatching mokuro must not touch the epub/txt loaders.
+    ref = ReadingSourceRef(
+        kind="mokuro",
+        path=Path("x.mokuro"),
+        image_root=None,
+        title="T",
+        volume="1",
+    )
+    mokuro_mod = MagicMock()
+    epub_mod = MagicMock()
+    aozora_mod = MagicMock()
+    with patch.dict(
+        sys.modules,
+        {
+            _LOADER_MODULES["mokuro"]: mokuro_mod,
+            _LOADER_MODULES["epub"]: epub_mod,
+            _LOADER_MODULES["txt"]: aozora_mod,
+        },
+    ):
+        detector.load(ref)
+
+    mokuro_mod.load.assert_called_once_with(ref)
+    epub_mod.load.assert_not_called()
+    aozora_mod.load.assert_not_called()
+
+
+def test_load_unknown_kind_errors():
+    ref = ReadingSourceRef(
+        kind="bogus",  # type: ignore[arg-type]
+        path=Path("x"),
+        image_root=None,
+        title="T",
+        volume=None,
+    )
+    with pytest.raises(SetupError):
+        detector.load(ref)
