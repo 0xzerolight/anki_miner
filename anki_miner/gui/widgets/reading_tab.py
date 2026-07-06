@@ -1,8 +1,10 @@
 """Reading (manga / novel) mining tab for the GUI.
 
 Drives a multi-source queue: the user adds manga volumes (a ``.mokuro``
-sidecar, a ``.cbz``/``.zip`` archive, or a whole title folder of volumes) and
-novels (``.epub``/``.txt``) via the two Add buttons or drag-and-drop; every
+sidecar or a ``.cbz``/``.zip`` archive) and novels (``.epub``/``.txt``) via
+the two Add buttons, or drops files — or a whole title folder of volumes —
+onto the tab (a folder can only arrive by drag-and-drop, not the file
+dialog); every
 accepted path is classified by ``detector.detect`` into one or more queue
 rows, and once at least one item is READY the user can run *Preview* or *Mine*
 across the whole queue. Structurally a faithful clone of
@@ -73,11 +75,14 @@ logger = logging.getLogger(__name__)
 # hang into a bounded delay with a leaked-thread warning.
 _SHUTDOWN_WAIT_MS = 30_000
 
-# File-dialog filters for the two Add buttons. Manga is multi-select so a user
-# can pick every volume in a title folder at once (each is expanded by detect);
-# a whole folder is added by drag-drop or the folder fallback below.
-_MANGA_FILTER = "Manga (*.mokuro *.cbz *.zip)"
-_BOOK_FILTER = "Books (*.epub *.txt)"
+# File-dialog filter globs for the two Add buttons. Manga is multi-select so a
+# user can pick every volume in a title folder at once (each is expanded by
+# detect); a whole folder can only be added by drag-drop (getOpenFileNames does
+# not select folders). The human label ("Manga" / "Books") is tr()'d at call
+# time — see _on_add_manga_clicked / _on_add_book_clicked — so only the literal
+# extension glob lives here.
+_MANGA_FILTER_GLOB = "*.mokuro *.cbz *.zip"
+_BOOK_FILTER_GLOB = "*.epub *.txt"
 
 # Extensions accepted from a drop / picked file (dirs are always accepted).
 _MANGA_EXTS = (".mokuro", ".cbz", ".zip")
@@ -190,7 +195,9 @@ class ReadingTab(MiningTabBase):
         add_row.setSpacing(SPACING.xs)
         self.add_manga_button = ModernButton(self.tr("Add Manga…"), variant="secondary")
         self.add_manga_button.setToolTip(
-            self.tr("Add manga volumes — a .mokuro/.cbz/.zip file, or a whole title folder.")
+            self.tr(
+                "Add manga volumes — .mokuro/.cbz/.zip file(s). Drop a whole title folder here to add every volume."
+            )
         )
         self.add_manga_button.clicked.connect(self._on_add_manga_clicked)
         add_row.addWidget(self.add_manga_button)
@@ -284,14 +291,18 @@ class ReadingTab(MiningTabBase):
     # ------------------------------------------------------------------
 
     def _on_add_manga_clicked(self) -> None:
-        """Pick manga file(s) and queue each (multi-select over a title folder)."""
+        """Pick manga file(s) and queue each (multi-select).
+
+        The file dialog selects files only; a whole title folder is added via
+        drag-and-drop onto the tab, not from here.
+        """
         if not self.add_manga_button.isEnabled():
             return  # Defensive: out-of-band trigger while a run is active.
         paths, _ = QFileDialog.getOpenFileNames(
             self,
             self.tr("Add Manga"),
             str(Path.home()),
-            _MANGA_FILTER,
+            f"{self.tr('Manga')} ({_MANGA_FILTER_GLOB})",
         )
         for path in paths:
             self._add_source_path(Path(path))
@@ -304,7 +315,7 @@ class ReadingTab(MiningTabBase):
             self,
             self.tr("Add Book"),
             str(Path.home()),
-            _BOOK_FILTER,
+            f"{self.tr('Books')} ({_BOOK_FILTER_GLOB})",
         )
         for path in paths:
             self._add_source_path(Path(path))
