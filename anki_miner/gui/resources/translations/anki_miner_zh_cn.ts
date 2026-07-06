@@ -338,46 +338,6 @@
         <translation>以纯假名形式存储例句。</translation>
     </message>
     <message>
-        <source>Cloze Prefix Field</source>
-        <translation>填空前缀字段</translation>
-    </message>
-    <message>
-        <source>Stores the sentence text before the target word (Yomitan cloze split).</source>
-        <translation>存储目标单词之前的句子文本（Yomitan 填空拆分）。</translation>
-    </message>
-    <message>
-        <source>Cloze Body Field</source>
-        <translation>填空主体字段</translation>
-    </message>
-    <message>
-        <source>Stores the target word as it appears in the sentence (Yomitan cloze split).</source>
-        <translation>存储目标单词在句子中出现的形式（Yomitan 填空拆分）。</translation>
-    </message>
-    <message>
-        <source>Cloze Body Kana Field</source>
-        <translation>填空主体假名字段</translation>
-    </message>
-    <message>
-        <source>Stores the kana reading of the inflected target word (Yomitan cloze split).</source>
-        <translation>存储变形后目标单词的假名读音（Yomitan 填空拆分）。</translation>
-    </message>
-    <message>
-        <source>Cloze Suffix Field</source>
-        <translation>填空后缀字段</translation>
-    </message>
-    <message>
-        <source>Stores the sentence text after the target word (Yomitan cloze split).</source>
-        <translation>存储目标单词之后的句子文本（Yomitan 填空拆分）。</translation>
-    </message>
-    <message>
-        <source>Conjugation Field</source>
-        <translation>活用字段</translation>
-    </message>
-    <message>
-        <source>Stores the deinflection chain showing how the word was conjugated.</source>
-        <translation>存储词形还原链，展示该单词是如何活用变形的。</translation>
-    </message>
-    <message>
         <source>Auxiliary Data Fields</source>
         <translation>辅助数据字段</translation>
     </message>
@@ -690,8 +650,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>+ 添加在线来源…</translation>
     </message>
     <message>
-        <source>Add a custom audio URL or online scrape source</source>
-        <translation>添加自定义音频 URL 或在线抓取源</translation>
+        <source>Add a custom audio URL source</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Move up in priority</source>
@@ -716,14 +676,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Google Translate (synthetic TTS)</source>
         <translation>Google 翻译（合成 TTS）</translation>
-    </message>
-    <message>
-        <source>JapanesePod101 dictionary (scrape)</source>
-        <translation>JapanesePod101 词典（抓取）</translation>
-    </message>
-    <message>
-        <source>Jisho.org (scrape)</source>
-        <translation>Jisho.org（抓取）</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -1172,6 +1124,14 @@ Total cards created: %2</source>
     <message>
         <source>Mine vocabulary from an audiobook or audio file using its transcript.</source>
         <translation>使用有声书或音频文件的文字稿从中挖取词汇。</translation>
+    </message>
+    <message>
+        <source>Mine from manga or novels</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine vocabulary from manga volumes (mokuro) or novels (EPUB/text).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Generate or re-time subtitles</source>
@@ -1835,44 +1795,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <source>Restore from Disk</source>
         <translation>从磁盘恢复</translation>
     </message>
-    <message>
-        <source>Check for Updates</source>
-        <translation>检查更新</translation>
-    </message>
-    <message>
-        <source>No installed dictionaries to check.</source>
-        <translation>没有可检查的已安装词典。</translation>
-    </message>
-    <message>
-        <source>Checking for dictionary updates…</source>
-        <translation>正在检查词典更新…</translation>
-    </message>
-    <message>
-        <source>Update Check Failed</source>
-        <translation>更新检查失败</translation>
-    </message>
-    <message>
-        <source>All dictionaries are up to date.</source>
-        <translation>所有词典均为最新。</translation>
-    </message>
-    <message>
-        <source>Updates available:</source>
-        <translation>有可用更新：</translation>
-    </message>
-    <message>
-        <source>  • %1: revision %2 → %3
-    %4</source>
-        <translation>  • %1：修订 %2 → %3
-    %4</translation>
-    </message>
-    <message>
-        <source>Download the new zip, then re-import it via the dictionary row's Re-import… menu.</source>
-        <translation>下载新的 zip，然后通过词典行的 “重新导入…” 菜单重新导入。</translation>
-    </message>
-    <message>
-        <source>Could not check:</source>
-        <translation>无法检查：</translation>
-    </message>
 </context><context>
     <name>DictionarySettingsPanel</name>
     <message>
@@ -1918,14 +1840,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
     <message>
         <source>Re-add dictionaries found in the storage folder that aren't in the list above (e.g. after a settings reset). No re-import needed.</source>
         <translation>重新添加存储文件夹中发现但不在上方列表中的词典（例如设置重置后）。无需重新导入。</translation>
-    </message>
-    <message>
-        <source>Check for Updates</source>
-        <translation>检查更新</translation>
-    </message>
-    <message>
-        <source>Fetch each updatable dictionary's online index and report any newer revisions. No download is performed — re-import the new zip yourself.</source>
-        <translation>获取每个可更新词典的在线索引并报告任何更新的修订版。不会执行下载——请自行重新导入新的 zip。</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -2205,12 +2119,6 @@ The dictionary was not removed.</source>
             <numerusform>已跳过 %n 个被 Anki 标记为重复的单词（Expression 相同）</numerusform>
         </translation>
     </message>
-    <message numerus="yes">
-        <source>Updated %n existing duplicate card(s): filled empty fields</source>
-        <translation>
-            <numerusform>已更新 %n 张现有重复卡片：填充空字段</numerusform>
-        </translation>
-    </message>
     <message>
         <source>No words found in subtitles</source>
         <translation>字幕中未找到单词</translation>
@@ -2239,12 +2147,6 @@ The dictionary was not removed.</source>
             <numerusform>已为 %n 个单词提取媒体</numerusform>
         </translation>
     </message>
-    <message numerus="yes">
-        <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
-        <translation>
-            <numerusform>运行在创建 %n 张卡片后失败；这些卡片仍保留在 Anki 中，可以撤销。</numerusform>
-        </translation>
-    </message>
     <message>
         <source>Error: %1</source>
         <translation>错误：%1</translation>
@@ -2252,6 +2154,40 @@ The dictionary was not removed.</source>
     <message>
         <source>Unexpected error: %1</source>
         <translation>意外错误：%1</translation>
+    </message>
+    <message numerus="yes">
+        <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
+        <translation>
+            <numerusform>运行在创建 %n 张卡片后失败；这些卡片仍保留在 Anki 中，可以撤销。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Step 3/5 — Preparing page images</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preparing page images</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped unsafe image archive %1 — its cards have no page image</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped corrupt image archive %1 — its cards have no page image</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped unreadable page image %1 — its card has no picture</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Page image: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Step 1/5 — Parsing text: %1</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ExportDialog</name>
@@ -2604,6 +2540,22 @@ The dictionary was not removed.</source>
         <translation>丢弃句子文本超过此字符数的卡片。设为 0 表示无限制。</translation>
     </message>
     <message>
+        <source>Reading</source>
+        <translation type="unfinished">读音</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Minimum Word Occurrences</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Minimum number of times a word must appear in a book or volume to be mined. 1 = no minimum (filter off).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Card Formatting</source>
         <translation>卡片格式</translation>
     </message>
@@ -2625,6 +2577,10 @@ The dictionary was not removed.</source>
     </message>
 </context><context>
     <name>FrequencyImportFlow</name>
+    <message>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Choose frequency source</source>
         <translation>选择词频来源</translation>
@@ -2886,6 +2842,10 @@ The frequency source was not removed.</source>
     <message>
         <source>Audio</source>
         <translation>音频</translation>
+    </message>
+    <message>
+        <source>Reading</source>
+        <translation type="unfinished">读音</translation>
     </message>
     <message>
         <source>Analytics</source>
@@ -3550,7 +3510,155 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>%1 个剧集 - %2 集 - 准备处理</translation>
     </message>
 </context><context>
+    <name>ReadingQueueItemWidget</name>
+    <message>
+        <source>%1 cards created</source>
+        <translation type="unfinished">已创建 %1 张卡片</translation>
+    </message>
+    <message>
+        <source>Manga</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>EPUB</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove from queue</source>
+        <translation type="unfinished">从队列中移除</translation>
+    </message>
+</context><context>
+    <name>ReadingTab</name>
+    <message>
+        <source>Reading queue</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Manga…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add manga volumes — .mokuro/.cbz/.zip file(s). Drop a whole title folder here to add every volume.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Book…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add a novel — an .epub or .txt file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add manga or books above, or drag them here.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Review words before mining</source>
+        <translation type="unfinished">挖词前先审阅单词</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup for each source before creating cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation type="unfinished">预览</translation>
+    </message>
+    <message>
+        <source>Run the queue in preview mode — no cards created.</source>
+        <translation type="unfinished">以预览模式运行队列——不创建卡片。</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation type="unfinished">挖词</translation>
+    </message>
+    <message>
+        <source>Mine every queued item into Anki cards.</source>
+        <translation type="unfinished">将队列中每一项挖词为 Anki 卡片。</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation type="unfinished">清空</translation>
+    </message>
+    <message>
+        <source>Remove every queued item that is not currently mining.</source>
+        <translation type="unfinished">移除当前未在挖词的每个队列项。</translation>
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation type="unfinished">全部停止</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation type="unfinished">取消正在进行的运行。</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">进度</translation>
+    </message>
+    <message>
+        <source>Add Manga</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manga</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Book</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Books</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not add %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation type="unfinished">无法挖词——服务未初始化。</translation>
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation type="unfinished">%1 运行开始——%2 个项。</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">正在取消…</translation>
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation type="unfinished">正在挖词 %1 / %2：%3</translation>
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation type="unfinished">已挖词 %1：%2 张卡片。</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation type="unfinished">失败 %1：%2。</translation>
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation type="unfinished">队列完成：%1 成功，%2 失败。</translation>
+    </message>
+</context><context>
     <name>ResourceDownloadDialog</name>
+    <message>
+        <source>Download Blocked</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A mining run is in progress. Stop it before downloading resources.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Preparing download…</source>
         <translation>正在准备下载…</translation>
@@ -3578,6 +3686,14 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>✓ %1 — %2</source>
         <translation>✓ %1 — %2</translation>
+    </message>
+    <message>
+        <source>   Replaced older copy: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>   Could not remove older copy: %1 — remove it via Settings → Dictionaries</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>✗ %1 — %2
@@ -5387,6 +5503,14 @@ Continue with import?</source>
     </message>
 </context><context>
     <name>_FreqRow</name>
+    <message>
+        <source>word-based</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Level labels are shown on the card but not used for frequency filtering.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>%1 entries</source>
         <translation>%1 个条目</translation>

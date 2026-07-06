@@ -67,3 +67,33 @@ def test_max_sentence_duration_tooltip_describes_seconds_not_chars(qtbot):
     assert "seconds" in tip.lower()
     assert "audio" in tip.lower()
     assert "subtitle line is longer" not in tip.lower()
+
+
+def test_reading_min_occurrence_spinbox_range_and_off_text(qtbot):
+    from anki_miner.config import AnkiMinerConfig
+
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    spin = panel.reading_min_occurrence_spinbox
+    assert spin.minimum() == 1
+    assert spin.maximum() == 100
+    # Value 1 (== minimum) shows the special "Off" text.
+    spin.setValue(1)
+    assert spin.specialValueText() != ""
+    # Default config value populates the spinbox.
+    panel.load_from_config(AnkiMinerConfig())
+    assert spin.value() == 1
+
+
+def test_reading_min_occurrence_load_and_collect_round_trip(qtbot):
+    from dataclasses import replace
+
+    from anki_miner.config import AnkiMinerConfig
+
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(replace(AnkiMinerConfig(), reading_min_occurrence=4))
+    assert panel.reading_min_occurrence_spinbox.value() == 4
+
+    result = panel.contribute(AnkiMinerConfig())
+    assert result.reading_min_occurrence == 4

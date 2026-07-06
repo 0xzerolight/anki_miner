@@ -41,6 +41,10 @@ dependencies = [
     # and pip installs, not just [dev]). Also used build-time by
     # scripts/build_name_wordsets.py (JMnedict entity-laden XML, Issue #59).
     "lxml>=6.1.0",
+    # Runtime: services/reading/images.py encodes reading-tab card images to JPEG
+    # via Pillow (must ship in the bundle and pip installs). Also used soft-import
+    # for the E2E screenshot diff and the yomitan importer's image-decode probe.
+    "pillow>=10.0.0",
 ]
 
 [project.optional-dependencies]
@@ -80,9 +84,6 @@ dev = [
     "ruff>=0.9.0",
     "types-requests>=2.31.0",
     "pre-commit>=4.0.0",
-    # Soft E2E dep: screenshot baseline-diff in tests/e2e/screenshot_diff.py.
-    # PIL is never imported at runtime; the diff degrades gracefully if absent.
-    "pillow>=10.0.0",
 ]
 # Build-time only: pyside6-lrelease compiles .ts → .qm translation catalogs
 # (scripts/i18n.py compile). NOT needed by tests or CI's drift check (which

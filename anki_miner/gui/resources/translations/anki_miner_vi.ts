@@ -338,46 +338,6 @@
         <translation>Lưu câu dưới dạng kana thuần túy.</translation>
     </message>
     <message>
-        <source>Cloze Prefix Field</source>
-        <translation>Trường tiền tố Cloze</translation>
-    </message>
-    <message>
-        <source>Stores the sentence text before the target word (Yomitan cloze split).</source>
-        <translation>Lưu phần câu đứng trước từ mục tiêu (phân tách cloze kiểu Yomitan).</translation>
-    </message>
-    <message>
-        <source>Cloze Body Field</source>
-        <translation>Trường thân Cloze</translation>
-    </message>
-    <message>
-        <source>Stores the target word as it appears in the sentence (Yomitan cloze split).</source>
-        <translation>Lưu từ mục tiêu như nó xuất hiện trong câu (phân tách cloze kiểu Yomitan).</translation>
-    </message>
-    <message>
-        <source>Cloze Body Kana Field</source>
-        <translation>Trường thân Cloze kana</translation>
-    </message>
-    <message>
-        <source>Stores the kana reading of the inflected target word (Yomitan cloze split).</source>
-        <translation>Lưu cách đọc kana của từ mục tiêu đã chia dạng (phân tách cloze kiểu Yomitan).</translation>
-    </message>
-    <message>
-        <source>Cloze Suffix Field</source>
-        <translation>Trường hậu tố Cloze</translation>
-    </message>
-    <message>
-        <source>Stores the sentence text after the target word (Yomitan cloze split).</source>
-        <translation>Lưu phần câu đứng sau từ mục tiêu (phân tách cloze kiểu Yomitan).</translation>
-    </message>
-    <message>
-        <source>Conjugation Field</source>
-        <translation>Trường chia dạng</translation>
-    </message>
-    <message>
-        <source>Stores the deinflection chain showing how the word was conjugated.</source>
-        <translation>Lưu chuỗi khử biến cách cho thấy từ đã được chia dạng như thế nào.</translation>
-    </message>
-    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Trường Dữ liệu Phụ trợ</translation>
     </message>
@@ -690,8 +650,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>+ Thêm nguồn trực tuyến…</translation>
     </message>
     <message>
-        <source>Add a custom audio URL or online scrape source</source>
-        <translation>Thêm URL âm thanh tùy chỉnh hoặc nguồn thu thập trực tuyến</translation>
+        <source>Add a custom audio URL source</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Move up in priority</source>
@@ -716,14 +676,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Google Translate (synthetic TTS)</source>
         <translation>Google Translate (TTS tổng hợp)</translation>
-    </message>
-    <message>
-        <source>JapanesePod101 dictionary (scrape)</source>
-        <translation>Từ điển JapanesePod101 (cào)</translation>
-    </message>
-    <message>
-        <source>Jisho.org (scrape)</source>
-        <translation>Jisho.org (cào)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -1172,6 +1124,14 @@ Tổng số thẻ đã tạo: %2</translation>
     <message>
         <source>Mine vocabulary from an audiobook or audio file using its transcript.</source>
         <translation>Khai thác từ vựng từ sách nói hoặc tệp âm thanh bằng bản chép lời của nó.</translation>
+    </message>
+    <message>
+        <source>Mine from manga or novels</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine vocabulary from manga volumes (mokuro) or novels (EPUB/text).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Generate or re-time subtitles</source>
@@ -1835,44 +1795,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <source>Restore from Disk</source>
         <translation>Khôi phục từ đĩa</translation>
     </message>
-    <message>
-        <source>Check for Updates</source>
-        <translation>Kiểm tra cập nhật</translation>
-    </message>
-    <message>
-        <source>No installed dictionaries to check.</source>
-        <translation>Không có từ điển nào đã cài đặt để kiểm tra.</translation>
-    </message>
-    <message>
-        <source>Checking for dictionary updates…</source>
-        <translation>Đang kiểm tra cập nhật từ điển…</translation>
-    </message>
-    <message>
-        <source>Update Check Failed</source>
-        <translation>Kiểm tra cập nhật thất bại</translation>
-    </message>
-    <message>
-        <source>All dictionaries are up to date.</source>
-        <translation>Tất cả từ điển đều đã được cập nhật.</translation>
-    </message>
-    <message>
-        <source>Updates available:</source>
-        <translation>Có bản cập nhật:</translation>
-    </message>
-    <message>
-        <source>  • %1: revision %2 → %3
-    %4</source>
-        <translation>  • %1: phiên bản %2 → %3
-    %4</translation>
-    </message>
-    <message>
-        <source>Download the new zip, then re-import it via the dictionary row's Re-import… menu.</source>
-        <translation>Tải tệp zip mới, sau đó nhập lại qua menu Nhập lại… ở hàng từ điển.</translation>
-    </message>
-    <message>
-        <source>Could not check:</source>
-        <translation>Không thể kiểm tra:</translation>
-    </message>
 </context><context>
     <name>DictionarySettingsPanel</name>
     <message>
@@ -1918,14 +1840,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
     <message>
         <source>Re-add dictionaries found in the storage folder that aren't in the list above (e.g. after a settings reset). No re-import needed.</source>
         <translation>Thêm lại các từ điển tìm thấy trong thư mục lưu trữ nhưng không có trong danh sách ở trên (ví dụ sau khi đặt lại cài đặt). Không cần nhập lại.</translation>
-    </message>
-    <message>
-        <source>Check for Updates</source>
-        <translation>Kiểm tra cập nhật</translation>
-    </message>
-    <message>
-        <source>Fetch each updatable dictionary's online index and report any newer revisions. No download is performed — re-import the new zip yourself.</source>
-        <translation>Tải chỉ mục trực tuyến của mỗi từ điển có thể cập nhật và báo cáo mọi bản sửa mới hơn. Không thực hiện tải xuống — bạn tự nhập lại tệp zip mới.</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -2205,12 +2119,6 @@ Từ điển chưa được xóa.</translation>
             <numerusform>Đã bỏ qua %n từ mà Anki đánh dấu là trùng lặp (cùng Expression)</numerusform>
         </translation>
     </message>
-    <message numerus="yes">
-        <source>Updated %n existing duplicate card(s): filled empty fields</source>
-        <translation>
-            <numerusform>Đã cập nhật %n thẻ trùng lặp hiện có: điền vào các trường trống</numerusform>
-        </translation>
-    </message>
     <message>
         <source>No words found in subtitles</source>
         <translation>Không tìm thấy từ nào trong phụ đề</translation>
@@ -2239,12 +2147,6 @@ Từ điển chưa được xóa.</translation>
             <numerusform>Đã trích xuất media cho %n từ</numerusform>
         </translation>
     </message>
-    <message numerus="yes">
-        <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
-        <translation>
-            <numerusform>Lượt chạy thất bại sau khi tạo %n thẻ; chúng vẫn còn trong Anki và có thể hoàn tác.</numerusform>
-        </translation>
-    </message>
     <message>
         <source>Error: %1</source>
         <translation>Lỗi: %1</translation>
@@ -2252,6 +2154,40 @@ Từ điển chưa được xóa.</translation>
     <message>
         <source>Unexpected error: %1</source>
         <translation>Lỗi không mong đợi: %1</translation>
+    </message>
+    <message numerus="yes">
+        <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
+        <translation>
+            <numerusform>Lượt chạy thất bại sau khi tạo %n thẻ; chúng vẫn còn trong Anki và có thể hoàn tác.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Step 3/5 — Preparing page images</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preparing page images</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped unsafe image archive %1 — its cards have no page image</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped corrupt image archive %1 — its cards have no page image</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped unreadable page image %1 — its card has no picture</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Page image: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Step 1/5 — Parsing text: %1</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ExportDialog</name>
@@ -2604,6 +2540,22 @@ Từ điển chưa được xóa.</translation>
         <translation>Loại bỏ các thẻ mà văn bản câu vượt quá số ký tự này. Đặt 0 để không giới hạn.</translation>
     </message>
     <message>
+        <source>Reading</source>
+        <translation type="unfinished">Cách đọc</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Minimum Word Occurrences</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Minimum number of times a word must appear in a book or volume to be mined. 1 = no minimum (filter off).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Card Formatting</source>
         <translation>Định dạng thẻ</translation>
     </message>
@@ -2625,6 +2577,10 @@ Từ điển chưa được xóa.</translation>
     </message>
 </context><context>
     <name>FrequencyImportFlow</name>
+    <message>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Choose frequency source</source>
         <translation>Chọn nguồn tần suất</translation>
@@ -2886,6 +2842,10 @@ Nguồn tần suất chưa được gỡ bỏ.</translation>
     <message>
         <source>Audio</source>
         <translation>Âm thanh</translation>
+    </message>
+    <message>
+        <source>Reading</source>
+        <translation type="unfinished">Cách đọc</translation>
     </message>
     <message>
         <source>Analytics</source>
@@ -3550,7 +3510,155 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation>%1 series - %2 tập - Sẵn sàng xử lý</translation>
     </message>
 </context><context>
+    <name>ReadingQueueItemWidget</name>
+    <message>
+        <source>%1 cards created</source>
+        <translation type="unfinished">Đã tạo %1 thẻ</translation>
+    </message>
+    <message>
+        <source>Manga</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>EPUB</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove from queue</source>
+        <translation type="unfinished">Xóa khỏi hàng đợi</translation>
+    </message>
+</context><context>
+    <name>ReadingTab</name>
+    <message>
+        <source>Reading queue</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Manga…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add manga volumes — .mokuro/.cbz/.zip file(s). Drop a whole title folder here to add every volume.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Book…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add a novel — an .epub or .txt file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add manga or books above, or drag them here.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Review words before mining</source>
+        <translation type="unfinished">Xem lại từ trước khi khai thác</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup for each source before creating cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation type="unfinished">Xem trước</translation>
+    </message>
+    <message>
+        <source>Run the queue in preview mode — no cards created.</source>
+        <translation type="unfinished">Chạy hàng đợi ở chế độ xem trước — không tạo thẻ.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation type="unfinished">Khai thác</translation>
+    </message>
+    <message>
+        <source>Mine every queued item into Anki cards.</source>
+        <translation type="unfinished">Khai thác mọi mục trong hàng đợi thành thẻ Anki.</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation type="unfinished">Xóa</translation>
+    </message>
+    <message>
+        <source>Remove every queued item that is not currently mining.</source>
+        <translation type="unfinished">Xóa mọi mục trong hàng đợi hiện không đang khai thác.</translation>
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation type="unfinished">Dừng tất cả</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation type="unfinished">Hủy lần chạy đang hoạt động.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">Tiến độ</translation>
+    </message>
+    <message>
+        <source>Add Manga</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manga</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Book</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Books</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not add %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation type="unfinished">Không thể khai thác — dịch vụ chưa được khởi tạo.</translation>
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation type="unfinished">Lần chạy %1 bắt đầu — %2 mục.</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation type="unfinished">Đang khai thác %1 trong %2: %3</translation>
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation type="unfinished">Đã khai thác %1: %2 thẻ.</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation type="unfinished">Thất bại %1: %2.</translation>
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation type="unfinished">Hàng đợi xong: %1 thành công, %2 thất bại.</translation>
+    </message>
+</context><context>
     <name>ResourceDownloadDialog</name>
+    <message>
+        <source>Download Blocked</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A mining run is in progress. Stop it before downloading resources.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Preparing download…</source>
         <translation>Đang chuẩn bị tải xuống…</translation>
@@ -3578,6 +3686,14 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     <message>
         <source>✓ %1 — %2</source>
         <translation>✓ %1 — %2</translation>
+    </message>
+    <message>
+        <source>   Replaced older copy: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>   Could not remove older copy: %1 — remove it via Settings → Dictionaries</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>✗ %1 — %2
@@ -5387,6 +5503,14 @@ Tiếp tục nhập?</translation>
     </message>
 </context><context>
     <name>_FreqRow</name>
+    <message>
+        <source>word-based</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Level labels are shown on the card but not used for frequency filtering.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>%1 entries</source>
         <translation>%1 mục</translation>

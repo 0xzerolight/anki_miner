@@ -12,6 +12,7 @@ import tempfile
 import threading
 import time
 import uuid
+import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -40,6 +41,7 @@ from anki_miner.services.pitch_accent.render import (
     render_pitch_graph_field,
     render_pitch_text_field,
 )
+from anki_miner.services.reading.images import prepare_card_image
 from anki_miner.utils import ensure_directory, has_katakana, hiragana_to_katakana, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
 
@@ -53,6 +55,7 @@ if TYPE_CHECKING:
     from anki_miner.services.frequency.multi_frequency_service import MultiFrequencyService
     from anki_miner.services.known_word_db import KnownWordDB
     from anki_miner.services.pitch_accent_service import PitchAccentService
+    from anki_miner.services.reading.models import ImageRef, ReadingDocument
     from anki_miner.services.stats_service import StatsService
     from anki_miner.services.word_list_service import WordListService
     from anki_miner.services.wordset_service import WordsetService
@@ -187,6 +190,11 @@ class _EpisodeContext:
     episode_name: str
     series_name: str
     source_label: str
+
+    # Reading-tab only (Issue: Reading tab): maps a unit index (= int of the
+    # dummy start_time) to its human page/chapter label ("p.42"). None on the
+    # video/subtitle path, where phase5 keeps the HH:MM:SS timestamp format.
+    unit_labels: dict[int, str] | None = None
 
     # Accumulator fields populated as phases progress.
     errors: list[str] = field(default_factory=list)
@@ -902,6 +910,15 @@ class EpisodeProcessor:
             **extra_kwargs,
         )
 
+        self._fetch_expression_audio(media_results, progress_callback)
+
+        return media_results
+
+    def _fetch_expression_audio(
+        self,
+        media_results: list[tuple[TokenizedWord, MediaData]],
+        progress_callback: ProgressCallback | None,
+    ) -> None:
         # Expression (pronunciation) audio, Issue #73. Sequential on purpose:
         # the fetcher rate-limits and caches internally and never raises, so
         # the loop needs no try/except, no sleep, and no parallelism. Gated on
@@ -929,7 +946,7 @@ class EpisodeProcessor:
                 if self.cancelled:
                     if progress_callback is not None:
                         progress_callback.on_complete()
-                    return media_results
+                    return
                 # Source-priority outer / candidate-ladder inner: each source
                 # tries ALL candidate forms before the chain falls through to a
                 # lower-priority source, so a synthetic fallback can't satisfy
@@ -975,8 +992,6 @@ class EpisodeProcessor:
                     diagnosis = _audio_failure_diagnosis(counts, len(media_results))
                     if diagnosis is not None:
                         self.presenter.show_warning(diagnosis)
-
-        return media_results
 
     def _phase4_lookup(
         self,
@@ -1130,8 +1145,15 @@ class EpisodeProcessor:
             if glossary:
                 extra_fields["glossary"] = (style_block + glossary) if style_block else glossary
             # Stamp the source unconditionally; AnkiService gates the write on a
-            # non-empty configured field name (anki_fields["source"]).
-            extra_fields["source"] = f"{ctx.source_label} @ {_format_timestamp(word.start_time)}"
+            # non-empty configured field name (anki_fields["source"]). Reading-tab
+            # runs carry a per-unit page/chapter label ("… @ p.42"); a miss
+            # (synthetic/rounded start_time) falls back to the timestamp format,
+            # never a KeyError. ctx.unit_labels is None on the video path.
+            unit_label = ctx.unit_labels.get(int(word.start_time)) if ctx.unit_labels else None
+            if unit_label:
+                extra_fields["source"] = f"{ctx.source_label} @ {unit_label}"
+            else:
+                extra_fields["source"] = f"{ctx.source_label} @ {_format_timestamp(word.start_time)}"
 
             # When the glossary field isn't the styling carrier (unmapped), prepend
             # the style block to the definition field so the card still carries the
@@ -1464,44 +1486,361 @@ class EpisodeProcessor:
         except AnkiMinerException as e:
             ctx.errors.append(str(e))
             partial_ids = list(self.anki_service.last_created_note_ids)
-            if partial_ids:
-                ctx.errors.append(
-                    QCoreApplication.translate(
-                        "EpisodeProcessor",
-                        "Run failed after creating %n card(s); they remain in Anki and can be undone.",
-                        "",
-                        len(partial_ids),
-                    )
-                )
             self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
-            return ctx.build_result(
-                total_words_found=0,
-                new_words_found=0,
-                cards_created=len(partial_ids),
-                card_ids=partial_ids,
-            )
+            return self._partial_failure_result(ctx, partial_ids)
         except Exception as e:
             logger.exception("EpisodeProcessor unhandled exception")
             ctx.errors.append(f"Unexpected error: {e}")
             partial_ids = list(self.anki_service.last_created_note_ids)
-            if partial_ids:
-                ctx.errors.append(
-                    QCoreApplication.translate(
-                        "EpisodeProcessor",
-                        "Run failed after creating %n card(s); they remain in Anki and can be undone.",
-                        "",
-                        len(partial_ids),
-                    )
-                )
             self.presenter.show_error(
                 tr_format(QCoreApplication.translate("EpisodeProcessor", "Unexpected error: %1"), str(e))
             )
-            return ctx.build_result(
-                total_words_found=0,
-                new_words_found=0,
-                cards_created=len(partial_ids),
-                card_ids=partial_ids,
+            return self._partial_failure_result(ctx, partial_ids)
+        finally:
+            if cancel_event is not None:
+                self._external_cancel = None
+            if keep_temp:
+                logger.info(
+                    "ANKI_MINER_KEEP_TEMP set; leaving run temp folder at %s",
+                    run_temp_folder,
+                )
+            else:
+                shutil.rmtree(run_temp_folder, ignore_errors=True)
+
+    def _partial_failure_result(self, ctx: _EpisodeContext, partial_ids: list[int]) -> ProcessingResult:
+        """Shared except-handler tail: note any partial cards and build the failure result."""
+        if partial_ids:
+            ctx.errors.append(
+                QCoreApplication.translate(
+                    "EpisodeProcessor",
+                    "Run failed after creating %n card(s); they remain in Anki and can be undone.",
+                    "",
+                    len(partial_ids),
+                )
             )
+        return ctx.build_result(
+            total_words_found=0,
+            new_words_found=0,
+            cards_created=len(partial_ids),
+            card_ids=partial_ids,
+        )
+
+    def _phase3_reading_media(
+        self,
+        ctx: _EpisodeContext,
+        document: ReadingDocument,
+        unknown_words: list[TokenizedWord],
+        progress_callback: ProgressCallback | None,
+        run_temp_folder: Path,
+    ) -> list[tuple[TokenizedWord, MediaData]]:
+        """Phase 3' (reading): materialize each word's page/cover image, then fetch
+        expression audio. No ffmpeg, no sentence audio.
+
+        Each surviving word maps back to its source unit via
+        ``int(word.start_time)`` (the parser stamps the unit index as the dummy
+        start; an i+1 swap re-stamps it to the chosen line's unit, so the image
+        and page label always match the card's sentence). Unique ``ImageRef``s
+        materialize once (a page shared by many words, or a book cover shared by
+        every word, converts a single time). Image failures never abort the
+        volume — it keeps mining imageless (the image band is still consumed
+        unconditionally):
+
+        * A ``SetupError`` from an unsafe archive is caught per-archive: one
+          warning, the archive is skipped for every remaining ref.
+        * A ``zipfile.BadZipFile`` means the whole archive is corrupt/unusable —
+          same per-archive skip-and-warn-once handling.
+        * A ``PIL.UnidentifiedImageError`` / ``OSError`` (corrupt or undecodable
+          page, or a missing codec in a frozen bundle) is per-ref: one warning
+          naming the page, that word goes imageless, the rest of the archive
+          stays readable.
+
+        Warnings fire once per failing archive/ref (``failed_archives`` /
+        ``failed_refs`` memos) even when the ref is shared by many words.
+        """
+        self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Step 3/5 — Preparing page images"))
+        images_dir = run_temp_folder / "images"
+        units_by_index = {unit.index: unit for unit in document.units}
+
+        # YOU own the per-run bookkeeping: a unique-ref → materialized-path memo,
+        # a set of archives whose safety gate failed or that are corrupt (skip
+        # their remaining refs, warn once each), and a set of individual refs
+        # whose page failed to decode (skip re-attempt, warn once each even when
+        # the page/cover is shared by many words).
+        ref_cache: dict[ImageRef, Path] = {}
+        failed_archives: set[Path] = set()
+        failed_refs: set[ImageRef] = set()
+
+        media_results: list[tuple[TokenizedWord, MediaData]] = []
+
+        # The image band is consumed UNCONDITIONALLY (on_start / per-ref
+        # on_progress / on_complete) — even for text-only volumes with zero
+        # image refs — so StageWeightedProgress does not advance into the next
+        # band's weight on an imageless run (same discipline as expression audio).
+        if progress_callback is not None:
+            progress_callback.on_start(
+                len(unknown_words),
+                QCoreApplication.translate("EpisodeProcessor", "Preparing page images"),
+            )
+        for i, word in enumerate(unknown_words):
+            media = MediaData()
+            unit = units_by_index.get(int(word.start_time))
+            ref = unit.image_ref if unit is not None else None
+            if ref is not None and ref.source not in failed_archives and ref not in failed_refs:
+                image_path = ref_cache.get(ref)
+                if image_path is None:
+                    try:
+                        image_path = prepare_card_image(ref, images_dir)
+                    except SetupError:
+                        # Appending to document.warnings here would be lost (the
+                        # up-front drain already ran) — surface directly, once
+                        # per archive.
+                        failed_archives.add(ref.source)
+                        self.presenter.show_warning(
+                            tr_format(
+                                QCoreApplication.translate(
+                                    "EpisodeProcessor",
+                                    "Skipped unsafe image archive %1 — its cards have no page image",
+                                ),
+                                ref.source.name,
+                            )
+                        )
+                        image_path = None
+                    except (OSError, zipfile.BadZipFile) as exc:
+                        # An image failure must never abort the volume (the plan's
+                        # degradation policy: keep mining imageless). A BadZipFile
+                        # (NOT an OSError subclass) means the whole archive is
+                        # corrupt → skip its remaining refs, warn once, like the
+                        # unsafe-archive gate. A PIL UnidentifiedImageError / bare
+                        # OSError (undecodable page, missing codec in a frozen
+                        # bundle) is per-ref → warn once naming the page, drop this
+                        # word's image, leave the rest of the archive readable.
+                        if ref.entry is not None and isinstance(exc, zipfile.BadZipFile):
+                            failed_archives.add(ref.source)
+                            self.presenter.show_warning(
+                                tr_format(
+                                    QCoreApplication.translate(
+                                        "EpisodeProcessor",
+                                        "Skipped corrupt image archive %1 — its cards have no page image",
+                                    ),
+                                    ref.source.name,
+                                )
+                            )
+                        else:
+                            failed_refs.add(ref)
+                            self.presenter.show_warning(
+                                tr_format(
+                                    QCoreApplication.translate(
+                                        "EpisodeProcessor",
+                                        "Skipped unreadable page image %1 — its card has no picture",
+                                    ),
+                                    ref.entry if ref.entry is not None else ref.source.name,
+                                )
+                            )
+                        image_path = None
+                    else:
+                        ref_cache[ref] = image_path
+                if image_path is not None:
+                    media.screenshot_path = image_path
+                    media.screenshot_filename = image_path.name
+            media_results.append((word, media))
+            if progress_callback is not None:
+                progress_callback.on_progress(
+                    i + 1,
+                    tr_format(
+                        QCoreApplication.translate("EpisodeProcessor", "Page image: %1"),
+                        word.mined_form,
+                    ),
+                )
+        if progress_callback is not None:
+            progress_callback.on_complete()
+
+        self._fetch_expression_audio(media_results, progress_callback)
+
+        return media_results
+
+    def process_reading(
+        self,
+        document: ReadingDocument,
+        *,
+        preview_mode: bool = False,
+        progress_callback: ProgressCallback | None = None,
+        curation_callback: Callable[[list], list | None] | None = None,
+        cancel_event: threading.Event | None = None,
+    ) -> ProcessingResult:
+        """Mine a loaded reading document (manga volume / novel) into Anki cards.
+
+        Mirrors :meth:`process_episode`'s skeleton over ``ReadingDocument``:
+        text-unit parse (phase 1') → filter (phase 2) → image materialization +
+        expression audio (phase 3') → definitions (phase 4) → cards (phase 5).
+        Video-only steps (ffmpeg extraction, audio-stream cache invalidation)
+        are omitted. Each ``document.warnings`` entry (text-only volume, unusable
+        cover, unmatched pages) is surfaced up front via
+        ``presenter.show_warning`` so load-time degradations stay visible.
+
+        Args:
+            document: The loaded document to mine.
+            preview_mode: If True, show the word list without creating cards
+                (returns before phase 3').
+            progress_callback: Optional progress callback; wraps only phases
+                3'/4/5 in a single weighted sweep.
+            curation_callback: Optional per-word curation callback; same
+                semantics as :meth:`process_episode`.
+            cancel_event: Optional worker cancel event, bridged into this run's
+                checkpoints for its duration only (see __init__).
+
+        Returns:
+            ProcessingResult with statistics.
+
+        Raises:
+            SetupError: note type / field mapping misconfigured, or a stale dict
+                index needs reimport.
+            AnkiConnectionError: AnkiConnect is unreachable.
+        """
+        if document.kind == "manga":
+            source_label = _sanitize_source_label(f"{document.series} — {document.episode}")
+        else:
+            source_label = document.episode
+        ctx = _EpisodeContext(
+            start_time=time.time(),
+            video_file_str="",
+            subtitle_file_str="",
+            episode_name=document.episode,
+            series_name=document.series,
+            source_label=source_label,
+            unit_labels={unit.index: unit.location_label for unit in document.units},
+        )
+
+        # Surface load-time degradations before anything else (the loaders hand
+        # plain strings; emit them verbatim).
+        for warning in document.warnings:
+            self.presenter.show_warning(warning)
+
+        # Outside the try so SetupError propagates to callers (staleness backstop
+        # first, for the same silent-zero-card reason as process_episode).
+        if not preview_mode:
+            self.check_dictionary_staleness()
+            self._preflight_card_target()
+        run_temp_folder = self._allocate_run_temp_folder()
+        keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
+
+        # Reset the partial-IDs accumulator so a mid-run failure harvests only
+        # THIS run's IDs, never stale IDs from a prior run on this shared
+        # processor (see process_episode).
+        self.anki_service.last_created_note_ids = []
+
+        if cancel_event is not None:
+            self._external_cancel = cancel_event.is_set
+
+        # D4: fuse the two triggers for building the line index. The episode path
+        # splits this across caller (curation) and callee (i+1); here we call
+        # parse_text_units directly, so an i+1-enabled Mine run must set
+        # want_line_index itself — otherwise the filter gets an empty index and
+        # silently drops every word.
+        want_line_index = self.config.use_i_plus_one_filter or (curation_callback is not None and not preview_mode)
+        try:
+            self.presenter.show_info(
+                tr_format(
+                    QCoreApplication.translate("EpisodeProcessor", "Step 1/5 — Parsing text: %1"),
+                    document.title,
+                )
+            )
+            all_words, line_index, counts = self.subtitle_parser.parse_text_units(document.units, want_line_index)
+            self.presenter.show_success(
+                QCoreApplication.translate("EpisodeProcessor", "Found %n unique word(s)", "", len(all_words))
+            )
+            ctx.total_words_found = len(all_words)
+            if not all_words:
+                self.presenter.show_warning(
+                    QCoreApplication.translate("EpisodeProcessor", "No words found in subtitles")
+                )
+                return ctx.build_result()
+            if self.cancelled:
+                return self._cancelled_result_from_ctx(ctx)
+
+            unknown_words = self._phase2_filter(ctx, all_words, line_index, None)
+            # Reading-specific in-document occurrence floor (reuses the
+            # cross-episode filter's <=1 early-return). counts is the parse
+            # Counter — replaces the episode path's count_lemmas(subtitle_file).
+            unknown_words = self.word_filter.filter_by_episode_count(
+                unknown_words, counts, self.config.reading_min_occurrence
+            )
+            ctx.new_words_found = len(unknown_words)
+            if not unknown_words:
+                self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "All words already in Anki!"))
+                return ctx.build_result(new_words_found=0)
+            if self.cancelled:
+                return self._cancelled_result_from_ctx(ctx)
+
+            if curation_callback is not None and not preview_mode:
+                if line_index is not None:
+                    self.word_filter.attach_sentence_candidates(unknown_words, line_index)
+                self.word_filter.attach_occurrence_counts(unknown_words, counts)
+                curated = curation_callback(unknown_words)
+                if curated is None:
+                    return self._cancelled_result_from_ctx(ctx)
+                unknown_words = curated
+                ctx.new_words_found = len(unknown_words)
+                if not unknown_words:
+                    self.presenter.show_info(
+                        QCoreApplication.translate("EpisodeProcessor", "No words selected for card creation")
+                    )
+                    return ctx.build_result(new_words_found=0)
+                self.presenter.show_info(
+                    QCoreApplication.translate("EpisodeProcessor", "Mining %n selected word(s)", "", len(unknown_words))
+                )
+
+            if preview_mode:
+                self.presenter.show_word_preview(unknown_words)
+                return ctx.build_result(mined_forms=[w.mined_form for w in unknown_words])
+
+            # Wrap only phases 3'/4/5 in one weighted sweep (no parse/filter
+            # bands). Bands, in firing order: image prep, [expression audio],
+            # definitions, [glossaries], cards — renormalized internally.
+            stage_progress = progress_callback
+            if progress_callback is not None:
+                stage_weights = [0.40]  # image prep
+                if self._expression_audio_active:
+                    stage_weights.append(0.10)  # expression audio
+                stage_weights.append(0.25)  # definitions
+                if self.config.anki_fields.get("glossary"):
+                    stage_weights.append(0.10)  # glossaries
+                stage_weights.append(0.25)  # cards
+                stage_progress = StageWeightedProgress(progress_callback, stage_weights)
+
+            media_results = self._phase3_reading_media(ctx, document, unknown_words, stage_progress, run_temp_folder)
+            if self.cancelled:
+                return self._cancelled_result_from_ctx(ctx)
+
+            definitions, glossaries, pitch_data = self._phase4_lookup(ctx, media_results, stage_progress)
+            if self.cancelled:
+                return self._cancelled_result_from_ctx(ctx)
+
+            cards_created, created_note_ids, mined_forms = self._phase5_create(
+                ctx, media_results, definitions, glossaries, pitch_data, stage_progress
+            )
+            if isinstance(stage_progress, StageWeightedProgress):
+                stage_progress.finish()
+            result = ctx.build_result(
+                cards_created=cards_created,
+                card_ids=created_note_ids,
+                mined_forms=mined_forms,
+            )
+            self._record_session(ctx, result)
+            return result
+
+        except AnkiMinerException as e:
+            ctx.errors.append(str(e))
+            partial_ids = list(self.anki_service.last_created_note_ids)
+            self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
+            return self._partial_failure_result(ctx, partial_ids)
+        except Exception as e:
+            logger.exception("EpisodeProcessor unhandled exception")
+            ctx.errors.append(f"Unexpected error: {e}")
+            partial_ids = list(self.anki_service.last_created_note_ids)
+            self.presenter.show_error(
+                tr_format(QCoreApplication.translate("EpisodeProcessor", "Unexpected error: %1"), str(e))
+            )
+            return self._partial_failure_result(ctx, partial_ids)
         finally:
             if cancel_event is not None:
                 self._external_cancel = None
