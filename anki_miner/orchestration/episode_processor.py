@@ -902,6 +902,15 @@ class EpisodeProcessor:
             **extra_kwargs,
         )
 
+        self._fetch_expression_audio(media_results, progress_callback)
+
+        return media_results
+
+    def _fetch_expression_audio(
+        self,
+        media_results: list[tuple[TokenizedWord, MediaData]],
+        progress_callback: ProgressCallback | None,
+    ) -> None:
         # Expression (pronunciation) audio, Issue #73. Sequential on purpose:
         # the fetcher rate-limits and caches internally and never raises, so
         # the loop needs no try/except, no sleep, and no parallelism. Gated on
@@ -929,7 +938,7 @@ class EpisodeProcessor:
                 if self.cancelled:
                     if progress_callback is not None:
                         progress_callback.on_complete()
-                    return media_results
+                    return
                 # Source-priority outer / candidate-ladder inner: each source
                 # tries ALL candidate forms before the chain falls through to a
                 # lower-priority source, so a synthetic fallback can't satisfy
@@ -975,8 +984,6 @@ class EpisodeProcessor:
                     diagnosis = _audio_failure_diagnosis(counts, len(media_results))
                     if diagnosis is not None:
                         self.presenter.show_warning(diagnosis)
-
-        return media_results
 
     def _phase4_lookup(
         self,
@@ -1464,44 +1471,16 @@ class EpisodeProcessor:
         except AnkiMinerException as e:
             ctx.errors.append(str(e))
             partial_ids = list(self.anki_service.last_created_note_ids)
-            if partial_ids:
-                ctx.errors.append(
-                    QCoreApplication.translate(
-                        "EpisodeProcessor",
-                        "Run failed after creating %n card(s); they remain in Anki and can be undone.",
-                        "",
-                        len(partial_ids),
-                    )
-                )
             self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
-            return ctx.build_result(
-                total_words_found=0,
-                new_words_found=0,
-                cards_created=len(partial_ids),
-                card_ids=partial_ids,
-            )
+            return self._partial_failure_result(ctx, partial_ids)
         except Exception as e:
             logger.exception("EpisodeProcessor unhandled exception")
             ctx.errors.append(f"Unexpected error: {e}")
             partial_ids = list(self.anki_service.last_created_note_ids)
-            if partial_ids:
-                ctx.errors.append(
-                    QCoreApplication.translate(
-                        "EpisodeProcessor",
-                        "Run failed after creating %n card(s); they remain in Anki and can be undone.",
-                        "",
-                        len(partial_ids),
-                    )
-                )
             self.presenter.show_error(
                 tr_format(QCoreApplication.translate("EpisodeProcessor", "Unexpected error: %1"), str(e))
             )
-            return ctx.build_result(
-                total_words_found=0,
-                new_words_found=0,
-                cards_created=len(partial_ids),
-                card_ids=partial_ids,
-            )
+            return self._partial_failure_result(ctx, partial_ids)
         finally:
             if cancel_event is not None:
                 self._external_cancel = None
@@ -1512,6 +1491,24 @@ class EpisodeProcessor:
                 )
             else:
                 shutil.rmtree(run_temp_folder, ignore_errors=True)
+
+    def _partial_failure_result(self, ctx: _EpisodeContext, partial_ids: list[int]) -> ProcessingResult:
+        """Shared except-handler tail: note any partial cards and build the failure result."""
+        if partial_ids:
+            ctx.errors.append(
+                QCoreApplication.translate(
+                    "EpisodeProcessor",
+                    "Run failed after creating %n card(s); they remain in Anki and can be undone.",
+                    "",
+                    len(partial_ids),
+                )
+            )
+        return ctx.build_result(
+            total_words_found=0,
+            new_words_found=0,
+            cards_created=len(partial_ids),
+            card_ids=partial_ids,
+        )
 
     def _record_session(self, ctx: _EpisodeContext, result: ProcessingResult) -> None:
         """Record a mining session in the stats service if one is configured."""
