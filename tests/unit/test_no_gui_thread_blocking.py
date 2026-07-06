@@ -103,7 +103,6 @@ ALLOWLIST: dict[str, set[str]] = {
         "widgets/_mining_tab_base.py",
         "widgets/single_episode_tab.py",
         "widgets/audiobook_tab.py",
-        "widgets/reading_tab.py",
         # Prose only: update_config's docstring notes the processor owns a
         # requests.Session (lazy-drop teardown ordering). No live call.
         "widgets/_reading_mining_base.py",
@@ -127,7 +126,6 @@ ALLOWLIST: dict[str, set[str]] = {
         "widgets/youtube_tab.py",
         "widgets/batch_processing_tab.py",
         "widgets/audiobook_tab.py",
-        "widgets/reading_tab.py",
         # Prose only: shutdown's docstring references _curation_event.wait() (the
         # worker-side park the poison releases). The real join is the bounded
         # worker_thread.wait(_SHUTDOWN_WAIT_MS), which has an arg and never matches.
@@ -169,7 +167,6 @@ ALLOWLIST: dict[str, set[str]] = {
         "widgets/youtube_tab.py",
         "widgets/batch_processing_tab.py",
         "widgets/audiobook_tab.py",
-        "widgets/reading_tab.py",
         # _launch_run's lazy-rebuild call is inside a `processor_factory` closure
         # passed to the worker thread, so the registry/sqlite/CSV work runs off
         # the GUI thread (same fix as the other reading/mining tabs).

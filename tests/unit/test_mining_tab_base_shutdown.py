@@ -228,9 +228,14 @@ class TestYouTubeAudiobookShutdownStillPoison:
 
         assert poison_calls, "AudiobookTab.shutdown must poison curation gate"
 
-    def test_reading_shutdown_poisons_gate(self, qapp, qtbot):
-        """ReadingTab.shutdown() must call _poison_curation_gate()."""
-        from anki_miner.gui.widgets.reading_tab import ReadingTab
+    def test_reading_manga_shutdown_poisons_gate(self, qapp, qtbot):
+        """ReadingMangaTab.shutdown() (inherited from the base) must poison the gate.
+
+        The container ReadingTab has no worker of its own — it fans shutdown out
+        to the two sub-tabs, which inherit ``_ReadingMiningTabBase.shutdown``. So
+        the poison-gate contract is verified on each concrete sub-tab.
+        """
+        from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 
         fake_worker = MagicMock()
         fake_worker.cancel = MagicMock()
@@ -238,14 +243,33 @@ class TestYouTubeAudiobookShutdownStillPoison:
         fake_worker.wait.return_value = True
 
         poison_calls: list[bool] = []
-        tab = MagicMock(spec=ReadingTab)
+        tab = MagicMock(spec=ReadingMangaTab)
         tab.worker_thread = fake_worker
         tab._poison_curation_gate = lambda: poison_calls.append(True)
         tab._cancel_active_curation_dialog = MagicMock()
 
-        ReadingTab.shutdown(tab)
+        ReadingMangaTab.shutdown(tab)
 
-        assert poison_calls, "ReadingTab.shutdown must poison curation gate"
+        assert poison_calls, "ReadingMangaTab.shutdown must poison curation gate when worker_thread is set"
+
+    def test_reading_novels_shutdown_poisons_gate(self, qapp, qtbot):
+        """ReadingNovelsTab.shutdown() (inherited from the base) must poison the gate."""
+        from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
+
+        fake_worker = MagicMock()
+        fake_worker.cancel = MagicMock()
+        fake_worker.quit = MagicMock()
+        fake_worker.wait.return_value = True
+
+        poison_calls: list[bool] = []
+        tab = MagicMock(spec=ReadingNovelsTab)
+        tab.worker_thread = fake_worker
+        tab._poison_curation_gate = lambda: poison_calls.append(True)
+        tab._cancel_active_curation_dialog = MagicMock()
+
+        ReadingNovelsTab.shutdown(tab)
+
+        assert poison_calls, "ReadingNovelsTab.shutdown must poison curation gate when worker_thread is set"
 
 
 # ---------------------------------------------------------------------------
