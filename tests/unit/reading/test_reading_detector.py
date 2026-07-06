@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import importlib
 import json
+import subprocess
 import sys
+import textwrap
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -355,7 +358,11 @@ def test_mokuro_missing_file_errors(tmp_path):
 
 
 @pytest.mark.parametrize("kind", ["mokuro", "epub", "txt"])
-def test_load_dispatches_to_source_module(kind):
+def test_load_dispatches_to_source_module(kind: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    # ``detector.load`` does ``from . import <loader>`` then ``<loader>.load(ref)``.
+    # The loaders really exist post-integration, so patch the real seam: monkeypatch
+    # the imported module's ``load`` attribute (faking sys.modules can't win once the
+    # real module is imported — ``from . import`` resolves through the package attr).
     ref = ReadingSourceRef(
         kind=kind,  # type: ignore[arg-type]
         path=Path("whatever"),
@@ -363,42 +370,60 @@ def test_load_dispatches_to_source_module(kind):
         title="T",
         volume=None,
     )
-    fake_module = MagicMock()
+    module = importlib.import_module(_LOADER_MODULES[kind])
     sentinel = object()
-    fake_module.load.return_value = sentinel
+    fake_load = MagicMock(return_value=sentinel)
+    monkeypatch.setattr(module, "load", fake_load)
 
-    with patch.dict(sys.modules, {_LOADER_MODULES[kind]: fake_module}):
-        result = detector.load(ref)
+    result = detector.load(ref)
 
     assert result is sentinel
-    fake_module.load.assert_called_once_with(ref)
+    fake_load.assert_called_once_with(ref)
 
 
 def test_load_does_not_import_sibling_modules():
-    # Dispatching mokuro must not touch the epub/txt loaders.
-    ref = ReadingSourceRef(
-        kind="mokuro",
-        path=Path("x.mokuro"),
-        image_root=None,
-        title="T",
-        volume="1",
-    )
-    mokuro_mod = MagicMock()
-    epub_mod = MagicMock()
-    aozora_mod = MagicMock()
-    with patch.dict(
-        sys.modules,
-        {
-            _LOADER_MODULES["mokuro"]: mokuro_mod,
-            _LOADER_MODULES["epub"]: epub_mod,
-            _LOADER_MODULES["txt"]: aozora_mod,
-        },
-    ):
+    # Dispatching a mokuro ref must not import the epub/txt loaders. Run in a fresh
+    # interpreter for total isolation: sibling loaders imported by other tests in the
+    # same process would otherwise be present in sys.modules and mask a regression.
+    script = textwrap.dedent("""
+        import sys
+        import types
+        from pathlib import Path
+
+        from anki_miner.services.reading import detector
+        from anki_miner.services.reading.models import ReadingSourceRef
+
+        # Stub the mokuro loader (both sys.modules and the package attr, so
+        # ``from . import mokuro_source`` resolves to the stub) to avoid disk I/O.
+        stub = types.ModuleType("anki_miner.services.reading.mokuro_source")
+        stub.load = lambda ref: None
+        sys.modules["anki_miner.services.reading.mokuro_source"] = stub
+        import anki_miner.services.reading as pkg
+
+        pkg.mokuro_source = stub
+
+        ref = ReadingSourceRef(
+            kind="mokuro",
+            path=Path("x.mokuro"),
+            image_root=None,
+            title="T",
+            volume="1",
+        )
         detector.load(ref)
 
-    mokuro_mod.load.assert_called_once_with(ref)
-    epub_mod.load.assert_not_called()
-    aozora_mod.load.assert_not_called()
+        siblings = [
+            "anki_miner.services.reading.epub_source",
+            "anki_miner.services.reading.aozora_source",
+        ]
+        leaked = [name for name in siblings if name in sys.modules]
+        assert not leaked, leaked
+        """)
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_load_unknown_kind_errors():
