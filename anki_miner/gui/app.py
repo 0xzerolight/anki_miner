@@ -81,6 +81,18 @@ def _run_bundled_smoke() -> int:
 
         if not youtube_ie.suitable("https://www.youtube.com/watch?v=9bZkp7q19f0"):
             raise RuntimeError("YoutubeIE.suitable() rejected a canonical YouTube URL")
+
+        # Prove the Pillow JPEG codec survived bundling — reading-tab cards encode
+        # manga pages/covers to JPEG (services/reading/images.py). A bare import is
+        # not enough: Pillow lazy-loads codecs, so a real encode+decode round-trip
+        # is the only way to catch a missing JPEG plugin in the frozen bundle.
+        import io
+
+        from PIL import Image
+
+        _jpeg_buf = io.BytesIO()
+        Image.new("RGB", (8, 8)).save(_jpeg_buf, "JPEG")
+        Image.open(io.BytesIO(_jpeg_buf.getvalue())).convert("RGB").load()
     except Exception as exc:
         print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
