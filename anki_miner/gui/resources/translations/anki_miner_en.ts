@@ -338,46 +338,6 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Cloze Prefix Field</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Stores the sentence text before the target word (Yomitan cloze split).</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cloze Body Field</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Stores the target word as it appears in the sentence (Yomitan cloze split).</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cloze Body Kana Field</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Stores the kana reading of the inflected target word (Yomitan cloze split).</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cloze Suffix Field</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Stores the sentence text after the target word (Yomitan cloze split).</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Conjugation Field</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Stores the deinflection chain showing how the word was conjugated.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Auxiliary Data Fields</source>
         <translation type="unfinished" />
     </message>
@@ -687,7 +647,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Add a custom audio URL or online scrape source</source>
+        <source>Add a custom audio URL source</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -712,14 +672,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Google Translate (synthetic TTS)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>JapanesePod101 dictionary (scrape)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Jisho.org (scrape)</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1157,6 +1109,14 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>Mine vocabulary from an audiobook or audio file using its transcript.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine from manga or novels</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine vocabulary from manga volumes (mokuro) or novels (EPUB/text).</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1816,43 +1776,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <source>Restore from Disk</source>
         <translation type="unfinished" />
     </message>
-    <message>
-        <source>Check for Updates</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>No installed dictionaries to check.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Checking for dictionary updates…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Update Check Failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>All dictionaries are up to date.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Updates available:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>  • %1: revision %2 → %3
-    %4</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Download the new zip, then re-import it via the dictionary row's Re-import… menu.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Could not check:</source>
-        <translation type="unfinished" />
-    </message>
 </context><context>
     <name>DictionarySettingsPanel</name>
     <message>
@@ -1897,14 +1820,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
     </message>
     <message>
         <source>Re-add dictionaries found in the storage folder that aren't in the list above (e.g. after a settings reset). No re-import needed.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Check for Updates</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Fetch each updatable dictionary's online index and report any newer revisions. No download is performed — re-import the new zip yourself.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2180,12 +2095,6 @@ The dictionary was not removed.</source>
             <numerusform />
         </translation>
     </message>
-    <message numerus="yes">
-        <source>Updated %n existing duplicate card(s): filled empty fields</source>
-        <translation type="unfinished">
-            <numerusform />
-        </translation>
-    </message>
     <message>
         <source>No words found in subtitles</source>
         <translation type="unfinished" />
@@ -2214,6 +2123,14 @@ The dictionary was not removed.</source>
             <numerusform />
         </translation>
     </message>
+    <message>
+        <source>Error: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Unexpected error: %1</source>
+        <translation type="unfinished" />
+    </message>
     <message numerus="yes">
         <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
         <translation type="unfinished">
@@ -2221,11 +2138,23 @@ The dictionary was not removed.</source>
         </translation>
     </message>
     <message>
-        <source>Error: %1</source>
+        <source>Step 3/5 — Preparing page images</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Unexpected error: %1</source>
+        <source>Preparing page images</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped unsafe image archive %1 — its cards have no page image</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Page image: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Step 1/5 — Parsing text: %1</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -2577,6 +2506,22 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Reading</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Off</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Minimum Word Occurrences</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Minimum number of times a word must appear in a book or volume to be mined. 1 = no minimum (filter off).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Card Formatting</source>
         <translation type="unfinished" />
     </message>
@@ -2598,6 +2543,10 @@ The dictionary was not removed.</source>
     </message>
 </context><context>
     <name>FrequencyImportFlow</name>
+    <message>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Choose frequency source</source>
         <translation type="unfinished" />
@@ -2851,6 +2800,10 @@ The frequency source was not removed.</source>
     </message>
     <message>
         <source>Audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reading</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3509,7 +3462,147 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>ReadingQueueItemWidget</name>
+    <message>
+        <source>%1 cards created</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manga</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>EPUB</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove from queue</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ReadingTab</name>
+    <message>
+        <source>Reading queue</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Manga…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add manga volumes — a .mokuro/.cbz/.zip file, or a whole title folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Book…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add a novel — an .epub or .txt file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add manga or books above, or drag them here.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Review words before mining</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show the word-selection popup for each source before creating cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Run the queue in preview mode — no cards created.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine every queued item into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove every queued item that is not currently mining.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Manga</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Book</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not add %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>ResourceDownloadDialog</name>
+    <message>
+        <source>Download Blocked</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A mining run is in progress. Stop it before downloading resources.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Preparing download…</source>
         <translation type="unfinished" />
@@ -3536,6 +3629,14 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>✓ %1 — %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>   Replaced older copy: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>   Could not remove older copy: %1 — remove it via Settings → Dictionaries</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5330,6 +5431,14 @@ Continue with import?</source>
     </message>
 </context><context>
     <name>_FreqRow</name>
+    <message>
+        <source>word-based</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Level labels are shown on the card but not used for frequency filtering.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>%1 entries</source>
         <translation type="unfinished" />

@@ -25,6 +25,7 @@ from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
+from anki_miner.gui.widgets.reading_tab import ReadingTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
@@ -577,6 +578,20 @@ def main():
         stats_service=stats_service,
     )
     register_mining_tab(window, audiobook_tab, audiobook_presenter, QCoreApplication.translate("MainWindow", "Audio"))
+
+    # Reading tab (manga volumes + novels). Same lazy-processor pattern as
+    # YouTube/Audiobook: processor=None defers the dictionary-chain build to the
+    # first Mine click; stats_service is threaded through so sessions land in
+    # analytics. Lazy tabs build their own progress callback per run, so — like
+    # Audiobook — no GUIProgressCallback is wired here.
+    reading_presenter = GUIPresenter(window)
+    reading_tab = ReadingTab(
+        config=window.get_config(),
+        processor=None,
+        presenter=reading_presenter,
+        stats_service=stats_service,
+    )
+    register_mining_tab(window, reading_tab, reading_presenter, QCoreApplication.translate("MainWindow", "Reading"))
 
     # Analytics tab (non-mining: no presenter, no update_config wiring)
     analytics_tab = AnalyticsTab(stats_service)

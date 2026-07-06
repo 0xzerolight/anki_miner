@@ -338,46 +338,6 @@
         <translation>Armazena a frase como kana simples.</translation>
     </message>
     <message>
-        <source>Cloze Prefix Field</source>
-        <translation>Campo de Prefixo Cloze</translation>
-    </message>
-    <message>
-        <source>Stores the sentence text before the target word (Yomitan cloze split).</source>
-        <translation>Armazena o texto da frase antes da palavra-alvo (divisão cloze do Yomitan).</translation>
-    </message>
-    <message>
-        <source>Cloze Body Field</source>
-        <translation>Campo de Corpo Cloze</translation>
-    </message>
-    <message>
-        <source>Stores the target word as it appears in the sentence (Yomitan cloze split).</source>
-        <translation>Armazena a palavra-alvo como ela aparece na frase (divisão cloze do Yomitan).</translation>
-    </message>
-    <message>
-        <source>Cloze Body Kana Field</source>
-        <translation>Campo de Corpo Kana Cloze</translation>
-    </message>
-    <message>
-        <source>Stores the kana reading of the inflected target word (Yomitan cloze split).</source>
-        <translation>Armazena a leitura em kana da palavra-alvo flexionada (divisão cloze do Yomitan).</translation>
-    </message>
-    <message>
-        <source>Cloze Suffix Field</source>
-        <translation>Campo de Sufixo Cloze</translation>
-    </message>
-    <message>
-        <source>Stores the sentence text after the target word (Yomitan cloze split).</source>
-        <translation>Armazena o texto da frase após a palavra-alvo (divisão cloze do Yomitan).</translation>
-    </message>
-    <message>
-        <source>Conjugation Field</source>
-        <translation>Campo de Conjugação</translation>
-    </message>
-    <message>
-        <source>Stores the deinflection chain showing how the word was conjugated.</source>
-        <translation>Armazena a cadeia de deflexão que mostra como a palavra foi conjugada.</translation>
-    </message>
-    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Campos de Dados Auxiliares</translation>
     </message>
@@ -690,8 +650,8 @@ Formatos suportados: AJT (index.json + media/), NHK16 (entries.json + audio/), F
         <translation>+ Adicionar Fonte Online…</translation>
     </message>
     <message>
-        <source>Add a custom audio URL or online scrape source</source>
-        <translation>Adicionar uma URL de áudio personalizada ou fonte de raspagem on-line</translation>
+        <source>Add a custom audio URL source</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Move up in priority</source>
@@ -716,14 +676,6 @@ Formatos suportados: AJT (index.json + media/), NHK16 (entries.json + audio/), F
     <message>
         <source>Google Translate (synthetic TTS)</source>
         <translation>Google Translate (TTS sintético)</translation>
-    </message>
-    <message>
-        <source>JapanesePod101 dictionary (scrape)</source>
-        <translation>Dicionário JapanesePod101 (raspagem)</translation>
-    </message>
-    <message>
-        <source>Jisho.org (scrape)</source>
-        <translation>Jisho.org (raspagem)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -1172,6 +1124,14 @@ Total de cartões criados: %2</translation>
     <message>
         <source>Mine vocabulary from an audiobook or audio file using its transcript.</source>
         <translation>Minerar vocabulário de um audiolivro ou arquivo de áudio usando sua transcrição.</translation>
+    </message>
+    <message>
+        <source>Mine from manga or novels</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine vocabulary from manga volumes (mokuro) or novels (EPUB/text).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Generate or re-time subtitles</source>
@@ -1835,44 +1795,6 @@ Pulados (sem fonte salva — clique com o botão direito na linha de um dicioná
         <source>Restore from Disk</source>
         <translation>Restaurar do Disco</translation>
     </message>
-    <message>
-        <source>Check for Updates</source>
-        <translation>Verificar Atualizações</translation>
-    </message>
-    <message>
-        <source>No installed dictionaries to check.</source>
-        <translation>Nenhum dicionário instalado para verificar.</translation>
-    </message>
-    <message>
-        <source>Checking for dictionary updates…</source>
-        <translation>Verificando atualizações de dicionários…</translation>
-    </message>
-    <message>
-        <source>Update Check Failed</source>
-        <translation>Falha na Verificação de Atualizações</translation>
-    </message>
-    <message>
-        <source>All dictionaries are up to date.</source>
-        <translation>Todos os dicionários estão atualizados.</translation>
-    </message>
-    <message>
-        <source>Updates available:</source>
-        <translation>Atualizações disponíveis:</translation>
-    </message>
-    <message>
-        <source>  • %1: revision %2 → %3
-    %4</source>
-        <translation>  • %1: revisão %2 → %3
-    %4</translation>
-    </message>
-    <message>
-        <source>Download the new zip, then re-import it via the dictionary row's Re-import… menu.</source>
-        <translation>Baixe o novo zip e reimporte-o pelo menu Reimportar… da linha do dicionário.</translation>
-    </message>
-    <message>
-        <source>Could not check:</source>
-        <translation>Não foi possível verificar:</translation>
-    </message>
 </context><context>
     <name>DictionarySettingsPanel</name>
     <message>
@@ -1918,14 +1840,6 @@ Pulados (sem fonte salva — clique com o botão direito na linha de um dicioná
     <message>
         <source>Re-add dictionaries found in the storage folder that aren't in the list above (e.g. after a settings reset). No re-import needed.</source>
         <translation>Readicionar dicionários encontrados na pasta de armazenamento que não estão na lista acima (por exemplo, após uma redefinição de configurações). Nenhuma reimportação necessária.</translation>
-    </message>
-    <message>
-        <source>Check for Updates</source>
-        <translation>Verificar Atualizações</translation>
-    </message>
-    <message>
-        <source>Fetch each updatable dictionary's online index and report any newer revisions. No download is performed — re-import the new zip yourself.</source>
-        <translation>Busca o índice online de cada dicionário atualizável e relata quaisquer revisões mais recentes. Nenhum download é feito — reimporte o novo zip você mesmo.</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -2212,13 +2126,6 @@ O dicionário não foi removido.</translation>
             <numerusform>Ignoradas %n palavras marcadas pelo Anki como duplicadas (mesma Expression)</numerusform>
         </translation>
     </message>
-    <message numerus="yes">
-        <source>Updated %n existing duplicate card(s): filled empty fields</source>
-        <translation>
-            <numerusform>Atualizado %n cartão duplicado existente: campos vazios preenchidos</numerusform>
-            <numerusform>Atualizados %n cartões duplicados existentes: campos vazios preenchidos</numerusform>
-        </translation>
-    </message>
     <message>
         <source>No words found in subtitles</source>
         <translation>Nenhuma palavra encontrada nas legendas</translation>
@@ -2249,6 +2156,14 @@ O dicionário não foi removido.</translation>
             <numerusform>Mídia extraída para %n palavras</numerusform>
         </translation>
     </message>
+    <message>
+        <source>Error: %1</source>
+        <translation>Erro: %1</translation>
+    </message>
+    <message>
+        <source>Unexpected error: %1</source>
+        <translation>Erro inesperado: %1</translation>
+    </message>
     <message numerus="yes">
         <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
         <translation>
@@ -2257,12 +2172,24 @@ O dicionário não foi removido.</translation>
         </translation>
     </message>
     <message>
-        <source>Error: %1</source>
-        <translation>Erro: %1</translation>
+        <source>Step 3/5 — Preparing page images</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Unexpected error: %1</source>
-        <translation>Erro inesperado: %1</translation>
+        <source>Preparing page images</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped unsafe image archive %1 — its cards have no page image</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Page image: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Step 1/5 — Parsing text: %1</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ExportDialog</name>
@@ -2615,6 +2542,22 @@ O dicionário não foi removido.</translation>
         <translation>Descarta cartões cujo texto da frase excede este número de caracteres. Defina como 0 para sem limite.</translation>
     </message>
     <message>
+        <source>Reading</source>
+        <translation type="unfinished">Leitura</translation>
+    </message>
+    <message>
+        <source>Off</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Minimum Word Occurrences</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Minimum number of times a word must appear in a book or volume to be mined. 1 = no minimum (filter off).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Card Formatting</source>
         <translation>Formatação do Cartão</translation>
     </message>
@@ -2636,6 +2579,10 @@ O dicionário não foi removido.</translation>
     </message>
 </context><context>
     <name>FrequencyImportFlow</name>
+    <message>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Choose frequency source</source>
         <translation>Escolha a fonte de frequência</translation>
@@ -2897,6 +2844,10 @@ A fonte de frequência não foi removida.</translation>
     <message>
         <source>Audio</source>
         <translation>Áudio</translation>
+    </message>
+    <message>
+        <source>Reading</source>
+        <translation type="unfinished">Leitura</translation>
     </message>
     <message>
         <source>Analytics</source>
@@ -3561,7 +3512,147 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
         <translation>%1 séries - %2 episódios - Pronto para processar</translation>
     </message>
 </context><context>
+    <name>ReadingQueueItemWidget</name>
+    <message>
+        <source>%1 cards created</source>
+        <translation type="unfinished">%1 cartões criados</translation>
+    </message>
+    <message>
+        <source>Manga</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>EPUB</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove from queue</source>
+        <translation type="unfinished">Remover da fila</translation>
+    </message>
+</context><context>
+    <name>ReadingTab</name>
+    <message>
+        <source>Reading queue</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Manga…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add manga volumes — a .mokuro/.cbz/.zip file, or a whole title folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Book…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add a novel — an .epub or .txt file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add manga or books above, or drag them here.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Review words before mining</source>
+        <translation type="unfinished">Revisar palavras antes de minerar</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup for each source before creating cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation type="unfinished">Prévia</translation>
+    </message>
+    <message>
+        <source>Run the queue in preview mode — no cards created.</source>
+        <translation type="unfinished">Executa a fila em modo de prévia — nenhum cartão criado.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation type="unfinished">Minerar</translation>
+    </message>
+    <message>
+        <source>Mine every queued item into Anki cards.</source>
+        <translation type="unfinished">Minerar todos os itens da fila em cartões do Anki.</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation type="unfinished">Limpar</translation>
+    </message>
+    <message>
+        <source>Remove every queued item that is not currently mining.</source>
+        <translation type="unfinished">Remove todos os itens enfileirados que não estão sendo minerados no momento.</translation>
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation type="unfinished">Parar Tudo</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation type="unfinished">Cancela a execução ativa.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">Progresso</translation>
+    </message>
+    <message>
+        <source>Add Manga</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Book</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not add %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation type="unfinished">Mineração indisponível — serviços não inicializados.</translation>
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation type="unfinished">Execução %1 iniciando — %2 itens.</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">Cancelando…</translation>
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation type="unfinished">Minerando %1 de %2: %3</translation>
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation type="unfinished">Minerado %1: %2 cartões.</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation type="unfinished">Falhou %1: %2.</translation>
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation type="unfinished">Fila concluída: %1 com sucesso, %2 com falha.</translation>
+    </message>
+</context><context>
     <name>ResourceDownloadDialog</name>
+    <message>
+        <source>Download Blocked</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A mining run is in progress. Stop it before downloading resources.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Preparing download…</source>
         <translation>Preparando download…</translation>
@@ -3589,6 +3680,14 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
     <message>
         <source>✓ %1 — %2</source>
         <translation>✓ %1 — %2</translation>
+    </message>
+    <message>
+        <source>   Replaced older copy: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>   Could not remove older copy: %1 — remove it via Settings → Dictionaries</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>✗ %1 — %2
@@ -5399,6 +5498,14 @@ Continuar com a importação?</translation>
     </message>
 </context><context>
     <name>_FreqRow</name>
+    <message>
+        <source>word-based</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Level labels are shown on the card but not used for frequency filtering.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>%1 entries</source>
         <translation>%1 entradas</translation>

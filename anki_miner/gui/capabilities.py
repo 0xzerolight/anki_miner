@@ -29,7 +29,7 @@ TRANSLATION_CONTEXT = "Capabilities"
 
 # Stable main-tab keys (resolved by MainWindow._main_tab_index, never indices).
 MAIN_TABS: frozenset[str] = frozenset(
-    {"episode", "batch", "deckbuilder", "youtube", "audiobook", "analytics", "subtitles", "settings"}
+    {"episode", "batch", "deckbuilder", "youtube", "audiobook", "reading", "analytics", "subtitles", "settings"}
 )
 # Stable settings sub-tab keys (resolved by SettingsTab.open_subtab).
 SETTINGS_SUBTABS: frozenset[str] = frozenset(
@@ -129,6 +129,16 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("audiobook"),
         keywords=("audiobook", "audio", "mp3", "book", "listening", "ln"),
+    ),
+    Capability(
+        id="reading-mining",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Mine from manga or novels"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities", "Mine vocabulary from manga volumes (mokuro) or novels (EPUB/text)."
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("reading"),
+        keywords=("manga", "mokuro", "novel", "epub", "text", "book", "reading", "cbz", "aozora", "ln"),
     ),
     Capability(
         id="subtitle-tools",
