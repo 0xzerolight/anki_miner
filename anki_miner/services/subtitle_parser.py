@@ -3,7 +3,7 @@
 import collections
 import logging
 import re
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +23,7 @@ from anki_miner.services.morphology import (
     merge_compound_suffixes,
     mining_base,
 )
+from anki_miner.services.reading.models import ReadingUnit
 from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.utils import (
     clean_subtitle_text,
@@ -239,15 +240,8 @@ class SubtitleParserService:
             # Convert timing from milliseconds to seconds and apply offset
             start_time = max(0.0, (line.start / 1000.0) + self.config.subtitle_offset)
             end_time = max(start_time, (line.end / 1000.0) + self.config.subtitle_offset)
-            duration = end_time - start_time
 
-            # Tokenize with MeCab and run compound-merge passes
-            raw_tokens = list(self.tagger(text))
-            merged_tokens = self._merge_compound_suffixes(raw_tokens)
-            if self._compound_matcher is not None:
-                merged_tokens = self._compound_matcher.merge_line(text, merged_tokens)
-
-            line_state = (text, raw_tokens, merged_tokens, start_time, end_time, duration)
+            line_state = self._build_line_state(text, start_time, end_time)
             line_states.append(line_state)
             yield line_state
 
@@ -261,6 +255,24 @@ class SubtitleParserService:
             if len(self._line_cache) >= _LINE_CACHE_MAX_FILES:
                 self._line_cache.pop(next(iter(self._line_cache)))
             self._line_cache[key] = (mtime, line_states)
+
+    def _build_line_state(
+        self, text: str, start: float, end: float
+    ) -> tuple[str, list[Any], list[Any], float, float, float]:
+        """Tokenize one cleaned line into its per-line parse-state 6-tuple.
+
+        Returns ``(text, raw_tokens, merged_tokens, start, end, duration)``:
+        ``raw_tokens`` is the direct ``self.tagger(text)`` output,
+        ``merged_tokens`` is that run through ``_merge_compound_suffixes`` and
+        the optional compound matcher, and ``duration`` is ``end - start``.
+        Shared by the subtitle path (``_iter_parsed_lines``) and the future
+        text-unit path so per-line tokenization stays in one place.
+        """
+        raw_tokens = list(self.tagger(text))
+        merged_tokens = self._merge_compound_suffixes(raw_tokens)
+        if self._compound_matcher is not None:
+            merged_tokens = self._compound_matcher.merge_line(text, merged_tokens)
+        return (text, raw_tokens, merged_tokens, start, end, end - start)
 
     @staticmethod
     def _iter_token_spans(text: str, tokens: list) -> Iterator[tuple[Any, int, int]]:
@@ -396,6 +408,100 @@ class SubtitleParserService:
             sentence_furigana_bolded=sentence_furigana_bolded,
         )
 
+    def _emit_line_words_and_index(
+        self,
+        line_state: tuple[str, list[Any], list[Any], float, float, float],
+        seen_lemmas: set[str],
+        *,
+        collect_index: bool,
+    ) -> tuple[list[TokenizedWord], LineLemmas | None]:
+        """Emit one line's deduped words plus its optional per-line lemma index.
+
+        Returns ``(line_words, line_lemmas)``. ``line_words`` is the list of
+        ``TokenizedWord`` objects emitted from this line, lemma-deduped against
+        ``seen_lemmas`` (first occurrence across the whole file wins).
+        ``line_lemmas`` is the line's ``LineLemmas`` index entry when
+        ``collect_index`` is set — or ``None`` when ``collect_index`` is set but
+        the line has zero content lemmas (skipped, so it returns ``([], None)``),
+        or whenever ``collect_index`` is unset. ``collect_index`` gates exactly
+        the index-only extras: ``lemma_first_span``, the zero-content-lemma line
+        skip, and the ``LineLemmas`` build; word emission is unaffected.
+        """
+        text, raw_tokens, merged_tokens, start_time, end_time, duration = line_state
+
+        # First pass: collect every content-word lemma/token on this line.
+        # _should_include_word handles particle/aux/proper-noun filtering.
+        # When collecting the index we also record (surface, start, end) for the
+        # FIRST occurrence of each content lemma — the i+1 filter uses this to
+        # re-bold against the swapped-in line.
+        line_lemmas: set[str] = set()
+        included_tokens: list = []
+        included_spans: list[tuple[int, int, int]] = []
+        lemma_first_span: dict[str, tuple[str, int, int, int]] = {}
+        # Spans come from the shared locator — same offset and drop rule as
+        # parse_subtitle_file (Issue #20 / T-38, see _iter_token_spans).
+        for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
+            if not self._should_include_word(word_token):
+                continue
+            lemma_here = self._extract_lemma(word_token)
+            line_lemmas.add(lemma_here)
+            included_tokens.append(word_token)
+            # Computed once per token here and reused by the second pass, so
+            # parse_subtitle_file and _with_index stay output-identical.
+            highlight_end = self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
+            included_spans.append((tok_start, tok_end, highlight_end))
+            if collect_index:
+                lemma_first_span.setdefault(lemma_here, (word_token.surface, tok_start, tok_end, highlight_end))
+
+        # A line with zero content words can never be i+1 — skip it from the
+        # index entirely. (Word emission is also skipped trivially.)
+        if collect_index and not line_lemmas:
+            return [], None
+
+        # Compute sentence-level furigana/reading ONCE for this line using the
+        # already-parsed raw_tokens; shared by the LineLemmas entry and every
+        # word emitted from this line.
+        sentence_furigana = generate_furigana_from_tokens(raw_tokens)
+        sentence_reading = generate_reading_from_tokens(raw_tokens)
+
+        line_lemmas_entry: LineLemmas | None = None
+        if collect_index:
+            line_lemmas_entry = LineLemmas(
+                line_text=text,
+                lemmas=frozenset(line_lemmas),
+                start_time=start_time,
+                end_time=end_time,
+                duration=duration,
+                sentence_furigana=sentence_furigana,
+                sentence_reading=sentence_reading,
+                lemma_spans=tuple(
+                    (lemma_key, surface, span_start, span_end, span_highlight_end)
+                    for lemma_key, (surface, span_start, span_end, span_highlight_end) in lemma_first_span.items()
+                ),
+            )
+
+        # Second pass: emit deduped TokenizedWord entries (lemma-keyed).
+        line_words: list[TokenizedWord] = []
+        for word_token, (tok_start, tok_end, highlight_end) in zip(included_tokens, included_spans, strict=True):
+            word = self._emit_word(
+                word_token,
+                tok_start,
+                tok_end,
+                highlight_end=highlight_end,
+                text=text,
+                raw_tokens=raw_tokens,
+                start_time=start_time,
+                end_time=end_time,
+                duration=duration,
+                sentence_furigana=sentence_furigana,
+                sentence_reading=sentence_reading,
+                seen_lemmas=seen_lemmas,
+            )
+            if word is not None:
+                line_words.append(word)
+
+        return line_words, line_lemmas_entry
+
     def parse_raw_entries(self, subtitle_file: Path) -> list[tuple[float, float, str]]:
         """Parse subtitle file and return raw timing entries without tokenization.
 
@@ -518,83 +624,84 @@ class SubtitleParserService:
         line_index: list[LineLemmas] = []
         seen_lemmas: set[str] = set()
 
-        for (
-            text,
-            raw_tokens,
-            merged_tokens,
-            start_time,
-            end_time,
-            duration,
-        ) in self._iter_parsed_lines(subtitle_file):
-            # First pass: collect every content-word lemma on this line.
-            # _should_include_word handles particle/aux/proper-noun filtering.
-            # We also record (surface, start, end) for the FIRST occurrence
-            # of each content lemma — the i+1 filter uses this to re-bold
-            # against the swapped-in line.
-            line_lemmas: set[str] = set()
-            included_tokens: list = []
-            included_spans: list[tuple[int, int, int]] = []
-            lemma_first_span: dict[str, tuple[str, int, int, int]] = {}
-            # Spans come from the shared locator — same offset and drop rule
-            # as parse_subtitle_file (Issue #20 / T-38, see _iter_token_spans).
-            for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-                if not self._should_include_word(word_token):
-                    continue
-                lemma_here = self._extract_lemma(word_token)
-                line_lemmas.add(lemma_here)
-                included_tokens.append(word_token)
-                # Computed once per token here and reused by the second pass,
-                # so parse_subtitle_file and _with_index stay output-identical.
-                highlight_end = self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
-                included_spans.append((tok_start, tok_end, highlight_end))
-                lemma_first_span.setdefault(lemma_here, (word_token.surface, tok_start, tok_end, highlight_end))
-
-            # A line with zero content words can never be i+1 — skip it from
-            # the index entirely. (Word emission is also skipped trivially.)
-            if not line_lemmas:
-                continue
-
-            # Compute sentence-level furigana/reading ONCE for this line using
-            # the already-parsed raw_tokens (tokenized at the top of the loop).
-            sentence_furigana = generate_furigana_from_tokens(raw_tokens)
-            sentence_reading = generate_reading_from_tokens(raw_tokens)
-
-            line_index.append(
-                LineLemmas(
-                    line_text=text,
-                    lemmas=frozenset(line_lemmas),
-                    start_time=start_time,
-                    end_time=end_time,
-                    duration=duration,
-                    sentence_furigana=sentence_furigana,
-                    sentence_reading=sentence_reading,
-                    lemma_spans=tuple(
-                        (lemma_key, surface, span_start, span_end, span_highlight_end)
-                        for lemma_key, (surface, span_start, span_end, span_highlight_end) in lemma_first_span.items()
-                    ),
-                )
-            )
-
-            # Second pass: emit deduped TokenizedWord entries (lemma-keyed).
-            for word_token, (tok_start, tok_end, highlight_end) in zip(included_tokens, included_spans, strict=True):
-                word = self._emit_word(
-                    word_token,
-                    tok_start,
-                    tok_end,
-                    highlight_end=highlight_end,
-                    text=text,
-                    raw_tokens=raw_tokens,
-                    start_time=start_time,
-                    end_time=end_time,
-                    duration=duration,
-                    sentence_furigana=sentence_furigana,
-                    sentence_reading=sentence_reading,
-                    seen_lemmas=seen_lemmas,
-                )
-                if word is not None:
-                    all_words.append(word)
+        for line_state in self._iter_parsed_lines(subtitle_file):
+            line_words, line_lemmas_entry = self._emit_line_words_and_index(line_state, seen_lemmas, collect_index=True)
+            if line_lemmas_entry is not None:
+                line_index.append(line_lemmas_entry)
+            all_words.extend(line_words)
 
         return all_words, line_index
+
+    def parse_text_units(
+        self,
+        units: Sequence[ReadingUnit],
+        want_line_index: bool,
+    ) -> tuple[list[TokenizedWord], list[LineLemmas] | None, collections.Counter[str]]:
+        """Parse reading-tab text units into mining words, index, and lemma counts.
+
+        The reading pipeline (manga volumes / novels) hands mined text as
+        ``ReadingUnit``s — one paragraph or manga text block each — instead of a
+        subtitle file. Each unit's ``text`` becomes the card sentence *verbatim*:
+        there is no re-windowing, no ``clean_subtitle_text``, no regex filter,
+        no pysubs2 and no per-file line cache on this path. ``unit.index``
+        (document order) doubles as the dummy start AND end time, so
+        ``duration`` is ``0.0`` and every duration-based optional filter is inert
+        by design.
+
+        One tokenize pass per unit: ``_build_line_state`` tokenizes once and both
+        the returned Counter and the emitted words reuse its ``merged_tokens``.
+        The Counter accumulates over ``_iter_token_spans`` (NOT the raw
+        ``merged_tokens``) so a span-undroppable token is excluded from the count
+        exactly as it is from mining — the T-38 mine-vs-count consistency guard
+        (see ``count_lemmas`` / ``_iter_token_spans``). Emission flows through
+        ``_emit_line_words_and_index`` so mining_base folding and lemma-tail
+        stripping are inherited, never re-implemented here.
+
+        Args:
+            units: Ordered reading units (only ``.text``/``.index`` are read).
+            want_line_index: When True, build the per-unit ``LineLemmas`` index
+                (i+1 filter input) alongside the words; when False the index
+                element of the returned tuple is ``None``.
+
+        Returns:
+            ``(words, line_index, counts)``. ``words`` is lemma-deduped
+            (first-occurrence-wins across the whole call, like the subtitle
+            entrypoints); ``line_index`` is the ``LineLemmas`` list when
+            ``want_line_index`` else ``None``; ``counts`` maps lemma → total
+            included occurrences (``count_lemmas`` semantics, no dedup).
+        """
+        # Public parse_* convention: reset the per-parse memo caches so a
+        # multi-volume queue on one shared processor never serves stale
+        # furigana/reading entries and cache growth stays bounded across units.
+        self._reset_caches()
+
+        all_words: list[TokenizedWord] = []
+        line_index: list[LineLemmas] = []
+        seen_lemmas: set[str] = set()
+        counts: collections.Counter[str] = collections.Counter()
+
+        for unit in units:
+            # Dummy timing: the index is both start and end (duration 0.0). No
+            # re-windowing exists — unit.text is the card sentence verbatim.
+            line_state = self._build_line_state(unit.text, float(unit.index), float(unit.index))
+            text, _raw_tokens, merged_tokens, *_ = line_state
+
+            # Count through the SAME locator as the mining loop below (and
+            # count_lemmas): a token mining drops (find == -1) is counted
+            # nowhere it is not mined, or the preview over-promises (T-38 — see
+            # _iter_token_spans for the drop-rule rationale).
+            for token, _tok_start, _tok_end in self._iter_token_spans(text, merged_tokens):
+                if self._should_include_word(token):
+                    counts[self._extract_lemma(token)] += 1
+
+            line_words, line_lemmas_entry = self._emit_line_words_and_index(
+                line_state, seen_lemmas, collect_index=want_line_index
+            )
+            all_words.extend(line_words)
+            if line_lemmas_entry is not None:
+                line_index.append(line_lemmas_entry)
+
+        return all_words, (line_index if want_line_index else None), counts
 
     def count_lemmas(self, subtitle_file: Path) -> collections.Counter[str]:
         """Return raw in-corpus lemma occurrence counts for a subtitle file.

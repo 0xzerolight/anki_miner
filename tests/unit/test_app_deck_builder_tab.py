@@ -49,6 +49,7 @@ def _build_tabs(monkeypatch, test_config):
     from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
     from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
     from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
+    from anki_miner.gui.widgets.reading_tab import ReadingTab
     from anki_miner.gui.widgets.settings_tab import SettingsTab
     from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
     from anki_miner.gui.widgets.youtube_tab import YouTubeTab
@@ -99,6 +100,15 @@ def _build_tabs(monkeypatch, test_config):
         stats_service=stats_service,
     )
     app_module.register_mining_tab(window, audiobook_tab, audiobook_presenter, "Audio")
+
+    reading_presenter = GUIPresenter(window)
+    reading_tab = ReadingTab(
+        config=window.get_config(),
+        processor=None,
+        presenter=reading_presenter,
+        stats_service=stats_service,
+    )
+    app_module.register_mining_tab(window, reading_tab, reading_presenter, "Reading")
 
     analytics_tab = AnalyticsTab(stats_service)
     window.tabs.addTab(analytics_tab, "Analytics")

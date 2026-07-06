@@ -103,6 +103,7 @@ ALLOWLIST: dict[str, set[str]] = {
         "widgets/_mining_tab_base.py",
         "widgets/single_episode_tab.py",
         "widgets/audiobook_tab.py",
+        "widgets/reading_tab.py",
     },
     # urllib — only `from urllib.parse import urlparse`: pure string parsing of a
     # URL, no network I/O. Cheap.
@@ -123,6 +124,7 @@ ALLOWLIST: dict[str, set[str]] = {
         "widgets/youtube_tab.py",
         "widgets/batch_processing_tab.py",
         "widgets/audiobook_tab.py",
+        "widgets/reading_tab.py",
         # worker.wait() after loop.exec() already returned on worker.finished —
         # the QThread is finished, so the join returns immediately (cheap).
         "widgets/dialogs/resource_download_dialog.py",
@@ -160,6 +162,7 @@ ALLOWLIST: dict[str, set[str]] = {
         "widgets/youtube_tab.py",
         "widgets/batch_processing_tab.py",
         "widgets/audiobook_tab.py",
+        "widgets/reading_tab.py",
     },
     # parse_raw_entries — inside single_episode_tab._parse (run_off_thread work
     # callable) and _mining_tab_base's timing-preview parse helper, both off-thread.
