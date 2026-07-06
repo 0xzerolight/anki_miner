@@ -105,6 +105,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         use_sentence_length_filter=True,
         max_sentence_duration_seconds=8.0,
         max_sentence_chars=50,
+        reading_min_occurrence=7,
         bold_target_in_sentence=True,
         # --- YouTubeSettingsPanel ---
         youtube_cookies_from_browser="firefox",
@@ -161,6 +162,7 @@ _SAVE_PATH_FIELDS = frozenset(
         "use_sentence_length_filter",
         "max_sentence_duration_seconds",
         "max_sentence_chars",
+        "reading_min_occurrence",
         "bold_target_in_sentence",
         # YouTubeSettingsPanel
         "youtube_cookies_from_browser",
@@ -300,6 +302,7 @@ class TestSavePathRoundTrip:
             "use_sentence_length_filter",
             "max_sentence_duration_seconds",
             "max_sentence_chars",
+            "reading_min_occurrence",
             "bold_target_in_sentence",
         ):
             assert getattr(result, field_name) == getattr(original, field_name), field_name

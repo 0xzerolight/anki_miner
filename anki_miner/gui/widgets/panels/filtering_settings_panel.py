@@ -328,6 +328,21 @@ class FilteringSettingsPanel(FormPanel):
             helper=self.tr("Drops cards whose sentence text exceeds this many characters. Set to 0 for no limit."),
         )
 
+        # Reading section: per-book minimum word occurrence (Reading tab).
+        self.add_section(self.tr("Reading"))
+
+        self.reading_min_occurrence_spinbox = QSpinBox()
+        self.reading_min_occurrence_spinbox.setRange(1, 100)
+        self.reading_min_occurrence_spinbox.setSpecialValueText(self.tr("Off"))
+        self.add_field(
+            self.tr("Minimum Word Occurrences"),
+            self.reading_min_occurrence_spinbox,
+            helper=self.tr(
+                "Minimum number of times a word must appear in a book or volume to be "
+                "mined. 1 = no minimum (filter off)."
+            ),
+        )
+
         # Card Formatting section (Issue #20)
         self.add_section(self.tr("Card Formatting"))
 
@@ -576,6 +591,16 @@ class FilteringSettingsPanel(FormPanel):
         """Set the max sentence chars spinbox."""
         self.max_sentence_chars_spinbox.setValue(value)
 
+    # --- Reading ---
+
+    def get_reading_min_occurrence(self) -> int:
+        """Return the per-book minimum word occurrence threshold."""
+        return self.reading_min_occurrence_spinbox.value()
+
+    def set_reading_min_occurrence(self, value: int) -> None:
+        """Set the reading min-occurrence spinbox."""
+        self.reading_min_occurrence_spinbox.setValue(value)
+
     # --- Card formatting ---
 
     def get_bold_target_in_sentence(self) -> bool:
@@ -624,6 +649,7 @@ class FilteringSettingsPanel(FormPanel):
         self.set_use_sentence_length_filter(config.use_sentence_length_filter)
         self.set_max_sentence_duration_seconds(config.max_sentence_duration_seconds)
         self.set_max_sentence_chars(config.max_sentence_chars)
+        self.set_reading_min_occurrence(config.reading_min_occurrence)
         self.set_bold_target_in_sentence(config.bold_target_in_sentence)
 
     def contribute(self, config):
@@ -657,5 +683,6 @@ class FilteringSettingsPanel(FormPanel):
             use_sentence_length_filter=self.get_use_sentence_length_filter(),
             max_sentence_duration_seconds=self.get_max_sentence_duration_seconds(),
             max_sentence_chars=self.get_max_sentence_chars(),
+            reading_min_occurrence=self.get_reading_min_occurrence(),
             bold_target_in_sentence=self.get_bold_target_in_sentence(),
         )
