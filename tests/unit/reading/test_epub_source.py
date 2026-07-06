@@ -309,6 +309,54 @@ def test_boilerplate_spine_files_skipped(tmp_path: Path) -> None:
     assert "表紙" not in joined and "奥付" not in joined and "扉" not in joined
 
 
+def test_boilerplate_name_matching_uses_tokens_not_substrings(tmp_path: Path) -> None:
+    # ``protocol`` contains "toc" and ``discover-chapter`` contains "cover" as raw
+    # substrings — token matching must mine them, while true boilerplate is skipped.
+    files = {
+        "OEBPS/content.opf": _opf(
+            [
+                ("proto", "protocol.xhtml", "application/xhtml+xml", ""),
+                ("disc", "discover-chapter.xhtml", "application/xhtml+xml", ""),
+                ("toc", "toc.xhtml", "application/xhtml+xml", ""),
+                ("colo", "p-colophon.xhtml", "application/xhtml+xml", ""),
+                ("ad", "p-ad-001.xhtml", "application/xhtml+xml", ""),
+                ("cov", "cover.xhtml", "application/xhtml+xml", ""),
+            ],
+            [
+                ("proto", None),
+                ("disc", None),
+                ("toc", None),
+                ("colo", None),
+                ("ad", None),
+                ("cov", None),
+            ],
+        ),
+        "OEBPS/protocol.xhtml": _xhtml("<p>プロトコル本文。</p>"),
+        "OEBPS/discover-chapter.xhtml": _xhtml("<p>発見の章。</p>"),
+        "OEBPS/toc.xhtml": _xhtml("<p>目次テキスト。</p>"),
+        "OEBPS/p-colophon.xhtml": _xhtml("<p>奥付テキスト。</p>"),
+        "OEBPS/p-ad-001.xhtml": _xhtml("<p>広告テキスト。</p>"),
+        "OEBPS/cover.xhtml": _xhtml("<p>表紙テキスト。</p>"),
+    }
+    doc = load(_ref(_build_epub(tmp_path, files)))
+
+    assert [u.text for u in doc.units] == ["プロトコル本文。", "発見の章。"]
+
+
+def test_pretty_printed_paragraph_collapsed_to_single_line(tmp_path: Path) -> None:
+    body = "<p>\n  これは\n  テストの文です。\n</p>"
+    files = {
+        "OEBPS/content.opf": _opf(
+            [("c1", "ch1.xhtml", "application/xhtml+xml", "")],
+            [("c1", None)],
+        ),
+        "OEBPS/ch1.xhtml": _xhtml(body),
+    }
+    doc = load(_ref(_build_epub(tmp_path, files)))
+
+    assert [u.text for u in doc.units] == ["これはテストの文です。"]
+
+
 def test_chapter_fallback_to_spine_index(tmp_path: Path) -> None:
     # Nav lists only boilerplate labels → fewer than two usable → ch.{i}.
     files = {
