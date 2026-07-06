@@ -106,6 +106,22 @@ def test_old_config_without_expression_audio_fields_gets_defaults(tmp_config: Pa
     assert loaded.expression_audio_delay == 0.2
 
 
+def test_old_config_without_reading_min_occurrence_gets_default(tmp_config: Path):
+    """A saved config predating reading_min_occurrence must backfill the default (1)."""
+    tmp_config.write_text(
+        json.dumps(
+            {
+                "anki_deck_name": "MyDeck",
+                # reading_min_occurrence absent (old config)
+            }
+        )
+    )
+
+    loaded = GUIConfigManager.load_config()
+    assert loaded.anki_deck_name == "MyDeck"
+    assert loaded.reading_min_occurrence == 1
+
+
 def test_obsolete_expression_audio_enabled_key_is_dropped(tmp_config: Path):
     """A legacy config carrying the removed expression_audio_enabled flag must
     load cleanly (the unknown key is dropped, not fatal), and a non-empty
