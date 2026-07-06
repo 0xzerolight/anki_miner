@@ -10,11 +10,13 @@ attach_occurrence_counts run their production logic.
 from __future__ import annotations
 
 import collections
+import zipfile
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from PIL import UnidentifiedImageError
 
 from anki_miner.exceptions import AnkiMinerException, SetupError
 from anki_miner.models import TokenizedWord
@@ -347,6 +349,60 @@ def test_unsafe_archive_warns_once_imageless(test_config):
     with patch(_IMG, side_effect=SetupError("unsafe zip")):
         res = proc.process_reading(_document(units))
 
+    assert presenter.show_warning.call_count == 1
+    assert res.cards_created == 2
+    assert all(p.media.screenshot_filename is None for p in anki.last_card_data)
+
+
+def test_undecodable_page_warns_once_imageless(test_config):
+    """7b. An undecodable page (PIL UnidentifiedImageError) never aborts the
+    volume: one warning, that word imageless, other pages still materialize."""
+    bad = ImageRef(Path("/pages/bad.png"))
+    good = ImageRef(Path("/pages/good.png"))
+    units = [_unit(0, image_ref=bad), _unit(1, image_ref=good)]
+    words = [_word("犬", 0), _word("猫", 1)]
+    counts = collections.Counter({"犬": 1, "猫": 1})
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+    anki = _make_anki_service()
+    presenter = MagicMock(name="Presenter")
+    proc = _make_processor(test_config, subtitle_parser=sp, anki_service=anki, presenter=presenter)
+
+    def _prep(ref, dest):
+        if ref == bad:
+            raise UnidentifiedImageError("boom")
+        return Path("/tmp/reading_good.jpg")
+
+    with patch(_IMG, side_effect=_prep):
+        res = proc.process_reading(_document(units))
+
+    assert presenter.show_warning.call_count == 1
+    assert res.cards_created == 2
+    by_lemma = {p.word.lemma: p.media.screenshot_filename for p in anki.last_card_data}
+    assert by_lemma["犬"] is None  # undecodable page → no picture
+    assert by_lemma["猫"] == "reading_good.jpg"  # the good page still materialized
+
+
+def test_corrupt_archive_warns_once_imageless(test_config):
+    """7c. A corrupt archive (BadZipFile — NOT an OSError subclass) shared by 2
+    refs → exactly one warning, all its words imageless, run completes."""
+    archive = Path("/vol.cbz")
+    units = [
+        _unit(0, image_ref=ImageRef(archive, "p1.jpg")),
+        _unit(1, image_ref=ImageRef(archive, "p2.jpg")),
+    ]
+    words = [_word("犬", 0), _word("猫", 1)]
+    counts = collections.Counter({"犬": 1, "猫": 1})
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+    anki = _make_anki_service()
+    presenter = MagicMock(name="Presenter")
+    proc = _make_processor(test_config, subtitle_parser=sp, anki_service=anki, presenter=presenter)
+
+    with patch(_IMG, side_effect=zipfile.BadZipFile("corrupt")) as prep:
+        res = proc.process_reading(_document(units))
+
+    assert prep.call_count == 1  # second ref short-circuits on failed_archives
     assert presenter.show_warning.call_count == 1
     assert res.cards_created == 2
     assert all(p.media.screenshot_filename is None for p in anki.last_card_data)

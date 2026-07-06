@@ -12,6 +12,7 @@ import tempfile
 import threading
 import time
 import uuid
+import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -1540,20 +1541,34 @@ class EpisodeProcessor:
         start; an i+1 swap re-stamps it to the chosen line's unit, so the image
         and page label always match the card's sentence). Unique ``ImageRef``s
         materialize once (a page shared by many words, or a book cover shared by
-        every word, converts a single time). A ``SetupError`` from an unsafe
-        archive is caught per-archive: one warning, the archive is skipped for
-        every remaining ref, and the volume keeps mining imageless — the image
-        band is still consumed unconditionally.
+        every word, converts a single time). Image failures never abort the
+        volume — it keeps mining imageless (the image band is still consumed
+        unconditionally):
+
+        * A ``SetupError`` from an unsafe archive is caught per-archive: one
+          warning, the archive is skipped for every remaining ref.
+        * A ``zipfile.BadZipFile`` means the whole archive is corrupt/unusable —
+          same per-archive skip-and-warn-once handling.
+        * A ``PIL.UnidentifiedImageError`` / ``OSError`` (corrupt or undecodable
+          page, or a missing codec in a frozen bundle) is per-ref: one warning
+          naming the page, that word goes imageless, the rest of the archive
+          stays readable.
+
+        Warnings fire once per failing archive/ref (``failed_archives`` /
+        ``failed_refs`` memos) even when the ref is shared by many words.
         """
         self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Step 3/5 — Preparing page images"))
         images_dir = run_temp_folder / "images"
         units_by_index = {unit.index: unit for unit in document.units}
 
-        # YOU own the per-run bookkeeping: a unique-ref → materialized-path memo
-        # and a set of archives whose safety gate failed (skip their remaining
-        # refs, warn once each).
+        # YOU own the per-run bookkeeping: a unique-ref → materialized-path memo,
+        # a set of archives whose safety gate failed or that are corrupt (skip
+        # their remaining refs, warn once each), and a set of individual refs
+        # whose page failed to decode (skip re-attempt, warn once each even when
+        # the page/cover is shared by many words).
         ref_cache: dict[ImageRef, Path] = {}
         failed_archives: set[Path] = set()
+        failed_refs: set[ImageRef] = set()
 
         media_results: list[tuple[TokenizedWord, MediaData]] = []
 
@@ -1570,7 +1585,7 @@ class EpisodeProcessor:
             media = MediaData()
             unit = units_by_index.get(int(word.start_time))
             ref = unit.image_ref if unit is not None else None
-            if ref is not None and ref.source not in failed_archives:
+            if ref is not None and ref.source not in failed_archives and ref not in failed_refs:
                 image_path = ref_cache.get(ref)
                 if image_path is None:
                     try:
@@ -1589,6 +1604,38 @@ class EpisodeProcessor:
                                 ref.source.name,
                             )
                         )
+                        image_path = None
+                    except (OSError, zipfile.BadZipFile) as exc:
+                        # An image failure must never abort the volume (the plan's
+                        # degradation policy: keep mining imageless). A BadZipFile
+                        # (NOT an OSError subclass) means the whole archive is
+                        # corrupt → skip its remaining refs, warn once, like the
+                        # unsafe-archive gate. A PIL UnidentifiedImageError / bare
+                        # OSError (undecodable page, missing codec in a frozen
+                        # bundle) is per-ref → warn once naming the page, drop this
+                        # word's image, leave the rest of the archive readable.
+                        if ref.entry is not None and isinstance(exc, zipfile.BadZipFile):
+                            failed_archives.add(ref.source)
+                            self.presenter.show_warning(
+                                tr_format(
+                                    QCoreApplication.translate(
+                                        "EpisodeProcessor",
+                                        "Skipped corrupt image archive %1 — its cards have no page image",
+                                    ),
+                                    ref.source.name,
+                                )
+                            )
+                        else:
+                            failed_refs.add(ref)
+                            self.presenter.show_warning(
+                                tr_format(
+                                    QCoreApplication.translate(
+                                        "EpisodeProcessor",
+                                        "Skipped unreadable page image %1 — its card has no picture",
+                                    ),
+                                    ref.entry if ref.entry is not None else ref.source.name,
+                                )
+                            )
                         image_path = None
                     else:
                         ref_cache[ref] = image_path
