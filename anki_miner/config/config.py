@@ -318,6 +318,13 @@ class AnkiMinerConfig:
     # Cross-episode frequency settings
     min_episode_appearances: int = 2  # Only mine words appearing in at least N episodes
 
+    # Reading tab: minimum times a word must occur in a single book/volume to be
+    # mined. 1 = no minimum (filter off). Consumed via
+    # WordFilterService.filter_by_episode_count, which early-returns when the
+    # threshold is <= 1. Migration-safe: absent in old configs → backfilled to 1
+    # by GUIConfigManager.load_config (unknown-key filter + dataclass default).
+    reading_min_occurrence: int = 1
+
     # History settings
     history_db_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "history.db")
     enable_history: bool = True
