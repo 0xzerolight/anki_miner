@@ -5,6 +5,7 @@ from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 
 
 class EnhancedDialog(QDialog):
@@ -38,6 +39,7 @@ class EnhancedDialog(QDialog):
             self.setWindowTitle(title)
 
         self._setup_ui()
+        add_min_max_buttons(self)
 
     def _setup_ui(self) -> None:
         """Set up the dialog UI."""

@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.utils.file_pairing import FilePair
 from anki_miner.utils.i18n import tr_format
@@ -42,6 +43,7 @@ class PairPreviewDialog(QDialog):
         super().__init__(parent)
         self.pairs = pairs
         self._setup_ui()
+        add_min_max_buttons(self)
 
     def _setup_ui(self):
         """Set up the user interface."""

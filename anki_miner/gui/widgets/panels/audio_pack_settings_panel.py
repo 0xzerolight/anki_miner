@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AudioSourceEntry
+from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.services.audio_packs.registry import AudioPackMeta, AudioPackRegistry
@@ -183,6 +184,7 @@ class _AddSourceDialog(QDialog):
         layout.addWidget(self._buttons)
 
         self._on_kind_changed()
+        add_min_max_buttons(self)
 
     def selected_kind(self) -> str:
         return str(self._kind_combo.currentData())

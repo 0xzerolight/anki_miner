@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
+from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.models.word import WordData
 from anki_miner.services.export_service import ExportService
@@ -61,6 +62,7 @@ class ExportDialog(QDialog):
         self._config = config
         self._output_path: Path | None = None
         self._setup_ui()
+        add_min_max_buttons(self)
 
     def _setup_ui(self) -> None:
         self.setWindowTitle(self.tr("Export Words"))
