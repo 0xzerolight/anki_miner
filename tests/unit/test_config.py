@@ -372,6 +372,19 @@ def test_sentence_length_filter_defaults():
     assert cfg.max_sentence_chars == 0
 
 
+def test_reading_min_occurrence_default_and_replace():
+    """reading_min_occurrence defaults to 1 (filter off) and round-trips via replace."""
+    from dataclasses import replace
+
+    from anki_miner.config import AnkiMinerConfig
+
+    cfg = AnkiMinerConfig()
+    assert cfg.reading_min_occurrence == 1
+
+    cfg2 = replace(cfg, reading_min_occurrence=3)
+    assert cfg2.reading_min_occurrence == 3
+
+
 class TestAudioSourceEntry:
     """Tests for the AudioSourceEntry frozen dataclass."""
 
