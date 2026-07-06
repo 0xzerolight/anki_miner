@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles import SPACING, Theme
 from anki_miner.gui.utils.fonts import make_scaled_font
+from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.widgets.dialogs.export_dialog import ExportDialog
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.models import TokenizedWord
@@ -64,6 +65,7 @@ class WordPreviewDialog(QDialog):
         self._setup_ui()
         self._populate_table()
         self._update_statistics()
+        add_min_max_buttons(self)
 
     def _setup_ui(self) -> None:
         """Set up the user interface."""

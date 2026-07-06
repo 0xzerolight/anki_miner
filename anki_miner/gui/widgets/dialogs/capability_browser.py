@@ -33,6 +33,7 @@ from anki_miner.gui.capabilities import (
     CapabilityTarget,
     search,
 )
+from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 
 
 class _RevealTarget(Protocol):
@@ -89,6 +90,7 @@ class CapabilityBrowser(QDialog):
 
         self._apply_filter("")
         self.search_box.setFocus()
+        add_min_max_buttons(self)
 
     # ------------------------------------------------------------------ filter
     def visible_capabilities(self) -> list[Capability]:

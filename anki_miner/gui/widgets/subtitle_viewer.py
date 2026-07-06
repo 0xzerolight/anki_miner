@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
+from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,7 @@ class SubtitleViewer(QDialog):
         self.resize(800, 600)
 
         self._setup_ui(initial_offset)
+        add_min_max_buttons(self)
         self.player_widget.set_source(
             video_path,
             subtitle_entries,

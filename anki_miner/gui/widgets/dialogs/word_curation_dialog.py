@@ -34,6 +34,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.fonts import make_scaled_font
+from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.models import TokenizedWord
 from anki_miner.utils.i18n import tr_format
@@ -150,6 +151,7 @@ class WordCurationDialog(QDialog):
         self._populate_table()
         self._update_word_count()
         self.finished.connect(self._stop_player)
+        add_min_max_buttons(self)
 
     # ------------------------------------------------------------------
     # UI construction

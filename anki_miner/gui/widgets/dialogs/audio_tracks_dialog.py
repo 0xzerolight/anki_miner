@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.utils.audio_track_detector import AudioStream
 from anki_miner.utils.i18n import tr_format
 
@@ -67,6 +68,8 @@ class AudioTracksDialog(QDialog):
             self._build_single_track(layout, streams[0])
         else:
             self._build_multi_track(layout, streams, current_override, auto_detected)
+
+        add_min_max_buttons(self)
 
     # ------------------------------------------------------------------
     # Layout builders

@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
+from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.utils.i18n import tr_format
@@ -38,6 +39,7 @@ class KnownWordsManagerDialog(QDialog):
         # feature — initialize so reads/writes don't hit a missing file.
         self._db.initialize()
         self._setup_ui()
+        add_min_max_buttons(self)
         self._refresh()
 
     def _setup_ui(self) -> None:

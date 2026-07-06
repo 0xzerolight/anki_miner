@@ -1,8 +1,8 @@
 """Typed Qt helpers that absorb Optional-returning accessors with documented invariants."""
 
-from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent
-from PyQt6.QtWidgets import QHeaderView, QTableWidget
+from PyQt6.QtWidgets import QDialog, QHeaderView, QTableWidget
 
 
 def urls_from_event(event: QDropEvent | QDragEnterEvent) -> list[QUrl]:
@@ -32,3 +32,20 @@ def configure_table_header(
     if header is not None:
         header.setStretchLastSection(True)
         header.setSectionResizeMode(resize_mode)
+
+
+def add_min_max_buttons(dialog: QDialog) -> None:
+    """Add minimize/maximize title-bar buttons to a resizable dialog.
+
+    Windows gives a plain ``QDialog`` only a close button; OR in the min/max
+    hints so resizable dialogs behave like normal windows. Linux WMs already
+    show all three regardless of flags. Call before the dialog is first shown:
+    ``setWindowFlags`` re-parents and hides an already-visible widget (PyQt6),
+    so callers invoke this during ``__init__``, ahead of ``exec()``.
+
+    OR-ing onto ``windowFlags()`` preserves the existing close/system-menu hints
+    and the implicit ``exec()`` modality; only the two button hints are added.
+    """
+    dialog.setWindowFlags(
+        dialog.windowFlags() | Qt.WindowType.WindowMinimizeButtonHint | Qt.WindowType.WindowMaximizeButtonHint
+    )
