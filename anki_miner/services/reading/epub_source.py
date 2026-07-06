@@ -27,12 +27,12 @@ touch beyond text is the bomb-safe cover peek. The single shared cover
 from __future__ import annotations
 
 import posixpath
+import re
 import zipfile
 from pathlib import Path
 from urllib.parse import unquote
 
 from lxml import etree, html  # type: ignore[import-untyped]
-from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.exceptions import SetupError
 from anki_miner.services.reading.models import (
@@ -42,7 +42,6 @@ from anki_miner.services.reading.models import (
     ReadingUnit,
 )
 from anki_miner.services.reading.sentence_splitter import split_sentences
-from anki_miner.utils.i18n import tr_format
 
 _CONTAINER_PATH = "META-INF/container.xml"
 _ENCRYPTION_PATH = "META-INF/encryption.xml"
@@ -81,11 +80,17 @@ _BLOCK_TAGS = frozenset(
 
 # Chapter labels that are structure, not content.
 _BOILERPLATE_LABELS = frozenset({"表紙", "目次", "奥付", "扉", "中扉"})
-# Spine filename stems that are front/back matter, not the work.
-_BOILERPLATE_MARKERS = ("cover", "toc", "colophon", "caution")
+# Spine filename stem tokens that mark front/back matter, not the work.
+_BOILERPLATE_TOKENS = frozenset({"cover", "toc", "colophon", "caution"})
+# Split a stem into whole tokens on ``-``, ``_`` and ``.`` boundaries.
+_STEM_DELIMITERS = re.compile(r"[-_.]+")
 
 _CONTENT_MEDIA_TYPES = frozenset({"application/xhtml+xml", "text/html"})
 _CONTENT_EXTS = (".xhtml", ".html", ".htm")
+
+# Pretty-printed XHTML wraps paragraph text across lines with indent; join those
+# CJK line-wraps with "" (no space) while leaving internal U+3000 untouched.
+_INTERNAL_LINEBREAK = re.compile(r"[ \t]*\n[ \t]*")
 
 
 def load(ref: ReadingSourceRef) -> ReadingDocument:
@@ -149,14 +154,7 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
                     index += 1
 
         if gaiji_total:
-            doc.warnings.append(
-                tr_format(
-                    QCoreApplication.translate(
-                        "EpubSource", "Skipped %1 inline image(s) (gaiji) that carried no text."
-                    ),
-                    gaiji_total,
-                )
-            )
+            doc.warnings.append(f"Skipped {gaiji_total} inline image(s) (gaiji) that carried no text.")
     return doc
 
 
@@ -223,12 +221,7 @@ def _check_encryption(zf: zipfile.ZipFile, names: set[str], epub_path: Path) -> 
             continue
         if uri and unquote(uri).lower().endswith(_FONT_EXTS):
             continue
-        raise SetupError(
-            tr_format(
-                QCoreApplication.translate("EpubSource", "'%1' is DRM-protected and cannot be mined."),
-                epub_path.name,
-            )
-        )
+        raise SetupError(f"'{epub_path.name}' is DRM-protected and cannot be mined.")
 
 
 # --------------------------------------------------------------------------- #
@@ -331,12 +324,9 @@ def _find_cover(
             header = b""
     if _is_image_magic(header):
         return ImageRef(epub_path, entry), None
-    return None, tr_format(
-        QCoreApplication.translate(
-            "EpubSource",
-            "Cover image '%1' is unreadable or not a supported image; " "the book will be mined without a cover.",
-        ),
-        posixpath.basename(entry),
+    return None, (
+        f"Cover image '{posixpath.basename(entry)}' is unreadable or not a supported image; "
+        "the book will be mined without a cover."
     )
 
 
@@ -364,10 +354,17 @@ def _is_content_doc(media_type: str | None, href: str) -> bool:
 
 
 def _is_boilerplate_name(entry: str) -> bool:
+    """True for front/back-matter spine files (cover/toc/colophon/caution, ``p-ad-*``).
+
+    Matches whole delimiter-split tokens, never raw substrings, so real chapters
+    like ``protocol.xhtml`` (contains "toc") or ``discover-chapter.xhtml``
+    (contains "cover") are not mistaken for boilerplate.
+    """
     stem = posixpath.basename(entry).rsplit(".", 1)[0].lower()
-    if any(marker in stem for marker in _BOILERPLATE_MARKERS):
+    if stem.startswith("p-ad-"):
         return True
-    return stem.startswith("p-ad") or "-ad-" in stem
+    tokens = set(_STEM_DELIMITERS.split(stem))
+    return bool(tokens & _BOILERPLATE_TOKENS)
 
 
 def _find_body(root):
@@ -419,7 +416,7 @@ def _walk_body(body) -> tuple[list[str], int]:
     def flush() -> None:
         if not buf:
             return
-        text = "".join(buf).lstrip()
+        text = _INTERNAL_LINEBREAK.sub("", "".join(buf)).lstrip()
         buf.clear()
         if text:
             paragraphs.append(text)
@@ -542,8 +539,4 @@ def _parse_ncx(zf: zipfile.ZipFile, names: set[str], opf_dir: str, ncx_href: str
 
 
 def _invalid_epub_msg(epub_path: Path, detail: str) -> str:
-    return tr_format(
-        QCoreApplication.translate("EpubSource", "'%1' is not a valid EPUB: %2."),
-        epub_path.name,
-        detail,
-    )
+    return f"'{epub_path.name}' is not a valid EPUB: {detail}."
