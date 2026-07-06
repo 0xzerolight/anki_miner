@@ -1130,7 +1130,7 @@ Total de cartes créées : %2</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Mine vocabulary from manga volumes (mokuro) or novels (EPUB/text).</source>
+        <source>Mine vocabulary from manga volumes (mokuro) in the Manga sub-tab, or novels (EPUB/text) in the Novels sub-tab.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2172,11 +2172,27 @@ Le dictionnaire n'a pas été supprimé.</translation>
         </translation>
     </message>
     <message>
+        <source>Step 3/5 — Preparing card images</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Step 3/5 — Preparing page images</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Preparing card images</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Preparing page images</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card image: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Page image: %1</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2189,10 +2205,6 @@ Le dictionnaire n'a pas été supprimé.</translation>
     </message>
     <message>
         <source>Skipped unreadable page image %1 — its card has no picture</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Page image: %1</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3046,6 +3058,14 @@ Continuer ?</translation>
         <translation>JMdict prêt (%1 entrées)</translation>
     </message>
     <message>
+        <source>Manga</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Novels</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Generate</source>
         <translation>Générer</translation>
     </message>
@@ -3520,6 +3540,246 @@ Vous pourrez ajuster cela plus tard dans Paramètres → Anki.</translation>
         <translation>%1 séries - %2 épisodes - Prêt à traiter</translation>
     </message>
 </context><context>
+    <name>ReadingMangaTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation type="unfinished">Réviser les mots avant l'extraction</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup for each source before creating cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Overall Progress</source>
+        <translation type="unfinished">Progression globale</translation>
+    </message>
+    <message>
+        <source>Current Item</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Quick Processing</source>
+        <translation type="unfinished">Traitement rapide</translation>
+    </message>
+    <message>
+        <source>Volume Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A folder with one manga volume mines now; a series folder of many volumes fills the queue below.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation type="unfinished">Aperçu</translation>
+    </message>
+    <message>
+        <source>Preview the selected volume folder — no cards created.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation type="unfinished">Extraire</translation>
+    </message>
+    <message>
+        <source>Mine the selected volume folder into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">Annuler</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation type="unfinished">Annuler l'exécution en cours.</translation>
+    </message>
+    <message>
+        <source>Manga queue</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Series Folder…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add every volume inside a series folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Volumes…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add manga volumes — .mokuro/.cbz/.zip file(s).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add a series folder or volumes above, or drag them here.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Process Queue</source>
+        <translation type="unfinished">Traiter la file d'attente</translation>
+    </message>
+    <message>
+        <source>Mine every queued volume into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Clear All</source>
+        <translation type="unfinished">Tout effacer</translation>
+    </message>
+    <message>
+        <source>Remove every queued item that is not currently mining.</source>
+        <translation type="unfinished">Retirer chaque élément en file d'attente qui n'est pas en cours d'extraction.</translation>
+    </message>
+    <message>
+        <source>Add Series Folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Volumes</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manga</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not add %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Novels are mined in the Novels tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a valid volume folder first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not process %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Found %1 volumes — added to the queue below.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">Annulation…</translation>
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation type="unfinished">Extraction de %1 sur %2 : %3</translation>
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation type="unfinished">Extrait %1 : %2 cartes.</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation type="unfinished">Échec %1 : %2.</translation>
+    </message>
+    <message>
+        <source>Completed: %1/%2</source>
+        <translation type="unfinished">Terminé : %1/%2</translation>
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation type="unfinished">File d'attente terminée : %1 réussis, %2 échoués.</translation>
+    </message>
+</context><context>
+    <name>ReadingNovelsTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation type="unfinished">Réviser les mots avant l'extraction</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">Progression</translation>
+    </message>
+    <message>
+        <source>Novel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Book File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Books</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select an .epub or .txt book to mine.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview</source>
+        <translation type="unfinished">Aperçu</translation>
+    </message>
+    <message>
+        <source>Preview the selected book — no cards created.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation type="unfinished">Extraire</translation>
+    </message>
+    <message>
+        <source>Mine the selected book into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">Annuler</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation type="unfinished">Annuler l'exécution en cours.</translation>
+    </message>
+    <message>
+        <source>Manga is mined in the Manga tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a valid .epub or .txt book first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not process %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">Annulation…</translation>
+    </message>
+    <message>
+        <source>Mining: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation type="unfinished">Extrait %1 : %2 cartes.</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation type="unfinished">Échec %1 : %2.</translation>
+    </message>
+</context><context>
     <name>ReadingQueueItemWidget</name>
     <message>
         <source>%1 cards created</source>
@@ -3544,120 +3804,20 @@ Vous pourrez ajuster cela plus tard dans Paramètres → Anki.</translation>
 </context><context>
     <name>ReadingTab</name>
     <message>
-        <source>Reading queue</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Add Manga…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Add manga volumes — .mokuro/.cbz/.zip file(s). Drop a whole title folder here to add every volume.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Add Book…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Add a novel — an .epub or .txt file.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Add manga or books above, or drag them here.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Review words before mining</source>
-        <translation type="unfinished">Réviser les mots avant l'extraction</translation>
-    </message>
-    <message>
-        <source>Show the word-selection popup for each source before creating cards.</source>
-        <translation type="unfinished" />
+        <source>Mining unavailable — services not initialized.</source>
+        <translation type="unfinished">Extraction indisponible — services non initialisés.</translation>
     </message>
     <message>
         <source>Preview</source>
         <translation type="unfinished">Aperçu</translation>
     </message>
     <message>
-        <source>Run the queue in preview mode — no cards created.</source>
-        <translation type="unfinished">Exécuter la file d'attente en mode aperçu — aucune carte créée.</translation>
-    </message>
-    <message>
         <source>Mine</source>
         <translation type="unfinished">Extraire</translation>
     </message>
     <message>
-        <source>Mine every queued item into Anki cards.</source>
-        <translation type="unfinished">Extraire chaque élément en file d'attente en cartes Anki.</translation>
-    </message>
-    <message>
-        <source>Clear</source>
-        <translation type="unfinished">Effacer</translation>
-    </message>
-    <message>
-        <source>Remove every queued item that is not currently mining.</source>
-        <translation type="unfinished">Retirer chaque élément en file d'attente qui n'est pas en cours d'extraction.</translation>
-    </message>
-    <message>
-        <source>Stop All</source>
-        <translation type="unfinished">Tout arrêter</translation>
-    </message>
-    <message>
-        <source>Cancel the active run.</source>
-        <translation type="unfinished">Annuler l'exécution en cours.</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation type="unfinished">Progression</translation>
-    </message>
-    <message>
-        <source>Add Manga</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Manga</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Add Book</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Books</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Could not add %1: %2</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Mining unavailable — services not initialized.</source>
-        <translation type="unfinished">Extraction indisponible — services non initialisés.</translation>
-    </message>
-    <message>
         <source>%1 run starting — %2 items.</source>
         <translation type="unfinished">Démarrage de l'exécution %1 — %2 éléments.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation type="unfinished">Annulation…</translation>
-    </message>
-    <message>
-        <source>Mining %1 of %2: %3</source>
-        <translation type="unfinished">Extraction de %1 sur %2 : %3</translation>
-    </message>
-    <message>
-        <source>Mined %1: %2 cards.</source>
-        <translation type="unfinished">Extrait %1 : %2 cartes.</translation>
-    </message>
-    <message>
-        <source>Failed %1: %2.</source>
-        <translation type="unfinished">Échec %1 : %2.</translation>
-    </message>
-    <message>
-        <source>Queue done: %1 succeeded, %2 failed.</source>
-        <translation type="unfinished">File d'attente terminée : %1 réussis, %2 échoués.</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>
