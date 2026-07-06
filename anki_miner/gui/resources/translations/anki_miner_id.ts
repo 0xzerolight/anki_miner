@@ -2174,6 +2174,14 @@ Kamus tidak dihapus.</translation>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Skipped corrupt image archive %1 — its cards have no page image</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped unreadable page image %1 — its card has no picture</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Page image: %1</source>
         <translation type="unfinished" />
     </message>
@@ -3534,7 +3542,7 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Add manga volumes — a .mokuro/.cbz/.zip file, or a whole title folder.</source>
+        <source>Add manga volumes — .mokuro/.cbz/.zip file(s). Drop a whole title folder here to add every volume.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3598,7 +3606,15 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Manga</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Add Book</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Books</source>
         <translation type="unfinished" />
     </message>
     <message>
