@@ -228,6 +228,25 @@ class TestYouTubeAudiobookShutdownStillPoison:
 
         assert poison_calls, "AudiobookTab.shutdown must poison curation gate"
 
+    def test_reading_shutdown_poisons_gate(self, qapp, qtbot):
+        """ReadingTab.shutdown() must call _poison_curation_gate()."""
+        from anki_miner.gui.widgets.reading_tab import ReadingTab
+
+        fake_worker = MagicMock()
+        fake_worker.cancel = MagicMock()
+        fake_worker.quit = MagicMock()
+        fake_worker.wait.return_value = True
+
+        poison_calls: list[bool] = []
+        tab = MagicMock(spec=ReadingTab)
+        tab.worker_thread = fake_worker
+        tab._poison_curation_gate = lambda: poison_calls.append(True)
+        tab._cancel_active_curation_dialog = MagicMock()
+
+        ReadingTab.shutdown(tab)
+
+        assert poison_calls, "ReadingTab.shutdown must poison curation gate"
+
 
 # ---------------------------------------------------------------------------
 # background_tasks.shutdown() duck-typed gate (OVH-003)
