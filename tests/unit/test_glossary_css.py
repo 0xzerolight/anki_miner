@@ -161,12 +161,87 @@ class TestGapFillerGate:
     def test_structural_rules_stay_ungated(self):
         # The gate is for data-sc-* presentation gap-fillers only; structural
         # rules (our own markup) must keep applying to styled dicts too.
+        # ``.gloss-tag`` is now split — its LAYOUT rule stays ungated but its pill
+        # VISUALS defer on styled cards — so its gating is pinned explicitly in
+        # TestHouseCosmeticsDeferOnStyledCards, not here.
         css = _no_comments(load_glossary_css())
-        for token in ("ul.gloss-list", ".gloss-sc-ruby", ".gloss-image", ".gloss-tag"):
+        for token in ("ul.gloss-list", ".gloss-sc-ruby", ".gloss-image"):
             start = css.index(token)
             selector_start = css.rfind("}", 0, start) + 1
             selector = css[selector_start:start]
             assert self._ANCHOR not in selector, f"structural rule {token!r} wrongly gated"
+
+
+class TestHouseCosmeticsDeferOnStyledCards:
+    """anki_miner's house cosmetics (grey/shrunk attribution, compact block size,
+    grey sense ordinals, grey tag-chip pill) must defer on styled
+    (``data-has-styles``) entries so a Jitendex card matches Yomitan — which
+    embeds no base sheet into the Anki card, leaving note-type/dict CSS to govern.
+    Each cosmetic is gated ``li[data-dictionary]:not([data-has-styles])`` and is
+    NOT a data-sc hook (so TestGapFillerGate does not cover it).
+    """
+
+    _ANCHOR = "li[data-dictionary]:not([data-has-styles])"
+
+    def _selectors(self, css):
+        return [sel.strip() for grp, _ in _iter_rules(css) for sel in grp.split(",")]
+
+    def test_attribution_line_is_gated(self):
+        css = load_glossary_css()
+        i_rules = [s for s in self._selectors(css) if s.endswith("> i")]
+        assert i_rules, "attribution '> i' rule missing"
+        for sel in i_rules:
+            assert self._ANCHOR in sel, f"attribution rule not gated (greys styled cards): {sel!r}"
+
+    def test_block_font_size_relocated_off_outer_ol(self):
+        css = load_glossary_css()
+        for grp, decl in _iter_rules(css):
+            if grp.strip() == ".yomitan-glossary > ol[data-count]":
+                assert "font-size" not in decl, "block font-size must leave the ungated outer-ol rule"
+        # A gated size default (unstyled dicts only) must exist — not the attribution
+        # rule, not a data-sc gap-filler.
+        assert any(
+            self._ANCHOR in grp and "font-size" in decl and "> i" not in grp and "data-sc-" not in grp
+            for grp, decl in _iter_rules(css)
+        ), "gated block-size default for unstyled dicts missing"
+
+    def test_sense_ordinal_color_is_gated(self):
+        css = load_glossary_css()
+        marker_rules = [s for s in self._selectors(css) if "::marker" in s]
+        assert marker_rules, "::marker rule missing"
+        for sel in marker_rules:
+            assert self._ANCHOR in sel, f"::marker color not gated: {sel!r}"
+
+    def test_chip_pill_visuals_gated_layout_ungated(self):
+        css = load_glossary_css()
+        rules = [(grp.strip(), decl) for grp, decl in _iter_rules(css) if ".gloss-tag" in grp]
+        assert len(rules) >= 2, "expected .gloss-tag split into a layout rule and a gated visual rule"
+        layout = [(g, d) for g, d in rules if self._ANCHOR not in g]
+        visual = [(g, d) for g, d in rules if self._ANCHOR in g]
+        assert layout, "chip layout rule must stay ungated (preserve the no-separator join on styled cards)"
+        assert visual, "chip pill visuals must be gated (defer to plain text on styled cards)"
+        # Layout keeps the inline-block join; visual carries the grey pill.
+        assert any("display" in d for _, d in layout), "layout rule should keep display/join props"
+        assert any(("background" in d or "color" in d) for _, d in visual), "visual rule should carry pill paint"
+
+
+class TestGlossaryListYomitanDefault:
+    """The in-sense glossary list must render as Yomitan's DEFAULT bulleted block,
+    not the compact inline ' | ' layout (Yomitan compact-mode only). The gated
+    inline rules are removed so the structural ``.gloss-sc-ul`` disc block governs.
+    """
+
+    def test_no_inline_glossary_list_rule(self):
+        css = _no_comments(load_glossary_css())
+        assert 'data-sc-content="glossary"' not in css, (
+            "inline compact glossary-list rule must be gone so the structural "
+            ".gloss-sc-ul bulleted block governs (Yomitan default)"
+        )
+        assert 'content: " | "' not in css, "compact ' | ' separator must be removed"
+
+    def test_structural_disc_block_still_present(self):
+        css = _no_comments(load_glossary_css())
+        assert ".gloss-sc-ul" in css, "structural glossary-list rule (disc block) must remain"
 
 
 class TestThemeAgnostic:
