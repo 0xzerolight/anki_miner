@@ -386,7 +386,7 @@ def test_progress_callback_routes_to_item_progress_signal(make_worker, mock_proc
 
     assert caps["progress"].calls == [
         (0, "Fetching definitions", 0),
-        (0, "Fetching definitions: word-05", 50),
+        (0, "word-05", 50),
         (0, "Fetching definitions", 100),
     ]
 

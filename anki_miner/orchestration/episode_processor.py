@@ -1557,7 +1557,28 @@ class EpisodeProcessor:
         Warnings fire once per failing archive/ref (``failed_archives`` /
         ``failed_refs`` memos) even when the ref is shared by many words.
         """
-        self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Step 3/5 — Preparing page images"))
+        # Label-only kind split: manga cards carry a distinct page image each,
+        # while a book attaches one cover to every card (txt has none) — so the
+        # image-stage wording differs. The three emissions below stay strictly
+        # UNCONDITIONAL (band accounting must not depend on kind); only the text
+        # varies. Derived once here, used at the three sites.
+        is_book = document.kind == "book"
+        step_banner = (
+            QCoreApplication.translate("EpisodeProcessor", "Step 3/5 — Preparing card images")
+            if is_book
+            else QCoreApplication.translate("EpisodeProcessor", "Step 3/5 — Preparing page images")
+        )
+        image_stage_desc = (
+            QCoreApplication.translate("EpisodeProcessor", "Preparing card images")
+            if is_book
+            else QCoreApplication.translate("EpisodeProcessor", "Preparing page images")
+        )
+        image_item_template = (
+            QCoreApplication.translate("EpisodeProcessor", "Card image: %1")
+            if is_book
+            else QCoreApplication.translate("EpisodeProcessor", "Page image: %1")
+        )
+        self.presenter.show_info(step_banner)
         images_dir = run_temp_folder / "images"
         units_by_index = {unit.index: unit for unit in document.units}
 
@@ -1579,7 +1600,7 @@ class EpisodeProcessor:
         if progress_callback is not None:
             progress_callback.on_start(
                 len(unknown_words),
-                QCoreApplication.translate("EpisodeProcessor", "Preparing page images"),
+                image_stage_desc,
             )
         for i, word in enumerate(unknown_words):
             media = MediaData()
@@ -1646,10 +1667,7 @@ class EpisodeProcessor:
             if progress_callback is not None:
                 progress_callback.on_progress(
                     i + 1,
-                    tr_format(
-                        QCoreApplication.translate("EpisodeProcessor", "Page image: %1"),
-                        word.mined_form,
-                    ),
+                    tr_format(image_item_template, word.mined_form),
                 )
         if progress_callback is not None:
             progress_callback.on_complete()

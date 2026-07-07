@@ -104,7 +104,6 @@ def _build_tabs(monkeypatch, test_config):
     reading_presenter = GUIPresenter(window)
     reading_tab = ReadingTab(
         config=window.get_config(),
-        processor=None,
         presenter=reading_presenter,
         stats_service=stats_service,
     )

@@ -30,7 +30,13 @@ class QueueMiningProgressAdapter:
 
     def on_progress(self, current: int, item_description: str) -> None:
         pct = int(round(100 * current / self._total))
-        label = f"{self._desc}: {item_description}" if self._desc else item_description
+        # Every pipeline item string is already self-prefixed with its stage
+        # ("Extracting media: X", "Expression audio: 語", ...), so emit it as-is.
+        # Gluing on self._desc — frozen at stage 1, since StageWeightedProgress
+        # forwards on_start only once — produced double prefixes like
+        # "Preparing page images: Expression audio: 語" (issue #1). Fall back to
+        # the stage desc only when the item string is empty (e.g. finish()).
+        label = item_description if item_description else self._desc
         self._emit(self._idx, label, pct)
 
     def on_complete(self) -> None:

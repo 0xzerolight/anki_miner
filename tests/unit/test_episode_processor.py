@@ -4075,15 +4075,14 @@ class TestExpressionAudioProgressBand:
         )
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", progress_callback=cb)
 
-        # StageWeightedProgress only forwards on_start to the inner callback
-        # once — on the very first stage (extract). All subsequent on_start
-        # calls from later stages (expression audio, definitions, cards) only
-        # advance the internal band counter and never reach the inner callback.
-        # Therefore cb.starts has exactly 1 entry regardless of band count.
-        # The expression-audio band being registered is verified indirectly:
-        # fetch_candidates was called (feature ran) AND finish() emitted one
-        # on_complete, confirming the full 4-band sweep completed without
-        # band-accounting errors.
+        # StageWeightedProgress forwards inner.on_start exactly once — on the
+        # very first stage (extract). Later stages (expression audio,
+        # definitions, cards) advance the band counter and refresh the label via
+        # inner.on_progress (never a second on_start), so cb.starts has exactly
+        # 1 entry regardless of band count. The expression-audio band being
+        # registered is verified indirectly: fetch_candidates was called
+        # (feature ran) AND finish() emitted one on_complete, confirming the
+        # full 4-band sweep completed without band-accounting errors.
         assert len(cb.starts) == 1
         assert cb.completes == 1  # from StageWeightedProgress.finish()
 

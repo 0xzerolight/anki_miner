@@ -614,7 +614,7 @@ def test_queue_mining_progress_adapter_bakes_idx_into_emit():
 
     assert emitted == [
         (7, "Extracting media", 0),
-        (7, "Extracting media: word-05", 50),
+        (7, "word-05", 50),
         (7, "Extracting media", 100),
     ]
 
@@ -639,8 +639,9 @@ def test_mining_progress_adapter_handles_zero_total():
     adapter.on_start(0, "Edge case")
     adapter.on_progress(1, "item")
 
-    # on_start emits pct=0; on_progress emits 1/1 = 100% under the clamp
-    assert emitted[-1] == (3, "Edge case: item", 100)
+    # on_start emits pct=0; on_progress emits 1/1 = 100% under the clamp.
+    # The label is the self-prefixed item string as-is (no stage-desc glue).
+    assert emitted[-1] == (3, "item", 100)
 
 
 # ---------------------------------------------------------------------------
