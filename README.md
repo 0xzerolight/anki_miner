@@ -103,7 +103,7 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - Offline Yomitan dictionary import (definitions, pitch accent, frequency data) with priority ordering.
 - Multiple frequency lists chained together, each indexed separately and ordered by priority.
 - Expression (word-level) audio on cards from local audio packs, JapanesePod101, or Google Translate TTS (opt-in, chained).
-- Definition styling presets (like Yomitan) or custom CSS.
+- Per-dictionary glossary styling, Yomitan-style — each dictionary's own scoped CSS is applied automatically, self-contained per card.
 - Subtitle timing preview with adjustable offset.
 - Animated screenshots (see example card gifs).
 

@@ -474,14 +474,6 @@
         <translation>Gli stili del glossario sono incorporati in ogni carta estratta, quindi il CSS del tipo di nota non viene mai modificato. I dizionari che includono stili propri vengono applicati automaticamente.</translation>
     </message>
     <message>
-        <source>Custom CSS:</source>
-        <translation>CSS personalizzato:</translation>
-    </message>
-    <message>
-        <source>Published Yomitan/Jitendex snippets work verbatim. Re-import a dictionary to refresh its data-sc-* hooks on older entries.</source>
-        <translation>Gli snippet Yomitan/Jitendex pubblicati funzionano alla lettera. Reimporta un dizionario per aggiornarne gli hook data-sc-* sulle voci più vecchie.</translation>
-    </message>
-    <message>
         <source>Syncing deck list...</source>
         <translation>Sincronizzazione dell'elenco dei mazzi in corso...</translation>
     </message>

@@ -474,14 +474,6 @@
         <translation>用語集のスタイルはマイニングされた各カードに直接組み込まれるため、ノートタイプの CSS が変更されることはありません。独自のスタイルを持つ辞書は自動的に適用されます。</translation>
     </message>
     <message>
-        <source>Custom CSS:</source>
-        <translation>カスタム CSS:</translation>
-    </message>
-    <message>
-        <source>Published Yomitan/Jitendex snippets work verbatim. Re-import a dictionary to refresh its data-sc-* hooks on older entries.</source>
-        <translation>公開されている Yomitan/Jitendex のスニペットはそのまま使えます。古いエントリの data-sc-* フックを更新するには辞書を再インポートしてください。</translation>
-    </message>
-    <message>
         <source>Syncing deck list...</source>
         <translation>デッキ一覧を同期中...</translation>
     </message>

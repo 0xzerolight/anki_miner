@@ -474,14 +474,6 @@
         <translation>Gaya glosarium disematkan ke setiap kartu yang di-mining, sehingga CSS tipe catatan tidak pernah disentuh. Kamus yang menyertakan gaya sendiri akan diterapkan secara otomatis.</translation>
     </message>
     <message>
-        <source>Custom CSS:</source>
-        <translation>CSS Kustom:</translation>
-    </message>
-    <message>
-        <source>Published Yomitan/Jitendex snippets work verbatim. Re-import a dictionary to refresh its data-sc-* hooks on older entries.</source>
-        <translation>Cuplikan Yomitan/Jitendex yang diterbitkan berfungsi apa adanya. Impor ulang kamus untuk menyegarkan hook data-sc-*-nya pada entri yang lebih lama.</translation>
-    </message>
-    <message>
         <source>Syncing deck list...</source>
         <translation>Menyinkronkan daftar dek...</translation>
     </message>

@@ -474,14 +474,6 @@
         <translation>词典释义样式已内置于每张挖出的卡片中，因此不会改动笔记类型的 CSS。自带样式的词典会自动套用其样式。</translation>
     </message>
     <message>
-        <source>Custom CSS:</source>
-        <translation>自定义 CSS：</translation>
-    </message>
-    <message>
-        <source>Published Yomitan/Jitendex snippets work verbatim. Re-import a dictionary to refresh its data-sc-* hooks on older entries.</source>
-        <translation>已发布的 Yomitan/Jitendex 代码片段可原样使用。重新导入词典可刷新旧条目上的 data-sc-* 钩子。</translation>
-    </message>
-    <message>
         <source>Syncing deck list...</source>
         <translation>正在同步牌组列表...</translation>
     </message>
