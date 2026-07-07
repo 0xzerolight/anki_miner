@@ -1862,14 +1862,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation>CSV/TSV со столбцами (чтение, кандзи, шаблон) или zip-архив тонального ударения в формате Yomitan (например, Kanjium, NHK). Zip-архивы Yomitan импортируются в ~/.anki_miner/pitch_accent.csv при сохранении.</translation>
     </message>
     <message>
-        <source>Enable Pitch Accent</source>
-        <translation>Включить тональное ударение</translation>
-    </message>
-    <message>
-        <source>Looks up and writes pitch patterns to mapped fields.</source>
-        <translation>Ищет и записывает шаблоны тонального ударения в сопоставленные поля.</translation>
-    </message>
-    <message>
         <source>Remove dictionary</source>
         <translation>Удалить словарь</translation>
     </message>
@@ -1946,8 +1938,8 @@ The dictionary was not removed.</source>
         <translation>Сопоставленные поля: &lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
     <message>
-        <source>Resources downloaded: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation>Загружено ресурсов: &lt;b&gt;%1&lt;/b&gt;</translation>
+        <source>Resources configured: &lt;b&gt;%1&lt;/b&gt;</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -2690,14 +2682,6 @@ The dictionary was not removed.</source>
     <message>
         <source>Remove</source>
         <translation>Удалить</translation>
-    </message>
-    <message>
-        <source>Enable Frequency Data</source>
-        <translation>Включить данные частотности</translation>
-    </message>
-    <message>
-        <source>Show word frequency rank on cards</source>
-        <translation>Показывать ранг частотности слова на карточках</translation>
     </message>
     <message>
         <source>Remove frequency source</source>

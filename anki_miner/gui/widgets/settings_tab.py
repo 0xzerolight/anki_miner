@@ -495,15 +495,15 @@ class SettingsTab(QWidget):
         # Audio source chain (same — immediate persist via its own signal).
         self.audio_panel.set_chain(self.config.expression_audio_chain)
 
-        # Frequency source chain + global enable toggle live in the Frequency
-        # tab; the chain persists immediately via its own signal. The max-rank
-        # threshold is owned by filtering_panel and already loaded above.
+        # Frequency source chain lives in the Frequency tab; the chain persists
+        # immediately via its own signal. Frequency activation is derived from an
+        # enabled source being present (config.frequency_active) — no toggle. The
+        # max-rank threshold is owned by filtering_panel and already loaded above.
         self.frequency_panel.set_chain(self.config.frequency_chain)
-        self.frequency_panel.use_frequency_checkbox.setChecked(self.config.use_frequency_data)
 
         # Pitch accent settings — file selector lives in the Dictionaries tab.
+        # Activation is derived from the file being present (config.pitch_active).
         self.dictionary_panel.pitch_accent_selector.set_path(str(self.config.pitch_accent_path))
-        self.dictionary_panel.use_pitch_accent_checkbox.setChecked(self.config.use_pitch_accent)
 
         # Update settings — standalone checkbox outside all panels.
         self.check_for_updates_checkbox.setChecked(self.config.check_for_updates)
@@ -683,11 +683,9 @@ class SettingsTab(QWidget):
             # Pitch accent settings — pitch_accent_path is overwritten below
             # with the resolver's result once the staged import commits.
             pitch_accent_path=self.config.pitch_accent_path,
-            use_pitch_accent=self.dictionary_panel.use_pitch_accent_checkbox.isChecked(),
-            # Frequency source chain + global enable — persisted immediately via
-            # the frequency panel's signals, but also included here for sync.
+            # Frequency source chain — persisted immediately via the frequency
+            # panel's signals, but also included here for sync.
             frequency_chain=self.frequency_panel.get_chain(),
-            use_frequency_data=self.frequency_panel.use_frequency_checkbox.isChecked(),
             # Audio source chain — persisted immediately via chain_changed, but
             # also included in the full Save so it is always in sync.
             expression_audio_chain=self.audio_panel.get_chain(),

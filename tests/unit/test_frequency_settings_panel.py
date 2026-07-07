@@ -204,15 +204,6 @@ def test_enable_toggle_reflected_in_get_chain(qapp, qtbot, tmp_path):
     assert panel.get_chain()[0].enabled is False
 
 
-def test_global_enable_checkbox_read(qapp, qtbot, tmp_path):
-    panel = FrequencySettingsPanel(tmp_path)
-    qtbot.addWidget(panel)
-    panel.use_frequency_checkbox.setChecked(True)
-    assert panel.use_frequency_checkbox.isChecked() is True
-    panel.use_frequency_checkbox.setChecked(False)
-    assert panel.use_frequency_checkbox.isChecked() is False
-
-
 # ---------------------------------------------------------------------------
 # Reorder
 # ---------------------------------------------------------------------------

@@ -545,7 +545,7 @@ class DonePage(QWizardPage):
         cfg = self._wizard.working_config()
         reachable = getattr(self._wizard.ankiconnect_page, "_reachable", False)
         mapped_count = sum(1 for v in cfg.anki_fields.values() if v)
-        resources = cfg.use_frequency_data or cfg.use_pitch_accent
+        resources = cfg.frequency_active or cfg.pitch_active
         yes = self.tr("Yes")
         no = self.tr("No")
         lines = [
@@ -553,6 +553,6 @@ class DonePage(QWizardPage):
             tr_format(self.tr("Deck: <b>%1</b>"), cfg.anki_deck_name),
             tr_format(self.tr("Note type: <b>%1</b>"), cfg.anki_note_type),
             tr_format(self.tr("Mapped fields: <b>%1</b>"), str(mapped_count)),
-            tr_format(self.tr("Resources downloaded: <b>%1</b>"), yes if resources else no),
+            tr_format(self.tr("Resources configured: <b>%1</b>"), yes if resources else no),
         ]
         self.summary_label.setText("<br>".join(lines))

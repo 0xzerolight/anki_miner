@@ -1862,14 +1862,6 @@ Dilewati (tidak ada sumber tersimpan — klik kanan baris kamus → Impor ulang�
         <translation>CSV/TSV dengan kolom (reading, kanji, pattern), atau zip aksen nada format Yomitan (mis. Kanjium, NHK). Zip Yomitan diimpor ke ~/.anki_miner/pitch_accent.csv saat Simpan.</translation>
     </message>
     <message>
-        <source>Enable Pitch Accent</source>
-        <translation>Aktifkan Aksen Nada</translation>
-    </message>
-    <message>
-        <source>Looks up and writes pitch patterns to mapped fields.</source>
-        <translation>Mencari dan menulis pola nada ke bidang yang dipetakan.</translation>
-    </message>
-    <message>
         <source>Remove dictionary</source>
         <translation>Hapus kamus</translation>
     </message>
@@ -1946,8 +1938,8 @@ Kamus tidak dihapus.</translation>
         <translation>Bidang yang dipetakan: &lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
     <message>
-        <source>Resources downloaded: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation>Sumber daya yang diunduh: &lt;b&gt;%1&lt;/b&gt;</translation>
+        <source>Resources configured: &lt;b&gt;%1&lt;/b&gt;</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -2670,14 +2662,6 @@ Kamus tidak dihapus.</translation>
     <message>
         <source>Remove</source>
         <translation>Hapus</translation>
-    </message>
-    <message>
-        <source>Enable Frequency Data</source>
-        <translation>Aktifkan Data Frekuensi</translation>
-    </message>
-    <message>
-        <source>Show word frequency rank on cards</source>
-        <translation>Tampilkan peringkat frekuensi kata pada kartu</translation>
     </message>
     <message>
         <source>Remove frequency source</source>

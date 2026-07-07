@@ -590,3 +590,59 @@ class TestFrequencySortField:
         from anki_miner.services.anki_note_builder import REQUIRED_FIELD_KEYS
 
         assert "frequency_sort" not in REQUIRED_FIELD_KEYS
+
+
+class TestFrequencyActiveGate:
+    """frequency_active replaces the removed use_frequency_data flag: it is True
+    iff at least one enabled source is configured in the chain."""
+
+    def test_default_is_inactive(self):
+        # Default chain is empty → inactive → default mining byte-identical.
+        assert AnkiMinerConfig().frequency_active is False
+
+    def test_enabled_source_activates(self):
+        from dataclasses import replace
+
+        from anki_miner.config import FreqEntry
+
+        cfg = replace(AnkiMinerConfig(), frequency_chain=(FreqEntry(source_id="jpdb", enabled=True),))
+        assert cfg.frequency_active is True
+
+    def test_disabled_only_chain_is_inactive(self):
+        from dataclasses import replace
+
+        from anki_miner.config import FreqEntry
+
+        cfg = replace(AnkiMinerConfig(), frequency_chain=(FreqEntry(source_id="jpdb", enabled=False),))
+        assert cfg.frequency_active is False
+
+    def test_mapping_field_or_rank_does_not_activate_without_a_source(self):
+        # The mapped field only controls the card write; the rank cutoff needs a
+        # source to have ranks. Neither activates frequency on an empty chain.
+        from dataclasses import replace
+
+        cfg = replace(
+            AnkiMinerConfig(),
+            anki_fields={**dict(AnkiMinerConfig().anki_fields), "frequency": "Frequency"},
+            max_frequency_rank=10000,
+        )
+        assert cfg.frequency_active is False
+
+
+class TestPitchActiveGate:
+    """pitch_active replaces the removed use_pitch_accent flag: it is True iff a
+    pitch data file is present at pitch_accent_path."""
+
+    def test_absent_file_is_inactive(self, tmp_path):
+        from dataclasses import replace
+
+        cfg = replace(AnkiMinerConfig(), pitch_accent_path=tmp_path / "missing.csv")
+        assert cfg.pitch_active is False
+
+    def test_present_file_is_active(self, tmp_path):
+        from dataclasses import replace
+
+        pitch = tmp_path / "pitch.csv"
+        pitch.write_text("たべる,食べる,0\n", encoding="utf-8")
+        cfg = replace(AnkiMinerConfig(), pitch_accent_path=pitch)
+        assert cfg.pitch_active is True

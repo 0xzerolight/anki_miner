@@ -14,10 +14,10 @@ from anki_miner.services.frequency.registry import FrequencySourceRegistry
 
 @pytest.fixture
 def base_config(tmp_path: Path) -> AnkiMinerConfig:
-    """A config rooted at tmp dirs, frequency enabled, no chain yet."""
+    """A config rooted at tmp dirs, no chain yet (migration gates on the
+    legacy frequency.csv being present, not a flag)."""
     return replace(
         AnkiMinerConfig(),
-        use_frequency_data=True,
         frequency_chain=(),
         frequency_list_path=tmp_path / "frequency.csv",
         freqs_root=tmp_path / "freqs",
@@ -26,13 +26,6 @@ def base_config(tmp_path: Path) -> AnkiMinerConfig:
 
 def _write_csv(path: Path) -> None:
     path.write_text("word,rank\n猫,1\n犬,2\n本,3\n", encoding="utf-8")
-
-
-def test_returns_none_when_frequency_disabled(base_config: AnkiMinerConfig):
-    """A user not using frequency data should not trigger an import."""
-    _write_csv(base_config.frequency_list_path)
-    config = replace(base_config, use_frequency_data=False)
-    assert migrate_legacy_frequency_csv(config) is None
 
 
 def test_returns_none_when_chain_already_populated(base_config: AnkiMinerConfig):

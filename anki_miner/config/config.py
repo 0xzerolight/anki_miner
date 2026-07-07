@@ -211,9 +211,10 @@ class AnkiMinerConfig:
     )
     audio_packs_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "audio_packs")
 
-    # Pitch accent settings
+    # Pitch accent settings. Activation is resource-driven (see the pitch_active
+    # property): the lookup runs iff a pitch data file is present. There is no
+    # separate on/off flag — importing/downloading the file is the switch.
     pitch_accent_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "pitch_accent.csv")
-    use_pitch_accent: bool = False
     # Output label format for the pitch_category Anki field.
     # "jp": 平板/頭高/中高/尾高/起伏 (legacy)
     # "romaji": heiban/atamadaka/nakadaka/odaka/kifuku (Yomitan/Lapis compatible)
@@ -225,7 +226,9 @@ class AnkiMinerConfig:
     # an existing frequency.csv into the chain; it still round-trips so old
     # configs migrate cleanly. Do not wire new writers to it.
     frequency_list_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "frequency.csv")
-    use_frequency_data: bool = False
+    # Activation is resource-driven (see the frequency_active property): the
+    # frequency service loads iff at least one enabled source is in the chain.
+    # There is no separate on/off flag — adding a source is the switch.
     max_frequency_rank: int = 0  # 0 = no filtering; e.g. 10000 = only top 10k words
 
     # Additive multi-source frequency chain. Each enabled FreqEntry references a
@@ -558,3 +561,29 @@ class AnkiMinerConfig:
         word_field_from_mapping = self.anki_fields.get("word", "")
         if word_field_from_mapping and word_field_from_mapping != self.anki_word_field:
             object.__setattr__(self, "anki_word_field", word_field_from_mapping)
+
+    @property
+    def frequency_active(self) -> bool:
+        """Whether frequency data should load — iff an enabled source is configured.
+
+        Replaces the removed ``use_frequency_data`` flag. This gates index load,
+        the max-frequency-rank mining filter, the rank shown in the curation
+        preview, and the CSV-export rank column — all of which happen *before*
+        the card write, so a mapped ``frequency`` Anki field is the wrong signal
+        (that only controls whether the rank is written onto the card). The
+        default chain is empty, so default configs are inactive (byte-identical).
+        Note: a truthy value means the service *should* load; it still yields no
+        provider if the enabled source lacks a valid on-disk index.
+        """
+        return any(e.enabled for e in self.frequency_chain)
+
+    @property
+    def pitch_active(self) -> bool:
+        """Whether pitch lookup should load — iff a pitch data file is present.
+
+        Replaces the removed ``use_pitch_accent`` flag. The default path exists
+        only after the user imports/downloads pitch data, so default configs are
+        inactive. Like frequency, this drives pre-card-write surfaces (CSV
+        export), so file-presence — not a mapped pitch field — is the switch.
+        """
+        return self.pitch_accent_path.is_file()

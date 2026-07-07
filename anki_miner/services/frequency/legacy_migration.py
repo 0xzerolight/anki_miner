@@ -31,11 +31,11 @@ def migrate_legacy_frequency_csv(config: AnkiMinerConfig) -> AnkiMinerConfig | N
     performed or back-filled, else None (nothing to do). Pure except for the
     one-shot import I/O; safe to call on every launch — it no-ops once migrated.
     """
-    # User wasn't using frequency data — don't import anything on their behalf.
-    if not config.use_frequency_data:
-        return None
-
     # Already on the multi-source model: leave the user's chain untouched.
+    # (The use_frequency_data gate was removed with that flag; the presence of a
+    # legacy frequency.csv — checked below — is now the sole migration trigger.
+    # frequency_active can't gate here: the chain is empty at migration time by
+    # definition, so it would always be False and nothing would ever migrate.)
     if config.frequency_chain:
         return None
 

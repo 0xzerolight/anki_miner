@@ -1,9 +1,10 @@
 """SettingsTab integration for the multi-source Frequency panel.
 
 Replaces the old single-file frequency selector tests: opening loads the chain
-+ global toggle into the panel; saving writes ``frequency_chain`` +
-``use_frequency_data`` into the config; the OLD ``frequency_selector`` /
-``_resolve_frequency_path`` no longer exist (pitch's single-file flow stays).
+into the panel; saving writes ``frequency_chain`` into the config; the OLD
+``frequency_selector`` / ``_resolve_frequency_path`` no longer exist (pitch's
+single-file flow stays). Frequency activation is derived from an enabled source
+being present, so there is no on/off toggle to load or save.
 """
 
 from __future__ import annotations
@@ -48,10 +49,11 @@ def test_old_frequency_selector_removed(tab):
 
 
 def test_pitch_resolver_and_selector_still_present(tab):
-    # Pitch keeps the single-file zip-import flow.
+    # Pitch keeps the single-file zip-import flow. The enable checkbox was
+    # removed (activation derives from the pitch file being present).
     assert hasattr(tab, "_resolve_pitch_accent_path")
     assert hasattr(tab.dictionary_panel, "pitch_accent_selector")
-    assert hasattr(tab.dictionary_panel, "use_pitch_accent_checkbox")
+    assert not hasattr(tab.dictionary_panel, "use_pitch_accent_checkbox")
 
 
 def test_frequency_panel_present(tab):
@@ -64,17 +66,15 @@ def test_frequency_panel_present(tab):
 # ---------------------------------------------------------------------------
 
 
-def test_load_reflects_frequency_chain_and_toggle(test_config: AnkiMinerConfig, qtbot):
+def test_load_reflects_frequency_chain(test_config: AnkiMinerConfig, qtbot):
     cfg = replace(
         test_config,
         frequency_chain=(FreqEntry(source_id="jpdb", enabled=True),),
-        use_frequency_data=True,
     )
     tab = SettingsTab(cfg)
     qtbot.addWidget(tab)
 
     assert tab.frequency_panel.get_chain() == (FreqEntry(source_id="jpdb", enabled=True),)
-    assert tab.frequency_panel.use_frequency_checkbox.isChecked() is True
 
 
 # ---------------------------------------------------------------------------
@@ -82,7 +82,7 @@ def test_load_reflects_frequency_chain_and_toggle(test_config: AnkiMinerConfig, 
 # ---------------------------------------------------------------------------
 
 
-def test_save_writes_frequency_chain_and_toggle(tab, monkeypatch):
+def test_save_writes_frequency_chain(tab, monkeypatch):
     from PyQt6.QtWidgets import QMessageBox
 
     monkeypatch.setattr(QMessageBox, "information", lambda *a, **kw: None)
@@ -91,7 +91,6 @@ def test_save_writes_frequency_chain_and_toggle(tab, monkeypatch):
         (FreqEntry(source_id="a", enabled=True), FreqEntry(source_id="b", enabled=False)),
         registry_meta={},
     )
-    tab.frequency_panel.use_frequency_checkbox.setChecked(True)
 
     received: list[AnkiMinerConfig] = []
     tab.config_changed.connect(received.append)
@@ -104,7 +103,8 @@ def test_save_writes_frequency_chain_and_toggle(tab, monkeypatch):
         FreqEntry(source_id="a", enabled=True),
         FreqEntry(source_id="b", enabled=False),
     )
-    assert cfg.use_frequency_data is True
+    # An enabled source in the chain means frequency is active — no separate flag.
+    assert cfg.frequency_active is True
 
 
 def test_chain_change_persists_immediately(tab):

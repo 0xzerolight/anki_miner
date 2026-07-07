@@ -1862,14 +1862,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation>列が（読み、漢字、パターン）の CSV/TSV、または Yomitan 形式のピッチ zip（Kanjium、NHK など）です。Yomitan zip は保存時に ~/.anki_miner/pitch_accent.csv にインポートされます。</translation>
     </message>
     <message>
-        <source>Enable Pitch Accent</source>
-        <translation>ピッチアクセントを有効化</translation>
-    </message>
-    <message>
-        <source>Looks up and writes pitch patterns to mapped fields.</source>
-        <translation>ピッチパターンを検索し、マッピングされたフィールドに書き込みます。</translation>
-    </message>
-    <message>
         <source>Remove dictionary</source>
         <translation>辞書を削除</translation>
     </message>
@@ -1946,8 +1938,8 @@ The dictionary was not removed.</source>
         <translation>マッピングされたフィールド: &lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
     <message>
-        <source>Resources downloaded: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation>ダウンロードしたリソース: &lt;b&gt;%1&lt;/b&gt;</translation>
+        <source>Resources configured: &lt;b&gt;%1&lt;/b&gt;</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -2670,14 +2662,6 @@ The dictionary was not removed.</source>
     <message>
         <source>Remove</source>
         <translation>削除</translation>
-    </message>
-    <message>
-        <source>Enable Frequency Data</source>
-        <translation>頻度データを有効化</translation>
-    </message>
-    <message>
-        <source>Show word frequency rank on cards</source>
-        <translation>カードに単語の頻度順位を表示</translation>
     </message>
     <message>
         <source>Remove frequency source</source>

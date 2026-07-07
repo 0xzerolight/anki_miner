@@ -133,14 +133,14 @@ class TestApplyDownloadSummary:
         assert "jitendex-org-2025-11-05" in ids  # kept: dir still on disk
         assert "jitendex" in ids
 
-    def test_freq_success_prepends_chain_entry_and_sets_flag(self) -> None:
+    def test_freq_success_prepends_chain_entry_and_activates(self) -> None:
         config = create_default_config()
-        assert config.use_frequency_data is False
+        assert config.frequency_active is False
         assert config.frequency_chain == ()
         result = apply_download_summary(config, ResourceDownloadSummary(results=[_freq_result(source_id="jpdb")]))
-        assert result.use_frequency_data is True
-        # Chain entry prepended — flipping the flag alone would leave an empty
-        # chain and zero providers in-session (the regression this fixes).
+        # The prepended enabled entry is what activates frequency — there is no
+        # separate flag to flip.
+        assert result.frequency_active is True
         assert result.frequency_chain[0] == FreqEntry(source_id="jpdb", enabled=True)
 
     def test_freq_success_is_idempotent_no_duplicate(self) -> None:
@@ -167,12 +167,15 @@ class TestApplyDownloadSummary:
         assert len(jpdb_entries) == 1
         assert any(e.source_id == "other" for e in result.frequency_chain)
 
-    def test_pitch_success_sets_use_pitch_accent(self) -> None:
+    def test_pitch_success_is_config_noop(self) -> None:
+        # A pitch download changes no config field: the worker writes the file to
+        # config.pitch_accent_path, and its presence activates pitch
+        # (config.pitch_active). apply_download_summary only touches the chains.
         config = create_default_config()
-        assert config.use_pitch_accent is False
         result = apply_download_summary(config, ResourceDownloadSummary(results=[_pitch_result()]))
-        assert result.use_pitch_accent is True
         assert result.pitch_accent_path == config.pitch_accent_path
+        assert result.frequency_chain == config.frequency_chain
+        assert result.dictionary_chain == config.dictionary_chain
 
     def test_partial_summary_applies_only_succeeded(self) -> None:
         config = create_default_config()
@@ -186,9 +189,8 @@ class TestApplyDownloadSummary:
         result = apply_download_summary(config, summary)
 
         assert result.dictionary_chain[0].dict_id == "jitendex"
-        assert result.use_frequency_data is False  # freq failed
+        assert result.frequency_active is False  # freq failed
         assert result.frequency_chain == ()  # freq failed → no chain entry
-        assert result.use_pitch_accent is True
 
     def test_all_succeeded_applies_everything(self) -> None:
         config = create_default_config()
@@ -196,9 +198,8 @@ class TestApplyDownloadSummary:
         result = apply_download_summary(config, summary)
 
         assert result.dictionary_chain[0].dict_id == "jitendex"
-        assert result.use_frequency_data is True
+        assert result.frequency_active is True
         assert result.frequency_chain[0] == FreqEntry(source_id="jpdb", enabled=True)
-        assert result.use_pitch_accent is True
 
 
 class TestFreqDownloadYieldsLiveServiceInSession:

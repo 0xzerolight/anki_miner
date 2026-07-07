@@ -1862,14 +1862,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation>CSV/TSV mit den Spalten (Lesung, Kanji, Muster) oder ein Tonhöhen-Zip im Yomitan-Format (z. B. Kanjium, NHK). Yomitan-Zips werden beim Speichern in ~/.anki_miner/pitch_accent.csv importiert.</translation>
     </message>
     <message>
-        <source>Enable Pitch Accent</source>
-        <translation>Tonhöhenakzent aktivieren</translation>
-    </message>
-    <message>
-        <source>Looks up and writes pitch patterns to mapped fields.</source>
-        <translation>Sucht Tonhöhenmuster und schreibt sie in zugeordnete Felder.</translation>
-    </message>
-    <message>
         <source>Remove dictionary</source>
         <translation>Wörterbuch entfernen</translation>
     </message>
@@ -1946,8 +1938,8 @@ Das Wörterbuch wurde nicht entfernt.</translation>
         <translation>Zugeordnete Felder: &lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
     <message>
-        <source>Resources downloaded: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation>Heruntergeladene Ressourcen: &lt;b&gt;%1&lt;/b&gt;</translation>
+        <source>Resources configured: &lt;b&gt;%1&lt;/b&gt;</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -2680,14 +2672,6 @@ Das Wörterbuch wurde nicht entfernt.</translation>
     <message>
         <source>Remove</source>
         <translation>Entfernen</translation>
-    </message>
-    <message>
-        <source>Enable Frequency Data</source>
-        <translation>Häufigkeitsdaten aktivieren</translation>
-    </message>
-    <message>
-        <source>Show word frequency rank on cards</source>
-        <translation>Häufigkeitsrang des Wortes auf Karten anzeigen</translation>
     </message>
     <message>
         <source>Remove frequency source</source>

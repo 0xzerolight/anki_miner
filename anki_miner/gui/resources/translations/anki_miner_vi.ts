@@ -1862,14 +1862,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation>CSV/TSV với các cột (cách đọc, kanji, mẫu), hoặc một zip trọng âm định dạng Yomitan (ví dụ Kanjium, NHK). Zip Yomitan được nhập vào ~/.anki_miner/pitch_accent.csv khi Lưu.</translation>
     </message>
     <message>
-        <source>Enable Pitch Accent</source>
-        <translation>Bật trọng âm cao độ</translation>
-    </message>
-    <message>
-        <source>Looks up and writes pitch patterns to mapped fields.</source>
-        <translation>Tra cứu và ghi các mẫu trọng âm cao độ vào các trường đã ánh xạ.</translation>
-    </message>
-    <message>
         <source>Remove dictionary</source>
         <translation>Xóa từ điển</translation>
     </message>
@@ -1946,8 +1938,8 @@ Từ điển chưa được xóa.</translation>
         <translation>Trường đã ánh xạ: &lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
     <message>
-        <source>Resources downloaded: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation>Tài nguyên đã tải về: &lt;b&gt;%1&lt;/b&gt;</translation>
+        <source>Resources configured: &lt;b&gt;%1&lt;/b&gt;</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -2670,14 +2662,6 @@ Từ điển chưa được xóa.</translation>
     <message>
         <source>Remove</source>
         <translation>Gỡ bỏ</translation>
-    </message>
-    <message>
-        <source>Enable Frequency Data</source>
-        <translation>Bật dữ liệu tần suất</translation>
-    </message>
-    <message>
-        <source>Show word frequency rank on cards</source>
-        <translation>Hiển thị hạng tần suất của từ trên thẻ</translation>
     </message>
     <message>
         <source>Remove frequency source</source>

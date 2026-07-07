@@ -181,29 +181,11 @@ class ValidationService:
                     )
                 )
 
-        if self.config.use_pitch_accent and not self.config.pitch_accent_path.is_file():
-            issues.append(
-                ValidationIssue(
-                    component="Pitch Accent",
-                    severity="WARNING",
-                    message=(
-                        f"Pitch accent data not found at {self.config.pitch_accent_path}. "
-                        "Pitch accent annotations will be skipped."
-                    ),
-                )
-            )
-
-        if self.config.use_frequency_data and not self.config.frequency_list_path.is_file():
-            issues.append(
-                ValidationIssue(
-                    component="Frequency Data",
-                    severity="WARNING",
-                    message=(
-                        f"Frequency list not found at {self.config.frequency_list_path}. "
-                        "Frequency-based filtering and annotations will be skipped."
-                    ),
-                )
-            )
+        # Pitch/frequency "resource missing" warnings were removed with the
+        # use_pitch_accent / use_frequency_data flags: activation is now derived
+        # from the resource being present (pitch_active = file exists;
+        # frequency_active = an enabled source in the chain), so a "wanted but
+        # missing" state is no longer representable.
 
         return ValidationResult(
             ankiconnect_ok=ankiconnect_ok,

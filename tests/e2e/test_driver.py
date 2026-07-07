@@ -153,8 +153,9 @@ def test_build_app_config_basic_field_mapping(tmp_path: Path) -> None:
     assert cfg.include_known_words is False
     assert cfg.deduplicate_sentences is True
     assert cfg.allow_duplicate_cards is False
-    assert cfg.use_frequency_data is False
-    assert cfg.use_pitch_accent is False
+    # Frequency/pitch off by default (empty chain, no pitch file).
+    assert cfg.frequency_active is False
+    assert cfg.pitch_active is False
     # AnkiService must accept this mapping (validates REQUIRED keys at __init__).
     from anki_miner.services.anki_service import AnkiService
 

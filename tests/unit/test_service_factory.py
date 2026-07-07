@@ -200,7 +200,7 @@ class TestFrequencyServiceWiring:
         result = import_frequency_source(csv, freqs_root, source_id="testfreq")
         return result.source_id
 
-    def _config(self, tmp_path: Path, *, chain, use_frequency_data=True) -> AnkiMinerConfig:
+    def _config(self, tmp_path: Path, *, chain) -> AnkiMinerConfig:
         from anki_miner.config import FreqEntry
 
         return dataclasses.replace(
@@ -210,7 +210,6 @@ class TestFrequencyServiceWiring:
             history_db_path=tmp_path / "history.db",
             stats_db_path=tmp_path / "stats.db",
             freqs_root=tmp_path / "freqs",
-            use_frequency_data=use_frequency_data,
             frequency_chain=tuple(FreqEntry(source_id=sid) for sid in chain),
         )
 
@@ -236,25 +235,54 @@ class TestFrequencyServiceWiring:
         assert "3" in joined  # 3 entries
 
     def test_empty_chain_yields_none(self, tmp_path: Path):
-        """use_frequency_data on but no chain entries → no service."""
+        """No chain entries → frequency inactive → no service."""
         # Import a source on disk but reference none of it in the chain.
         freqs_root = tmp_path / "freqs"
         self._import_source(freqs_root, tmp_path)
         cfg = self._config(tmp_path, chain=[])
 
+        assert cfg.frequency_active is False
         services = service_factory.create_services(cfg)
 
         assert services.frequency_service is None
 
-    def test_use_frequency_data_off_yields_none(self, tmp_path: Path):
-        """Toggle off → no service even with a populated chain."""
+    def test_disabled_only_chain_yields_none(self, tmp_path: Path):
+        """A chain with only disabled entries is inactive → no service, even
+        though the source exists on disk (successor to the removed flag-off
+        test: a disabled entry is the new "off")."""
+        from anki_miner.config import FreqEntry
+
         freqs_root = tmp_path / "freqs"
         source_id = self._import_source(freqs_root, tmp_path)
-        cfg = self._config(tmp_path, chain=[source_id], use_frequency_data=False)
+        cfg = dataclasses.replace(
+            self._config(tmp_path, chain=[]),
+            frequency_chain=(FreqEntry(source_id=source_id, enabled=False),),
+        )
 
+        assert cfg.frequency_active is False
         services = service_factory.create_services(cfg)
 
         assert services.frequency_service is None
+
+    def test_enabled_source_builds_service_without_mapped_field(self, tmp_path: Path):
+        """A configured (enabled) source builds the service even when no
+        frequency Anki field is mapped and max_frequency_rank is 0 — this guards
+        the curation-preview and CSV-export rank surfaces, which read ranks off
+        the service, not off the card field."""
+        freqs_root = tmp_path / "freqs"
+        source_id = self._import_source(freqs_root, tmp_path)
+        cfg = self._config(tmp_path, chain=[source_id])
+
+        # Precondition: neither frequency card field mapped, no rank cutoff.
+        assert not cfg.anki_fields.get("frequency")
+        assert not cfg.anki_fields.get("frequency_sort")
+        assert cfg.max_frequency_rank == 0
+        assert cfg.frequency_active is True
+
+        services = service_factory.create_services(cfg)
+
+        assert services.frequency_service is not None
+        assert services.frequency_service.is_available()
 
     def test_missing_source_yields_none_without_crash(self, tmp_path: Path):
         """A chain entry whose source is absent on disk → None, no exception."""
@@ -274,6 +302,63 @@ class TestFrequencyServiceWiring:
 
         # registry.load() swallows OSError internally → no sources → None.
         assert services.frequency_service is None
+
+    def test_rank_cutoff_without_field_still_builds_service(self, tmp_path: Path):
+        """max_frequency_rank>0 with an enabled source but no frequency field
+        mapped still builds the service, so ranks attach and the rank-cutoff
+        filter keeps the top-N words. Without the service, frequency_rank is
+        None for every word and the cutoff filter would drop them all."""
+        freqs_root = tmp_path / "freqs"
+        source_id = self._import_source(freqs_root, tmp_path)
+        cfg = dataclasses.replace(
+            self._config(tmp_path, chain=[source_id]),
+            max_frequency_rank=10000,
+        )
+        assert not cfg.anki_fields.get("frequency")
+        assert cfg.frequency_active is True
+
+        services = service_factory.create_services(cfg)
+
+        assert services.frequency_service is not None
+        # A ranked word resolves → the cutoff filter has real ranks to keep.
+        assert services.frequency_service.lookup_min("食べる") == 3
+
+
+class TestPitchServiceWiring:
+    """Pitch activation is derived from the pitch file being present — no on/off
+    flag, and independent of any mapped pitch Anki field."""
+
+    def _config(self, tmp_path: Path, pitch_path: Path) -> AnkiMinerConfig:
+        return dataclasses.replace(
+            AnkiMinerConfig(),
+            dicts_root=tmp_path / "dicts",
+            known_words_db_path=tmp_path / "known_words.db",
+            history_db_path=tmp_path / "history.db",
+            stats_db_path=tmp_path / "stats.db",
+            pitch_accent_path=pitch_path,
+        )
+
+    def test_present_file_builds_service_without_mapped_field(self, tmp_path: Path):
+        pitch = tmp_path / "pitch.csv"
+        pitch.write_text("たべる,食べる,0\nのむ,飲む,1\n", encoding="utf-8")
+        cfg = self._config(tmp_path, pitch)
+
+        assert not any(
+            cfg.anki_fields.get(k) for k in ("pitch_position", "pitch_category", "pitch_graph", "pitch_text")
+        )
+        assert cfg.pitch_active is True
+
+        services = service_factory.create_services(cfg)
+
+        assert services.pitch_accent_service is not None
+
+    def test_absent_file_yields_none(self, tmp_path: Path):
+        cfg = self._config(tmp_path, tmp_path / "missing.csv")
+
+        assert cfg.pitch_active is False
+        services = service_factory.create_services(cfg)
+
+        assert services.pitch_accent_service is None
 
 
 class TestCompoundMatchingInjection:

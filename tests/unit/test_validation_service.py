@@ -514,8 +514,6 @@ class TestValidationService:
             test_config = replace(
                 test_config,
                 dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
-                use_pitch_accent=False,
-                use_frequency_data=False,
             )
             service = ValidationService(test_config)
 
@@ -922,32 +920,6 @@ class TestOptionalResourceWarnings:
 
         assert not self._has_warning(result, "Offline Dictionary")
 
-    def test_warns_when_pitch_accent_enabled_but_file_missing(self, test_config, monkeypatch, tmp_path):
-        from dataclasses import replace
-
-        self._patch_external_checks(monkeypatch)
-        config = replace(
-            test_config,
-            use_pitch_accent=True,
-            pitch_accent_path=tmp_path / "missing_pitch.csv",
-        )
-        result = ValidationService(config).validate_setup()
-
-        assert self._has_warning(result, "Pitch Accent")
-
-    def test_warns_when_frequency_enabled_but_file_missing(self, test_config, monkeypatch, tmp_path):
-        from dataclasses import replace
-
-        self._patch_external_checks(monkeypatch)
-        config = replace(
-            test_config,
-            use_frequency_data=True,
-            frequency_list_path=tmp_path / "missing_freq.csv",
-        )
-        result = ValidationService(config).validate_setup()
-
-        assert self._has_warning(result, "Frequency Data")
-
     def test_no_warning_when_features_disabled(self, test_config, monkeypatch):
         from dataclasses import replace
 
@@ -959,12 +931,12 @@ class TestOptionalResourceWarnings:
         config = replace(
             test_config,
             dictionary_chain=chain,
-            use_pitch_accent=False,
-            use_frequency_data=False,
         )
         result = ValidationService(config).validate_setup()
 
         assert not self._has_warning(result, "Offline Dictionary")
+        # Pitch/frequency "resource missing" warnings were removed with their
+        # flags; assert they never surface.
         assert not self._has_warning(result, "Pitch Accent")
         assert not self._has_warning(result, "Frequency Data")
 
@@ -1060,8 +1032,6 @@ class TestCheckAlass:
         config = replace(
             test_config,
             dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
-            use_pitch_accent=False,
-            use_frequency_data=False,
         )
         result = ValidationService(config).validate_setup()
 
@@ -1121,8 +1091,6 @@ class TestCheckAlass:
         config = replace(
             test_config,
             dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
-            use_pitch_accent=False,
-            use_frequency_data=False,
         )
         result = ValidationService(config).validate_setup()
 
