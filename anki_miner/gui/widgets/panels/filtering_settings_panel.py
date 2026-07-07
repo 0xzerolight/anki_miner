@@ -80,6 +80,20 @@ class FilteringSettingsPanel(FormPanel):
             self.max_frequency_spinbox,
             helper=self.tr("Words missing from the frequency list are excluded"),
         )
+        # Shown by load_from_config only when a cutoff is set but no frequency
+        # source is enabled. In that state the pipeline gates the cutoff off (it
+        # would otherwise drop every word and create zero cards), so warn here
+        # instead of letting the spinbox look active.
+        self.max_frequency_warning = QLabel(
+            self.tr(
+                "No frequency source is loaded — this cutoff is ignored. "
+                "Add a frequency source in the Dictionaries tab."
+            )
+        )
+        self.max_frequency_warning.setObjectName("helper-text")
+        self.max_frequency_warning.setWordWrap(True)
+        self.max_frequency_warning.setVisible(False)
+        self.add_widget(self.max_frequency_warning)
 
         # Known Words Database section
         self.add_section(self.tr("Known Words Database"))
@@ -629,6 +643,10 @@ class FilteringSettingsPanel(FormPanel):
         None) so Reset-to-Defaults clears a previously visible path (T-11).
         """
         self.set_max_frequency_rank(config.max_frequency_rank)
+        # A cutoff with no enabled frequency source is inert (the pipeline skips
+        # it). Surface that here so the setting doesn't look active. frequency_active
+        # is derived from the enabled sources in the chain (Dictionaries tab).
+        self.max_frequency_warning.setVisible(config.max_frequency_rank > 0 and not config.frequency_active)
         self.set_use_known_words_db(config.use_known_words_db)
         self.set_excluded_decks(config.excluded_decks)
         self.set_excluded_wordsets(config.excluded_wordsets)

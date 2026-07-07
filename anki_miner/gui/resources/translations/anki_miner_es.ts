@@ -1954,6 +1954,14 @@ El diccionario no se quitó.</translation>
         <translation>La fuente de audio de palabras devolvió respuestas que no son audio (probablemente por límite de velocidad) — audio omitido en esta ejecución, se reintentará en la próxima</translation>
     </message>
     <message>
+        <source>All %1 new word(s) were removed by active filters — no cards created</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All words already in Anki!</source>
+        <translation>¡Todas las palabras ya están en Anki!</translation>
+    </message>
+    <message>
         <source>Step 1/5 — Parsing subtitles: %1</source>
         <translation>Paso 1/5 — Analizando subtítulos: %1</translation>
     </message>
@@ -2001,6 +2009,10 @@ El diccionario no se quitó.</translation>
     <message>
         <source>Frequency filter: removed %1 words outside top %2</source>
         <translation>Filtro de frecuencia: se eliminaron %1 palabras fuera de las %2 principales</translation>
+    </message>
+    <message>
+        <source>Frequency cutoff set but no frequency source is loaded — cutoff ignored (add a frequency source in Settings).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word list filter: removed %1 words</source>
@@ -2105,10 +2117,6 @@ El diccionario no se quitó.</translation>
     <message>
         <source>No words found in subtitles</source>
         <translation>No se encontraron palabras en los subtítulos</translation>
-    </message>
-    <message>
-        <source>All words already in Anki!</source>
-        <translation>¡Todas las palabras ya están en Anki!</translation>
     </message>
     <message>
         <source>No words selected for card creation</source>
@@ -2316,6 +2324,10 @@ El diccionario no se quitó.</translation>
     <message>
         <source>Words missing from the frequency list are excluded</source>
         <translation>Las palabras que faltan en la lista de frecuencia quedan excluidas</translation>
+    </message>
+    <message>
+        <source>No frequency source is loaded — this cutoff is ignored. Add a frequency source in the Dictionaries tab.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Known Words Database</source>

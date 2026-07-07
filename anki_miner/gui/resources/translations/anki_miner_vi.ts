@@ -1954,6 +1954,14 @@ Từ điển chưa được xóa.</translation>
         <translation>Nguồn âm thanh từ trả về phản hồi không phải âm thanh (có thể bị giới hạn tốc độ) — bỏ qua âm thanh lần này, sẽ thử lại lần sau</translation>
     </message>
     <message>
+        <source>All %1 new word(s) were removed by active filters — no cards created</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All words already in Anki!</source>
+        <translation>Tất cả các từ đều đã có trong Anki!</translation>
+    </message>
+    <message>
         <source>Step 1/5 — Parsing subtitles: %1</source>
         <translation>Bước 1/5 — Phân tích phụ đề: %1</translation>
     </message>
@@ -1998,6 +2006,10 @@ Từ điển chưa được xóa.</translation>
     <message>
         <source>Frequency filter: removed %1 words outside top %2</source>
         <translation>Bộ lọc tần suất: đã loại bỏ %1 từ ngoài top %2</translation>
+    </message>
+    <message>
+        <source>Frequency cutoff set but no frequency source is loaded — cutoff ignored (add a frequency source in Settings).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word list filter: removed %1 words</source>
@@ -2098,10 +2110,6 @@ Từ điển chưa được xóa.</translation>
     <message>
         <source>No words found in subtitles</source>
         <translation>Không tìm thấy từ nào trong phụ đề</translation>
-    </message>
-    <message>
-        <source>All words already in Anki!</source>
-        <translation>Tất cả các từ đều đã có trong Anki!</translation>
     </message>
     <message>
         <source>No words selected for card creation</source>
@@ -2306,6 +2314,10 @@ Từ điển chưa được xóa.</translation>
     <message>
         <source>Words missing from the frequency list are excluded</source>
         <translation>Các từ không có trong danh sách tần suất sẽ bị loại trừ</translation>
+    </message>
+    <message>
+        <source>No frequency source is loaded — this cutoff is ignored. Add a frequency source in the Dictionaries tab.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Known Words Database</source>

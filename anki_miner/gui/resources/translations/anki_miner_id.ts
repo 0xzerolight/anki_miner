@@ -1954,6 +1954,14 @@ Kamus tidak dihapus.</translation>
         <translation>Sumber audio kata mengembalikan respons non-audio (kemungkinan dibatasi laju) — audio dilewati pada proses ini, akan dicoba ulang pada proses berikutnya</translation>
     </message>
     <message>
+        <source>All %1 new word(s) were removed by active filters — no cards created</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All words already in Anki!</source>
+        <translation>Semua kata sudah ada di Anki!</translation>
+    </message>
+    <message>
         <source>Step 1/5 — Parsing subtitles: %1</source>
         <translation>Langkah 1/5 — Mengurai subtitel: %1</translation>
     </message>
@@ -1998,6 +2006,10 @@ Kamus tidak dihapus.</translation>
     <message>
         <source>Frequency filter: removed %1 words outside top %2</source>
         <translation>Filter frekuensi: menghapus %1 kata di luar %2 teratas</translation>
+    </message>
+    <message>
+        <source>Frequency cutoff set but no frequency source is loaded — cutoff ignored (add a frequency source in Settings).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word list filter: removed %1 words</source>
@@ -2098,10 +2110,6 @@ Kamus tidak dihapus.</translation>
     <message>
         <source>No words found in subtitles</source>
         <translation>Tidak ada kata yang ditemukan di subtitel</translation>
-    </message>
-    <message>
-        <source>All words already in Anki!</source>
-        <translation>Semua kata sudah ada di Anki!</translation>
     </message>
     <message>
         <source>No words selected for card creation</source>
@@ -2306,6 +2314,10 @@ Kamus tidak dihapus.</translation>
     <message>
         <source>Words missing from the frequency list are excluded</source>
         <translation>Kata yang tidak ada dalam daftar frekuensi akan dikecualikan</translation>
+    </message>
+    <message>
+        <source>No frequency source is loaded — this cutoff is ignored. Add a frequency source in the Dictionaries tab.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Known Words Database</source>

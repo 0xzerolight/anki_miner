@@ -1954,6 +1954,14 @@ The dictionary was not removed.</source>
         <translation>單字音訊來源回傳非音訊的回應（可能遭速率限制）——本次執行已略過音訊，將於下次執行時重試</translation>
     </message>
     <message>
+        <source>All %1 new word(s) were removed by active filters — no cards created</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All words already in Anki!</source>
+        <translation>所有單字皆已在 Anki 中！</translation>
+    </message>
+    <message>
         <source>Step 1/5 — Parsing subtitles: %1</source>
         <translation>步驟 1/5——正在解析字幕：%1</translation>
     </message>
@@ -1998,6 +2006,10 @@ The dictionary was not removed.</source>
     <message>
         <source>Frequency filter: removed %1 words outside top %2</source>
         <translation>頻率篩選器：已移除 %1 個排名在前 %2 名之外的單字</translation>
+    </message>
+    <message>
+        <source>Frequency cutoff set but no frequency source is loaded — cutoff ignored (add a frequency source in Settings).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word list filter: removed %1 words</source>
@@ -2098,10 +2110,6 @@ The dictionary was not removed.</source>
     <message>
         <source>No words found in subtitles</source>
         <translation>字幕中找不到單字</translation>
-    </message>
-    <message>
-        <source>All words already in Anki!</source>
-        <translation>所有單字皆已在 Anki 中！</translation>
     </message>
     <message>
         <source>No words selected for card creation</source>
@@ -2306,6 +2314,10 @@ The dictionary was not removed.</source>
     <message>
         <source>Words missing from the frequency list are excluded</source>
         <translation>頻率清單中缺少的單字將被排除</translation>
+    </message>
+    <message>
+        <source>No frequency source is loaded — this cutoff is ignored. Add a frequency source in the Dictionaries tab.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Known Words Database</source>
