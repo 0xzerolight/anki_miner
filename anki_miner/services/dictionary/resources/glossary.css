@@ -59,7 +59,6 @@
   padding: 0;
   list-style: none;
   text-align: left;
-  font-size: 0.92em;
   line-height: 1.6;
   word-wrap: break-word;
 }
@@ -78,8 +77,19 @@
   padding: 0.1em 0;
 }
 
-/* The "(part-of-speech…, Dictionary Name)" line — a small muted label. */
-.yomitan-glossary ol[data-count] li[data-dictionary] > i {
+/* Compact house block size — unstyled dicts only. A dict that ships styles.css
+ * inherits the note type's size, so a styled (Jitendex) card is not shrunk:
+ * Yomitan embeds no base sheet in the Anki card, so the note type governs size.
+ * Relocated here from `> ol[data-count]` because the stamp is on the `li`, not
+ * its parent `ol`. */
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) {
+  font-size: 0.92em;
+}
+
+/* The "(part-of-speech…, Dictionary Name)" line — a small muted label on
+ * unstyled dicts; on a styled dict it defers to the note type (Yomitan renders
+ * this attribution as a bare <i> on the card, with no grey/shrink). */
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) > i {
   display: inline-block;
   margin-bottom: 0.3em;
   font-size: 0.8em;
@@ -106,8 +116,9 @@
   margin: 0.25em 0;
 }
 
-/* Progressive enhancement: muted ordinals where ::marker color is honored. */
-.yomitan-glossary ol[data-count] li.gloss-item::marker {
+/* Progressive enhancement: muted ordinals where ::marker color is honored —
+ * unstyled dicts only, so a styled card's sense ordinals defer to the note type. */
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) li.gloss-item::marker {
   color: var(--am-muted);
 }
 
@@ -335,17 +346,22 @@
 }
 /* Hover chips — unioned dictionary tags that carry a tags-table row (schema v3,
  * emitted by indexed_provider as `<span class="gloss-tag" data-category=… title=…>`).
- * The markup joins them with no separator, so the chip supplies its own right
- * margin. Mirrors the data-sc tag pill above so both tag kinds read alike. */
+ * LAYOUT (ungated): the markup joins chips with no separator, so the chip supplies
+ * its own right margin — this must survive on styled cards too, where the pill
+ * paint below is gated off and the tags read as plain spaced text. */
 .yomitan-glossary ol[data-count] .gloss-tag {
   display: inline-block;
   margin-right: 0.4em;
+  vertical-align: text-bottom;
+  word-break: keep-all;
+}
+/* PILL VISUALS (gated): on a dict that ships styles.css the tags defer to the
+ * note type — Yomitan renders tags as plain text on the Anki card, not pills. */
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) .gloss-tag {
   padding: 0.05em 0.4em;
   border-radius: 0.3em;
   font-size: 0.8em;
   font-weight: 600;
-  vertical-align: text-bottom;
-  word-break: keep-all;
   background: var(--am-chip);
   color: var(--am-muted);
 }
@@ -426,20 +442,10 @@
   vertical-align: top;
 }
 
-/* In-sense glossary list — Yomitan renders it inline with " | " separators
- * rather than as a bulleted block. */
-.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) ul[data-sc-content="glossary"] {
-  display: inline;
-  list-style: none;
-  padding-left: 0;
-}
-.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) ul[data-sc-content="glossary"] > li {
-  display: inline;
-}
-.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) ul[data-sc-content="glossary"] > li:not(:first-child)::before {
-  content: " | ";
-  color: var(--am-muted);
-}
+/* In-sense glossary list: Yomitan's DEFAULT layout renders it as a disc-bulleted
+ * block; the structural `.gloss-sc-ul` rule above governs it. (Yomitan's inline
+ * " | " separators are compact-glossaries mode only, which anki_miner never
+ * emits — so no inline rule here.) */
 
 @supports (color: color-mix(in srgb, red 50%, blue 50%)) {
   .yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) div[data-sc-content="info-gloss"] {

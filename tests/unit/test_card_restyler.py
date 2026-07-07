@@ -10,6 +10,7 @@ import pytest
 from anki_miner.config import create_default_config
 from anki_miner.services import card_restyler
 from anki_miner.services.card_restyler import RestyleResult, restyle_mined_cards
+from anki_miner.services.dictionary.card_style_block import build_card_style_block
 
 # A miner card mined bare (markup, no <style>).
 BARE = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="X">x</li></ol></div>'
@@ -78,12 +79,81 @@ class TestRestyleMinedCards:
         assert result.skipped_no_markup == 1
         svc.update_notes_fields.assert_not_called()
 
-    def test_already_styled_skipped(self):
-        svc = _svc([_note(1, ALREADY)])
+    def test_stale_base_refreshed(self):
+        # A card carrying a STALE base head is refreshed in place (not skipped):
+        # the base swaps to the current minified base; the body is preserved.
+        from anki_miner.services.dictionary.card_style_block import minified_base_css
+
+        svc = _svc([_note(1, ALREADY)])  # ALREADY carries a stub `ol[data-count]{margin:0}` base
+        result = restyle_mined_cards(svc, _cfg())
+        assert result.restyled == 1
+        assert result.skipped_styled == 0
+        (updates,), _ = svc.update_notes_fields.call_args
+        assert updates[0][1]["Glossary"] == f"<style>{minified_base_css()}</style>{BARE}"
+
+    def test_current_base_card_skipped(self):
+        # A card already carrying the CURRENT base is an idempotent no-op → skipped.
+        current = build_card_style_block(dict_css="") + BARE
+        svc = _svc([_note(1, current)])
         result = restyle_mined_cards(svc, _cfg())
         assert result.restyled == 0
         assert result.skipped_styled == 1
         svc.update_notes_fields.assert_not_called()
+
+    def test_refresh_preserves_dict_css_tail_and_stamps(self):
+        # A stale base with a per-dict dict_css tail: base swaps, tail preserved
+        # verbatim, and the card's own carried CSS stamps its envelope.
+        from anki_miner.services.dictionary.card_style_block import minified_base_css
+
+        tail = '.yomitan-glossary [data-dictionary="X"]{color:red}'
+        stale = f"<style>STALE ol[data-count]{{}}\n{tail}</style>{BARE}"
+        svc = _svc([_note(1, stale)])
+        result = restyle_mined_cards(svc, _cfg())
+        assert result.restyled == 1
+        (updates,), _ = svc.update_notes_fields.call_args
+        written = updates[0][1]["Glossary"]
+        assert written.startswith(f"<style>{minified_base_css()}\n{tail}</style>")
+        assert '<li data-dictionary="X" data-has-styles="">' in written
+
+    def test_refresh_service_is_idempotent(self):
+        # Feed a refreshed card back through the service (same config) → no-op.
+        svc = _svc([_note(1, ALREADY)])
+        restyle_mined_cards(svc, _cfg())
+        (updates,), _ = svc.update_notes_fields.call_args
+        refreshed_value = updates[0][1]["Glossary"]
+        svc2 = _svc([_note(1, refreshed_value)])
+        result2 = restyle_mined_cards(svc2, _cfg())
+        assert result2.restyled == 0
+        assert result2.skipped_styled == 1
+        svc2.update_notes_fields.assert_not_called()
+
+    def test_non_conforming_head_token_in_later_block_skipped(self):
+        # `ol[data-count]` present but only in a LATER <style>; the first block is a
+        # per-dict style → refresh leaves it untouched (skipped, never corrupts).
+        v = (
+            '<style>.yomitan-glossary [data-dictionary="X"]{color:red}</style>'
+            "<style>.yomitan-glossary ol[data-count]{margin:0}</style>"
+            '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="X">x</li></ol></div>'
+        )
+        svc = _svc([_note(1, v)])
+        result = restyle_mined_cards(svc, _cfg())
+        assert result.restyled == 0
+        assert result.skipped_styled == 1
+        svc.update_notes_fields.assert_not_called()
+
+    def test_refresh_counts_exact_tuple(self):
+        # A 5-note mix exercises every branch; refreshed + prepended fold into restyled.
+        current = build_card_style_block(dict_css="") + BARE
+        notes = [
+            _note(1, ALREADY),  # stale base → refreshed
+            _note(2, BARE),  # no base → prepended
+            _note(3, current),  # current base → skipped_styled (idempotent)
+            _note(4, YOMITAN_EXPORT),  # no data-count → skipped_no_markup
+            _note(5, "<div>plain</div>"),  # not a miner card → skipped_no_markup
+        ]
+        svc = _svc(notes)
+        result = restyle_mined_cards(svc, _cfg())
+        assert result == RestyleResult(5, 2, 1, 2)
 
     def test_no_styling_field_mapped_is_noop(self):
         # Noop only when NEITHER glossary NOR definition is mapped — with no
@@ -155,6 +225,71 @@ class TestRestyleMinedCards:
         restyle_mined_cards(svc, replace(_cfg(), anki_note_type='Core_2k "x"'))
         (query,), _ = svc.find_notes.call_args
         assert query == 'note:"Core\\_2k \\"x\\""'
+
+
+class TestRefreshBaseSheet:
+    """Pure helper: swap a stale base head, preserve the dict_css tail + body verbatim."""
+
+    _refresh = staticmethod(card_restyler._refresh_base_sheet)
+
+    def test_not_style_prefixed_returns_none(self):
+        assert self._refresh("<div>x</div>", "NB ol[data-count]{}") is None
+
+    def test_missing_close_returns_none(self):
+        # base token present but no </style> — must return None, never raise.
+        assert self._refresh("<style>ol[data-count]{}", "NB ol[data-count]{}") is None
+
+    def test_token_only_in_later_block_returns_none(self):
+        v = "<style>.per-dict{}</style><style>ol[data-count]{}</style>body"
+        assert self._refresh(v, "NB ol[data-count]{}") is None
+
+    def test_newline_in_new_base_returns_none(self):
+        # Belt-and-suspenders: a broken newline invariant degrades to a safe no-op.
+        assert self._refresh("<style>OLD ol[data-count]{}</style>b", "a\nb") is None
+
+    def test_swaps_base_preserves_multiline_dict_and_body(self):
+        v = "<style>OLD ol[data-count]{}\n.dictA{}\n.dictB{}</style><div>body</div>"
+        out = self._refresh(v, "NEW ol[data-count]{}")
+        assert out == "<style>NEW ol[data-count]{}\n.dictA{}\n.dictB{}</style><div>body</div>"
+
+    def test_no_dict_tail_swaps_base_only(self):
+        v = "<style>OLD ol[data-count]{}</style><div>body</div>"
+        out = self._refresh(v, "NEW ol[data-count]{}")
+        assert out == "<style>NEW ol[data-count]{}</style><div>body</div>"
+
+    def test_current_base_is_noop(self):
+        v = "<style>NB ol[data-count]{}\n.dictA{}</style>body"
+        assert self._refresh(v, "NB ol[data-count]{}") is None
+
+    def test_idempotent_and_body_byte_identical(self):
+        v = '<style>OLD ol[data-count]{}\n.d{}</style><li data-dictionary="X">x</li>'
+        nb = "NEW ol[data-count]{}"
+        r1 = self._refresh(v, nb)
+        assert r1 is not None
+        assert self._refresh(r1, nb) is None  # second pass is a no-op
+        assert r1.split("</style>", 1)[1] == v.split("</style>", 1)[1]  # body preserved byte-for-byte
+
+    def test_trailing_legacy_style_in_body_preserved(self):
+        v = (
+            "<style>OLD ol[data-count]{}\n.dictA{}</style>"
+            '<div class="yomitan-glossary"><style>.legacy{}</style>'
+            '<ol data-count="1"><li data-dictionary="X">x</li></ol></div>'
+        )
+        out = self._refresh(v, "NEW ol[data-count]{}")
+        assert out is not None
+        assert out.startswith("<style>NEW ol[data-count]{}\n.dictA{}</style>")
+        assert "<style>.legacy{}</style>" in out  # body's own <style> survives verbatim
+
+    def test_stamps_from_carried_dict_css_not_config(self):
+        # Head carries scoped CSS for X; the body's unstamped envelope stamps from
+        # the card's OWN CSS (no config is consulted — the helper takes no dict_css).
+        v = (
+            '<style>OLD ol[data-count]{}\n.yomitan-glossary [data-dictionary="X"]{color:red}</style>'
+            '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="X">x</li></ol></div>'
+        )
+        out = self._refresh(v, "NEW ol[data-count]{}")
+        assert out is not None
+        assert '<li data-dictionary="X" data-has-styles="">' in out
 
 
 class TestLegacyEnvelopeStamping:

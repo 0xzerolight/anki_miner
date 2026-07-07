@@ -66,6 +66,19 @@ def _minify_css(css: str) -> str:
     return "".join(out).strip()
 
 
+def minified_base_css() -> str:
+    """The minified base ``glossary.css`` alone (no ``<style>`` wrapper).
+
+    Byte-identical to the first section ``build_card_style_block`` embeds before
+    any ``dict_css``, and newline-free by construction (the minifier collapses all
+    whitespace runs outside string literals, and the sheet carries no multi-line
+    string literal). ``card_restyler._refresh_base_sheet`` relies on both
+    properties to swap a stale embedded base head in place, so they are pinned by
+    ``test_minified_base_is_newline_free`` / ``test_minified_base_has_no_data_dictionary_literals``.
+    """
+    return _minify_css(load_glossary_css())
+
+
 def build_card_style_block(*, dict_css: str) -> str:
     """Assemble the self-contained per-card ``<style>`` block.
 
@@ -76,7 +89,7 @@ def build_card_style_block(*, dict_css: str) -> str:
     section is empty (the bundled base is never empty, so in practice this always
     returns a block).
     """
-    sections = [_minify_css(load_glossary_css())]
+    sections = [minified_base_css()]
     scoped = dict_css.strip()
     if scoped:
         sections.append(scoped)
