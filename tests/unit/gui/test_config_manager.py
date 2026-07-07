@@ -33,6 +33,25 @@ class TestLoadConfigMigration:
         assert config.ankiconnect_url == "http://example:8765"
         assert not hasattr(config, "min_word_length")
 
+    def test_stray_custom_card_css_key_is_dropped(self, tmp_path, monkeypatch):
+        """A gui_config.json from a version that had Custom CSS loads without error."""
+        cfg_file = tmp_path / "gui_config.json"
+        cfg_file.write_text(
+            json.dumps(
+                {
+                    "anki_deck_name": "My Deck",
+                    "custom_card_css": ".yomitan-glossary { color: red; }",  # removed field
+                }
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
+
+        config = GUIConfigManager.load_config()
+
+        assert config.anki_deck_name == "My Deck"
+        assert not hasattr(config, "custom_card_css")
+
 
 class TestAllowedPosMigration:
     """Migration of pre-v2.3.2 allowed_pos defaults that lacked 代名詞."""
@@ -139,23 +158,6 @@ class TestAnkiTagsRoundTrip:
 
         assert loaded.anki_tags == "auto-mined"
         assert loaded.anki_deck_name == "Legacy Deck"
-
-
-class TestCustomCssRoundTrip:
-    """Persistence of the custom_card_css field through save/load (Issue #44)."""
-
-    def test_save_and_load_preserves_custom_css(self, tmp_path, monkeypatch):
-        """custom_card_css must survive save/load."""
-        cfg_file = tmp_path / "gui_config.json"
-        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
-
-        css = '.yomitan-glossary { color: red; }\n[data-sc-content|="example-sentence"] { display: none; }'
-        config = replace(create_default_config(), custom_card_css=css)
-        GUIConfigManager.save_config(config)
-
-        loaded = GUIConfigManager.load_config()
-
-        assert loaded.custom_card_css == css
 
 
 class TestDictsRootRoundTrip:

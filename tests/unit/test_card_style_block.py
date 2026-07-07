@@ -9,28 +9,28 @@ from anki_miner.services.dictionary.card_style_block import _minify_css, build_c
 
 class TestBuildCardStyleBlock:
     def test_wraps_in_single_style_element(self):
-        out = build_card_style_block(custom_css="", dict_css="")
+        out = build_card_style_block(dict_css="")
         assert out.startswith("<style>")
         assert out.endswith("</style>")
         assert out.count("<style>") == 1
 
     def test_includes_base_sheet(self):
         # The bundled base glossary.css is always embedded (its scope hook proves it).
-        out = build_card_style_block(custom_css="", dict_css="")
+        out = build_card_style_block(dict_css="")
         assert ".yomitan-glossary" in out
 
-    def test_order_base_then_dict_then_custom(self):
-        out = build_card_style_block(custom_css="CUSTOMMARK{}", dict_css="DICTMARK{}")
-        assert out.index("yomitan-glossary") < out.index("DICTMARK") < out.index("CUSTOMMARK")
+    def test_order_base_then_dict(self):
+        out = build_card_style_block(dict_css="DICTMARK{}")
+        assert out.index("yomitan-glossary") < out.index("DICTMARK")
 
-    def test_dict_and_custom_embedded_verbatim(self):
-        out = build_card_style_block(custom_css=".c{color:blue}", dict_css=".d{color:green}")
+    def test_dict_embedded_verbatim(self):
+        # dict_css is embedded WITHOUT minification, unlike the authored base sheet.
+        out = build_card_style_block(dict_css=".d{color:green}")
         assert ".d{color:green}" in out
-        assert ".c{color:blue}" in out
 
-    def test_empty_dict_and_custom_still_non_empty(self):
+    def test_empty_dict_still_non_empty(self):
         # Base is never empty, so a block is always produced.
-        out = build_card_style_block(custom_css="  ", dict_css="  ")
+        out = build_card_style_block(dict_css="  ")
         assert out.startswith("<style>")
         assert ".yomitan-glossary" in out
 

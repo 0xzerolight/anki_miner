@@ -244,12 +244,3 @@ class TestLegacyEnvelopeStamping:
         stamped = '<li data-dictionary="X" data-has-styles="">x</li>'
         out = card_restyler._stamp_styled_envelopes(stamped, '.yomitan-glossary [data-dictionary="X"] li {color: red}')
         assert out == stamped
-
-    def test_user_custom_css_never_stamps(self):
-        # custom_css is not part of the membership test: a user's own
-        # [data-dictionary="X"] tweak must not gate dict X's gap-fillers.
-        cfg = replace(_cfg(), custom_card_css='.yomitan-glossary [data-dictionary="X"] li {color: red}')
-        svc = _svc([_note(1, BARE)])
-        result = restyle_mined_cards(svc, cfg)
-        assert result.restyled == 1
-        assert '<li data-dictionary="X">x' in self._written(svc)
