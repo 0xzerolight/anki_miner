@@ -2794,20 +2794,6 @@ The frequency source was not removed.</source>
         <translation>ローカルの既知単語リストに追加したすべての単語を削除しますか？この操作は元に戻せません。Anki と同期されたキャッシュには影響しません。</translation>
     </message>
 </context><context>
-    <name>LanguagePanel</name>
-    <message>
-        <source>Choose the language for the app interface.</source>
-        <translation>インターフェースの言語を選択します。</translation>
-    </message>
-    <message>
-        <source>Language</source>
-        <translation>言語</translation>
-    </message>
-    <message>
-        <source>Restart to apply.</source>
-        <translation>適用するには再起動してください。</translation>
-    </message>
-</context><context>
     <name>LogWidget</name>
     <message>
         <source>Activity Log</source>
@@ -4008,12 +3994,8 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>字幕</translation>
     </message>
     <message>
-        <source>Themes</source>
-        <translation>テーマ</translation>
-    </message>
-    <message>
-        <source>Language</source>
-        <translation>言語</translation>
+        <source>UI</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check for updates on startup</source>
@@ -5080,22 +5062,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>このプラットフォームでは無音除去を利用できません。</translation>
     </message>
 </context><context>
-    <name>ThemesPanel</name>
+    <name>UISettingsPanel</name>
     <message>
-        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
-        <translation>テーマにスターを付けると、右上のセレクターに追加されます。行をクリックするとプレビューでき、変更はアプリ全体に即座に反映されます。プレビューを取り消すには&lt;b&gt;復元&lt;/b&gt;を押してください。</translation>
+        <source>Language</source>
+        <translation>言語</translation>
     </message>
     <message>
-        <source>Text size</source>
-        <translation>文字サイズ</translation>
-    </message>
-    <message>
-        <source>Scale all UI text. Applies live across the app.</source>
-        <translation>すべてのUIテキストを拡大縮小します。アプリ全体に即座に反映されます。</translation>
-    </message>
-    <message>
-        <source>%1%</source>
-        <translation>%1%</translation>
+        <source>Restart to apply.</source>
+        <translation>適用するには再起動してください。</translation>
     </message>
     <message>
         <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
@@ -5106,8 +5080,20 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>ズーム</translation>
     </message>
     <message>
-        <source>Restart to apply.</source>
-        <translation>適用するには再起動してください。</translation>
+        <source>%1%</source>
+        <translation>%1%</translation>
+    </message>
+    <message>
+        <source>Text size</source>
+        <translation>文字サイズ</translation>
+    </message>
+    <message>
+        <source>Scale all UI text. Applies live across the app.</source>
+        <translation>すべてのUIテキストを拡大縮小します。アプリ全体に即座に反映されます。</translation>
+    </message>
+    <message>
+        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
+        <translation>テーマにスターを付けると、右上のセレクターに追加されます。行をクリックするとプレビューでき、変更はアプリ全体に即座に反映されます。プレビューを取り消すには&lt;b&gt;復元&lt;/b&gt;を押してください。</translation>
     </message>
     <message>
         <source>Name</source>

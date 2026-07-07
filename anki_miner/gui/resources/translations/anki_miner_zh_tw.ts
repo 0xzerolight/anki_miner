@@ -2794,20 +2794,6 @@ The frequency source was not removed.</source>
         <translation>要移除你加入本機已知單字清單的所有單字嗎？此操作無法復原。不會影響與 Anki 同步的快取。</translation>
     </message>
 </context><context>
-    <name>LanguagePanel</name>
-    <message>
-        <source>Choose the language for the app interface.</source>
-        <translation>選擇應用程式介面的語言。</translation>
-    </message>
-    <message>
-        <source>Language</source>
-        <translation>語言</translation>
-    </message>
-    <message>
-        <source>Restart to apply.</source>
-        <translation>重新啟動以套用。</translation>
-    </message>
-</context><context>
     <name>LogWidget</name>
     <message>
         <source>Activity Log</source>
@@ -4008,12 +3994,8 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>字幕</translation>
     </message>
     <message>
-        <source>Themes</source>
-        <translation>主題</translation>
-    </message>
-    <message>
-        <source>Language</source>
-        <translation>語言</translation>
+        <source>UI</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check for updates on startup</source>
@@ -5080,22 +5062,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>此平台無法使用靜音移除。</translation>
     </message>
 </context><context>
-    <name>ThemesPanel</name>
+    <name>UISettingsPanel</name>
     <message>
-        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
-        <translation>為主題加上星號即可將它加入右上角的選擇器。點按任一列即可預覽——變更會即時套用到整個應用程式。按 &lt;b&gt;還原&lt;/b&gt; 即可取消您的預覽。</translation>
+        <source>Language</source>
+        <translation>語言</translation>
     </message>
     <message>
-        <source>Text size</source>
-        <translation>文字大小</translation>
-    </message>
-    <message>
-        <source>Scale all UI text. Applies live across the app.</source>
-        <translation>縮放所有 UI 文字。即時套用到整個應用程式。</translation>
-    </message>
-    <message>
-        <source>%1%</source>
-        <translation>%1%</translation>
+        <source>Restart to apply.</source>
+        <translation>重新啟動以套用。</translation>
     </message>
     <message>
         <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
@@ -5106,8 +5080,20 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>縮放</translation>
     </message>
     <message>
-        <source>Restart to apply.</source>
-        <translation>重新啟動以套用。</translation>
+        <source>%1%</source>
+        <translation>%1%</translation>
+    </message>
+    <message>
+        <source>Text size</source>
+        <translation>文字大小</translation>
+    </message>
+    <message>
+        <source>Scale all UI text. Applies live across the app.</source>
+        <translation>縮放所有 UI 文字。即時套用到整個應用程式。</translation>
+    </message>
+    <message>
+        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
+        <translation>為主題加上星號即可將它加入右上角的選擇器。點按任一列即可預覽——變更會即時套用到整個應用程式。按 &lt;b&gt;還原&lt;/b&gt; 即可取消您的預覽。</translation>
     </message>
     <message>
         <source>Name</source>

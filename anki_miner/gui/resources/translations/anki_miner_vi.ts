@@ -2794,20 +2794,6 @@ Nguồn tần suất chưa được gỡ bỏ.</translation>
         <translation>Gỡ bỏ TẤT CẢ các từ bạn đã thêm vào danh sách từ đã biết cục bộ? Không thể hoàn tác. Bộ nhớ đệm đồng bộ với Anki không bị ảnh hưởng.</translation>
     </message>
 </context><context>
-    <name>LanguagePanel</name>
-    <message>
-        <source>Choose the language for the app interface.</source>
-        <translation>Chọn ngôn ngữ cho giao diện ứng dụng.</translation>
-    </message>
-    <message>
-        <source>Language</source>
-        <translation>Ngôn ngữ</translation>
-    </message>
-    <message>
-        <source>Restart to apply.</source>
-        <translation>Khởi động lại để áp dụng.</translation>
-    </message>
-</context><context>
     <name>LogWidget</name>
     <message>
         <source>Activity Log</source>
@@ -4008,12 +3994,8 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation>Phụ đề</translation>
     </message>
     <message>
-        <source>Themes</source>
-        <translation>Giao diện</translation>
-    </message>
-    <message>
-        <source>Language</source>
-        <translation>Ngôn ngữ</translation>
+        <source>UI</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check for updates on startup</source>
@@ -5080,22 +5062,14 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>Loại bỏ khoảng lặng không khả dụng trên nền tảng này.</translation>
     </message>
 </context><context>
-    <name>ThemesPanel</name>
+    <name>UISettingsPanel</name>
     <message>
-        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
-        <translation>Đánh dấu sao các chủ đề để thêm chúng vào bộ chọn ở góc trên bên phải. Nhấp vào bất kỳ hàng nào để xem trước — thay đổi được áp dụng trực tiếp trên toàn ứng dụng. Nhấn &lt;b&gt;Hoàn tác&lt;/b&gt; để hủy bản xem trước.</translation>
+        <source>Language</source>
+        <translation>Ngôn ngữ</translation>
     </message>
     <message>
-        <source>Text size</source>
-        <translation>Cỡ chữ</translation>
-    </message>
-    <message>
-        <source>Scale all UI text. Applies live across the app.</source>
-        <translation>Điều chỉnh tỷ lệ toàn bộ chữ giao diện. Áp dụng trực tiếp trên toàn ứng dụng.</translation>
-    </message>
-    <message>
-        <source>%1%</source>
-        <translation>%1%</translation>
+        <source>Restart to apply.</source>
+        <translation>Khởi động lại để áp dụng.</translation>
     </message>
     <message>
         <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
@@ -5106,8 +5080,20 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>Thu phóng</translation>
     </message>
     <message>
-        <source>Restart to apply.</source>
-        <translation>Khởi động lại để áp dụng.</translation>
+        <source>%1%</source>
+        <translation>%1%</translation>
+    </message>
+    <message>
+        <source>Text size</source>
+        <translation>Cỡ chữ</translation>
+    </message>
+    <message>
+        <source>Scale all UI text. Applies live across the app.</source>
+        <translation>Điều chỉnh tỷ lệ toàn bộ chữ giao diện. Áp dụng trực tiếp trên toàn ứng dụng.</translation>
+    </message>
+    <message>
+        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
+        <translation>Đánh dấu sao các chủ đề để thêm chúng vào bộ chọn ở góc trên bên phải. Nhấp vào bất kỳ hàng nào để xem trước — thay đổi được áp dụng trực tiếp trên toàn ứng dụng. Nhấn &lt;b&gt;Hoàn tác&lt;/b&gt; để hủy bản xem trước.</translation>
     </message>
     <message>
         <source>Name</source>
