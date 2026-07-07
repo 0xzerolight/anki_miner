@@ -5,7 +5,6 @@ from dataclasses import replace
 from typing import Literal, cast
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -13,13 +12,12 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QPlainTextEdit,
     QVBoxLayout,
     QWidget,
 )
 
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
-from anki_miner.gui.widgets.base import FormPanel, StatusBadge, make_label_fit_text
+from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.widgets.base import FormPanel, StatusBadge
 from anki_miner.gui.widgets.enhanced import ModernButton
 
 # Keywords used by populate_from_field_list to auto-map Anki field names.
@@ -426,7 +424,6 @@ class AnkiSettingsPanel(FormPanel):
         # Card Styling section (Issue #44). Mined-card glossaries are styled by a
         # self-contained <style> block embedded in each card at card-creation
         # time (the Yomitan model) — Anki Miner never writes to the note type.
-        # Custom CSS below is appended after the built-in styles inside that block.
         self.add_section(self.tr("Card Styling"))
 
         styling_helper = QLabel(
@@ -438,30 +435,6 @@ class AnkiSettingsPanel(FormPanel):
         styling_helper.setObjectName("helper-text")
         styling_helper.setWordWrap(True)
         self.add_widget(styling_helper)
-
-        css_label = QLabel(self.tr("Custom CSS:"))
-        css_label.setObjectName("field-label")
-        make_label_fit_text(css_label)
-        self.add_widget(css_label)
-
-        self.custom_css_edit = QPlainTextEdit()
-        self.custom_css_edit.setPlaceholderText(
-            "/* Appended after the built-in styles. Example: */\n"
-            '[data-sc-content|="example-sentence"] { display: none !important; }'
-        )
-        mono_font = QFont("monospace")
-        mono_font.setStyleHint(QFont.StyleHint.Monospace)
-        mono_font.setPixelSize(FONT_SIZES.small)
-        self.custom_css_edit.setToolTip(
-            self.tr(
-                "Published Yomitan/Jitendex snippets work verbatim. "
-                "Re-import a dictionary to refresh its data-sc-* hooks on older entries."
-            )
-        )
-        self.custom_css_edit.setFont(mono_font)
-        self.custom_css_edit.setMinimumHeight(120)
-        self.custom_css_edit.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
-        self.add_widget(self.custom_css_edit)
 
     def _add_labeled_field_with_button(
         self,
@@ -732,19 +705,6 @@ class AnkiSettingsPanel(FormPanel):
         for key, widget in self._card_type_inputs.items():
             widget.setText(mapping.get(key, _CARD_TYPE_MARKER_DEFAULTS[key]))
 
-    # === Card Styling (Issue #44) ===
-    def get_custom_css(self) -> str:
-        """Return the user's custom CSS text."""
-        return self.custom_css_edit.toPlainText()
-
-    def set_custom_css(self, value: str) -> None:
-        """Set the custom CSS editor contents (without marking a user edit)."""
-        blocked = self.custom_css_edit.blockSignals(True)
-        try:
-            self.custom_css_edit.setPlainText(value)
-        finally:
-            self.custom_css_edit.blockSignals(blocked)
-
     # === Simple field accessors (OVH-020) ===
 
     def get_deck_name(self) -> str:
@@ -797,7 +757,6 @@ class AnkiSettingsPanel(FormPanel):
         self.set_ankiconnect_url(config.ankiconnect_url)
         self.set_anki_tags(config.anki_tags)
         self.set_card_fields(config.anki_fields)
-        self.set_custom_css(config.custom_card_css)
         self.set_pitch_category_format(config.pitch_category_format)
         self.set_card_type(config.card_type)
         self.set_card_type_marker_fields(config.card_type_marker_fields)
@@ -819,7 +778,6 @@ class AnkiSettingsPanel(FormPanel):
             anki_tags=self.get_anki_tags(),
             anki_fields=fields,
             anki_word_field=fields.get("word", "Expression"),
-            custom_card_css=self.get_custom_css(),
             pitch_category_format=self.get_pitch_category_format(),
             card_type=cast(
                 Literal["", "word_and_sentence", "click", "sentence", "audio"],

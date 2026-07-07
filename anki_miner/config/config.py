@@ -289,13 +289,10 @@ class AnkiMinerConfig:
     # class scheme (`.yomitan-glossary`, `gloss-sc-*`, `data-sc-*`) and ships one
     # universal glossary stylesheet (resources/glossary.css). Glossary styling is
     # self-contained per card (the Yomitan model): a `<style>` block — universal
-    # sheet + every enabled dictionary's scoped styles.css + `custom_card_css` —
-    # is embedded at the top of each card's glossary field at card-creation time
+    # sheet + every enabled dictionary's scoped styles.css — is embedded at the top
+    # of each card's glossary field at card-creation time
     # (`EpisodeProcessor._phase5_create` → `build_card_style_block`). anki_miner
-    # never writes to the note type's card styling. `custom_card_css`
-    # (Yomitan/Jitendex snippets work verbatim) is appended after the dictionary
-    # CSS. Distinct from the app-UI `theme` fields below.
-    custom_card_css: str = ""
+    # never writes to the note type's card styling.
 
     # Deduplication settings
     deduplicate_sentences: bool = True
