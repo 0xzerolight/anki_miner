@@ -2814,20 +2814,6 @@ The frequency source was not removed.</source>
         <translation>Удалить ВСЕ слова, добавленные вами в локальный список известных слов? Это нельзя отменить. Синхронизированный с Anki кэш не затрагивается.</translation>
     </message>
 </context><context>
-    <name>LanguagePanel</name>
-    <message>
-        <source>Choose the language for the app interface.</source>
-        <translation>Выберите язык интерфейса приложения.</translation>
-    </message>
-    <message>
-        <source>Language</source>
-        <translation>Язык</translation>
-    </message>
-    <message>
-        <source>Restart to apply.</source>
-        <translation>Перезапустите, чтобы применить.</translation>
-    </message>
-</context><context>
     <name>LogWidget</name>
     <message>
         <source>Activity Log</source>
@@ -4028,12 +4014,8 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>Субтитры</translation>
     </message>
     <message>
-        <source>Themes</source>
-        <translation>Темы</translation>
-    </message>
-    <message>
-        <source>Language</source>
-        <translation>Язык</translation>
+        <source>UI</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check for updates on startup</source>
@@ -5102,22 +5084,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Удаление тишины недоступно на этой платформе.</translation>
     </message>
 </context><context>
-    <name>ThemesPanel</name>
+    <name>UISettingsPanel</name>
     <message>
-        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
-        <translation>Отметьте темы звёздочкой, чтобы добавить их в селектор в правом верхнем углу. Нажмите на любую строку для предпросмотра — изменение применяется вживую во всём приложении. Нажмите &lt;b&gt;Вернуть&lt;/b&gt;, чтобы отменить предпросмотр.</translation>
+        <source>Language</source>
+        <translation>Язык</translation>
     </message>
     <message>
-        <source>Text size</source>
-        <translation>Размер текста</translation>
-    </message>
-    <message>
-        <source>Scale all UI text. Applies live across the app.</source>
-        <translation>Масштабировать весь текст интерфейса. Применяется вживую во всём приложении.</translation>
-    </message>
-    <message>
-        <source>%1%</source>
-        <translation>%1%</translation>
+        <source>Restart to apply.</source>
+        <translation>Перезапустите, чтобы применить.</translation>
     </message>
     <message>
         <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
@@ -5128,8 +5102,20 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Масштаб</translation>
     </message>
     <message>
-        <source>Restart to apply.</source>
-        <translation>Перезапустите, чтобы применить.</translation>
+        <source>%1%</source>
+        <translation>%1%</translation>
+    </message>
+    <message>
+        <source>Text size</source>
+        <translation>Размер текста</translation>
+    </message>
+    <message>
+        <source>Scale all UI text. Applies live across the app.</source>
+        <translation>Масштабировать весь текст интерфейса. Применяется вживую во всём приложении.</translation>
+    </message>
+    <message>
+        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
+        <translation>Отметьте темы звёздочкой, чтобы добавить их в селектор в правом верхнем углу. Нажмите на любую строку для предпросмотра — изменение применяется вживую во всём приложении. Нажмите &lt;b&gt;Вернуть&lt;/b&gt;, чтобы отменить предпросмотр.</translation>
     </message>
     <message>
         <source>Name</source>

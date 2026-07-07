@@ -148,11 +148,11 @@ ALLOWLIST: dict[str, set[str]] = {
         "widgets/panels/dictionary_settings_panel.py",
         "widgets/panels/frequency_settings_panel.py",
     },
-    # processEvents — a single deliberate pump in themes_panel so the busy cursor
-    # paints before an UNAVOIDABLE synchronous repolish of the whole widget tree
-    # (documented in the slot: the restyle cost can't be moved off the GUI thread).
+    # processEvents — a single deliberate pump in ui_settings_panel so the busy
+    # cursor paints before an UNAVOIDABLE synchronous repolish of the whole widget
+    # tree (documented in the slot: the restyle cost can't be moved off the GUI thread).
     r"\.processEvents\(": {
-        "widgets/panels/themes_panel.py",
+        "widgets/panels/ui_settings_panel.py",
     },
     # get_overall_stats — inside analytics_tab._fetch, dispatched via run_off_thread.
     r"get_overall_stats\(": {

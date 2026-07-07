@@ -41,7 +41,7 @@ class AnalyticsTab(QWidget): ...
 class SettingsTab(QWidget):
     def __init__(self) -> None:
         super().__init__()
-        self.open_themes_subtab = Mock()  # capability marker for _settings_tab_index
+        self.open_ui_subtab = Mock()  # capability marker for _settings_tab_index
         self.open_subtab = Mock()
 
 

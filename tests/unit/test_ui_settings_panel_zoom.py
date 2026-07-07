@@ -1,4 +1,4 @@
-"""Tests for the Zoom (whole-UI scale) control on the ThemesPanel.
+"""Tests for the Zoom (whole-UI scale) control on the UISettingsPanel.
 
 Zoom is restart-to-apply (injected as QT_SCALE_FACTOR before QApplication is
 built), so unlike Text size there is no live Theme/restyle path — selecting a
@@ -16,7 +16,7 @@ import pytest
 
 from anki_miner.config import create_default_config
 from anki_miner.gui.resources.styles.theme import REQUIRED_COLOR_KEYS, Theme
-from anki_miner.gui.widgets.panels.themes_panel import ZOOM_PRESETS, ThemesPanel
+from anki_miner.gui.widgets.panels.ui_settings_panel import ZOOM_PRESETS, UISettingsPanel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 
@@ -41,20 +41,20 @@ def themes_dir(tmp_path: Path) -> Path:
 @pytest.fixture
 def panel(qapp, qtbot, themes_dir: Path):
     Theme.initialize(active="light", favorites=("light", "dark"), shipped_dir=themes_dir)
-    p = ThemesPanel(themes_dir)
+    p = UISettingsPanel(themes_dir)
     qtbot.addWidget(p)
     return p
 
 
-def _index_for_percent(panel: ThemesPanel, percent: int) -> int:
+def _index_for_percent(panel: UISettingsPanel, percent: int) -> int:
     return panel.zoom_combo.findData(percent)
 
 
 class TestComboPopulation:
-    def test_combo_exists_with_object_name(self, panel: ThemesPanel) -> None:
+    def test_combo_exists_with_object_name(self, panel: UISettingsPanel) -> None:
         assert panel.zoom_combo.objectName() == "zoomCombo"
 
-    def test_combo_has_exactly_the_presets(self, panel: ThemesPanel) -> None:
+    def test_combo_has_exactly_the_presets(self, panel: UISettingsPanel) -> None:
         combo = panel.zoom_combo
         assert combo.count() == len(ZOOM_PRESETS)
         for i, p in enumerate(ZOOM_PRESETS):
@@ -65,7 +65,7 @@ class TestComboPopulation:
         # ui_zoom is clamped to [0.5, 2.0] in AnkiMinerConfig.__post_init__.
         assert all(50 <= p <= 200 for p in ZOOM_PRESETS)
 
-    def test_restart_note_hidden_initially(self, panel: ThemesPanel) -> None:
+    def test_restart_note_hidden_initially(self, panel: UISettingsPanel) -> None:
         assert panel.zoom_restart_note.isHidden() is True
 
 
@@ -75,7 +75,7 @@ class TestApplyPath:
         [(75, 0.75), (100, 1.0), (125, 1.25), (200, 2.0)],
     )
     def test_selecting_preset_emits_and_reveals_note(
-        self, panel: ThemesPanel, percent: int, expected_zoom: float
+        self, panel: UISettingsPanel, percent: int, expected_zoom: float
     ) -> None:
         captured: list[float] = []
         panel.zoom_changed.connect(captured.append)
@@ -87,7 +87,7 @@ class TestApplyPath:
         assert panel.zoom_restart_note.isHidden() is False
         assert panel._ui_zoom == pytest.approx(expected_zoom)
 
-    def test_activated_signal_drives_apply(self, panel: ThemesPanel) -> None:
+    def test_activated_signal_drives_apply(self, panel: UISettingsPanel) -> None:
         captured: list[float] = []
         panel.zoom_changed.connect(captured.append)
 
@@ -103,7 +103,7 @@ class TestSyncFromConfig:
         Theme.initialize(active="light", favorites=("light",), shipped_dir=themes_dir)
         captured: list[float] = []
 
-        p = ThemesPanel(themes_dir, ui_zoom=2.0)
+        p = UISettingsPanel(themes_dir, ui_zoom=2.0)
         qtbot.addWidget(p)
         p.zoom_changed.connect(captured.append)
 
@@ -116,11 +116,11 @@ class TestSyncFromConfig:
     def test_legacy_non_preset_zoom_snaps_to_nearest(self, qapp, qtbot, themes_dir: Path) -> None:
         # 1.30 (130%) is not a preset; the display snaps to the nearest (125%).
         Theme.initialize(active="light", favorites=("light",), shipped_dir=themes_dir)
-        p = ThemesPanel(themes_dir, ui_zoom=1.30)
+        p = UISettingsPanel(themes_dir, ui_zoom=1.30)
         qtbot.addWidget(p)
         assert p.zoom_combo.currentData() == 125
 
-    def test_default_zoom_selects_100(self, panel: ThemesPanel) -> None:
+    def test_default_zoom_selects_100(self, panel: UISettingsPanel) -> None:
         # Default ui_zoom (1.0) seeds the 100% entry.
         assert panel.zoom_combo.currentData() == 100
 
@@ -150,9 +150,9 @@ class TestSettingsTabForwarding:
         tab = SettingsTab(config)
         qtbot.addWidget(tab)
 
-        combo = tab.themes_panel.zoom_combo
+        combo = tab.ui_panel.zoom_combo
         idx = combo.findData(150)
-        tab.themes_panel._on_zoom_selected(idx)
+        tab.ui_panel._on_zoom_selected(idx)
         assert tab.config.ui_zoom == pytest.approx(combo.itemData(idx) / 100.0)
 
     def test_panel_seeded_from_config_zoom(self, qapp, qtbot, themes_dir: Path) -> None:
@@ -160,4 +160,4 @@ class TestSettingsTabForwarding:
         config = replace(create_default_config(), themes_root=themes_dir, ui_zoom=1.75)
         tab = SettingsTab(config)
         qtbot.addWidget(tab)
-        assert tab.themes_panel.zoom_combo.currentData() == 175
+        assert tab.ui_panel.zoom_combo.currentData() == 175

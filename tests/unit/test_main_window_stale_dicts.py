@@ -57,14 +57,14 @@ def _stub_settings_trigger(qtbot, window) -> MagicMock:
     """Install a minimal fake Settings tab so ``_settings_tab_index`` resolves.
 
     A bare MainWindow has no tabs (app.py adds them), so the prompt's Settings
-    navigation needs a stand-in carrying the ``open_themes_subtab`` marker the
+    navigation needs a stand-in carrying the ``open_ui_subtab`` marker the
     index lookup keys on, plus a capturing ``trigger_reimport_all``.
     """
     from PyQt6.QtWidgets import QWidget
 
     fake = QWidget()
     qtbot.addWidget(fake)
-    fake.open_themes_subtab = lambda: None  # marker used by _settings_tab_index
+    fake.open_ui_subtab = lambda: None  # marker used by _settings_tab_index
     fake.trigger_reimport_all = MagicMock(name="trigger_reimport_all")
     window.tabs.addTab(fake, "Settings")
     return fake.trigger_reimport_all

@@ -1,4 +1,4 @@
-"""Tests for the Text size (UI font scale) control on the ThemesPanel.
+"""Tests for the Text size (UI font scale) control on the UISettingsPanel.
 
 Covers the combo population, the apply-on-selection path, the read-only sync
 from Theme state, nearest-preset snapping for legacy custom scales, and the
@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import QApplication
 
 from anki_miner.config import create_default_config
 from anki_miner.gui.resources.styles.theme import FONT_SCALE_MAX, FONT_SCALE_MIN, REQUIRED_COLOR_KEYS, Theme
-from anki_miner.gui.widgets.panels.themes_panel import FONT_SCALE_PRESETS, ThemesPanel
+from anki_miner.gui.widgets.panels.ui_settings_panel import FONT_SCALE_PRESETS, UISettingsPanel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 
@@ -62,22 +62,22 @@ def themes_dir(tmp_path: Path) -> Path:
 @pytest.fixture
 def panel(qapp, qtbot, themes_dir: Path):
     Theme.initialize(active="light", favorites=("light", "dark"), shipped_dir=themes_dir)
-    p = ThemesPanel(themes_dir)
+    p = UISettingsPanel(themes_dir)
     qtbot.addWidget(p)
     yield p
     # Reset font scale so it cannot leak into other tests on the singleton.
     Theme.set_font_scale(1.0)
 
 
-def _index_for_percent(panel: ThemesPanel, percent: int) -> int:
+def _index_for_percent(panel: UISettingsPanel, percent: int) -> int:
     return panel.font_scale_combo.findData(percent)
 
 
 class TestComboPopulation:
-    def test_combo_exists_with_object_name(self, panel: ThemesPanel) -> None:
+    def test_combo_exists_with_object_name(self, panel: UISettingsPanel) -> None:
         assert panel.font_scale_combo.objectName() == "fontScaleCombo"
 
-    def test_combo_has_exactly_the_presets(self, panel: ThemesPanel) -> None:
+    def test_combo_has_exactly_the_presets(self, panel: UISettingsPanel) -> None:
         combo = panel.font_scale_combo
         assert combo.count() == len(FONT_SCALE_PRESETS)
         for i, p in enumerate(FONT_SCALE_PRESETS):
@@ -94,7 +94,9 @@ class TestApplyPath:
         ("percent", "expected_scale"),
         [(50, 0.5), (100, 1.0), (125, 1.25), (200, 2.0)],
     )
-    def test_selecting_preset_applies_and_emits(self, panel: ThemesPanel, percent: int, expected_scale: float) -> None:
+    def test_selecting_preset_applies_and_emits(
+        self, panel: UISettingsPanel, percent: int, expected_scale: float
+    ) -> None:
         captured: list[float] = []
         panel.font_scale_changed.connect(captured.append)
 
@@ -105,7 +107,7 @@ class TestApplyPath:
         assert Theme.get_font_scale() == pytest.approx(expected_scale)
         assert captured == [pytest.approx(expected_scale)]
 
-    def test_activated_signal_drives_apply(self, panel: ThemesPanel) -> None:
+    def test_activated_signal_drives_apply(self, panel: UISettingsPanel) -> None:
         captured: list[float] = []
         panel.font_scale_changed.connect(captured.append)
 
@@ -117,7 +119,7 @@ class TestApplyPath:
 
 
 class TestSyncFromTheme:
-    def test_sync_selects_index_without_emitting(self, panel: ThemesPanel) -> None:
+    def test_sync_selects_index_without_emitting(self, panel: UISettingsPanel) -> None:
         Theme.set_font_scale(2.0)
         captured: list[float] = []
         panel.font_scale_changed.connect(captured.append)
@@ -130,7 +132,7 @@ class TestSyncFromTheme:
         # And Theme scale is unchanged (sync reads, never writes).
         assert Theme.get_font_scale() == 2.0
 
-    def test_legacy_non_preset_scale_snaps_to_nearest(self, panel: ThemesPanel) -> None:
+    def test_legacy_non_preset_scale_snaps_to_nearest(self, panel: UISettingsPanel) -> None:
         # A legacy custom scale of 1.3 (130%) is not a preset; the display
         # snaps to the nearest preset (125%) and must not emit.
         Theme.set_font_scale(1.3)
@@ -147,7 +149,7 @@ class TestSyncFromTheme:
         Theme.initialize(active="light", favorites=("light",), shipped_dir=themes_dir)
         Theme.set_font_scale(1.5)
         try:
-            p = ThemesPanel(themes_dir)
+            p = UISettingsPanel(themes_dir)
             qtbot.addWidget(p)
             assert p.font_scale_combo.currentData() == 150
         finally:
@@ -181,10 +183,10 @@ class TestSettingsTabForwarding:
         tab = SettingsTab(config)
         qtbot.addWidget(tab)
         try:
-            combo = tab.themes_panel.font_scale_combo
+            combo = tab.ui_panel.font_scale_combo
             idx = combo.findData(150)
             combo.setCurrentIndex(idx)
-            tab.themes_panel._on_font_scale_selected(idx)
+            tab.ui_panel._on_font_scale_selected(idx)
             assert tab.config.ui_font_scale == pytest.approx(combo.itemData(idx) / 100.0)
         finally:
             Theme.set_font_scale(1.0)

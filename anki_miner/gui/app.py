@@ -662,13 +662,13 @@ def main():
     # dictionary closes cached sqlite handles across every tab first — Win11
     # rejects the rmtree otherwise (Issue #30).
     settings_tab.dictionary_panel.set_release_callback(window.release_dictionary_resources)
-    # Favorites-list edits in Themes panel must repopulate the top-right combo
+    # Favorites-list edits in the UI panel must repopulate the top-right combo
     # immediately; the panel doesn't know about the header so the wiring lives
     # here. Active-theme changes from the panel must update the selected entry
     # in the combo without re-emitting `theme_changed` (the theme is already
     # applied — re-emitting would loop back through `_on_theme_changed`).
-    settings_tab.themes_panel.favorites_changed.connect(window.header.refresh_favorites)
-    settings_tab.themes_panel.state_changed.connect(lambda *_: window.header.update_theme_selector())
+    settings_tab.ui_panel.favorites_changed.connect(window.header.refresh_favorites)
+    settings_tab.ui_panel.state_changed.connect(lambda *_: window.header.update_theme_selector())
     window.tabs.addTab(settings_tab, QCoreApplication.translate("MainWindow", "Settings"))
 
     # Non-Settings config refreshes (e.g. JMdict migration finishing in the

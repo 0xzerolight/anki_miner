@@ -2804,20 +2804,6 @@ La source de fréquence n'a pas été supprimée.</translation>
         <translation>Supprimer TOUS les mots que vous avez ajoutés à la liste locale de mots connus ? Cette action est irréversible. Le cache synchronisé depuis Anki n'est pas affecté.</translation>
     </message>
 </context><context>
-    <name>LanguagePanel</name>
-    <message>
-        <source>Choose the language for the app interface.</source>
-        <translation>Choisissez la langue de l'interface de l'application.</translation>
-    </message>
-    <message>
-        <source>Language</source>
-        <translation>Langue</translation>
-    </message>
-    <message>
-        <source>Restart to apply.</source>
-        <translation>Redémarrez pour appliquer.</translation>
-    </message>
-</context><context>
     <name>LogWidget</name>
     <message>
         <source>Activity Log</source>
@@ -4018,12 +4004,8 @@ Vous pourrez ajuster cela plus tard dans Paramètres → Anki.</translation>
         <translation>Sous-titres</translation>
     </message>
     <message>
-        <source>Themes</source>
-        <translation>Thèmes</translation>
-    </message>
-    <message>
-        <source>Language</source>
-        <translation>Langue</translation>
+        <source>UI</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check for updates on startup</source>
@@ -5091,22 +5073,14 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>La suppression des silences n'est pas disponible sur cette plateforme.</translation>
     </message>
 </context><context>
-    <name>ThemesPanel</name>
+    <name>UISettingsPanel</name>
     <message>
-        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
-        <translation>Marquez des thèmes d'une étoile pour les ajouter au sélecteur en haut à droite. Cliquez sur une ligne pour prévisualiser — le changement s'applique en direct dans toute l'application. Appuyez sur &lt;b&gt;Rétablir&lt;/b&gt; pour annuler votre aperçu.</translation>
+        <source>Language</source>
+        <translation>Langue</translation>
     </message>
     <message>
-        <source>Text size</source>
-        <translation>Taille du texte</translation>
-    </message>
-    <message>
-        <source>Scale all UI text. Applies live across the app.</source>
-        <translation>Met à l'échelle tout le texte de l'interface. S'applique en direct dans toute l'application.</translation>
-    </message>
-    <message>
-        <source>%1%</source>
-        <translation>%1 %</translation>
+        <source>Restart to apply.</source>
+        <translation>Redémarrez pour appliquer.</translation>
     </message>
     <message>
         <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
@@ -5117,8 +5091,20 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Zoom</translation>
     </message>
     <message>
-        <source>Restart to apply.</source>
-        <translation>Redémarrez pour appliquer.</translation>
+        <source>%1%</source>
+        <translation>%1 %</translation>
+    </message>
+    <message>
+        <source>Text size</source>
+        <translation>Taille du texte</translation>
+    </message>
+    <message>
+        <source>Scale all UI text. Applies live across the app.</source>
+        <translation>Met à l'échelle tout le texte de l'interface. S'applique en direct dans toute l'application.</translation>
+    </message>
+    <message>
+        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
+        <translation>Marquez des thèmes d'une étoile pour les ajouter au sélecteur en haut à droite. Cliquez sur une ligne pour prévisualiser — le changement s'applique en direct dans toute l'application. Appuyez sur &lt;b&gt;Rétablir&lt;/b&gt; pour annuler votre aperçu.</translation>
     </message>
     <message>
         <source>Name</source>

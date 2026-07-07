@@ -34,11 +34,11 @@ def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
 
 
 class _SettingsStub(QTabWidget):
-    """Stands in for SettingsTab: exposes ``open_themes_subtab`` like the real one."""
+    """Stands in for SettingsTab: exposes ``open_ui_subtab`` like the real one."""
 
     def __init__(self) -> None:
         super().__init__()
-        self.open_themes_subtab = Mock()
+        self.open_ui_subtab = Mock()
 
 
 def _build_window(qtbot, monkeypatch, test_config):
@@ -71,7 +71,7 @@ def test_open_theme_settings_lands_on_settings_not_analytics(window_tabs):
     window._open_theme_settings()
     assert window.tabs.currentWidget() is settings
     assert window.tabs.currentWidget() is not analytics
-    settings.open_themes_subtab.assert_called_once()
+    settings.open_ui_subtab.assert_called_once()
 
 
 def test_open_settings_lands_on_settings(window_tabs):
@@ -81,7 +81,7 @@ def test_open_settings_lands_on_settings(window_tabs):
 
 
 def test_settings_tab_index_requires_capability(qtbot, monkeypatch, test_config):
-    """A widget without open_themes_subtab is not recognized as the Settings tab."""
+    """A widget without open_ui_subtab is not recognized as the Settings tab."""
     _patch_heavy_init(monkeypatch, test_config)
     from anki_miner.gui.main_window import MainWindow
 
@@ -90,7 +90,7 @@ def test_settings_tab_index_requires_capability(qtbot, monkeypatch, test_config)
     try:
         window.tabs.clear()
         window.tabs.addTab(QWidget(), "Analytics")
-        plain_settings = QWidget()  # no open_themes_subtab attribute
+        plain_settings = QWidget()  # no open_ui_subtab attribute
         window.tabs.addTab(plain_settings, "Settings")
         # The label-fallback was removed to avoid breaking under non-English
         # locales; capability check is the sole lookup path.
