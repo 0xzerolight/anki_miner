@@ -97,3 +97,35 @@ def test_reading_min_occurrence_load_and_collect_round_trip(qtbot):
 
     result = panel.contribute(AnkiMinerConfig())
     assert result.reading_min_occurrence == 4
+
+
+def test_max_frequency_warning_shown_only_when_cutoff_without_source(qtbot):
+    """A Max Frequency Rank cutoff with no enabled frequency source is inert (the
+    mining pipeline skips it), so the panel warns in that state and hides the
+    warning once a source is enabled or the cutoff is cleared."""
+    from dataclasses import replace
+
+    from anki_miner.config import AnkiMinerConfig, FreqEntry
+
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+
+    # Cutoff set + empty chain (no source) → warning shown. Assert with isHidden(),
+    # NOT isVisible(): isVisible() is False on an unshown top-level widget and would
+    # false-red this case; isHidden() reflects the explicit setVisible flag.
+    panel.load_from_config(replace(AnkiMinerConfig(), max_frequency_rank=15000))
+    assert not panel.max_frequency_warning.isHidden()
+
+    # Cutoff set + an enabled source → warning hidden.
+    panel.load_from_config(
+        replace(
+            AnkiMinerConfig(),
+            max_frequency_rank=15000,
+            frequency_chain=(FreqEntry(source_id="x", enabled=True),),
+        )
+    )
+    assert panel.max_frequency_warning.isHidden()
+
+    # No cutoff (0) → warning hidden regardless of sources.
+    panel.load_from_config(replace(AnkiMinerConfig(), max_frequency_rank=0))
+    assert panel.max_frequency_warning.isHidden()

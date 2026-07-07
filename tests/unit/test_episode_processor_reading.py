@@ -257,6 +257,29 @@ def test_min_occurrence_filters_singletons(test_config):
     assert fronts == {"頻"}
 
 
+def test_no_mineable_words_message_names_filters_on_reading_path(test_config):
+    """Regression B (reading path): reading_min_occurrence runs OUTSIDE _phase2_filter
+    (episode_processor.py:1779), so it can empty the list after words survived the
+    known-vocab filter. The shared terminal helper must then say 'removed by active
+    filters', NOT 'All words already in Anki!' — proving the filter-agnostic wording
+    is correct even when a non-_phase2 filter does the emptying."""
+    words = [_word("犬", 0), _word("猫", 1)]
+    counts = collections.Counter({"犬": 1, "猫": 1})  # both hapax
+    cfg = replace(test_config, reading_min_occurrence=2)  # drops every hapax → empty set
+
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+    presenter = MagicMock(spec=NullPresenter())
+    proc = _make_processor(cfg, subtitle_parser=sp, presenter=presenter)
+
+    proc.process_reading(_document([_unit(0), _unit(1)]))
+
+    assert any(
+        "removed by active filters" in str(c.args[0]).lower() for c in presenter.show_warning.call_args_list
+    ), presenter.show_warning.call_args_list
+    assert not any("already in anki" in str(c.args[0]).lower() for c in presenter.show_info.call_args_list)
+
+
 def test_occurrence_counts_attached_for_curation(test_config):
     """4. attach_occurrence_counts effect visible to the curation callback."""
     words = [_word("犬", 0), _word("猫", 1)]

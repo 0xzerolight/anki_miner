@@ -200,6 +200,11 @@ class _EpisodeContext:
     errors: list[str] = field(default_factory=list)
     total_words_found: int = 0
     new_words_found: int = 0
+    # Words that survived the known-vocabulary filter (the "%n new word(s) to
+    # mine" count), snapshotted before the optional filters shrink the set. Lets
+    # the terminal no-mineable-words message tell "already in Anki" (0 survivors)
+    # apart from "removed by active filters" (survivors, then filtered out).
+    candidate_words_found: int = 0
     comprehension_percentage: float = 0.0
 
     def build_result(self, **overrides: Any) -> ProcessingResult:
@@ -439,6 +444,31 @@ class EpisodeProcessor:
             new_words_found=ctx.new_words_found,
         )
 
+    def _report_no_mineable_words(self, ctx: _EpisodeContext) -> None:
+        """Emit the terminal message when no mineable words remain.
+
+        Distinguishes the two ways the set empties: the known-vocabulary filter
+        finding zero survivors ("already in Anki") versus survivors that the
+        optional filters then removed entirely. The old code always said "already
+        in Anki", which misattributed a frequency-cutoff wipe as a re-mine /
+        known-words problem. Wording is filter-agnostic: the emptying filter
+        varies by path (frequency, word list, script type, dedup, i+1, sentence
+        length on the video path; reading occurrence floor on the reading path),
+        so it does not enumerate a specific list.
+        """
+        if ctx.candidate_words_found > 0:
+            self.presenter.show_warning(
+                tr_format(
+                    QCoreApplication.translate(
+                        "EpisodeProcessor",
+                        "All %1 new word(s) were removed by active filters — no cards created",
+                    ),
+                    ctx.candidate_words_found,
+                )
+            )
+        else:
+            self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "All words already in Anki!"))
+
     def _phase1_parse(
         self,
         ctx: _EpisodeContext,
@@ -560,6 +590,10 @@ class EpisodeProcessor:
         self.presenter.show_success(
             QCoreApplication.translate("EpisodeProcessor", "%n new word(s) to mine", "", len(unknown_words))
         )
+        # Snapshot the post-known-vocab survivor count before optional filters
+        # shrink it, so the terminal message can distinguish "already in Anki"
+        # from "removed by active filters".
+        ctx.candidate_words_found = len(unknown_words)
 
         # Comprehension percentage.
         comprehension = ((len(all_words) - len(unknown_words)) / len(all_words)) * 100 if all_words else 0.0
@@ -593,8 +627,18 @@ class EpisodeProcessor:
         # just the mineable ones.
         all_unknown_lemmas = {w.lemma for w in unknown_words}
 
-        # Frequency rank cutoff.
-        if self.config.max_frequency_rank > 0 and not self.config.bypass_optional_filters:
+        # Frequency rank cutoff. Gate on an actually-loaded frequency service —
+        # NOT just max_frequency_rank > 0. With no source, the rank-assignment
+        # loop above is skipped so every word keeps frequency_rank=None, and
+        # filter_by_frequency drops every None-ranked word (word_filter.py) — a
+        # configured cutoff would then silently wipe 100% of words and produce
+        # zero cards. This mirrors the exact guard used for rank assignment above.
+        if (
+            self.config.max_frequency_rank > 0
+            and self.frequency_service
+            and self.frequency_service.is_available()
+            and not self.config.bypass_optional_filters
+        ):
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_frequency(unknown_words, self.config.max_frequency_rank)
             filtered_out = before - len(unknown_words)
@@ -608,6 +652,16 @@ class EpisodeProcessor:
                         self.config.max_frequency_rank,
                     )
                 )
+        elif self.config.max_frequency_rank > 0 and not self.config.bypass_optional_filters:
+            # Cutoff configured but no frequency source is loaded: skip it (it
+            # would drop every word) and tell the user it is inert, so they add a
+            # source instead of silently getting zero cards.
+            self.presenter.show_warning(
+                QCoreApplication.translate(
+                    "EpisodeProcessor",
+                    "Frequency cutoff set but no frequency source is loaded — cutoff ignored (add a frequency source in Settings).",
+                )
+            )
 
         # Word list (blacklist/whitelist) filter.
         if self.word_list_service and self.word_list_service.is_available() and not self.config.bypass_optional_filters:
@@ -1376,7 +1430,7 @@ class EpisodeProcessor:
 
             unknown_words = self._phase2_filter(ctx, all_words, line_index, cross_episode_counts)
             if not unknown_words:
-                self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "All words already in Anki!"))
+                self._report_no_mineable_words(ctx)
                 return ctx.build_result(new_words_found=0)
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
@@ -1781,7 +1835,7 @@ class EpisodeProcessor:
             )
             ctx.new_words_found = len(unknown_words)
             if not unknown_words:
-                self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "All words already in Anki!"))
+                self._report_no_mineable_words(ctx)
                 return ctx.build_result(new_words_found=0)
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)

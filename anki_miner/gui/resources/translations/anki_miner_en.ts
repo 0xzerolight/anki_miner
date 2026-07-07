@@ -1930,6 +1930,14 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>All %1 new word(s) were removed by active filters — no cards created</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All words already in Anki!</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Step 1/5 — Parsing subtitles: %1</source>
         <translation type="unfinished" />
     </message>
@@ -1973,6 +1981,10 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Frequency filter: removed %1 words outside top %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency cutoff set but no frequency source is loaded — cutoff ignored (add a frequency source in Settings).</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2073,10 +2085,6 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>No words found in subtitles</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>All words already in Anki!</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2279,6 +2287,10 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Words missing from the frequency list are excluded</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No frequency source is loaded — this cutoff is ignored. Add a frequency source in the Dictionaries tab.</source>
         <translation type="unfinished" />
     </message>
     <message>

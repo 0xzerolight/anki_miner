@@ -20,6 +20,7 @@ from anki_miner.orchestration.episode_processor import (
 from anki_miner.presenters import NullPresenter
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.pitch_accent_service import PitchEntry
+from anki_miner.services.word_filter import WordFilterService
 
 
 def _make_episode_context(tmp_path):
@@ -773,6 +774,107 @@ class TestOptionalServices:
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         mock_services["word_filter"].filter_by_frequency.assert_not_called()
+
+    def test_freq_cutoff_skipped_when_no_source_loaded(self, test_config, mock_services, tmp_path):
+        """Regression (reported bug): a max_frequency_rank cutoff with NO frequency
+        source loaded must NOT wipe every word. Pre-fix the ungated filter dropped
+        every None-ranked word → 0 cards + a misleading 'All words already in Anki!',
+        which the reporter mistook for 'won't re-mine deleted cards'.
+
+        Uses a REAL WordFilterService so the actual None-rank drop executes — a
+        mocked filter_by_frequency returns a truthy MagicMock and hides the bug.
+        """
+        config = replace(test_config, max_frequency_rank=15000, deduplicate_sentences=False)
+        word = _make_word("食べる")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        presenter = MagicMock(spec=NullPresenter())
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=presenter,
+            frequency_service=None,  # no source loaded — the trigger condition
+            **services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # The word survives the skipped cutoff and reaches card creation (pre-fix
+        # this was never called — the list was empty).
+        mock_services["anki_service"].create_cards_batch.assert_called_once()
+        # And the user is told the cutoff is inert instead of silently getting 0.
+        assert any(
+            "frequency source" in str(c.args[0]).lower() for c in presenter.show_warning.call_args_list
+        ), presenter.show_warning.call_args_list
+
+    def test_freq_cutoff_skipped_when_source_unavailable(self, test_config, mock_services, tmp_path):
+        """Regression A2: the gate is two-part — service present AND is_available().
+        A service whose on-disk index failed to load (is_available False) must also
+        skip the cutoff, not wipe every word."""
+        config = replace(test_config, max_frequency_rank=15000, deduplicate_sentences=False)
+        word = _make_word("食べる")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = False
+
+        presenter = MagicMock(spec=NullPresenter())
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=presenter,
+            frequency_service=mock_frequency,
+            **services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["anki_service"].create_cards_batch.assert_called_once()
+        assert any("frequency source" in str(c.args[0]).lower() for c in presenter.show_warning.call_args_list)
+
+    def test_all_filtered_out_message_names_filters_not_anki(self, test_config, mock_services, tmp_path):
+        """Regression B: when a LOADED frequency source removes every surviving
+        word, the terminal message must say the words were removed by filters — NOT
+        'All words already in Anki!' (the misdiagnosis in the original report)."""
+        config = replace(test_config, max_frequency_rank=100, deduplicate_sentences=False)
+        word = _make_word("食べる")
+
+        # Loaded source, but the word ranks far below the cutoff → real filter drops it.
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = True
+        mock_frequency.lookup_all.return_value = [("Src", 5000, None)]
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+
+        presenter = MagicMock(spec=NullPresenter())
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=presenter,
+            frequency_service=mock_frequency,
+            **services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # Positive: the corrected message on show_warning...
+        assert any(
+            "removed by active filters" in str(c.args[0]).lower() for c in presenter.show_warning.call_args_list
+        ), presenter.show_warning.call_args_list
+        # Negative (targets the OTHER method): the old string is show_info, so a
+        # method-agnostic check could false-pass — assert specifically on show_info.
+        assert not any("already in anki" in str(c.args[0]).lower() for c in presenter.show_info.call_args_list)
 
     def test_pitch_accent_populates_extra_fields(self, test_config, mock_services, tmp_path):
         """Pitch accent service should populate extra_fields in card data."""
@@ -1769,10 +1871,18 @@ class TestStatsServiceIntegration:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
+        # Frequency cutoff is gated on a loaded service now; inject one so the
+        # mocked filter_by_frequency still runs and the 2->1 shrink stays real
+        # (lookup_all returns a 3-tuple the rank-assignment loop unpacks).
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = True
+        mock_frequency.lookup_all.return_value = [("Src", 1, None)]
+
         processor = EpisodeProcessor(
             config=config,
             presenter=NullPresenter(),
             stats_service=mock_stats,
+            frequency_service=mock_frequency,
             **mock_services,
         )
 
@@ -2731,9 +2841,18 @@ class TestIPlusOneFilter:
         # Frequency filter drops the rare word before i+1 runs.
         mock_services["word_filter"].filter_by_frequency.return_value = [common]
 
+        # The frequency cutoff is now gated on a loaded frequency_service (a
+        # cutoff with no source is skipped entirely). Inject one so the mocked
+        # filter_by_frequency stays reachable; lookup_all must return a
+        # (name, rank, display) 3-tuple because the rank-assignment loop unpacks it.
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = True
+        mock_frequency.lookup_all.return_value = [("Src", 1, None)]
+
         processor = EpisodeProcessor(
             config=config,
             presenter=NullPresenter(),
+            frequency_service=mock_frequency,
             **mock_services,
         )
 

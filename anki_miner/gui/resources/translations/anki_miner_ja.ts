@@ -1954,6 +1954,14 @@ The dictionary was not removed.</source>
         <translation>単語音声ソースが音声以外の応答を返しました（レート制限の可能性）— 今回の実行では音声をスキップしました。次回の実行で再試行します</translation>
     </message>
     <message>
+        <source>All %1 new word(s) were removed by active filters — no cards created</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All words already in Anki!</source>
+        <translation>すべての単語はすでに Anki にあります！</translation>
+    </message>
+    <message>
         <source>Step 1/5 — Parsing subtitles: %1</source>
         <translation>ステップ 1/5 — 字幕を解析中: %1</translation>
     </message>
@@ -1998,6 +2006,10 @@ The dictionary was not removed.</source>
     <message>
         <source>Frequency filter: removed %1 words outside top %2</source>
         <translation>頻度フィルター: 上位 %2 圏外の %1 単語を除去</translation>
+    </message>
+    <message>
+        <source>Frequency cutoff set but no frequency source is loaded — cutoff ignored (add a frequency source in Settings).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word list filter: removed %1 words</source>
@@ -2098,10 +2110,6 @@ The dictionary was not removed.</source>
     <message>
         <source>No words found in subtitles</source>
         <translation>字幕に単語が見つかりませんでした</translation>
-    </message>
-    <message>
-        <source>All words already in Anki!</source>
-        <translation>すべての単語はすでに Anki にあります！</translation>
     </message>
     <message>
         <source>No words selected for card creation</source>
@@ -2306,6 +2314,10 @@ The dictionary was not removed.</source>
     <message>
         <source>Words missing from the frequency list are excluded</source>
         <translation>頻度リストにない単語は除外されます</translation>
+    </message>
+    <message>
+        <source>No frequency source is loaded — this cutoff is ignored. Add a frequency source in the Dictionaries tab.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Known Words Database</source>
