@@ -466,14 +466,6 @@
         <translation>Audio:</translation>
     </message>
     <message>
-        <source>Card Styling</source>
-        <translation>Stile delle carte</translation>
-    </message>
-    <message>
-        <source>Glossary styles are baked into each mined card, so your note type's CSS is never touched. Dictionaries that ship their own styles are applied automatically.</source>
-        <translation>Gli stili del glossario sono incorporati in ogni carta estratta, quindi il CSS del tipo di nota non viene mai modificato. I dizionari che includono stili propri vengono applicati automaticamente.</translation>
-    </message>
-    <message>
         <source>Syncing deck list...</source>
         <translation>Sincronizzazione dell'elenco dei mazzi in corso...</translation>
     </message>

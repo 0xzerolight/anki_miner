@@ -466,14 +466,6 @@
         <translation>Аудио:</translation>
     </message>
     <message>
-        <source>Card Styling</source>
-        <translation>Стили карточек</translation>
-    </message>
-    <message>
-        <source>Glossary styles are baked into each mined card, so your note type's CSS is never touched. Dictionaries that ship their own styles are applied automatically.</source>
-        <translation>Стили глоссария встраиваются в каждую намайненную карточку, поэтому CSS вашего типа заметки никогда не затрагивается. Словари с собственными стилями применяют их автоматически.</translation>
-    </message>
-    <message>
         <source>Syncing deck list...</source>
         <translation>Синхронизация списка колод...</translation>
     </message>

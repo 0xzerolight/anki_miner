@@ -421,21 +421,6 @@ class AnkiSettingsPanel(FormPanel):
         self.card_type_names_group.toggled.connect(self._card_type_names_body.setVisible)
         self.add_widget(self.card_type_names_group)
 
-        # Card Styling section (Issue #44). Mined-card glossaries are styled by a
-        # self-contained <style> block embedded in each card at card-creation
-        # time (the Yomitan model) — Anki Miner never writes to the note type.
-        self.add_section(self.tr("Card Styling"))
-
-        styling_helper = QLabel(
-            self.tr(
-                "Glossary styles are baked into each mined card, so your note type's CSS is "
-                "never touched. Dictionaries that ship their own styles are applied automatically."
-            )
-        )
-        styling_helper.setObjectName("helper-text")
-        styling_helper.setWordWrap(True)
-        self.add_widget(styling_helper)
-
     def _add_labeled_field_with_button(
         self,
         label_text: str,

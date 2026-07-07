@@ -466,14 +466,6 @@
         <translation>Audio:</translation>
     </message>
     <message>
-        <source>Card Styling</source>
-        <translation>Penataan Gaya Kartu</translation>
-    </message>
-    <message>
-        <source>Glossary styles are baked into each mined card, so your note type's CSS is never touched. Dictionaries that ship their own styles are applied automatically.</source>
-        <translation>Gaya glosarium disematkan ke setiap kartu yang di-mining, sehingga CSS tipe catatan tidak pernah disentuh. Kamus yang menyertakan gaya sendiri akan diterapkan secara otomatis.</translation>
-    </message>
-    <message>
         <source>Syncing deck list...</source>
         <translation>Menyinkronkan daftar dek...</translation>
     </message>

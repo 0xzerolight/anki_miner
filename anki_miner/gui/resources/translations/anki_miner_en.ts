@@ -466,14 +466,6 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Card Styling</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Glossary styles are baked into each mined card, so your note type's CSS is never touched. Dictionaries that ship their own styles are applied automatically.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Syncing deck list...</source>
         <translation type="unfinished" />
     </message>
