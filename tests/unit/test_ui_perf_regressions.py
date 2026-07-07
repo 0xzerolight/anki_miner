@@ -4,7 +4,7 @@ Covers five hot paths that were rebuilding entire widget trees / scheduling
 synchronous disk work / lacking bulk-insert guards on click:
 
 - AnalyticsTab.showEvent → refresh_data staleness cache + bulk-insert guards
-- ThemesPanel star toggle → surgical favorite-state update, no _populate
+- UISettingsPanel star toggle → surgical favorite-state update, no _populate
 - WordPreviewDialog search → debounce + bulk-insert guards
 - DictionarySettingsPanel._rebuild_list → setUpdatesEnabled wrapper
 - PairPreviewDialog populate → bulk-insert guards
@@ -25,7 +25,7 @@ from anki_miner.gui.widgets.dialogs.pair_preview_dialog import PairPreviewDialog
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 from anki_miner.gui.widgets.dialogs.word_preview_dialog import WordPreviewDialog
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
-from anki_miner.gui.widgets.panels.themes_panel import _STAR_FILLED, _STAR_OUTLINE, ThemesPanel
+from anki_miner.gui.widgets.panels.ui_settings_panel import _STAR_FILLED, _STAR_OUTLINE, UISettingsPanel
 from anki_miner.models import TokenizedWord
 from anki_miner.models.stats import OverallStats
 from anki_miner.utils.file_pairing import FilePair
@@ -109,7 +109,7 @@ def test_analytics_refresh_button_forces_refresh(qtbot):
 
 
 # ---------------------------------------------------------------------------
-# Fix 2: ThemesPanel surgical favorite-state update (no _populate on toggle)
+# Fix 2: UISettingsPanel surgical favorite-state update (no _populate on toggle)
 # ---------------------------------------------------------------------------
 
 
@@ -123,7 +123,7 @@ def _theme_dict(name: str, **overrides) -> dict:
 
 
 @pytest.fixture
-def themes_panel(qtbot, tmp_path: Path) -> ThemesPanel:
+def themes_panel(qtbot, tmp_path: Path) -> UISettingsPanel:
     import json
 
     d = tmp_path / "themes"
@@ -131,19 +131,19 @@ def themes_panel(qtbot, tmp_path: Path) -> ThemesPanel:
     (d / "light.json").write_text(json.dumps(_theme_dict("Light")))
     (d / "dark.json").write_text(json.dumps(_theme_dict("Dark")))
     Theme.initialize(active="light", favorites=(), shipped_dir=d)
-    panel = ThemesPanel(d)
+    panel = UISettingsPanel(d)
     qtbot.addWidget(panel)
     return panel
 
 
-def test_themes_star_toggle_does_not_call_populate(themes_panel: ThemesPanel):
+def test_themes_star_toggle_does_not_call_populate(themes_panel: UISettingsPanel):
     """Clicking a star updates state surgically, never via full tree rebuild."""
     with patch.object(themes_panel, "_populate") as populate_spy:
         themes_panel._toggle_favorite("dark")
         assert populate_spy.call_count == 0
 
 
-def test_themes_star_toggle_updates_button_in_place(themes_panel: ThemesPanel):
+def test_themes_star_toggle_updates_button_in_place(themes_panel: UISettingsPanel):
     """Toggling 'dark' flips its star button without rebuilding the row."""
     button = themes_panel._star_buttons["dark"]
     assert button.text() == _STAR_OUTLINE
@@ -166,7 +166,7 @@ def test_themes_family_toggle_does_not_call_populate(qtbot, tmp_path: Path):
         json.dumps(_theme_dict("Catppuccin Latte", family="Catppuccin", variant="Latte"))
     )
     Theme.initialize(active="catppuccin-mocha", favorites=(), shipped_dir=d)
-    panel = ThemesPanel(d)
+    panel = UISettingsPanel(d)
     qtbot.addWidget(panel)
     try:
         with patch.object(panel, "_populate") as populate_spy:
