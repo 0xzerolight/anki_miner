@@ -5,11 +5,10 @@ from .audio_pack_settings_panel import AudioPackSettingsPanel
 from .dictionary_settings_panel import DictionarySettingsPanel
 from .filtering_settings_panel import FilteringSettingsPanel
 from .frequency_settings_panel import FrequencySettingsPanel
-from .language_panel import LanguagePanel
 from .media_settings_panel import MediaSettingsPanel
 from .queue_panel import QueuePanel
 from .subtitles_settings_panel import SubtitlesSettingsPanel
-from .themes_panel import ThemesPanel
+from .ui_settings_panel import UISettingsPanel
 from .youtube_settings_panel import YouTubeSettingsPanel
 
 __all__ = [
@@ -19,9 +18,8 @@ __all__ = [
     "DictionarySettingsPanel",
     "FilteringSettingsPanel",
     "FrequencySettingsPanel",
-    "LanguagePanel",
     "QueuePanel",
     "SubtitlesSettingsPanel",
-    "ThemesPanel",
+    "UISettingsPanel",
     "YouTubeSettingsPanel",
 ]

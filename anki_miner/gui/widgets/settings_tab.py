@@ -38,9 +38,8 @@ from anki_miner.gui.widgets.panels import (
     DictionarySettingsPanel,
     FilteringSettingsPanel,
     FrequencySettingsPanel,
-    LanguagePanel,
     MediaSettingsPanel,
-    ThemesPanel,
+    UISettingsPanel,
     YouTubeSettingsPanel,
 )
 from anki_miner.gui.widgets.panels.subtitles_settings_panel import SubtitlesSettingsPanel
@@ -68,7 +67,7 @@ class SettingsTab(QWidget):
     """Settings tab with category organization.
 
     Uses extracted panel components for cleaner architecture.
-    Each category (Anki, Media, Dictionary, Filtering, YouTube, Themes) has its
+    Each category (Anki, Media, Dictionary, Filtering, YouTube, UI) has its
     own panel.
 
     Signals:
@@ -169,8 +168,8 @@ class SettingsTab(QWidget):
         )
         # Ordered list of panels that participate in the Save round-trip.
         # _load_config calls load_from_config on each; _on_save_clicked folds
-        # contribute() over them.  Dictionary/audio chain panels and ThemesPanel
-        # are intentionally excluded — they persist via their own signals.
+        # contribute() over them.  Dictionary/audio chain panels and the UI
+        # panel are intentionally excluded — they persist via their own signals.
         self._save_panels: list[_SavePathPanel] = [
             self.anki_panel,
             self.media_panel,
@@ -200,8 +199,7 @@ class SettingsTab(QWidget):
         self.filtering_panel = FilteringSettingsPanel()
         self.youtube_panel = YouTubeSettingsPanel()
         self.subtitles_panel = SubtitlesSettingsPanel()
-        self.themes_panel = ThemesPanel(self.config.themes_root, self.config.ui_zoom)
-        self.language_panel = LanguagePanel(self.config.ui_language)
+        self.ui_panel = UISettingsPanel(self.config.themes_root, self.config.ui_zoom, self.config.ui_language)
 
         # Add tabs with scroll areas for each panel. Stable string keys are
         # captured into _subtab_index so callers (MainWindow.reveal_capability,
@@ -218,14 +216,14 @@ class SettingsTab(QWidget):
             "filtering": self.tab_widget.addTab(self._wrap_in_scroll_area(self.filtering_panel), self.tr("Filtering")),
             "youtube": self.tab_widget.addTab(self._wrap_in_scroll_area(self.youtube_panel), self.tr("YouTube")),
             "subtitles": self.tab_widget.addTab(self._wrap_in_scroll_area(self.subtitles_panel), self.tr("Subtitles")),
-            "themes": self.tab_widget.addTab(self._wrap_in_scroll_area(self.themes_panel), self.tr("Themes")),
-            "language": self.tab_widget.addTab(self._wrap_in_scroll_area(self.language_panel), self.tr("Language")),
+            "ui": self.tab_widget.addTab(self._wrap_in_scroll_area(self.ui_panel), self.tr("UI")),
         }
-        # Retained: _on_settings_subtab_changed and open_themes_subtab key off
-        # the Themes index; reading it from the map keeps a single source of truth.
-        self._themes_subtab_index = self._subtab_index["themes"]
-        # Reset preview baseline when the user navigates away from Themes so
-        # a later visit reverts to their last-chosen theme, not session start.
+        # Retained: _on_settings_subtab_changed and open_ui_subtab key off the
+        # UI index; reading it from the map keeps a single source of truth.
+        self._ui_subtab_index = self._subtab_index["ui"]
+        # Reset the theme preview baseline when the user navigates away from the
+        # UI tab so a later visit reverts to their last-chosen theme, not session
+        # start.
         self.tab_widget.currentChanged.connect(self._on_settings_subtab_changed)
 
         layout.addWidget(self.tab_widget)
@@ -329,12 +327,11 @@ class SettingsTab(QWidget):
         self.filtering_panel.rebuild_known_words_requested.connect(self._on_rebuild_known_words)
         self.filtering_panel.manage_known_words_requested.connect(self._on_manage_known_words)
 
-        # Themes panel persists immediately on any change (live-preview model).
-        self.themes_panel.state_changed.connect(self._on_theme_state_changed)
-        self.themes_panel.font_scale_changed.connect(self._on_font_scale_changed)
-        self.themes_panel.zoom_changed.connect(self._on_zoom_changed)
-
-        self.language_panel.language_changed.connect(self._on_language_changed)
+        # UI panel persists immediately on any change (live-preview model).
+        self.ui_panel.state_changed.connect(self._on_theme_state_changed)
+        self.ui_panel.font_scale_changed.connect(self._on_font_scale_changed)
+        self.ui_panel.zoom_changed.connect(self._on_zoom_changed)
+        self.ui_panel.language_changed.connect(self._on_language_changed)
 
         # YouTube panel: manual "Update yt-dlp now" → re-emit to MainWindow
         # (app.py routes it to background_tasks.start_ytdlp_update(force=True)).
@@ -511,7 +508,7 @@ class SettingsTab(QWidget):
         # Update settings — standalone checkbox outside all panels.
         self.check_for_updates_checkbox.setChecked(self.config.check_for_updates)
 
-        self.language_panel.set_language(self.config.ui_language)
+        self.ui_panel.set_language(self.config.ui_language)
 
     def open_subtab(self, key: str) -> None:
         """Switch the settings sub-tab to the one named by ``key``.
@@ -535,20 +532,20 @@ class SettingsTab(QWidget):
         self.open_subtab("dictionaries")
         self._dict_import_flow.reimport_all()
 
-    def open_themes_subtab(self) -> None:
-        """Switch the settings sub-tab to Themes.
+    def open_ui_subtab(self) -> None:
+        """Switch the settings sub-tab to UI (language, zoom, text size, themes).
 
         Thin wrapper over :meth:`open_subtab` kept because MainWindow's
         ``_settings_tab_index`` uses this method name as the capability marker
         that identifies the Settings tab, and the 'All themes…' header sentinel
         calls it directly.
         """
-        self.open_subtab("themes")
+        self.open_subtab("ui")
 
     def _on_settings_subtab_changed(self, index: int) -> None:
-        """Reset the Themes panel preview baseline when leaving its sub-tab."""
-        if index != self._themes_subtab_index:
-            self.themes_panel.reset_baseline()
+        """Reset the UI panel's theme preview baseline when leaving its sub-tab."""
+        if index != self._ui_subtab_index:
+            self.ui_panel.reset_baseline()
 
     def _on_theme_state_changed(self, active: str, favorites: tuple) -> None:
         """Forward Themes panel changes through ``config_changed``.

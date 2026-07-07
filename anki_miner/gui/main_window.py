@@ -398,7 +398,7 @@ class MainWindow(QMainWindow):
     def _settings_tab_index(self) -> int:
         """Locate the Settings tab by capability (self-healing against tab reorder)."""
         for i in range(self.tabs.count()):
-            if hasattr(self.tabs.widget(i), "open_themes_subtab"):
+            if hasattr(self.tabs.widget(i), "open_ui_subtab"):
                 return i
         return -1
 
@@ -452,14 +452,18 @@ class MainWindow(QMainWindow):
             self.tabs.setCurrentIndex(idx)
 
     def _open_theme_settings(self) -> None:
-        """Switch to Settings → Themes (triggered by 'All themes…' sentinel)."""
+        """Switch to Settings → UI (triggered by 'All themes…' sentinel).
+
+        The theme list now lives on the UI sub-tab (alongside language/zoom/
+        text size), so this lands there.
+        """
         idx = self._settings_tab_index()
         if idx < 0:
             return
         self.tabs.setCurrentIndex(idx)
         # Call through to the Settings tab's convenience method to land on the right sub-tab.
         settings_widget = self.tabs.widget(idx)
-        open_subtab = getattr(settings_widget, "open_themes_subtab", None)
+        open_subtab = getattr(settings_widget, "open_ui_subtab", None)
         if callable(open_subtab):
             open_subtab()
 

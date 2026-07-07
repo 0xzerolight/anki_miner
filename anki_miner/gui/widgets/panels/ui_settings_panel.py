@@ -1,20 +1,25 @@
-"""Themes settings panel.
+"""UI settings panel — language, zoom, text size, and theme selection.
 
-Lists every discovered theme (shipped + user-installed) and provides:
+This is the "UI" Settings sub-tab. Top to bottom it offers:
 
-* Live preview when a row is selected — the active theme actually changes so
-  the user sees buttons, tables, scrollbars, banners react in real time.
-* A star toggle to add/remove the theme from the favorites list that drives
-  the top-right header combo and the Ctrl+T cycle rotation.
-* An "Open themes folder" button that surfaces ``~/.anki_miner/themes/`` so
-  community-contributed JSON files can be installed by drop-in (see
-  discussion #27).
-* A "Revert" button that snaps back to whatever was active when the user
-  opened the panel — preview safety without a separate Apply/Cancel button.
+* UI language picker (restart-to-apply; merged in from the former
+  ``LanguagePanel``). Emits ``language_changed``.
+* Zoom (whole-UI scale, restart-to-apply) and Text size (live font scale).
+* The theme list (shipped + user-installed) with:
+  - Live preview when a row is selected — the active theme actually changes so
+    the user sees buttons, tables, scrollbars, banners react in real time.
+  - A star toggle to add/remove the theme from the favorites list that drives
+    the top-right header combo and the Ctrl+T cycle rotation.
+  - An "Open themes folder" button that surfaces ``~/.anki_miner/themes/`` so
+    community-contributed JSON files can be installed by drop-in (see
+    discussion #27).
+  - A "Revert" button that snaps back to whatever was active when the user
+    opened the panel — preview safety without a separate Apply/Cancel button.
 
-Persistence is handled by emitting ``state_changed`` (re-uses the
-``config_changed`` convention from other panels). The settings tab forwards
-to ``MainWindow.update_config`` which writes ``gui_config.json``.
+Persistence is handled by emitting ``state_changed`` / ``font_scale_changed`` /
+``zoom_changed`` / ``language_changed`` (re-uses the ``config_changed``
+convention from other panels). The settings tab forwards to
+``MainWindow.update_config`` which writes ``gui_config.json``.
 """
 
 from __future__ import annotations
@@ -38,6 +43,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from anki_miner.gui.i18n import available_languages
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.resources.styles.theme import (
     Theme,
@@ -78,8 +84,8 @@ FONT_SCALE_PRESETS = (50, 75, 100, 125, 150, 175, 200)
 ZOOM_PRESETS = (75, 100, 125, 150, 175, 200)
 
 
-class ThemesPanel(QWidget):
-    """Settings panel for managing themes and the favorites rotation.
+class UISettingsPanel(QWidget):
+    """Settings panel for UI language, zoom, text size, and theme selection.
 
     Signals:
         state_changed: Emitted with ``(active_theme, favorites_tuple)`` after
@@ -87,19 +93,30 @@ class ThemesPanel(QWidget):
             the config and saving.
         favorites_changed: Emitted whenever favorites change so the header
             combo can refresh without an extra config round-trip.
+        font_scale_changed: Emitted with the new UI font scale (Text size).
+        zoom_changed: Emitted with the new whole-UI zoom factor.
+        language_changed: Emitted with the selected language code when the user
+            picks a new UI language (not on programmatic ``set_language``).
     """
 
     state_changed = pyqtSignal(str, tuple)
     favorites_changed = pyqtSignal()
     font_scale_changed = pyqtSignal(float)
     zoom_changed = pyqtSignal(float)
+    language_changed = pyqtSignal(str)
 
     # Column indices for clarity.
     COL_NAME = 0  # tree expander + name
     COL_STATUS = 1  # "Active" marker
     COL_STAR = 2  # favorite toggle
 
-    def __init__(self, themes_root: Path, ui_zoom: float = 1.0, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        themes_root: Path,
+        ui_zoom: float = 1.0,
+        ui_language: str = "en",
+        parent: QWidget | None = None,
+    ) -> None:
         """Initialize the panel.
 
         Args:
@@ -108,6 +125,8 @@ class ThemesPanel(QWidget):
             ui_zoom: The persisted whole-UI zoom factor, used to seed the Zoom
                 dropdown. Zoom is restart-to-apply (QT_SCALE_FACTOR), so there
                 is no live Theme state to read it from — it is passed in.
+            ui_language: The persisted UI language code, used to seed the
+                Language dropdown. Restart-to-apply, so it is passed in.
             parent: Optional parent widget.
         """
         super().__init__(parent)
@@ -122,6 +141,9 @@ class ThemesPanel(QWidget):
         self._family_records: dict[str, tuple[QTreeWidgetItem, str, list[ThemeGroupEntry]]] = {}
 
         self._setup_ui()
+        # Seed the language combo after the widgets exist (set_language reads
+        # self.language_combo); does not emit.
+        self.set_language(ui_language)
         self._populate()
         self._sync_font_scale_combo()
         self._sync_zoom_combo()
@@ -133,18 +155,65 @@ class ThemesPanel(QWidget):
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
         layout.setSpacing(SPACING.sm)
 
-        intro = QLabel(
-            self.tr(
-                "Star themes to add them to the top-right selector. Click any row to preview — "
-                "the change applies live across the app. Press <b>Revert</b> to undo your preview."
-            )
-        )
-        intro.setWordWrap(True)
-        intro.setTextFormat(Qt.TextFormat.RichText)
-        layout.addWidget(intro)
+        # Language row (restart-to-apply). Merged in from the former
+        # LanguagePanel; Qt captures tr() strings at construction, so a language
+        # change persists immediately but applies on next launch.
+        lang_row = QHBoxLayout()
+        lang_row.setSpacing(SPACING.sm)
+        lang_row.addWidget(QLabel(self.tr("Language")))
+
+        self.language_combo = QComboBox()
+        self.language_combo.setObjectName("languageCombo")
+        for code, name in available_languages().items():
+            self.language_combo.addItem(name, code)
+        # `activated` fires only on user interaction (not on the programmatic
+        # setCurrentIndex in set_language).
+        self.language_combo.activated.connect(self._on_language_selected)
+        lang_row.addWidget(self.language_combo)
+        lang_row.addStretch(1)
+        layout.addLayout(lang_row)
+
+        # Hidden until the user changes language; restart-to-apply hint.
+        self.language_restart_note = QLabel(self.tr("Restart to apply."))
+        self.language_restart_note.setWordWrap(True)
+        self.language_restart_note.setVisible(False)
+        layout.addWidget(self.language_restart_note)
+
+        # Zoom (whole-UI scale) row. Restart-to-apply (injected as
+        # QT_SCALE_FACTOR at startup), so picking a value only persists +
+        # reveals the restart note below — no live restyle.
+        zoom_row = QHBoxLayout()
+        zoom_row.setSpacing(SPACING.sm)
+
+        zoom_tip = self.tr("Scale the entire interface — text, spacing, and controls. Applies after restart.")
+        zoom_label = QLabel(self.tr("Zoom"))
+        zoom_label.setToolTip(zoom_tip)
+        zoom_row.addWidget(zoom_label)
+
+        self.zoom_combo = QComboBox()
+        self.zoom_combo.setObjectName("zoomCombo")
+        self.zoom_combo.setToolTip(zoom_tip)
+        for p in ZOOM_PRESETS:
+            self.zoom_combo.addItem(tr_format(self.tr("%1%"), p), p)
+        # `activated` (user-only) so the programmatic setCurrentIndex in
+        # _sync_zoom_combo doesn't emit and falsely reveal the restart note.
+        self.zoom_combo.activated.connect(self._on_zoom_selected)
+        zoom_row.addWidget(self.zoom_combo)
+
+        zoom_row.addStretch(1)
+
+        layout.addLayout(zoom_row)
+
+        # Hidden until the user changes zoom; restart-to-apply hint (mirrors the
+        # language note above).
+        self.zoom_restart_note = QLabel(self.tr("Restart to apply."))
+        self.zoom_restart_note.setWordWrap(True)
+        self.zoom_restart_note.setVisible(False)
+        layout.addWidget(self.zoom_restart_note)
 
         # Text size (global UI font scale) row. A styled QComboBox of discrete
         # percent presets; apply maps the selected percent to a float scale.
+        # Unlike Zoom/Language this applies live, so it has no restart note.
         font_row = QHBoxLayout()
         font_row.setSpacing(SPACING.sm)
 
@@ -169,37 +238,18 @@ class ThemesPanel(QWidget):
 
         layout.addLayout(font_row)
 
-        # Zoom (whole-UI scale) row. Unlike Text size this is restart-to-apply
-        # (injected as QT_SCALE_FACTOR at startup), so picking a value only
-        # persists + reveals the restart note below — no live restyle.
-        zoom_row = QHBoxLayout()
-        zoom_row.setSpacing(SPACING.sm)
-
-        zoom_tip = self.tr("Scale the entire interface — text, spacing, and controls. Applies after restart.")
-        zoom_label = QLabel(self.tr("Zoom"))
-        zoom_label.setToolTip(zoom_tip)
-        zoom_row.addWidget(zoom_label)
-
-        self.zoom_combo = QComboBox()
-        self.zoom_combo.setObjectName("zoomCombo")
-        self.zoom_combo.setToolTip(zoom_tip)
-        for p in ZOOM_PRESETS:
-            self.zoom_combo.addItem(tr_format(self.tr("%1%"), p), p)
-        # `activated` (user-only) so the programmatic setCurrentIndex in
-        # _sync_zoom_combo doesn't emit and falsely reveal the restart note.
-        self.zoom_combo.activated.connect(self._on_zoom_selected)
-        zoom_row.addWidget(self.zoom_combo)
-
-        zoom_row.addStretch(1)
-
-        layout.addLayout(zoom_row)
-
-        # Hidden until the user changes zoom; mirrors the language picker's
-        # restart-to-apply hint (language_panel.py).
-        self.zoom_restart_note = QLabel(self.tr("Restart to apply."))
-        self.zoom_restart_note.setWordWrap(True)
-        self.zoom_restart_note.setVisible(False)
-        layout.addWidget(self.zoom_restart_note)
+        # Theme selection. The intro explains the tree's star/preview behavior,
+        # so it sits just above the tree — the language/zoom/text-size controls
+        # now lead the panel.
+        intro = QLabel(
+            self.tr(
+                "Star themes to add them to the top-right selector. Click any row to preview — "
+                "the change applies live across the app. Press <b>Revert</b> to undo your preview."
+            )
+        )
+        intro.setWordWrap(True)
+        intro.setTextFormat(Qt.TextFormat.RichText)
+        layout.addWidget(intro)
 
         self.tree = QTreeWidget(self)
         # objectName lets common.qss scope styling overrides to just this tree
@@ -661,3 +711,28 @@ class ThemesPanel(QWidget):
             if app is not None:
                 app.restoreOverrideCursor()
         self.font_scale_changed.emit(scale)
+
+    # ---- Language --------------------------------------------------------
+
+    def set_language(self, code: str) -> None:
+        """Select ``code`` in the language combo without emitting (external sync)."""
+        idx = self.language_combo.findData(code, Qt.ItemDataRole.UserRole)
+        if idx < 0:
+            idx = self.language_combo.findData("en", Qt.ItemDataRole.UserRole)
+        self.language_combo.blockSignals(True)
+        try:
+            self.language_combo.setCurrentIndex(max(0, idx))
+        finally:
+            self.language_combo.blockSignals(False)
+
+    def _on_language_selected(self, index: int) -> None:
+        """Persist the picked UI language and reveal the restart note.
+
+        Restart-to-apply: Qt widgets capture their tr() strings at construction,
+        so the change only takes effect on the next launch.
+        """
+        code = self.language_combo.itemData(index)
+        if not isinstance(code, str):
+            return
+        self.language_restart_note.setVisible(True)
+        self.language_changed.emit(code)
