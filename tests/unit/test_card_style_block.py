@@ -4,7 +4,35 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from anki_miner.services.dictionary.card_style_block import _minify_css, build_card_style_block
+from anki_miner.services.dictionary.card_style_block import (
+    _minify_css,
+    build_card_style_block,
+    minified_base_css,
+)
+
+
+class TestMinifiedBaseCss:
+    """Invariants the restyle refresh (``card_restyler._refresh_base_sheet``) relies
+    on to swap a stale embedded base head in place without corrupting the card."""
+
+    def test_matches_block_head(self):
+        # Byte-identical to the first section build_card_style_block embeds, so the
+        # accessor is a faithful source for the refresh's replacement head.
+        block = build_card_style_block(dict_css="")
+        assert block == f"<style>{minified_base_css()}</style>"
+
+    def test_minified_base_is_newline_free(self):
+        # The refresh splits the embedded head on the FIRST "\n" to separate base
+        # from dict_css; a newline in the base would break that boundary.
+        assert "\n" not in minified_base_css()
+
+    def test_minified_base_has_no_data_dictionary_literals(self):
+        # Refresh stamps the WHOLE reassembled value (incl. the new base) with
+        # data-has-styles; the base must carry neither a `[data-dictionary="…"]`
+        # selector (would over-stamp) nor a `<li data-dictionary=` literal.
+        base = minified_base_css()
+        assert '[data-dictionary="' not in base
+        assert "<li data-dictionary=" not in base
 
 
 class TestBuildCardStyleBlock:
