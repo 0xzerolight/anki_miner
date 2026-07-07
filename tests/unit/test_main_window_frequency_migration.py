@@ -26,7 +26,6 @@ def test_startup_runs_migration_and_persists(tmp_path: Path, monkeypatch):
     csv_path.write_text("word,rank\n猫,1\n犬,2\n", encoding="utf-8")
     config = replace(
         AnkiMinerConfig(),
-        use_frequency_data=True,
         frequency_chain=(),
         frequency_list_path=csv_path,
         freqs_root=tmp_path / "freqs",
@@ -49,7 +48,6 @@ def test_startup_noop_when_nothing_to_migrate(tmp_path: Path, monkeypatch):
     """No legacy csv → config unchanged and save_config is never called."""
     config = replace(
         AnkiMinerConfig(),
-        use_frequency_data=True,
         frequency_chain=(),
         frequency_list_path=tmp_path / "frequency.csv",  # absent
         freqs_root=tmp_path / "freqs",

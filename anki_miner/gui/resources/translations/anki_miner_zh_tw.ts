@@ -1862,14 +1862,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation>含有（讀音、漢字、音調型）欄位的 CSV／TSV，或 Yomitan 格式的音調 zip（例如 Kanjium、NHK）。Yomitan zip 會在儲存時匯入 ~/.anki_miner/pitch_accent.csv。</translation>
     </message>
     <message>
-        <source>Enable Pitch Accent</source>
-        <translation>啟用高低音調</translation>
-    </message>
-    <message>
-        <source>Looks up and writes pitch patterns to mapped fields.</source>
-        <translation>查詢音調型並寫入對應的欄位。</translation>
-    </message>
-    <message>
         <source>Remove dictionary</source>
         <translation>移除字典</translation>
     </message>
@@ -1946,8 +1938,8 @@ The dictionary was not removed.</source>
         <translation>已對應欄位：&lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
     <message>
-        <source>Resources downloaded: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation>已下載資源：&lt;b&gt;%1&lt;/b&gt;</translation>
+        <source>Resources configured: &lt;b&gt;%1&lt;/b&gt;</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -2670,14 +2662,6 @@ The dictionary was not removed.</source>
     <message>
         <source>Remove</source>
         <translation>移除</translation>
-    </message>
-    <message>
-        <source>Enable Frequency Data</source>
-        <translation>啟用頻率資料</translation>
-    </message>
-    <message>
-        <source>Show word frequency rank on cards</source>
-        <translation>在卡片上顯示單字頻率排名</translation>
     </message>
     <message>
         <source>Remove frequency source</source>

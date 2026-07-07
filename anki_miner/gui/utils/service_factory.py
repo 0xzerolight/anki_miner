@@ -329,7 +329,7 @@ def create_services(
 
     # Optional services
     pitch_accent_service = None
-    if config.use_pitch_accent:
+    if config.pitch_active:
         try:
             pitch_accent_service = PitchAccentService(config.pitch_accent_path)
             pitch_accent_service.load()
@@ -347,7 +347,7 @@ def create_services(
             pitch_accent_service = None
 
     frequency_service: MultiFrequencyService | None = None
-    if config.use_frequency_data:
+    if config.frequency_active:
         try:
             registry = FrequencySourceRegistry(config.freqs_root)
             registry.load()
@@ -370,7 +370,7 @@ def create_services(
                 )
             else:
                 # Nothing enabled / on-disk: no providers loaded. Not an error —
-                # a user can have use_frequency_data on with an empty chain.
+                # an enabled chain entry can still point at a missing on-disk index.
                 frequency_service = None
         except Exception as e:
             logger.warning(f"Could not load frequency data: {e}")

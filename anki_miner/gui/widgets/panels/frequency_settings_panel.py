@@ -6,9 +6,8 @@ Replaces the old single-file "Frequency List" picker: the user adds, reorders,
 enables/disables, and removes multiple frequency rank lists, each backed by a
 per-source ``index.sqlite`` under ``config.freqs_root/<source_id>/``.
 
-A global "Enable Frequency Data" checkbox gates the whole feature (the
-service factory still reads ``config.use_frequency_data``); its state is exposed
-to the settings tab via :attr:`use_frequency_checkbox`.
+Frequency activation is resource-driven: adding an enabled source here turns the
+feature on (``config.frequency_active``). There is no separate on/off checkbox.
 """
 
 from __future__ import annotations
@@ -332,16 +331,6 @@ class FrequencySettingsPanel(FormPanel):
 
         layout.addLayout(buttons)
         self.add_field("", container)
-
-        # Global feature toggle. Kept alongside the chain because the service
-        # factory still gates on config.use_frequency_data; the settings tab
-        # reads this checkbox into that field on Save.
-        self.use_frequency_checkbox = QCheckBox(self.tr("Enable Frequency Data"))
-        self.add_field(
-            "",
-            self.use_frequency_checkbox,
-            helper=self.tr("Show word frequency rank on cards"),
-        )
         self.add_stretch()
 
     def set_chain(

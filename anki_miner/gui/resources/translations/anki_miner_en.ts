@@ -1843,14 +1843,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Enable Pitch Accent</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Looks up and writes pitch patterns to mapped fields.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Remove dictionary</source>
         <translation type="unfinished" />
     </message>
@@ -1922,7 +1914,7 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Resources downloaded: &lt;b&gt;%1&lt;/b&gt;</source>
+        <source>Resources configured: &lt;b&gt;%1&lt;/b&gt;</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -2643,14 +2635,6 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Remove</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Enable Frequency Data</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Show word frequency rank on cards</source>
         <translation type="unfinished" />
     </message>
     <message>

@@ -1862,14 +1862,6 @@ Omitidos (sin origen guardado: haga clic derecho en una fila de diccionario → 
         <translation>CSV/TSV con columnas (lectura, kanji, patrón), o un zip de acento tonal en formato Yomitan (p. ej., Kanjium, NHK). Los zips de Yomitan se importan a ~/.anki_miner/pitch_accent.csv al guardar.</translation>
     </message>
     <message>
-        <source>Enable Pitch Accent</source>
-        <translation>Activar acento tonal</translation>
-    </message>
-    <message>
-        <source>Looks up and writes pitch patterns to mapped fields.</source>
-        <translation>Busca y escribe los patrones de acento tonal en los campos asignados.</translation>
-    </message>
-    <message>
         <source>Remove dictionary</source>
         <translation>Quitar diccionario</translation>
     </message>
@@ -1946,8 +1938,8 @@ El diccionario no se quitó.</translation>
         <translation>Campos asignados: &lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
     <message>
-        <source>Resources downloaded: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation>Recursos descargados: &lt;b&gt;%1&lt;/b&gt;</translation>
+        <source>Resources configured: &lt;b&gt;%1&lt;/b&gt;</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -2680,14 +2672,6 @@ El diccionario no se quitó.</translation>
     <message>
         <source>Remove</source>
         <translation>Quitar</translation>
-    </message>
-    <message>
-        <source>Enable Frequency Data</source>
-        <translation>Activar datos de frecuencia</translation>
-    </message>
-    <message>
-        <source>Show word frequency rank on cards</source>
-        <translation>Mostrar el rango de frecuencia de la palabra en las tarjetas</translation>
     </message>
     <message>
         <source>Remove frequency source</source>

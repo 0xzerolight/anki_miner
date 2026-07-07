@@ -421,7 +421,9 @@ class DictionarySettingsPanel(FormPanel):
         layout.addLayout(buttons)
         self.add_field("", container)
 
-        # Pitch accent section unchanged
+        # Pitch accent: file selector only. Activation is resource-driven —
+        # importing a pitch file turns the feature on (config.pitch_active);
+        # there is no separate on/off checkbox.
         self.add_section(self.tr("Pitch Accent"))
         self.pitch_accent_selector = FileSelector(
             label="",
@@ -438,12 +440,6 @@ class DictionarySettingsPanel(FormPanel):
                 "Yomitan-format pitch zip (e.g. Kanjium, NHK). Yomitan zips "
                 "are imported into ~/.anki_miner/pitch_accent.csv on Save."
             ),
-        )
-        self.use_pitch_accent_checkbox = QCheckBox(self.tr("Enable Pitch Accent"))
-        self.add_field(
-            "",
-            self.use_pitch_accent_checkbox,
-            helper=self.tr("Looks up and writes pitch patterns to mapped fields."),
         )
 
         # Frequency sources now live in their own Settings → Frequency tab

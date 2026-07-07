@@ -87,24 +87,17 @@ def test_reorder_controls_disabled_during_scan_placeholder(qapp, qtbot, tmp_path
     assert panel._remove_btn.isEnabled()
 
 
-def test_pitch_checkbox_tooltip_is_helper_text(qapp, qtbot, tmp_path):
-    # After the helper->tooltip migration the redundant explicit setToolTip
-    # was removed so the richer add_field helper is the single tooltip.
-    panel = DictionarySettingsPanel(tmp_path)
-    qtbot.addWidget(panel)
-    assert panel.use_pitch_accent_checkbox.toolTip() == "Looks up and writes pitch patterns to mapped fields."
-
-
-def test_frequency_widgets_removed_pitch_kept(qapp, qtbot, tmp_path):
+def test_frequency_widgets_removed_pitch_selector_kept(qapp, qtbot, tmp_path):
     # Frequency moved to its own multi-source Settings → Frequency panel; the
-    # old single-file picker + enable toggle no longer live on the dictionary
-    # panel. Pitch accent stays here (single-file flow unchanged).
+    # old single-file picker no longer lives on the dictionary panel. The pitch
+    # file selector stays here; its enable checkbox was removed (activation is
+    # now derived from the pitch file being present, config.pitch_active).
     panel = DictionarySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     assert not hasattr(panel, "frequency_selector")
     assert not hasattr(panel, "use_frequency_checkbox")
     assert hasattr(panel, "pitch_accent_selector")
-    assert hasattr(panel, "use_pitch_accent_checkbox")
+    assert not hasattr(panel, "use_pitch_accent_checkbox")
 
 
 def test_reorder_moves_entry_up(qapp, qtbot, monkeypatch, tmp_path):

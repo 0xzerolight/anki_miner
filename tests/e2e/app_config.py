@@ -148,8 +148,6 @@ def build_app_config(e2e: E2EConfig, test_home: Path, *, bypass_known_words: boo
         include_known_words=include_known_words,
         deduplicate_sentences=deduplicate_sentences,
         allow_duplicate_cards=allow_duplicate_cards,
-        use_frequency_data=False,
-        use_pitch_accent=False,
         enable_history=True,
         # Default expression_audio field stays "" (feature off) → no audio fetch.
     )

@@ -26,14 +26,14 @@ def apply_download_summary(config: AnkiMinerConfig, summary: ResourceDownloadSum
       entry to the front (enabled) instead of stacking a duplicate, so repeated
       Tools-menu runs never grow the chain.
     * ``freq`` → prepend an enabled :class:`FreqEntry` for the new ``source_id``
-      (the worker imported the source into ``config.freqs_root/<source_id>/``)
-      and set ``use_frequency_data=True``. Idempotent in the same way as the
-      dict path: a re-run with the same source_id moves the existing entry to
-      the front instead of duplicating it. Adding the chain entry is what makes
-      the freshly-downloaded frequency data live in the same session — flipping
-      the flag alone leaves an empty chain → no providers.
-    * ``pitch`` → set ``use_pitch_accent=True`` (path already
-      ``config.pitch_accent_path``).
+      (the worker imported the source into ``config.freqs_root/<source_id>/``).
+      Idempotent in the same way as the dict path: a re-run with the same
+      source_id moves the existing entry to the front instead of duplicating it.
+      The enabled chain entry is what activates frequency (``frequency_active``)
+      and makes the freshly-downloaded data live in the same session.
+    * ``pitch`` → no config change needed: the worker wrote the file to
+      ``config.pitch_accent_path``, and its presence activates pitch
+      (``pitch_active``).
 
     If nothing succeeded, the original ``config`` object is returned unchanged.
     """
@@ -43,8 +43,6 @@ def apply_download_summary(config: AnkiMinerConfig, summary: ResourceDownloadSum
 
     chain = list(config.dictionary_chain)
     freq_chain = list(config.frequency_chain)
-    use_frequency_data = config.use_frequency_data
-    use_pitch_accent = config.use_pitch_accent
 
     for result in succeeded:
         if result.kind == "dict" and result.dict_id:
@@ -64,14 +62,11 @@ def apply_download_summary(config: AnkiMinerConfig, summary: ResourceDownloadSum
             # frequency providers until an app restart.
             freq_chain = [e for e in freq_chain if e.source_id != result.source_id]
             freq_chain.insert(0, FreqEntry(source_id=result.source_id, enabled=True))
-            use_frequency_data = True
-        elif result.kind == "pitch":
-            use_pitch_accent = True
+        # ``pitch`` results need no config change: the worker already wrote the
+        # file to config.pitch_accent_path, whose presence activates pitch.
 
     return replace(
         config,
         dictionary_chain=tuple(chain),
         frequency_chain=tuple(freq_chain),
-        use_frequency_data=use_frequency_data,
-        use_pitch_accent=use_pitch_accent,
     )
