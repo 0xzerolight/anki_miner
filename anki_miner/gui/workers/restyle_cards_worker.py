@@ -1,4 +1,4 @@
-"""Worker thread for the one-time Restyle Mined Cards tool."""
+"""Worker thread for the Restyle Mined Cards tool (re-apply latest styling)."""
 
 import logging
 
