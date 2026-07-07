@@ -550,12 +550,13 @@ class MainWindow(QMainWindow):
             self.update_config(new_config)
 
     def _restyle_mined_cards(self) -> None:
-        """Tools-menu handler: embed the built-in glossary styling into already-mined cards.
+        """Tools-menu handler: re-apply the built-in glossary styling to already-mined cards.
 
-        One-time, idempotent, additive: prepends the same self-contained ``<style>``
-        block emitted at mining time to existing miner cards that lack the base
-        sheet (see :func:`card_restyler.restyle_mined_cards`). Runs off-thread via
-        ``BackgroundTaskController`` (joined at close).
+        Idempotent and content-preserving: prepends the self-contained ``<style>``
+        block to cards that lack the base sheet, and refreshes the embedded base
+        head in place on cards that already carry one — so a styling change reaches
+        existing cards (see :func:`card_restyler.restyle_mined_cards`). Runs
+        off-thread via ``BackgroundTaskController`` (joined at close).
         """
         from anki_miner.services.card_restyler import RestyleResult
 
@@ -563,10 +564,10 @@ class MainWindow(QMainWindow):
             self,
             self.tr("Restyle Mined Cards"),
             self.tr(
-                "Embed the built-in styling into cards you mined earlier so they match "
-                "new ones. Safe to re-run and only adds styling.\n\nClose Anki's card "
-                "browser and any open note editor first — editing an open note can lose "
-                "unsaved edits.\n\nContinue?"
+                "Re-apply the latest built-in styling to your mined cards so they match "
+                "new ones. Safe to re-run; it never removes card content.\n\nClose Anki's "
+                "card browser and any open note editor first — editing an open note can "
+                "lose unsaved edits.\n\nContinue?"
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
@@ -586,7 +587,7 @@ class MainWindow(QMainWindow):
                 self,
                 self.tr("Restyle Mined Cards"),
                 tr_format(
-                    self.tr("Restyled %1 card(s). (%2 scanned; %3 already styled.)"),
+                    self.tr("Restyled %1 card(s). (%2 scanned; %3 already up to date.)"),
                     result.restyled,
                     result.scanned,
                     result.skipped_styled,
