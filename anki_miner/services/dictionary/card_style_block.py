@@ -7,11 +7,11 @@ or de-sync it. This is how Yomitan delivers glossary CSS (self-contained field
 HTML), and it replaces the shared note-type CSS block that the v2.7.6 rework
 introduced (Anki Miner no longer writes note-type styling at all).
 
-The block is ``[universal glossary.css] + [scoped per-dictionary CSS] + [user
-custom CSS]`` (base → dict-author → user, the Yomitan ``_getCustomCss`` ordering).
-The base sheet is minified on embed (comments + whitespace stripped) since it
-ships on every glossary-bearing card; only the base — which we author — is
-minified, so a dictionary's or the user's own CSS is embedded verbatim.
+The block is ``[universal glossary.css] + [scoped per-dictionary CSS]`` (base →
+dict-author, following the Yomitan ``_getCustomCss`` ordering). The base sheet is
+minified on embed (comments + whitespace stripped) since it ships on every
+glossary-bearing card; only the base — which we author — is minified, so a
+dictionary's own CSS is embedded verbatim.
 
 Pure string transform: no Qt, no HTTP, no disk I/O beyond ``load_glossary_css``'s
 bundled read. The scoped per-dictionary CSS is gathered separately by
@@ -66,14 +66,13 @@ def _minify_css(css: str) -> str:
     return "".join(out).strip()
 
 
-def build_card_style_block(*, custom_css: str, dict_css: str) -> str:
+def build_card_style_block(*, dict_css: str) -> str:
     """Assemble the self-contained per-card ``<style>`` block.
 
-    ``[minified base glossary.css] + [dict_css] + [custom_css]``, wrapped in a
-    single ``<style>`` element for embedding at the top of a card's glossary
-    field. ``dict_css`` is the already-scoped, already-concatenated per-dictionary
-    CSS (from ``collect_dictionary_css``); ``custom_css`` is the user's
-    ``custom_card_css``. Both are embedded verbatim. Returns ``""`` only if every
+    ``[minified base glossary.css] + [dict_css]``, wrapped in a single ``<style>``
+    element for embedding at the top of a card's glossary field. ``dict_css`` is
+    the already-scoped, already-concatenated per-dictionary CSS (from
+    ``collect_dictionary_css``), embedded verbatim. Returns ``""`` only if every
     section is empty (the bundled base is never empty, so in practice this always
     returns a block).
     """
@@ -81,9 +80,6 @@ def build_card_style_block(*, custom_css: str, dict_css: str) -> str:
     scoped = dict_css.strip()
     if scoped:
         sections.append(scoped)
-    custom = custom_css.strip()
-    if custom:
-        sections.append(custom)
     body = "\n".join(section for section in sections if section)
     if not body.strip():
         return ""

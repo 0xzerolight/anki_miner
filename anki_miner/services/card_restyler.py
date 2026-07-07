@@ -58,10 +58,10 @@ def _stamp_styled_envelopes(value: str, dict_css: str) -> str:
     per-dict ``<style>`` (covers renamed/uninstalled dictionaries) or the
     ``dict_css`` about to be prepended (the restyler injects current-config CSS,
     so its titles gate too; over-stamping is impossible — the block always
-    carries the matching scoped CSS for any title it contributes). Never matched
-    against custom CSS: a user's own ``[data-dictionary="D"]`` tweak must not
-    gate dict D (the residual case of such a tweak inside a legacy embedded
-    block is a benign accepted edge).
+    carries the matching scoped CSS for any title it contributes). Only those two
+    stylesheets are matched: a stray ``[data-dictionary="D"]`` selector baked into
+    a legacy card body (e.g. an older manual edit) is a benign accepted edge, not
+    a gate for dict D.
 
     The membership key re-derives the scoped-CSS selector prefix from the
     envelope attribute via the same forward escaper ``scope_dict_css`` uses
@@ -129,7 +129,7 @@ def restyle_mined_cards(
         return RestyleResult(0, 0, 0, 0)
 
     dict_css = collect_dictionary_css(config)
-    block = build_card_style_block(custom_css=config.custom_card_css, dict_css=dict_css)
+    block = build_card_style_block(dict_css=dict_css)
     if not block.startswith("<style"):
         # Defensive: the bundled base is never empty, but an empty block would
         # otherwise "restyle" every card on every run (no ol[data-count] added).

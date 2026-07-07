@@ -1094,10 +1094,7 @@ class EpisodeProcessor:
         definition_mapped = bool(self.config.anki_fields.get("definition"))
         style_block = ""
         if glossary_mapped or definition_mapped:
-            style_block = build_card_style_block(
-                custom_css=self.config.custom_card_css,
-                dict_css=collect_dictionary_css(self.config),
-            )
+            style_block = build_card_style_block(dict_css=collect_dictionary_css(self.config))
         for (word, media), definition, glossary, (pitch_position, pitch_category) in zip(
             media_results, definitions, glossaries, pitch_data, strict=True
         ):
