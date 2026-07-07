@@ -2804,20 +2804,6 @@ La fuente de frecuencia no se quitó.</translation>
         <translation>¿Eliminar TODAS las palabras que añadió a la lista local de palabras conocidas? Esto no se puede deshacer. La caché sincronizada con Anki no se ve afectada.</translation>
     </message>
 </context><context>
-    <name>LanguagePanel</name>
-    <message>
-        <source>Choose the language for the app interface.</source>
-        <translation>Elija el idioma de la interfaz de la aplicación.</translation>
-    </message>
-    <message>
-        <source>Language</source>
-        <translation>Idioma</translation>
-    </message>
-    <message>
-        <source>Restart to apply.</source>
-        <translation>Reinicie para aplicar.</translation>
-    </message>
-</context><context>
     <name>LogWidget</name>
     <message>
         <source>Activity Log</source>
@@ -4018,12 +4004,8 @@ Puede ajustar esto más tarde en Ajustes → Anki.</translation>
         <translation>Subtítulos</translation>
     </message>
     <message>
-        <source>Themes</source>
-        <translation>Temas</translation>
-    </message>
-    <message>
-        <source>Language</source>
-        <translation>Idioma</translation>
+        <source>UI</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check for updates on startup</source>
@@ -5091,22 +5073,14 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
         <translation>La eliminación de silencios no está disponible en esta plataforma.</translation>
     </message>
 </context><context>
-    <name>ThemesPanel</name>
+    <name>UISettingsPanel</name>
     <message>
-        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
-        <translation>Marque temas con estrella para añadirlos al selector superior derecho. Haga clic en cualquier fila para previsualizar; el cambio se aplica en vivo en toda la app. Pulse &lt;b&gt;Revertir&lt;/b&gt; para deshacer su vista previa.</translation>
+        <source>Language</source>
+        <translation>Idioma</translation>
     </message>
     <message>
-        <source>Text size</source>
-        <translation>Tamaño del texto</translation>
-    </message>
-    <message>
-        <source>Scale all UI text. Applies live across the app.</source>
-        <translation>Escala todo el texto de la interfaz. Se aplica en vivo en toda la app.</translation>
-    </message>
-    <message>
-        <source>%1%</source>
-        <translation>%1 %</translation>
+        <source>Restart to apply.</source>
+        <translation>Reinicie para aplicar.</translation>
     </message>
     <message>
         <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
@@ -5117,8 +5091,20 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
         <translation>Zoom</translation>
     </message>
     <message>
-        <source>Restart to apply.</source>
-        <translation>Reinicie para aplicar.</translation>
+        <source>%1%</source>
+        <translation>%1 %</translation>
+    </message>
+    <message>
+        <source>Text size</source>
+        <translation>Tamaño del texto</translation>
+    </message>
+    <message>
+        <source>Scale all UI text. Applies live across the app.</source>
+        <translation>Escala todo el texto de la interfaz. Se aplica en vivo en toda la app.</translation>
+    </message>
+    <message>
+        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
+        <translation>Marque temas con estrella para añadirlos al selector superior derecho. Haga clic en cualquier fila para previsualizar; el cambio se aplica en vivo en toda la app. Pulse &lt;b&gt;Revertir&lt;/b&gt; para deshacer su vista previa.</translation>
     </message>
     <message>
         <source>Name</source>

@@ -2794,20 +2794,6 @@ Sumber frekuensi tidak dihapus.</translation>
         <translation>Hapus SEMUA kata yang Anda tambahkan ke daftar kata yang dikenal lokal? Ini tidak dapat dibatalkan. Cache yang tersinkron dengan Anki tidak terpengaruh.</translation>
     </message>
 </context><context>
-    <name>LanguagePanel</name>
-    <message>
-        <source>Choose the language for the app interface.</source>
-        <translation>Pilih bahasa untuk antarmuka aplikasi.</translation>
-    </message>
-    <message>
-        <source>Language</source>
-        <translation>Bahasa</translation>
-    </message>
-    <message>
-        <source>Restart to apply.</source>
-        <translation>Mulai ulang untuk menerapkan.</translation>
-    </message>
-</context><context>
     <name>LogWidget</name>
     <message>
         <source>Activity Log</source>
@@ -4008,12 +3994,8 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation>Subtitel</translation>
     </message>
     <message>
-        <source>Themes</source>
-        <translation>Tema</translation>
-    </message>
-    <message>
-        <source>Language</source>
-        <translation>Bahasa</translation>
+        <source>UI</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check for updates on startup</source>
@@ -5080,22 +5062,14 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>Penghapusan keheningan tidak tersedia pada platform ini.</translation>
     </message>
 </context><context>
-    <name>ThemesPanel</name>
+    <name>UISettingsPanel</name>
     <message>
-        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
-        <translation>Beri bintang pada tema untuk menambahkannya ke pemilih di kanan atas. Klik baris mana pun untuk pratinjau — perubahan diterapkan langsung di seluruh aplikasi. Tekan &lt;b&gt;Kembalikan&lt;/b&gt; untuk membatalkan pratinjau Anda.</translation>
+        <source>Language</source>
+        <translation>Bahasa</translation>
     </message>
     <message>
-        <source>Text size</source>
-        <translation>Ukuran teks</translation>
-    </message>
-    <message>
-        <source>Scale all UI text. Applies live across the app.</source>
-        <translation>Skalakan semua teks antarmuka. Diterapkan langsung di seluruh aplikasi.</translation>
-    </message>
-    <message>
-        <source>%1%</source>
-        <translation>%1%</translation>
+        <source>Restart to apply.</source>
+        <translation>Mulai ulang untuk menerapkan.</translation>
     </message>
     <message>
         <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
@@ -5106,8 +5080,20 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>Zoom</translation>
     </message>
     <message>
-        <source>Restart to apply.</source>
-        <translation>Mulai ulang untuk menerapkan.</translation>
+        <source>%1%</source>
+        <translation>%1%</translation>
+    </message>
+    <message>
+        <source>Text size</source>
+        <translation>Ukuran teks</translation>
+    </message>
+    <message>
+        <source>Scale all UI text. Applies live across the app.</source>
+        <translation>Skalakan semua teks antarmuka. Diterapkan langsung di seluruh aplikasi.</translation>
+    </message>
+    <message>
+        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
+        <translation>Beri bintang pada tema untuk menambahkannya ke pemilih di kanan atas. Klik baris mana pun untuk pratinjau — perubahan diterapkan langsung di seluruh aplikasi. Tekan &lt;b&gt;Kembalikan&lt;/b&gt; untuk membatalkan pratinjau Anda.</translation>
     </message>
     <message>
         <source>Name</source>

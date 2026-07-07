@@ -27,8 +27,7 @@ _KEY_TO_PANEL = {
     "filtering": "filtering_panel",
     "youtube": "youtube_panel",
     "subtitles": "subtitles_panel",
-    "themes": "themes_panel",
-    "language": "language_panel",
+    "ui": "ui_panel",
 }
 
 
@@ -46,11 +45,11 @@ def test_open_subtab_lands_on_the_right_panel(tab, key: str, panel_attr: str) ->
     assert panel is current or panel in current.findChildren(type(panel))
 
 
-def test_open_themes_subtab_still_lands_on_themes(tab) -> None:
+def test_open_ui_subtab_still_lands_on_ui(tab) -> None:
     # Move away first so the assertion is meaningful.
     tab.open_subtab("anki")
-    tab.open_themes_subtab()
-    assert tab.tab_widget.currentIndex() == tab._subtab_index["themes"]
+    tab.open_ui_subtab()
+    assert tab.tab_widget.currentIndex() == tab._subtab_index["ui"]
 
 
 def test_unknown_key_is_ignored(tab) -> None:

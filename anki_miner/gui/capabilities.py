@@ -33,7 +33,7 @@ MAIN_TABS: frozenset[str] = frozenset(
 )
 # Stable settings sub-tab keys (resolved by SettingsTab.open_subtab).
 SETTINGS_SUBTABS: frozenset[str] = frozenset(
-    {"anki", "media", "dictionaries", "audio", "frequency", "filtering", "youtube", "subtitles", "themes", "language"}
+    {"anki", "media", "dictionaries", "audio", "frequency", "filtering", "youtube", "subtitles", "ui"}
 )
 
 # Display categories (deduped; translated at display time).
@@ -433,15 +433,15 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Themes, dark mode, fonts & zoom"),
         description=QT_TRANSLATE_NOOP("Capabilities", "Switch light/dark themes and adjust font scale and UI zoom."),
         category=_CAT_APPEARANCE,
-        target=CapabilityTarget("settings", "themes"),
-        keywords=("theme", "dark mode", "light mode", "font", "zoom", "color", "appearance"),
+        target=CapabilityTarget("settings", "ui"),
+        keywords=("theme", "dark mode", "light mode", "font", "zoom", "color", "appearance", "language"),
     ),
     Capability(
         id="ui-language",
         title=QT_TRANSLATE_NOOP("Capabilities", "Change the app language"),
         description=QT_TRANSLATE_NOOP("Capabilities", "Switch the interface to another language."),
         category=_CAT_APPEARANCE,
-        target=CapabilityTarget("settings", "language"),
+        target=CapabilityTarget("settings", "ui"),
         keywords=("language", "ui language", "localization", "locale", "translate interface"),
     ),
     Capability(
