@@ -10,6 +10,7 @@ from anki_miner.services.dictionary.importers.yomitan_importer import (
     derive_dict_id_from_zip,
     import_yomitan_zip,
 )
+from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, open_readonly, read_meta
 from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip
 
@@ -673,6 +674,57 @@ class TestTagBankImport:
         finally:
             conn.close()
         assert row == ("usage", -2, "word usually written using kana alone", 5.0)
+
+    def test_multiword_nbsp_tag_names_survive_import(self, tmp_path: Path):
+        """Multi-word tag NAMES must survive import intact.
+
+        Yomitan encodes a multi-word tag *name* with an internal non-breaking
+        space (U+00A0) and separates *distinct* tags with an ASCII space. If the
+        importer splits on all whitespace, a name like ``priority\xa0form``
+        shatters into ``priority``/``form`` fragments that never match their
+        tags-table chip and dump as garbled fallback words in the attribution
+        line. This affects ~31.5% of Jitendex entries.
+        """
+        nbsp = "\u00a0"  # non-breaking space: nbsp WITHIN a name, ASCII space BETWEEN tags
+        priority_form = f"priority{nbsp}form"
+        rarely_form = f"rarely{nbsp}used{nbsp}form"
+        # defTags (entry[2]) = one multi-word name; termTags (entry[7]) = a
+        # single-word tag + another multi-word name, ASCII-space separated.
+        term_banks = [[["語", "ご", rarely_form, "", 0, ["a word"], 1, f"P {priority_form}"]]]
+        tag_banks = [
+            [
+                [priority_form, "usage", 0, "high priority spelling or reading", 0],
+                [rarely_form, "usage", 0, "rarely-used form", 0],
+                ["P", "popular", -10, "popular term", 0],
+            ]
+        ]
+        zip_path = build_yomitan_zip(tmp_path / "src" / "nbsp.zip", term_banks=term_banks, tag_banks=tag_banks)
+        dest_root = tmp_path / "dicts"
+        result = import_yomitan_zip(zip_path, dest_root)
+        db = dest_root / result.dict_id / "index.sqlite"
+
+        # 1. Stored entries.tags preserves the nbsp *within* each name; the
+        #    ASCII-space-shattered artifact must be absent.
+        conn = open_readonly(db)
+        try:
+            tags = conn.execute("SELECT tags FROM entries WHERE term = ?", ("語",)).fetchone()[0]
+        finally:
+            conn.close()
+        assert priority_form in tags
+        assert rarely_form in tags
+        assert "priority form" not in tags  # ASCII-space variant = shattered
+        assert "rarely used form" not in tags
+
+        # 2. End-to-end: each name renders as ONE chip, none as garbled fallback.
+        provider = IndexedDictProvider(result.dict_id, db, display_name="Test Dict")
+        provider.load()
+        rendered = provider.lookup("語")
+        assert rendered is not None
+        assert f">{priority_form}</span>" in rendered
+        assert f">{rarely_form}</span>" in rendered
+        assert "(priority, form" not in rendered
+        assert "rarely, used" not in rendered
+        assert "<i>(Test Dict)</i>" in rendered
 
     def test_legacy_index_tag_meta_converted(self, tmp_path: Path):
         """A dict with no tag_bank files but an inline index.json tagMeta."""
