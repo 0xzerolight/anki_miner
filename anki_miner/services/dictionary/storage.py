@@ -25,7 +25,11 @@ from anki_miner.utils.text_utils import katakana_to_hiragana
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 3
+# v4: no table change — bumped to force a one-time reimport that re-runs the
+# fixed Yomitan tag split (multi-word nbsp tag names were shattered on import).
+# Stale (< SCHEMA_VERSION) indexes are dropped and the startup Reimport-All
+# prompt + pre-run gate act on schema_ok; reimport is the migration.
+SCHEMA_VERSION = 4
 
 # Lone UTF-16 surrogates (U+D800–U+DFFF) have no valid UTF-8 encoding, so sqlite3
 # raises ``UnicodeEncodeError: surrogates not allowed`` the moment such text is
