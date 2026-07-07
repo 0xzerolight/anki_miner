@@ -179,12 +179,19 @@ def import_yomitan_zip(
                     glossary = entry[5] if isinstance(entry[5], list) else [entry[5]]
                     sequence = int(entry[6]) if len(entry) > 6 and entry[6] is not None else None
                     # Yomitan term-bank tag columns: column 3 (entry[2]) is
-                    # `definitionTags`; column 8 (entry[7]) is `termTags`. Both
-                    # are space-separated tag-name strings. We union them
-                    # (definitionTags first, preserving order) and store on
-                    # `DictRow.tags` for provider-side badge composition.
-                    definition_tags = str(entry[2]).split() if len(entry) > 2 and entry[2] else []
-                    extra_term_tags = str(entry[7]).split() if len(entry) > 7 and entry[7] else []
+                    # `definitionTags`; column 8 (entry[7]) is `termTags`. Distinct
+                    # tags are separated by an ASCII space, but a multi-word tag
+                    # NAME carries an internal non-breaking space (U+00A0) — e.g.
+                    # Jitendex's "priority form", "rarely used form".
+                    # Split on ASCII space ONLY (arg-less .split() also breaks on
+                    # nbsp, shattering the name into fragments that never match the
+                    # nbsp-keyed tags-table chip and dump as garbled fallback words
+                    # in the attribution line). The renderer splits on " " too, so
+                    # the stored string must use ASCII spaces BETWEEN tags and keep
+                    # the nbsp WITHIN each name. We union both columns (definitionTags
+                    # first, preserving order) and store on `DictRow.tags`.
+                    definition_tags = [t for t in str(entry[2]).split(" ") if t] if len(entry) > 2 and entry[2] else []
+                    extra_term_tags = [t for t in str(entry[7]).split(" ") if t] if len(entry) > 7 and entry[7] else []
                     all_tags = definition_tags + extra_term_tags
                     # Column 4 (entry[3]) is `ruleIdentifiers`: the space-separated
                     # deinflection condition flags. Stored raw on DictRow.rules for
