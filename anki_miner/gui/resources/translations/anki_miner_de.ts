@@ -2804,20 +2804,6 @@ Die Häufigkeitsquelle wurde nicht entfernt.</translation>
         <translation>ALLE Wörter entfernen, die Sie zur lokalen Liste bekannter Wörter hinzugefügt haben? Dies kann nicht rückgängig gemacht werden. Der mit Anki synchronisierte Cache ist nicht betroffen.</translation>
     </message>
 </context><context>
-    <name>LanguagePanel</name>
-    <message>
-        <source>Choose the language for the app interface.</source>
-        <translation>Wählen Sie die Sprache für die App-Oberfläche.</translation>
-    </message>
-    <message>
-        <source>Language</source>
-        <translation>Sprache</translation>
-    </message>
-    <message>
-        <source>Restart to apply.</source>
-        <translation>Zum Übernehmen neu starten.</translation>
-    </message>
-</context><context>
     <name>LogWidget</name>
     <message>
         <source>Activity Log</source>
@@ -4018,12 +4004,8 @@ Sie können dies später unter Einstellungen → Anki verfeinern.</translation>
         <translation>Untertitel</translation>
     </message>
     <message>
-        <source>Themes</source>
-        <translation>Designs</translation>
-    </message>
-    <message>
-        <source>Language</source>
-        <translation>Sprache</translation>
+        <source>UI</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check for updates on startup</source>
@@ -5091,22 +5073,14 @@ Gehen Sie zu Einstellungen → ASR, um es vor dem Erstellen von Untertiteln heru
         <translation>Stille-Entfernung ist auf dieser Plattform nicht verfügbar.</translation>
     </message>
 </context><context>
-    <name>ThemesPanel</name>
+    <name>UISettingsPanel</name>
     <message>
-        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
-        <translation>Markieren Sie Designs mit einem Stern, um sie zur Auswahl oben rechts hinzuzufügen. Klicken Sie eine beliebige Zeile an, um eine Vorschau zu sehen — die Änderung wird live in der gesamten App übernommen. Drücken Sie &lt;b&gt;Zurücksetzen&lt;/b&gt;, um Ihre Vorschau rückgängig zu machen.</translation>
+        <source>Language</source>
+        <translation>Sprache</translation>
     </message>
     <message>
-        <source>Text size</source>
-        <translation>Textgröße</translation>
-    </message>
-    <message>
-        <source>Scale all UI text. Applies live across the app.</source>
-        <translation>Skaliert den gesamten UI-Text. Wird live in der gesamten App übernommen.</translation>
-    </message>
-    <message>
-        <source>%1%</source>
-        <translation>%1 %</translation>
+        <source>Restart to apply.</source>
+        <translation>Zum Übernehmen neu starten.</translation>
     </message>
     <message>
         <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
@@ -5117,8 +5091,20 @@ Gehen Sie zu Einstellungen → ASR, um es vor dem Erstellen von Untertiteln heru
         <translation>Zoom</translation>
     </message>
     <message>
-        <source>Restart to apply.</source>
-        <translation>Zum Übernehmen neu starten.</translation>
+        <source>%1%</source>
+        <translation>%1 %</translation>
+    </message>
+    <message>
+        <source>Text size</source>
+        <translation>Textgröße</translation>
+    </message>
+    <message>
+        <source>Scale all UI text. Applies live across the app.</source>
+        <translation>Skaliert den gesamten UI-Text. Wird live in der gesamten App übernommen.</translation>
+    </message>
+    <message>
+        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
+        <translation>Markieren Sie Designs mit einem Stern, um sie zur Auswahl oben rechts hinzuzufügen. Klicken Sie eine beliebige Zeile an, um eine Vorschau zu sehen — die Änderung wird live in der gesamten App übernommen. Drücken Sie &lt;b&gt;Zurücksetzen&lt;/b&gt;, um Ihre Vorschau rückgängig zu machen.</translation>
     </message>
     <message>
         <source>Name</source>

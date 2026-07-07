@@ -2761,20 +2761,6 @@ The frequency source was not removed.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
-    <name>LanguagePanel</name>
-    <message>
-        <source>Choose the language for the app interface.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Language</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Restart to apply.</source>
-        <translation type="unfinished" />
-    </message>
-</context><context>
     <name>LogWidget</name>
     <message>
         <source>Activity Log</source>
@@ -3967,11 +3953,7 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Themes</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Language</source>
+        <source>UI</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5028,21 +5010,13 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
-    <name>ThemesPanel</name>
+    <name>UISettingsPanel</name>
     <message>
-        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
+        <source>Language</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Text size</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Scale all UI text. Applies live across the app.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1%</source>
+        <source>Restart to apply.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5054,7 +5028,19 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Restart to apply.</source>
+        <source>%1%</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Text size</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Scale all UI text. Applies live across the app.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
         <translation type="unfinished" />
     </message>
     <message>

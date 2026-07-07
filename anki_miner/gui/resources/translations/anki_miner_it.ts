@@ -2804,20 +2804,6 @@ La sorgente di frequenza non è stata rimossa.</translation>
         <translation>Rimuovere TUTTE le parole aggiunte all'elenco locale delle parole conosciute? Questa operazione non può essere annullata. La cache sincronizzata con Anki non viene modificata.</translation>
     </message>
 </context><context>
-    <name>LanguagePanel</name>
-    <message>
-        <source>Choose the language for the app interface.</source>
-        <translation>Scegli la lingua dell'interfaccia dell'app.</translation>
-    </message>
-    <message>
-        <source>Language</source>
-        <translation>Lingua</translation>
-    </message>
-    <message>
-        <source>Restart to apply.</source>
-        <translation>Riavviare per applicare.</translation>
-    </message>
-</context><context>
     <name>LogWidget</name>
     <message>
         <source>Activity Log</source>
@@ -4018,12 +4004,8 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>Sottotitoli</translation>
     </message>
     <message>
-        <source>Themes</source>
-        <translation>Temi</translation>
-    </message>
-    <message>
-        <source>Language</source>
-        <translation>Lingua</translation>
+        <source>UI</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Check for updates on startup</source>
@@ -5091,22 +5073,14 @@ Andare in Impostazioni → ASR per scaricarlo prima di generare i sottotitoli.</
         <translation>La rimozione del silenzio non è disponibile su questa piattaforma.</translation>
     </message>
 </context><context>
-    <name>ThemesPanel</name>
+    <name>UISettingsPanel</name>
     <message>
-        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
-        <translation>Contrassegnare i temi con una stella per aggiungerli al selettore in alto a destra. Fare clic su una riga per l'anteprima — la modifica si applica in tempo reale in tutta l'app. Premere &lt;b&gt;Ripristina&lt;/b&gt; per annullare l'anteprima.</translation>
+        <source>Language</source>
+        <translation>Lingua</translation>
     </message>
     <message>
-        <source>Text size</source>
-        <translation>Dimensione del testo</translation>
-    </message>
-    <message>
-        <source>Scale all UI text. Applies live across the app.</source>
-        <translation>Ridimensiona tutto il testo dell'interfaccia. Si applica in tempo reale in tutta l'app.</translation>
-    </message>
-    <message>
-        <source>%1%</source>
-        <translation>%1%</translation>
+        <source>Restart to apply.</source>
+        <translation>Riavviare per applicare.</translation>
     </message>
     <message>
         <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
@@ -5117,8 +5091,20 @@ Andare in Impostazioni → ASR per scaricarlo prima di generare i sottotitoli.</
         <translation>Zoom</translation>
     </message>
     <message>
-        <source>Restart to apply.</source>
-        <translation>Riavviare per applicare.</translation>
+        <source>%1%</source>
+        <translation>%1%</translation>
+    </message>
+    <message>
+        <source>Text size</source>
+        <translation>Dimensione del testo</translation>
+    </message>
+    <message>
+        <source>Scale all UI text. Applies live across the app.</source>
+        <translation>Ridimensiona tutto il testo dell'interfaccia. Si applica in tempo reale in tutta l'app.</translation>
+    </message>
+    <message>
+        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
+        <translation>Contrassegnare i temi con una stella per aggiungerli al selettore in alto a destra. Fare clic su una riga per l'anteprima — la modifica si applica in tempo reale in tutta l'app. Premere &lt;b&gt;Ripristina&lt;/b&gt; per annullare l'anteprima.</translation>
     </message>
     <message>
         <source>Name</source>
