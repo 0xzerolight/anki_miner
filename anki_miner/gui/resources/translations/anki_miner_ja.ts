@@ -466,14 +466,6 @@
         <translation>音声：</translation>
     </message>
     <message>
-        <source>Card Styling</source>
-        <translation>カードのスタイル</translation>
-    </message>
-    <message>
-        <source>Glossary styles are baked into each mined card, so your note type's CSS is never touched. Dictionaries that ship their own styles are applied automatically.</source>
-        <translation>用語集のスタイルはマイニングされた各カードに直接組み込まれるため、ノートタイプの CSS が変更されることはありません。独自のスタイルを持つ辞書は自動的に適用されます。</translation>
-    </message>
-    <message>
         <source>Syncing deck list...</source>
         <translation>デッキ一覧を同期中...</translation>
     </message>

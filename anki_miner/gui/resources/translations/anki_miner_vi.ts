@@ -466,14 +466,6 @@
         <translation>Âm thanh:</translation>
     </message>
     <message>
-        <source>Card Styling</source>
-        <translation>Định kiểu Thẻ</translation>
-    </message>
-    <message>
-        <source>Glossary styles are baked into each mined card, so your note type's CSS is never touched. Dictionaries that ship their own styles are applied automatically.</source>
-        <translation>Kiểu Bảng chú giải được nhúng sẵn vào mỗi thẻ đã khai thác, nên CSS của loại ghi chú không bao giờ bị thay đổi. Các từ điển có kiểu riêng sẽ được áp dụng tự động.</translation>
-    </message>
-    <message>
         <source>Syncing deck list...</source>
         <translation>Đang đồng bộ danh sách bộ thẻ...</translation>
     </message>

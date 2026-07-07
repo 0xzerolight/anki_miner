@@ -466,14 +466,6 @@
         <translation>音訊：</translation>
     </message>
     <message>
-        <source>Card Styling</source>
-        <translation>卡片樣式</translation>
-    </message>
-    <message>
-        <source>Glossary styles are baked into each mined card, so your note type's CSS is never touched. Dictionaries that ship their own styles are applied automatically.</source>
-        <translation>詞彙表樣式會直接內嵌到每張採集的卡片中，因此不會更動您筆記類型的 CSS。內建樣式的字典會自動套用其樣式。</translation>
-    </message>
-    <message>
         <source>Syncing deck list...</source>
         <translation>正在同步牌組清單...</translation>
     </message>
