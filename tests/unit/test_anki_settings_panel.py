@@ -141,23 +141,12 @@ def test_no_styling_buttons_or_checkbox(qtbot):
         "apply_styling_requested",
         "remove_styling_requested",
         "manage_styling_checkbox",
+        # Custom CSS field removed — lock against reintroduction.
+        "custom_css_edit",
+        "get_custom_css",
+        "set_custom_css",
     ):
         assert not hasattr(panel, attr)
-
-
-def test_custom_css_always_editable(qtbot):
-    """The Custom CSS box is always enabled — there is no manage toggle to gate it."""
-    panel = AnkiSettingsPanel()
-    qtbot.addWidget(panel)
-    assert panel.custom_css_edit.isEnabled()
-
-
-def test_custom_css_get_set_round_trip(qtbot):
-    panel = AnkiSettingsPanel()
-    qtbot.addWidget(panel)
-    css = '[data-sc-content|="example-sentence"] { display: none; }'
-    panel.set_custom_css(css)
-    assert panel.get_custom_css() == css
 
 
 # ---------------------------------------------------------------------------
