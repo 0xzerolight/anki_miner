@@ -474,14 +474,6 @@
         <translation>Стили глоссария встраиваются в каждую намайненную карточку, поэтому CSS вашего типа заметки никогда не затрагивается. Словари с собственными стилями применяют их автоматически.</translation>
     </message>
     <message>
-        <source>Custom CSS:</source>
-        <translation>Пользовательский CSS:</translation>
-    </message>
-    <message>
-        <source>Published Yomitan/Jitendex snippets work verbatim. Re-import a dictionary to refresh its data-sc-* hooks on older entries.</source>
-        <translation>Опубликованные фрагменты Yomitan/Jitendex работают без изменений. Переимпортируйте словарь, чтобы обновить его хуки data-sc-* в старых записях.</translation>
-    </message>
-    <message>
         <source>Syncing deck list...</source>
         <translation>Синхронизация списка колод...</translation>
     </message>

@@ -474,14 +474,6 @@
         <translation>Los estilos del glosario se integran en cada tarjeta minada, por lo que el CSS de su tipo de nota nunca se modifica. Los diccionarios que incluyen sus propios estilos se aplican automáticamente.</translation>
     </message>
     <message>
-        <source>Custom CSS:</source>
-        <translation>CSS personalizado:</translation>
-    </message>
-    <message>
-        <source>Published Yomitan/Jitendex snippets work verbatim. Re-import a dictionary to refresh its data-sc-* hooks on older entries.</source>
-        <translation>Los fragmentos publicados de Yomitan/Jitendex funcionan tal cual. Vuelva a importar un diccionario para actualizar sus enganches data-sc-* en entradas antiguas.</translation>
-    </message>
-    <message>
         <source>Syncing deck list...</source>
         <translation>Sincronizando lista de mazos...</translation>
     </message>

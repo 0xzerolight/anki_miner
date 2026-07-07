@@ -474,14 +474,6 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Custom CSS:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Published Yomitan/Jitendex snippets work verbatim. Re-import a dictionary to refresh its data-sc-* hooks on older entries.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Syncing deck list...</source>
         <translation type="unfinished" />
     </message>

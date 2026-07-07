@@ -474,14 +474,6 @@
         <translation>Kiểu Bảng chú giải được nhúng sẵn vào mỗi thẻ đã khai thác, nên CSS của loại ghi chú không bao giờ bị thay đổi. Các từ điển có kiểu riêng sẽ được áp dụng tự động.</translation>
     </message>
     <message>
-        <source>Custom CSS:</source>
-        <translation>CSS tùy chỉnh:</translation>
-    </message>
-    <message>
-        <source>Published Yomitan/Jitendex snippets work verbatim. Re-import a dictionary to refresh its data-sc-* hooks on older entries.</source>
-        <translation>Các đoạn Yomitan/Jitendex đã xuất bản hoạt động nguyên văn. Nhập lại một từ điển để làm mới các hook data-sc-* trên các mục cũ hơn.</translation>
-    </message>
-    <message>
         <source>Syncing deck list...</source>
         <translation>Đang đồng bộ danh sách bộ thẻ...</translation>
     </message>

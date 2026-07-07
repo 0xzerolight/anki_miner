@@ -474,14 +474,6 @@
         <translation>詞彙表樣式會直接內嵌到每張採集的卡片中，因此不會更動您筆記類型的 CSS。內建樣式的字典會自動套用其樣式。</translation>
     </message>
     <message>
-        <source>Custom CSS:</source>
-        <translation>自訂 CSS：</translation>
-    </message>
-    <message>
-        <source>Published Yomitan/Jitendex snippets work verbatim. Re-import a dictionary to refresh its data-sc-* hooks on older entries.</source>
-        <translation>已發布的 Yomitan／Jitendex 片段可原封不動使用。重新匯入字典以更新舊項目的 data-sc-* 掛鉤。</translation>
-    </message>
-    <message>
         <source>Syncing deck list...</source>
         <translation>正在同步牌組清單...</translation>
     </message>

@@ -474,14 +474,6 @@
         <translation>Glossar-Stile werden in jede gesammelte Karte eingebettet, sodass das CSS Ihres Notiztyps nie verändert wird. Wörterbücher, die eigene Stile mitbringen, werden automatisch angewendet.</translation>
     </message>
     <message>
-        <source>Custom CSS:</source>
-        <translation>Eigenes CSS:</translation>
-    </message>
-    <message>
-        <source>Published Yomitan/Jitendex snippets work verbatim. Re-import a dictionary to refresh its data-sc-* hooks on older entries.</source>
-        <translation>Veröffentlichte Yomitan-/Jitendex-Snippets funktionieren wortwörtlich. Importieren Sie ein Wörterbuch erneut, um seine data-sc-*-Hooks bei älteren Einträgen zu aktualisieren.</translation>
-    </message>
-    <message>
         <source>Syncing deck list...</source>
         <translation>Stapelliste wird synchronisiert...</translation>
     </message>

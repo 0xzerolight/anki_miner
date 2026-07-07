@@ -474,14 +474,6 @@
         <translation>Les styles du glossaire sont intégrés dans chaque carte extraite, si bien que le CSS de votre type de note n'est jamais modifié. Les dictionnaires qui fournissent leurs propres styles sont appliqués automatiquement.</translation>
     </message>
     <message>
-        <source>Custom CSS:</source>
-        <translation>CSS personnalisé :</translation>
-    </message>
-    <message>
-        <source>Published Yomitan/Jitendex snippets work verbatim. Re-import a dictionary to refresh its data-sc-* hooks on older entries.</source>
-        <translation>Les extraits Yomitan/Jitendex publiés fonctionnent tels quels. Réimportez un dictionnaire pour actualiser ses ancres data-sc-* sur les anciennes entrées.</translation>
-    </message>
-    <message>
         <source>Syncing deck list...</source>
         <translation>Synchronisation de la liste des paquets...</translation>
     </message>
