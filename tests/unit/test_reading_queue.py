@@ -1,14 +1,16 @@
-"""Tests for reading_queue module."""
+"""Tests for reading_queue module.
+
+The persistent ``ReadingQueue`` collection was removed with the manga tab's
+queue; each Preview/Mine run now builds an ephemeral ``ReadingQueueItem`` list
+handed straight to the worker. Only the item + status models remain.
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from anki_miner.models.reading_queue import (
     ReadingItemStatus,
-    ReadingQueue,
     ReadingQueueItem,
 )
 from anki_miner.services.reading.models import ReadingSourceRef
@@ -82,122 +84,6 @@ class TestReadingItemStatus:
         assert ReadingItemStatus.PROCESSING.value == "processing"
         assert ReadingItemStatus.COMPLETED.value == "completed"
         assert ReadingItemStatus.ERROR.value == "error"
-
-
-# ---------------------------------------------------------------------------
-# ReadingQueue.add
-# ---------------------------------------------------------------------------
-
-
-class TestReadingQueueAdd:
-    """Tests for ReadingQueue.add."""
-
-    def test_add_returns_ready_item(self):
-        queue = ReadingQueue()
-        item = queue.add(REF)
-        assert item.status == ReadingItemStatus.READY
-
-    def test_add_derives_title_and_kind_from_ref(self):
-        queue = ReadingQueue()
-        ref = _ref(kind="epub", title="Novel", volume=None)
-        item = queue.add(ref)
-        assert item.source is ref
-        assert item.title == "Novel"
-        assert item.kind == "epub"
-
-    def test_add_appends_in_order(self):
-        queue = ReadingQueue()
-        refs = [
-            _ref(title="A", path="/m/a.cbz"),
-            _ref(title="B", path="/m/b.cbz"),
-            _ref(title="C", path="/m/c.cbz"),
-        ]
-        for ref in refs:
-            queue.add(ref)
-        all_items = queue.all_items()
-        assert [i.source for i in all_items] == refs
-
-    def test_add_returns_item_in_all_items(self):
-        queue = ReadingQueue()
-        item = queue.add(REF)
-        assert item in queue.all_items()
-
-    def test_add_multiple_returns_distinct_objects(self):
-        queue = ReadingQueue()
-        item1 = queue.add(REF)
-        item2 = queue.add(REF)
-        assert item1 is not item2
-
-
-# ---------------------------------------------------------------------------
-# ReadingQueue.all_items
-# ---------------------------------------------------------------------------
-
-
-class TestReadingQueueAllItems:
-    """Tests for ReadingQueue.all_items."""
-
-    def test_all_items_returns_copy(self):
-        queue = ReadingQueue()
-        queue.add(REF)
-        snapshot = queue.all_items()
-        snapshot.clear()
-        assert len(queue.all_items()) == 1  # original not affected
-
-    def test_all_items_empty_on_new_queue(self):
-        queue = ReadingQueue()
-        assert queue.all_items() == []
-
-
-# ---------------------------------------------------------------------------
-# ReadingQueue.remove
-# ---------------------------------------------------------------------------
-
-
-class TestReadingQueueRemove:
-    """Tests for ReadingQueue.remove."""
-
-    def test_remove_drops_item(self):
-        queue = ReadingQueue()
-        item = queue.add(REF)
-        queue.remove(item)
-        assert item not in queue.all_items()
-
-    def test_remove_decrements_length(self):
-        queue = ReadingQueue()
-        item1 = queue.add(REF)
-        queue.add(_ref(title="B", path="/m/b.cbz"))
-        queue.remove(item1)
-        assert len(queue.all_items()) == 1
-
-    def test_remove_leaves_other_items(self):
-        queue = ReadingQueue()
-        item1 = queue.add(REF)
-        item2 = queue.add(_ref(title="B", path="/m/b.cbz"))
-        queue.remove(item1)
-        assert item2 in queue.all_items()
-
-    def test_remove_non_member_raises_value_error(self):
-        queue = ReadingQueue()
-        orphan = ReadingQueueItem(source=REF, title="Show", kind="mokuro")
-        with pytest.raises(ValueError):
-            queue.remove(orphan)
-
-    def test_remove_already_removed_raises_value_error(self):
-        queue = ReadingQueue()
-        item = queue.add(REF)
-        queue.remove(item)
-        with pytest.raises(ValueError):
-            queue.remove(item)
-
-    def test_remove_uses_identity_not_equality(self):
-        """remove() must remove the specific instance, not the first field-equal item."""
-        queue = ReadingQueue()
-        item_a = queue.add(REF)
-        item_b = queue.add(REF)
-        queue.remove(item_b)
-        assert len(queue.all_items()) == 1
-        assert queue.all_items()[0] is item_a
 
 
 # ---------------------------------------------------------------------------

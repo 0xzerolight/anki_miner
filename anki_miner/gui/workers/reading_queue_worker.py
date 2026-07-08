@@ -10,15 +10,12 @@ parse error) ends only that item; the queue continues.
 
 Unlike the audiobook worker, this worker owns the queue-item lifecycle: it
 sets ``status``/``cards_created``/``error_message`` on each item as it runs
-(READY → PROCESSING → COMPLETED/ERROR). Items removed mid-run via
-:meth:`skip_item` are left untouched at READY. The GUI reads item state in
-the queued signal handlers, which run after the worker has already recorded
-it.
+(READY → PROCESSING → COMPLETED/ERROR). The GUI reads item state in the queued
+signal handlers, which run after the worker has already recorded it.
 
 Signal shapes mirror the audiobook worker so the tab code mirrors too:
 
-* ``item_started(int)`` — idx, fired before the item is mined. Skipped items
-  get no ``item_started`` / ``item_finished``.
+* ``item_started(int)`` — idx, fired before the item is mined.
 * ``item_progress(int, str, int)`` — idx, label, pct.
 * ``item_finished(int, object, object, int)`` — idx, result-or-None,
   error-string-or-None, attempts. Attempts is always 1 (no retry). Fires
@@ -38,7 +35,6 @@ inherits the base ``(None, None)`` media context.
 from __future__ import annotations
 
 import logging
-import threading
 from collections.abc import Callable
 
 from PyQt6.QtCore import pyqtSignal
@@ -116,14 +112,6 @@ class ReadingQueueWorker(ProcessorOwningWorker):
         # D8: no _curation_video/_curation_subtitle/_curation_offset here —
         # reading curation is table-only; the tab inherits the base (None,
         # None) media context.
-        # Skip channel: items the user removed mid-run (Clear / row [x]).
-        # The run loop iterates the frozen constructor snapshot, so a GUI-side
-        # removal alone would still mine the item — cards for rows that no
-        # longer exist. Identity-based membership (ReadingQueueItem is
-        # eq=False); ``self._items`` keeps every snapshot item alive, so
-        # identities are stable for the whole run.
-        self._skip_lock = threading.Lock()
-        self._skipped: set[ReadingQueueItem] = set()
 
     @property
     def curation_processor(self) -> EpisodeProcessor | None:
@@ -133,22 +121,6 @@ class ReadingQueueWorker(ProcessorOwningWorker):
         the GUI caches it back after the run so subsequent runs reuse it.
         """
         return self._processor
-
-    def skip_item(self, item: ReadingQueueItem) -> None:
-        """Mark *item* to be skipped if its turn has not started yet.
-
-        Thread-safe; called from the GUI thread when the user removes a queued
-        row during an active run. Best-effort: an item the loop has already
-        started runs to completion. Skipped items emit no signals and are left
-        untouched at their current (READY) status.
-        """
-        with self._skip_lock:
-            self._skipped.add(item)
-
-    def _is_skipped(self, item: ReadingQueueItem) -> bool:
-        """Thread-safe membership check for the skip channel."""
-        with self._skip_lock:
-            return item in self._skipped
 
     def run(self) -> None:
         """Process the queue end-to-end, one mining attempt per item."""
@@ -178,8 +150,6 @@ class ReadingQueueWorker(ProcessorOwningWorker):
             # load of the current item (load is the first step of _mine_one).
             if self.is_cancelled:
                 break
-            if self._is_skipped(item):
-                continue  # removed from the GUI mid-run; no signals, left at READY
             item.status = ReadingItemStatus.PROCESSING
             self.item_started.emit(idx)
             try:
