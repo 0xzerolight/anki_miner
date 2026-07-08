@@ -214,57 +214,6 @@ def test_mining_exception_on_first_item_continues_queue(make_worker, mock_proces
 
 
 # ---------------------------------------------------------------------------
-# Skip channel: GUI-removed items must not be loaded/mined and stay untouched
-# ---------------------------------------------------------------------------
-
-
-def test_skip_item_before_run_skips_only_that_item(make_worker, mock_processor, fake_load):
-    items = [_make_item("a"), _make_item("b"), _make_item("c")]
-    mock_processor.process_reading.side_effect = lambda document, **kw: _result(1)
-
-    worker = make_worker(items=items)
-    worker.skip_item(items[1])
-    caps = _connect_all(worker)
-    worker.run()
-
-    loaded = [c.args[0].title for c in fake_load.call_args_list]
-    assert loaded == ["a", "c"]
-    # idx values still match the frozen snapshot positions (0 and 2).
-    assert caps["started"].calls == [(0,), (2,)]
-    assert [c[0] for c in caps["finished"].calls] == [0, 2]
-    assert len(caps["queue_finished"].calls) == 1
-    # The skipped item is left completely untouched.
-    assert items[1].status is ReadingItemStatus.READY
-    assert items[1].cards_created == 0
-    assert items[1].error_message is None
-
-
-def test_skip_item_mid_run_emits_no_signals_for_skipped(make_worker, mock_processor, fake_load):
-    items = [_make_item("a"), _make_item("b"), _make_item("c")]
-    worker_box: dict = {}
-
-    def _skip_rest_while_mining_first(document, **kw):
-        # Simulate the user removing the queued tail while item 1 is mining.
-        worker_box["worker"].skip_item(items[1])
-        worker_box["worker"].skip_item(items[2])
-        return _result(1)
-
-    mock_processor.process_reading.side_effect = _skip_rest_while_mining_first
-
-    worker = make_worker(items=items)
-    worker_box["worker"] = worker
-    caps = _connect_all(worker)
-    worker.run()
-
-    assert mock_processor.process_reading.call_count == 1
-    assert caps["started"].calls == [(0,)]
-    assert [c[0] for c in caps["finished"].calls] == [0]
-    assert len(caps["queue_finished"].calls) == 1
-    assert items[1].status is ReadingItemStatus.READY
-    assert items[2].status is ReadingItemStatus.READY
-
-
-# ---------------------------------------------------------------------------
 # Cancellation
 # ---------------------------------------------------------------------------
 

@@ -1,35 +1,33 @@
-"""Manga sub-tab of the Reading tab: quick-folder mining plus a volume queue.
+"""Manga sub-tab of the Reading tab: one auto-detecting folder, no queue.
 
-Two ways in, one shared worker/processor lifecycle (owned by
-:class:`~anki_miner.gui.widgets._reading_mining_base._ReadingMiningTabBase`):
+Pick a folder (or drop one), then Preview or Mine. The folder is classified by
+``detector.detect``: a single-volume folder resolves to one volume, a series
+folder to many. There is no queue — **Mine** runs whatever the folder resolves
+to sequentially in one job (one ephemeral :class:`ReadingQueueItem` per volume)
+through the shared
+:class:`~anki_miner.gui.widgets._reading_mining_base._ReadingMiningTabBase`
+lifecycle. **Preview** shows a structural
+:class:`~anki_miner.gui.widgets.dialogs.manga_volumes_preview_dialog.MangaVolumesPreviewDialog`
+listing the detected volume(s) — no tokenizing, no cards. Words are inspected
+during Mine via the "Review words before mining" curation popup.
 
-* **Quick Processing card** — a folder selector plus Preview / Mine. The folder
-  is classified by ``detector.detect``: a single-volume folder mines straight
-  away as an ephemeral item (never added to the queue); a series folder of many
-  volumes expands into queue rows instead and waits for *Process Queue*.
-* **Manga queue card** — *Add Series Folder…* / *Add Volumes…* (or a drag-drop
-  of folders / ``.mokuro`` / ``.cbz`` / ``.zip``) build a list of
-  :class:`ReadingQueueItemWidget` rows that *Process Queue* mines together.
-
-Progress is shown on two bars: overall (item N of M) and current (the mining
-stage sweep of the active item).
+Progress uses two bars: the overall bar (vol N of M) appears only for a series
+run of more than one volume; a single volume shows just the per-volume bar, so
+it reads like the Novels tab.
 
 The worker OWNS the item lifecycle (it sets ``status``/``cards_created``/
 ``error_message`` on each item, on the worker thread, before emitting its
-signals), so this tab's signal slots are READ-ONLY on item state: they refresh
-the row display and the summary bars, never write status/cards/error. A queued
-``item_started`` slot arriving late must not overwrite a COMPLETED status back
-to PROCESSING.
+signals), so this tab's signal slots are READ-ONLY on item state: they update
+the progress bars and log outcomes, never write status/cards/error.
 
-Button enable/disable is recomputed on every queue/worker change by
-:meth:`_recompute_buttons`. There is no explicit state flag — the queue
-contents plus the worker handle fully determine the UI.
+Drag-drop routes through the tab, not the file selector: the first dropped
+folder / ``.mokuro`` / ``.cbz`` / ``.zip`` fills the selector; a novel drop
+earns a cross-tab hint instead.
 """
 
 from __future__ import annotations
 
 import contextlib
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -37,30 +35,24 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
-    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
-    QListWidget,
-    QListWidgetItem,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
 
-from anki_miner.exceptions import SetupError
-from anki_miner.gui.constants import MIN_HEIGHT_QUEUE_SECTION
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.base import field_label_width
+from anki_miner.gui.widgets.dialogs.manga_volumes_preview_dialog import MangaVolumesPreviewDialog
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
-from anki_miner.gui.widgets.reading_queue_item_widget import ReadingQueueItemWidget
-from anki_miner.models.reading_queue import ReadingItemStatus, ReadingQueue, ReadingQueueItem
-from anki_miner.services.reading import detector
+from anki_miner.models.reading_queue import ReadingItemStatus, ReadingQueueItem
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -68,27 +60,20 @@ if TYPE_CHECKING:
     from anki_miner.interfaces.presenter import PresenterProtocol
     from anki_miner.orchestration import EpisodeProcessor
 
-logger = logging.getLogger(__name__)
-
-# File-dialog filter glob for the "Add Volumes…" button. Multi-select so a user
-# can pick every volume in a title folder at once (each is expanded by detect).
-# The human label ("Manga") is tr()'d at call time; only the literal extension
-# glob lives here.
-_MANGA_FILTER_GLOB = "*.mokuro *.cbz *.zip"
-
-# Extensions accepted from a drag-drop / a folder (dirs are always accepted).
-# Manga sources feed _add_source_path; novel drops earn a cross-tab hint.
+# Extensions accepted from a drag-drop (directories are always accepted). Manga
+# sources fill the selector; novel drops earn a cross-tab hint.
 _MANGA_EXTS = (".mokuro", ".cbz", ".zip")
 _NOVEL_EXTS = (".epub", ".txt")
 
 
 class ReadingMangaTab(_ReadingMiningTabBase):
-    """Quick-folder + queue manga mining sub-tab.
+    """Single auto-detecting folder manga mining sub-tab (no queue).
 
-    Owns a :class:`ReadingQueue` and, via the base, at most one running
-    :class:`~anki_miner.gui.workers.reading_queue_worker.ReadingQueueWorker`.
-    Button state is derived from the queue contents and the worker handle by
-    :meth:`_recompute_buttons`.
+    Owns, via the base, at most one running
+    :class:`~anki_miner.gui.workers.reading_queue_worker.ReadingQueueWorker`
+    mining the volume(s) a folder resolves to. Button state is purely derived
+    from the worker handle by :meth:`_recompute_buttons`: idle shows
+    Preview/Mine, a run swaps them for Cancel.
 
     Reading curation is table-only (D8): the base inherits the ``(None, None)``
     curation context — this tab does NOT override ``_build_curation_context``.
@@ -116,13 +101,13 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         """
         super().__init__(config, processor, presenter, parent, stats_service)
 
-        # Queue model + per-row widget map.
-        self._queue: ReadingQueue = ReadingQueue()
-        self._row_widgets: dict[ReadingQueueItem, ReadingQueueItemWidget] = {}
-        self._list_items: dict[ReadingQueueItem, QListWidgetItem] = {}
-
         self._setup_ui()
         self._setup_drag_drop()
+        # Route ALL drops through this tab's handler: the FileSelector sets any
+        # dropped path unconditionally and its inner QLineEdit accepts URL drops
+        # by default, so disable both so the drag manager delivers to the tab.
+        self.volume_folder_selector.setAcceptDrops(False)
+        self.volume_folder_selector.input.setAcceptDrops(False)
         self._recompute_buttons()
 
     # ------------------------------------------------------------------
@@ -130,7 +115,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     # ------------------------------------------------------------------
 
     def _setup_ui(self) -> None:
-        """Build the tab layout: quick card, queue card, dual bars, log."""
+        """Build the tab layout: one Manga card, checkbox, two bars, log."""
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.Shape.NoFrame)
@@ -141,30 +126,33 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        layout.addWidget(self._create_quick_card())
-        layout.addWidget(self._create_queue_card(), 1)
+        layout.addWidget(self._create_manga_card())
 
         # Issue #65: opt-in per-item word curation popup (default off).
         self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
         self.review_words_checkbox.setChecked(False)
         self.review_words_checkbox.setToolTip(
-            self.tr("Show the word-selection popup for each source before creating cards.")
+            self.tr("Show the word-selection popup for each volume before creating cards.")
         )
         layout.addWidget(self.review_words_checkbox)
 
-        # Overall Progress (item N of M across the run).
-        layout.addWidget(self._progress_header(self.tr("Overall Progress")))
+        # Overall bar (vol N of M). Hidden unless a series run of >1 volume is
+        # active — a single volume shows just the per-volume bar below.
+        self.overall_header = self._progress_header(self.tr("Overall Progress"))
+        layout.addWidget(self.overall_header)
         self.overall_progress_widget = ProgressWidget()
         layout.addWidget(self.overall_progress_widget)
+        self.overall_header.hide()
+        self.overall_progress_widget.hide()
 
-        # Current Item Progress (the active item's mining-stage sweep).
-        layout.addWidget(self._progress_header(self.tr("Current Item")))
+        # Per-volume bar (the active volume's mining-stage sweep) — always shown.
+        layout.addWidget(self._progress_header(self.tr("Progress")))
         self.current_progress_widget = ProgressWidget()
         layout.addWidget(self.current_progress_widget)
 
         # LogWidget (carries its own header + Copy/Clear actions).
         self.log_widget = LogWidget()
-        layout.addWidget(self.log_widget)
+        layout.addWidget(self.log_widget, 1)
 
         container.setLayout(layout)
         scroll_area.setWidget(container)
@@ -184,24 +172,24 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         header.setFont(font)
         return header
 
-    def _create_quick_card(self) -> QFrame:
-        """Quick Processing card: folder selector + Preview / Mine / Cancel."""
+    def _create_manga_card(self) -> QFrame:
+        """Manga card: folder selector + Preview / Mine / Cancel."""
         card = QFrame()
         card.setObjectName("card")
         card_layout = QVBoxLayout()
         card_layout.setSpacing(SPACING.sm)
         card_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        card_layout.addWidget(SectionHeader(title=self.tr("Quick Processing")))
+        card_layout.addWidget(SectionHeader(title=self.tr("Manga")))
 
         self.volume_folder_selector = FileSelector(
-            label=self.tr("Volume Folder:"),
+            label=self.tr("Folder:"),
             file_mode=False,
             file_filter="",
-            label_width=field_label_width("Volume Folder:"),
+            label_width=field_label_width("Folder:"),
         )
         self.volume_folder_selector.setToolTip(
-            self.tr("A folder with one manga volume mines now; a series folder of many volumes fills the queue below.")
+            self.tr("A folder with one manga volume, or a series folder of many volumes.")
         )
         card_layout.addWidget(self.volume_folder_selector)
 
@@ -209,12 +197,12 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         button_row.setSpacing(SPACING.sm)
 
         self.preview_button = ModernButton(self.tr("Preview"), variant="secondary")
-        self.preview_button.setToolTip(self.tr("Preview the selected volume folder — no cards created."))
+        self.preview_button.setToolTip(self.tr("List the volume(s) this folder would mine — no cards created."))
         self.preview_button.clicked.connect(self._on_preview_clicked)
         button_row.addWidget(self.preview_button)
 
         self.mine_button = ModernButton(self.tr("Mine"), variant="primary")
-        self.mine_button.setToolTip(self.tr("Mine the selected volume folder into Anki cards."))
+        self.mine_button.setToolTip(self.tr("Mine the selected folder's volume(s) into Anki cards."))
         self.mine_button.clicked.connect(self._on_mine_clicked)
         button_row.addWidget(self.mine_button)
 
@@ -228,123 +216,18 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         card_layout.addLayout(button_row)
 
         card.setLayout(card_layout)
-        card.setMinimumHeight(MIN_HEIGHT_QUEUE_SECTION)
         card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         return card
 
-    def _create_queue_card(self) -> QFrame:
-        """Manga queue card: Add buttons + list + Process Queue / Clear All."""
-        card = QFrame()
-        card.setObjectName("card")
-        card_layout = QVBoxLayout()
-        card_layout.setSpacing(SPACING.sm)
-        card_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
-
-        card_layout.addWidget(SectionHeader(title=self.tr("Manga queue")))
-
-        add_row = QHBoxLayout()
-        add_row.setSpacing(SPACING.xs)
-        self.add_series_button = ModernButton(self.tr("Add Series Folder…"), variant="secondary")
-        self.add_series_button.setToolTip(self.tr("Add every volume inside a series folder."))
-        self.add_series_button.clicked.connect(self._on_add_series_clicked)
-        add_row.addWidget(self.add_series_button)
-
-        self.add_volumes_button = ModernButton(self.tr("Add Volumes…"), variant="secondary")
-        self.add_volumes_button.setToolTip(self.tr("Add manga volumes — .mokuro/.cbz/.zip file(s)."))
-        self.add_volumes_button.clicked.connect(self._on_add_volumes_clicked)
-        add_row.addWidget(self.add_volumes_button)
-        add_row.addStretch()
-        card_layout.addLayout(add_row)
-
-        self.list_widget = QListWidget()
-        self.list_widget.setObjectName("reading-queue-list")
-        self.list_widget.setSelectionMode(QListWidget.SelectionMode.NoSelection)
-        self.list_widget.setUniformItemSizes(False)
-        card_layout.addWidget(self.list_widget, 1)
-
-        self.empty_label = QLabel(self.tr("Add a series folder or volumes above, or drag them here."))
-        self.empty_label.setObjectName("helper-text")
-        self.empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        card_layout.addWidget(self.empty_label)
-
-        button_row = QHBoxLayout()
-        button_row.setSpacing(SPACING.xs)
-        self.process_queue_button = ModernButton(self.tr("Process Queue"), variant="primary")
-        self.process_queue_button.setToolTip(self.tr("Mine every queued volume into Anki cards."))
-        self.process_queue_button.clicked.connect(self._on_process_queue_clicked)
-        button_row.addWidget(self.process_queue_button)
-
-        self.clear_button = ModernButton(self.tr("Clear All"), variant="ghost")
-        self.clear_button.setToolTip(self.tr("Remove every queued item that is not currently mining."))
-        self.clear_button.clicked.connect(self._on_clear_clicked)
-        button_row.addWidget(self.clear_button)
-        button_row.addStretch()
-        card_layout.addLayout(button_row)
-
-        card.setLayout(card_layout)
-        return card
-
     # ------------------------------------------------------------------
-    # Add flow
-    # ------------------------------------------------------------------
-
-    def _on_add_series_clicked(self) -> None:
-        """Pick a series folder and queue every volume detect finds inside it."""
-        if not self.add_series_button.isEnabled():
-            return  # Defensive: out-of-band trigger while a run is active.
-        folder = QFileDialog.getExistingDirectory(
-            self,
-            self.tr("Add Series Folder"),
-            str(Path.home()),
-        )
-        if folder:
-            self._add_source_path(Path(folder))
-
-    def _on_add_volumes_clicked(self) -> None:
-        """Pick manga volume file(s) and queue each (multi-select)."""
-        if not self.add_volumes_button.isEnabled():
-            return  # Defensive: out-of-band trigger while a run is active.
-        paths, _ = QFileDialog.getOpenFileNames(
-            self,
-            self.tr("Add Volumes"),
-            str(Path.home()),
-            f"{self.tr('Manga')} ({_MANGA_FILTER_GLOB})",
-        )
-        for path in paths:
-            self._add_source_path(Path(path))
-
-    def _add_source_path(self, path: Path) -> None:
-        """Classify *path* via ``detector.detect`` and queue every resulting ref.
-
-        A series dir yields N volume refs → N rows. Any ``SetupError`` (missing
-        sidecar, bad ``.mokuro`` JSON, unrecognized path) or unexpected detect
-        failure is surfaced in the log and adds no row.
-        """
-        try:
-            refs = detector.detect(path)
-        except SetupError as exc:
-            # Crafted, user-facing message: surface it verbatim.
-            self.log_widget.append_error(str(exc))
-            return
-        except Exception as exc:  # noqa: BLE001 - surface any classify failure to the log
-            logger.exception("Reading source detect failed for %s", path)
-            self.log_widget.append_error(tr_format(self.tr("Could not add %1: %2"), path.name, exc))
-            return
-
-        for ref in refs:
-            item = self._queue.add(ref)
-            self._render_new_item(item)
-        self._recompute_buttons()
-
-    # ------------------------------------------------------------------
-    # Drag-and-drop (tab-level: manga sources queue; novels earn a hint)
+    # Drag-and-drop (tab-level: manga sources fill the selector; novels hint)
     # ------------------------------------------------------------------
 
     def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:
         """Accept a drag holding a directory or any reading file.
 
         Novels are accepted too so the drop can be delivered and answered with
-        the cross-tab hint (they never create a row here).
+        the cross-tab hint (they never fill the selector here).
         """
         if event is None:
             return
@@ -356,18 +239,21 @@ class ReadingMangaTab(_ReadingMiningTabBase):
                 return
 
     def dropEvent(self, event: QDropEvent | None) -> None:
-        """Queue dropped folders / manga files; redirect dropped novels."""
+        """Fill the selector from the first dropped folder/manga file; hint novels."""
         if event is None:
             return
         novel_seen = False
+        source_set = False
         for url in urls_from_event(event):
             local = Path(url.toLocalFile())
             suffix = local.suffix.lower()
             if local.is_dir() or suffix in _MANGA_EXTS:
-                self._add_source_path(local)
+                if not source_set:
+                    self.volume_folder_selector.set_path(str(local))
+                    source_set = True
             elif suffix in _NOVEL_EXTS:
                 novel_seen = True
-        if novel_seen:
+        if novel_seen and not source_set:
             self.log_widget.append_info(self.tr("Novels are mined in the Novels tab."))
         event.acceptProposedAction()
 
@@ -376,75 +262,59 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     # ------------------------------------------------------------------
 
     def _on_preview_clicked(self) -> None:
-        """Quick-card Preview — validate the folder, then preview."""
-        self._start_quick_run(preview_mode=True)
+        """Preview — classify the folder and list its volume(s). No cards."""
+        if self.worker_thread is not None:
+            return
+        refs = self._detected_refs()
+        if refs is None:
+            return
+        dialog = MangaVolumesPreviewDialog(refs, self)
+        dialog.exec()
 
     def _on_mine_clicked(self) -> None:
-        """Quick-card Mine — validate the folder, then mine."""
-        self._start_quick_run(preview_mode=False)
+        """Mine — classify the folder and mine its volume(s) sequentially."""
+        if self.worker_thread is not None:
+            return
+        refs = self._detected_refs()
+        if refs is None:
+            return
 
-    def _start_quick_run(self, *, preview_mode: bool) -> None:
-        """Classify the quick-card folder; mine one volume or fill the queue.
+        items = [ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind) for ref in refs]
+        if self._launch_run(items, preview_mode=False):
+            self._begin_progress(len(items))
+            self._recompute_buttons()
 
-        A single-volume folder mines straight away as an ephemeral item that is
-        NOT added to ``self._queue`` (summaries compute over ``_run_items``). A
-        series folder of >1 volume expands into queue rows and waits for
-        *Process Queue* — the quick card never bulk-mines a series silently.
+    def _detected_refs(self) -> list | None:
+        """Read the folder path and classify it, or ``None`` on empty/failure.
+
+        Warns (and returns ``None``) when no folder is selected; otherwise
+        delegates to the shared :meth:`_detect_or_report`, which surfaces any
+        detector error verbatim in the log.
         """
-        if self.worker_thread is not None:
-            return
         raw = self.volume_folder_selector.get_path().strip()
-        if not raw or not self.volume_folder_selector.is_valid():
-            self.log_widget.append_warning(self.tr("Select a valid volume folder first."))
-            return
-
-        path = Path(raw)
-        try:
-            refs = detector.detect(path)
-        except SetupError as exc:
-            self.log_widget.append_error(str(exc))
-            return
-        except Exception as exc:  # noqa: BLE001 - surface any classify failure to the log
-            logger.exception("Reading source detect failed for %s", path)
-            self.log_widget.append_error(tr_format(self.tr("Could not process %1: %2"), path.name, exc))
-            return
-
-        if len(refs) > 1:
-            # A series folder: don't bulk-mine silently. Add rows + point the
-            # user at Process Queue.
-            for ref in refs:
-                item = self._queue.add(ref)
-                self._render_new_item(item)
-            self.log_widget.append_info(tr_format(self.tr("Found %1 volumes — added to the queue below."), len(refs)))
-            self._recompute_buttons()
-            return
-
-        # Exactly one volume: ephemeral item, never entering self._queue.
-        ref = refs[0]
-        ephemeral = ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind)
-        if self._launch_run([ephemeral], preview_mode=preview_mode):
-            self._begin_progress(1)
-            self._recompute_buttons()
-
-    def _on_process_queue_clicked(self) -> None:
-        """Mine every READY queue item (mine-only — preview is the quick card's job)."""
-        if self.worker_thread is not None:
-            return
-        ready = [i for i in self._queue.all_items() if i.status == ReadingItemStatus.READY]
-        if not ready:
-            return
-        if self._launch_run(ready, preview_mode=False):
-            self._begin_progress(len(ready))
-            self._recompute_buttons()
+        if not raw:
+            self.log_widget.append_warning(self.tr("Select a manga folder first."))
+            return None
+        return self._detect_or_report(Path(raw))
 
     def _begin_progress(self, total: int) -> None:
-        """Reset both bars and seed the overall bar for a fresh run of *total* items."""
+        """Reset both bars for a fresh run; show the overall bar only for a series.
+
+        A single volume (``total == 1``) hides the overall bar so the tab reads
+        like the Novels tab; a series (``total > 1``) shows it and seeds the
+        vol N of M tally.
+        """
         self.overall_progress_widget.reset()
         self.current_progress_widget.reset()
-        self.overall_progress_widget.set_progress(0, total, self.tr("Starting…"))
+        is_series = total > 1
+        self.overall_header.setVisible(is_series)
+        self.overall_progress_widget.setVisible(is_series)
+        if is_series:
+            self.overall_progress_widget.set_progress(0, total, self.tr("Starting…"))
+        self.current_progress_widget.set_status(self.tr("Starting…"))
 
     def _on_cancel_clicked(self) -> None:
-        """Cancel the active run (shared by the quick card and the queue)."""
+        """Cancel the active run."""
         # Release any open curation dialog first so the blocked worker resumes
         # instead of hanging on _curation_event (Issue #65).
         self._cancel_active_curation_dialog()
@@ -460,26 +330,27 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     # ------------------------------------------------------------------
 
     def _on_item_started(self, idx: int) -> None:
-        """Refresh the started item's row + seed the current-item bar.
+        """Seed the per-volume bar with the started volume's title.
 
         READ-ONLY: the worker has already set ``status`` to PROCESSING before
-        emitting this signal, so the row/bar just reflect current state — never
-        write it here (a late-delivered start must not clobber a status the
-        worker has since advanced to COMPLETED/ERROR).
+        emitting this signal, so this only reflects current state — never write
+        it here (a late-delivered start must not clobber a status the worker has
+        since advanced to COMPLETED/ERROR).
         """
         item = self._item_at(idx)
         if item is None:
             return
-        self._refresh_row(item)
-
         total = len(self._run_items)
-        self.current_progress_widget.set_status(tr_format(self.tr("Mining %1 of %2: %3"), idx + 1, total, item.title))
+        if total > 1:
+            status = tr_format(self.tr("Mining %1 of %2: %3"), idx + 1, total, item.title)
+        else:
+            status = tr_format(self.tr("Mining: %1"), item.title)
+        self.current_progress_widget.set_status(status)
         self.current_progress_widget.set_determinate(100)
         self.current_progress_widget.set_value(0)
-        self._recompute_buttons()
 
     def _on_item_progress(self, idx: int, label: str, pct: int) -> None:
-        """Route worker progress into the current-item bar (pct < 0 → indeterminate)."""
+        """Route worker progress into the per-volume bar (pct < 0 → indeterminate)."""
         if pct < 0:
             self.current_progress_widget.set_indeterminate()
         else:
@@ -488,12 +359,11 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         self.current_progress_widget.set_status(label)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
-        """Log the outcome, refresh the row, advance the overall bar.
+        """Log the outcome and advance the overall bar (series runs only).
 
         READ-ONLY: the worker has already recorded ``status``/``cards_created``/
         ``error_message`` on the item before emitting this signal, so this slot
-        only reads them (via :meth:`_refresh_row` and the overall-bar tally) and
-        never writes them.
+        only reads them and never writes them.
         """
         item = self._item_at(idx)
         if item is None:
@@ -503,148 +373,65 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             cards = int(getattr(result, "cards_created", 0) or 0)
             self.log_widget.append_success(tr_format(self.tr("Mined %1: %2 cards."), item.title, cards))
             if self._presenter is not None:
-                # Presenter forwarding is best-effort — the queue worker has
-                # already recorded the result; a broken presenter slot shouldn't
-                # take down the queue.
+                # Presenter forwarding is best-effort — the worker has already
+                # recorded the result; a broken presenter slot shouldn't take
+                # down the run.
                 with contextlib.suppress(Exception):
                     self._presenter.show_processing_result(result)  # type: ignore[arg-type]
         else:
             self.log_widget.append_error(tr_format(self.tr("Failed %1: %2."), item.title, error))
 
-        self._refresh_row(item)
-
         # Advance the overall bar over items that have reached a terminal state
-        # (worker-owned), tallied against the frozen run snapshot.
+        # (worker-owned), tallied against the frozen run snapshot. Only shown
+        # for a series run of more than one volume.
         total = len(self._run_items)
-        done = sum(1 for i in self._run_items if i.status in (ReadingItemStatus.COMPLETED, ReadingItemStatus.ERROR))
-        self.overall_progress_widget.set_progress(done, total, tr_format(self.tr("Completed: %1/%2"), done, total))
-        self._recompute_buttons()
+        if total > 1:
+            done = sum(1 for i in self._run_items if i.status in (ReadingItemStatus.COMPLETED, ReadingItemStatus.ERROR))
+            self.overall_progress_widget.set_progress(done, total, tr_format(self.tr("Completed: %1/%2"), done, total))
 
     def _on_queue_finished(self) -> None:
         """Success-path summary log over the run snapshot. Cleanup is elsewhere.
 
         ``queue_finished`` is emitted from inside ``run()`` while ``_run_items``
         is still intact; ``QThread.finished`` fires later on every exit path and
-        clears it. Computing over ``_run_items`` (not ``self._queue``) covers
-        the ephemeral quick-run item, which never enters the queue.
+        clears it. A single-volume run's outcome is already covered by
+        ``_on_item_finished``, so only summarize a multi-volume run.
         """
+        total = len(self._run_items)
+        if total <= 1:
+            return
         succeeded = sum(1 for i in self._run_items if i.status == ReadingItemStatus.COMPLETED)
         failed = sum(1 for i in self._run_items if i.status == ReadingItemStatus.ERROR)
-        self.log_widget.append_info(tr_format(self.tr("Queue done: %1 succeeded, %2 failed."), succeeded, failed))
+        self.log_widget.append_info(tr_format(self.tr("Done: %1 succeeded, %2 failed."), succeeded, failed))
 
     def _after_run_cleanup(self) -> None:
         """Per-tab UI recovery after a run ends (called from the base cleanup slot).
 
-        Restores the Cancel button, resets both progress bars, and recomputes
-        button state. Runs on every run-exit path (success, cancel, exception).
+        Restores the Cancel button, resets + hides the overall bar and resets the
+        per-volume bar, and recomputes button state. Runs on every run-exit path
+        (success, cancel, exception).
         """
         self.cancel_button.setText(self.tr("Cancel"))
         self.cancel_button.setEnabled(True)
         self.overall_progress_widget.reset()
+        self.overall_header.hide()
+        self.overall_progress_widget.hide()
         self.current_progress_widget.reset()
         self._recompute_buttons()
-
-    # ------------------------------------------------------------------
-    # Remove + clear
-    # ------------------------------------------------------------------
-
-    def _on_remove_clicked(self, item: ReadingQueueItem) -> None:
-        """Remove a single item from the queue (and its row from the list)."""
-        if item.status == ReadingItemStatus.PROCESSING:
-            # The row widget disables its [×] button in this state, but
-            # belt-and-braces guard against an out-of-band trigger.
-            return
-        self._drop_item(item)
-        self._recompute_buttons()
-
-    def _on_clear_clicked(self) -> None:
-        """Remove every non-PROCESSING item from the queue."""
-        # Collect targets first so we don't mutate during iteration.
-        targets = [i for i in self._queue.all_items() if i.status != ReadingItemStatus.PROCESSING]
-        for item in targets:
-            self._drop_item(item)
-        # Reset the progress bars only when idle. Mid-run clears must not wipe
-        # the live "Mining N of M…" display for the still-PROCESSING item.
-        if self.worker_thread is None:
-            self.overall_progress_widget.reset()
-            self.current_progress_widget.reset()
-        self._recompute_buttons()
-
-    def _drop_item(self, item: ReadingQueueItem) -> None:
-        """Remove ``item`` from queue model, list widget, and bookkeeping."""
-        self._queue.remove(item)
-        list_item = self._list_items.pop(item, None)
-        if list_item is not None:
-            row = self.list_widget.row(list_item)
-            if row >= 0:
-                # takeItem deletes the QListWidgetItem; Qt manages the embedded
-                # widget (deleted alongside the list item).
-                self.list_widget.takeItem(row)
-        self._row_widgets.pop(item, None)
-        # Mid-run removal must also reach the worker: it iterates its own
-        # constructor snapshot, so editing the GUI queue alone would still mine
-        # the removed item (cards for rows that no longer exist).
-        if self.worker_thread is not None:
-            self.worker_thread.skip_item(item)
 
     # ------------------------------------------------------------------
     # Button recomputation
     # ------------------------------------------------------------------
 
     def _recompute_buttons(self) -> None:
-        """Refresh every button's enabled/visible state from the queue + worker.
+        """Refresh button state from the worker handle.
 
-        Pure derived state (no processing flag):
-
-        * Run active → quick Preview/Mine hidden, Cancel shown; Add buttons +
-          Process Queue disabled; Clear allowed (trims the queue tail mid-run).
-        * Idle → quick Preview/Mine shown; Cancel hidden; Add buttons enabled;
-          Process Queue enabled iff a READY item exists; Clear iff non-empty.
+        Pure derived state: a live run hides Preview/Mine and shows Cancel; idle
+        shows Preview/Mine and hides Cancel.
         """
-        items = self._queue.all_items()
-        has_items = bool(items)
-        has_ready = any(i.status == ReadingItemStatus.READY for i in items)
         run_active = self.worker_thread is not None
-
-        # Queue card.
-        self.add_series_button.setEnabled(not run_active)
-        self.add_volumes_button.setEnabled(not run_active)
-        self.process_queue_button.setEnabled(has_ready and not run_active)
-        # Clear still works during a run for non-PROCESSING items — it's how the
-        # user trims the queue tail mid-run.
-        self.clear_button.setEnabled(has_items)
-        self.empty_label.setVisible(not has_items)
-
-        # Quick card: Preview/Mine give way to Cancel while a run is active.
         self.preview_button.setVisible(not run_active)
         self.mine_button.setVisible(not run_active)
         self.preview_button.setEnabled(not run_active)
         self.mine_button.setEnabled(not run_active)
         self.cancel_button.setVisible(run_active)
-
-    # ------------------------------------------------------------------
-    # Row widget integration
-    # ------------------------------------------------------------------
-
-    def _render_new_item(self, item: ReadingQueueItem) -> None:
-        """Create a row widget for ``item`` and add it to the list widget."""
-        widget = ReadingQueueItemWidget(item)
-        widget.removed.connect(lambda it=item: self._on_remove_clicked(it))
-
-        list_item = QListWidgetItem()
-        list_item.setSizeHint(widget.sizeHint())
-        self.list_widget.addItem(list_item)
-        self.list_widget.setItemWidget(list_item, widget)
-
-        self._row_widgets[item] = widget
-        self._list_items[item] = list_item
-
-    def _refresh_row(self, item: ReadingQueueItem) -> None:
-        """Update the row widget for ``item`` after the model has changed.
-
-        Tolerant of the ephemeral quick-run item, which has no row: a missing
-        entry is a no-op.
-        """
-        widget = self._row_widgets.get(item)
-        if widget is not None:
-            widget.update_from(item)
