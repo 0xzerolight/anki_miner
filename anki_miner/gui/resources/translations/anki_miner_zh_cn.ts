@@ -3032,6 +3032,40 @@ Continue?</source>
         <translation>重新计时</translation>
     </message>
 </context><context>
+    <name>MangaVolumesPreviewDialog</name>
+    <message>
+        <source>Preview Volumes — %1 found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Volume Preview: %1 volume(s)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Title</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Volume</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Format</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Volumes mine in order. No cards are created by Preview.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished">关闭</translation>
+    </message>
+</context><context>
     <name>MediaSettingsPanel</name>
     <message>
         <source>Audio Format</source>
@@ -3504,7 +3538,7 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished">挖词前先审阅单词</translation>
     </message>
     <message>
-        <source>Show the word-selection popup for each source before creating cards.</source>
+        <source>Show the word-selection popup for each volume before creating cards.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3512,19 +3546,19 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished">总进度</translation>
     </message>
     <message>
-        <source>Current Item</source>
+        <source>Progress</source>
+        <translation type="unfinished">进度</translation>
+    </message>
+    <message>
+        <source>Manga</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Quick Processing</source>
-        <translation type="unfinished">快速处理</translation>
-    </message>
-    <message>
-        <source>Volume Folder:</source>
+        <source>Folder:</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>A folder with one manga volume mines now; a series folder of many volumes fills the queue below.</source>
+        <source>A folder with one manga volume, or a series folder of many volumes.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3532,7 +3566,7 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished">预览</translation>
     </message>
     <message>
-        <source>Preview the selected volume folder — no cards created.</source>
+        <source>List the volume(s) this folder would mine — no cards created.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3540,7 +3574,7 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished">挖词</translation>
     </message>
     <message>
-        <source>Mine the selected volume folder into Anki cards.</source>
+        <source>Mine the selected folder's volume(s) into Anki cards.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3552,75 +3586,11 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished">取消正在进行的运行。</translation>
     </message>
     <message>
-        <source>Manga queue</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Add Series Folder…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Add every volume inside a series folder.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Add Volumes…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Add manga volumes — .mokuro/.cbz/.zip file(s).</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Add a series folder or volumes above, or drag them here.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Process Queue</source>
-        <translation type="unfinished">处理队列</translation>
-    </message>
-    <message>
-        <source>Mine every queued volume into Anki cards.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Clear All</source>
-        <translation type="unfinished">清空全部</translation>
-    </message>
-    <message>
-        <source>Remove every queued item that is not currently mining.</source>
-        <translation type="unfinished">移除当前未在挖词的每个队列项。</translation>
-    </message>
-    <message>
-        <source>Add Series Folder</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Add Volumes</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Manga</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Could not add %1: %2</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Novels are mined in the Novels tab.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Select a valid volume folder first.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Could not process %1: %2</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Found %1 volumes — added to the queue below.</source>
+        <source>Select a manga folder first.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3636,6 +3606,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished">正在挖词 %1 / %2：%3</translation>
     </message>
     <message>
+        <source>Mining: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mined %1: %2 cards.</source>
         <translation type="unfinished">已挖词 %1：%2 张卡片。</translation>
     </message>
@@ -3648,8 +3622,8 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished">已完成：%1/%2</translation>
     </message>
     <message>
-        <source>Queue done: %1 succeeded, %2 failed.</source>
-        <translation type="unfinished">队列完成：%1 成功，%2 失败。</translation>
+        <source>Done: %1 succeeded, %2 failed.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ReadingNovelsTab</name>
@@ -3714,10 +3688,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not process %1: %2</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Starting…</source>
         <translation type="unfinished" />
     </message>
@@ -3738,28 +3708,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished">失败 %1：%2。</translation>
     </message>
 </context><context>
-    <name>ReadingQueueItemWidget</name>
-    <message>
-        <source>%1 cards created</source>
-        <translation type="unfinished">已创建 %1 张卡片</translation>
-    </message>
-    <message>
-        <source>Manga</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>EPUB</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Text</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove from queue</source>
-        <translation type="unfinished">从队列中移除</translation>
-    </message>
-</context><context>
     <name>ReadingTab</name>
     <message>
         <source>Mining unavailable — services not initialized.</source>
@@ -3776,6 +3724,10 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>%1 run starting — %2 items.</source>
         <translation type="unfinished">%1 运行开始——%2 个项。</translation>
+    </message>
+    <message>
+        <source>Could not process %1: %2</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>
