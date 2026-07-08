@@ -1,28 +1,29 @@
 """Tests for the manga sub-tab of the Reading tab.
 
-``ReadingMangaTab`` pairs a quick-folder Preview/Mine card with a volume queue
-over the shared ``_ReadingMiningTabBase`` lifecycle. Behaviour under test:
+``ReadingMangaTab`` is a single auto-detecting folder card (no queue): pick a
+folder, then Preview or Mine. The folder is classified by ``detect`` on click.
+Behaviour under test:
 
-* Add: each accepted path is classified by ``detect`` into one or more READY
-  rows; a ``SetupError`` is surfaced in the log and adds no row.
-* Quick run: a single-volume folder mines an ephemeral item that never enters
-  ``self._queue``; a series folder of >1 volume fills the queue and does NOT
-  start. Both dialogs feed ``_add_source_path``.
-* Queue run: ``Process Queue`` mines every READY item (mine-only).
-* Buttons: pure derived state — quick Preview/Mine give way to Cancel while a
-  run is active; Adds + Process Queue disabled during a run; Clear trims the
-  tail mid-run.
+* Preview: classify the folder and open a structural
+  ``MangaVolumesPreviewDialog`` listing the detected volume(s). No worker, no
+  tokenizing, no cards.
+* Mine: classify the folder into one ephemeral ``ReadingQueueItem`` per volume
+  and launch them through the base (a single volume hides the overall bar; a
+  series of >1 shows it).
+* Empty path warns; a ``detect`` ``SetupError`` is surfaced verbatim; neither
+  starts a run or opens the dialog.
+* Buttons: pure derived state — Preview/Mine give way to Cancel during a run.
 * Per-item signals are READ-ONLY on item state (the worker owns the lifecycle):
-  they refresh the row + dual progress bars but never write status/cards.
-* Drag-drop queues manga sources; a dropped novel earns a cross-tab hint, no
-  row.
-* Cancel (shared quick/queue) releases any curation dialog then cancels.
+  they drive the two progress bars + log the outcome, never write status/cards.
+* Drag-drop routes through the tab: the FileSelector and its inner QLineEdit
+  both have drops disabled, so a drop lands on the tab (folder/manga file fills
+  the selector; a dropped novel earns a cross-tab hint).
 * D8: ``_build_curation_context`` inherits the base ``(None, None)`` even with a
   live worker — reading curation is table-only.
 
 Qt threads are never started — ``ReadingQueueWorker`` is class-level patched at
 the base module so ``start()`` is a no-op and constructor kwargs can be
-inspected.
+inspected. The preview dialog is patched so no modal opens.
 """
 
 from __future__ import annotations
@@ -31,6 +32,8 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from PyQt6.QtCore import QMimeData, QPointF, Qt, QUrl
+from PyQt6.QtGui import QDropEvent
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
@@ -39,9 +42,10 @@ from anki_miner.models.reading_queue import ReadingItemStatus
 from anki_miner.services.reading.models import ReadingSourceRef
 
 _WORKER_TARGET = "anki_miner.gui.widgets._reading_mining_base.ReadingQueueWorker"
-_DETECT = "anki_miner.gui.widgets.reading_manga_tab.detector.detect"
-_OPEN_FILES = "anki_miner.gui.widgets.reading_manga_tab.QFileDialog.getOpenFileNames"
-_GET_DIR = "anki_miner.gui.widgets.reading_manga_tab.QFileDialog.getExistingDirectory"
+_CREATE_TARGET = "anki_miner.gui.widgets._reading_mining_base.create_episode_processor"
+# detect() runs in the shared base helper (_detect_or_report); patch it there.
+_DETECT = "anki_miner.gui.widgets._reading_mining_base.detector.detect"
+_DIALOG = "anki_miner.gui.widgets.reading_manga_tab.MangaVolumesPreviewDialog"
 _URLS = "anki_miner.gui.widgets.reading_manga_tab.urls_from_event"
 
 
@@ -81,20 +85,9 @@ def _make_ref(kind: str = "mokuro", title: str = "Series Vol.1") -> ReadingSourc
     )
 
 
-def _add_refs(tab, refs, path: str = "/src/whatever"):
-    """Patch ``detect`` to return *refs* and drive ``_add_source_path``.
-
-    Returns the queue items created by the add (the tail ``len(refs)`` items).
-    """
-    with patch(_DETECT, return_value=list(refs)):
-        tab._add_source_path(Path(path))
-    n = len(refs)
-    return tab._queue.all_items()[-n:] if n else []
-
-
-def _add_one(tab, kind: str = "mokuro", title: str = "Series Vol.1"):
-    """Add a single source ref and return its queue item."""
-    return _add_refs(tab, [_make_ref(kind, title)])[0]
+def _series(n: int) -> list[ReadingSourceRef]:
+    """Build *n* volume refs for one series."""
+    return [_make_ref("mokuro", f"Series Vol.{i + 1}") for i in range(n)]
 
 
 def _url(local_path: str):
@@ -104,521 +97,332 @@ def _url(local_path: str):
     return u
 
 
-def _quick_run(tab, folder: Path, refs, *, preview: bool = False):
-    """Select a valid *folder*, patch ``detect`` to return *refs*, click Preview/Mine.
-
-    *folder* must exist on disk so the folder-mode selector validates.
-    """
-    tab.volume_folder_selector.set_path(str(folder))
-    assert tab.volume_folder_selector.is_valid()
+def _mine(tab, refs, folder: str = "/src/series"):
+    """Select *folder*, patch ``detect`` to return *refs*, click Mine."""
+    tab.volume_folder_selector.set_path(folder)
     with patch(_DETECT, return_value=list(refs)):
-        if preview:
-            tab._on_preview_clicked()
-        else:
-            tab._on_mine_clicked()
+        tab._on_mine_clicked()
+
+
+def _preview(tab, refs, folder: str = "/src/series"):
+    """Select *folder*, patch ``detect`` + the dialog, click Preview.
+
+    Returns the patched dialog class mock so tests can inspect construction.
+    """
+    tab.volume_folder_selector.set_path(folder)
+    with patch(_DETECT, return_value=list(refs)), patch(_DIALOG) as dialog_cls:
+        tab._on_preview_clicked()
+    return dialog_cls
 
 
 class TestInitialState:
-    """Empty queue: quick buttons visible, queue actions disabled."""
+    """Idle tab: Preview/Mine visible, Cancel hidden, no queue widgets."""
 
-    def test_empty_state_buttons(self, tab):
-        assert tab._queue.all_items() == []
-        assert tab.add_series_button.isEnabled()
-        assert tab.add_volumes_button.isEnabled()
+    def test_buttons_idle(self, tab):
         assert not tab.preview_button.isHidden()
         assert not tab.mine_button.isHidden()
         assert tab.cancel_button.isHidden()
-        assert not tab.process_queue_button.isEnabled()
-        assert not tab.clear_button.isEnabled()
         assert tab.worker_thread is None
-
-    def test_list_widget_empty(self, tab):
-        assert tab.list_widget.count() == 0
-        assert not tab.empty_label.isHidden()
 
     def test_review_checkbox_default_unchecked(self, tab):
         assert tab.review_words_checkbox.isChecked() is False
 
-
-class TestAddSource:
-    """Add classifies each path via detect and queues READY item(s)."""
-
-    def test_add_single_ref_creates_ready_item(self, tab):
-        item = _add_one(tab, "mokuro", "My Manga Vol.1")
-
-        items = tab._queue.all_items()
-        assert len(items) == 1
-        assert items[0] is item
-        assert item.title == "My Manga Vol.1"
-        assert item.kind == "mokuro"
-        assert item.status == ReadingItemStatus.READY
-
-    def test_add_renders_row(self, tab):
-        item = _add_one(tab)
-        assert tab.list_widget.count() == 1
-        assert item in tab._row_widgets
-
-    def test_add_series_dir_expands_to_n_rows(self, tab):
-        refs = [_make_ref("mokuro", f"Series Vol.{i}") for i in range(1, 4)]
-        items = _add_refs(tab, refs, path="/src/Series")
-
-        assert len(items) == 3
-        assert tab.list_widget.count() == 3
-        assert [i.title for i in items] == ["Series Vol.1", "Series Vol.2", "Series Vol.3"]
-
-    def test_add_enables_queue_buttons(self, tab):
-        _add_one(tab)
-        assert tab.process_queue_button.isEnabled()
-        assert tab.clear_button.isEnabled()
-
-    def test_detect_error_surfaced_no_row(self, tab):
-        with patch(_DETECT, side_effect=SetupError("No .mokuro sidecar found for 'x.cbz'.")):
-            tab._add_source_path(Path("/src/x.cbz"))
-
-        assert tab._queue.all_items() == []
-        assert tab.list_widget.count() == 0
-        assert "sidecar" in tab.log_widget.text_edit.toPlainText().lower()
-
-    def test_unexpected_detect_error_surfaced_no_row(self, tab):
-        with patch(_DETECT, side_effect=RuntimeError("boom")):
-            tab._add_source_path(Path("/src/weird"))
-
-        assert tab._queue.all_items() == []
-        assert "boom" in tab.log_widget.text_edit.toPlainText()
-
-
-class TestAddButtons:
-    """Add Series Folder / Add Volumes open dialogs and feed detect."""
-
-    def test_add_series_queues_folder_volumes(self, tab):
-        refs = [_make_ref("mokuro", f"Vol.{i}") for i in range(1, 3)]
-        with (
-            patch(_GET_DIR, return_value="/src/Series"),
-            patch(_DETECT, return_value=refs),
+    def test_has_no_queue_widgets(self, tab):
+        # The queue was removed: none of its machinery exists.
+        for attr in (
+            "list_widget",
+            "add_series_button",
+            "add_volumes_button",
+            "process_queue_button",
+            "clear_button",
+            "_queue",
         ):
-            tab._on_add_series_clicked()
+            assert not hasattr(tab, attr)
 
-        assert [i.title for i in tab._queue.all_items()] == ["Vol.1", "Vol.2"]
+    def test_overall_bar_hidden_initially(self, tab):
+        assert tab.overall_progress_widget.isHidden()
+        assert tab.overall_header.isHidden()
 
-    def test_add_series_cancelled_dialog_noop(self, tab):
-        with patch(_GET_DIR, return_value=""):
-            tab._on_add_series_clicked()
-        assert tab._queue.all_items() == []
+    def test_section_header_says_manga(self, tab):
+        from anki_miner.gui.widgets.enhanced import SectionHeader
 
-    def test_add_volumes_queues_picked_files(self, tab):
-        with (
-            patch(_OPEN_FILES, return_value=(["/src/a.mokuro", "/src/b.mokuro"], "")),
-            patch(_DETECT, side_effect=lambda p: [_make_ref("mokuro", p.stem)]),
-        ):
-            tab._on_add_volumes_clicked()
-
-        assert [i.title for i in tab._queue.all_items()] == ["a", "b"]
-
-    def test_add_volumes_cancelled_dialog_noop(self, tab):
-        with patch(_OPEN_FILES, return_value=([], "")):
-            tab._on_add_volumes_clicked()
-        assert tab._queue.all_items() == []
-
-    def test_add_disabled_during_run_is_noop(self, tab):
-        _add_one(tab, "mokuro", "a")
-        tab._on_process_queue_clicked()
-        assert not tab.add_volumes_button.isEnabled()
-
-        with patch(_OPEN_FILES) as dlg:
-            tab._on_add_volumes_clicked()
-            dlg.assert_not_called()  # guarded out before opening the picker
-
-        with patch(_GET_DIR) as dlg2:
-            tab._on_add_series_clicked()
-            dlg2.assert_not_called()
+        headers = tab.findChildren(SectionHeader)
+        assert any(h.title_label.text() == "Manga" for h in headers)
 
 
-class TestDragDrop:
-    """Dropped folders/manga route through _add_source_path; novels earn a hint."""
+class TestPreview:
+    """Preview classifies the folder and opens the structural dialog. No worker."""
 
-    def test_drop_manga_file_adds_row(self, tab):
-        event = MagicMock()
-        with (
-            patch(_URLS, return_value=[_url("/src/a.mokuro")]),
-            patch(_DETECT, return_value=[_make_ref("mokuro", "a")]),
-        ):
-            tab.dropEvent(event)
+    def test_preview_opens_dialog_with_refs(self, tab):
+        refs = _series(3)
+        dialog_cls = _preview(tab, refs)
+        dialog_cls.assert_called_once()
+        # First positional arg is the detected refs list.
+        assert dialog_cls.call_args.args[0] == refs
+        dialog_cls.return_value.exec.assert_called_once()
 
-        assert [i.title for i in tab._queue.all_items()] == ["a"]
-        event.acceptProposedAction.assert_called_once()
+    def test_preview_single_volume_opens_dialog(self, tab):
+        dialog_cls = _preview(tab, [_make_ref()])
+        dialog_cls.assert_called_once()
 
-    def test_drop_folder_adds_rows(self, tmp_path, tab):
-        event = MagicMock()
-        with (
-            patch(_URLS, return_value=[_url(str(tmp_path))]),
-            patch(_DETECT, return_value=[_make_ref("mokuro", "Vol.1")]),
-        ):
-            tab.dropEvent(event)
-
-        assert [i.title for i in tab._queue.all_items()] == ["Vol.1"]
-
-    def test_drop_novel_hints_no_row(self, tab):
-        event = MagicMock()
-        with (
-            patch(_URLS, return_value=[_url("/src/book.epub")]),
-            patch(_DETECT) as detect,
-        ):
-            tab.dropEvent(event)
-
-        detect.assert_not_called()
-        assert tab._queue.all_items() == []
-        assert "novels" in tab.log_widget.text_edit.toPlainText().lower()
-        event.acceptProposedAction.assert_called_once()
-
-    def test_drop_none_event_is_noop(self, tab):
-        tab.dropEvent(None)  # must not raise
-        assert tab._queue.all_items() == []
-
-    def test_drag_enter_accepts_manga_and_novel(self, tab):
-        for name in ("/src/a.mokuro", "/src/a.cbz", "/src/a.epub"):
-            event = MagicMock()
-            with patch(_URLS, return_value=[_url(name)]):
-                tab.dragEnterEvent(event)
-            event.acceptProposedAction.assert_called_once()
-
-
-class TestQuickRun:
-    """Quick-card Preview/Mine: one volume mines ephemerally; a series fills the queue."""
-
-    def test_single_volume_mines_ephemeral_no_row(self, tmp_path, tab):
+    def test_preview_starts_no_worker(self, tab):
         queue_cls = tab._queue_worker_cls
-        _quick_run(tab, tmp_path, [_make_ref("mokuro", "Solo Vol.1")])
-
-        assert queue_cls.call_count == 1
-        items = queue_cls.call_args.kwargs["items"]
-        assert [i.title for i in items] == ["Solo Vol.1"]
-        # Ephemeral: never added to the queue, no row rendered.
-        assert tab._queue.all_items() == []
-        assert tab.list_widget.count() == 0
-        assert items[0] not in tab._queue.all_items()
-        assert tab.worker_thread is not None
-        assert queue_cls.call_args.kwargs["preview_mode"] is False
-        tab.worker_thread.start.assert_called_once()
-
-    def test_single_volume_preview_flag(self, tmp_path, tab):
-        queue_cls = tab._queue_worker_cls
-        _quick_run(tab, tmp_path, [_make_ref("mokuro", "Solo Vol.1")], preview=True)
-
-        assert queue_cls.call_args.kwargs["preview_mode"] is True
-
-    def test_series_folder_fills_queue_without_starting(self, tmp_path, tab):
-        queue_cls = tab._queue_worker_cls
-        refs = [_make_ref("mokuro", f"Vol.{i}") for i in range(1, 4)]
-        _quick_run(tab, tmp_path, refs)
-
+        _preview(tab, _series(2))
         assert queue_cls.call_count == 0
         assert tab.worker_thread is None
-        assert len(tab._queue.all_items()) == 3
-        assert tab.list_widget.count() == 3
-        assert "3 volumes" in tab.log_widget.text_edit.toPlainText()
 
-    def test_launch_success_seeds_overall_bar(self, tmp_path, tab):
-        _quick_run(tab, tmp_path, [_make_ref("mokuro", "Solo")])
-        assert "Starting" in tab.overall_progress_widget.status_label.text()
+    def test_preview_empty_path_warns_no_dialog(self, tab):
+        with patch(_DIALOG) as dialog_cls:
+            tab._on_preview_clicked()
+        dialog_cls.assert_not_called()
+        assert "folder" in tab.log_widget.text_edit.toPlainText().lower()
 
-    def test_empty_folder_warns_no_run(self, tab):
-        queue_cls = tab._queue_worker_cls
-        tab._on_mine_clicked()
-        assert queue_cls.call_count == 0
-        assert tab.worker_thread is None
-        assert "valid volume folder" in tab.log_widget.text_edit.toPlainText().lower()
-
-    def test_invalid_folder_warns_no_run(self, tab):
-        queue_cls = tab._queue_worker_cls
-        tab.volume_folder_selector.set_path("/no/such/folder")
-        tab._on_mine_clicked()
-        assert queue_cls.call_count == 0
-        assert "valid volume folder" in tab.log_widget.text_edit.toPlainText().lower()
-
-    def test_detect_error_surfaced_no_run(self, tmp_path, tab):
-        queue_cls = tab._queue_worker_cls
-        tab.volume_folder_selector.set_path(str(tmp_path))
-        with patch(_DETECT, side_effect=SetupError("not a recognized reading source")):
-            tab._on_mine_clicked()
-        assert queue_cls.call_count == 0
+    def test_preview_detect_error_surfaced_no_dialog(self, tab):
+        tab.volume_folder_selector.set_path("/src/bad")
+        with (
+            patch(_DETECT, side_effect=SetupError("not a recognized reading source")),
+            patch(_DIALOG) as dialog_cls,
+        ):
+            tab._on_preview_clicked()
+        dialog_cls.assert_not_called()
         assert "recognized reading source" in tab.log_widget.text_edit.toPlainText()
 
-    def test_quick_run_refused_while_worker_active(self, tmp_path, tab):
-        _add_one(tab)
-        tab._on_process_queue_clicked()
+    def test_preview_refused_while_worker_active(self, tab):
+        _mine(tab, [_make_ref()])
+        with patch(_DIALOG) as dialog_cls:
+            tab._on_preview_clicked()
+        dialog_cls.assert_not_called()
+
+
+class TestMineSingleVolume:
+    """A single-volume folder mines one ephemeral item; overall bar hidden."""
+
+    def test_mine_constructs_worker_one_item(self, tab):
         queue_cls = tab._queue_worker_cls
-        calls_before = queue_cls.call_count
-
-        _quick_run(tab, tmp_path, [_make_ref("mokuro", "Solo")])
-        assert queue_cls.call_count == calls_before  # no second worker
-
-
-class TestProcessQueue:
-    """Process Queue mines every READY item, mine-only."""
-
-    def test_process_queue_constructs_worker_preview_false(self, tab):
-        _add_one(tab)
-        queue_cls = tab._queue_worker_cls
-        tab._on_process_queue_clicked()
-
+        _mine(tab, [_make_ref("mokuro", "Solo Vol")], folder="/src/vol")
         assert queue_cls.call_count == 1
-        kwargs = queue_cls.call_args.kwargs
-        assert kwargs["preview_mode"] is False
-        assert kwargs["processor"] is tab._processor
-        assert kwargs["config"] is tab._config
-        assert kwargs["curation_callback"] is None
+        items = queue_cls.call_args.kwargs["items"]
+        assert [i.title for i in items] == ["Solo Vol"]
         assert tab.worker_thread is not None
         tab.worker_thread.start.assert_called_once()
 
-    def test_process_queue_wires_signals(self, tab):
-        _add_one(tab)
-        tab._on_process_queue_clicked()
-        worker = tab.worker_thread
-
-        worker.item_started.connect.assert_called_once_with(tab._on_item_started)
-        worker.item_progress.connect.assert_called_once_with(tab._on_item_progress)
-        worker.item_finished.connect.assert_called_once_with(tab._on_item_finished)
-        worker.queue_finished.connect.assert_called_once_with(tab._on_queue_finished)
-        worker.finished.connect.assert_called_once_with(tab._on_worker_finished)
-
-    def test_process_queue_passes_ready_items_only(self, tab):
-        done = _add_one(tab, "mokuro", "done")
-        ready = _add_one(tab, "mokuro", "ready")
-        done.status = ReadingItemStatus.COMPLETED
-
+    def test_mine_preview_flag_false(self, tab):
         queue_cls = tab._queue_worker_cls
-        tab._on_process_queue_clicked()
+        _mine(tab, [_make_ref()])
+        assert queue_cls.call_args.kwargs["preview_mode"] is False
 
-        assert queue_cls.call_args.kwargs["items"] == [ready]
+    def test_mine_single_hides_overall_bar(self, tab):
+        _mine(tab, [_make_ref()])
+        assert tab.overall_progress_widget.isHidden()
+        assert tab.overall_header.isHidden()
+        assert "Starting" in tab.current_progress_widget.status_label.text()
 
-    def test_process_queue_no_ready_noop(self, tab):
+    def test_passes_prebuilt_processor_no_factory(self, tab):
         queue_cls = tab._queue_worker_cls
-        tab._on_process_queue_clicked()
-        assert queue_cls.call_count == 0
-        assert tab.worker_thread is None
+        _mine(tab, [_make_ref()])
+        assert queue_cls.call_args.kwargs["processor"] is tab._processor
+        assert queue_cls.call_args.kwargs["processor_factory"] is None
 
-    def test_process_queue_callback_follows_checkbox(self, tab):
+    def test_curation_callback_none_when_unchecked(self, tab):
         queue_cls = tab._queue_worker_cls
-        _add_one(tab)
+        _mine(tab, [_make_ref()])
+        assert queue_cls.call_args.kwargs["curation_callback"] is None
+
+    def test_curation_callback_bridge_when_checked(self, tab):
+        queue_cls = tab._queue_worker_cls
         tab.review_words_checkbox.setChecked(True)
-        tab._on_process_queue_clicked()
+        _mine(tab, [_make_ref()])
         assert queue_cls.call_args.kwargs["curation_callback"] == tab._curation_bridge
 
+    def test_ephemeral_items_not_stored(self, tab):
+        _mine(tab, [_make_ref()])
+        # No queue: items live only in the base run snapshot.
+        assert len(tab._run_items) == 1
+        assert not hasattr(tab, "_queue")
 
-class TestButtonMatrix:
-    """Pure derived button state: running vs idle."""
-
-    def test_idle_with_ready_item(self, tab):
-        _add_one(tab)
-        assert not tab.preview_button.isHidden()
-        assert not tab.mine_button.isHidden()
-        assert tab.cancel_button.isHidden()
-        assert tab.add_series_button.isEnabled()
-        assert tab.add_volumes_button.isEnabled()
-        assert tab.process_queue_button.isEnabled()
-        assert tab.clear_button.isEnabled()
-
-    def test_running_queue_hides_quick_shows_cancel(self, tab):
-        _add_one(tab)
-        tab._on_process_queue_clicked()
-
+    def test_start_swaps_buttons(self, tab):
+        _mine(tab, [_make_ref()])
         assert tab.preview_button.isHidden()
         assert tab.mine_button.isHidden()
         assert not tab.cancel_button.isHidden()
-        assert not tab.add_series_button.isEnabled()
-        assert not tab.add_volumes_button.isEnabled()
-        assert not tab.process_queue_button.isEnabled()
-        assert tab.clear_button.isEnabled()  # has queued items
-
-    def test_running_quick_hides_quick_buttons(self, tmp_path, tab):
-        _quick_run(tab, tmp_path, [_make_ref("mokuro", "Solo")])
-
-        assert tab.preview_button.isHidden()
-        assert tab.mine_button.isHidden()
-        assert not tab.cancel_button.isHidden()
-        # Ephemeral quick run leaves the queue empty → nothing to clear.
-        assert not tab.clear_button.isEnabled()
 
 
-class TestPerItemSignalsReadOnly:
-    """Per-item signals refresh the UI but never write item state."""
+class TestMineSeries:
+    """A series folder mines every volume; overall bar shown + advanced."""
 
-    def test_item_started_sets_current_bar_no_status_write(self, tab):
-        item_a = _add_one(tab, "mokuro", "vol1")
-        _add_one(tab, "mokuro", "vol2")
-        _add_one(tab, "mokuro", "vol3")
-        tab._on_process_queue_clicked()
+    def test_mine_constructs_worker_n_items(self, tab):
+        queue_cls = tab._queue_worker_cls
+        refs = _series(4)
+        _mine(tab, refs)
+        items = queue_cls.call_args.kwargs["items"]
+        assert [i.title for i in items] == [r.title for r in refs]
+        assert len(items) == 4
 
-        # Worker owns lifecycle: emulate it having already completed item_a.
-        item_a.status = ReadingItemStatus.COMPLETED
-        item_a.cards_created = 7
+    def test_mine_series_shows_overall_bar(self, tab):
+        _mine(tab, _series(3))
+        assert not tab.overall_progress_widget.isHidden()
+        assert not tab.overall_header.isHidden()
 
-        tab._on_item_started(0)
-
-        assert item_a.status == ReadingItemStatus.COMPLETED
-        assert item_a.cards_created == 7
-        text = tab.current_progress_widget.status_label.text()
-        assert "Mining 1 of 3" in text
-        assert "vol1" in text
-
-    def test_item_started_refreshes_row_from_worker_status(self, tab):
-        item = _add_one(tab, "mokuro", "vol1")
-        tab._on_process_queue_clicked()
-        item.status = ReadingItemStatus.PROCESSING
-
-        tab._on_item_started(0)
-
-        assert not tab._row_widgets[item].remove_button.isEnabled()
-
-    def test_item_progress_determinate(self, tab):
-        _add_one(tab)
-        tab._on_process_queue_clicked()
-        tab._on_item_started(0)
-
-        tab._on_item_progress(0, "Loading pages", 42)
-
-        assert tab.current_progress_widget.progress_bar.maximum() == 100
-        assert tab.current_progress_widget.progress_bar.value() == 42
-        assert "Loading pages" in tab.current_progress_widget.status_label.text()
-
-    def test_item_progress_indeterminate(self, tab):
-        _add_one(tab)
-        tab._on_process_queue_clicked()
-        tab._on_item_started(0)
-
-        tab._on_item_progress(0, "Fetching definitions", -1)
-
-        assert tab.current_progress_widget.progress_bar.maximum() == 0
-        assert "Fetching definitions" in tab.current_progress_widget.status_label.text()
-
-    def test_item_finished_success_reads_worker_state(self, tab):
-        item = _add_one(tab, "mokuro", "vol1")
-        tab._on_process_queue_clicked()
-        tab._on_item_started(0)
-
-        item.status = ReadingItemStatus.COMPLETED
-        item.cards_created = 5
-        result = MagicMock(cards_created=5)
-
-        tab._on_item_finished(0, result, None, 1)
-
-        assert "5 cards created" in tab._row_widgets[item].detail_label.full_text
-        assert "5 cards" in tab.log_widget.text_edit.toPlainText()
-        tab._presenter.show_processing_result.assert_called_once_with(result)
-
-    def test_item_finished_does_not_write_state(self, tab):
-        item = _add_one(tab)
-        tab._on_process_queue_clicked()
-        tab._on_item_started(0)
-        before_status = item.status
-        before_cards = item.cards_created
-
-        tab._on_item_finished(0, MagicMock(cards_created=99), None, 1)
-
-        assert item.status == before_status
-        assert item.cards_created == before_cards
-
-    def test_item_finished_error_logged(self, tab):
-        item = _add_one(tab, "mokuro", "vol1")
-        tab._on_process_queue_clicked()
-        tab._on_item_started(0)
-        item.status = ReadingItemStatus.ERROR
-        item.error_message = "SetupError: DRM"
-
-        tab._on_item_finished(0, None, "SetupError: DRM", 1)
-
-        assert "SetupError: DRM" in tab.log_widget.text_edit.toPlainText()
-        assert "SetupError: DRM" in tab._row_widgets[item].detail_label.full_text
-
-    def test_item_finished_presenter_error_swallowed(self, tab):
-        item = _add_one(tab)
-        tab._on_process_queue_clicked()
-        tab._on_item_started(0)
-        item.status = ReadingItemStatus.COMPLETED
-        tab._presenter.show_processing_result.side_effect = RuntimeError("presenter blew up")
-
-        tab._on_item_finished(0, MagicMock(cards_created=1), None, 1)  # must not raise
-
-    def test_item_started_out_of_range_idx_is_noop(self, tab):
-        item = _add_one(tab)
-        tab._on_process_queue_clicked()
-        status_before = tab.current_progress_widget.status_label.text()
-
-        tab._on_item_started(99)
-
-        assert item.status == ReadingItemStatus.READY
-        assert tab.current_progress_widget.status_label.text() == status_before
-
-    def test_item_finished_out_of_range_idx_is_noop(self, tab):
-        _add_one(tab)
-        tab._on_process_queue_clicked()
-        tab._on_item_started(0)
-
-        tab._on_item_finished(99, None, "err", 1)
-
-        tab._presenter.show_processing_result.assert_not_called()
-
-
-class TestOverallBar:
-    """The overall bar advances over terminal items in the run snapshot."""
-
-    def test_overall_bar_advances_on_finish(self, tab):
-        first = _add_one(tab, "mokuro", "vol1")
-        _add_one(tab, "mokuro", "vol2")
-        tab._on_process_queue_clicked()
-        tab._on_item_started(0)
-
-        first.status = ReadingItemStatus.COMPLETED
-        tab._on_item_finished(0, MagicMock(cards_created=1), None, 1)
-
-        assert "Completed: 1/2" in tab.overall_progress_widget.status_label.text()
+    def test_item_finished_advances_overall_bar(self, tab):
+        _mine(tab, _series(2))
+        # Worker owns lifecycle: emulate it having completed item 0.
+        tab._run_items[0].status = ReadingItemStatus.COMPLETED
+        tab._on_item_finished(0, MagicMock(cards_created=3), None, 1)
+        # set_progress renders a percentage: 1 of 2 volumes done → 50%.
         assert tab.overall_progress_widget.progress_bar.value() == 50
+        assert "1/2" in tab.overall_progress_widget.status_label.text()
 
+    def test_item_started_series_label(self, tab):
+        _mine(tab, _series(3))
+        tab._on_item_started(1)
+        assert "Mining 2 of 3" in tab.current_progress_widget.status_label.text()
 
-class TestQueueFinished:
-    """``queue_finished`` logs a run summary over ``_run_items``."""
-
-    def test_queue_finished_summary_over_run_items(self, tab):
-        good = _add_one(tab, "mokuro", "good")
-        bad = _add_one(tab, "mokuro", "bad")
-        tab._on_process_queue_clicked()
-        good.status = ReadingItemStatus.COMPLETED
-        bad.status = ReadingItemStatus.ERROR
-
+    def test_queue_finished_summary_for_series(self, tab):
+        _mine(tab, _series(2))
+        tab._run_items[0].status = ReadingItemStatus.COMPLETED
+        tab._run_items[1].status = ReadingItemStatus.ERROR
         tab._on_queue_finished()
-
         text = tab.log_widget.text_edit.toPlainText()
         assert "1 succeeded" in text
         assert "1 failed" in text
 
-    def test_queue_finished_covers_ephemeral_quick_item(self, tmp_path, tab):
-        _quick_run(tab, tmp_path, [_make_ref("mokuro", "Solo")])
-        ephemeral = tab._run_items[0]
-        ephemeral.status = ReadingItemStatus.COMPLETED
+    def test_lazy_factory_when_no_processor(self, qtbot, test_config):
+        """No cached processor → the base hands the worker a factory (off-thread)."""
+        with (
+            patch(_WORKER_TARGET, autospec=False) as q_cls,
+            patch(_CREATE_TARGET) as mock_create,
+        ):
+            q_cls.side_effect = lambda *a, **kw: MagicMock(name="QueueWorker")
+            built = MagicMock(name="LazyProcessor")
+            mock_create.return_value = built
 
+            widget = ReadingMangaTab(config=test_config, processor=None, presenter=MagicMock(name="Presenter"))
+            qtbot.addWidget(widget)
+            try:
+                _mine(widget, [_make_ref()])
+                assert q_cls.call_args.kwargs["processor"] is None
+                factory = q_cls.call_args.kwargs["processor_factory"]
+                assert factory is not None
+                assert mock_create.call_count == 0  # deferred to the worker thread
+                assert factory() is built
+            finally:
+                widget.deleteLater()
+
+
+class TestInvalidPath:
+    """Invalid selections warn and never construct a worker."""
+
+    def test_empty_path_warns_no_run(self, tab):
+        queue_cls = tab._queue_worker_cls
+        tab._on_mine_clicked()
+        assert queue_cls.call_count == 0
+        assert tab.worker_thread is None
+        assert "folder" in tab.log_widget.text_edit.toPlainText().lower()
+
+    def test_detect_error_surfaced_no_run(self, tab):
+        queue_cls = tab._queue_worker_cls
+        tab.volume_folder_selector.set_path("/src/bad")
+        with patch(_DETECT, side_effect=SetupError("no .mokuro volumes inside it")):
+            tab._on_mine_clicked()
+        assert queue_cls.call_count == 0
+        assert "no .mokuro volumes" in tab.log_widget.text_edit.toPlainText()
+
+    def test_unexpected_detect_error_surfaced_no_run(self, tab):
+        queue_cls = tab._queue_worker_cls
+        tab.volume_folder_selector.set_path("/src/bad")
+        with patch(_DETECT, side_effect=RuntimeError("boom")):
+            tab._on_mine_clicked()
+        assert queue_cls.call_count == 0
+        assert "boom" in tab.log_widget.text_edit.toPlainText()
+
+    def test_run_refused_while_worker_active(self, tab):
+        _mine(tab, [_make_ref()])
+        queue_cls = tab._queue_worker_cls
+        calls_before = queue_cls.call_count
+        _mine(tab, [_make_ref("mokuro", "Second")], folder="/src/second")
+        assert queue_cls.call_count == calls_before  # no second worker
+
+
+class TestPerItemSignalsReadOnly:
+    """Per-item signals drive the bars/log but never write item state."""
+
+    def test_item_started_sets_bar_no_status_write(self, tab):
+        _mine(tab, [_make_ref("mokuro", "Solo Vol")])
+        item = tab._run_items[0]
+        item.status = ReadingItemStatus.COMPLETED
+        item.cards_created = 9
+
+        tab._on_item_started(0)
+
+        assert item.status == ReadingItemStatus.COMPLETED
+        assert item.cards_created == 9
+        assert "Mining: Solo Vol" in tab.current_progress_widget.status_label.text()
+        assert tab.current_progress_widget.progress_bar.maximum() == 100
+
+    def test_item_progress_determinate(self, tab):
+        _mine(tab, [_make_ref()])
+        tab._on_item_started(0)
+        tab._on_item_progress(0, "Fetching definitions", 42)
+        assert tab.current_progress_widget.progress_bar.value() == 42
+        assert "Fetching definitions" in tab.current_progress_widget.status_label.text()
+
+    def test_item_progress_indeterminate(self, tab):
+        _mine(tab, [_make_ref()])
+        tab._on_item_started(0)
+        tab._on_item_progress(0, "Parsing", -1)
+        assert tab.current_progress_widget.progress_bar.maximum() == 0  # busy indicator
+        assert "Parsing" in tab.current_progress_widget.status_label.text()
+
+    def test_item_finished_success_logs_and_forwards(self, tab):
+        _mine(tab, [_make_ref("mokuro", "Solo Vol")])
+        result = MagicMock(cards_created=5)
+        tab._on_item_finished(0, result, None, 1)
+        assert "5 cards" in tab.log_widget.text_edit.toPlainText()
+        tab._presenter.show_processing_result.assert_called_once_with(result)
+
+    def test_item_finished_does_not_write_state(self, tab):
+        _mine(tab, [_make_ref()])
+        item = tab._run_items[0]
+        before_status = item.status
+        before_cards = item.cards_created
+        tab._on_item_finished(0, MagicMock(cards_created=99), None, 1)
+        assert item.status == before_status
+        assert item.cards_created == before_cards
+
+    def test_item_finished_error_logged(self, tab):
+        _mine(tab, [_make_ref("mokuro", "Solo Vol")])
+        tab._on_item_finished(0, None, "SetupError: DRM", 1)
+        assert "SetupError: DRM" in tab.log_widget.text_edit.toPlainText()
+        tab._presenter.show_processing_result.assert_not_called()
+
+    def test_item_finished_presenter_error_swallowed(self, tab):
+        _mine(tab, [_make_ref()])
+        tab._presenter.show_processing_result.side_effect = RuntimeError("presenter blew up")
+        tab._on_item_finished(0, MagicMock(cards_created=1), None, 1)  # must not raise
+
+    def test_item_started_out_of_range_idx_is_noop(self, tab):
+        _mine(tab, [_make_ref()])
+        status_before = tab.current_progress_widget.status_label.text()
+        tab._on_item_started(99)
+        assert tab.current_progress_widget.status_label.text() == status_before
+
+    def test_single_volume_queue_finished_is_noop(self, tab):
+        _mine(tab, [_make_ref()])
+        text_before = tab.log_widget.text_edit.toPlainText()
+        tab._on_item_finished(0, MagicMock(cards_created=1), None, 1)
+        text_after_finish = tab.log_widget.text_edit.toPlainText()
         tab._on_queue_finished()
-
-        assert "1 succeeded, 0 failed" in tab.log_widget.text_edit.toPlainText()
-
-    def test_queue_finished_does_not_mutate_state(self, tab):
-        _add_one(tab)
-        tab._on_process_queue_clicked()
-        worker = tab.worker_thread
-
-        tab._on_queue_finished()
-
-        assert tab.worker_thread is worker
-        assert tab._run_items != []
+        # Single item: queue_finished adds no summary beyond the per-item line.
+        assert tab.log_widget.text_edit.toPlainText() == text_after_finish
+        assert text_after_finish != text_before
 
 
 class TestAfterRunCleanup:
     """The base cleanup slot restores the Cancel button and both bars."""
 
-    def test_cleanup_restores_cancel_and_bars(self, tab):
-        _add_one(tab)
-        tab._on_process_queue_clicked()
+    def test_cleanup_restores_buttons_and_bars(self, tab):
+        _mine(tab, _series(2))
         tab._on_item_started(0)
-        tab._on_item_progress(0, "Loading", -1)
         tab._on_cancel_clicked()
         assert tab.cancel_button.text() == "Cancelling…"
 
@@ -626,12 +430,10 @@ class TestAfterRunCleanup:
 
         assert tab.cancel_button.text() == "Cancel"
         assert tab.cancel_button.isEnabled()
-        assert tab.overall_progress_widget.progress_bar.maximum() == 100
-        assert tab.current_progress_widget.progress_bar.maximum() == 100
+        assert tab.overall_progress_widget.isHidden()  # overall re-hidden
         assert tab.current_progress_widget.status_label.text() == "Ready"
         assert tab.worker_thread is None
         assert tab._run_items == []
-        # Idle again: quick buttons restored, Cancel hidden.
         assert not tab.preview_button.isHidden()
         assert tab.cancel_button.isHidden()
 
@@ -639,29 +441,16 @@ class TestAfterRunCleanup:
 class TestCancel:
     """Cancel forwards to worker.cancel() and releases any curation dialog."""
 
-    def test_cancel_during_queue_run(self, tab):
-        _add_one(tab)
-        tab._on_process_queue_clicked()
+    def test_cancel_forwards_and_relabels(self, tab):
+        _mine(tab, [_make_ref()])
         worker = tab.worker_thread
-
         tab._on_cancel_clicked()
-
         worker.cancel.assert_called_once()  # type: ignore[union-attr]
         assert not tab.cancel_button.isEnabled()
         assert tab.cancel_button.text() == "Cancelling…"
 
-    def test_cancel_during_quick_run(self, tmp_path, tab):
-        _quick_run(tab, tmp_path, [_make_ref("mokuro", "Solo")])
-        worker = tab.worker_thread
-
-        tab._on_cancel_clicked()
-
-        worker.cancel.assert_called_once()  # type: ignore[union-attr]
-        assert tab.cancel_button.text() == "Cancelling…"
-
     def test_cancel_releases_active_curation_dialog(self, tab):
-        _add_one(tab)
-        tab._on_process_queue_clicked()
+        _mine(tab, [_make_ref()])
         with patch.object(tab, "_cancel_active_curation_dialog") as cancel:
             tab._on_cancel_clicked()
             cancel.assert_called_once()
@@ -670,76 +459,89 @@ class TestCancel:
         tab._on_cancel_clicked()  # must not raise
 
 
-class TestRemoveAndClear:
-    """Remove button and Clear All manage queue contents."""
+def _resolve_drop_target(widget):
+    """Mimic Qt's DnD target selection: the nearest ``acceptDrops()`` ancestor."""
+    w = widget
+    while w is not None and not w.acceptDrops():
+        w = w.parentWidget()
+    return w
 
-    def test_remove_item(self, tab):
-        item = _add_one(tab, "mokuro", "vol1")
-        keep = _add_one(tab, "mokuro", "vol2")
 
-        tab._on_remove_clicked(item)
+class TestDragDrop:
+    """Drops route through the tab; the selector + its input never consume them."""
 
-        assert tab._queue.all_items() == [keep]
-        assert tab.list_widget.count() == 1
-        assert item not in tab._row_widgets
+    def test_selector_and_input_reject_drops(self, tab):
+        assert tab.volume_folder_selector.acceptDrops() is False
+        assert tab.volume_folder_selector.input.acceptDrops() is False
+        assert tab.acceptDrops() is True
 
-    def test_remove_processing_item_is_noop(self, tab):
-        item = _add_one(tab)
-        tab._on_process_queue_clicked()
-        item.status = ReadingItemStatus.PROCESSING
+    def test_drop_on_input_field_routes_to_tab(self, tmp_path, tab):
+        """A drop landing on the INPUT FIELD is delivered to the tab handler."""
+        folder = tmp_path / "series"
+        folder.mkdir()
+        target = _resolve_drop_target(tab.volume_folder_selector.input)
+        assert target is tab  # skipped the input AND the FileSelector
 
-        tab._on_remove_clicked(item)
+        mime = QMimeData()
+        mime.setUrls([QUrl.fromLocalFile(str(folder))])
+        event = QDropEvent(
+            QPointF(1.0, 1.0),
+            Qt.DropAction.CopyAction,
+            mime,
+            Qt.MouseButton.LeftButton,
+            Qt.KeyboardModifier.NoModifier,
+        )
+        target.dropEvent(event)
 
-        assert tab._queue.all_items() == [item]
+        assert tab.volume_folder_selector.get_path() == str(folder)
+        assert event.isAccepted()
 
-    def test_remove_during_run_skips_item_in_worker(self, tab):
-        _add_one(tab, "mokuro", "vol1")
-        item2 = _add_one(tab, "mokuro", "vol2")
-        tab._on_process_queue_clicked()
-        worker = tab.worker_thread
+    def test_drop_folder_fills_selector(self, tmp_path, tab):
+        folder = tmp_path / "series"
+        folder.mkdir()
+        event = MagicMock()
+        with patch(_URLS, return_value=[_url(str(folder))]):
+            tab.dropEvent(event)
+        assert tab.volume_folder_selector.get_path() == str(folder)
+        event.acceptProposedAction.assert_called_once()
 
-        tab._on_remove_clicked(item2)
+    def test_drop_manga_file_fills_selector(self, tab):
+        event = MagicMock()
+        with patch(_URLS, return_value=[_url("/src/vol.cbz")]):
+            tab.dropEvent(event)
+        assert tab.volume_folder_selector.get_path() == "/src/vol.cbz"
 
-        worker.skip_item.assert_called_once_with(item2)
-        assert item2 not in tab._queue.all_items()
+    def test_drop_first_source_wins(self, tmp_path, tab):
+        folder = tmp_path / "series"
+        folder.mkdir()
+        event = MagicMock()
+        with patch(_URLS, return_value=[_url(str(folder)), _url("/src/other.cbz")]):
+            tab.dropEvent(event)
+        assert tab.volume_folder_selector.get_path() == str(folder)
 
-    def test_clear_removes_non_processing(self, tab):
-        _add_one(tab, "mokuro", "vol1")
-        _add_one(tab, "mokuro", "vol2")
+    def test_drop_novel_hints_no_path(self, tab):
+        event = MagicMock()
+        with patch(_URLS, return_value=[_url("/src/book.epub")]):
+            tab.dropEvent(event)
+        assert tab.volume_folder_selector.get_path() == ""
+        assert "novels" in tab.log_widget.text_edit.toPlainText().lower()
+        event.acceptProposedAction.assert_called_once()
 
-        tab._on_clear_clicked()
+    def test_drop_none_event_is_noop(self, tab):
+        tab.dropEvent(None)  # must not raise
+        assert tab.volume_folder_selector.get_path() == ""
 
-        assert tab._queue.all_items() == []
-        assert tab.list_widget.count() == 0
-        assert not tab.clear_button.isEnabled()
+    def test_drag_enter_accepts_folder_manga_and_novel(self, tmp_path, tab):
+        folder = tmp_path / "d"
+        folder.mkdir()
+        for name in (str(folder), "/src/a.mokuro", "/src/a.cbz", "/src/a.epub"):
+            event = MagicMock()
+            with patch(_URLS, return_value=[_url(name)]):
+                tab.dragEnterEvent(event)
+            event.acceptProposedAction.assert_called_once()
 
-    def test_clear_during_run_preserves_processing(self, tab):
-        item1 = _add_one(tab, "mokuro", "vol1")
-        item2 = _add_one(tab, "mokuro", "vol2")
-        item3 = _add_one(tab, "mokuro", "vol3")
-        tab._on_process_queue_clicked()
-        item1.status = ReadingItemStatus.PROCESSING
-        worker = tab.worker_thread
-
-        tab._on_clear_clicked()
-
-        assert tab._queue.all_items() == [item1]
-        assert tab.list_widget.count() == 1
-        skipped = [c.args[0] for c in worker.skip_item.call_args_list]
-        assert skipped == [item2, item3]
-
-    def test_clear_during_run_does_not_reset_bars(self, tab):
-        item1 = _add_one(tab, "mokuro", "vol1")
-        _add_one(tab, "mokuro", "vol2")
-        tab._on_process_queue_clicked()
-        item1.status = ReadingItemStatus.PROCESSING
-        tab._on_item_started(0)
-        tab._on_item_progress(0, "Loading pages", 42)
-
-        tab._on_clear_clicked()
-
-        assert "Loading pages" in tab.current_progress_widget.status_label.text()
-        assert tab.current_progress_widget.progress_bar.value() == 42
+    def test_drag_enter_none_event_is_noop(self, tab):
+        tab.dragEnterEvent(None)  # must not raise
 
 
 class TestCurationContext:
@@ -749,8 +551,25 @@ class TestCurationContext:
         assert tab._build_curation_context() == (None, None)
 
     def test_build_curation_context_none_none_with_worker(self, tab):
-        # Even with a live worker (driven via Process Queue), no media context is
-        # sourced (D8): the worker publishes no _curation_video/_subtitle/_offset.
-        _add_one(tab)
-        tab._on_process_queue_clicked()
+        _mine(tab, [_make_ref()])
         assert tab._build_curation_context() == (None, None)
+
+
+class TestShutdownRelease:
+    """shutdown/release smoke — inherited from the base, exercised on this tab."""
+
+    def test_shutdown_cancels_worker(self, tab):
+        _mine(tab, [_make_ref()])
+        worker = tab.worker_thread
+        tab.shutdown()
+        worker.cancel.assert_called_once()  # type: ignore[union-attr]
+        assert tab.worker_thread is None
+
+    def test_shutdown_with_nothing_active(self, tab):
+        tab.shutdown()  # must not raise
+
+    def test_release_dictionary_resources_when_idle(self, tab):
+        processor = tab._processor
+        assert tab.release_dictionary_resources() is True
+        processor.release_dictionary_resources.assert_called_once()
+        assert tab._processor is None

@@ -28,6 +28,7 @@ import pytest
 from PyQt6.QtWidgets import QCheckBox
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.exceptions import SetupError
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.models.reading_queue import ReadingQueueItem
@@ -35,6 +36,7 @@ from anki_miner.services.reading.models import ReadingSourceRef
 
 _WORKER_TARGET = "anki_miner.gui.widgets._reading_mining_base.ReadingQueueWorker"
 _CREATE_TARGET = "anki_miner.gui.widgets._reading_mining_base.create_episode_processor"
+_DETECT = "anki_miner.gui.widgets._reading_mining_base.detector.detect"
 
 
 class _ConcreteReadingTab(_ReadingMiningTabBase):
@@ -412,3 +414,27 @@ class TestReleaseDictionaryResources:
 
         assert tab.release_dictionary_resources() is False
         assert tab._processor is not None
+
+
+class TestDetectOrReport:
+    """The shared detect helper returns refs or surfaces the failure in the log."""
+
+    def test_success_returns_refs(self, tab):
+        refs = [_make_item().source]
+        with patch(_DETECT, return_value=refs) as detect:
+            result = tab._detect_or_report(Path("/src/vol"))
+        detect.assert_called_once_with(Path("/src/vol"))
+        assert result is refs
+
+    def test_setup_error_surfaced_verbatim_returns_none(self, tab):
+        with patch(_DETECT, side_effect=SetupError("no .mokuro volumes inside it")):
+            result = tab._detect_or_report(Path("/src/bad"))
+        assert result is None
+        assert "no .mokuro volumes inside it" in tab.log_widget.text_edit.toPlainText()
+
+    def test_unexpected_error_surfaced_type_prefixed_returns_none(self, tab):
+        with patch(_DETECT, side_effect=RuntimeError("boom")):
+            result = tab._detect_or_report(Path("/src/vol"))
+        assert result is None
+        text = tab.log_widget.text_edit.toPlainText()
+        assert "boom" in text
