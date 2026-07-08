@@ -24,6 +24,7 @@ from anki_miner.orchestration.episode_processor import EpisodeProcessor, _format
 from anki_miner.presenters import NullPresenter
 from anki_miner.services.reading.models import ImageRef, ReadingDocument, ReadingUnit
 from anki_miner.services.word_filter import WordFilterService
+from anki_miner.services.word_list_service import WordListService
 
 _IMG = "anki_miner.orchestration.episode_processor.prepare_card_image"
 
@@ -105,6 +106,7 @@ def _make_processor(
     presenter=None,
     stats_service=None,
     expression_audio_fetcher=None,
+    word_list_service=None,
 ) -> EpisodeProcessor:
     subtitle_parser = subtitle_parser or MagicMock(name="SubtitleParser")
     definition_service = definition_service or MagicMock(name="DefinitionService")
@@ -139,6 +141,7 @@ def _make_processor(
         presenter=presenter or NullPresenter(),
         stats_service=stats_service,
         expression_audio_fetcher=expression_audio_fetcher,
+        word_list_service=word_list_service,
     )
 
 
@@ -255,6 +258,30 @@ def test_min_occurrence_filters_singletons(test_config):
     assert res.cards_created == 1
     fronts = {p.word.lemma for p in anki2.last_card_data}
     assert fronts == {"頻"}
+
+
+def test_whitelist_force_includes_past_min_occurrence(test_config, tmp_path):
+    """A whitelisted hapax survives reading_min_occurrence=2 (force-include bypasses
+    the reading path's occurrence floor, which runs OUTSIDE _phase2_filter)."""
+    wl = tmp_path / "wl.txt"
+    wl.write_text("稀\n", encoding="utf-8")
+    wls = WordListService(whitelist_path=wl)
+    wls.load()
+
+    cfg = replace(test_config, reading_min_occurrence=2, use_whitelist=True)
+    words = [_word("頻", 0), _word("稀", 1)]  # 頻 appears 3×, 稀 is a hapax
+    counts = collections.Counter({"頻": 3, "稀": 1})
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+    anki = _make_anki_service()
+
+    _make_processor(cfg, subtitle_parser=sp, anki_service=anki, word_list_service=wls).process_reading(
+        _document([_unit(0), _unit(1)])
+    )
+
+    # Both survive: 頻 by occurrence count, 稀 by whitelist force-include.
+    fronts = {p.word.lemma for p in anki.last_card_data}
+    assert fronts == {"頻", "稀"}
 
 
 def test_no_mineable_words_message_names_filters_on_reading_path(test_config):

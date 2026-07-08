@@ -2039,6 +2039,12 @@ The dictionary was not removed.</source>
         <source>Sentence length filter: removed %1 words (cap: %2)</source>
         <translation>文の長さフィルター: %1 単語を除去（上限: %2）</translation>
     </message>
+    <message numerus="yes">
+        <source>Whitelist: force-included %n word(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
     <message>
         <source>Skipped %1 words with no definition found: %2%3</source>
         <translation>語義が見つからなかった %1 単語をスキップしました: %2%3</translation>
@@ -2388,8 +2394,8 @@ The dictionary was not removed.</source>
         <translation>ホワイトリストファイル</translation>
     </message>
     <message>
-        <source>Text file with one word per line to always include</source>
-        <translation>常に含める単語を1行に1つ記載したテキストファイル</translation>
+        <source>Text file with one word per line to force-include, bypassing frequency, script, length and other filters. A word must still have a dictionary entry and not already be in Anki or your known-words list.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Enable Whitelist</source>
@@ -2930,16 +2936,12 @@ The frequency source was not removed.</source>
         <translation>マイニングしたカードのスタイルを再適用</translation>
     </message>
     <message>
-        <source>Embed the built-in styling into cards you mined earlier so they match new ones. Safe to re-run and only adds styling.
+        <source>Re-apply the latest built-in styling to your mined cards so they match new ones. Safe to re-run; it never removes card content.
 
 Close Anki's card browser and any open note editor first — editing an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>組み込みのスタイルを、以前にマイニングしたカードに埋め込み、新しいカードと見た目を揃えます。再実行しても安全で、スタイルが追加されるだけです。
-
-先に Anki のカードブラウザと、開いているノートエディタをすべて閉じてください — ノートを開いたまま編集すると、未保存の変更が失われる場合があります。
-
-続行しますか？</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restyling mined cards…</source>
@@ -2954,8 +2956,8 @@ Continue?</source>
         <translation>スタイルの再適用が完了しました</translation>
     </message>
     <message>
-        <source>Restyled %1 card(s). (%2 scanned; %3 already styled.)</source>
-        <translation>%1 枚のカードのスタイルを再適用しました。（%2 枚をスキャン、%3 枚は既に適用済み。）</translation>
+        <source>Restyled %1 card(s). (%2 scanned; %3 already up to date.)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restyle failed</source>

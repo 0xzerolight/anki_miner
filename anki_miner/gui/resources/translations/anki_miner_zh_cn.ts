@@ -2039,6 +2039,12 @@ The dictionary was not removed.</source>
         <source>Sentence length filter: removed %1 words (cap: %2)</source>
         <translation>句子长度过滤器：移除了 %1 个单词（上限：%2）</translation>
     </message>
+    <message numerus="yes">
+        <source>Whitelist: force-included %n word(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
     <message>
         <source>Skipped %1 words with no definition found: %2%3</source>
         <translation>已跳过 %1 个未找到释义的单词：%2%3</translation>
@@ -2388,8 +2394,8 @@ The dictionary was not removed.</source>
         <translation>白名单文件</translation>
     </message>
     <message>
-        <source>Text file with one word per line to always include</source>
-        <translation>每行一个单词的文本文件，这些单词将始终被包含</translation>
+        <source>Text file with one word per line to force-include, bypassing frequency, script, length and other filters. A word must still have a dictionary entry and not already be in Anki or your known-words list.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Enable Whitelist</source>
@@ -2930,16 +2936,12 @@ The frequency source was not removed.</source>
         <translation>重新设置挖词卡片样式</translation>
     </message>
     <message>
-        <source>Embed the built-in styling into cards you mined earlier so they match new ones. Safe to re-run and only adds styling.
+        <source>Re-apply the latest built-in styling to your mined cards so they match new ones. Safe to re-run; it never removes card content.
 
 Close Anki's card browser and any open note editor first — editing an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>将内置样式嵌入你此前挖出的卡片，使其与新卡片保持一致。可安全重复运行，只会新增样式。
-
-请先关闭 Anki 的卡片浏览器和任何打开的笔记编辑器——编辑打开的笔记可能导致未保存的修改丢失。
-
-是否继续？</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restyling mined cards…</source>
@@ -2954,8 +2956,8 @@ Continue?</source>
         <translation>样式重设完成</translation>
     </message>
     <message>
-        <source>Restyled %1 card(s). (%2 scanned; %3 already styled.)</source>
-        <translation>已重新设置 %1 张卡片的样式。（扫描了 %2 张；%3 张已有样式。）</translation>
+        <source>Restyled %1 card(s). (%2 scanned; %3 already up to date.)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restyle failed</source>

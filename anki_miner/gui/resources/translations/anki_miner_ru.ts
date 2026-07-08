@@ -2045,6 +2045,12 @@ The dictionary was not removed.</source>
         <source>Sentence length filter: removed %1 words (cap: %2)</source>
         <translation>Фильтр длины предложения: удалено %1 слов (предел: %2)</translation>
     </message>
+    <message numerus="yes">
+        <source>Whitelist: force-included %n word(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
     <message>
         <source>Skipped %1 words with no definition found: %2%3</source>
         <translation>Пропущено %1 слов без найденного определения: %2%3</translation>
@@ -2408,8 +2414,8 @@ The dictionary was not removed.</source>
         <translation>Файл белого списка</translation>
     </message>
     <message>
-        <source>Text file with one word per line to always include</source>
-        <translation>Текстовый файл с одним словом в строке, которые всегда включать</translation>
+        <source>Text file with one word per line to force-include, bypassing frequency, script, length and other filters. A word must still have a dictionary entry and not already be in Anki or your known-words list.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Enable Whitelist</source>
@@ -2950,16 +2956,12 @@ The frequency source was not removed.</source>
         <translation>Изменить стиль намайненных карточек</translation>
     </message>
     <message>
-        <source>Embed the built-in styling into cards you mined earlier so they match new ones. Safe to re-run and only adds styling.
+        <source>Re-apply the latest built-in styling to your mined cards so they match new ones. Safe to re-run; it never removes card content.
 
 Close Anki's card browser and any open note editor first — editing an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Встроить стандартное оформление в карточки, намайненные ранее, чтобы они соответствовали новым. Операцию можно безопасно повторять — она только добавляет оформление.
-
-Сначала закройте браузер карточек Anki и все открытые редакторы заметок — редактирование открытой заметки может привести к потере несохранённых изменений.
-
-Продолжить?</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restyling mined cards…</source>
@@ -2974,8 +2976,8 @@ Continue?</source>
         <translation>Изменение стиля завершено</translation>
     </message>
     <message>
-        <source>Restyled %1 card(s). (%2 scanned; %3 already styled.)</source>
-        <translation>Изменён стиль %1 карточек. (%2 просканировано; %3 уже оформлено.)</translation>
+        <source>Restyled %1 card(s). (%2 scanned; %3 already up to date.)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restyle failed</source>
