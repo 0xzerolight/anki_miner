@@ -206,6 +206,10 @@ class _EpisodeContext:
     # apart from "removed by active filters" (survivors, then filtered out).
     candidate_words_found: int = 0
     comprehension_percentage: float = 0.0
+    # Lemmas force-included by the user whitelist (populated in _phase2_filter's
+    # partition step). Read by the Reading path so its post-phase2 occurrence
+    # floor does not re-drop force-included words. Empty on every other path.
+    forced_include_lemmas: set[str] = field(default_factory=set)
 
     def build_result(self, **overrides: Any) -> ProcessingResult:
         """Construct a ProcessingResult from accumulated state.
@@ -627,6 +631,26 @@ class EpisodeProcessor:
         # just the mineable ones.
         all_unknown_lemmas = {w.lemma for w in unknown_words}
 
+        # Whitelist force-include (partition-then-merge). A whitelisted lemma is
+        # a true force-include: it bypasses every optional COVERAGE filter below
+        # (frequency, blacklist, script-type, name-wordsets, dedup,
+        # cross-episode-count, i+1, sentence-length). We split it out here and
+        # merge it back just before the integrity gates (offline-def existence
+        # and within-run duplicate collapse), which it stays subject to.
+        # Gated on bypass_optional_filters so the Deck Builder preview — which
+        # already includes everything — is unchanged.
+        forced_include: list[TokenizedWord] = []
+        if (
+            self.config.use_whitelist
+            and self.word_list_service
+            and self.word_list_service.is_available()
+            and not self.config.bypass_optional_filters
+        ):
+            forced_include, unknown_words = self.word_filter.partition_whitelisted(
+                unknown_words, self.word_list_service
+            )
+            ctx.forced_include_lemmas = {w.lemma for w in forced_include}
+
         # Frequency rank cutoff. Gate on an actually-loaded frequency service —
         # NOT just max_frequency_rank > 0. With no source, the rank-assignment
         # loop above is skipped so every word keeps frequency_rank=None, and
@@ -702,13 +726,12 @@ class EpisodeProcessor:
                 )
         # Name wordset filter (Issue #59). Drops proper nouns (people/place
         # names) that slipped past the 固有名詞 POS filter because unidic-lite
-        # mistagged them. Whitelist still rescues. Gated like neighbors so the
-        # Deck Builder corpus preview (bypass_optional_filters) stays in parity.
+        # mistagged them. Force-included whitelist words are already partitioned
+        # out above, so they never reach here. Gated like neighbors so the Deck
+        # Builder corpus preview (bypass_optional_filters) stays in parity.
         if self.wordset_service and self.wordset_service.is_available() and not self.config.bypass_optional_filters:
             before = len(unknown_words)
-            unknown_words = self.word_filter.filter_by_wordsets(
-                unknown_words, self.wordset_service, self.word_list_service
-            )
+            unknown_words = self.word_filter.filter_by_wordsets(unknown_words, self.wordset_service)
             filtered_out = before - len(unknown_words)
             if filtered_out > 0:
                 self.presenter.show_info(
@@ -816,6 +839,25 @@ class EpisodeProcessor:
                         ", ".join(caps),
                     )
                 )
+
+        # Merge force-included whitelist words back in before the integrity
+        # gates. Prepend so a forced word wins its mined_form slot in the
+        # within-run duplicate collapse below (which keeps the first occurrence)
+        # — this makes force-include hold even in the rare cross-lemma homograph
+        # collision (a forced verb's orth_base equal to a distinct noun's
+        # surface). The tradeoff is that the forced word keeps its own parse-time
+        # sentence rather than the collided rest word's (possibly i+1-swapped)
+        # one, which is correct for "mine this word as-is".
+        if forced_include:
+            unknown_words = forced_include + unknown_words
+            self.presenter.show_info(
+                QCoreApplication.translate(
+                    "EpisodeProcessor",
+                    "Whitelist: force-included %n word(s)",
+                    "",
+                    len(forced_include),
+                )
+            )
 
         # Offline definition existence filter. Drops words whose lemma has no
         # entry in any OFFLINE dictionary so the curation dialog never surfaces
@@ -1830,9 +1872,14 @@ class EpisodeProcessor:
             # Reading-specific in-document occurrence floor (reuses the
             # cross-episode filter's <=1 early-return). counts is the parse
             # Counter — replaces the episode path's count_lemmas(subtitle_file).
-            unknown_words = self.word_filter.filter_by_episode_count(
-                unknown_words, counts, self.config.reading_min_occurrence
-            )
+            # Force-included whitelist words bypass this floor too (it is a
+            # coverage filter applied outside _phase2_filter): floor only the
+            # non-forced remainder, then re-prepend. A no-op when nothing was
+            # force-included, so the default reading config is unchanged.
+            forced = [w for w in unknown_words if w.lemma in ctx.forced_include_lemmas]
+            rest = [w for w in unknown_words if w.lemma not in ctx.forced_include_lemmas]
+            rest = self.word_filter.filter_by_episode_count(rest, counts, self.config.reading_min_occurrence)
+            unknown_words = forced + rest
             ctx.new_words_found = len(unknown_words)
             if not unknown_words:
                 self._report_no_mineable_words(ctx)

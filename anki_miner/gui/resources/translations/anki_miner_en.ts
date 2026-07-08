@@ -2015,6 +2015,12 @@ The dictionary was not removed.</source>
         <source>Sentence length filter: removed %1 words (cap: %2)</source>
         <translation type="unfinished" />
     </message>
+    <message numerus="yes">
+        <source>Whitelist: force-included %n word(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
     <message>
         <source>Skipped %1 words with no definition found: %2%3</source>
         <translation type="unfinished" />
@@ -2362,7 +2368,7 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Text file with one word per line to always include</source>
+        <source>Text file with one word per line to force-include, bypassing frequency, script, length and other filters. A word must still have a dictionary entry and not already be in Anki or your known-words list.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2897,7 +2903,7 @@ The frequency source was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Embed the built-in styling into cards you mined earlier so they match new ones. Safe to re-run and only adds styling.
+        <source>Re-apply the latest built-in styling to your mined cards so they match new ones. Safe to re-run; it never removes card content.
 
 Close Anki's card browser and any open note editor first — editing an open note can lose unsaved edits.
 
@@ -2917,7 +2923,7 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Restyled %1 card(s). (%2 scanned; %3 already styled.)</source>
+        <source>Restyled %1 card(s). (%2 scanned; %3 already up to date.)</source>
         <translation type="unfinished" />
     </message>
     <message>
