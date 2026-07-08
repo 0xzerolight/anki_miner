@@ -2039,6 +2039,12 @@ Kamus tidak dihapus.</translation>
         <source>Sentence length filter: removed %1 words (cap: %2)</source>
         <translation>Filter panjang kalimat: menghapus %1 kata (batas: %2)</translation>
     </message>
+    <message numerus="yes">
+        <source>Whitelist: force-included %n word(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
     <message>
         <source>Skipped %1 words with no definition found: %2%3</source>
         <translation>Melewati %1 kata tanpa definisi ditemukan: %2%3</translation>
@@ -2388,8 +2394,8 @@ Kamus tidak dihapus.</translation>
         <translation>Berkas Daftar Putih</translation>
     </message>
     <message>
-        <source>Text file with one word per line to always include</source>
-        <translation>Berkas teks dengan satu kata per baris untuk selalu disertakan</translation>
+        <source>Text file with one word per line to force-include, bypassing frequency, script, length and other filters. A word must still have a dictionary entry and not already be in Anki or your known-words list.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Enable Whitelist</source>
@@ -2930,16 +2936,12 @@ Sumber frekuensi tidak dihapus.</translation>
         <translation>Tata Ulang Kartu Hasil Mining</translation>
     </message>
     <message>
-        <source>Embed the built-in styling into cards you mined earlier so they match new ones. Safe to re-run and only adds styling.
+        <source>Re-apply the latest built-in styling to your mined cards so they match new ones. Safe to re-run; it never removes card content.
 
 Close Anki's card browser and any open note editor first — editing an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Sematkan gaya bawaan ke kartu yang sudah di-mining sebelumnya agar sesuai dengan kartu baru. Aman dijalankan ulang dan hanya menambahkan gaya.
-
-Tutup dahulu browser kartu Anki dan editor catatan yang terbuka — mengedit catatan yang sedang terbuka dapat menghilangkan perubahan yang belum disimpan.
-
-Lanjutkan?</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restyling mined cards…</source>
@@ -2954,8 +2956,8 @@ Lanjutkan?</translation>
         <translation>Penataan ulang selesai</translation>
     </message>
     <message>
-        <source>Restyled %1 card(s). (%2 scanned; %3 already styled.)</source>
-        <translation>Menata ulang %1 kartu. (%2 dipindai; %3 sudah ditata.)</translation>
+        <source>Restyled %1 card(s). (%2 scanned; %3 already up to date.)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restyle failed</source>

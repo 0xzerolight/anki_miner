@@ -176,7 +176,11 @@ class FilteringSettingsPanel(FormPanel):
         self.add_field(
             self.tr("Whitelist File"),
             self.whitelist_selector,
-            helper=self.tr("Text file with one word per line to always include"),
+            helper=self.tr(
+                "Text file with one word per line to force-include, bypassing frequency, "
+                "script, length and other filters. A word must still have a dictionary entry "
+                "and not already be in Anki or your known-words list."
+            ),
         )
 
         self.use_whitelist_checkbox = QCheckBox(self.tr("Enable Whitelist"))

@@ -2039,6 +2039,12 @@ Từ điển chưa được xóa.</translation>
         <source>Sentence length filter: removed %1 words (cap: %2)</source>
         <translation>Bộ lọc độ dài câu: đã loại bỏ %1 từ (giới hạn: %2)</translation>
     </message>
+    <message numerus="yes">
+        <source>Whitelist: force-included %n word(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
     <message>
         <source>Skipped %1 words with no definition found: %2%3</source>
         <translation>Đã bỏ qua %1 từ không tìm thấy định nghĩa: %2%3</translation>
@@ -2388,8 +2394,8 @@ Từ điển chưa được xóa.</translation>
         <translation>Tệp danh sách trắng</translation>
     </message>
     <message>
-        <source>Text file with one word per line to always include</source>
-        <translation>Tệp văn bản với mỗi từ một dòng để luôn bao gồm</translation>
+        <source>Text file with one word per line to force-include, bypassing frequency, script, length and other filters. A word must still have a dictionary entry and not already be in Anki or your known-words list.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Enable Whitelist</source>
@@ -2930,16 +2936,12 @@ Nguồn tần suất chưa được gỡ bỏ.</translation>
         <translation>Tạo lại kiểu cho thẻ đã khai thác</translation>
     </message>
     <message>
-        <source>Embed the built-in styling into cards you mined earlier so they match new ones. Safe to re-run and only adds styling.
+        <source>Re-apply the latest built-in styling to your mined cards so they match new ones. Safe to re-run; it never removes card content.
 
 Close Anki's card browser and any open note editor first — editing an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Nhúng kiểu dáng có sẵn vào các thẻ đã khai thác trước đó để chúng khớp với các thẻ mới. An toàn khi chạy lại và chỉ thêm kiểu dáng.
-
-Hãy đóng trình duyệt thẻ của Anki và mọi trình chỉnh sửa ghi chú đang mở trước — chỉnh sửa một ghi chú đang mở có thể làm mất các thay đổi chưa lưu.
-
-Tiếp tục?</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restyling mined cards…</source>
@@ -2954,8 +2956,8 @@ Tiếp tục?</translation>
         <translation>Đã tạo lại kiểu xong</translation>
     </message>
     <message>
-        <source>Restyled %1 card(s). (%2 scanned; %3 already styled.)</source>
-        <translation>Đã tạo lại kiểu cho %1 thẻ. (%2 đã quét; %3 đã có kiểu.)</translation>
+        <source>Restyled %1 card(s). (%2 scanned; %3 already up to date.)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restyle failed</source>
