@@ -51,13 +51,16 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QCoreApplication
 
+from anki_miner.exceptions import SetupError
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.workers.reading_queue_worker import ReadingQueueWorker
+from anki_miner.services.reading import detector
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -67,6 +70,7 @@ if TYPE_CHECKING:
     from anki_miner.interfaces.presenter import PresenterProtocol
     from anki_miner.models.reading_queue import ReadingQueueItem
     from anki_miner.orchestration import EpisodeProcessor
+    from anki_miner.services.reading.models import ReadingSourceRef
 
 logger = logging.getLogger(__name__)
 
@@ -232,6 +236,27 @@ class _ReadingMiningTabBase(MiningTabBase):
         if 0 <= idx < len(self._run_items):
             return self._run_items[idx]
         return None
+
+    def _detect_or_report(self, path: Path) -> list[ReadingSourceRef] | None:
+        """Classify *path* with ``detector.detect``, reporting any failure.
+
+        Shared by both reading sub-tabs (manga folder / novel file): a
+        ``SetupError`` carries a crafted, user-facing message and is surfaced
+        verbatim; any other failure is logged and shown type-prefixed. Returns
+        the detected refs on success, or ``None`` when detection failed (the
+        caller then aborts the Preview/Mine without starting a run).
+        """
+        try:
+            return detector.detect(path)
+        except SetupError as exc:
+            self.log_widget.append_error(str(exc))  # type: ignore[attr-defined]
+            return None
+        except Exception as exc:  # noqa: BLE001 - surface any classify failure to the log
+            logger.exception("Reading source detect failed for %s", path)
+            self.log_widget.append_error(  # type: ignore[attr-defined]
+                tr_format(QCoreApplication.translate("ReadingTab", "Could not process %1: %2"), path.name, exc)
+            )
+            return None
 
     def _on_worker_finished(self) -> None:
         """Single cleanup slot wired to ``QThread.finished``.

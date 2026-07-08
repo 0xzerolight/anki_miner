@@ -22,7 +22,6 @@ selector; a manga-kind drop earns a cross-tab hint instead.
 from __future__ import annotations
 
 import contextlib
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -39,7 +38,6 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from anki_miner.exceptions import SetupError
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
@@ -48,15 +46,12 @@ from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionH
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.models.reading_queue import ReadingQueueItem
-from anki_miner.services.reading import detector
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.interfaces.presenter import PresenterProtocol
     from anki_miner.orchestration import EpisodeProcessor
-
-logger = logging.getLogger(__name__)
 
 # File-selector filter glob for the Book File field. The human label ("Books")
 # is tr()'d at call time; only the literal extension glob lives here.
@@ -273,15 +268,8 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
             self.log_widget.append_warning(self.tr("Select a valid .epub or .txt book first."))
             return
 
-        try:
-            refs = detector.detect(path)
-        except SetupError as exc:
-            # Crafted, user-facing message: surface it verbatim.
-            self.log_widget.append_error(str(exc))
-            return
-        except Exception as exc:  # noqa: BLE001 - surface any classify failure to the log
-            logger.exception("Reading source detect failed for %s", path)
-            self.log_widget.append_error(tr_format(self.tr("Could not process %1: %2"), path.name, exc))
+        refs = self._detect_or_report(path)
+        if refs is None:
             return
 
         ref = refs[0]

@@ -39,7 +39,9 @@ from anki_miner.services.reading.models import ReadingSourceRef
 
 _WORKER_TARGET = "anki_miner.gui.widgets._reading_mining_base.ReadingQueueWorker"
 _CREATE_TARGET = "anki_miner.gui.widgets._reading_mining_base.create_episode_processor"
-_DETECT = "anki_miner.gui.widgets.reading_novels_tab.detector.detect"
+# detect() now lives in the shared base helper (_detect_or_report), so patch it
+# where the base module imports it.
+_DETECT = "anki_miner.gui.widgets._reading_mining_base.detector.detect"
 _URLS = "anki_miner.gui.widgets.reading_novels_tab.urls_from_event"
 
 
