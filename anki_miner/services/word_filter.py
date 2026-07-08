@@ -116,25 +116,53 @@ class WordFilterService:
         words: list[TokenizedWord],
         word_list_service: WordListService,
     ) -> list[TokenizedWord]:
-        """Filter words using blacklist/whitelist.
+        """Filter words using the user blacklist.
 
-        Blacklist/whitelist entries match against ``word.lemma`` (dictionary
-        form). Users should enter dictionary forms in their list files
-        (e.g. 食べる, not 食べた). Whitelist short-circuits the blacklist
-        check, so an entry on both lists is kept.
+        Blacklist entries match against ``word.lemma`` (dictionary form). Users
+        should enter dictionary forms in their list files (e.g. 食べる, not
+        食べた). The whitelist is NOT consulted here: whitelisted words are
+        force-included by :meth:`partition_whitelisted` before this filter runs,
+        so they never reach it.
 
         Args:
             words: List of words to filter.
-            word_list_service: Service providing blacklist/whitelist lookups.
+            word_list_service: Service providing blacklist lookups.
 
         Returns:
             Filtered list of words.
         """
-        result = []
+        return [word for word in words if not word_list_service.is_blacklisted(word.lemma)]
+
+    def partition_whitelisted(
+        self,
+        words: list[TokenizedWord],
+        word_list_service: WordListService,
+    ) -> tuple[list[TokenizedWord], list[TokenizedWord]]:
+        """Split words into ``(forced, rest)`` by user whitelist membership.
+
+        Force-included words (lemma on the whitelist) bypass every optional
+        coverage filter — the caller runs the filter chain on ``rest`` only and
+        merges ``forced`` back in before the integrity gates. Matching is on
+        ``word.lemma``, the dictionary-form convention shared with
+        :meth:`filter_by_word_lists`. ``all_words`` is already lemma-deduped
+        upstream (``SubtitleParserService``), so exactly one word per whitelisted
+        lemma is moved to ``forced``.
+
+        Args:
+            words: List of candidate words.
+            word_list_service: Service providing whitelist lookups.
+
+        Returns:
+            A ``(forced, rest)`` tuple preserving input order within each list.
+        """
+        forced: list[TokenizedWord] = []
+        rest: list[TokenizedWord] = []
         for word in words:
-            if word_list_service.is_whitelisted(word.lemma) or not word_list_service.is_blacklisted(word.lemma):
-                result.append(word)
-        return result
+            if word_list_service.is_whitelisted(word.lemma):
+                forced.append(word)
+            else:
+                rest.append(word)
+        return forced, rest
 
     def filter_by_script_type(
         self,
@@ -174,7 +202,6 @@ class WordFilterService:
         self,
         words: list[TokenizedWord],
         wordset_service: WordsetService,
-        word_list_service: WordListService | None = None,
     ) -> list[TokenizedWord]:
         """Drop words on any enabled name wordset (Issue #59).
 
@@ -186,26 +213,17 @@ class WordFilterService:
         filter. (Keying on ``lemma`` here let a name slip through whenever
         unidic's noun lemma diverged from its surface form.)
 
-        The user whitelist, when provided, short-circuits the drop. It stays
-        keyed on ``word.lemma`` to match ``WordListService``'s documented
-        convention (users enter dictionary forms in their list files), the
-        same key ``filter_by_word_lists`` uses.
+        Whitelisted words never reach this filter: they are force-included by
+        :meth:`partition_whitelisted` before the chain runs.
 
         Args:
             words: Words to filter.
             wordset_service: Loaded union of enabled name wordsets.
-            word_list_service: Optional user blacklist/whitelist service;
-                a whitelisted lemma is always kept.
 
         Returns:
             Filtered list of words.
         """
-        result = []
-        for word in words:
-            whitelisted = word_list_service is not None and word_list_service.is_whitelisted(word.lemma)
-            if whitelisted or not wordset_service.is_excluded(word.mined_form):
-                result.append(word)
-        return result
+        return [word for word in words if not wordset_service.is_excluded(word.mined_form)]
 
     def deduplicate_by_sentence(
         self,

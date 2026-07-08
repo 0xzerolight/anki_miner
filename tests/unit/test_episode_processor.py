@@ -21,6 +21,7 @@ from anki_miner.presenters import NullPresenter
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.pitch_accent_service import PitchEntry
 from anki_miner.services.word_filter import WordFilterService
+from anki_miner.services.word_list_service import WordListService
 
 
 def _make_episode_context(tmp_path):
@@ -1604,8 +1605,8 @@ class TestWordsetServiceIntegration:
 
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        # filter_by_wordsets called with both words + the wordset service + word_list_service (None)
-        mock_services["word_filter"].filter_by_wordsets.assert_called_once_with([word1, word2], mock_ws, None)
+        # filter_by_wordsets called with both words + the wordset service
+        mock_services["word_filter"].filter_by_wordsets.assert_called_once_with([word1, word2], mock_ws)
         assert result.cards_created == 1
 
     def test_bypass_optional_filters_skips_wordset_filter(self, test_config, mock_services, tmp_path):
@@ -1634,38 +1635,153 @@ class TestWordsetServiceIntegration:
 
         mock_services["word_filter"].filter_by_wordsets.assert_not_called()
 
-    def test_wordset_filter_passes_word_list_service_for_whitelist(self, test_config, mock_services, tmp_path):
-        """filter_by_wordsets receives the word_list_service so whitelist can rescue words."""
-        word1 = _make_word("田中")
-        media = _make_media()
 
-        mock_ws = MagicMock()
-        mock_ws.is_available.return_value = True
+class TestWhitelistForceInclude:
+    """Force-include: a whitelisted lemma bypasses every optional coverage filter
+    (partition-then-merge), while staying subject to the integrity gates
+    (already-in-Anki, offline-definition existence). Uses a REAL WordFilterService
+    and a REAL WordListService loaded from a temp file so the partition and the real
+    filters run — a mocked word_filter would replay stubs, and a bare MagicMock
+    WordListService would force-include every word."""
 
-        mock_wls = MagicMock()
-        mock_wls.is_available.return_value = True
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
 
-        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1]
+    def _wls(self, tmp_path, *lemmas):
+        wl = tmp_path / "wl.txt"
+        wl.write_text("\n".join(lemmas) + "\n", encoding="utf-8")
+        svc = WordListService(whitelist_path=wl)
+        svc.load()
+        return svc
+
+    def test_force_includes_past_script_type_filter(self, test_config, mock_services, tmp_path):
+        """Whitelisted katakana word survives exclude_katakana_only_words; a
+        non-whitelisted katakana word is still dropped (guards against a mock that
+        would force-include everything)."""
+        config = replace(test_config, use_whitelist=True, exclude_katakana_only_words=True)
+        kept = _make_word("コーヒー", surface="コーヒー", pos="名詞")
+        dropped = _make_word("ソファ", surface="ソファ", start_time=5.0, pos="名詞")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [kept, dropped]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
-        mock_services["word_filter"].filter_unknown.return_value = [word1]
-        mock_services["word_filter"].filter_by_word_lists.return_value = [word1]
-        mock_services["word_filter"].filter_by_wordsets.return_value = [word1]
-        mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media)]
-        mock_services["definition_service"].get_definitions_batch.return_value = ["surname def"]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(kept, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. coffee"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
+        services = {**mock_services, "word_filter": WordFilterService(config)}
         processor = EpisodeProcessor(
-            config=test_config,
+            config=config,
             presenter=NullPresenter(),
-            wordset_service=mock_ws,
-            word_list_service=mock_wls,
-            **mock_services,
+            word_list_service=self._wls(tmp_path, "コーヒー"),
+            **services,
         )
-
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        # Verify filter_by_wordsets was called with the word_list_service (for whitelist rescue)
-        mock_services["word_filter"].filter_by_wordsets.assert_called_once_with([word1], mock_ws, mock_wls)
+        sent = mock_services["media_extractor"].extract_media_batch.call_args.args[1]
+        assert [w.mined_form for w in sent] == ["コーヒー"]
+
+    def test_force_includes_past_sentence_length_filter(self, test_config, mock_services, tmp_path):
+        """Whitelisted word survives use_sentence_length_filter's char cap."""
+        config = replace(test_config, use_whitelist=True, use_sentence_length_filter=True, max_sentence_chars=1)
+        kept = _make_word("食べる")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [kept]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["media_extractor"].extract_media_batch.return_value = [(kept, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            word_list_service=self._wls(tmp_path, "食べる"),
+            **services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["anki_service"].create_cards_batch.assert_called_once()
+
+    def test_still_dropped_when_no_offline_definition(self, test_config, mock_services, tmp_path):
+        """Integrity gate: a whitelisted word with no offline definition is still
+        dropped (force-include does NOT bypass the offline-def existence filter)."""
+        config = replace(test_config, use_whitelist=True)
+        word = _make_word("食べる")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["definition_service"].has_offline_definitions.side_effect = lambda lemmas: dict.fromkeys(
+            lemmas, False
+        )
+        mock_services["anki_service"].create_cards_batch.return_value = 0
+
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            word_list_service=self._wls(tmp_path, "食べる"),
+            **services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.new_words_found == 0
+        mock_services["anki_service"].create_cards_batch.assert_not_called()
+
+    def test_not_force_included_when_already_in_anki(self, test_config, mock_services, tmp_path):
+        """Integrity gate: a whitelisted word already in Anki is excluded (partition
+        runs after filter_unknown, so force-include never re-mines an existing card)."""
+        config = replace(test_config, use_whitelist=True)
+        word = _make_word("食べる")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = {word.mined_form}
+        mock_services["anki_service"].create_cards_batch.return_value = 0
+
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            word_list_service=self._wls(tmp_path, "食べる"),
+            **services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.new_words_found == 0
+        mock_services["anki_service"].create_cards_batch.assert_not_called()
+
+    def test_use_whitelist_false_no_force_include(self, test_config, mock_services, tmp_path):
+        """With use_whitelist False the partition is skipped: a word on the whitelist
+        file is NOT force-included and is dropped by the katakana filter."""
+        config = replace(test_config, use_whitelist=False, exclude_katakana_only_words=True)
+        word = _make_word("コーヒー", surface="コーヒー", pos="名詞")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["anki_service"].create_cards_batch.return_value = 0
+
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=NullPresenter(),
+            word_list_service=self._wls(tmp_path, "コーヒー"),
+            **services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.new_words_found == 0
+        mock_services["anki_service"].create_cards_batch.assert_not_called()
 
 
 class TestCrossEpisodeFiltering:

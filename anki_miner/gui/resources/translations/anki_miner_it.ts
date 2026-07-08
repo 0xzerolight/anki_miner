@@ -2042,6 +2042,12 @@ Il dizionario non è stato rimosso.</translation>
         <source>Sentence length filter: removed %1 words (cap: %2)</source>
         <translation>Filtro lunghezza frase: rimosse %1 parole (limite: %2)</translation>
     </message>
+    <message numerus="yes">
+        <source>Whitelist: force-included %n word(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
     <message>
         <source>Skipped %1 words with no definition found: %2%3</source>
         <translation>Saltate %1 parole senza definizione trovata: %2%3</translation>
@@ -2398,8 +2404,8 @@ Il dizionario non è stato rimosso.</translation>
         <translation>File whitelist</translation>
     </message>
     <message>
-        <source>Text file with one word per line to always include</source>
-        <translation>File di testo con una parola per riga da includere sempre</translation>
+        <source>Text file with one word per line to force-include, bypassing frequency, script, length and other filters. A word must still have a dictionary entry and not already be in Anki or your known-words list.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Enable Whitelist</source>
@@ -2940,16 +2946,12 @@ La sorgente di frequenza non è stata rimossa.</translation>
         <translation>Riapplica stile alle carte estratte</translation>
     </message>
     <message>
-        <source>Embed the built-in styling into cards you mined earlier so they match new ones. Safe to re-run and only adds styling.
+        <source>Re-apply the latest built-in styling to your mined cards so they match new ones. Safe to re-run; it never removes card content.
 
 Close Anki's card browser and any open note editor first — editing an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Incorpora lo stile integrato nelle carte estratte in precedenza, così da farle corrispondere a quelle nuove. È sicuro da rieseguire: aggiunge solo lo stile.
-
-Chiudere prima il browser delle carte di Anki e qualsiasi editor di note aperto — modificare una nota aperta può causare la perdita di modifiche non salvate.
-
-Continuare?</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restyling mined cards…</source>
@@ -2964,8 +2966,8 @@ Continuare?</translation>
         <translation>Riapplicazione dello stile completata</translation>
     </message>
     <message>
-        <source>Restyled %1 card(s). (%2 scanned; %3 already styled.)</source>
-        <translation>Stile riapplicato a %1 carte. (%2 esaminate; %3 già con stile.)</translation>
+        <source>Restyled %1 card(s). (%2 scanned; %3 already up to date.)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restyle failed</source>

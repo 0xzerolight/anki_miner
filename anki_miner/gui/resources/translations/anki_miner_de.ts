@@ -2042,6 +2042,13 @@ Das Wörterbuch wurde nicht entfernt.</translation>
         <source>Sentence length filter: removed %1 words (cap: %2)</source>
         <translation>Satzlängen-Filter: %1 Wörter entfernt (Grenze: %2)</translation>
     </message>
+    <message numerus="yes">
+        <source>Whitelist: force-included %n word(s)</source>
+        <translation>
+            <numerusform>Whitelist: %n Wort zwangsweise aufgenommen</numerusform>
+            <numerusform>Whitelist: %n Wörter zwangsweise aufgenommen</numerusform>
+        </translation>
+    </message>
     <message>
         <source>Skipped %1 words with no definition found: %2%3</source>
         <translation>%1 Wörter ohne gefundene Definition übersprungen: %2%3</translation>
@@ -2398,8 +2405,8 @@ Das Wörterbuch wurde nicht entfernt.</translation>
         <translation>Whitelist-Datei</translation>
     </message>
     <message>
-        <source>Text file with one word per line to always include</source>
-        <translation>Textdatei mit einem Wort pro Zeile, das immer eingeschlossen wird</translation>
+        <source>Text file with one word per line to force-include, bypassing frequency, script, length and other filters. A word must still have a dictionary entry and not already be in Anki or your known-words list.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Enable Whitelist</source>
@@ -2940,16 +2947,12 @@ Die Häufigkeitsquelle wurde nicht entfernt.</translation>
         <translation>Gesammelte Karten neu gestalten</translation>
     </message>
     <message>
-        <source>Embed the built-in styling into cards you mined earlier so they match new ones. Safe to re-run and only adds styling.
+        <source>Re-apply the latest built-in styling to your mined cards so they match new ones. Safe to re-run; it never removes card content.
 
 Close Anki's card browser and any open note editor first — editing an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Das integrierte Styling in zuvor gesammelte Karten einbetten, damit sie neuen Karten entsprechen. Kann gefahrlos erneut ausgeführt werden und fügt nur Styling hinzu.
-
-Schließen Sie zuerst Ankis Kartenbrowser und alle geöffneten Notiz-Editoren — das Bearbeiten einer geöffneten Notiz kann ungespeicherte Änderungen verlieren.
-
-Fortfahren?</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restyling mined cards…</source>
@@ -2964,8 +2967,8 @@ Fortfahren?</translation>
         <translation>Neugestaltung abgeschlossen</translation>
     </message>
     <message>
-        <source>Restyled %1 card(s). (%2 scanned; %3 already styled.)</source>
-        <translation>%1 Karte(n) neu gestaltet. (%2 gescannt; %3 bereits gestaltet.)</translation>
+        <source>Restyled %1 card(s). (%2 scanned; %3 already up to date.)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restyle failed</source>

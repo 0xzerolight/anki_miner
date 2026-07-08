@@ -3,7 +3,6 @@ from pathlib import Path
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import TokenizedWord
 from anki_miner.services.word_filter import WordFilterService
-from anki_miner.services.word_list_service import WordListService
 from anki_miner.services.wordset_service import WordsetService
 
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "wordsets"
@@ -30,26 +29,6 @@ def test_filter_by_wordsets_drops_blacklisted_lemma():
     assert [w.lemma for w in result] == ["食べる"]
 
 
-def test_whitelist_rescues_wordset_word(tmp_path):
-    wl_file = tmp_path / "wl.txt"
-    wl_file.write_text("田中\n", encoding="utf-8")
-    wls = WordListService(whitelist_path=wl_file)
-    wls.load()
-    svc = WordsetService(enabled_ids=("surnames",), resource_dir=FIXTURES)
-    svc.load()
-    wf = WordFilterService(AnkiMinerConfig())
-    result = wf.filter_by_wordsets([_word("田中")], svc, wls)
-    assert [w.lemma for w in result] == ["田中"]
-
-
-def test_no_word_list_service_still_filters():
-    svc = WordsetService(enabled_ids=("surnames",), resource_dir=FIXTURES)
-    svc.load()
-    wf = WordFilterService(AnkiMinerConfig())
-    result = wf.filter_by_wordsets([_word("田中")], svc, None)
-    assert result == []
-
-
 def test_filter_by_wordsets_keys_on_mined_form_not_lemma():
     """A name noun whose surface is in the wordset but whose unidic lemma
     diverges (the 豪腕→剛腕 class) must still be excluded: the wordset data
@@ -70,5 +49,5 @@ def test_filter_by_wordsets_keys_on_mined_form_not_lemma():
         pos="名詞",
     )
     assert name.mined_form == "田中"
-    result = wf.filter_by_wordsets([name], svc, None)
+    result = wf.filter_by_wordsets([name], svc)
     assert result == []

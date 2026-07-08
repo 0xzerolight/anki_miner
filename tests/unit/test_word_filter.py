@@ -222,21 +222,10 @@ class TestWordFilterService:
             assert len(result) == 1
             assert result[0].lemma == "飲む"
 
-        def test_keeps_whitelisted_words(self, test_config, tmp_path):
-            """Whitelisted words should always be kept."""
-            wl = tmp_path / "wl.txt"
-            wl.write_text("食べる\n", encoding="utf-8")
-            wls = WordListService(whitelist_path=wl)
-            wls.load()
-
-            service = WordFilterService(test_config)
-            words = [create_word("食べる"), create_word("飲む")]
-
-            result = service.filter_by_word_lists(words, wls)
-            assert len(result) == 2
-
-        def test_whitelist_overrides_blacklist(self, test_config, tmp_path):
-            """If a word is on both lists, whitelist wins."""
+        def test_ignores_whitelist(self, test_config, tmp_path):
+            """filter_by_word_lists no longer consults the whitelist: a word on
+            BOTH lists is still dropped here. Whitelist rescue moved upstream to
+            partition_whitelisted (force-include), so this method is blacklist-only."""
             bl = tmp_path / "bl.txt"
             bl.write_text("食べる\n", encoding="utf-8")
             wl = tmp_path / "wl.txt"
@@ -248,7 +237,7 @@ class TestWordFilterService:
             words = [create_word("食べる")]
 
             result = service.filter_by_word_lists(words, wls)
-            assert len(result) == 1
+            assert result == []
 
         def test_empty_list(self, test_config, tmp_path):
             """Should return empty list for empty input."""
@@ -258,6 +247,35 @@ class TestWordFilterService:
             service = WordFilterService(test_config)
             result = service.filter_by_word_lists([], wls)
             assert result == []
+
+    class TestPartitionWhitelisted:
+        """Tests for partition_whitelisted (whitelist force-include split)."""
+
+        def test_splits_by_lemma(self, test_config, tmp_path):
+            """Whitelisted lemmas go to forced, everything else to rest."""
+            wl = tmp_path / "wl.txt"
+            wl.write_text("食べる\n", encoding="utf-8")
+            wls = WordListService(whitelist_path=wl)
+            wls.load()
+
+            service = WordFilterService(test_config)
+            words = [create_word("食べる"), create_word("飲む")]
+
+            forced, rest = service.partition_whitelisted(words, wls)
+            assert [w.lemma for w in forced] == ["食べる"]
+            assert [w.lemma for w in rest] == ["飲む"]
+
+        def test_empty_whitelist_everything_in_rest(self, test_config, tmp_path):
+            """With no whitelist, all words land in rest and forced is empty."""
+            wls = WordListService()
+            wls.load()
+
+            service = WordFilterService(test_config)
+            words = [create_word("食べる"), create_word("飲む")]
+
+            forced, rest = service.partition_whitelisted(words, wls)
+            assert forced == []
+            assert [w.lemma for w in rest] == ["食べる", "飲む"]
 
     class TestFilterByScriptType:
         """Tests for filter_by_script_type method (Issue #57)."""
