@@ -215,6 +215,19 @@ def test_over_threshold_block_splits_on_adjacent_quotes(tmp_path):
     assert [u.index for u in doc.units] == list(range(30))
 
 
+def test_over_threshold_unbalanced_bracket_block_splits(tmp_path):
+    # Regression for the manga "wall of text" bug: an over-threshold block with
+    # an unmatched leading 「 (rampant in OCR'd cover blurbs) used to survive
+    # whole because the open bracket suppressed every internal 。. It must now
+    # split into short mineable units, none equal to the full block.
+    joined = "「" + "あいうえお。" * 21  # 127 chars > threshold, unmatched 「
+    assert len(joined) > _BLOCK_SPLIT_THRESHOLD
+    doc = load(_write_ref(tmp_path, _mokuro([_page("001.jpg", [_block([joined])])]), None))
+    assert len(doc.units) > 1
+    assert all(u.text != joined for u in doc.units)
+    assert all(len(u.text) <= _BLOCK_SPLIT_THRESHOLD for u in doc.units)
+
+
 # ---------------------------------------------------------------------------
 # Ordering / indexing / labels
 # ---------------------------------------------------------------------------
