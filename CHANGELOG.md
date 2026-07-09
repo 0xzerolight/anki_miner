@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Removed
+- **The Preview buttons are gone.** The word curator ("Review words before mining") long ago replaced pre-mine review, so the Preview Words button (Episode Mining, with its Ctrl+P shortcut), the Preview buttons on the YouTube / Audiobook / Novels tabs, the Batch tab's pair preview (pairings show in the processing log), and the Manga tab's volume-list preview have all been removed along with their dialogs. To inspect words before cards are created, tick *Review words before mining*.
 
 ### Fixed
 
