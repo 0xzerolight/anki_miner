@@ -27,9 +27,10 @@ Signal shapes mirror the audiobook worker so the tab code mirrors too:
   fires for that item, and the loop-top check then stops the queue with
   ``queue_finished`` still emitted.
 
-D8: this worker publishes NO ``_curation_video``/``_curation_subtitle``/
-``_curation_offset`` attributes — reading curation is table-only, so the tab
-inherits the base ``(None, None)`` media context.
+D8 (amended): this worker publishes NO ``_curation_video``/``_curation_subtitle``/
+``_curation_offset`` attributes — novels curation is table-only. For manga it
+publishes :attr:`curation_document` (the in-flight item's loaded
+``ReadingDocument``) so the manga tab can build a page-image curation context.
 """
 
 from __future__ import annotations
@@ -47,6 +48,7 @@ from anki_miner.models.reading_queue import ReadingItemStatus, ReadingQueueItem
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.dictionary.registry import stale_dict_reimport_error
 from anki_miner.services.reading import detector
+from anki_miner.services.reading.models import ReadingDocument
 
 logger = logging.getLogger(__name__)
 
@@ -109,9 +111,13 @@ class ReadingQueueWorker(ProcessorOwningWorker):
         self._items = items
         self._curation_callback = curation_callback
         self._preview_mode = preview_mode
-        # D8: no _curation_video/_curation_subtitle/_curation_offset here —
-        # reading curation is table-only; the tab inherits the base (None,
-        # None) media context.
+        # D8 (amended): no _curation_video/_curation_subtitle/_curation_offset
+        # here — novels curation is table-only. Manga curation reads
+        # curation_document instead (set per item in _mine_one). It is read
+        # only by the GUI-side _build_curation_context while this worker is
+        # parked in the curation Event wait, so the parked worker cannot
+        # overwrite it mid-dialog and no lock is needed.
+        self.curation_document: ReadingDocument | None = None
 
     @property
     def curation_processor(self) -> EpisodeProcessor | None:
@@ -185,6 +191,10 @@ class ReadingQueueWorker(ProcessorOwningWorker):
         exception (load or mining) propagates to the error handling in ``run``.
         """
         document = detector.load(item.source)
+        # Published for the manga tab's curation context (page images). Set
+        # before process_reading so it is always the in-flight item's document
+        # by the time the curation callback parks this thread.
+        self.curation_document = document
 
         mining_cb = QueueMiningProgressAdapter(idx, self.item_progress.emit)
 
