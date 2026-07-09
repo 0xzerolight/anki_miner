@@ -55,7 +55,6 @@ class ProgressWidget(QWidget):
         self.progress_bar.setMaximum(100)
         self.progress_bar.setValue(0)
         self.progress_bar.setTextVisible(False)
-        self.progress_bar.setFormat("%p%")
         layout.addWidget(self.progress_bar)
 
         # Statistics bar
@@ -98,13 +97,85 @@ class ProgressWidget(QWidget):
             # Calculate percentage
             percentage = int((current / total) * 100)
             self.progress_bar.setValue(percentage)
-            self.progress_bar.setFormat(f"{current}/{total}")
 
         if description:
             self.status_label.setText(description)
 
         # Update statistics
         self._update_stats()
+
+    def set_percent(self, percent: int, status: str | None = None) -> None:
+        """Drive the bar in percent units (0-100); optionally update the status.
+
+        Unlike ``set_determinate(100)`` + ``set_value``, this recovers from a
+        prior ``set_indeterminate`` (restores ``setMaximum(100)``) without
+        killing the elapsed timer, and keeps the stats/ETA math in percent
+        units (``_total_items`` pinned to 100).
+
+        Args:
+            percent: Progress percent, clamped to 0-100
+            status: Optional status text; falsy values leave the label alone
+                (the pipeline's terminal ``on_progress(100, "")`` must not
+                blank the last meaningful label)
+        """
+        percent = min(max(percent, 0), 100)
+        self._items_processed = percent
+        self._total_items = 100
+
+        if self._start_time is None and percent > 0:
+            self._start_time = time()
+
+        self.progress_bar.setMaximum(100)
+        self.progress_bar.setValue(percent)
+
+        if status:
+            self.status_label.setText(status)
+
+        self._update_stats()
+
+    def set_composed(
+        self,
+        items_done: int,
+        item_pct: int,
+        items_total: int,
+        status: str | None = None,
+    ) -> None:
+        """Compose per-item progress into whole-run percent (one bar per run).
+
+        ``overall = ((items_done + item_pct/100) / items_total) * 100`` — the
+        single home of the composition formula; tabs track their own counters
+        but never restate the math.
+
+        Args:
+            items_done: Items fully finished so far
+            item_pct: Current item's own progress percent (clamped 0-100)
+            items_total: Total items in the run; ``<= 0`` is a no-op
+            status: Optional status text (falsy leaves the label alone)
+        """
+        if items_total <= 0:
+            return
+        item_frac = min(max(item_pct, 0), 100) / 100
+        overall = int(((items_done + item_frac) / items_total) * 100)
+        self.set_percent(overall, status)
+
+    def show_completion(self, message: str) -> None:
+        """Pin the bar at 100%, show a completion summary, freeze stats.
+
+        Renders the final elapsed time, then drops the timer so a late
+        straggler update cannot resurrect the ETA.
+
+        Args:
+            message: Completion summary text
+        """
+        self.progress_bar.setMaximum(100)
+        self.progress_bar.setValue(100)
+        self.status_label.setText(message)
+        if self._start_time is not None:
+            elapsed = time() - self._start_time
+            minutes = int(elapsed // 60)
+            seconds = int(elapsed % 60)
+            self.stats_label.setText(f"{minutes:02d}:{seconds:02d}")
+        self._start_time = None
 
     def set_status(self, message: str) -> None:
         """Set the status message.
@@ -132,13 +203,12 @@ class ProgressWidget(QWidget):
     def reset(self) -> None:
         """Reset progress to initial state.
 
-        Restores maximum and text format too — otherwise calling ``reset``
-        after ``set_indeterminate`` would leave ``setMaximum(0)`` in place,
+        Restores the maximum too — otherwise calling ``reset`` after
+        ``set_indeterminate`` would leave ``setMaximum(0)`` in place,
         which Qt renders as a looping busy indicator.
         """
         self.progress_bar.setMaximum(100)
         self.progress_bar.setValue(0)
-        self.progress_bar.setFormat("%p%")
         self.status_label.setText(self.tr("Ready"))
         self.stats_label.setText("")
         self._start_time = None
@@ -149,19 +219,20 @@ class ProgressWidget(QWidget):
         """Set progress bar to indeterminate mode (busy indicator)."""
         self.progress_bar.setMinimum(0)
         self.progress_bar.setMaximum(0)
-        self.progress_bar.setFormat(self.tr("Processing..."))
         self._start_time = None
 
     def set_determinate(self, maximum: int = 100) -> None:
-        """Set progress bar to determinate mode with specified maximum.
+        """Set progress bar to determinate mode.
+
+        The bar maximum is always pinned to 100; ``maximum`` only seeds the
+        total used by ``set_progress`` scaling and the ETA estimate.
 
         Args:
-            maximum: Maximum progress value (default: 100)
+            maximum: Total item count for ``set_progress``/ETA (default: 100)
         """
         self._total_items = maximum
         self.progress_bar.setMaximum(100)
         self.progress_bar.setValue(0)
-        self.progress_bar.setFormat("%p%")
         self._start_time = None
         self._items_processed = 0
 
@@ -178,11 +249,12 @@ class ProgressWidget(QWidget):
         seconds = int(elapsed % 60)
         elapsed_str = f"{minutes:02d}:{seconds:02d}"
 
-        # Calculate rate (items per second)
+        # Rate stays internal ETA input only — displaying it reads as
+        # "N.N/sec" of percent units on the mining path, which looks buggy.
         rate = self._items_processed / elapsed if elapsed > 0 else 0
 
         # Build stats string
-        stats_parts = [f"{elapsed_str}", f"{rate:.1f}/sec"]
+        stats_parts = [f"{elapsed_str}"]
 
         # Calculate ETA if we have total
         if self._total_items > 0 and rate > 0:

@@ -4,6 +4,7 @@ import logging
 import re
 
 import requests
+from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError, SetupError
@@ -21,6 +22,7 @@ from anki_miner.services.anki_note_builder import (
     _strip_for_dedup,
     build_note,
 )
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -425,7 +427,10 @@ class AnkiService:
         all_created_ids: list[int] = []
 
         if progress_callback:
-            progress_callback.on_start(len(word_data_list), "Creating Anki cards")
+            progress_callback.on_start(
+                len(word_data_list),
+                QCoreApplication.translate("AnkiService", "Creating Anki cards"),
+            )
 
         # First, store all media files and track which succeeded
         stored_files = self._store_media_files_batch(word_data_list)
@@ -525,9 +530,18 @@ class AnkiService:
                 )
 
                 if progress_callback:
+                    # Report the CUMULATIVE run total, never per-chunk figures:
+                    # a per-batch "{batch_created}/{len(batch)}" reads as
+                    # "100/100 cards done" on every full chunk regardless of
+                    # the real run total (the reported Issue: misleading
+                    # "Cards created: 100/100").
                     progress_callback.on_progress(
                         min(i + batch_size, len(word_data_list)),
-                        f"Cards created: {batch_created}/{len(batch)}",
+                        tr_format(
+                            QCoreApplication.translate("AnkiService", "Cards created: %1/%2"),
+                            total_created,
+                            len(word_data_list),
+                        ),
                     )
         finally:
             # Record whatever batches completed (all of them on success, the
