@@ -298,7 +298,6 @@ def register_mining_tab(window: "MainWindow", tab: "_HasUpdateConfig", presenter
     presenter.warning_signal.connect(window._on_warning_message)
     presenter.error_signal.connect(window._on_error_message)
     presenter.processing_result_signal.connect(window._on_processing_result)
-    presenter.word_preview_signal.connect(window._on_word_preview)
 
     window.config_refreshed.connect(tab.update_config)
 

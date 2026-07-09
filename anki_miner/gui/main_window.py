@@ -33,7 +33,6 @@ from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
-from anki_miner.gui.widgets.dialogs.word_preview_dialog import WordPreviewDialog
 from anki_miner.gui.widgets.header_widget import HeaderWidget
 from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
 from anki_miner.models import ProcessingResult, ValidationResult
@@ -705,7 +704,6 @@ class MainWindow(QMainWindow):
         self.presenter.error_signal.connect(self._on_error_message)
         self.presenter.validation_result_signal.connect(self._on_validation_result)
         self.presenter.processing_result_signal.connect(self._on_processing_result)
-        self.presenter.word_preview_signal.connect(self._on_word_preview)
 
     def _on_info_message(self, message: str) -> None:
         """Handle info message from presenter.
@@ -851,15 +849,6 @@ class MainWindow(QMainWindow):
             )
         except Exception:
             logger.debug("Failed to record history", exc_info=True)
-
-    def _on_word_preview(self, words: list) -> None:
-        """Handle word preview from presenter.
-
-        Args:
-            words: List of TokenizedWord objects
-        """
-        dialog = WordPreviewDialog(words, self.config, self)
-        dialog.exec()
 
     def get_config(self) -> AnkiMinerConfig:
         """Get current configuration.

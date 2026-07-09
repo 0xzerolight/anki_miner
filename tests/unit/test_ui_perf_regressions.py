@@ -5,7 +5,6 @@ synchronous disk work / lacking bulk-insert guards on click:
 
 - AnalyticsTab.showEvent → refresh_data staleness cache + bulk-insert guards
 - UISettingsPanel star toggle → surgical favorite-state update, no _populate
-- WordPreviewDialog search → debounce + bulk-insert guards
 - DictionarySettingsPanel._rebuild_list → setUpdatesEnabled wrapper
 """
 
@@ -17,11 +16,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from anki_miner.config import AnkiMinerConfig, ChainEntry
+from anki_miner.config import ChainEntry
 from anki_miner.gui.resources.styles.theme import REQUIRED_COLOR_KEYS, Theme
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
-from anki_miner.gui.widgets.dialogs.word_preview_dialog import WordPreviewDialog
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
 from anki_miner.gui.widgets.panels.ui_settings_panel import _STAR_FILLED, _STAR_OUTLINE, UISettingsPanel
 from anki_miner.models import TokenizedWord
@@ -174,70 +172,6 @@ def test_themes_family_toggle_does_not_call_populate(qtbot, tmp_path: Path):
         assert panel._star_buttons["catppuccin-latte"].text() == _STAR_FILLED
     finally:
         panel.deleteLater()
-
-
-# ---------------------------------------------------------------------------
-# Fix 3: WordPreviewDialog search debounce + populate guards
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def sample_words() -> list[TokenizedWord]:
-    return [
-        TokenizedWord(
-            surface=f"word{i}",
-            lemma=f"lemma{i}",
-            reading=f"reading{i}",
-            sentence=f"sentence {i}",
-            start_time=float(i),
-            end_time=float(i + 1),
-            duration=1.0,
-        )
-        for i in range(20)
-    ]
-
-
-def test_word_preview_search_debounces_keystrokes(
-    qtbot, test_config: AnkiMinerConfig, sample_words: list[TokenizedWord]
-):
-    """Three keystrokes in a row only run one filter+populate after the timer fires."""
-    dialog = WordPreviewDialog(sample_words, test_config)
-    qtbot.addWidget(dialog)
-    try:
-        with patch.object(dialog, "_apply_search", wraps=dialog._apply_search) as apply_spy:
-            dialog.search_input.setText("w")
-            dialog.search_input.setText("wo")
-            dialog.search_input.setText("wor")
-            # Timer is single-shot; restarted on each keystroke, never fired
-            # synchronously.
-            assert apply_spy.call_count == 0
-            # Force the timer to fire.
-            dialog._search_debounce_timer.stop()
-            dialog._apply_search()
-            assert apply_spy.call_count == 1
-    finally:
-        dialog.deleteLater()
-
-
-def test_word_preview_populate_disables_updates(qtbot, test_config: AnkiMinerConfig, sample_words: list[TokenizedWord]):
-    """_populate_table suspends repaints across the loop."""
-    dialog = WordPreviewDialog(sample_words, test_config)
-    qtbot.addWidget(dialog)
-    try:
-        update_calls: list[bool] = []
-        original = dialog.table.setUpdatesEnabled
-
-        def spy(enabled: bool) -> None:
-            update_calls.append(enabled)
-            original(enabled)
-
-        with patch.object(dialog.table, "setUpdatesEnabled", side_effect=spy):
-            dialog._populate_table()
-        # Must contain at least one False (suspend) followed by True (resume).
-        assert False in update_calls
-        assert update_calls[-1] is True
-    finally:
-        dialog.deleteLater()
 
 
 # ---------------------------------------------------------------------------

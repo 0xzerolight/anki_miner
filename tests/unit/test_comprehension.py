@@ -103,10 +103,13 @@ class TestComprehensionCalculation:
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["word_filter"].filter_unknown.return_value = words
-        # Preview mode to avoid needing media/definitions
-        mock_services["media_extractor"].extract_media_batch.return_value = []
+        # Full pipeline: mock the downstream phases so the run reaches phase 5.
+        media = _make_media("taberu")
+        mock_services["media_extractor"].extract_media_batch.return_value = [(w, media) for w in words]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. def", "1. def"]
+        mock_services["anki_service"].create_cards_batch.return_value = 2
 
-        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", preview_mode=True)
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         assert result.comprehension_percentage == 0.0
 
@@ -128,8 +131,12 @@ class TestComprehensionCalculation:
             "泳ぐ",
         }
         mock_services["word_filter"].filter_unknown.return_value = unknown
+        media = _make_media("yomu")
+        mock_services["media_extractor"].extract_media_batch.return_value = [(unknown[0], media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to read"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", preview_mode=True)
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         assert result.comprehension_percentage == 75.0
 

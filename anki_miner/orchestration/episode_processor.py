@@ -1349,7 +1349,6 @@ class EpisodeProcessor:
         self,
         video_file: Path,
         subtitle_file: Path,
-        preview_mode: bool = False,
         progress_callback: ProgressCallback | None = None,
         curation_callback: Callable[[list], list | None] | None = None,
         cross_episode_counts: dict[str, int] | None = None,
@@ -1370,7 +1369,6 @@ class EpisodeProcessor:
         Args:
             video_file: Path to video file.
             subtitle_file: Path to subtitle file.
-            preview_mode: If True, only show words without creating cards.
             progress_callback: Optional progress callback.
             curation_callback: Optional callback for word curation. Receives
                 filtered words. Returns the user-selected subset (an empty list
@@ -1425,9 +1423,8 @@ class EpisodeProcessor:
         # allocation so no dir is leaked on failure. The staleness backstop (4.0)
         # runs first: a stale-index run would otherwise drop every word for lack
         # of a definition and report a silent zero-card success.
-        if not preview_mode:
-            self.check_dictionary_staleness()
-            self._preflight_card_target()
+        self.check_dictionary_staleness()
+        self._preflight_card_target()
         run_temp_folder = self._allocate_run_temp_folder()
         keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
 
@@ -1459,7 +1456,7 @@ class EpisodeProcessor:
         # Interactive curation offers a per-word sentence picker, which needs
         # the line index (all lines each lemma appears on). Build it for that
         # path too — not just the i+1 filter.
-        want_line_index = curation_callback is not None and not preview_mode
+        want_line_index = curation_callback is not None
         try:
             all_words, line_index = self._phase1_parse(ctx, subtitle_file, want_line_index=want_line_index)
             if not all_words:
@@ -1477,7 +1474,7 @@ class EpisodeProcessor:
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
-            if curation_callback is not None and not preview_mode:
+            if curation_callback is not None:
                 if line_index is not None:
                     # Attach alternative example sentences so the curator can
                     # offer a per-word sentence picker (no-op for words that
@@ -1506,19 +1503,6 @@ class EpisodeProcessor:
                     return ctx.build_result(new_words_found=0)
                 self.presenter.show_info(
                     QCoreApplication.translate("EpisodeProcessor", "Mining %n selected word(s)", "", len(unknown_words))
-                )
-
-            if preview_mode:
-                self.presenter.show_word_preview(unknown_words)
-                # Preview reports the would-be-mined forms (no cards are created
-                # here). This overloads mined_forms' usual "cards actually created"
-                # meaning, but is safe: every consumer is gated on card creation —
-                # the Undo button only renders when card_ids exist, the undo
-                # callback's remove_words finds no source='mined' rows (preview
-                # returns before _phase5_create, the sole writer), and history/
-                # stats are gated on cards_created > 0.
-                return ctx.build_result(
-                    mined_forms=[w.mined_form for w in unknown_words],
                 )
 
             # Wrap the raw callback so the bar reflects whole-episode progress
@@ -1773,7 +1757,6 @@ class EpisodeProcessor:
         self,
         document: ReadingDocument,
         *,
-        preview_mode: bool = False,
         progress_callback: ProgressCallback | None = None,
         curation_callback: Callable[[list], list | None] | None = None,
         cancel_event: threading.Event | None = None,
@@ -1790,8 +1773,6 @@ class EpisodeProcessor:
 
         Args:
             document: The loaded document to mine.
-            preview_mode: If True, show the word list without creating cards
-                (returns before phase 3').
             progress_callback: Optional progress callback; wraps only phases
                 3'/4/5 in a single weighted sweep.
             curation_callback: Optional per-word curation callback; same
@@ -1828,9 +1809,8 @@ class EpisodeProcessor:
 
         # Outside the try so SetupError propagates to callers (staleness backstop
         # first, for the same silent-zero-card reason as process_episode).
-        if not preview_mode:
-            self.check_dictionary_staleness()
-            self._preflight_card_target()
+        self.check_dictionary_staleness()
+        self._preflight_card_target()
         run_temp_folder = self._allocate_run_temp_folder()
         keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
 
@@ -1847,7 +1827,7 @@ class EpisodeProcessor:
         # parse_text_units directly, so an i+1-enabled Mine run must set
         # want_line_index itself — otherwise the filter gets an empty index and
         # silently drops every word.
-        want_line_index = self.config.use_i_plus_one_filter or (curation_callback is not None and not preview_mode)
+        want_line_index = self.config.use_i_plus_one_filter or curation_callback is not None
         try:
             self.presenter.show_info(
                 tr_format(
@@ -1887,7 +1867,7 @@ class EpisodeProcessor:
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
-            if curation_callback is not None and not preview_mode:
+            if curation_callback is not None:
                 if line_index is not None:
                     self.word_filter.attach_sentence_candidates(unknown_words, line_index)
                 self.word_filter.attach_occurrence_counts(unknown_words, counts)
@@ -1904,10 +1884,6 @@ class EpisodeProcessor:
                 self.presenter.show_info(
                     QCoreApplication.translate("EpisodeProcessor", "Mining %n selected word(s)", "", len(unknown_words))
                 )
-
-            if preview_mode:
-                self.presenter.show_word_preview(unknown_words)
-                return ctx.build_result(mined_forms=[w.mined_form for w in unknown_words])
 
             # Wrap only phases 3'/4/5 in one weighted sweep (no parse/filter
             # bands). Bands, in firing order: image prep, [expression audio],
@@ -2034,7 +2010,6 @@ class EpisodeProcessor:
         fetch_progress_cb: Callable[[str, float | None], None] | None = None,
         curation_callback: Callable[[list], list | None] | None = None,
         on_fetched: Callable[[FetchedMedia], None] | None = None,
-        preview_mode: bool = False,
         source_label: str | None = None,
     ) -> ProcessingResult:
         """Fetch a YouTube video + subs then run the standard mining pipeline.
@@ -2072,8 +2047,6 @@ class EpisodeProcessor:
             on_fetched: Optional callback invoked with the ``FetchedMedia``
                 result after download completes, before the mining pipeline
                 starts. Called on the calling thread (the worker thread).
-            preview_mode: If True, skip card creation and show previews only.
-                Forwarded unchanged to ``process_episode``.
             source_label: Optional origin string for the card "source" field
                 (typically the YouTube video title). Forwarded to
                 ``process_episode`` as ``source_label_override``. The stats/dedup
@@ -2097,14 +2070,13 @@ class EpisodeProcessor:
         if cancel_event.is_set():
             return self._make_cancelled_result(start_time)
 
-        if not preview_mode:
-            # Deliberate early check: fail before the video download rather than
-            # after.  process_episode re-runs the same pre-flight post-fetch;
-            # that double-check is intentional — cheap idempotent localhost calls.
-            # The staleness backstop is likewise cheap and fails before the
-            # download when an enabled index needs reimport.
-            self.check_dictionary_staleness()
-            self._preflight_card_target()
+        # Deliberate early check: fail before the video download rather than
+        # after.  process_episode re-runs the same pre-flight post-fetch;
+        # that double-check is intentional — cheap idempotent localhost calls.
+        # The staleness backstop is likewise cheap and fails before the
+        # download when an enabled index needs reimport.
+        self.check_dictionary_staleness()
+        self._preflight_card_target()
 
         # The fetch stage consults cancel_event directly (fetch_video gets it
         # verbatim and the post-fetch check below polls it); the mining stage
@@ -2130,7 +2102,6 @@ class EpisodeProcessor:
         return self.process_episode(
             fetched.video_file,
             fetched.subtitle_file,
-            preview_mode=preview_mode,
             progress_callback=progress_callback,
             curation_callback=curation_callback,
             episode_name_override=f"YT:{video_id}",
