@@ -101,6 +101,35 @@ def _network_guard(request):
 
 
 @pytest.fixture(autouse=True)
+def _stub_asr_engine_probes(request, monkeypatch):
+    """Keep heavy ASR native imports off test worker threads.
+
+    Constructing SettingsTab / SubtitlesSettingsPanel fires an off-thread
+    availability probe (``run_off_thread`` -> ``_engine.available()`` /
+    ``_engine.cuda_device_count()``) whose function-local faster_whisper /
+    ctranslate2 imports can still be running when the test ends. That native
+    initialization racing the ``_drain_qt_deletes`` teardown drain aborts the
+    whole xdist worker (``Fatal Python error: Aborted`` — observed crashing
+    test_settings_tab / test_ui_settings_panel_font_scale /
+    test_audio_pack_import_flow depending on file-to-worker sharding). Same
+    leaked-off-thread-probe class as ``_clear_resolver_caches`` below.
+
+    Stub both probes with cheap constants by default. Tests that exercise
+    engine-gated UI already monkeypatch ``_engine.available`` themselves (a
+    per-test monkeypatch overrides this one), and ``asr``-marked tests need
+    the real seam, so they are exempt.
+    """
+    if request.node.get_closest_marker("asr"):
+        yield
+        return
+    from anki_miner.services.asr import _engine
+
+    monkeypatch.setattr(_engine, "available", lambda: False)
+    monkeypatch.setattr(_engine, "cuda_device_count", lambda: 0)
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _no_logger_level_leak():
     """Fail any test that leaves the root or ``anki_miner`` logger level changed.
 
