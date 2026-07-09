@@ -3,7 +3,7 @@
 import contextlib
 import threading
 import time
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from PyQt6.QtCore import Qt, QThread, QTimer
 from PyQt6.QtTest import QTest
@@ -425,3 +425,90 @@ def test_cancel_during_off_thread_build_releases_worker_without_dialog(qapp, qtb
 
     dialog_cls.assert_not_called()  # no dialog popped for a cancelled run
     assert tab._curation_result is None  # cancelled → None
+
+
+# ---------------------------------------------------------------------------
+# Curator reject stops the whole run (not just this item)
+# ---------------------------------------------------------------------------
+
+
+def _reject_dialog_cls():
+    """A fake WordCurationDialog whose exec() rejects (Cancel / window-X / Esc)."""
+
+    class _RejectDialog:
+        DialogCode = WordCurationDialog.DialogCode
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def exec(self):
+            return WordCurationDialog.DialogCode.Rejected
+
+        def get_selected_words(self):  # pragma: no cover - not consumed on reject
+            return ["should-not-be-used"]
+
+        def deleteLater(self):  # noqa: N802
+            pass
+
+    return _RejectDialog
+
+
+def test_reject_cancels_running_worker(qapp, qtbot):
+    """A user reject cancels the running worker so the queue loop's between-items
+    _cancel_event check stops the run instead of re-popping the curator per item."""
+    tab = _Bare()
+    qtbot.addWidget(tab)
+    tab._init_curation_bridge()
+    tab.worker_thread = Mock()  # _Bare has no worker; a queue tab supplies one
+
+    with patch(f"{MODULE}.WordCurationDialog", _reject_dialog_cls()):
+        tab._show_curation_dialog(["w1"], None, None)
+
+    tab.worker_thread.cancel.assert_called_once()
+    assert tab._curation_result is None  # cancelled → None downstream
+    assert tab._curation_event.is_set()  # worker still released
+
+
+def test_empty_accept_continues_without_cancel(qapp, qtbot):
+    """Confirm-with-nothing-selected ([] ≠ None) is the per-item skip: the worker
+    is NOT cancelled and the queue continues. This is the linchpin the fix keeps."""
+    tab = _Bare()
+    qtbot.addWidget(tab)
+    tab._init_curation_bridge()
+    tab.worker_thread = Mock()
+
+    class _EmptyAcceptDialog:
+        DialogCode = WordCurationDialog.DialogCode
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def exec(self):
+            return WordCurationDialog.DialogCode.Accepted
+
+        def get_selected_words(self):
+            return []  # confirmed, nothing selected
+
+        def deleteLater(self):  # noqa: N802
+            pass
+
+    with patch(f"{MODULE}.WordCurationDialog", _EmptyAcceptDialog):
+        tab._show_curation_dialog(["w1"], None, None)
+
+    tab.worker_thread.cancel.assert_not_called()
+    assert tab._curation_result == []  # empty selection, NOT None
+
+
+def test_reject_without_worker_thread_does_not_raise(qapp, qtbot):
+    """Tabs with no worker_thread (base/container/non-mining) must not blow up on
+    reject: getattr(...) is None, so the cancel is skipped."""
+    tab = _Bare()
+    qtbot.addWidget(tab)
+    tab._init_curation_bridge()
+    assert getattr(tab, "worker_thread", "MISSING") == "MISSING"  # no such attr
+
+    with patch(f"{MODULE}.WordCurationDialog", _reject_dialog_cls()):
+        tab._show_curation_dialog(["w1"], None, None)  # must not raise
+
+    assert tab._curation_result is None
+    assert tab._curation_event.is_set()
