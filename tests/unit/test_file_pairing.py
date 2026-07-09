@@ -87,6 +87,68 @@ class TestFilePairMatcher:
 
             assert len(pairs) == 1
 
+        def test_custom_subtitle_extensions_finds_vtt(self, tmp_path):
+            """Default set excludes .vtt; a caller-supplied set including it pairs
+            the .vtt subtitle (condenser use case, D12)."""
+            video_dir = tmp_path / "video"
+            video_dir.mkdir()
+            sub_dir = tmp_path / "subs"
+            sub_dir.mkdir()
+
+            (video_dir / "Show_01.mkv").touch()
+            (sub_dir / "Show_01.vtt").touch()
+
+            # Default: .vtt is invisible → no pair.
+            assert FilePairMatcher.find_pairs_by_episode_number(video_dir, sub_dir) == []
+
+            # Custom subtitle extensions including .vtt → one pair.
+            pairs = FilePairMatcher.find_pairs_by_episode_number(
+                video_dir, sub_dir, subtitle_extensions=frozenset({".vtt"})
+            )
+            assert len(pairs) == 1
+            assert pairs[0].subtitle.name == "Show_01.vtt"
+
+        def test_custom_video_extensions_finds_audio(self, tmp_path):
+            """Audio-only inputs pair when the caller supplies audio media
+            extensions (condenser use case, D12)."""
+            video_dir = tmp_path / "video"
+            video_dir.mkdir()
+            sub_dir = tmp_path / "subs"
+            sub_dir.mkdir()
+
+            (video_dir / "Show_01.m4b").touch()
+            (sub_dir / "Show_01.srt").touch()
+
+            # Default video set excludes .m4b → no pair.
+            assert FilePairMatcher.find_pairs_by_episode_number(video_dir, sub_dir) == []
+
+            pairs = FilePairMatcher.find_pairs_by_episode_number(
+                video_dir, sub_dir, video_extensions=frozenset({".m4b"})
+            )
+            assert len(pairs) == 1
+            assert pairs[0].video.name == "Show_01.m4b"
+
+        def test_explicit_default_extensions_match_implicit(self, tmp_path):
+            """Passing the class-default extension sets explicitly reproduces the
+            None-default result exactly (byte-for-byte parity)."""
+            video_dir = tmp_path / "video"
+            video_dir.mkdir()
+            sub_dir = tmp_path / "subs"
+            sub_dir.mkdir()
+
+            (video_dir / "Show_01.mkv").touch()
+            (sub_dir / "Show_01.srt").touch()
+
+            explicit = FilePairMatcher.find_pairs_by_episode_number(
+                video_dir,
+                sub_dir,
+                video_extensions=FilePairMatcher.VIDEO_EXTENSIONS,
+                subtitle_extensions=FilePairMatcher.SUBTITLE_EXTENSIONS,
+            )
+            implicit = FilePairMatcher.find_pairs_by_episode_number(video_dir, sub_dir)
+            assert explicit == implicit
+            assert len(implicit) == 1
+
         def test_pairs_sorted_by_episode_ascending(self, tmp_path):
             """Preview consumes this order, so it must be ascending by episode
             number regardless of filesystem iteration order (Issue #80)."""
