@@ -15,8 +15,9 @@ the base exactly one ephemeral ``ReadingQueueItem``. Behaviour under test:
 * Drag-drop routes through the tab: the FileSelector and its inner QLineEdit
   both have drops disabled, so a drop landing on the input field is delivered to
   the tab handler (which fills the selector for a book, hints for manga).
-* D8: ``_build_curation_context`` inherits the base ``(None, None)`` even with a
-  live worker — reading curation is table-only.
+* D8 (amended): ``_build_curation_context`` inherits the base ``(None, None)``
+  even with a live worker — novels curation is table-only (only the manga
+  sub-tab overrides it with a page-image context).
 
 Qt threads are never started — ``ReadingQueueWorker`` is class-level patched at
 the base module so ``start()`` is a no-op and constructor kwargs can be
@@ -507,14 +508,15 @@ class TestDragDrop:
 
 
 class TestCurationContext:
-    """D8: reading curation is table-only — inherit the base (None, None)."""
+    """D8 (amended): novels curation is table-only — inherit the base (None, None)."""
 
     def test_build_curation_context_is_none_none(self, tab):
         assert tab._build_curation_context() == (None, None)
 
     def test_build_curation_context_none_none_with_worker(self, tmp_path, tab):
-        # Even with a live worker (driven via Mine), no media context is sourced
-        # (D8): the worker publishes no _curation_video/_subtitle/_offset.
+        # Even with a live worker (driven via Mine), no media context is sourced:
+        # the novels tab never overrides _build_curation_context (only the
+        # manga tab does, for its page-image context).
         _run(tab, _book_file(tmp_path), [_make_ref()])
         assert tab._build_curation_context() == (None, None)
 

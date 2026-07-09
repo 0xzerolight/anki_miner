@@ -49,6 +49,7 @@ from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.base import field_label_width
 from anki_miner.gui.widgets.dialogs.manga_volumes_preview_dialog import MangaVolumesPreviewDialog
+from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -75,8 +76,10 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     from the worker handle by :meth:`_recompute_buttons`: idle shows
     Preview/Mine, a run swaps them for Cancel.
 
-    Reading curation is table-only (D8): the base inherits the ``(None, None)``
-    curation context — this tab does NOT override ``_build_curation_context``.
+    Manga curation shows page images (D8 amended): this tab overrides
+    ``_build_curation_context`` to hand the dialog the in-flight volume's
+    units (page image + mokuro block box per word) read off the parked
+    worker's ``curation_document``. Novels stay table-only.
     """
 
     def __init__(
@@ -324,6 +327,31 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         worker.cancel()
         self.cancel_button.setEnabled(False)
         self.cancel_button.setText(self.tr("Cancelling…"))
+
+    # ------------------------------------------------------------------
+    # Curation context (D8 amended: manga shows page images)
+    # ------------------------------------------------------------------
+
+    def _build_curation_context(self):
+        """Page-image curation context for the in-flight manga volume.
+
+        Runs off the GUI thread (run_off_thread in the base). Reads the
+        worker's published ``curation_document`` — stable because the worker
+        is parked in the curation Event wait for the whole build — and hands
+        the dialog a plain ``{unit.index: ReadingUnit}`` map (the dialog
+        resolves a word's unit via ``int(word.start_time)``, the same mapping
+        phase 3 uses for card images). Falls back to the table-only
+        ``(None, None)`` for novels-kind documents and image-less volumes.
+        Imageless units are still included so unmatched pages show their
+        page label in the placeholder. ``lookup_fn`` stays None — the
+        definition pane remains out of scope for reading curation.
+        """
+        worker = self.worker_thread
+        doc = worker.curation_document if worker is not None else None
+        if doc is None or doc.kind != "manga" or not any(u.image_ref for u in doc.units):
+            return None, None
+        units = {u.index: u for u in doc.units}
+        return CurationMediaContext(video_file=None, subtitle_entries=[], page_units=units), None
 
     # ------------------------------------------------------------------
     # Per-item signal slots (READ-ONLY on item state — the worker owns it)
