@@ -1,15 +1,15 @@
 # Testing
 
-Anki Miner has a substantial test suite — ~4,800 tests across roughly 260 unit test files plus the integration layer. This page documents how it is organized and how to run it.
+Anki Miner has a substantial test suite — ~6,200+ test functions across roughly 310 unit test files plus the integration layer. This page documents how it is organized and how to run it.
 
 ## Layout
 
 ```
 tests/
 ├── conftest.py            # shared fixtures
-├── unit/                  # ~260 files, external services mocked
+├── unit/                  # ~310 files, external services mocked
 │   └── gui/               # a handful of widget tests; most live in unit/ root
-├── integration/           # 6 files, real adapters where possible
+├── integration/           # 7 files, real adapters where possible
 └── e2e/                   # on-demand live harness (see E2E harness below)
 ```
 
@@ -58,6 +58,8 @@ HTML coverage lands in `htmlcov/`.
 | `e2e` | Real-service end-to-end GUI tests (need running Anki); excluded by default via `addopts`. |
 | `soak` | Multi-session soak tests run through the e2e harness. |
 | `real_ytdlp` | Exercises the real `_ytdlp_supports_js_runtimes` probe (no autouse stub). |
+| `real_probe` | Exercises the real `AnkiService._probe_duplicates` (no autouse stub). |
+| `network` | Genuinely needs real network; suppresses the socket tripwire (`tests/_network_tripwire.py`). |
 
 Register new markers in `[tool.pytest.ini_options].markers` in `pyproject.toml`.
 
