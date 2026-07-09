@@ -2,6 +2,7 @@
 
 from anki_miner.services.reading._util import (
     JUNK_NAMES,
+    _decode,
     is_junk_path,
     natural_sort_key,
 )
@@ -43,3 +44,10 @@ def test_is_junk_path_negative():
 def test_is_junk_path_backslash_separators():
     # Archive namelists use "/", but be robust to "\\" too.
     assert is_junk_path("foo\\__MACOSX\\bar.jpg")
+
+
+def test_decode_lives_in_util():
+    # Canonical home after the aozora extraction (shared with subtitle_source);
+    # deep coverage stays in test_aozora_source via the re-export.
+    assert _decode("日本語".encode()) == "日本語"
+    assert _decode("日本語".encode("cp932")) == "日本語"
