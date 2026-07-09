@@ -192,6 +192,16 @@
         <translation>無法取得牌組。Anki 是否已在執行且安裝 AnkiConnect？</translation>
     </message>
 </context><context>
+    <name>AnkiService</name>
+    <message>
+        <source>Creating Anki cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cards created: %1/%2</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>AnkiSettingsPanel</name>
     <message>
         <source>AnkiConnect URL</source>
@@ -851,6 +861,22 @@ The audio pack was not removed.</source>
         <source>Queue done: %1 succeeded, %2 failed.</source>
         <translation>佇列完成：%1 個成功，%2 個失敗。</translation>
     </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">已取消</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>BatchProcessingTab</name>
     <message>
@@ -864,10 +890,6 @@ The audio pack was not removed.</source>
     <message>
         <source>Overall Progress</source>
         <translation>整體進度</translation>
-    </message>
-    <message>
-        <source>Current Episode</source>
-        <translation>目前集數</translation>
     </message>
     <message>
         <source>Retry Failed</source>
@@ -964,6 +986,10 @@ Files pair by episode number — point each folder at a single show.</source>
         <translation>■ 取消</translation>
     </message>
     <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">已取消</translation>
+    </message>
+    <message>
         <source>Cancelling...</source>
         <translation>正在取消…</translation>
     </message>
@@ -976,16 +1002,28 @@ Files pair by episode number — point each folder at a single show.</source>
         <translation>正在開始批次處理…</translation>
     </message>
     <message>
-        <source>Completed: %1/%2</source>
-        <translation>已完成：%1／%2</translation>
+        <source>Episode %1/%2: %3</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Processing series: %1</source>
         <translation>正在處理系列：%1</translation>
     </message>
     <message>
+        <source>Series %1/%2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Created %1 cards</source>
         <translation>已建立 %1 張卡片</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Processed %1 series
@@ -1570,6 +1608,10 @@ Total cards created: %2</source>
         <translation>正在建立牌組「%1」…</translation>
     </message>
     <message>
+        <source>Episode %1/%2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Processing: %1</source>
         <translation>處理中：%1</translation>
     </message>
@@ -1582,16 +1624,28 @@ Total cards created: %2</source>
         <translation>完成！已在牌組「%3」中建立 %1 張卡片（約 %2% 目標涵蓋率）。</translation>
     </message>
     <message>
-        <source>Build complete</source>
-        <translation>建立完成</translation>
+        <source>Complete — %1 cards created</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelling…</source>
         <translation>正在取消…</translation>
     </message>
     <message>
+        <source>Cancelling...</source>
+        <translation type="unfinished">正在取消…</translation>
+    </message>
+    <message>
         <source>Error: %1</source>
         <translation>錯誤：%1</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">已取消</translation>
     </message>
 </context><context>
     <name>DeckPage</name>
@@ -1614,6 +1668,32 @@ Total cards created: %2</source>
     <message>
         <source>Deck not found — it will be created automatically when mining starts.</source>
         <translation>找不到牌組——採集開始時將自動建立。</translation>
+    </message>
+</context><context>
+    <name>DefinitionService</name>
+    <message>
+        <source>Fetching definitions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Definition found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No definition: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fetching glossary entries</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Glossary found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No glossary: %1</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>DictionaryImportFlow</name>
@@ -3066,6 +3146,32 @@ Continue?</source>
         <translation type="unfinished">關閉</translation>
     </message>
 </context><context>
+    <name>MediaExtractorService</name>
+    <message>
+        <source>Extracting media</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Extracting media: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>audio extraction failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No audio: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No screenshot: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>media extraction failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>MediaSettingsPanel</name>
     <message>
         <source>Audio Format</source>
@@ -3185,10 +3291,6 @@ Continue?</source>
     </message>
 </context><context>
     <name>MiningTabBase</name>
-    <message>
-        <source>%1 — done</source>
-        <translation>%1 — 完成</translation>
-    </message>
     <message>
         <source>Complete</source>
         <translation>完成</translation>
@@ -3387,10 +3489,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <source>Ready</source>
         <translation>就緒</translation>
     </message>
-    <message>
-        <source>Processing...</source>
-        <translation>處理中…</translation>
-    </message>
 </context><context>
     <name>QueueItemWidget</name>
     <message>
@@ -3444,6 +3542,12 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Not configured</source>
         <translation>未設定</translation>
+    </message>
+</context><context>
+    <name>QueueMiningProgressAdapter</name>
+    <message>
+        <source>Complete</source>
+        <translation type="unfinished">完成</translation>
     </message>
 </context><context>
     <name>QueuePanel</name>
@@ -3542,10 +3646,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Overall Progress</source>
-        <translation type="unfinished">整體進度</translation>
-    </message>
-    <message>
         <source>Progress</source>
         <translation type="unfinished">進度</translation>
     </message>
@@ -3602,11 +3702,7 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished">取消中……</translation>
     </message>
     <message>
-        <source>Mining %1 of %2: %3</source>
-        <translation type="unfinished">正在採集第 %1 個，共 %2 個：%3</translation>
-    </message>
-    <message>
-        <source>Mining: %1</source>
+        <source>Volume %1/%2: %3</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3616,10 +3712,6 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Failed %1: %2.</source>
         <translation type="unfinished">失敗 %1：%2。</translation>
-    </message>
-    <message>
-        <source>Completed: %1/%2</source>
-        <translation type="unfinished">已完成：%1／%2</translation>
     </message>
     <message>
         <source>Done: %1 succeeded, %2 failed.</source>
@@ -3727,6 +3819,22 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Could not process %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">已取消</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview complete — %1 new words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -4255,6 +4363,22 @@ Details: %2</source>
         <source>Cancelling...</source>
         <translation>正在取消…</translation>
     </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">已取消</translation>
+    </message>
+    <message>
+        <source>Preview complete — %1 new words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>StatusBarWidget</name>
     <message>
@@ -4464,8 +4588,8 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>已取消</translation>
     </message>
     <message>
-        <source>Finished</source>
-        <translation>已結束</translation>
+        <source>Complete — %1 files processed</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelling…</source>
@@ -4786,8 +4910,8 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>已取消</translation>
     </message>
     <message>
-        <source>Finished</source>
-        <translation>已結束</translation>
+        <source>Complete — %1 files processed</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelling…</source>
@@ -5358,6 +5482,16 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>跨度：%1</translation>
     </message>
 </context><context>
+    <name>YouTubeFetcher</name>
+    <message>
+        <source>Downloading video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Merging audio and video</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>YouTubeQueueItemWidget</name>
     <message>
         <source>Manual JA subs</source>
@@ -5534,6 +5668,22 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Queue done: %1 succeeded, %2 failed.</source>
         <translation>佇列完成：%1 個成功，%2 個失敗。</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">已取消</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ZipImportFlow</name>
