@@ -786,14 +786,6 @@ The audio pack was not removed.</source>
         <translation>在建立卡片前，為每個音訊檔案顯示單字選取彈出視窗。</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation>預覽</translation>
-    </message>
-    <message>
-        <source>Run the queue in preview mode — no cards created.</source>
-        <translation>以預覽模式執行佇列 — 不建立卡片。</translation>
-    </message>
-    <message>
         <source>Mine</source>
         <translation>採集</translation>
     </message>
@@ -908,14 +900,6 @@ The audio pack was not removed.</source>
         <translation>字幕資料夾：</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation>預覽</translation>
-    </message>
-    <message>
-        <source>Preview video/subtitle pairs before processing</source>
-        <translation>處理前先預覽影片／字幕配對</translation>
-    </message>
-    <message>
         <source>Process Folder</source>
         <translation>處理資料夾</translation>
     </message>
@@ -942,12 +926,6 @@ The audio pack was not removed.</source>
     <message>
         <source>No Pairs Found</source>
         <translation>找不到配對</translation>
-    </message>
-    <message>
-        <source>No matching video/subtitle pairs found.
-Files pair by episode number — point each folder at a single show.</source>
-        <translation>找不到相符的影片／字幕組合。
-檔案依集數配對——請將每個資料夾對應到單一作品。</translation>
     </message>
     <message>
         <source>No matching video/subtitle pairs found</source>
@@ -3112,40 +3090,6 @@ Continue?</source>
         <translation>重新計時</translation>
     </message>
 </context><context>
-    <name>MangaVolumesPreviewDialog</name>
-    <message>
-        <source>Preview Volumes — %1 found</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volume Preview: %1 volume(s)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Title</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volume</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Format</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Source</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volumes mine in order. No cards are created by Preview.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Close</source>
-        <translation type="unfinished">關閉</translation>
-    </message>
-</context><context>
     <name>MediaExtractorService</name>
     <message>
         <source>Extracting media</source>
@@ -3362,60 +3306,6 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Silence-removal library installed successfully.</source>
         <translation>靜音移除函式庫安裝成功。</translation>
-    </message>
-</context><context>
-    <name>PairPreviewDialog</name>
-    <message>
-        <source>Preview File Pairs - %1 pairs found</source>
-        <translation>預覽檔案配對 - 找到 %1 組配對</translation>
-    </message>
-    <message>
-        <source>File Pair Preview: %1 pairs</source>
-        <translation>檔案配對預覽：%1 組配對</translation>
-    </message>
-    <message>
-        <source>%1 video/subtitle pairs</source>
-        <translation>%1 組影片／字幕配對</translation>
-    </message>
-    <message>
-        <source>Total size: %1</source>
-        <translation>總大小：%1</translation>
-    </message>
-    <message>
-        <source>Video: %1 • Subtitles: %2</source>
-        <translation>影片：%1 • 字幕：%2</translation>
-    </message>
-    <message>
-        <source>Paired Files</source>
-        <translation>已配對檔案</translation>
-    </message>
-    <message>
-        <source>Video File</source>
-        <translation>影片檔案</translation>
-    </message>
-    <message>
-        <source>Video Size</source>
-        <translation>影片大小</translation>
-    </message>
-    <message>
-        <source>Subtitle File</source>
-        <translation>字幕檔案</translation>
-    </message>
-    <message>
-        <source>Subtitle Size</source>
-        <translation>字幕大小</translation>
-    </message>
-    <message>
-        <source>Pairs process in order.</source>
-        <translation>配對依序處理。</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>取消</translation>
-    </message>
-    <message>
-        <source>Proceed with Processing</source>
-        <translation>繼續處理</translation>
     </message>
 </context><context>
     <name>PlaylistAddController</name>
@@ -3662,14 +3552,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">預覽</translation>
-    </message>
-    <message>
-        <source>List the volume(s) this folder would mine — no cards created.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Mine</source>
         <translation type="unfinished">採集</translation>
     </message>
@@ -3748,14 +3630,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">預覽</translation>
-    </message>
-    <message>
-        <source>Preview the selected book — no cards created.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Mine</source>
         <translation type="unfinished">採集</translation>
     </message>
@@ -3806,16 +3680,12 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished">無法採集 — 服務未初始化。</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">預覽</translation>
+        <source>%1 run starting — %2 items.</source>
+        <translation type="unfinished">%1 執行開始中 — %2 個項目。</translation>
     </message>
     <message>
         <source>Mine</source>
         <translation type="unfinished">採集</translation>
-    </message>
-    <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation type="unfinished">%1 執行開始中 — %2 個項目。</translation>
     </message>
     <message>
         <source>Could not process %1: %2</source>
@@ -4218,14 +4088,6 @@ Details: %2</source>
     <message>
         <source>Actions</source>
         <translation>動作</translation>
-    </message>
-    <message>
-        <source>Preview Words</source>
-        <translation>預覽單字</translation>
-    </message>
-    <message>
-        <source>Preview discovered words before creating cards</source>
-        <translation>在建立卡片前預覽找到的單字</translation>
     </message>
     <message>
         <source>Process Episode</source>
@@ -5348,140 +5210,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>已選取 %2 個單字中的 %1 個</translation>
     </message>
 </context><context>
-    <name>WordPreviewDialog</name>
-    <message>
-        <source>Word Preview - %1 words found</source>
-        <translation>單字預覽 — 找到 %1 個單字</translation>
-    </message>
-    <message>
-        <source>Word Preview: %1 words found</source>
-        <translation>單字預覽：找到 %1 個單字</translation>
-    </message>
-    <message>
-        <source>Search:</source>
-        <translation>搜尋：</translation>
-    </message>
-    <message>
-        <source>Filter by any field...</source>
-        <translation>依任意欄位篩選……</translation>
-    </message>
-    <message>
-        <source>Group by:</source>
-        <translation>分組依據：</translation>
-    </message>
-    <message>
-        <source>None (Flat List)</source>
-        <translation>無（平面清單）</translation>
-    </message>
-    <message>
-        <source>Time Range</source>
-        <translation>時間範圍</translation>
-    </message>
-    <message>
-        <source>Alphabetical</source>
-        <translation>依字母順序</translation>
-    </message>
-    <message>
-        <source>Word Length</source>
-        <translation>單字長度</translation>
-    </message>
-    <message>
-        <source>Export...</source>
-        <translation>匯出……</translation>
-    </message>
-    <message>
-        <source>Discovered Words</source>
-        <translation>已發現的單字</translation>
-    </message>
-    <message>
-        <source>Surface</source>
-        <translation>表層形</translation>
-    </message>
-    <message>
-        <source>Lemma</source>
-        <translation>詞元</translation>
-    </message>
-    <message>
-        <source>Reading</source>
-        <translation>讀音</translation>
-    </message>
-    <message>
-        <source>Sentence</source>
-        <translation>例句</translation>
-    </message>
-    <message>
-        <source>Time</source>
-        <translation>時間</translation>
-    </message>
-    <message>
-        <source>Video</source>
-        <translation>影片</translation>
-    </message>
-    <message>
-        <source>Close</source>
-        <translation>關閉</translation>
-    </message>
-    <message>
-        <source>Showing %1 of %2 words</source>
-        <translation>顯示 %2 個單字中的 %1 個</translation>
-    </message>
-    <message>
-        <source>Start: %1s, End: %2s, Duration: %3s</source>
-        <translation>開始：%1 秒，結束：%2 秒，長度：%3 秒</translation>
-    </message>
-    <message>
-        <source>%1 (%2 words)</source>
-        <translation>%1（%2 個單字）</translation>
-    </message>
-    <message>
-        <source>1-2 characters</source>
-        <translation>1-2 個字元</translation>
-    </message>
-    <message>
-        <source>3-4 characters</source>
-        <translation>3-4 個字元</translation>
-    </message>
-    <message>
-        <source>5-6 characters</source>
-        <translation>5-6 個字元</translation>
-    </message>
-    <message>
-        <source>7+ characters</source>
-        <translation>7 個以上字元</translation>
-    </message>
-    <message>
-        <source>0 words</source>
-        <translation>0 個單字</translation>
-    </message>
-    <message>
-        <source>0 unique</source>
-        <translation>0 個不重複</translation>
-    </message>
-    <message>
-        <source>Avg: 0 chars</source>
-        <translation>平均：0 個字元</translation>
-    </message>
-    <message>
-        <source>Span: 00:00</source>
-        <translation>跨度：00:00</translation>
-    </message>
-    <message>
-        <source>%1 words</source>
-        <translation>%1 個單字</translation>
-    </message>
-    <message>
-        <source>%1 unique</source>
-        <translation>%1 個不重複</translation>
-    </message>
-    <message>
-        <source>Avg: %1 chars</source>
-        <translation>平均：%1 個字元</translation>
-    </message>
-    <message>
-        <source>Span: %1</source>
-        <translation>跨度：%1</translation>
-    </message>
-</context><context>
     <name>YouTubeFetcher</name>
     <message>
         <source>Downloading video</source>
@@ -5604,14 +5332,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Show the word-selection popup for each video before creating cards.</source>
         <translation>為每部影片在建立卡片前顯示單字選擇彈出視窗。</translation>
-    </message>
-    <message>
-        <source>Preview</source>
-        <translation>預覽</translation>
-    </message>
-    <message>
-        <source>Run the queue in preview mode — no cards created.</source>
-        <translation>以預覽模式執行佇列 — 不建立卡片。</translation>
     </message>
     <message>
         <source>Mine</source>

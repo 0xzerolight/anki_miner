@@ -786,14 +786,6 @@ Gói âm thanh chưa được xóa.</translation>
         <translation>Hiển thị cửa sổ chọn từ cho mỗi tệp âm thanh trước khi tạo thẻ.</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation>Xem trước</translation>
-    </message>
-    <message>
-        <source>Run the queue in preview mode — no cards created.</source>
-        <translation>Chạy hàng đợi ở chế độ xem trước — không tạo thẻ.</translation>
-    </message>
-    <message>
         <source>Mine</source>
         <translation>Khai thác</translation>
     </message>
@@ -908,14 +900,6 @@ Gói âm thanh chưa được xóa.</translation>
         <translation>Thư mục phụ đề:</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation>Xem trước</translation>
-    </message>
-    <message>
-        <source>Preview video/subtitle pairs before processing</source>
-        <translation>Xem trước các cặp video/phụ đề trước khi xử lý</translation>
-    </message>
-    <message>
         <source>Process Folder</source>
         <translation>Xử lý thư mục</translation>
     </message>
@@ -942,12 +926,6 @@ Gói âm thanh chưa được xóa.</translation>
     <message>
         <source>No Pairs Found</source>
         <translation>Không tìm thấy cặp</translation>
-    </message>
-    <message>
-        <source>No matching video/subtitle pairs found.
-Files pair by episode number — point each folder at a single show.</source>
-        <translation>Không tìm thấy cặp video/phụ đề khớp nhau.
-Các tệp được ghép theo số tập — hãy trỏ mỗi thư mục đến một chương trình duy nhất.</translation>
     </message>
     <message>
         <source>No matching video/subtitle pairs found</source>
@@ -3112,40 +3090,6 @@ Continue?</source>
         <translation>Định lại thời gian</translation>
     </message>
 </context><context>
-    <name>MangaVolumesPreviewDialog</name>
-    <message>
-        <source>Preview Volumes — %1 found</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volume Preview: %1 volume(s)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Title</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volume</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Format</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Source</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volumes mine in order. No cards are created by Preview.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Close</source>
-        <translation type="unfinished">Đóng</translation>
-    </message>
-</context><context>
     <name>MediaExtractorService</name>
     <message>
         <source>Extracting media</source>
@@ -3362,60 +3306,6 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     <message>
         <source>Silence-removal library installed successfully.</source>
         <translation>Đã cài đặt thư viện loại bỏ khoảng lặng thành công.</translation>
-    </message>
-</context><context>
-    <name>PairPreviewDialog</name>
-    <message>
-        <source>Preview File Pairs - %1 pairs found</source>
-        <translation>Xem trước cặp tệp - tìm thấy %1 cặp</translation>
-    </message>
-    <message>
-        <source>File Pair Preview: %1 pairs</source>
-        <translation>Xem trước cặp tệp: %1 cặp</translation>
-    </message>
-    <message>
-        <source>%1 video/subtitle pairs</source>
-        <translation>%1 cặp video/phụ đề</translation>
-    </message>
-    <message>
-        <source>Total size: %1</source>
-        <translation>Tổng dung lượng: %1</translation>
-    </message>
-    <message>
-        <source>Video: %1 • Subtitles: %2</source>
-        <translation>Video: %1 • Phụ đề: %2</translation>
-    </message>
-    <message>
-        <source>Paired Files</source>
-        <translation>Tệp đã ghép cặp</translation>
-    </message>
-    <message>
-        <source>Video File</source>
-        <translation>Tệp video</translation>
-    </message>
-    <message>
-        <source>Video Size</source>
-        <translation>Dung lượng video</translation>
-    </message>
-    <message>
-        <source>Subtitle File</source>
-        <translation>Tệp phụ đề</translation>
-    </message>
-    <message>
-        <source>Subtitle Size</source>
-        <translation>Dung lượng phụ đề</translation>
-    </message>
-    <message>
-        <source>Pairs process in order.</source>
-        <translation>Các cặp được xử lý theo thứ tự.</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Hủy</translation>
-    </message>
-    <message>
-        <source>Proceed with Processing</source>
-        <translation>Tiến hành xử lý</translation>
     </message>
 </context><context>
     <name>PlaylistAddController</name>
@@ -3662,14 +3552,6 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">Xem trước</translation>
-    </message>
-    <message>
-        <source>List the volume(s) this folder would mine — no cards created.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Mine</source>
         <translation type="unfinished">Khai thác</translation>
     </message>
@@ -3748,14 +3630,6 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">Xem trước</translation>
-    </message>
-    <message>
-        <source>Preview the selected book — no cards created.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Mine</source>
         <translation type="unfinished">Khai thác</translation>
     </message>
@@ -3806,16 +3680,12 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation type="unfinished">Không thể khai thác — dịch vụ chưa được khởi tạo.</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">Xem trước</translation>
+        <source>%1 run starting — %2 items.</source>
+        <translation type="unfinished">Lần chạy %1 bắt đầu — %2 mục.</translation>
     </message>
     <message>
         <source>Mine</source>
         <translation type="unfinished">Khai thác</translation>
-    </message>
-    <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation type="unfinished">Lần chạy %1 bắt đầu — %2 mục.</translation>
     </message>
     <message>
         <source>Could not process %1: %2</source>
@@ -4218,14 +4088,6 @@ Chi tiết: %2</translation>
     <message>
         <source>Actions</source>
         <translation>Hành động</translation>
-    </message>
-    <message>
-        <source>Preview Words</source>
-        <translation>Xem trước từ</translation>
-    </message>
-    <message>
-        <source>Preview discovered words before creating cards</source>
-        <translation>Xem trước các từ được phát hiện trước khi tạo thẻ</translation>
     </message>
     <message>
         <source>Process Episode</source>
@@ -5348,140 +5210,6 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>%1 trên %2 từ được chọn</translation>
     </message>
 </context><context>
-    <name>WordPreviewDialog</name>
-    <message>
-        <source>Word Preview - %1 words found</source>
-        <translation>Xem trước từ - Tìm thấy %1 từ</translation>
-    </message>
-    <message>
-        <source>Word Preview: %1 words found</source>
-        <translation>Xem trước từ: Tìm thấy %1 từ</translation>
-    </message>
-    <message>
-        <source>Search:</source>
-        <translation>Tìm kiếm:</translation>
-    </message>
-    <message>
-        <source>Filter by any field...</source>
-        <translation>Lọc theo trường bất kỳ...</translation>
-    </message>
-    <message>
-        <source>Group by:</source>
-        <translation>Nhóm theo:</translation>
-    </message>
-    <message>
-        <source>None (Flat List)</source>
-        <translation>Không (danh sách phẳng)</translation>
-    </message>
-    <message>
-        <source>Time Range</source>
-        <translation>Khoảng thời gian</translation>
-    </message>
-    <message>
-        <source>Alphabetical</source>
-        <translation>Theo thứ tự bảng chữ cái</translation>
-    </message>
-    <message>
-        <source>Word Length</source>
-        <translation>Độ dài từ</translation>
-    </message>
-    <message>
-        <source>Export...</source>
-        <translation>Xuất...</translation>
-    </message>
-    <message>
-        <source>Discovered Words</source>
-        <translation>Từ đã phát hiện</translation>
-    </message>
-    <message>
-        <source>Surface</source>
-        <translation>Bề mặt</translation>
-    </message>
-    <message>
-        <source>Lemma</source>
-        <translation>Từ gốc</translation>
-    </message>
-    <message>
-        <source>Reading</source>
-        <translation>Cách đọc</translation>
-    </message>
-    <message>
-        <source>Sentence</source>
-        <translation>Câu</translation>
-    </message>
-    <message>
-        <source>Time</source>
-        <translation>Thời gian</translation>
-    </message>
-    <message>
-        <source>Video</source>
-        <translation>Video</translation>
-    </message>
-    <message>
-        <source>Close</source>
-        <translation>Đóng</translation>
-    </message>
-    <message>
-        <source>Showing %1 of %2 words</source>
-        <translation>Đang hiển thị %1 trong %2 từ</translation>
-    </message>
-    <message>
-        <source>Start: %1s, End: %2s, Duration: %3s</source>
-        <translation>Bắt đầu: %1s, Kết thúc: %2s, Thời lượng: %3s</translation>
-    </message>
-    <message>
-        <source>%1 (%2 words)</source>
-        <translation>%1 (%2 từ)</translation>
-    </message>
-    <message>
-        <source>1-2 characters</source>
-        <translation>1-2 ký tự</translation>
-    </message>
-    <message>
-        <source>3-4 characters</source>
-        <translation>3-4 ký tự</translation>
-    </message>
-    <message>
-        <source>5-6 characters</source>
-        <translation>5-6 ký tự</translation>
-    </message>
-    <message>
-        <source>7+ characters</source>
-        <translation>7+ ký tự</translation>
-    </message>
-    <message>
-        <source>0 words</source>
-        <translation>0 từ</translation>
-    </message>
-    <message>
-        <source>0 unique</source>
-        <translation>0 duy nhất</translation>
-    </message>
-    <message>
-        <source>Avg: 0 chars</source>
-        <translation>TB: 0 ký tự</translation>
-    </message>
-    <message>
-        <source>Span: 00:00</source>
-        <translation>Khoảng: 00:00</translation>
-    </message>
-    <message>
-        <source>%1 words</source>
-        <translation>%1 từ</translation>
-    </message>
-    <message>
-        <source>%1 unique</source>
-        <translation>%1 duy nhất</translation>
-    </message>
-    <message>
-        <source>Avg: %1 chars</source>
-        <translation>TB: %1 ký tự</translation>
-    </message>
-    <message>
-        <source>Span: %1</source>
-        <translation>Khoảng: %1</translation>
-    </message>
-</context><context>
     <name>YouTubeFetcher</name>
     <message>
         <source>Downloading video</source>
@@ -5604,14 +5332,6 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     <message>
         <source>Show the word-selection popup for each video before creating cards.</source>
         <translation>Hiển thị hộp thoại chọn từ cho mỗi video trước khi tạo thẻ.</translation>
-    </message>
-    <message>
-        <source>Preview</source>
-        <translation>Xem trước</translation>
-    </message>
-    <message>
-        <source>Run the queue in preview mode — no cards created.</source>
-        <translation>Chạy hàng đợi ở chế độ xem trước — không tạo thẻ.</translation>
     </message>
     <message>
         <source>Mine</source>

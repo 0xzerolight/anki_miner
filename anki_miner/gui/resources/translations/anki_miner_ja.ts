@@ -786,14 +786,6 @@ The audio pack was not removed.</source>
         <translation>カードを作成する前に、各音声ファイルの単語選択ポップアップを表示します。</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation>プレビュー</translation>
-    </message>
-    <message>
-        <source>Run the queue in preview mode — no cards created.</source>
-        <translation>キューをプレビューモードで実行します — カードは作成されません。</translation>
-    </message>
-    <message>
         <source>Mine</source>
         <translation>マイニング</translation>
     </message>
@@ -908,14 +900,6 @@ The audio pack was not removed.</source>
         <translation>字幕フォルダ:</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation>プレビュー</translation>
-    </message>
-    <message>
-        <source>Preview video/subtitle pairs before processing</source>
-        <translation>処理する前に動画と字幕のペアをプレビューします。</translation>
-    </message>
-    <message>
         <source>Process Folder</source>
         <translation>フォルダを処理</translation>
     </message>
@@ -942,12 +926,6 @@ The audio pack was not removed.</source>
     <message>
         <source>No Pairs Found</source>
         <translation>ペアが見つかりません</translation>
-    </message>
-    <message>
-        <source>No matching video/subtitle pairs found.
-Files pair by episode number — point each folder at a single show.</source>
-        <translation>一致する動画・字幕のペアが見つかりません。
-ファイルはエピソード番号でペアになります — 各フォルダには 1 つの番組のみを指定してください。</translation>
     </message>
     <message>
         <source>No matching video/subtitle pairs found</source>
@@ -3112,40 +3090,6 @@ Continue?</source>
         <translation>リタイミング</translation>
     </message>
 </context><context>
-    <name>MangaVolumesPreviewDialog</name>
-    <message>
-        <source>Preview Volumes — %1 found</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volume Preview: %1 volume(s)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Title</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volume</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Format</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Source</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volumes mine in order. No cards are created by Preview.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Close</source>
-        <translation type="unfinished">閉じる</translation>
-    </message>
-</context><context>
     <name>MediaExtractorService</name>
     <message>
         <source>Extracting media</source>
@@ -3362,60 +3306,6 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Silence-removal library installed successfully.</source>
         <translation>無音除去ライブラリのインストールが完了しました。</translation>
-    </message>
-</context><context>
-    <name>PairPreviewDialog</name>
-    <message>
-        <source>Preview File Pairs - %1 pairs found</source>
-        <translation>ファイルペアのプレビュー - %1 ペアが見つかりました</translation>
-    </message>
-    <message>
-        <source>File Pair Preview: %1 pairs</source>
-        <translation>ファイルペアのプレビュー: %1 ペア</translation>
-    </message>
-    <message>
-        <source>%1 video/subtitle pairs</source>
-        <translation>%1 個の動画/字幕ペア</translation>
-    </message>
-    <message>
-        <source>Total size: %1</source>
-        <translation>合計サイズ: %1</translation>
-    </message>
-    <message>
-        <source>Video: %1 • Subtitles: %2</source>
-        <translation>動画: %1 • 字幕: %2</translation>
-    </message>
-    <message>
-        <source>Paired Files</source>
-        <translation>ペアになったファイル</translation>
-    </message>
-    <message>
-        <source>Video File</source>
-        <translation>動画ファイル</translation>
-    </message>
-    <message>
-        <source>Video Size</source>
-        <translation>動画サイズ</translation>
-    </message>
-    <message>
-        <source>Subtitle File</source>
-        <translation>字幕ファイル</translation>
-    </message>
-    <message>
-        <source>Subtitle Size</source>
-        <translation>字幕サイズ</translation>
-    </message>
-    <message>
-        <source>Pairs process in order.</source>
-        <translation>ペアは順番に処理されます。</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>キャンセル</translation>
-    </message>
-    <message>
-        <source>Proceed with Processing</source>
-        <translation>処理を続行</translation>
     </message>
 </context><context>
     <name>PlaylistAddController</name>
@@ -3662,14 +3552,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">プレビュー</translation>
-    </message>
-    <message>
-        <source>List the volume(s) this folder would mine — no cards created.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Mine</source>
         <translation type="unfinished">マイニング</translation>
     </message>
@@ -3748,14 +3630,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">プレビュー</translation>
-    </message>
-    <message>
-        <source>Preview the selected book — no cards created.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Mine</source>
         <translation type="unfinished">マイニング</translation>
     </message>
@@ -3806,16 +3680,12 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished">マイニングを利用できません — サービスが初期化されていません。</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">プレビュー</translation>
+        <source>%1 run starting — %2 items.</source>
+        <translation type="unfinished">%1 の実行を開始します — %2 件。</translation>
     </message>
     <message>
         <source>Mine</source>
         <translation type="unfinished">マイニング</translation>
-    </message>
-    <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation type="unfinished">%1 の実行を開始します — %2 件。</translation>
     </message>
     <message>
         <source>Could not process %1: %2</source>
@@ -4218,14 +4088,6 @@ Details: %2</source>
     <message>
         <source>Actions</source>
         <translation>操作</translation>
-    </message>
-    <message>
-        <source>Preview Words</source>
-        <translation>単語をプレビュー</translation>
-    </message>
-    <message>
-        <source>Preview discovered words before creating cards</source>
-        <translation>カードを作成する前に検出された単語をプレビューします</translation>
     </message>
     <message>
         <source>Process Episode</source>
@@ -5348,140 +5210,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>%2 単語中 %1 件を選択</translation>
     </message>
 </context><context>
-    <name>WordPreviewDialog</name>
-    <message>
-        <source>Word Preview - %1 words found</source>
-        <translation>単語プレビュー - %1 件の単語が見つかりました</translation>
-    </message>
-    <message>
-        <source>Word Preview: %1 words found</source>
-        <translation>単語プレビュー: %1 件の単語が見つかりました</translation>
-    </message>
-    <message>
-        <source>Search:</source>
-        <translation>検索:</translation>
-    </message>
-    <message>
-        <source>Filter by any field...</source>
-        <translation>任意のフィールドで絞り込み...</translation>
-    </message>
-    <message>
-        <source>Group by:</source>
-        <translation>グループ化:</translation>
-    </message>
-    <message>
-        <source>None (Flat List)</source>
-        <translation>なし（フラットリスト）</translation>
-    </message>
-    <message>
-        <source>Time Range</source>
-        <translation>時間範囲</translation>
-    </message>
-    <message>
-        <source>Alphabetical</source>
-        <translation>アルファベット順</translation>
-    </message>
-    <message>
-        <source>Word Length</source>
-        <translation>単語の長さ</translation>
-    </message>
-    <message>
-        <source>Export...</source>
-        <translation>エクスポート...</translation>
-    </message>
-    <message>
-        <source>Discovered Words</source>
-        <translation>検出した単語</translation>
-    </message>
-    <message>
-        <source>Surface</source>
-        <translation>表層形</translation>
-    </message>
-    <message>
-        <source>Lemma</source>
-        <translation>見出し語</translation>
-    </message>
-    <message>
-        <source>Reading</source>
-        <translation>読み</translation>
-    </message>
-    <message>
-        <source>Sentence</source>
-        <translation>例文</translation>
-    </message>
-    <message>
-        <source>Time</source>
-        <translation>時間</translation>
-    </message>
-    <message>
-        <source>Video</source>
-        <translation>動画</translation>
-    </message>
-    <message>
-        <source>Close</source>
-        <translation>閉じる</translation>
-    </message>
-    <message>
-        <source>Showing %1 of %2 words</source>
-        <translation>%2 件中 %1 件の単語を表示</translation>
-    </message>
-    <message>
-        <source>Start: %1s, End: %2s, Duration: %3s</source>
-        <translation>開始: %1s、終了: %2s、長さ: %3s</translation>
-    </message>
-    <message>
-        <source>%1 (%2 words)</source>
-        <translation>%1（%2 単語）</translation>
-    </message>
-    <message>
-        <source>1-2 characters</source>
-        <translation>1〜2文字</translation>
-    </message>
-    <message>
-        <source>3-4 characters</source>
-        <translation>3〜4文字</translation>
-    </message>
-    <message>
-        <source>5-6 characters</source>
-        <translation>5〜6文字</translation>
-    </message>
-    <message>
-        <source>7+ characters</source>
-        <translation>7文字以上</translation>
-    </message>
-    <message>
-        <source>0 words</source>
-        <translation>0 単語</translation>
-    </message>
-    <message>
-        <source>0 unique</source>
-        <translation>0 ユニーク</translation>
-    </message>
-    <message>
-        <source>Avg: 0 chars</source>
-        <translation>平均: 0 文字</translation>
-    </message>
-    <message>
-        <source>Span: 00:00</source>
-        <translation>範囲: 00:00</translation>
-    </message>
-    <message>
-        <source>%1 words</source>
-        <translation>%1 単語</translation>
-    </message>
-    <message>
-        <source>%1 unique</source>
-        <translation>%1 ユニーク</translation>
-    </message>
-    <message>
-        <source>Avg: %1 chars</source>
-        <translation>平均: %1 文字</translation>
-    </message>
-    <message>
-        <source>Span: %1</source>
-        <translation>範囲: %1</translation>
-    </message>
-</context><context>
     <name>YouTubeFetcher</name>
     <message>
         <source>Downloading video</source>
@@ -5604,14 +5332,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Show the word-selection popup for each video before creating cards.</source>
         <translation>カードを作成する前に、各動画の単語選択ポップアップを表示します。</translation>
-    </message>
-    <message>
-        <source>Preview</source>
-        <translation>プレビュー</translation>
-    </message>
-    <message>
-        <source>Run the queue in preview mode — no cards created.</source>
-        <translation>キューをプレビューモードで実行します — カードは作成されません。</translation>
     </message>
     <message>
         <source>Mine</source>

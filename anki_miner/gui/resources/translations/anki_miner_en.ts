@@ -777,14 +777,6 @@ The audio pack was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Run the queue in preview mode — no cards created.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Mine</source>
         <translation type="unfinished" />
     </message>
@@ -899,14 +891,6 @@ The audio pack was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Preview video/subtitle pairs before processing</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Process Folder</source>
         <translation type="unfinished" />
     </message>
@@ -932,11 +916,6 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>No Pairs Found</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>No matching video/subtitle pairs found.
-Files pair by episode number — point each folder at a single show.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3077,40 +3056,6 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
 </context><context>
-    <name>MangaVolumesPreviewDialog</name>
-    <message>
-        <source>Preview Volumes — %1 found</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volume Preview: %1 volume(s)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Title</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volume</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Format</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Source</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volumes mine in order. No cards are created by Preview.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Close</source>
-        <translation type="unfinished" />
-    </message>
-</context><context>
     <name>MediaExtractorService</name>
     <message>
         <source>Extracting media</source>
@@ -3325,60 +3270,6 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Silence-removal library installed successfully.</source>
-        <translation type="unfinished" />
-    </message>
-</context><context>
-    <name>PairPreviewDialog</name>
-    <message>
-        <source>Preview File Pairs - %1 pairs found</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>File Pair Preview: %1 pairs</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 video/subtitle pairs</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Total size: %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Video: %1 • Subtitles: %2</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Paired Files</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Video File</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Video Size</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Subtitle File</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Subtitle Size</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pairs process in order.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Proceed with Processing</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -3626,14 +3517,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>List the volume(s) this folder would mine — no cards created.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Mine</source>
         <translation type="unfinished" />
     </message>
@@ -3712,14 +3595,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Preview the selected book — no cards created.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Mine</source>
         <translation type="unfinished" />
     </message>
@@ -3770,15 +3645,11 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
+        <source>%1 run starting — %2 items.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Mine</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 run starting — %2 items.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4170,14 +4041,6 @@ Details: %2</source>
     <name>SingleEpisodeTab</name>
     <message>
         <source>Actions</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Preview Words</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Preview discovered words before creating cards</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5298,140 +5161,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
-    <name>WordPreviewDialog</name>
-    <message>
-        <source>Word Preview - %1 words found</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Word Preview: %1 words found</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Search:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Filter by any field...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Group by:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>None (Flat List)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Time Range</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Alphabetical</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Word Length</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Export...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Discovered Words</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Surface</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Lemma</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Reading</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Sentence</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Time</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Video</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Close</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Showing %1 of %2 words</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Start: %1s, End: %2s, Duration: %3s</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 (%2 words)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>1-2 characters</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>3-4 characters</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>5-6 characters</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>7+ characters</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>0 words</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>0 unique</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Avg: 0 chars</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Span: 00:00</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 words</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 unique</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Avg: %1 chars</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Span: %1</source>
-        <translation type="unfinished" />
-    </message>
-</context><context>
     <name>YouTubeFetcher</name>
     <message>
         <source>Downloading video</source>
@@ -5553,14 +5282,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Show the word-selection popup for each video before creating cards.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Preview</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Run the queue in preview mode — no cards created.</source>
         <translation type="unfinished" />
     </message>
     <message>
