@@ -5,9 +5,10 @@ shared scanner to reuse — the old Yomitan-derived one was deleted in 3e10353).
 A single left-to-right pass tracks bracket/quote depth; a terminator run at
 depth 0 ends a sentence, a run inside brackets does not. A run of two-or-more
 ``．`` (or the ellipsis marks ``…‥``) is an ellipsis, not a terminator, so
-``……。`` still splits on the ``。``. Unmatched closers are ignored, the
-unterminated tail is flushed, and callers pass one paragraph at a time so an
-unbalanced ``「`` only damages its own paragraph.
+``……。`` still splits on the ``。``. Only *matched* bracket pairs gate depth: a
+pre-scan (``_matched_openers``) pairs openers to closers, so an unmatched opener
+and an unmatched closer are both treated as ordinary characters and cannot
+suppress splitting. The unterminated tail is flushed.
 """
 
 from __future__ import annotations
@@ -48,12 +49,32 @@ def _run_is_terminating(run: str) -> bool:
     return False
 
 
+def _matched_openers(text: str) -> set[int]:
+    """Indices of openers that have a matching closer later in ``text``.
+
+    A plain LIFO stack: any closer pops the nearest still-open opener (bracket
+    *family* is not checked — a shorter split on cross-family OCR garbage is
+    harmless). Openers still on the stack at the end are unmatched and must not
+    gate depth, so an unbalanced ``「`` no longer suppresses every terminator
+    after it (the mokuro cover-blurb "wall of text" bug).
+    """
+    stack: list[int] = []
+    matched: set[int] = set()
+    for i, ch in enumerate(text):
+        if ch in _OPENERS:
+            stack.append(i)
+        elif ch in _CLOSERS and stack:
+            matched.add(stack.pop())
+    return matched
+
+
 def split_sentences(text: str, *, split_adjacent_quotes: bool = False) -> list[str]:
     """Split ``text`` into sentences; empty/whitespace-only results dropped.
 
     ``split_adjacent_quotes`` inserts a break between an adjacent ``」「`` pair
     at depth 0 (used only by the mokuro overflow fallback).
     """
+    matched_openers = _matched_openers(text)
     segments: list[str] = []
     buf: list[str] = []
     depth = 0
@@ -62,7 +83,8 @@ def split_sentences(text: str, *, split_adjacent_quotes: bool = False) -> list[s
     while i < n:
         c = text[i]
         if c in _OPENERS:
-            depth += 1
+            if i in matched_openers:  # unmatched openers stay depth-neutral
+                depth += 1
             buf.append(c)
             i += 1
         elif c in _CLOSERS:
