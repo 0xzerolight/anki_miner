@@ -270,3 +270,23 @@ def test_bom_utf8_document(tmp_path):
     p.write_bytes(text.encode("utf-8"))
     doc = load(_ref(p, title="bom"))
     assert [u.text for u in doc.units] == ["先頭にBOMがある。", "次の行。"]
+
+
+# --- shared-splitter fix: unmatched brackets no longer suppress splitting ----
+
+
+def test_unmatched_opener_paragraph_splits_into_sentences(tmp_path):
+    # A narrative paragraph whose 「 is never closed used to collapse into one
+    # over-long unit (same "wall of text" defect as manga); it now splits on
+    # the internal 。.
+    p = _write(tmp_path, "「あの人は言った。それから去った", "utf-8")
+    doc = load(_ref(p))
+    assert [u.text for u in doc.units] == ["「あの人は言った。", "それから去った"]
+
+
+def test_balanced_quote_with_attribution_stays_one_unit(tmp_path):
+    # A matched 「」 still suppresses its internal terminator: quote plus
+    # attribution remains a single mining unit (no over-splitting).
+    p = _write(tmp_path, "「行くぞ。」と彼は言った。", "utf-8")
+    doc = load(_ref(p))
+    assert [u.text for u in doc.units] == ["「行くぞ。」と彼は言った。"]
