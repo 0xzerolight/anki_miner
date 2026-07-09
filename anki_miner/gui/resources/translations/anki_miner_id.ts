@@ -2836,8 +2836,8 @@ Sumber frekuensi tidak dihapus.</translation>
         <translation>Analitik</translation>
     </message>
     <message>
-        <source>Subtitles</source>
-        <translation>Subtitel</translation>
+        <source>Tools</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Settings</source>
@@ -5202,6 +5202,14 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>%1
 
 (%2 kalimat tersedia — fokuskan baris, lalu pilih satu di bawah “Kalimat”)</translation>
+    </message>
+    <message>
+        <source>No page image for this word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not load page image</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Copy lemma</source>

@@ -2803,7 +2803,7 @@ The frequency source was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Subtitles</source>
+        <source>Tools</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5151,6 +5151,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <source>%1
 
 (%2 sentences available — focus the row, then pick one under “Sentences”)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No page image for this word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not load page image</source>
         <translation type="unfinished" />
     </message>
     <message>

@@ -2836,8 +2836,8 @@ Nguồn tần suất chưa được gỡ bỏ.</translation>
         <translation>Phân tích</translation>
     </message>
     <message>
-        <source>Subtitles</source>
-        <translation>Phụ đề</translation>
+        <source>Tools</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Settings</source>
@@ -5202,6 +5202,14 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>%1
 
 (%2 câu khả dụng — tập trung vào hàng, rồi chọn một câu dưới “Câu”)</translation>
+    </message>
+    <message>
+        <source>No page image for this word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not load page image</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Copy lemma</source>

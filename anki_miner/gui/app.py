@@ -601,13 +601,14 @@ def main():
     analytics_tab = AnalyticsTab(stats_service)
     window.tabs.addTab(analytics_tab, QCoreApplication.translate("MainWindow", "Analytics"))
 
-    # Subtitles tab (non-mining: no presenter). Nests Generate (SubtitleCreationTab)
-    # and Retime (SubtitleRetimeTab) as inner tabs. It DOES need config updates so
-    # an ASR model switch in Settings reaches the model-downloaded guard and the
-    # worker: config_changed is auto-wired by the loop below (it has update_config);
-    # config_refreshed is wired explicitly near the SettingsTab refresh connection.
+    # Tools tab (non-mining: no presenter). Nests Generate (SubtitleCreationTab)
+    # and Retime (SubtitleRetimeTab) as inner tabs; will host further tools over
+    # time. It DOES need config updates so an ASR model switch in Settings reaches
+    # the model-downloaded guard and the worker: config_changed is auto-wired by
+    # the loop below (it has update_config); config_refreshed is wired explicitly
+    # near the SettingsTab refresh connection.
     subtitles_tab = SubtitlesTab(window.get_config())
-    window.tabs.addTab(subtitles_tab, QCoreApplication.translate("MainWindow", "Subtitles"))
+    window.tabs.addTab(subtitles_tab, QCoreApplication.translate("MainWindow", "Tools"))
 
     settings_tab = SettingsTab(window.get_config())
     # from_settings=True suppresses the config_refreshed re-emit: SettingsTab
