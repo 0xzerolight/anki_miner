@@ -1,18 +1,15 @@
 """Tests for the manga sub-tab of the Reading tab.
 
 ``ReadingMangaTab`` is a single auto-detecting folder card (no queue): pick a
-folder, then Preview or Mine. The folder is classified by ``detect`` on click.
+folder, then Mine. The folder is classified by ``detect`` on click.
 Behaviour under test:
 
-* Preview: classify the folder and open a structural
-  ``MangaVolumesPreviewDialog`` listing the detected volume(s). No worker, no
-  tokenizing, no cards.
 * Mine: classify the folder into one ephemeral ``ReadingQueueItem`` per volume
   and launch them through the base (a single volume hides the overall bar; a
   series of >1 shows it).
 * Empty path warns; a ``detect`` ``SetupError`` is surfaced verbatim; neither
   starts a run or opens the dialog.
-* Buttons: pure derived state — Preview/Mine give way to Cancel during a run.
+* Buttons: pure derived state — Mine gives way to Cancel during a run.
 * Per-item signals are READ-ONLY on item state (the worker owns the lifecycle):
   they drive the two progress bars + log the outcome, never write status/cards.
 * Drag-drop routes through the tab: the FileSelector and its inner QLineEdit
@@ -25,7 +22,7 @@ Behaviour under test:
 
 Qt threads are never started — ``ReadingQueueWorker`` is class-level patched at
 the base module so ``start()`` is a no-op and constructor kwargs can be
-inspected. The preview dialog is patched so no modal opens.
+inspected.
 """
 
 from __future__ import annotations
@@ -52,7 +49,6 @@ _WORKER_TARGET = "anki_miner.gui.widgets._reading_mining_base.ReadingQueueWorker
 _CREATE_TARGET = "anki_miner.gui.widgets._reading_mining_base.create_episode_processor"
 # detect() runs in the shared base helper (_detect_or_report); patch it there.
 _DETECT = "anki_miner.gui.widgets._reading_mining_base.detector.detect"
-_DIALOG = "anki_miner.gui.widgets.reading_manga_tab.MangaVolumesPreviewDialog"
 _URLS = "anki_miner.gui.widgets.reading_manga_tab.urls_from_event"
 
 
@@ -111,22 +107,10 @@ def _mine(tab, refs, folder: str = "/src/series"):
         tab._on_mine_clicked()
 
 
-def _preview(tab, refs, folder: str = "/src/series"):
-    """Select *folder*, patch ``detect`` + the dialog, click Preview.
-
-    Returns the patched dialog class mock so tests can inspect construction.
-    """
-    tab.volume_folder_selector.set_path(folder)
-    with patch(_DETECT, return_value=list(refs)), patch(_DIALOG) as dialog_cls:
-        tab._on_preview_clicked()
-    return dialog_cls
-
-
 class TestInitialState:
-    """Idle tab: Preview/Mine visible, Cancel hidden, no queue widgets."""
+    """Idle tab: Mine visible, Cancel hidden, no queue widgets."""
 
     def test_buttons_idle(self, tab):
-        assert not tab.preview_button.isHidden()
         assert not tab.mine_button.isHidden()
         assert tab.cancel_button.isHidden()
         assert tab.worker_thread is None
@@ -158,50 +142,6 @@ class TestInitialState:
         assert any(h.title_label.text() == "Manga" for h in headers)
 
 
-class TestPreview:
-    """Preview classifies the folder and opens the structural dialog. No worker."""
-
-    def test_preview_opens_dialog_with_refs(self, tab):
-        refs = _series(3)
-        dialog_cls = _preview(tab, refs)
-        dialog_cls.assert_called_once()
-        # First positional arg is the detected refs list.
-        assert dialog_cls.call_args.args[0] == refs
-        dialog_cls.return_value.exec.assert_called_once()
-
-    def test_preview_single_volume_opens_dialog(self, tab):
-        dialog_cls = _preview(tab, [_make_ref()])
-        dialog_cls.assert_called_once()
-
-    def test_preview_starts_no_worker(self, tab):
-        queue_cls = tab._queue_worker_cls
-        _preview(tab, _series(2))
-        assert queue_cls.call_count == 0
-        assert tab.worker_thread is None
-
-    def test_preview_empty_path_warns_no_dialog(self, tab):
-        with patch(_DIALOG) as dialog_cls:
-            tab._on_preview_clicked()
-        dialog_cls.assert_not_called()
-        assert "folder" in tab.log_widget.text_edit.toPlainText().lower()
-
-    def test_preview_detect_error_surfaced_no_dialog(self, tab):
-        tab.volume_folder_selector.set_path("/src/bad")
-        with (
-            patch(_DETECT, side_effect=SetupError("not a recognized reading source")),
-            patch(_DIALOG) as dialog_cls,
-        ):
-            tab._on_preview_clicked()
-        dialog_cls.assert_not_called()
-        assert "recognized reading source" in tab.log_widget.text_edit.toPlainText()
-
-    def test_preview_refused_while_worker_active(self, tab):
-        _mine(tab, [_make_ref()])
-        with patch(_DIALOG) as dialog_cls:
-            tab._on_preview_clicked()
-        dialog_cls.assert_not_called()
-
-
 class TestMineSingleVolume:
     """A single-volume folder mines one ephemeral item; overall bar hidden."""
 
@@ -213,11 +153,6 @@ class TestMineSingleVolume:
         assert [i.title for i in items] == ["Solo Vol"]
         assert tab.worker_thread is not None
         tab.worker_thread.start.assert_called_once()
-
-    def test_mine_preview_flag_false(self, tab):
-        queue_cls = tab._queue_worker_cls
-        _mine(tab, [_make_ref()])
-        assert queue_cls.call_args.kwargs["preview_mode"] is False
 
     def test_mine_single_uses_single_bar(self, tab):
         _mine(tab, [_make_ref()])
@@ -249,7 +184,6 @@ class TestMineSingleVolume:
 
     def test_start_swaps_buttons(self, tab):
         _mine(tab, [_make_ref()])
-        assert tab.preview_button.isHidden()
         assert tab.mine_button.isHidden()
         assert not tab.cancel_button.isHidden()
 
@@ -454,7 +388,7 @@ class TestAfterRunCleanup:
         assert tab.overall_progress_widget.progress_bar.value() == 0
         assert tab.worker_thread is None
         assert tab._run_items == []
-        assert not tab.preview_button.isHidden()
+        assert not tab.mine_button.isHidden()
         assert tab.cancel_button.isHidden()
 
     def test_cleanup_success_pins_summary(self, tab):

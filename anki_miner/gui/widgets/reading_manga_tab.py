@@ -1,14 +1,12 @@
 """Manga sub-tab of the Reading tab: one auto-detecting folder, no queue.
 
-Pick a folder (or drop one), then Preview or Mine. The folder is classified by
+Pick a folder (or drop one), then Mine. The folder is classified by
 ``detector.detect``: a single-volume folder resolves to one volume, a series
 folder to many. There is no queue — **Mine** runs whatever the folder resolves
 to sequentially in one job (one ephemeral :class:`ReadingQueueItem` per volume)
 through the shared
 :class:`~anki_miner.gui.widgets._reading_mining_base._ReadingMiningTabBase`
-lifecycle. **Preview** shows a structural
-:class:`~anki_miner.gui.widgets.dialogs.manga_volumes_preview_dialog.MangaVolumesPreviewDialog`
-listing the detected volume(s) — no tokenizing, no cards. Words are inspected
+lifecycle. Words are inspected
 during Mine via the "Review words before mining" curation popup.
 
 Progress uses two bars: the overall bar (vol N of M) appears only for a series
@@ -48,7 +46,6 @@ from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.base import field_label_width
-from anki_miner.gui.widgets.dialogs.manga_volumes_preview_dialog import MangaVolumesPreviewDialog
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
@@ -74,7 +71,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     :class:`~anki_miner.gui.workers.reading_queue_worker.ReadingQueueWorker`
     mining the volume(s) a folder resolves to. Button state is purely derived
     from the worker handle by :meth:`_recompute_buttons`: idle shows
-    Preview/Mine, a run swaps them for Cancel.
+    Mine, a run swaps it for Cancel.
 
     Manga curation shows page images (D8 amended): this tab overrides
     ``_build_curation_context`` to hand the dialog the in-flight volume's
@@ -169,7 +166,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         return header
 
     def _create_manga_card(self) -> QFrame:
-        """Manga card: folder selector + Preview / Mine / Cancel."""
+        """Manga card: folder selector + Mine / Cancel."""
         card = QFrame()
         card.setObjectName("card")
         card_layout = QVBoxLayout()
@@ -191,11 +188,6 @@ class ReadingMangaTab(_ReadingMiningTabBase):
 
         button_row = QHBoxLayout()
         button_row.setSpacing(SPACING.sm)
-
-        self.preview_button = ModernButton(self.tr("Preview"), variant="secondary")
-        self.preview_button.setToolTip(self.tr("List the volume(s) this folder would mine — no cards created."))
-        self.preview_button.clicked.connect(self._on_preview_clicked)
-        button_row.addWidget(self.preview_button)
 
         self.mine_button = ModernButton(self.tr("Mine"), variant="primary")
         self.mine_button.setToolTip(self.tr("Mine the selected folder's volume(s) into Anki cards."))
@@ -256,16 +248,6 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     # ------------------------------------------------------------------
     # Run lifecycle
     # ------------------------------------------------------------------
-
-    def _on_preview_clicked(self) -> None:
-        """Preview — classify the folder and list its volume(s). No cards."""
-        if self.worker_thread is not None:
-            return
-        refs = self._detected_refs()
-        if refs is None:
-            return
-        dialog = MangaVolumesPreviewDialog(refs, self)
-        dialog.exec()
 
     def _on_mine_clicked(self) -> None:
         """Mine — classify the folder and mine its volume(s) sequentially."""
@@ -447,12 +429,10 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     def _recompute_buttons(self) -> None:
         """Refresh button state from the worker handle.
 
-        Pure derived state: a live run hides Preview/Mine and shows Cancel; idle
-        shows Preview/Mine and hides Cancel.
+        Pure derived state: a live run hides Mine and shows Cancel; idle
+        shows Mine and hides Cancel.
         """
         run_active = self.worker_thread is not None
-        self.preview_button.setVisible(not run_active)
         self.mine_button.setVisible(not run_active)
-        self.preview_button.setEnabled(not run_active)
         self.mine_button.setEnabled(not run_active)
         self.cancel_button.setVisible(run_active)
