@@ -297,7 +297,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Removed
 - **The `smoke-min-deps` CI job and floor-pin tooling** (`scripts/extract_floor_pins.py`). With dependency floors now at recent stable, floor-version smoke-testing is redundant with the latest-version `test` job.
 
-## [v2.6.1] - 2026-06-07
+## [2.6.1] - 2026-06-07
 
 ### Added
 
