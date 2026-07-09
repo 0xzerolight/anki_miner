@@ -132,6 +132,49 @@ class TestRegisterMiningTabPresenterConnections:
         tab.update_config.assert_called_once_with(cfg)
 
 
+class TestRegisterMiningTabExtraPresenters:
+    """Container registration: one addTab, every child presenter wired."""
+
+    @pytest.fixture
+    def registered_container(self, bare_window, qtbot):
+        from anki_miner.gui import app as app_module
+        from anki_miner.gui.presenters import GUIPresenter
+
+        tab = QWidget()
+        tab.update_config = MagicMock()
+        qtbot.addWidget(tab)
+
+        primary = GUIPresenter(bare_window)
+        extra_a = GUIPresenter(bare_window)
+        extra_b = GUIPresenter(bare_window)
+        app_module.register_mining_tab(bare_window, tab, primary, "Container Tab", extra_presenters=(extra_a, extra_b))
+        return bare_window, tab, (primary, extra_a, extra_b)
+
+    def test_tab_added_exactly_once(self, registered_container):
+        window, tab, _presenters = registered_container
+        assert window.tabs.count() == 1
+        assert window.tabs.widget(0) is tab
+
+    def test_every_presenter_reaches_status_bar(self, registered_container):
+        """All presenters (primary + extras) get the six-signal wiring."""
+        window, _tab, presenters = registered_container
+        calls: list[tuple] = []
+        window.status_bar.set_operation = lambda msg, kind: calls.append((msg, kind))
+
+        for i, presenter in enumerate(presenters):
+            presenter.info_signal.emit(f"msg-{i}")
+
+        msgs = {c[0] for c in calls}
+        assert msgs == {"msg-0", "msg-1", "msg-2"}, f"unexpected received: {calls}"
+
+    def test_config_refreshed_connected_once(self, registered_container):
+        """config_refreshed → update_config exactly once despite 3 presenters."""
+        window, tab, _presenters = registered_container
+        cfg = window.get_config()
+        window.config_refreshed.emit(cfg)
+        tab.update_config.assert_called_once_with(cfg)
+
+
 class TestSetupTabShortcutsAfterRegistration:
     """Ctrl+N shortcuts are count-driven, one per tab, no gaps, no duplicates."""
 
