@@ -827,9 +827,11 @@ class TestWorkerFinished:
         tab._on_queue_finished()
         tab._on_worker_finished()
 
+        # Success end state: bar pinned at 100% with a run summary (marquee
+        # recovered to determinate).
         assert tab.progress_widget.progress_bar.maximum() == 100
-        assert tab.progress_widget.progress_bar.value() == 0
-        assert tab.progress_widget.status_label.text() == "Ready"
+        assert tab.progress_widget.progress_bar.value() == 100
+        assert tab.progress_widget.status_label.text().startswith("Complete")
 
     def test_worker_finished_recovers_from_cancel_without_queue_finished(self, tab):
         """Mid-fetch cancel skips ``queue_finished`` — ``finished`` must still clean up."""
@@ -847,7 +849,8 @@ class TestWorkerFinished:
         assert tab.stop_button.text() == "Stop All"
         assert tab.stop_button.isEnabled()
         assert tab.progress_widget.progress_bar.maximum() == 100
-        assert tab.progress_widget.status_label.text() == "Ready"
+        assert tab.progress_widget.status_label.text() == "Cancelled"
+        assert tab.progress_widget.progress_bar.value() == 0
 
 
 class TestRemoveAndClear:
@@ -945,8 +948,9 @@ class TestRemoveAndClear:
         tab._on_clear_clicked()
 
         # Bar still reflects the in-flight item — Clear did not reset it.
+        # (Composed whole-run value: item 1 of 2 at 42% -> 21%.)
         assert "Downloading" in tab.progress_widget.status_label.text()
-        assert tab.progress_widget.progress_bar.value() == 42
+        assert tab.progress_widget.progress_bar.value() == 21
 
 
 class TestShutdown:

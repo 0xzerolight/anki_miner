@@ -286,6 +286,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
 
     def _on_cancel_clicked(self) -> None:
         """Cancel the active run."""
+        self._cancel_requested = True
         # Release any open curation dialog first so the blocked worker resumes
         # instead of hanging on the curation gate (Issue #65).
         self._cancel_active_curation_dialog()
@@ -295,6 +296,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         worker.cancel()
         self.cancel_button.setEnabled(False)
         self.cancel_button.setText(self.tr("Cancelling…"))
+        self.progress_widget.set_status(self.tr("Cancelling…"))
 
     # ------------------------------------------------------------------
     # Per-item signal slots (READ-ONLY on item state — the worker owns it)
@@ -309,18 +311,25 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         item = self._item_at(idx)
         if item is None:
             return
+        self._current_item_title = item.title
+        # Status only — the composed bar never resets between items.
         self.progress_widget.set_status(tr_format(self.tr("Mining: %1"), item.title))
-        self.progress_widget.set_determinate(100)
-        self.progress_widget.set_value(0)
 
     def _on_item_progress(self, idx: int, label: str, pct: int) -> None:
-        """Route worker progress into the bar (pct < 0 → indeterminate)."""
-        if pct < 0:
-            self.progress_widget.set_indeterminate()
+        """Compose the book's percent into the run bar (pct < 0 holds the bar)."""
+        title = getattr(self, "_current_item_title", "")
+        status: str | None
+        if label and title:
+            status = f"{title} — {label}"
+        elif label:
+            status = label
         else:
-            self.progress_widget.set_determinate(100)
-            self.progress_widget.set_value(pct)
-        self.progress_widget.set_status(label)
+            status = title or None
+        if pct < 0:
+            if status:
+                self.progress_widget.set_status(status)
+            return
+        self.progress_widget.set_composed(idx, pct, len(self._run_items), status)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Log the outcome and forward a success result to the presenter.
@@ -335,6 +344,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
 
         if error is None:
             cards = int(getattr(result, "cards_created", 0) or 0)
+            self._record_item_result(result)
             self.log_widget.append_success(tr_format(self.tr("Mined %1: %2 cards."), item.title, cards))
             if self._presenter is not None:
                 # Presenter forwarding is best-effort — the worker has already
@@ -356,7 +366,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         """
         self.cancel_button.setText(self.tr("Cancel"))
         self.cancel_button.setEnabled(True)
-        self.progress_widget.reset()
+        self._apply_terminal_bar_state(self.progress_widget)
         self._recompute_buttons()
 
     # ------------------------------------------------------------------

@@ -165,6 +165,15 @@ class _ReadingMiningTabBase(MiningTabBase):
         if not items:
             return False
 
+        # Per-run terminal-state flags and summary accumulators. Accumulated in
+        # the tabs' _on_item_finished and read by _apply_terminal_bar_state —
+        # NEVER from _run_items, which the base clears before cleanup runs.
+        self._cancel_requested = False
+        self._run_failed = False
+        self._run_preview_mode = preview_mode
+        self._run_cards_total = 0
+        self._run_new_words_total = 0
+
         # Processor may be None for two reasons: (a) Settings → Remove dictionary
         # called release_dictionary_resources to drop sqlite handles, or (b)
         # app.py deferred the eager create_episode_processor call so the window
@@ -208,8 +217,9 @@ class _ReadingMiningTabBase(MiningTabBase):
         worker.item_finished.connect(self._on_item_finished)  # type: ignore[attr-defined]
         worker.queue_finished.connect(self._on_queue_finished)  # type: ignore[attr-defined]
         # Fatal pre-loop failures (schema-stale dict gate, processor build) end
-        # the run via error + queue_finished; surface the message in the log.
-        worker.error.connect(self.log_widget.append_error)  # type: ignore[attr-defined]
+        # the run via error + queue_finished; flag the failure for the terminal
+        # bar state and surface the message in the log.
+        worker.error.connect(self._on_run_error)
         # QThread.finished fires on every run() exit (success, cancel, exception),
         # so run-end cleanup converges here rather than only on the success path.
         worker.finished.connect(self._on_worker_finished)
@@ -288,6 +298,44 @@ class _ReadingMiningTabBase(MiningTabBase):
                 self._processor.close()
                 self._processor = None
             self._config_dirty = False
+
+    def _on_run_error(self, message: str) -> None:
+        """Run-level fatal: flag for the terminal bar state and log it."""
+        self._run_failed = True
+        self.log_widget.append_error(message)  # type: ignore[attr-defined]
+
+    def _record_item_result(self, result: object) -> None:
+        """Accumulate per-run summary counts from a successful item result."""
+        self._run_cards_total += int(getattr(result, "cards_created", 0) or 0)
+        self._run_new_words_total += int(getattr(result, "new_words_found", 0) or 0)
+
+    def _apply_terminal_bar_state(self, widget) -> None:
+        """Set the run's terminal bar state: cancel -> failed -> success.
+
+        Reads only the per-run flags/accumulators seeded in :meth:`_launch_run`
+        — never ``_run_items``, which is already cleared when the cleanup hook
+        calls this.
+        """
+        if getattr(self, "_cancel_requested", False):
+            widget.reset()
+            widget.set_status(QCoreApplication.translate("ReadingTab", "Cancelled"))
+        elif getattr(self, "_run_failed", False):
+            widget.reset()
+            widget.set_status(QCoreApplication.translate("ReadingTab", "Failed — see log"))
+        elif getattr(self, "_run_preview_mode", False):
+            widget.show_completion(
+                tr_format(
+                    QCoreApplication.translate("ReadingTab", "Preview complete — %1 new words"),
+                    self._run_new_words_total,
+                )
+            )
+        else:
+            widget.show_completion(
+                tr_format(
+                    QCoreApplication.translate("ReadingTab", "Complete — %1 cards created"),
+                    self._run_cards_total,
+                )
+            )
 
     # ------------------------------------------------------------------
     # Known/ignore list (Issue #42)

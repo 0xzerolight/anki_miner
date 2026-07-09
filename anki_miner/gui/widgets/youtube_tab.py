@@ -338,6 +338,11 @@ class YouTubeTab(MiningTabBase):
         # Snapshot BEFORE constructing the worker so all idx-based signal
         # handlers resolve against a frozen list that survives mid-run removals.
         self._run_items = list(ready_items)
+        self._items_total = len(ready_items)
+        self._items_done = 0
+        self._cancel_requested = False
+        self._run_failed = False
+        self._item_bar_seen = False
 
         self.progress_widget.reset()
 
@@ -355,8 +360,9 @@ class YouTubeTab(MiningTabBase):
         worker.item_finished.connect(self._on_item_finished)
         worker.queue_finished.connect(self._on_queue_finished)
         # Fatal pre-loop failures (schema-stale dict gate, processor build) end
-        # the run via error + queue_finished; surface the message in the log.
-        worker.error.connect(self.log_widget.append_error)
+        # the run via error + queue_finished; flag it so the terminal handler
+        # shows "Failed" instead of a success summary, and surface the message.
+        worker.error.connect(self._on_run_error)
         # QThread.finished fires on every run() exit (success, cancel, exception),
         # so run-end cleanup converges here rather than only on the success path.
         worker.finished.connect(self._on_worker_finished)
@@ -369,6 +375,7 @@ class YouTubeTab(MiningTabBase):
 
     def _on_stop_all_clicked(self) -> None:
         """Cancel the active run."""
+        self._cancel_requested = True
         # Release any open curation dialog first so the blocked worker resumes
         # instead of hanging on _curation_event (Issue #65).
         self._cancel_active_curation_dialog()
@@ -378,6 +385,11 @@ class YouTubeTab(MiningTabBase):
         worker.cancel()
         self.stop_button.setEnabled(False)
         self.stop_button.setText(self.tr("Cancelling…"))
+
+    def _on_run_error(self, message: str) -> None:
+        """Run-level fatal: flag for the terminal handler and log it."""
+        self._run_failed = True
+        self.log_widget.append_error(message)
 
     # ------------------------------------------------------------------
     # Per-item signal slots
@@ -404,21 +416,30 @@ class YouTubeTab(MiningTabBase):
 
         total = len(self._run_items)
         title = item.video_info.title if item.video_info else item.url
+        # Status only — the composed bar never resets between items
+        # (convention B: one bar sweep for the whole run).
         self.progress_widget.set_status(tr_format(self.tr("Mining %1 of %2: %3"), idx + 1, total, title))
-        self.progress_widget.set_determinate(100)
-        self.progress_widget.set_value(0)
         self._recompute_buttons()
 
     def _on_item_progress(self, idx: int, label: str, pct: int) -> None:
-        """Route worker progress into the progress widget."""
-        # Translation mirrors YouTubeQueueWorker's progress adapter:
-        # pct < 0 → indeterminate; otherwise determinate.
+        """Compose the item's percent into the whole-run bar.
+
+        ``pct < 0`` (the merge step between download and mining) HOLDS the bar
+        at its current value with a status update — switching the whole bar to
+        a marquee mid-run would read as a reset. A marquee is shown only if no
+        determinate value has been painted yet this run.
+        """
         if pct < 0:
-            self.progress_widget.set_indeterminate()
-        else:
-            self.progress_widget.set_determinate(100)
-            self.progress_widget.set_value(pct)
-        self.progress_widget.set_status(label)
+            if getattr(self, "_item_bar_seen", False):
+                self.progress_widget.set_status(label)
+            else:
+                self.progress_widget.set_indeterminate()
+                self.progress_widget.set_status(label)
+            return
+        self._item_bar_seen = True
+        self.progress_widget.set_composed(
+            getattr(self, "_items_done", 0), pct, getattr(self, "_items_total", 0) or len(self._run_items), label
+        )
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Update the item with success/error and forward to the presenter."""
@@ -446,6 +467,8 @@ class YouTubeTab(MiningTabBase):
             self.log_widget.append_error(tr_format(self.tr("Failed %1: %2 (attempts=%3)."), item.url, error, attempts))
 
         self._refresh_row(item)
+        self._items_done = getattr(self, "_items_done", 0) + 1
+        self.progress_widget.set_composed(self._items_done, 0, getattr(self, "_items_total", 0))
         self._recompute_buttons()
 
     def _on_queue_finished(self) -> None:
@@ -480,7 +503,22 @@ class YouTubeTab(MiningTabBase):
         self._run_items = []
         self.stop_button.setText(self.tr("Stop All"))
         self.stop_button.setEnabled(True)
-        self.progress_widget.reset()
+        # Terminal end state (cancel -> failed -> success). Counts come from
+        # self._queue (still intact) — never _run_items, just cleared above.
+        if getattr(self, "_cancel_requested", False):
+            self.progress_widget.reset()
+            self.progress_widget.set_status(self.tr("Cancelled"))
+        elif getattr(self, "_run_failed", False):
+            self.progress_widget.reset()
+            self.progress_widget.set_status(self.tr("Failed — see log"))
+        else:
+            succeeded = sum(1 for i in self._queue.all_items() if i.status == YouTubeItemStatus.COMPLETED)
+            failed = sum(1 for i in self._queue.all_items() if i.status == YouTubeItemStatus.ERROR)
+            if failed:
+                summary = tr_format(self.tr("Complete — %1 succeeded, %2 failed"), succeeded, failed)
+            else:
+                summary = tr_format(self.tr("Complete — %1 succeeded"), succeeded)
+            self.progress_widget.show_completion(summary)
         self._recompute_buttons()
         if self._config_dirty:
             if self._processor is not None:
