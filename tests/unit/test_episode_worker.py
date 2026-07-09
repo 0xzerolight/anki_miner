@@ -19,7 +19,6 @@ def _make_factory_worker(qapp, factory, **kwargs):
         "processor_factory": factory,
         "video_file": Path("/fake/video.mkv"),
         "subtitle_file": Path("/fake/subs.ass"),
-        "preview_mode": False,
         "progress_callback": MagicMock(name="ProgressCallback"),
     }
     common.update(kwargs)
@@ -35,7 +34,6 @@ def _make_worker(qapp, audio_track_override=..., **kwargs):
         "processor": processor,
         "video_file": Path("/fake/video.mkv"),
         "subtitle_file": Path("/fake/subs.ass"),
-        "preview_mode": False,
         "progress_callback": MagicMock(name="ProgressCallback"),
     }
     common.update(kwargs)
@@ -325,7 +323,6 @@ def test_prebuilt_processor_path_still_works(qapp):
         processor=processor,
         video_file=Path("/fake/video.mkv"),
         subtitle_file=Path("/fake/subs.ass"),
-        preview_mode=False,
         progress_callback=MagicMock(name="ProgressCallback"),
     )
 
@@ -345,7 +342,6 @@ def test_both_processor_and_factory_raises(qapp):
             processor_factory=lambda: proc,
             video_file=Path("/fake/video.mkv"),
             subtitle_file=Path("/fake/subs.ass"),
-            preview_mode=False,
             progress_callback=MagicMock(name="ProgressCallback"),
         )
 
@@ -358,6 +354,21 @@ def test_neither_processor_nor_factory_raises(qapp):
             processor_factory=None,
             video_file=Path("/fake/video.mkv"),
             subtitle_file=Path("/fake/subs.ass"),
-            preview_mode=False,
             progress_callback=MagicMock(name="ProgressCallback"),
         )
+
+
+def test_run_calls_process_episode_with_keyword_args_only(qapp):
+    """Beyond the two file paths, everything is passed by keyword.
+
+    Guards the positional-shift hazard: process_episode's signature changed
+    when preview_mode was removed, and a positional caller would silently bind
+    the wrong parameter (a truthy callback in a bool slot) — a MagicMock
+    assert_called_once() cannot catch that.
+    """
+    worker = _make_worker(qapp)
+    worker.run()
+    args, kwargs = worker.processor.process_episode.call_args
+    assert len(args) == 2  # video_file, subtitle_file only
+    assert "progress_callback" in kwargs
+    assert "curation_callback" in kwargs

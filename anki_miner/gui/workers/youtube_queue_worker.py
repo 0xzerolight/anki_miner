@@ -96,7 +96,6 @@ class YouTubeQueueWorker(ProcessorOwningWorker):
         config: AnkiMinerConfig,
         items: list[YouTubeQueueItem],
         curation_callback: Callable[[list], list | None] | None,
-        preview_mode: bool,
         parent=None,
         *,
         processor_factory: Callable[[], EpisodeProcessor] | None = None,
@@ -110,11 +109,9 @@ class YouTubeQueueWorker(ProcessorOwningWorker):
             items: Queue items to process, in order. Each must already have
                 ``video_id`` and ``resolved_sub_mode`` populated (probe step
                 handles that before items reach this worker).
-            curation_callback: Forwarded unconditionally to
-                ``process_youtube_url``; ``process_episode`` internally gates
-                invocation on ``not preview_mode``, so curation fires only on
-                Mine runs. Pass ``None`` to disable entirely.
-            preview_mode: If True, mining produces previews instead of cards.
+            curation_callback: Forwarded to ``process_youtube_url``. Pass
+                ``None`` to disable entirely (the tab gates on its review
+                checkbox).
             parent: Optional parent QObject.
             processor_factory: Zero-arg callable that returns an EpisodeProcessor.
                 Mutually exclusive with a non-None ``processor``.  When supplied,
@@ -131,7 +128,6 @@ class YouTubeQueueWorker(ProcessorOwningWorker):
         self._config = config
         self._items = items
         self._curation_callback = curation_callback
-        self._preview_mode = preview_mode
         # Published for the GUI curation bridge. Attribute names mirror
         # BatchQueueWorkerThread's _curation_* so the shared curation bridge can
         # read the same attribute names regardless of which worker is driving it.
@@ -287,11 +283,8 @@ class YouTubeQueueWorker(ProcessorOwningWorker):
             cancel_event=self._cancel_event,
             progress_callback=mining_cb,
             fetch_progress_cb=lambda label, frac: self._emit_fetch_progress(idx, label, frac),
-            # process_episode gates curation on not preview_mode, so this fires
-            # only on Mine runs; passing it unconditionally is correct.
             curation_callback=self._curation_callback,
             on_fetched=self._capture_curation_media,
-            preview_mode=self._preview_mode,
             source_label=item.video_info.title,
         )
 

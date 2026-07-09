@@ -266,7 +266,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
 
         ref = refs[0]
         ephemeral = ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind)
-        if self._launch_run([ephemeral], preview_mode=False):
+        if self._launch_run([ephemeral]):
             self._begin_run()
 
     def _begin_run(self) -> None:

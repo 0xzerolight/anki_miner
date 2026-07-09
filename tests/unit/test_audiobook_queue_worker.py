@@ -51,7 +51,6 @@ def make_worker(qapp, mock_processor, test_config):
     def _make(
         items: list[AudiobookQueueItem] | None = None,
         curation_callback=None,
-        preview_mode: bool = False,
         config=None,
     ) -> AudiobookQueueWorker:
         if items is None:
@@ -61,7 +60,6 @@ def make_worker(qapp, mock_processor, test_config):
             config=config if config is not None else test_config,
             items=items,
             curation_callback=curation_callback,
-            preview_mode=preview_mode,
         )
 
     return _make
@@ -291,13 +289,12 @@ def test_process_episode_kwargs(make_worker, mock_processor):
         return words
 
     items = [_make_item("my_audiobook")]
-    worker = make_worker(items=items, curation_callback=_curation, preview_mode=True)
+    worker = make_worker(items=items, curation_callback=_curation)
     worker.run()
 
     call = mock_processor.process_episode.call_args
     assert call.args == (items[0].audio_file, items[0].subtitle_file)
     assert call.kwargs["audio_only"] is True
-    assert call.kwargs["preview_mode"] is True
     assert call.kwargs["episode_name_override"] == "my_audiobook"
     assert call.kwargs["series_name_override"] == "Audio"
     assert call.kwargs["curation_callback"] is _curation
@@ -315,12 +312,11 @@ def test_worker_cancel_event_passed_to_process_episode(make_worker, mock_process
 
 
 def test_none_curation_callback_passed_through(make_worker, mock_processor):
-    worker = make_worker(items=[_make_item()], curation_callback=None, preview_mode=False)
+    worker = make_worker(items=[_make_item()], curation_callback=None)
     worker.run()
 
     kwargs = mock_processor.process_episode.call_args.kwargs
     assert kwargs["curation_callback"] is None
-    assert kwargs["preview_mode"] is False
 
 
 # ---------------------------------------------------------------------------
@@ -375,7 +371,6 @@ def test_factory_path_builds_processor_inside_run(qapp, test_config):
         config=test_config,
         items=[_make_item()],
         curation_callback=None,
-        preview_mode=False,
         processor_factory=factory,
     )
     # Before run(), processor is None (not yet built).
@@ -401,7 +396,6 @@ def test_factory_path_error_emits_error_and_queue_finished(qapp, test_config):
         config=test_config,
         items=[_make_item()],
         curation_callback=None,
-        preview_mode=False,
         processor_factory=bad_factory,
     )
     errors: list[str] = []
@@ -426,7 +420,6 @@ def test_prebuilt_processor_path_does_not_use_factory(qapp, mock_processor, test
         config=test_config,
         items=[_make_item()],
         curation_callback=None,
-        preview_mode=False,
     )
     worker.run()
 
@@ -442,7 +435,6 @@ def test_both_processor_and_factory_raises(qapp, mock_processor, test_config):
             config=test_config,
             items=[_make_item()],
             curation_callback=None,
-            preview_mode=False,
             processor_factory=lambda: mock_processor,
         )
 
@@ -455,7 +447,6 @@ def test_neither_processor_nor_factory_raises(qapp, test_config):
             config=test_config,
             items=[_make_item()],
             curation_callback=None,
-            preview_mode=False,
         )
 
 
@@ -474,7 +465,6 @@ def test_stale_dict_aborts_queue_once(qapp, mock_processor, test_config):
         config=test_config,
         items=[_make_item("book01"), _make_item("book02"), _make_item("book03")],
         curation_callback=None,
-        preview_mode=False,
     )
     errors: list[str] = []
     worker.error.connect(errors.append)
