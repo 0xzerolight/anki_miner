@@ -346,7 +346,7 @@ class TestShutdown:
 
 
 class TestCurationContext:
-    """D8: reading curation is table-only — inherit the base (None, None)."""
+    """D8 (amended): the base stays (None, None) — only the manga tab overrides."""
 
     def test_build_curation_context_is_none_none(self, tab):
         assert tab._build_curation_context() == (None, None)

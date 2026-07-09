@@ -15,10 +15,13 @@ the row display and summary counts, never write status/cards/error. A queued
 ``item_started`` slot arriving late must not overwrite a COMPLETED status back
 to PROCESSING.
 
-D8: reading curation is table-only. The ``ReadingQueueWorker`` publishes no
-``_curation_video``/``_curation_subtitle``/``_curation_offset``, so this base
-does NOT override :meth:`_build_curation_context` — it inherits
-:class:`MiningTabBase`'s ``(None, None)`` context (a plain word table).
+D8 (amended): novels curation is table-only; manga supplies a page-image
+context. The ``ReadingQueueWorker`` publishes no ``_curation_video``/
+``_curation_subtitle``/``_curation_offset``, so this base does NOT override
+:meth:`_build_curation_context` — it inherits :class:`MiningTabBase`'s
+``(None, None)`` context (a plain word table). The manga sub-tab overrides it
+to read the worker's published ``curation_document`` (page images + block
+boxes); the novels sub-tab keeps the base behaviour.
 
 This base deliberately does NOT wire :meth:`MiningTabBase._teardown_previous_run`.
 Single-episode/batch tabs build a fresh processor per run, so teardown closes
@@ -85,9 +88,10 @@ class _ReadingMiningTabBase(MiningTabBase):
 
     Owns at most one running :class:`ReadingQueueWorker` and a single cached
     :class:`EpisodeProcessor` reused across runs within the sub-tab. The
-    worker→GUI curation bridge is provided by :class:`MiningTabBase`; reading
-    curation is table-only (D8), so this base does NOT override
-    :meth:`_build_curation_context` — it inherits the base ``(None, None)``.
+    worker→GUI curation bridge is provided by :class:`MiningTabBase`; this
+    base does NOT override :meth:`_build_curation_context` — it inherits the
+    base ``(None, None)`` (D8 amended: novels stays table-only; the manga
+    sub-tab overrides it with a page-image context).
     """
 
     def __init__(
@@ -383,12 +387,14 @@ class _ReadingMiningTabBase(MiningTabBase):
     # Subclass hooks
     # ------------------------------------------------------------------
     #
-    # D8: intentionally NO ``_build_curation_context`` override. Reading
-    # curation is table-only — the ReadingQueueWorker publishes no
-    # ``_curation_video``/``_curation_subtitle``/``_curation_offset``, so the
-    # base ``MiningTabBase._build_curation_context`` (returns ``(None, None)``)
-    # is exactly right. Cloning the audiobook override would AttributeError on
-    # those missing worker attributes.
+    # D8 (amended): intentionally NO ``_build_curation_context`` override HERE.
+    # The ReadingQueueWorker publishes no ``_curation_video``/
+    # ``_curation_subtitle``/``_curation_offset``, so the base
+    # ``MiningTabBase._build_curation_context`` (returns ``(None, None)``) is
+    # exactly right for novels; cloning the audiobook override would
+    # AttributeError on those missing worker attributes. The MANGA sub-tab
+    # overrides it to build a page-image context from the worker's published
+    # ``curation_document``.
 
     def _after_run_cleanup(self) -> None:
         """Per-tab UI recovery after a run ends. Overridden by each sub-tab.

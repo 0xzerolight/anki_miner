@@ -18,8 +18,10 @@ Behaviour under test:
 * Drag-drop routes through the tab: the FileSelector and its inner QLineEdit
   both have drops disabled, so a drop lands on the tab (folder/manga file fills
   the selector; a dropped novel earns a cross-tab hint).
-* D8: ``_build_curation_context`` inherits the base ``(None, None)`` even with a
-  live worker — reading curation is table-only.
+* D8 (amended): ``_build_curation_context`` builds a page-image context from
+  the worker's published manga ``curation_document``; it falls back to the
+  base ``(None, None)`` for no worker / no document / book-kind documents /
+  image-less volumes. Novels curation stays table-only.
 
 Qt threads are never started — ``ReadingQueueWorker`` is class-level patched at
 the base module so ``start()`` is a no-op and constructor kwargs can be
@@ -39,7 +41,12 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 from anki_miner.models.reading_queue import ReadingItemStatus
-from anki_miner.services.reading.models import ReadingSourceRef
+from anki_miner.services.reading.models import (
+    ImageRef,
+    ReadingDocument,
+    ReadingSourceRef,
+    ReadingUnit,
+)
 
 _WORKER_TARGET = "anki_miner.gui.widgets._reading_mining_base.ReadingQueueWorker"
 _CREATE_TARGET = "anki_miner.gui.widgets._reading_mining_base.create_episode_processor"
@@ -544,14 +551,54 @@ class TestDragDrop:
         tab.dragEnterEvent(None)  # must not raise
 
 
-class TestCurationContext:
-    """D8: reading curation is table-only — inherit the base (None, None)."""
+def _manga_document(*, kind: str = "manga", with_images: bool = True) -> ReadingDocument:
+    """A two-unit manga document (units share one page image)."""
+    ref = ImageRef(Path("/pages/001.png")) if with_images else None
+    doc = ReadingDocument(title="Series", kind=kind, series="Series", episode="1")  # type: ignore[arg-type]
+    doc.units = [
+        ReadingUnit(text="ふきだし", index=0, location_label="p.1", image_ref=ref, block_box=(1, 2, 3, 4)),
+        ReadingUnit(text="つづき", index=1, location_label="p.1", image_ref=ref),
+    ]
+    return doc
 
-    def test_build_curation_context_is_none_none(self, tab):
+
+class TestCurationContext:
+    """D8 (amended): manga builds a page-image context off the parked worker.
+
+    Falls back to the base (None, None) when there is no worker, no published
+    document, a book-kind document, or a volume with no page images.
+    """
+
+    def test_build_curation_context_is_none_none_without_worker(self, tab):
         assert tab._build_curation_context() == (None, None)
 
-    def test_build_curation_context_none_none_with_worker(self, tab):
+    def test_manga_document_yields_page_units_context(self, tab):
         _mine(tab, [_make_ref()])
+        doc = _manga_document()
+        tab.worker_thread.curation_document = doc
+
+        ctx, lookup_fn = tab._build_curation_context()
+
+        assert lookup_fn is None
+        assert ctx is not None
+        assert ctx.video_file is None
+        # Every unit is mapped by index — including imageless ones, so
+        # unmatched pages still show their page label in the placeholder.
+        assert ctx.page_units == {0: doc.units[0], 1: doc.units[1]}
+
+    def test_none_document_falls_back(self, tab):
+        _mine(tab, [_make_ref()])
+        tab.worker_thread.curation_document = None
+        assert tab._build_curation_context() == (None, None)
+
+    def test_book_kind_falls_back(self, tab):
+        _mine(tab, [_make_ref()])
+        tab.worker_thread.curation_document = _manga_document(kind="book")
+        assert tab._build_curation_context() == (None, None)
+
+    def test_imageless_volume_falls_back(self, tab):
+        _mine(tab, [_make_ref()])
+        tab.worker_thread.curation_document = _manga_document(with_images=False)
         assert tab._build_curation_context() == (None, None)
 
 
