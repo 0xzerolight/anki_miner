@@ -1,7 +1,7 @@
-"""Novels sub-tab of the Reading tab: single-file Preview / Mine (no queue).
+"""Novels sub-tab of the Reading tab: single-file Mine (no queue).
 
 A novel is one ``.epub``/``.txt`` book: pick it in the file selector (or drop
-it), then Preview or Mine. Unlike the manga sub-tab there is no batch queue —
+it), then Mine. Unlike the manga sub-tab there is no batch queue —
 every run mines exactly one ephemeral :class:`ReadingQueueItem` through the
 shared :class:`~anki_miner.gui.widgets._reading_mining_base._ReadingMiningTabBase`
 lifecycle (a one-item list handed to the queue worker). One progress bar, no
@@ -69,8 +69,8 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
     Owns, via the base, at most one running
     :class:`~anki_miner.gui.workers.reading_queue_worker.ReadingQueueWorker`
     mining a single ephemeral item. Button state is purely derived from the
-    worker handle by :meth:`_recompute_buttons`: idle shows Preview/Mine, a run
-    swaps them for Cancel.
+    worker handle by :meth:`_recompute_buttons`: idle shows Mine, a run
+    swaps it for Cancel.
 
     Novels curation is table-only (D8): the base inherits the ``(None, None)``
     curation context — this tab does NOT override ``_build_curation_context``
@@ -159,7 +159,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         return header
 
     def _create_novel_card(self) -> QFrame:
-        """Novel card: book-file selector + Preview / Mine / Cancel."""
+        """Novel card: book-file selector + Mine / Cancel."""
         card = QFrame()
         card.setObjectName("card")
         card_layout = QVBoxLayout()
@@ -179,11 +179,6 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
 
         button_row = QHBoxLayout()
         button_row.setSpacing(SPACING.sm)
-
-        self.preview_button = ModernButton(self.tr("Preview"), variant="secondary")
-        self.preview_button.setToolTip(self.tr("Preview the selected book — no cards created."))
-        self.preview_button.clicked.connect(self._on_preview_clicked)
-        button_row.addWidget(self.preview_button)
 
         self.mine_button = ModernButton(self.tr("Mine"), variant="primary")
         self.mine_button.setToolTip(self.tr("Mine the selected book into Anki cards."))
@@ -245,21 +240,17 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
     # Run lifecycle
     # ------------------------------------------------------------------
 
-    def _on_preview_clicked(self) -> None:
-        """Preview — validate the book, then preview it."""
-        self._start_run(preview_mode=True)
-
     def _on_mine_clicked(self) -> None:
         """Mine — validate the book, then mine it."""
-        self._start_run(preview_mode=False)
+        self._start_run()
 
-    def _start_run(self, *, preview_mode: bool) -> None:
+    def _start_run(self) -> None:
         """Validate the selected book and mine it as a single ephemeral item.
 
         The book is classified by ``detector.detect`` (one ref for a valid
         ``.epub``/``.txt``) into an ephemeral :class:`ReadingQueueItem` that is
         never stored — this tab has no queue. A ``True`` launch swaps the
-        Preview/Mine buttons for Cancel and resets the progress bar.
+        Mine button for Cancel and resets the progress bar.
         """
         if self.worker_thread is not None:
             return
@@ -275,7 +266,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
 
         ref = refs[0]
         ephemeral = ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind)
-        if self._launch_run([ephemeral], preview_mode=preview_mode):
+        if self._launch_run([ephemeral], preview_mode=False):
             self._begin_run()
 
     def _begin_run(self) -> None:
@@ -376,12 +367,10 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
     def _recompute_buttons(self) -> None:
         """Refresh button state from the worker handle.
 
-        Pure derived state: a live run hides Preview/Mine and shows Cancel; idle
-        shows Preview/Mine and hides Cancel.
+        Pure derived state: a live run hides Mine and shows Cancel; idle
+        shows Mine and hides Cancel.
         """
         run_active = self.worker_thread is not None
-        self.preview_button.setVisible(not run_active)
         self.mine_button.setVisible(not run_active)
-        self.preview_button.setEnabled(not run_active)
         self.mine_button.setEnabled(not run_active)
         self.cancel_button.setVisible(run_active)

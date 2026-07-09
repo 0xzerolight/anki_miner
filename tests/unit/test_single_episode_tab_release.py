@@ -122,7 +122,7 @@ def test_rerun_closes_prior_processor_before_building_new_one(tab, tmp_path):
             return_value=new_processor,
         ) as mock_build,
     ):
-        tab._start_processing(preview_mode=False)
+        tab._start_processing()
 
     # Old worker was cancelled and joined.
     old_worker.cancel.assert_called_once_with()
@@ -154,7 +154,7 @@ def test_rerun_with_no_prior_worker_does_not_crash(tab, tmp_path):
             return_value=MagicMock(),
         ),
     ):
-        tab._start_processing(preview_mode=False)  # must not raise
+        tab._start_processing()  # must not raise
 
 
 def test_teardown_disconnects_finished_handler(tab, tmp_path):
@@ -193,7 +193,7 @@ def test_rerun_skips_processor_close_on_join_timeout(tab, tmp_path):
             return_value=new_processor,
         ),
     ):
-        tab._start_processing(preview_mode=False)
+        tab._start_processing()
 
     old_worker.cancel.assert_called_once_with()
     old_worker.wait.assert_called_once()

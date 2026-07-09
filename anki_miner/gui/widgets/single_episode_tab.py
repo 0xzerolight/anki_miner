@@ -99,7 +99,6 @@ class SingleEpisodeTab(MiningTabBase):
         self._cancel_requested = False
         self.recent_manager = RecentFilesManager()
         self._audio_track_override: int | None = None
-        self._last_run_was_preview = False
 
         self._init_curation_bridge()
 
@@ -141,8 +140,6 @@ class SingleEpisodeTab(MiningTabBase):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.xs)
 
-        self.preview_button = ModernButton(self.tr("Preview Words"), variant="secondary")
-        self.preview_button.setToolTip(self.tr("Preview discovered words before creating cards"))
         self.process_button = ModernButton(self.tr("Process Episode"), variant="primary")
         self.process_button.setToolTip(self.tr("Create Anki cards from the episode"))
         self.timing_button = ModernButton(self.tr("Test Timing"), variant="secondary")
@@ -154,13 +151,11 @@ class SingleEpisodeTab(MiningTabBase):
         self.cancel_button.setToolTip(self.tr("Cancel processing"))
         self.cancel_button.hide()
 
-        self.preview_button.clicked.connect(self._on_preview_clicked)
         self.process_button.clicked.connect(self._on_process_clicked)
         self.cancel_button.clicked.connect(self._on_cancel_clicked)
         self.timing_button.clicked.connect(self._on_timing_clicked)
         self.tracks_button.clicked.connect(self._on_tracks_clicked)
 
-        button_layout.addWidget(self.preview_button)
         button_layout.addWidget(self.process_button)
         button_layout.addWidget(self.timing_button)
         button_layout.addWidget(self.tracks_button)
@@ -203,10 +198,6 @@ class SingleEpisodeTab(MiningTabBase):
         browse_shortcut = QShortcut(QKeySequence("Ctrl+O"), self)
         browse_shortcut.activated.connect(self.video_selector.browse)
 
-        # Ctrl+P: Preview words
-        preview_shortcut = QShortcut(QKeySequence("Ctrl+P"), self)
-        preview_shortcut.activated.connect(self._on_preview_clicked)
-
         # Ctrl+Return: Process episode
         process_shortcut = QShortcut(QKeySequence("Ctrl+Return"), self)
         process_shortcut.activated.connect(self._on_process_clicked)
@@ -219,11 +210,10 @@ class SingleEpisodeTab(MiningTabBase):
         self.setAccessibleName("Episode Mining Tab")
         self.setAccessibleDescription("Process a single video episode to create vocabulary flashcards")
 
-        # Set proper tab order: video selector -> subtitle selector -> offset -> preview -> process
+        # Set proper tab order: video selector -> subtitle selector -> offset -> process
         self.setTabOrder(self.video_selector, self.subtitle_selector)
         self.setTabOrder(self.subtitle_selector, self.offset_spinbox)
-        self.setTabOrder(self.offset_spinbox, self.preview_button)
-        self.setTabOrder(self.preview_button, self.process_button)
+        self.setTabOrder(self.offset_spinbox, self.process_button)
 
     def _create_file_selection_group(self) -> QFrame:
         """Create file selection group with enhanced file selectors.
@@ -391,13 +381,9 @@ class SingleEpisodeTab(MiningTabBase):
 
         run_off_thread(self, _probe, _on_streams, _on_probe_error)
 
-    def _on_preview_clicked(self) -> None:
-        """Handle preview button click."""
-        self._start_processing(preview_mode=True)
-
     def _on_process_clicked(self) -> None:
         """Handle process button click."""
-        self._start_processing(preview_mode=False)
+        self._start_processing()
 
     def _on_timing_clicked(self) -> None:
         """Handle test timing button click. Opens the subtitle viewer dialog."""
@@ -466,12 +452,8 @@ class SingleEpisodeTab(MiningTabBase):
 
         run_off_thread(self, _parse, _on_parsed, _on_parse_error)
 
-    def _start_processing(self, preview_mode: bool) -> None:
-        """Start episode processing.
-
-        Args:
-            preview_mode: If True, only preview words without creating cards
-        """
+    def _start_processing(self) -> None:
+        """Start episode processing."""
         if self._is_processing:
             return
 
@@ -495,11 +477,6 @@ class SingleEpisodeTab(MiningTabBase):
             )
             return
 
-        # Record preview mode only after validation passes — a rejected validation
-        # must not flip the flag and cause the previous result's clear/override
-        # logic to misfire.
-        self._last_run_was_preview = preview_mode
-
         video_file = Path(video_path)
         subtitle_file = Path(subtitle_path)
 
@@ -515,7 +492,6 @@ class SingleEpisodeTab(MiningTabBase):
 
         # Hide action buttons, show cancel button
         self._is_processing = True
-        self.preview_button.hide()
         self.process_button.hide()
         self.timing_button.hide()
         self.tracks_button.hide()
@@ -543,12 +519,12 @@ class SingleEpisodeTab(MiningTabBase):
             return proc
 
         # Create and start worker thread
-        curation_cb = self._curation_bridge if not preview_mode else None
+        curation_cb = self._curation_bridge
         self.worker_thread = EpisodeWorkerThread(
             None,
             video_file,
             subtitle_file,
-            preview_mode,
+            False,
             self.progress_callback,
             curation_callback=curation_cb,
             audio_track_override=self._audio_track_override,
@@ -601,7 +577,6 @@ class SingleEpisodeTab(MiningTabBase):
         """Restore normal button state after processing ends."""
         self._is_processing = False
         self.cancel_button.hide()
-        self.preview_button.show()
         self.process_button.show()
         self.timing_button.show()
         self.tracks_button.show()
@@ -643,19 +618,16 @@ class SingleEpisodeTab(MiningTabBase):
                 self.recent_manager.add_entry(Path(video_path), Path(subtitle_path), offset)
                 self._refresh_recent_combo()
 
-            if not self._last_run_was_preview:
-                # Clear file selectors so the next run starts from a clean slate.
-                # Failed/cancelled runs keep their paths (Issue #51 retry affordance);
-                # previews keep them for the preview-then-process flow.
-                self.video_selector.clear()
-                self.subtitle_selector.clear()
+            # Clear file selectors so the next run starts from a clean slate.
+            # Failed/cancelled runs keep their paths (Issue #51 retry affordance).
+            self.video_selector.clear()
+            self.subtitle_selector.clear()
 
         # Show result
         self.presenter.show_processing_result(result)
 
-        if result.success and not self._last_run_was_preview:
+        if result.success:
             # Reset per-run override so next Process uses Auto unless user picks again.
-            # A previewed track pick carries into the subsequent Process run.
             # Failed runs keep the override intact so the user can retry with the same
             # track pick without having to reopen the Tracks dialog.
             self._audio_track_override = None
