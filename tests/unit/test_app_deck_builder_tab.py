@@ -47,12 +47,10 @@ def _build_tabs(monkeypatch, test_config):
     from anki_miner.gui.utils.service_factory import create_youtube_fetcher
     from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
     from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
-    from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
     from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
     from anki_miner.gui.widgets.reading_tab import ReadingTab
     from anki_miner.gui.widgets.settings_tab import SettingsTab
-    from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
-    from anki_miner.gui.widgets.youtube_tab import YouTubeTab
+    from anki_miner.gui.widgets.video_tab import VideoTab
     from anki_miner.services.stats_service import StatsService
 
     window = MainWindow()
@@ -61,15 +59,27 @@ def _build_tabs(monkeypatch, test_config):
 
     episode_presenter = GUIPresenter(window)
     episode_progress = GUIProgressCallback(window)
-    episode_tab = SingleEpisodeTab(
-        window.get_config(), episode_presenter, episode_progress, stats_service=stats_service
-    )
-    app_module.register_mining_tab(window, episode_tab, episode_presenter, "Episode Mining")
-
     batch_presenter = GUIPresenter(window)
     batch_progress = GUIProgressCallback(window)
-    batch_tab = BatchProcessingTab(window.get_config(), batch_presenter, batch_progress, stats_service=stats_service)
-    app_module.register_mining_tab(window, batch_tab, batch_presenter, "Batch Mining")
+    youtube_presenter = GUIPresenter(window)
+    youtube_fetcher = create_youtube_fetcher(window.get_config())
+    video_tab = VideoTab(
+        window.get_config(),
+        episode_presenter=episode_presenter,
+        episode_progress=episode_progress,
+        batch_presenter=batch_presenter,
+        batch_progress=batch_progress,
+        youtube_presenter=youtube_presenter,
+        youtube_fetcher=youtube_fetcher,
+        stats_service=stats_service,
+    )
+    app_module.register_mining_tab(
+        window,
+        video_tab,
+        episode_presenter,
+        "Video",
+        extra_presenters=(batch_presenter, youtube_presenter),
+    )
 
     deck_builder_presenter = GUIPresenter(window)
     deck_builder_progress = GUIProgressCallback(window)
@@ -80,17 +90,6 @@ def _build_tabs(monkeypatch, test_config):
         stats_service=stats_service,
     )
     app_module.register_mining_tab(window, deck_builder_tab, deck_builder_presenter, "Deck Builder")
-
-    youtube_presenter = GUIPresenter(window)
-    youtube_fetcher = create_youtube_fetcher(window.get_config())
-    youtube_tab = YouTubeTab(
-        config=window.get_config(),
-        processor=None,
-        fetcher=youtube_fetcher,
-        presenter=youtube_presenter,
-        stats_service=stats_service,
-    )
-    app_module.register_mining_tab(window, youtube_tab, youtube_presenter, "YouTube")
 
     audiobook_presenter = GUIPresenter(window)
     audiobook_tab = AudiobookTab(
@@ -149,13 +148,13 @@ def test_deck_builder_tab_is_correct_type(wired_window):
     assert isinstance(tabs["Deck Builder"], DeckBuilderTab)
 
 
-def test_deck_builder_tab_after_batch_mining(wired_window):
-    """Deck Builder must appear right after Batch Mining (index 2)."""
+def test_deck_builder_tab_after_video(wired_window):
+    """Deck Builder must appear right after the Video container (index 1)."""
     _window, titles, _tabs = wired_window
-    assert titles.index("Deck Builder") == titles.index("Batch Mining") + 1
+    assert titles.index("Deck Builder") == titles.index("Video") + 1
 
 
-def test_deck_builder_tab_before_youtube(wired_window):
-    """Deck Builder must appear before YouTube."""
+def test_deck_builder_tab_before_audio(wired_window):
+    """Deck Builder must appear before Audio."""
     _window, titles, _tabs = wired_window
-    assert titles.index("Deck Builder") < titles.index("YouTube")
+    assert titles.index("Deck Builder") < titles.index("Audio")
