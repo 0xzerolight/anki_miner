@@ -357,6 +357,37 @@ def test_pretty_printed_paragraph_collapsed_to_single_line(tmp_path: Path) -> No
     assert [u.text for u in doc.units] == ["これはテストの文です。"]
 
 
+def test_unmatched_opener_paragraph_splits_into_sentences(tmp_path: Path) -> None:
+    # Shared-splitter fix: a paragraph whose 「 is never closed used to collapse
+    # into one over-long unit (same "wall of text" defect as manga); it now
+    # splits on the internal 。.
+    files = {
+        "OEBPS/content.opf": _opf(
+            [("c1", "ch1.xhtml", "application/xhtml+xml", "")],
+            [("c1", None)],
+        ),
+        "OEBPS/ch1.xhtml": _xhtml("<p>「あの人は言った。それから去った</p>"),
+    }
+    doc = load(_ref(_build_epub(tmp_path, files)))
+
+    assert [u.text for u in doc.units] == ["「あの人は言った。", "それから去った"]
+
+
+def test_balanced_quote_with_attribution_stays_one_unit(tmp_path: Path) -> None:
+    # A matched 「」 still suppresses its internal terminator: quote plus
+    # attribution remains a single mining unit (no over-splitting).
+    files = {
+        "OEBPS/content.opf": _opf(
+            [("c1", "ch1.xhtml", "application/xhtml+xml", "")],
+            [("c1", None)],
+        ),
+        "OEBPS/ch1.xhtml": _xhtml("<p>「行くぞ。」と彼は言った。</p>"),
+    }
+    doc = load(_ref(_build_epub(tmp_path, files)))
+
+    assert [u.text for u in doc.units] == ["「行くぞ。」と彼は言った。"]
+
+
 def test_chapter_fallback_to_spine_index(tmp_path: Path) -> None:
     # Nav lists only boilerplate labels → fewer than two usable → ch.{i}.
     files = {
