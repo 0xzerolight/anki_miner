@@ -148,7 +148,7 @@ class _ReadingMiningTabBase(MiningTabBase):
     # Run lifecycle
     # ------------------------------------------------------------------
 
-    def _launch_run(self, items: list[ReadingQueueItem], *, preview_mode: bool) -> bool:
+    def _launch_run(self, items: list[ReadingQueueItem]) -> bool:
         """Construct and start a :class:`ReadingQueueWorker` over *items*.
 
         *items* is the caller's already-filtered list of READY items. Returns
@@ -209,7 +209,6 @@ class _ReadingMiningTabBase(MiningTabBase):
             config=self._config,
             items=items,
             curation_callback=curation_cb,
-            preview_mode=preview_mode,
             processor_factory=processor_factory,
         )
         worker.item_started.connect(self._on_item_started)  # type: ignore[attr-defined]
@@ -225,15 +224,10 @@ class _ReadingMiningTabBase(MiningTabBase):
         worker.finished.connect(self._on_worker_finished)
         self.worker_thread = worker
 
-        mode_label = (
-            QCoreApplication.translate("ReadingTab", "Preview")
-            if preview_mode
-            else QCoreApplication.translate("ReadingTab", "Mine")
-        )
         self.log_widget.append_info(  # type: ignore[attr-defined]
             tr_format(
                 QCoreApplication.translate("ReadingTab", "%1 run starting — %2 items."),
-                mode_label,
+                QCoreApplication.translate("ReadingTab", "Mine"),
                 len(items),
             )
         )
@@ -258,7 +252,7 @@ class _ReadingMiningTabBase(MiningTabBase):
         ``SetupError`` carries a crafted, user-facing message and is surfaced
         verbatim; any other failure is logged and shown type-prefixed. Returns
         the detected refs on success, or ``None`` when detection failed (the
-        caller then aborts the Preview/Mine without starting a run).
+        caller then aborts the Mine without starting a run).
         """
         try:
             return detector.detect(path)
@@ -395,7 +389,7 @@ class _ReadingMiningTabBase(MiningTabBase):
         crash the run. Returns ``True`` after a successful release, or when there
         was nothing to release.
 
-        The processor is rebuilt lazily on the next Preview/Mine click via
+        The processor is rebuilt lazily on the next Mine click via
         ``_launch_run``.
         """
         if self.worker_thread is not None and self.worker_thread.isRunning():

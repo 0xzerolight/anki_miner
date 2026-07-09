@@ -111,11 +111,11 @@ class TestLaunchRunGuards:
 
     def test_refused_when_busy(self, tab):
         tab.worker_thread = MagicMock(name="ActiveWorker")
-        assert tab._launch_run([_make_item()], preview_mode=False) is False
+        assert tab._launch_run([_make_item()]) is False
         tab._queue_worker_cls.assert_not_called()
 
     def test_refused_when_empty(self, tab):
-        assert tab._launch_run([], preview_mode=False) is False
+        assert tab._launch_run([]) is False
         assert tab.worker_thread is None
         tab._queue_worker_cls.assert_not_called()
 
@@ -125,7 +125,7 @@ class TestLaunchRunGuards:
             widget = _ConcreteReadingTab(config=test_config, processor=None, presenter=None)
             qtbot.addWidget(widget)
             try:
-                assert widget._launch_run([_make_item()], preview_mode=False) is False
+                assert widget._launch_run([_make_item()]) is False
                 q_cls.assert_not_called()
                 assert widget.worker_thread is None
                 assert "not initialized" in widget.log_widget.text_edit.toPlainText().lower()
@@ -138,28 +138,22 @@ class TestLaunchRunStart:
 
     def test_returns_true_and_starts(self, tab):
         item = _make_item()
-        assert tab._launch_run([item], preview_mode=False) is True
+        assert tab._launch_run([item]) is True
         assert tab.worker_thread is not None
         tab.worker_thread.start.assert_called_once()
         assert tab._run_items == [item]
 
-    def test_preview_mode_true(self, tab):
-        tab._launch_run([_make_item()], preview_mode=True)
-        assert tab._queue_worker_cls.call_args.kwargs["preview_mode"] is True
-
-    def test_preview_mode_false(self, tab):
-        tab._launch_run([_make_item()], preview_mode=False)
-        assert tab._queue_worker_cls.call_args.kwargs["preview_mode"] is False
-
     def test_passes_config_and_items(self, tab):
         item = _make_item()
-        tab._launch_run([item], preview_mode=False)
+        tab._launch_run([item])
         kwargs = tab._queue_worker_cls.call_args.kwargs
         assert kwargs["config"] is tab._config
         assert kwargs["items"] == [item]
+        # No preview plumbing survives on the worker ctor.
+        assert "preview_mode" not in kwargs
 
     def test_wires_worker_signals_to_slots(self, tab):
-        tab._launch_run([_make_item()], preview_mode=False)
+        tab._launch_run([_make_item()])
         worker = tab.worker_thread
 
         worker.item_started.connect.assert_called_once_with(tab._on_item_started)
@@ -172,16 +166,16 @@ class TestLaunchRunStart:
         worker.error.connect.assert_called_once_with(tab._on_run_error)
 
     def test_logs_run_banner(self, tab):
-        tab._launch_run([_make_item(), _make_item(title="v2")], preview_mode=False)
+        tab._launch_run([_make_item(), _make_item(title="v2")])
         assert "2 items" in tab.log_widget.text_edit.toPlainText()
 
     def test_curation_callback_none_when_unchecked(self, tab):
-        tab._launch_run([_make_item()], preview_mode=False)
+        tab._launch_run([_make_item()])
         assert tab._queue_worker_cls.call_args.kwargs["curation_callback"] is None
 
     def test_curation_callback_bridge_when_checked(self, tab):
         tab.review_words_checkbox.setChecked(True)
-        tab._launch_run([_make_item()], preview_mode=False)
+        tab._launch_run([_make_item()])
         # Bound methods compare by ``==`` (fresh wrapper per attribute access).
         assert tab._queue_worker_cls.call_args.kwargs["curation_callback"] == tab._curation_bridge
 
@@ -190,7 +184,7 @@ class TestLaunchRunStart:
         the absence of any such attribute on the minimal subclass; the run still
         starts without one."""
         assert not hasattr(tab, "progress_widget")
-        assert tab._launch_run([_make_item()], preview_mode=False) is True
+        assert tab._launch_run([_make_item()]) is True
 
 
 class TestItemAt:
@@ -198,11 +192,11 @@ class TestItemAt:
 
     def test_in_range_returns_item(self, tab):
         item = _make_item()
-        tab._launch_run([item], preview_mode=False)
+        tab._launch_run([item])
         assert tab._item_at(0) is item
 
     def test_out_of_range_returns_none(self, tab):
-        tab._launch_run([_make_item()], preview_mode=False)
+        tab._launch_run([_make_item()])
         assert tab._item_at(99) is None
         assert tab._item_at(-1) is None
 
@@ -250,7 +244,7 @@ class TestDeferredProcessor:
             )
             qtbot.addWidget(widget)
             try:
-                widget._launch_run([_make_item()], preview_mode=False)
+                widget._launch_run([_make_item()])
 
                 assert mock_create.call_count == 0
                 assert q_cls.call_args.kwargs["processor"] is None
@@ -264,7 +258,7 @@ class TestDeferredProcessor:
                 widget.deleteLater()
 
     def test_cached_processor_passes_prebuilt_no_factory(self, tab):
-        tab._launch_run([_make_item()], preview_mode=False)
+        tab._launch_run([_make_item()])
         assert tab._queue_worker_cls.call_args.kwargs["processor"] is tab._processor
         assert tab._queue_worker_cls.call_args.kwargs["processor_factory"] is None
 
@@ -274,7 +268,7 @@ class TestDeferredProcessor:
             widget = _ConcreteReadingTab(config=test_config, processor=None, presenter=MagicMock(name="Presenter"))
             qtbot.addWidget(widget)
             try:
-                widget._launch_run([_make_item()], preview_mode=False)
+                widget._launch_run([_make_item()])
                 built = MagicMock(name="BuiltProcessor")
                 widget.worker_thread.curation_processor = built  # type: ignore[union-attr]
 
@@ -290,7 +284,7 @@ class TestWorkerFinished:
     """`QThread.finished` is the single cleanup signal for every run-exit path."""
 
     def test_clears_worker_and_snapshot(self, tab):
-        tab._launch_run([_make_item()], preview_mode=False)
+        tab._launch_run([_make_item()])
         assert tab.worker_thread is not None
 
         tab._on_worker_finished()
@@ -299,7 +293,7 @@ class TestWorkerFinished:
         assert tab._run_items == []
 
     def test_calls_after_run_cleanup_hook(self, tab):
-        tab._launch_run([_make_item()], preview_mode=False)
+        tab._launch_run([_make_item()])
         before = tab.cleanup_calls
 
         tab._on_worker_finished()
@@ -311,7 +305,7 @@ class TestShutdown:
     """shutdown() releases curation, then cancels and joins the worker."""
 
     def test_shutdown_with_active_worker(self, tab):
-        tab._launch_run([_make_item()], preview_mode=False)
+        tab._launch_run([_make_item()])
         worker = tab.worker_thread
 
         tab.shutdown()
@@ -370,7 +364,7 @@ class TestUpdateConfig:
         old_processor.release_dictionary_resources.assert_not_called()
 
     def test_update_config_busy_sets_dirty_flag(self, tab, test_config):
-        tab._launch_run([_make_item()], preview_mode=False)
+        tab._launch_run([_make_item()])
         tab.worker_thread.isRunning.return_value = True  # type: ignore[union-attr]
         original_processor = tab._processor
 
@@ -385,7 +379,7 @@ class TestUpdateConfig:
         mock_create.assert_not_called()
 
     def test_worker_finished_reconciles_dirty_config(self, tab, test_config):
-        tab._launch_run([_make_item()], preview_mode=False)
+        tab._launch_run([_make_item()])
         tab.worker_thread.isRunning.return_value = True
         original_processor = tab._processor
 
@@ -411,7 +405,7 @@ class TestReleaseDictionaryResources:
         assert tab._processor is None
 
     def test_release_refused_during_run(self, tab):
-        tab._launch_run([_make_item()], preview_mode=False)
+        tab._launch_run([_make_item()])
         tab.worker_thread.isRunning.return_value = True  # type: ignore[union-attr]
 
         assert tab.release_dictionary_resources() is False

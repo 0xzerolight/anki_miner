@@ -343,7 +343,6 @@ class YouTubeTab(MiningTabBase):
             config=self._config,
             items=ready_items,
             curation_callback=curation_cb,
-            preview_mode=False,
             processor_factory=processor_factory,
         )
         worker.item_started.connect(self._on_item_started)

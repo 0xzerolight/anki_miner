@@ -38,7 +38,6 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
         processor: EpisodeProcessor | None,
         video_file: Path,
         subtitle_file: Path,
-        preview_mode: bool,
         progress_callback: ProgressCallback,
         curation_callback: Callable[[list], list | None] | None = None,
         parent=None,
@@ -53,7 +52,6 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
                 is provided (the processor is then built at run() start).
             video_file: Path to video file
             subtitle_file: Path to subtitle file
-            preview_mode: If True, only preview words without creating cards
             progress_callback: Progress callback for updates
             curation_callback: Optional callback for word curation
             parent: Optional parent QObject
@@ -72,7 +70,6 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
         self._processor_factory = processor_factory
         self.video_file = video_file
         self.subtitle_file = subtitle_file
-        self.preview_mode = preview_mode
         self.progress_callback = progress_callback
         self.curation_callback = curation_callback
         self.audio_track_override = audio_track_override
@@ -112,8 +109,7 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
             result = self.processor.process_episode(
                 self.video_file,
                 self.subtitle_file,
-                self.preview_mode,
-                self.progress_callback,
+                progress_callback=self.progress_callback,
                 curation_callback=self.curation_callback,
                 audio_track_override=self.audio_track_override,
                 cancel_event=self._cancel_event,

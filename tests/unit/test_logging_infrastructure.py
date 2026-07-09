@@ -345,7 +345,6 @@ class TestWorkerExceptionLogging:
             processor=processor,
             video_file=Path("/fake/video.mkv"),
             subtitle_file=Path("/fake/subs.ass"),
-            preview_mode=False,
             progress_callback=MagicMock(),
         )
 
@@ -386,7 +385,6 @@ class TestWorkerExceptionLogging:
             processor.process_episode(
                 Path("/fake/video.mkv"),
                 Path("/fake/subs.ass"),
-                preview_mode=False,
                 progress_callback=NullProgressCallback(),
             )
 

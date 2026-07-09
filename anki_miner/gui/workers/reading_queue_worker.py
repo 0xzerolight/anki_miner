@@ -77,7 +77,6 @@ class ReadingQueueWorker(ProcessorOwningWorker):
         config: AnkiMinerConfig,
         items: list[ReadingQueueItem],
         curation_callback: Callable[[list], list | None] | None,
-        preview_mode: bool,
         parent=None,
         *,
         processor_factory: Callable[[], EpisodeProcessor] | None = None,
@@ -89,11 +88,8 @@ class ReadingQueueWorker(ProcessorOwningWorker):
                 ``processor_factory`` is provided (built at run() start).
             config: Frozen app config.
             items: Queue items to process, in order (frozen snapshot).
-            curation_callback: Forwarded unconditionally to
-                ``process_reading``, which internally gates invocation on
-                ``not preview_mode``, so curation fires only on Mine runs.
-                Pass ``None`` to disable entirely.
-            preview_mode: If True, mining produces previews instead of cards.
+            curation_callback: Forwarded to ``process_reading``. Pass ``None``
+                to disable entirely (the tab gates on its review checkbox).
             parent: Optional parent QObject.
             processor_factory: Zero-arg callable that returns an EpisodeProcessor.
                 Mutually exclusive with a non-None ``processor``.  When supplied,
@@ -110,7 +106,6 @@ class ReadingQueueWorker(ProcessorOwningWorker):
         self._config = config
         self._items = items
         self._curation_callback = curation_callback
-        self._preview_mode = preview_mode
         # D8 (amended): no _curation_video/_curation_subtitle/_curation_offset
         # here — novels curation is table-only. Manga curation reads
         # curation_document instead (set per item in _mine_one). It is read
@@ -201,10 +196,7 @@ class ReadingQueueWorker(ProcessorOwningWorker):
         assert self._processor is not None  # built at run() start
         return self._processor.process_reading(
             document,
-            preview_mode=self._preview_mode,
             progress_callback=mining_cb,
-            # process_reading gates curation on not preview_mode, so this fires
-            # only on Mine runs; passing it unconditionally is correct.
             curation_callback=self._curation_callback,
             # Bridge Stop mid-mine into the processor's phase checkpoints.
             # Must be the event, NOT processor.cancel(): the sticky

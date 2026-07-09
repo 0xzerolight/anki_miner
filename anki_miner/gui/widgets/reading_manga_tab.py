@@ -258,7 +258,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             return
 
         items = [ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind) for ref in refs]
-        if self._launch_run(items, preview_mode=False):
+        if self._launch_run(items):
             self._begin_progress(len(items))
             self._recompute_buttons()
 
