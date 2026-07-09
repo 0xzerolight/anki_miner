@@ -94,14 +94,12 @@ def test_single_cancel_click_releases_active_curation_dialog(single_tab):
 
 def test_single_restore_buttons_hides_cancel_and_shows_actions(single_tab):
     single_tab.cancel_button.show()
-    single_tab.preview_button.hide()
     single_tab.process_button.hide()
     single_tab._is_processing = True
 
     single_tab._restore_buttons()
 
     assert single_tab.cancel_button.isHidden()
-    assert not single_tab.preview_button.isHidden()
     assert not single_tab.process_button.isHidden()
     assert not single_tab.timing_button.isHidden()
     assert not single_tab.tracks_button.isHidden()

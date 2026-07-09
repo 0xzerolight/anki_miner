@@ -6,8 +6,8 @@ machine. Behaviour under test:
 * Add: creates a PROBING item, spawns a probe worker, clears the URL field.
 * Probe outcomes: success → READY; failure → PROBE_ERROR.
 * Buttons: enabled iff ≥1 READY item exists and no run is active.
-* Preview / Mine: instantiates :class:`YouTubeQueueWorker` with the right
-  ``preview_mode`` and starts it.
+* Mine: instantiates :class:`YouTubeQueueWorker` over a READY-items snapshot
+  and starts it.
 * Stop All: forwards to ``worker.cancel()``.
 * Per-item signals (``item_started`` / ``item_progress`` / ``item_finished``)
   update the queue model + row widgets + progress widget.
@@ -159,7 +159,6 @@ class TestInitialState:
     def test_empty_queue_buttons(self, tab):
         assert tab._queue.all_items() == []
         assert tab.add_button.isEnabled()
-        assert not tab.preview_button.isEnabled()
         assert not tab.mine_button.isEnabled()
         assert not tab.clear_button.isEnabled()
         assert tab.stop_button.isHidden()
@@ -283,7 +282,6 @@ class TestProbeOutcomes:
         assert item.video_info is not None
         assert item.video_id == "abc123"
         assert item.resolved_sub_mode == "manual_only"
-        assert tab.preview_button.isEnabled()
         assert tab.mine_button.isEnabled()
         assert tab.clear_button.isEnabled()
 
@@ -306,7 +304,6 @@ class TestProbeOutcomes:
 
         assert item.status == YouTubeItemStatus.PROBE_ERROR
         assert "live" in (item.error_message or "").lower()
-        assert not tab.preview_button.isEnabled()
         assert not tab.mine_button.isEnabled()
 
     def test_probe_done_too_long_marks_probe_error(self, tab):
@@ -320,7 +317,6 @@ class TestProbeOutcomes:
         )
 
         assert item.status == YouTubeItemStatus.PROBE_ERROR
-        assert not tab.preview_button.isEnabled()
 
     def test_probe_done_age_locked_without_cookies(self, tab):
         tab.url_edit.setText("https://youtu.be/abc")
@@ -350,7 +346,6 @@ class TestProbeOutcomes:
 
         assert item.status == YouTubeItemStatus.PROBE_ERROR
         assert item.error_message == "yt-dlp exploded"
-        assert not tab.preview_button.isEnabled()
         assert not tab.mine_button.isEnabled()
 
     def test_probe_error_with_ready_sibling_keeps_buttons_enabled(self, tab):
@@ -363,7 +358,6 @@ class TestProbeOutcomes:
         bad = tab._queue.all_items()[-1]
         tab._add_flow._on_probe_error(bad, "nope")
 
-        assert tab.preview_button.isEnabled()
         assert tab.mine_button.isEnabled()
 
     def test_probe_finished_removes_worker_and_calls_delete_later(self, tab):
@@ -516,30 +510,21 @@ class TestDeferredProcessor:
 
 
 class TestRunStartup:
-    """Preview / Mine buttons construct the queue worker correctly."""
+    """The Mine button constructs the queue worker correctly."""
 
-    def test_mine_constructs_queue_worker_preview_false(self, tab):
+    def test_mine_constructs_queue_worker(self, tab):
         _add_ready_item(tab)
         queue_cls = tab._queue_worker_cls
         tab._on_mine_clicked()
 
         assert queue_cls.call_count == 1
         kwargs = queue_cls.call_args.kwargs
-        assert kwargs["preview_mode"] is False
         assert kwargs["processor"] is tab._processor
         assert kwargs["config"] is tab._config
         # Curation callback gated by the (default-unchecked) review checkbox.
         assert kwargs["curation_callback"] is None
         # Worker handle set.
         assert tab.worker_thread is not None
-
-    def test_preview_constructs_queue_worker_preview_true(self, tab):
-        _add_ready_item(tab)
-        queue_cls = tab._queue_worker_cls
-        tab._on_preview_clicked()
-
-        kwargs = queue_cls.call_args.kwargs
-        assert kwargs["preview_mode"] is True
 
     def test_mine_passes_ready_items_only(self, tab):
         _add_ready_item(tab, "https://youtu.be/v1")
@@ -566,7 +551,6 @@ class TestRunStartup:
         tab._on_mine_clicked()
 
         assert not tab.add_button.isEnabled()
-        assert not tab.preview_button.isEnabled()
         assert not tab.mine_button.isEnabled()
         assert not tab.stop_button.isHidden()
 
@@ -792,9 +776,8 @@ class TestWorkerFinished:
         tab._on_queue_finished()
         tab._on_worker_finished()
 
-        # No more READY items; Preview/Mine disabled, Add re-enabled, Stop hidden.
+        # No more READY items; Mine disabled, Add re-enabled, Stop hidden.
         assert tab.add_button.isEnabled()
-        assert not tab.preview_button.isEnabled()
         assert not tab.mine_button.isEnabled()
         assert tab.stop_button.isHidden()
         # Item record preserved.
@@ -819,7 +802,7 @@ class TestWorkerFinished:
         tab._on_mine_clicked()
         tab._on_item_started(0)
         # Simulate the fetcher's final indeterminate emit — last signal before
-        # the mining pipeline short-circuits on a zero-unknown-word preview.
+        # the mining pipeline short-circuits on a zero-unknown-word run.
         tab._on_item_progress(0, "Merging", -1)
         assert tab.progress_widget.progress_bar.maximum() == 0  # indeterminate
         assert "Merging" in tab.progress_widget.status_label.text()
@@ -1064,7 +1047,7 @@ class TestUpdateConfig:
     def test_update_config_idle_drops_processor_to_none(self, tab, test_config):
         """update_config when idle drops processor to None (lazy-drop, OVH-014).
 
-        No eager rebuild — _start_run will rebuild on the next Mine/Preview.
+        No eager rebuild — _start_run will rebuild on the next Mine.
         The old processor must be fully closed (OVH-055, Issue #30).
         """
         old_processor = tab._processor
