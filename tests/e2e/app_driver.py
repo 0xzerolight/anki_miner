@@ -96,7 +96,7 @@ class AppDriver:
 
     Construct it, register ``driver.window`` AND ``driver.tab`` with
     ``qtbot.addWidget`` in the test, switch tabs / trigger menu actions / drive a
-    preview-or-process run, then :meth:`teardown` (in pytest; ``dispose`` in the
+    process run, then :meth:`teardown` (in pytest; ``dispose`` in the
     non-pytest soak loop).
 
     Args:
@@ -163,7 +163,6 @@ class AppDriver:
             # (register_mining_tab's processing_result connection) through a spy
             # so a run pops the patched ResultsDialog and we can count it.
             self._tab_driver.presenter.processing_result_signal.connect(self._on_window_result)
-            self._tab_driver.presenter.word_preview_signal.connect(self.window._on_word_preview)
         except Exception:
             # Construction failed after the patches were entered — unwind them so
             # we don't leak a global monkeypatch into the rest of the suite.
@@ -206,10 +205,6 @@ class AppDriver:
     def set_offset(self, seconds: float) -> None:
         """Set the subtitle-offset spinbox value."""
         self._tab_driver.set_offset(seconds)
-
-    def click_preview(self) -> None:
-        """Click the real Preview button and arm result capture."""
-        self._tab_driver.click_preview()
 
     def click_process(self) -> None:
         """Click the real Process button and arm result capture (card creation)."""
@@ -291,8 +286,8 @@ class AppDriver:
         Does NOT exit the held-open patches or release any QWidget — the SAME
         AppDriver is reused for the next session in the soak loop, so the dialog/
         responder/start_validation patches MUST stay open (a torn-down
-        WordPreviewDialog/ResultsDialog patch would make the next preview block on
-        the real modal) and the window/tab must survive. Final cleanup is
+        ResultsDialog patch would make the next run block on the real modal)
+        and the window/tab must survive. Final cleanup is
         :meth:`dispose`. Idempotent and safe when no run ever started.
         """
         tab_driver = getattr(self, "_tab_driver", None)
