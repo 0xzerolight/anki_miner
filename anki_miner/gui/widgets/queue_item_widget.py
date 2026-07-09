@@ -8,7 +8,6 @@ from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
-    QProgressBar,
     QPushButton,
     QSizePolicy,
     QVBoxLayout,
@@ -29,7 +28,6 @@ class QueueItemWidget(QFrame):
     - Body: Folder paths (truncated), episode count, statistics
     - Footer: Edit and Remove buttons
     - Status badges: Pending, Processing, Complete
-    - Progress overlay when processing
     - Collapsible details
     - Visual feedback on hover
 
@@ -135,14 +133,6 @@ class QueueItemWidget(QFrame):
         self.body_widget.setLayout(body_layout)
         main_layout.addWidget(self.body_widget)
 
-        # Progress bar (hidden by default)
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setObjectName("queue-progress")
-        self.progress_bar.setMaximumHeight(4)
-        self.progress_bar.setTextVisible(False)
-        self.progress_bar.setVisible(False)
-        main_layout.addWidget(self.progress_bar)
-
         # Footer: Action buttons
         footer_layout = QHBoxLayout()
         footer_layout.setSpacing(SPACING.xs)
@@ -209,23 +199,6 @@ class QueueItemWidget(QFrame):
         """
         self._status = status
         self._update_status_badge()
-
-        # Show/hide progress bar
-        if status == "processing":
-            self.progress_bar.setVisible(True)
-        else:
-            self.progress_bar.setVisible(False)
-
-    def set_progress(self, current: int, total: int) -> None:
-        """Set the progress of processing.
-
-        Args:
-            current: Current episode number
-            total: Total episode count
-        """
-        if total > 0:
-            percentage = int((current / total) * 100)
-            self.progress_bar.setValue(percentage)
 
     def set_episode_count(self, count: int) -> None:
         """Set the episode count.
