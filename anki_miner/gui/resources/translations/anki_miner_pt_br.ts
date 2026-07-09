@@ -2846,8 +2846,8 @@ A fonte de frequência não foi removida.</translation>
         <translation>Análises</translation>
     </message>
     <message>
-        <source>Subtitles</source>
-        <translation>Legendas</translation>
+        <source>Tools</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Settings</source>
@@ -5213,6 +5213,14 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
         <translation>%1
 
 (%2 frases disponíveis — foque na linha e escolha uma em “Frases”)</translation>
+    </message>
+    <message>
+        <source>No page image for this word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not load page image</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Copy lemma</source>

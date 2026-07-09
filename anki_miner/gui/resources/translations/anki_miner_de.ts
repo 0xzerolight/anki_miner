@@ -2847,8 +2847,8 @@ Die Häufigkeitsquelle wurde nicht entfernt.</translation>
         <translation>Analytik</translation>
     </message>
     <message>
-        <source>Subtitles</source>
-        <translation>Untertitel</translation>
+        <source>Tools</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Settings</source>
@@ -5214,6 +5214,14 @@ Gehen Sie zu Einstellungen → ASR, um es vor dem Erstellen von Untertiteln heru
         <translation>%1
 
 (%2 Sätze verfügbar — fokussieren Sie die Zeile und wählen Sie dann einen unter „Sätze“)</translation>
+    </message>
+    <message>
+        <source>No page image for this word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not load page image</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Copy lemma</source>

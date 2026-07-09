@@ -2856,8 +2856,8 @@ The frequency source was not removed.</source>
         <translation>Аналитика</translation>
     </message>
     <message>
-        <source>Subtitles</source>
-        <translation>Субтитры</translation>
+        <source>Tools</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Settings</source>
@@ -5224,6 +5224,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>%1
 
 (доступно предложений: %2 — выделите строку, затем выберите одно в столбце «Предложения»)</translation>
+    </message>
+    <message>
+        <source>No page image for this word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not load page image</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Copy lemma</source>

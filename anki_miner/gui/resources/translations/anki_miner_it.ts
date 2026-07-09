@@ -2846,8 +2846,8 @@ La sorgente di frequenza non è stata rimossa.</translation>
         <translation>Analisi</translation>
     </message>
     <message>
-        <source>Subtitles</source>
-        <translation>Sottotitoli</translation>
+        <source>Tools</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Settings</source>
@@ -5213,6 +5213,14 @@ Andare in Impostazioni → ASR per scaricarlo prima di generare i sottotitoli.</
         <translation>%1
 
 (%2 frasi disponibili — mettere a fuoco la riga, poi sceglierne una sotto “Frasi”)</translation>
+    </message>
+    <message>
+        <source>No page image for this word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not load page image</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Copy lemma</source>

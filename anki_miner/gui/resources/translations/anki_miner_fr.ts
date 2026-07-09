@@ -2846,8 +2846,8 @@ La source de fréquence n'a pas été supprimée.</translation>
         <translation>Statistiques</translation>
     </message>
     <message>
-        <source>Subtitles</source>
-        <translation>Sous-titres</translation>
+        <source>Tools</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Settings</source>
@@ -5213,6 +5213,14 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>%1
 
 (%2 phrases disponibles — sélectionnez la ligne, puis choisissez-en une sous « Phrases »)</translation>
+    </message>
+    <message>
+        <source>No page image for this word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not load page image</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Copy lemma</source>

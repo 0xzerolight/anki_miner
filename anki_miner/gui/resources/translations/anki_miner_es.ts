@@ -2846,8 +2846,8 @@ La fuente de frecuencia no se quitó.</translation>
         <translation>Analíticas</translation>
     </message>
     <message>
-        <source>Subtitles</source>
-        <translation>Subtítulos</translation>
+        <source>Tools</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Settings</source>
@@ -5213,6 +5213,14 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
         <translation>%1
 
 (%2 frases disponibles; enfoque la fila y luego elija una en «Frases»)</translation>
+    </message>
+    <message>
+        <source>No page image for this word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not load page image</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Copy lemma</source>
