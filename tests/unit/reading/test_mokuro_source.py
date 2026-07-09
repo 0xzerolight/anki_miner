@@ -229,6 +229,51 @@ def test_over_threshold_unbalanced_bracket_block_splits(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# Block bounding boxes (block_box)
+# ---------------------------------------------------------------------------
+def test_unit_carries_block_box(tmp_path):
+    block = _block(["ふきだし"], box=[10, 20, 110, 220])
+    doc = load(_write_ref(tmp_path, _mokuro([_page("001.jpg", [block])]), None))
+    assert [u.block_box for u in doc.units] == [(10, 20, 110, 220)]
+
+
+def test_split_pieces_share_parent_block_box(tmp_path):
+    piece = "「せりふ。」"
+    joined = piece * 30  # over threshold -> sentence-split
+    assert len(joined) > _BLOCK_SPLIT_THRESHOLD
+    block = _block([joined], box=[5, 6, 700, 800])
+    doc = load(_write_ref(tmp_path, _mokuro([_page("001.jpg", [block])]), None))
+    assert len(doc.units) == 30
+    assert all(u.block_box == (5, 6, 700, 800) for u in doc.units)
+
+
+def test_missing_box_yields_none(tmp_path):
+    block = _block(["はこなし"])
+    del block["box"]
+    doc = load(_write_ref(tmp_path, _mokuro([_page("001.jpg", [block])]), None))
+    assert [u.block_box for u in doc.units] == [None]
+
+
+def test_malformed_box_yields_none(tmp_path):
+    null_box = _block(["ぬる"])
+    null_box["box"] = None  # explicit null (the fixture's `box or default` would swallow it)
+    blocks = [
+        _block(["みじかい"], box=[1, 2, 3]),  # 3 elements
+        _block(["もじれつ"], box=["a", "b", "c", "d"]),  # non-numeric
+        null_box,
+        _block(["すから"], box="0,0,10,10"),  # wrong type
+    ]
+    doc = load(_write_ref(tmp_path, _mokuro([_page("001.jpg", blocks)]), None))
+    assert [u.block_box for u in doc.units] == [None, None, None, None]
+
+
+def test_float_box_coerced_to_ints(tmp_path):
+    block = _block(["こてい"], box=[1.9, 2.1, 100.5, 200.0])
+    doc = load(_write_ref(tmp_path, _mokuro([_page("001.jpg", [block])]), None))
+    assert [u.block_box for u in doc.units] == [(1, 2, 100, 200)]
+
+
+# ---------------------------------------------------------------------------
 # Ordering / indexing / labels
 # ---------------------------------------------------------------------------
 def test_pages_and_blocks_keep_file_order(tmp_path):

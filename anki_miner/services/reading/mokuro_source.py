@@ -91,8 +91,10 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
             else:
                 image_ref = record.ref
         label = f"p.{page_num}"
-        for text in _page_unit_texts(page):
-            doc.units.append(ReadingUnit(text=text, index=index, location_label=label, image_ref=image_ref))
+        for text, box in _page_unit_entries(page):
+            doc.units.append(
+                ReadingUnit(text=text, index=index, location_label=label, image_ref=image_ref, block_box=box)
+            )
             index += 1
     return doc
 
@@ -100,19 +102,36 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
 # --------------------------------------------------------------------------- #
 # Text assembly
 # --------------------------------------------------------------------------- #
-def _page_unit_texts(page: dict) -> list[str]:
-    """Mineable unit texts for one page, in block order (split units expanded)."""
-    texts: list[str] = []
+def _page_unit_entries(page: dict) -> list[tuple[str, tuple[int, int, int, int] | None]]:
+    """Mineable (text, block_box) pairs for one page, in block order.
+
+    Split units are expanded; every sentence piece of one oversized block
+    shares the parent block's box.
+    """
+    entries: list[tuple[str, tuple[int, int, int, int] | None]] = []
     for block in page.get("blocks", []) or []:
         cleaned = _sanitize_block(block.get("lines", []) or [])
         if not cleaned:
             continue
+        box = _block_box(block)
         if len(cleaned) > _BLOCK_SPLIT_THRESHOLD:
             pieces = split_sentences(cleaned, split_adjacent_quotes=True)
         else:
             pieces = [cleaned]
-        texts.extend(piece for piece in pieces if _is_mineable(piece))
-    return texts
+        entries.extend((piece, box) for piece in pieces if _is_mineable(piece))
+    return entries
+
+
+def _block_box(block: dict) -> tuple[int, int, int, int] | None:
+    """The block's ``box`` as an int 4-tuple, or None when absent/malformed."""
+    raw = block.get("box")
+    if not isinstance(raw, (list, tuple)) or len(raw) != 4:
+        return None
+    try:
+        xmin, ymin, xmax, ymax = (int(v) for v in raw)
+    except (TypeError, ValueError):
+        return None
+    return (xmin, ymin, xmax, ymax)
 
 
 def _sanitize_block(lines: list[str]) -> str:

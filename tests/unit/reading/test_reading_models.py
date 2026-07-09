@@ -64,6 +64,17 @@ def test_reading_unit_carries_image_ref():
     assert unit.image_ref is ref
 
 
+def test_reading_unit_block_box_defaults_none():
+    # Novels/txt (and pre-box constructions) never pass block_box.
+    unit = ReadingUnit(text="本文", index=0, location_label="ch.1")
+    assert unit.block_box is None
+
+
+def test_reading_unit_carries_block_box():
+    unit = ReadingUnit(text="", index=1, location_label="p.2", block_box=(1, 2, 3, 4))
+    assert unit.block_box == (1, 2, 3, 4)
+
+
 def test_reading_source_ref_is_frozen():
     ref = ReadingSourceRef(
         kind="mokuro",
