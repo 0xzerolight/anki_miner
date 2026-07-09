@@ -786,14 +786,6 @@ El paquete de audio no se quitó.</translation>
         <translation>Muestra la ventana emergente de selección de palabras para cada archivo de audio antes de crear tarjetas.</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation>Vista previa</translation>
-    </message>
-    <message>
-        <source>Run the queue in preview mode — no cards created.</source>
-        <translation>Ejecutar la cola en modo de vista previa: no se crean tarjetas.</translation>
-    </message>
-    <message>
         <source>Mine</source>
         <translation>Minar</translation>
     </message>
@@ -908,14 +900,6 @@ El paquete de audio no se quitó.</translation>
         <translation>Carpeta de subtítulos:</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation>Vista previa</translation>
-    </message>
-    <message>
-        <source>Preview video/subtitle pairs before processing</source>
-        <translation>Previsualizar los pares de video/subtítulos antes de procesar</translation>
-    </message>
-    <message>
         <source>Process Folder</source>
         <translation>Procesar carpeta</translation>
     </message>
@@ -942,12 +926,6 @@ El paquete de audio no se quitó.</translation>
     <message>
         <source>No Pairs Found</source>
         <translation>No se encontraron pares</translation>
-    </message>
-    <message>
-        <source>No matching video/subtitle pairs found.
-Files pair by episode number — point each folder at a single show.</source>
-        <translation>No se encontraron pares de vídeo/subtítulos coincidentes.
-Los archivos se emparejan por número de episodio — apunte cada carpeta a una sola serie.</translation>
     </message>
     <message>
         <source>No matching video/subtitle pairs found</source>
@@ -3122,40 +3100,6 @@ Continue?</source>
         <translation>Resincronizar</translation>
     </message>
 </context><context>
-    <name>MangaVolumesPreviewDialog</name>
-    <message>
-        <source>Preview Volumes — %1 found</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volume Preview: %1 volume(s)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Title</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volume</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Format</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Source</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volumes mine in order. No cards are created by Preview.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Close</source>
-        <translation type="unfinished">Cerrar</translation>
-    </message>
-</context><context>
     <name>MediaExtractorService</name>
     <message>
         <source>Extracting media</source>
@@ -3372,60 +3316,6 @@ Puede ajustar esto más tarde en Ajustes → Anki.</translation>
     <message>
         <source>Silence-removal library installed successfully.</source>
         <translation>Biblioteca de eliminación de silencios instalada correctamente.</translation>
-    </message>
-</context><context>
-    <name>PairPreviewDialog</name>
-    <message>
-        <source>Preview File Pairs - %1 pairs found</source>
-        <translation>Vista previa de pares de archivos - %1 pares encontrados</translation>
-    </message>
-    <message>
-        <source>File Pair Preview: %1 pairs</source>
-        <translation>Vista previa de pares de archivos: %1 pares</translation>
-    </message>
-    <message>
-        <source>%1 video/subtitle pairs</source>
-        <translation>%1 pares de video/subtítulos</translation>
-    </message>
-    <message>
-        <source>Total size: %1</source>
-        <translation>Tamaño total: %1</translation>
-    </message>
-    <message>
-        <source>Video: %1 • Subtitles: %2</source>
-        <translation>Video: %1 • Subtítulos: %2</translation>
-    </message>
-    <message>
-        <source>Paired Files</source>
-        <translation>Archivos emparejados</translation>
-    </message>
-    <message>
-        <source>Video File</source>
-        <translation>Archivo de video</translation>
-    </message>
-    <message>
-        <source>Video Size</source>
-        <translation>Tamaño del video</translation>
-    </message>
-    <message>
-        <source>Subtitle File</source>
-        <translation>Archivo de subtítulos</translation>
-    </message>
-    <message>
-        <source>Subtitle Size</source>
-        <translation>Tamaño de los subtítulos</translation>
-    </message>
-    <message>
-        <source>Pairs process in order.</source>
-        <translation>Los pares se procesan en orden.</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Cancelar</translation>
-    </message>
-    <message>
-        <source>Proceed with Processing</source>
-        <translation>Continuar con el procesamiento</translation>
     </message>
 </context><context>
     <name>PlaylistAddController</name>
@@ -3672,14 +3562,6 @@ Puede ajustar esto más tarde en Ajustes → Anki.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">Vista previa</translation>
-    </message>
-    <message>
-        <source>List the volume(s) this folder would mine — no cards created.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Mine</source>
         <translation type="unfinished">Minar</translation>
     </message>
@@ -3758,14 +3640,6 @@ Puede ajustar esto más tarde en Ajustes → Anki.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">Vista previa</translation>
-    </message>
-    <message>
-        <source>Preview the selected book — no cards created.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Mine</source>
         <translation type="unfinished">Minar</translation>
     </message>
@@ -3816,16 +3690,12 @@ Puede ajustar esto más tarde en Ajustes → Anki.</translation>
         <translation type="unfinished">Minería no disponible; servicios no inicializados.</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">Vista previa</translation>
+        <source>%1 run starting — %2 items.</source>
+        <translation type="unfinished">Iniciando ejecución de %1; %2 elementos.</translation>
     </message>
     <message>
         <source>Mine</source>
         <translation type="unfinished">Minar</translation>
-    </message>
-    <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation type="unfinished">Iniciando ejecución de %1; %2 elementos.</translation>
     </message>
     <message>
         <source>Could not process %1: %2</source>
@@ -4228,14 +4098,6 @@ Detalles: %2</translation>
     <message>
         <source>Actions</source>
         <translation>Acciones</translation>
-    </message>
-    <message>
-        <source>Preview Words</source>
-        <translation>Vista previa de palabras</translation>
-    </message>
-    <message>
-        <source>Preview discovered words before creating cards</source>
-        <translation>Previsualizar las palabras descubiertas antes de crear tarjetas</translation>
     </message>
     <message>
         <source>Process Episode</source>
@@ -5359,140 +5221,6 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
         <translation>%1 de %2 palabras seleccionadas</translation>
     </message>
 </context><context>
-    <name>WordPreviewDialog</name>
-    <message>
-        <source>Word Preview - %1 words found</source>
-        <translation>Vista previa de palabras - %1 palabras encontradas</translation>
-    </message>
-    <message>
-        <source>Word Preview: %1 words found</source>
-        <translation>Vista previa de palabras: %1 palabras encontradas</translation>
-    </message>
-    <message>
-        <source>Search:</source>
-        <translation>Buscar:</translation>
-    </message>
-    <message>
-        <source>Filter by any field...</source>
-        <translation>Filtrar por cualquier campo...</translation>
-    </message>
-    <message>
-        <source>Group by:</source>
-        <translation>Agrupar por:</translation>
-    </message>
-    <message>
-        <source>None (Flat List)</source>
-        <translation>Ninguno (lista plana)</translation>
-    </message>
-    <message>
-        <source>Time Range</source>
-        <translation>Intervalo de tiempo</translation>
-    </message>
-    <message>
-        <source>Alphabetical</source>
-        <translation>Alfabético</translation>
-    </message>
-    <message>
-        <source>Word Length</source>
-        <translation>Longitud de palabra</translation>
-    </message>
-    <message>
-        <source>Export...</source>
-        <translation>Exportar...</translation>
-    </message>
-    <message>
-        <source>Discovered Words</source>
-        <translation>Palabras descubiertas</translation>
-    </message>
-    <message>
-        <source>Surface</source>
-        <translation>Superficie</translation>
-    </message>
-    <message>
-        <source>Lemma</source>
-        <translation>Lema</translation>
-    </message>
-    <message>
-        <source>Reading</source>
-        <translation>Lectura</translation>
-    </message>
-    <message>
-        <source>Sentence</source>
-        <translation>Frase</translation>
-    </message>
-    <message>
-        <source>Time</source>
-        <translation>Tiempo</translation>
-    </message>
-    <message>
-        <source>Video</source>
-        <translation>Video</translation>
-    </message>
-    <message>
-        <source>Close</source>
-        <translation>Cerrar</translation>
-    </message>
-    <message>
-        <source>Showing %1 of %2 words</source>
-        <translation>Mostrando %1 de %2 palabras</translation>
-    </message>
-    <message>
-        <source>Start: %1s, End: %2s, Duration: %3s</source>
-        <translation>Inicio: %1s, Fin: %2s, Duración: %3s</translation>
-    </message>
-    <message>
-        <source>%1 (%2 words)</source>
-        <translation>%1 (%2 palabras)</translation>
-    </message>
-    <message>
-        <source>1-2 characters</source>
-        <translation>1-2 caracteres</translation>
-    </message>
-    <message>
-        <source>3-4 characters</source>
-        <translation>3-4 caracteres</translation>
-    </message>
-    <message>
-        <source>5-6 characters</source>
-        <translation>5-6 caracteres</translation>
-    </message>
-    <message>
-        <source>7+ characters</source>
-        <translation>7+ caracteres</translation>
-    </message>
-    <message>
-        <source>0 words</source>
-        <translation>0 palabras</translation>
-    </message>
-    <message>
-        <source>0 unique</source>
-        <translation>0 únicas</translation>
-    </message>
-    <message>
-        <source>Avg: 0 chars</source>
-        <translation>Prom.: 0 caracteres</translation>
-    </message>
-    <message>
-        <source>Span: 00:00</source>
-        <translation>Lapso: 00:00</translation>
-    </message>
-    <message>
-        <source>%1 words</source>
-        <translation>%1 palabras</translation>
-    </message>
-    <message>
-        <source>%1 unique</source>
-        <translation>%1 únicas</translation>
-    </message>
-    <message>
-        <source>Avg: %1 chars</source>
-        <translation>Prom.: %1 caracteres</translation>
-    </message>
-    <message>
-        <source>Span: %1</source>
-        <translation>Lapso: %1</translation>
-    </message>
-</context><context>
     <name>YouTubeFetcher</name>
     <message>
         <source>Downloading video</source>
@@ -5615,14 +5343,6 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
     <message>
         <source>Show the word-selection popup for each video before creating cards.</source>
         <translation>Muestra la ventana emergente de selección de palabras para cada video antes de crear tarjetas.</translation>
-    </message>
-    <message>
-        <source>Preview</source>
-        <translation>Vista previa</translation>
-    </message>
-    <message>
-        <source>Run the queue in preview mode — no cards created.</source>
-        <translation>Ejecutar la cola en modo de vista previa; no se crean tarjetas.</translation>
     </message>
     <message>
         <source>Mine</source>

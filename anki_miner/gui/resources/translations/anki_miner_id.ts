@@ -786,14 +786,6 @@ Paket audio tidak dihapus.</translation>
         <translation>Tampilkan popup pemilihan kata untuk setiap berkas audio sebelum membuat kartu.</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation>Pratinjau</translation>
-    </message>
-    <message>
-        <source>Run the queue in preview mode — no cards created.</source>
-        <translation>Jalankan antrean dalam mode pratinjau — tidak ada kartu yang dibuat.</translation>
-    </message>
-    <message>
         <source>Mine</source>
         <translation>Mining</translation>
     </message>
@@ -908,14 +900,6 @@ Paket audio tidak dihapus.</translation>
         <translation>Folder Subtitel:</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation>Pratinjau</translation>
-    </message>
-    <message>
-        <source>Preview video/subtitle pairs before processing</source>
-        <translation>Pratinjau pasangan video/subtitel sebelum diproses</translation>
-    </message>
-    <message>
         <source>Process Folder</source>
         <translation>Proses Folder</translation>
     </message>
@@ -942,12 +926,6 @@ Paket audio tidak dihapus.</translation>
     <message>
         <source>No Pairs Found</source>
         <translation>Tidak Ada Pasangan Ditemukan</translation>
-    </message>
-    <message>
-        <source>No matching video/subtitle pairs found.
-Files pair by episode number — point each folder at a single show.</source>
-        <translation>Tidak ditemukan pasangan video/subtitel yang cocok.
-Berkas dipasangkan berdasarkan nomor episode — arahkan setiap folder ke satu serial saja.</translation>
     </message>
     <message>
         <source>No matching video/subtitle pairs found</source>
@@ -3112,40 +3090,6 @@ Continue?</source>
         <translation>Atur Ulang Waktu</translation>
     </message>
 </context><context>
-    <name>MangaVolumesPreviewDialog</name>
-    <message>
-        <source>Preview Volumes — %1 found</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volume Preview: %1 volume(s)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Title</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volume</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Format</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Source</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volumes mine in order. No cards are created by Preview.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Close</source>
-        <translation type="unfinished">Tutup</translation>
-    </message>
-</context><context>
     <name>MediaExtractorService</name>
     <message>
         <source>Extracting media</source>
@@ -3362,60 +3306,6 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     <message>
         <source>Silence-removal library installed successfully.</source>
         <translation>Pustaka penghapus keheningan berhasil dipasang.</translation>
-    </message>
-</context><context>
-    <name>PairPreviewDialog</name>
-    <message>
-        <source>Preview File Pairs - %1 pairs found</source>
-        <translation>Pratinjau Pasangan Berkas - %1 pasangan ditemukan</translation>
-    </message>
-    <message>
-        <source>File Pair Preview: %1 pairs</source>
-        <translation>Pratinjau Pasangan Berkas: %1 pasangan</translation>
-    </message>
-    <message>
-        <source>%1 video/subtitle pairs</source>
-        <translation>%1 pasangan video/subtitel</translation>
-    </message>
-    <message>
-        <source>Total size: %1</source>
-        <translation>Total ukuran: %1</translation>
-    </message>
-    <message>
-        <source>Video: %1 • Subtitles: %2</source>
-        <translation>Video: %1 • Subtitel: %2</translation>
-    </message>
-    <message>
-        <source>Paired Files</source>
-        <translation>Berkas Berpasangan</translation>
-    </message>
-    <message>
-        <source>Video File</source>
-        <translation>Berkas Video</translation>
-    </message>
-    <message>
-        <source>Video Size</source>
-        <translation>Ukuran Video</translation>
-    </message>
-    <message>
-        <source>Subtitle File</source>
-        <translation>Berkas Subtitel</translation>
-    </message>
-    <message>
-        <source>Subtitle Size</source>
-        <translation>Ukuran Subtitel</translation>
-    </message>
-    <message>
-        <source>Pairs process in order.</source>
-        <translation>Pasangan diproses secara berurutan.</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Batal</translation>
-    </message>
-    <message>
-        <source>Proceed with Processing</source>
-        <translation>Lanjutkan Pemrosesan</translation>
     </message>
 </context><context>
     <name>PlaylistAddController</name>
@@ -3662,14 +3552,6 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">Pratinjau</translation>
-    </message>
-    <message>
-        <source>List the volume(s) this folder would mine — no cards created.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Mine</source>
         <translation type="unfinished">Mining</translation>
     </message>
@@ -3748,14 +3630,6 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">Pratinjau</translation>
-    </message>
-    <message>
-        <source>Preview the selected book — no cards created.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Mine</source>
         <translation type="unfinished">Mining</translation>
     </message>
@@ -3806,16 +3680,12 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation type="unfinished">Mining tidak tersedia — layanan belum diinisialisasi.</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">Pratinjau</translation>
+        <source>%1 run starting — %2 items.</source>
+        <translation type="unfinished">Proses %1 dimulai — %2 item.</translation>
     </message>
     <message>
         <source>Mine</source>
         <translation type="unfinished">Mining</translation>
-    </message>
-    <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation type="unfinished">Proses %1 dimulai — %2 item.</translation>
     </message>
     <message>
         <source>Could not process %1: %2</source>
@@ -4218,14 +4088,6 @@ Detail: %2</translation>
     <message>
         <source>Actions</source>
         <translation>Tindakan</translation>
-    </message>
-    <message>
-        <source>Preview Words</source>
-        <translation>Pratinjau Kata</translation>
-    </message>
-    <message>
-        <source>Preview discovered words before creating cards</source>
-        <translation>Pratinjau kata yang ditemukan sebelum membuat kartu</translation>
     </message>
     <message>
         <source>Process Episode</source>
@@ -5348,140 +5210,6 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>%1 dari %2 kata dipilih</translation>
     </message>
 </context><context>
-    <name>WordPreviewDialog</name>
-    <message>
-        <source>Word Preview - %1 words found</source>
-        <translation>Pratinjau Kata - %1 kata ditemukan</translation>
-    </message>
-    <message>
-        <source>Word Preview: %1 words found</source>
-        <translation>Pratinjau Kata: %1 kata ditemukan</translation>
-    </message>
-    <message>
-        <source>Search:</source>
-        <translation>Cari:</translation>
-    </message>
-    <message>
-        <source>Filter by any field...</source>
-        <translation>Filter menurut bidang apa pun...</translation>
-    </message>
-    <message>
-        <source>Group by:</source>
-        <translation>Kelompokkan menurut:</translation>
-    </message>
-    <message>
-        <source>None (Flat List)</source>
-        <translation>Tidak Ada (Daftar Rata)</translation>
-    </message>
-    <message>
-        <source>Time Range</source>
-        <translation>Rentang Waktu</translation>
-    </message>
-    <message>
-        <source>Alphabetical</source>
-        <translation>Menurut Abjad</translation>
-    </message>
-    <message>
-        <source>Word Length</source>
-        <translation>Panjang Kata</translation>
-    </message>
-    <message>
-        <source>Export...</source>
-        <translation>Ekspor...</translation>
-    </message>
-    <message>
-        <source>Discovered Words</source>
-        <translation>Kata yang Ditemukan</translation>
-    </message>
-    <message>
-        <source>Surface</source>
-        <translation>Permukaan</translation>
-    </message>
-    <message>
-        <source>Lemma</source>
-        <translation>Lema</translation>
-    </message>
-    <message>
-        <source>Reading</source>
-        <translation>Cara Baca</translation>
-    </message>
-    <message>
-        <source>Sentence</source>
-        <translation>Kalimat</translation>
-    </message>
-    <message>
-        <source>Time</source>
-        <translation>Waktu</translation>
-    </message>
-    <message>
-        <source>Video</source>
-        <translation>Video</translation>
-    </message>
-    <message>
-        <source>Close</source>
-        <translation>Tutup</translation>
-    </message>
-    <message>
-        <source>Showing %1 of %2 words</source>
-        <translation>Menampilkan %1 dari %2 kata</translation>
-    </message>
-    <message>
-        <source>Start: %1s, End: %2s, Duration: %3s</source>
-        <translation>Mulai: %1d, Selesai: %2d, Durasi: %3d</translation>
-    </message>
-    <message>
-        <source>%1 (%2 words)</source>
-        <translation>%1 (%2 kata)</translation>
-    </message>
-    <message>
-        <source>1-2 characters</source>
-        <translation>1-2 karakter</translation>
-    </message>
-    <message>
-        <source>3-4 characters</source>
-        <translation>3-4 karakter</translation>
-    </message>
-    <message>
-        <source>5-6 characters</source>
-        <translation>5-6 karakter</translation>
-    </message>
-    <message>
-        <source>7+ characters</source>
-        <translation>7+ karakter</translation>
-    </message>
-    <message>
-        <source>0 words</source>
-        <translation>0 kata</translation>
-    </message>
-    <message>
-        <source>0 unique</source>
-        <translation>0 unik</translation>
-    </message>
-    <message>
-        <source>Avg: 0 chars</source>
-        <translation>Rata-rata: 0 karakter</translation>
-    </message>
-    <message>
-        <source>Span: 00:00</source>
-        <translation>Rentang: 00:00</translation>
-    </message>
-    <message>
-        <source>%1 words</source>
-        <translation>%1 kata</translation>
-    </message>
-    <message>
-        <source>%1 unique</source>
-        <translation>%1 unik</translation>
-    </message>
-    <message>
-        <source>Avg: %1 chars</source>
-        <translation>Rata-rata: %1 karakter</translation>
-    </message>
-    <message>
-        <source>Span: %1</source>
-        <translation>Rentang: %1</translation>
-    </message>
-</context><context>
     <name>YouTubeFetcher</name>
     <message>
         <source>Downloading video</source>
@@ -5604,14 +5332,6 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
     <message>
         <source>Show the word-selection popup for each video before creating cards.</source>
         <translation>Tampilkan popup pemilihan kata untuk setiap video sebelum membuat kartu.</translation>
-    </message>
-    <message>
-        <source>Preview</source>
-        <translation>Pratinjau</translation>
-    </message>
-    <message>
-        <source>Run the queue in preview mode — no cards created.</source>
-        <translation>Jalankan antrean dalam mode pratinjau — tidak ada kartu yang dibuat.</translation>
     </message>
     <message>
         <source>Mine</source>
