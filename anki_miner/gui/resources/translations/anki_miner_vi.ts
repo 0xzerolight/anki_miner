@@ -192,6 +192,16 @@
         <translation>Không thể lấy danh sách bộ thẻ. Anki có đang chạy với AnkiConnect không?</translation>
     </message>
 </context><context>
+    <name>AnkiService</name>
+    <message>
+        <source>Creating Anki cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cards created: %1/%2</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>AnkiSettingsPanel</name>
     <message>
         <source>AnkiConnect URL</source>
@@ -851,6 +861,22 @@ Gói âm thanh chưa được xóa.</translation>
         <source>Queue done: %1 succeeded, %2 failed.</source>
         <translation>Hoàn tất hàng đợi: %1 thành công, %2 thất bại.</translation>
     </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Đã hủy</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>BatchProcessingTab</name>
     <message>
@@ -864,10 +890,6 @@ Gói âm thanh chưa được xóa.</translation>
     <message>
         <source>Overall Progress</source>
         <translation>Tiến trình tổng thể</translation>
-    </message>
-    <message>
-        <source>Current Episode</source>
-        <translation>Tập hiện tại</translation>
     </message>
     <message>
         <source>Retry Failed</source>
@@ -964,6 +986,10 @@ Các tệp được ghép theo số tập — hãy trỏ mỗi thư mục đến
         <translation>■ Hủy</translation>
     </message>
     <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Đã hủy</translation>
+    </message>
+    <message>
         <source>Cancelling...</source>
         <translation>Đang hủy...</translation>
     </message>
@@ -976,16 +1002,28 @@ Các tệp được ghép theo số tập — hãy trỏ mỗi thư mục đến
         <translation>Đang bắt đầu xử lý hàng loạt...</translation>
     </message>
     <message>
-        <source>Completed: %1/%2</source>
-        <translation>Hoàn tất: %1/%2</translation>
+        <source>Episode %1/%2: %3</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Processing series: %1</source>
         <translation>Đang xử lý loạt phim: %1</translation>
     </message>
     <message>
+        <source>Series %1/%2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Created %1 cards</source>
         <translation>Đã tạo %1 thẻ</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Processed %1 series
@@ -1570,6 +1608,10 @@ Tổng số thẻ đã tạo: %2</translation>
         <translation>Đang dựng bộ thẻ '%1'…</translation>
     </message>
     <message>
+        <source>Episode %1/%2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Processing: %1</source>
         <translation>Đang xử lý: %1</translation>
     </message>
@@ -1582,16 +1624,28 @@ Tổng số thẻ đã tạo: %2</translation>
         <translation>Xong! Đã tạo %1 thẻ (~%2% độ bao phủ mục tiêu) trong bộ thẻ '%3'.</translation>
     </message>
     <message>
-        <source>Build complete</source>
-        <translation>Dựng hoàn tất</translation>
+        <source>Complete — %1 cards created</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelling…</source>
         <translation>Đang hủy…</translation>
     </message>
     <message>
+        <source>Cancelling...</source>
+        <translation type="unfinished">Đang hủy...</translation>
+    </message>
+    <message>
         <source>Error: %1</source>
         <translation>Lỗi: %1</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Đã hủy</translation>
     </message>
 </context><context>
     <name>DeckPage</name>
@@ -1614,6 +1668,32 @@ Tổng số thẻ đã tạo: %2</translation>
     <message>
         <source>Deck not found — it will be created automatically when mining starts.</source>
         <translation>Không tìm thấy bộ thẻ — nó sẽ được tạo tự động khi bắt đầu khai thác.</translation>
+    </message>
+</context><context>
+    <name>DefinitionService</name>
+    <message>
+        <source>Fetching definitions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Definition found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No definition: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fetching glossary entries</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Glossary found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No glossary: %1</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>DictionaryImportFlow</name>
@@ -3066,6 +3146,32 @@ Continue?</source>
         <translation type="unfinished">Đóng</translation>
     </message>
 </context><context>
+    <name>MediaExtractorService</name>
+    <message>
+        <source>Extracting media</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Extracting media: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>audio extraction failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No audio: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No screenshot: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>media extraction failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>MediaSettingsPanel</name>
     <message>
         <source>Audio Format</source>
@@ -3185,10 +3291,6 @@ Continue?</source>
     </message>
 </context><context>
     <name>MiningTabBase</name>
-    <message>
-        <source>%1 — done</source>
-        <translation>%1 — xong</translation>
-    </message>
     <message>
         <source>Complete</source>
         <translation>Hoàn tất</translation>
@@ -3387,10 +3489,6 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <source>Ready</source>
         <translation>Sẵn sàng</translation>
     </message>
-    <message>
-        <source>Processing...</source>
-        <translation>Đang xử lý...</translation>
-    </message>
 </context><context>
     <name>QueueItemWidget</name>
     <message>
@@ -3444,6 +3542,12 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     <message>
         <source>Not configured</source>
         <translation>Chưa cấu hình</translation>
+    </message>
+</context><context>
+    <name>QueueMiningProgressAdapter</name>
+    <message>
+        <source>Complete</source>
+        <translation type="unfinished">Hoàn tất</translation>
     </message>
 </context><context>
     <name>QueuePanel</name>
@@ -3542,10 +3646,6 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Overall Progress</source>
-        <translation type="unfinished">Tiến trình tổng thể</translation>
-    </message>
-    <message>
         <source>Progress</source>
         <translation type="unfinished">Tiến độ</translation>
     </message>
@@ -3602,11 +3702,7 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation type="unfinished">Đang hủy…</translation>
     </message>
     <message>
-        <source>Mining %1 of %2: %3</source>
-        <translation type="unfinished">Đang khai thác %1 trong %2: %3</translation>
-    </message>
-    <message>
-        <source>Mining: %1</source>
+        <source>Volume %1/%2: %3</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3616,10 +3712,6 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     <message>
         <source>Failed %1: %2.</source>
         <translation type="unfinished">Thất bại %1: %2.</translation>
-    </message>
-    <message>
-        <source>Completed: %1/%2</source>
-        <translation type="unfinished">Hoàn tất: %1/%2</translation>
     </message>
     <message>
         <source>Done: %1 succeeded, %2 failed.</source>
@@ -3727,6 +3819,22 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     </message>
     <message>
         <source>Could not process %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Đã hủy</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview complete — %1 new words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -4255,6 +4363,22 @@ Chi tiết: %2</translation>
         <source>Cancelling...</source>
         <translation>Đang hủy...</translation>
     </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Đã hủy</translation>
+    </message>
+    <message>
+        <source>Preview complete — %1 new words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>StatusBarWidget</name>
     <message>
@@ -4464,8 +4588,8 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>Đã hủy</translation>
     </message>
     <message>
-        <source>Finished</source>
-        <translation>Đã xong</translation>
+        <source>Complete — %1 files processed</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelling…</source>
@@ -4786,8 +4910,8 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>Đã hủy</translation>
     </message>
     <message>
-        <source>Finished</source>
-        <translation>Đã hoàn tất</translation>
+        <source>Complete — %1 files processed</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelling…</source>
@@ -5358,6 +5482,16 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>Khoảng: %1</translation>
     </message>
 </context><context>
+    <name>YouTubeFetcher</name>
+    <message>
+        <source>Downloading video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Merging audio and video</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>YouTubeQueueItemWidget</name>
     <message>
         <source>Manual JA subs</source>
@@ -5534,6 +5668,22 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     <message>
         <source>Queue done: %1 succeeded, %2 failed.</source>
         <translation>Hàng đợi xong: %1 thành công, %2 thất bại.</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Đã hủy</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ZipImportFlow</name>

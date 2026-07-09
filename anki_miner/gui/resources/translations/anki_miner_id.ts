@@ -192,6 +192,16 @@
         <translation>Tidak dapat mengambil dek. Apakah Anki berjalan dengan AnkiConnect?</translation>
     </message>
 </context><context>
+    <name>AnkiService</name>
+    <message>
+        <source>Creating Anki cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cards created: %1/%2</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>AnkiSettingsPanel</name>
     <message>
         <source>AnkiConnect URL</source>
@@ -851,6 +861,22 @@ Paket audio tidak dihapus.</translation>
         <source>Queue done: %1 succeeded, %2 failed.</source>
         <translation>Antrean selesai: %1 berhasil, %2 gagal.</translation>
     </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Dibatalkan</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>BatchProcessingTab</name>
     <message>
@@ -864,10 +890,6 @@ Paket audio tidak dihapus.</translation>
     <message>
         <source>Overall Progress</source>
         <translation>Kemajuan Keseluruhan</translation>
-    </message>
-    <message>
-        <source>Current Episode</source>
-        <translation>Episode Saat Ini</translation>
     </message>
     <message>
         <source>Retry Failed</source>
@@ -964,6 +986,10 @@ Berkas dipasangkan berdasarkan nomor episode — arahkan setiap folder ke satu s
         <translation>■ Batal</translation>
     </message>
     <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Dibatalkan</translation>
+    </message>
+    <message>
         <source>Cancelling...</source>
         <translation>Membatalkan...</translation>
     </message>
@@ -976,16 +1002,28 @@ Berkas dipasangkan berdasarkan nomor episode — arahkan setiap folder ke satu s
         <translation>Memulai pemrosesan batch...</translation>
     </message>
     <message>
-        <source>Completed: %1/%2</source>
-        <translation>Selesai: %1/%2</translation>
+        <source>Episode %1/%2: %3</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Processing series: %1</source>
         <translation>Memproses seri: %1</translation>
     </message>
     <message>
+        <source>Series %1/%2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Created %1 cards</source>
         <translation>Membuat %1 kartu</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Processed %1 series
@@ -1570,6 +1608,10 @@ Total kartu dibuat: %2</translation>
         <translation>Membangun dek '%1'…</translation>
     </message>
     <message>
+        <source>Episode %1/%2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Processing: %1</source>
         <translation>Memproses: %1</translation>
     </message>
@@ -1582,16 +1624,28 @@ Total kartu dibuat: %2</translation>
         <translation>Selesai! Membuat %1 kartu (~%2% target cakupan) di dek '%3'.</translation>
     </message>
     <message>
-        <source>Build complete</source>
-        <translation>Pembuatan selesai</translation>
+        <source>Complete — %1 cards created</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelling…</source>
         <translation>Membatalkan…</translation>
     </message>
     <message>
+        <source>Cancelling...</source>
+        <translation type="unfinished">Membatalkan...</translation>
+    </message>
+    <message>
         <source>Error: %1</source>
         <translation>Kesalahan: %1</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Dibatalkan</translation>
     </message>
 </context><context>
     <name>DeckPage</name>
@@ -1614,6 +1668,32 @@ Total kartu dibuat: %2</translation>
     <message>
         <source>Deck not found — it will be created automatically when mining starts.</source>
         <translation>Dek tidak ditemukan — akan dibuat otomatis saat mining dimulai.</translation>
+    </message>
+</context><context>
+    <name>DefinitionService</name>
+    <message>
+        <source>Fetching definitions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Definition found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No definition: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fetching glossary entries</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Glossary found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No glossary: %1</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>DictionaryImportFlow</name>
@@ -3066,6 +3146,32 @@ Continue?</source>
         <translation type="unfinished">Tutup</translation>
     </message>
 </context><context>
+    <name>MediaExtractorService</name>
+    <message>
+        <source>Extracting media</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Extracting media: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>audio extraction failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No audio: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No screenshot: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>media extraction failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>MediaSettingsPanel</name>
     <message>
         <source>Audio Format</source>
@@ -3185,10 +3291,6 @@ Continue?</source>
     </message>
 </context><context>
     <name>MiningTabBase</name>
-    <message>
-        <source>%1 — done</source>
-        <translation>%1 — selesai</translation>
-    </message>
     <message>
         <source>Complete</source>
         <translation>Selesai</translation>
@@ -3387,10 +3489,6 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <source>Ready</source>
         <translation>Siap</translation>
     </message>
-    <message>
-        <source>Processing...</source>
-        <translation>Memproses...</translation>
-    </message>
 </context><context>
     <name>QueueItemWidget</name>
     <message>
@@ -3444,6 +3542,12 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     <message>
         <source>Not configured</source>
         <translation>Belum dikonfigurasi</translation>
+    </message>
+</context><context>
+    <name>QueueMiningProgressAdapter</name>
+    <message>
+        <source>Complete</source>
+        <translation type="unfinished">Selesai</translation>
     </message>
 </context><context>
     <name>QueuePanel</name>
@@ -3542,10 +3646,6 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Overall Progress</source>
-        <translation type="unfinished">Kemajuan Keseluruhan</translation>
-    </message>
-    <message>
         <source>Progress</source>
         <translation type="unfinished">Progres</translation>
     </message>
@@ -3602,11 +3702,7 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation type="unfinished">Membatalkan…</translation>
     </message>
     <message>
-        <source>Mining %1 of %2: %3</source>
-        <translation type="unfinished">Mining %1 dari %2: %3</translation>
-    </message>
-    <message>
-        <source>Mining: %1</source>
+        <source>Volume %1/%2: %3</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3616,10 +3712,6 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     <message>
         <source>Failed %1: %2.</source>
         <translation type="unfinished">Gagal %1: %2.</translation>
-    </message>
-    <message>
-        <source>Completed: %1/%2</source>
-        <translation type="unfinished">Selesai: %1/%2</translation>
     </message>
     <message>
         <source>Done: %1 succeeded, %2 failed.</source>
@@ -3727,6 +3819,22 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     </message>
     <message>
         <source>Could not process %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Dibatalkan</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview complete — %1 new words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -4255,6 +4363,22 @@ Detail: %2</translation>
         <source>Cancelling...</source>
         <translation>Membatalkan...</translation>
     </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Dibatalkan</translation>
+    </message>
+    <message>
+        <source>Preview complete — %1 new words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>StatusBarWidget</name>
     <message>
@@ -4464,8 +4588,8 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>Dibatalkan</translation>
     </message>
     <message>
-        <source>Finished</source>
-        <translation>Selesai</translation>
+        <source>Complete — %1 files processed</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelling…</source>
@@ -4786,8 +4910,8 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>Dibatalkan</translation>
     </message>
     <message>
-        <source>Finished</source>
-        <translation>Rampung</translation>
+        <source>Complete — %1 files processed</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelling…</source>
@@ -5358,6 +5482,16 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>Rentang: %1</translation>
     </message>
 </context><context>
+    <name>YouTubeFetcher</name>
+    <message>
+        <source>Downloading video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Merging audio and video</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>YouTubeQueueItemWidget</name>
     <message>
         <source>Manual JA subs</source>
@@ -5534,6 +5668,22 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
     <message>
         <source>Queue done: %1 succeeded, %2 failed.</source>
         <translation>Antrean selesai: %1 berhasil, %2 gagal.</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Dibatalkan</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ZipImportFlow</name>

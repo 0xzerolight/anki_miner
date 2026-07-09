@@ -192,6 +192,16 @@
         <translation>Não foi possível obter os baralhos. O Anki está em execução com o AnkiConnect?</translation>
     </message>
 </context><context>
+    <name>AnkiService</name>
+    <message>
+        <source>Creating Anki cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cards created: %1/%2</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>AnkiSettingsPanel</name>
     <message>
         <source>AnkiConnect URL</source>
@@ -851,6 +861,22 @@ O pacote de áudio não foi removido.</translation>
         <source>Queue done: %1 succeeded, %2 failed.</source>
         <translation>Fila concluída: %1 com sucesso, %2 com falha.</translation>
     </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Cancelado</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>BatchProcessingTab</name>
     <message>
@@ -864,10 +890,6 @@ O pacote de áudio não foi removido.</translation>
     <message>
         <source>Overall Progress</source>
         <translation>Progresso geral</translation>
-    </message>
-    <message>
-        <source>Current Episode</source>
-        <translation>Episódio atual</translation>
     </message>
     <message>
         <source>Retry Failed</source>
@@ -964,6 +986,10 @@ Os arquivos são pareados pelo número do episódio — aponte cada pasta para u
         <translation>■ Cancelar</translation>
     </message>
     <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Cancelado</translation>
+    </message>
+    <message>
         <source>Cancelling...</source>
         <translation>Cancelando...</translation>
     </message>
@@ -976,16 +1002,28 @@ Os arquivos são pareados pelo número do episódio — aponte cada pasta para u
         <translation>Iniciando processamento em lote...</translation>
     </message>
     <message>
-        <source>Completed: %1/%2</source>
-        <translation>Concluído: %1/%2</translation>
+        <source>Episode %1/%2: %3</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Processing series: %1</source>
         <translation>Processando série: %1</translation>
     </message>
     <message>
+        <source>Series %1/%2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Created %1 cards</source>
         <translation>%1 cartões criados</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Processed %1 series
@@ -1570,6 +1608,10 @@ Total de cartões criados: %2</translation>
         <translation>Construindo baralho '%1'…</translation>
     </message>
     <message>
+        <source>Episode %1/%2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Processing: %1</source>
         <translation>Processando: %1</translation>
     </message>
@@ -1582,16 +1624,28 @@ Total de cartões criados: %2</translation>
         <translation>Concluído! %1 cartões criados (~%2% de cobertura desejada) no baralho '%3'.</translation>
     </message>
     <message>
-        <source>Build complete</source>
-        <translation>Construção concluída</translation>
+        <source>Complete — %1 cards created</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelling…</source>
         <translation>Cancelando…</translation>
     </message>
     <message>
+        <source>Cancelling...</source>
+        <translation type="unfinished">Cancelando...</translation>
+    </message>
+    <message>
         <source>Error: %1</source>
         <translation>Erro: %1</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Cancelado</translation>
     </message>
 </context><context>
     <name>DeckPage</name>
@@ -1614,6 +1668,32 @@ Total de cartões criados: %2</translation>
     <message>
         <source>Deck not found — it will be created automatically when mining starts.</source>
         <translation>Baralho não encontrado — ele será criado automaticamente quando a mineração começar.</translation>
+    </message>
+</context><context>
+    <name>DefinitionService</name>
+    <message>
+        <source>Fetching definitions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Definition found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No definition: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fetching glossary entries</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Glossary found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No glossary: %1</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>DictionaryImportFlow</name>
@@ -3076,6 +3156,32 @@ Continue?</source>
         <translation type="unfinished">Fechar</translation>
     </message>
 </context><context>
+    <name>MediaExtractorService</name>
+    <message>
+        <source>Extracting media</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Extracting media: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>audio extraction failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No audio: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No screenshot: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>media extraction failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>MediaSettingsPanel</name>
     <message>
         <source>Audio Format</source>
@@ -3195,10 +3301,6 @@ Continue?</source>
     </message>
 </context><context>
     <name>MiningTabBase</name>
-    <message>
-        <source>%1 — done</source>
-        <translation>%1 — concluído</translation>
-    </message>
     <message>
         <source>Complete</source>
         <translation>Concluído</translation>
@@ -3397,10 +3499,6 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
         <source>Ready</source>
         <translation>Pronto</translation>
     </message>
-    <message>
-        <source>Processing...</source>
-        <translation>Processando...</translation>
-    </message>
 </context><context>
     <name>QueueItemWidget</name>
     <message>
@@ -3454,6 +3552,12 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
     <message>
         <source>Not configured</source>
         <translation>Não configurado</translation>
+    </message>
+</context><context>
+    <name>QueueMiningProgressAdapter</name>
+    <message>
+        <source>Complete</source>
+        <translation type="unfinished">Concluído</translation>
     </message>
 </context><context>
     <name>QueuePanel</name>
@@ -3552,10 +3656,6 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Overall Progress</source>
-        <translation type="unfinished">Progresso geral</translation>
-    </message>
-    <message>
         <source>Progress</source>
         <translation type="unfinished">Progresso</translation>
     </message>
@@ -3612,11 +3712,7 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
         <translation type="unfinished">Cancelando…</translation>
     </message>
     <message>
-        <source>Mining %1 of %2: %3</source>
-        <translation type="unfinished">Minerando %1 de %2: %3</translation>
-    </message>
-    <message>
-        <source>Mining: %1</source>
+        <source>Volume %1/%2: %3</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3626,10 +3722,6 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
     <message>
         <source>Failed %1: %2.</source>
         <translation type="unfinished">Falhou %1: %2.</translation>
-    </message>
-    <message>
-        <source>Completed: %1/%2</source>
-        <translation type="unfinished">Concluído: %1/%2</translation>
     </message>
     <message>
         <source>Done: %1 succeeded, %2 failed.</source>
@@ -3737,6 +3829,22 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
     </message>
     <message>
         <source>Could not process %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Cancelado</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preview complete — %1 new words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -4265,6 +4373,22 @@ Detalhes: %2</translation>
         <source>Cancelling...</source>
         <translation>Cancelando...</translation>
     </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Cancelado</translation>
+    </message>
+    <message>
+        <source>Preview complete — %1 new words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 cards created</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>StatusBarWidget</name>
     <message>
@@ -4475,8 +4599,8 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
         <translation>Cancelado</translation>
     </message>
     <message>
-        <source>Finished</source>
-        <translation>Finalizado</translation>
+        <source>Complete — %1 files processed</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelling…</source>
@@ -4797,8 +4921,8 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
         <translation>Cancelado</translation>
     </message>
     <message>
-        <source>Finished</source>
-        <translation>Finalizado</translation>
+        <source>Complete — %1 files processed</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelling…</source>
@@ -5369,6 +5493,16 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
         <translation>Intervalo: %1</translation>
     </message>
 </context><context>
+    <name>YouTubeFetcher</name>
+    <message>
+        <source>Downloading video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Merging audio and video</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>YouTubeQueueItemWidget</name>
     <message>
         <source>Manual JA subs</source>
@@ -5545,6 +5679,22 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
     <message>
         <source>Queue done: %1 succeeded, %2 failed.</source>
         <translation>Fila concluída: %1 com sucesso, %2 com falha.</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Cancelado</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ZipImportFlow</name>
