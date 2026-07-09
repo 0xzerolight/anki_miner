@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Removed
+
+### Fixed
+
+## [2.8.0] - 2026-07-09
+
+### Added
 - **Reading tab — mine manga and novels.** A new Reading tab mines mokuro-processed manga volumes and Japanese novels into cards through the same pipeline as video mining: offline definitions, frequency, pitch accent, and expression audio. The tab splits into two sub-tabs: **Manga** — a quick folder selector (a single-volume folder mines immediately, a series folder of many volumes fills the queue) plus a batch queue you build with *Add Series Folder…* / *Add Volumes…* or drag-and-drop — and **Novels**, for mining one `.epub`/`.txt` file at a time. Manga input is a mokuro-processed volume — an image folder or `.cbz` with its sibling `.mokuro` file (Anki Miner reads mokuro's output and does no OCR of its own); novels are `.epub` or Aozora/plain `.txt`. Words are mined in the order they appear in the volume, and each card carries the manga page image or the book's cover art plus a `@ p.42` / `@ ch.3` source label. Manga is filed under its title and volume (series = title, episode = volume); novels group under a single "Books" series. Word curation and the pre-mine preview work as they do in the other tabs, and a new Settings → Filtering minimum-occurrence knob (off by default) skips words appearing fewer than the chosen number of times in a volume. DRM-protected EPUBs are rejected up front with a clear error.
 
 ### Removed
