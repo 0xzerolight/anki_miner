@@ -15,6 +15,34 @@ from anki_miner.utils.furigana_distribute import distribute_furigana
 # cache after first load, so the cost is negligible.
 
 
+def strip_subtitle_markup(text: str) -> str:
+    """Strip subtitle formatting markup without any language normalization.
+
+    Removes the three tag families that :func:`clean_subtitle_text` handles:
+    ASS/SSA override blocks (``{\\...}``), the ``\\N``/``\\n`` line-break markers
+    (each replaced by a space), and HTML tags (``<...>``). It deliberately does
+    NOT run the MeCab-oriented Japanese normalization (halfwidth→fullwidth kana,
+    NFKD folding, kanji-variant mapping) nor collapse whitespace, so the returned
+    string is safe to display verbatim to the user (e.g. condensed subtitles).
+
+    Args:
+        text: Raw subtitle text with possible formatting tags.
+
+    Returns:
+        Text with formatting markup removed; whitespace untouched.
+    """
+    # Remove ASS/SSA style tags like {\pos(x,y)}, {\fad(100,200)}, etc.
+    text = re.sub(r"\{[^}]*\}", "", text)
+
+    # Remove line break tags
+    text = re.sub(r"\\[nN]", " ", text)
+
+    # Remove HTML tags if present
+    text = re.sub(r"<[^>]+>", "", text)
+
+    return text
+
+
 def clean_subtitle_text(text: str) -> str:
     """Remove formatting tags, then Japanese-normalize for tokenization.
 
@@ -31,14 +59,7 @@ def clean_subtitle_text(text: str) -> str:
     Returns:
         Cleaned, normalized text without formatting tags
     """
-    # Remove ASS/SSA style tags like {\pos(x,y)}, {\fad(100,200)}, etc.
-    text = re.sub(r"\{[^}]*\}", "", text)
-
-    # Remove line break tags
-    text = re.sub(r"\\[nN]", " ", text)
-
-    # Remove HTML tags if present
-    text = re.sub(r"<[^>]+>", "", text)
+    text = strip_subtitle_markup(text)
 
     # Normalize whitespace
     text = " ".join(text.split())

@@ -15,7 +15,48 @@ from anki_miner.utils.text_utils import (
     is_hiragana_only,
     is_katakana_only,
     katakana_to_hiragana,
+    strip_subtitle_markup,
 )
+
+
+class TestStripSubtitleMarkup:
+    """Tests for strip_subtitle_markup — the display-safe tag-strip subset of
+    clean_subtitle_text (no MeCab-oriented Japanese normalization)."""
+
+    def test_removes_ass_style_tags(self):
+        assert strip_subtitle_markup(r"{\pos(100,200)}Hello World") == "Hello World"
+
+    def test_removes_multiple_ass_tags(self):
+        assert strip_subtitle_markup(r"{\fad(100,200)}{\b1}Bold text{\b0}") == "Bold text"
+
+    def test_converts_line_break_tags_to_spaces(self):
+        assert strip_subtitle_markup(r"Line one\NLine two\nLine three") == "Line one Line two Line three"
+
+    def test_removes_html_tags(self):
+        assert strip_subtitle_markup("<b>Bold</b> and <i>italic</i>") == "Bold and italic"
+
+    def test_handles_empty_string(self):
+        assert strip_subtitle_markup("") == ""
+
+    def test_handles_complex_subtitle(self):
+        assert strip_subtitle_markup(r"{\pos(100,200)}<b>日本語</b>\Nテスト") == "日本語 テスト"
+
+    def test_does_not_normalize_whitespace(self):
+        """Unlike clean_subtitle_text, raw whitespace is preserved (no collapse/strip)."""
+        assert strip_subtitle_markup("  Too   many    spaces  ") == "  Too   many    spaces  "
+
+    def test_does_not_apply_japanese_normalization(self):
+        """The MeCab-oriented normalization must NOT run: halfwidth katakana,
+        NFKD folding, and kanji-variant mapping are all left untouched."""
+        assert strip_subtitle_markup("ﾊﾟｿｺﾝ") == "ﾊﾟｿｺﾝ"
+        assert strip_subtitle_markup("⼭") == "⼭"  # Kangxi radical NOT folded to 山
+        assert strip_subtitle_markup("𠮟られた") == "𠮟られた"  # variant NOT standardized
+
+    def test_clean_subtitle_text_still_normalizes(self):
+        """Sanity: clean_subtitle_text (which now delegates markup-strip to this
+        helper) still applies the JP normalization the helper deliberately omits."""
+        assert clean_subtitle_text("ﾊﾟｿｺﾝ") == "パソコン"
+        assert clean_subtitle_text("𠮟られた") == "叱られた"
 
 
 class TestCleanSubtitleText:

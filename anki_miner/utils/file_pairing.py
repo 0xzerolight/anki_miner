@@ -2,6 +2,7 @@
 
 import sys
 import unicodedata
+from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -63,18 +64,26 @@ def resolve_output_path(out_dir: Path, name: str) -> Path:
     return exact  # 0 matches -> create; >=2 ambiguous -> refuse to guess
 
 
-def find_sibling_subtitle(video_path: Path) -> Path | None:
+def find_sibling_subtitle(video_path: Path, priority: Sequence[str] | None = None) -> Path | None:
     """Return the highest-priority sibling subtitle for *video_path*, or None.
 
     Looks in the same folder for a file whose stem matches *video_path*'s stem
-    and whose extension is one of DEFAULT_SUBTITLE_PRIORITY.  Returns the first
-    hit in priority order (.ass > .ssa > .srt), or None when no sibling exists.
+    and whose extension is one of *priority*.  Returns the first hit in priority
+    order, or None when no sibling exists.
+
+    Args:
+        video_path: Video (or media) file whose sibling subtitle is sought.
+        priority: Ordered lowercase extensions (e.g. ``(".ass", ".srt")``) to
+            accept, best first.  Defaults to :data:`DEFAULT_SUBTITLE_PRIORITY`
+            (``.ass > .ssa > .srt``), preserving mining behavior byte-for-byte.
+            Callers may pass a wider set (e.g. including ``.vtt``).
 
     Matching is case-insensitive on both stem and extension, and NFC-normalized
     on the stem, so a ``.SRT`` (a differing-case stem, or an NFD-encoded stem) is
     still found on case-sensitive filesystems. Reads are non-destructive, so the
     casefold here is unconditional (unlike the write-side resolver).
     """
+    exts = DEFAULT_SUBTITLE_PRIORITY if priority is None else tuple(priority)
     folder = video_path.parent
     stem_cf = _nfc(video_path.stem).casefold()
     try:
@@ -84,9 +93,9 @@ def find_sibling_subtitle(video_path: Path) -> Path | None:
     by_ext: dict[str, Path] = {}
     for p in entries:
         ext = p.suffix.lower()
-        if ext in DEFAULT_SUBTITLE_PRIORITY and _nfc(p.stem).casefold() == stem_cf:
+        if ext in exts and _nfc(p.stem).casefold() == stem_cf:
             by_ext.setdefault(ext, p)
-    for ext in DEFAULT_SUBTITLE_PRIORITY:
+    for ext in exts:
         if ext in by_ext:
             return by_ext[ext]
     return None
@@ -109,7 +118,12 @@ class FilePairMatcher:
     SUBTITLE_EXTENSIONS: frozenset[str] = frozenset(DEFAULT_SUBTITLE_PRIORITY)
 
     @staticmethod
-    def find_pairs_by_episode_number(video_folder: Path, subtitle_folder: Path) -> list[FilePair]:
+    def find_pairs_by_episode_number(
+        video_folder: Path,
+        subtitle_folder: Path,
+        video_extensions: Collection[str] | None = None,
+        subtitle_extensions: Collection[str] | None = None,
+    ) -> list[FilePair]:
         """Find matching pairs by episode number instead of exact name.
 
         Matches files like:
@@ -120,22 +134,26 @@ class FilePairMatcher:
         Args:
             video_folder: Folder containing video files
             subtitle_folder: Folder containing subtitle files
+            video_extensions: Lowercase media extensions to accept as the
+                "video" side.  Defaults to :data:`VIDEO_EXTENSIONS`, preserving
+                mining behavior byte-for-byte.  Callers may pass a wider set
+                (e.g. audio-only extensions).
+            subtitle_extensions: Lowercase subtitle extensions to accept.
+                Defaults to :data:`SUBTITLE_EXTENSIONS`, preserving mining
+                behavior.  Callers may pass a wider set (e.g. including ``.vtt``).
 
         Returns:
             List of FilePair objects matched by episode number
         """
         from anki_miner.utils.episode_matcher import EpisodeMatcher
 
-        # Get all videos and subtitles
-        videos = [
-            f for f in video_folder.iterdir() if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
-        ]
+        video_exts = FilePairMatcher.VIDEO_EXTENSIONS if video_extensions is None else video_extensions
+        subtitle_exts = FilePairMatcher.SUBTITLE_EXTENSIONS if subtitle_extensions is None else subtitle_extensions
 
-        subtitles = [
-            f
-            for f in subtitle_folder.iterdir()
-            if f.is_file() and f.suffix.lower() in FilePairMatcher.SUBTITLE_EXTENSIONS
-        ]
+        # Get all videos and subtitles
+        videos = [f for f in video_folder.iterdir() if f.is_file() and f.suffix.lower() in video_exts]
+
+        subtitles = [f for f in subtitle_folder.iterdir() if f.is_file() and f.suffix.lower() in subtitle_exts]
 
         # Match by episode number
         matched_pairs = EpisodeMatcher.match_by_episode_number(videos, subtitles)

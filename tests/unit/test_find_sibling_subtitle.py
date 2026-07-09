@@ -82,3 +82,37 @@ class TestFindSiblingSubtitle:
         sibling = tmp_path / f"ep01{lowest_ext}"
         sibling.touch()
         assert find_sibling_subtitle(video) == sibling
+
+    def test_default_does_not_find_vtt(self, tmp_path):
+        """The mining default set excludes .vtt, so a .vtt sibling is invisible."""
+        video = tmp_path / "episode01.mkv"
+        video.touch()
+        (tmp_path / "episode01.vtt").touch()
+        assert find_sibling_subtitle(video) is None
+
+    def test_custom_priority_finds_vtt(self, tmp_path):
+        """A caller-supplied priority including .vtt discovers the .vtt sibling."""
+        video = tmp_path / "episode01.mkv"
+        video.touch()
+        vtt = tmp_path / "episode01.vtt"
+        vtt.touch()
+        assert find_sibling_subtitle(video, priority=(".ass", ".ssa", ".srt", ".vtt")) == vtt
+
+    def test_custom_priority_ordering_respected(self, tmp_path):
+        """The supplied priority order wins: .vtt first beats an existing .srt."""
+        video = tmp_path / "ep01.mp4"
+        video.touch()
+        (tmp_path / "ep01.srt").touch()
+        vtt = tmp_path / "ep01.vtt"
+        vtt.touch()
+        assert find_sibling_subtitle(video, priority=(".vtt", ".srt")) == vtt
+
+    def test_explicit_default_priority_matches_implicit(self, tmp_path):
+        """Passing the default set explicitly is byte-for-byte the None default."""
+        from anki_miner.utils.file_pairing import DEFAULT_SUBTITLE_PRIORITY
+
+        video = tmp_path / "ep01.mp4"
+        video.touch()
+        (tmp_path / "ep01.ass").touch()
+        (tmp_path / "ep01.srt").touch()
+        assert find_sibling_subtitle(video, priority=DEFAULT_SUBTITLE_PRIORITY) == find_sibling_subtitle(video)
