@@ -52,7 +52,7 @@ Subtitle file (ASS/SRT/SSA)
 ProcessingResult
 ```
 
-Before Phase 1, a pre-flight step validates the configured note type and field mapping against Anki and auto-creates the target deck; this step is skipped in preview mode. Cancellation is checked between each phase. Preview mode exits after stage 2 (shows words, creates no cards). An optional curation callback lets the GUI present a word selection dialog between stages 2 and 3.
+Before Phase 1, a pre-flight step validates the configured note type and field mapping against Anki and auto-creates the target deck. Cancellation is checked between each phase. An optional curation callback lets the GUI present a word selection dialog between stages 2 and 3.
 
 The offline dictionary also participates in stage 1 when available: `service_factory` injects `DefinitionService.offline_terms_exist` into the parser, whose `CompoundDictionaryMatcher` (`services/compound_matcher.py`) merges adjacent MeCab tokens into a single word whenever the joined form — with the tail token deinflected via UniDic orthBase — is an exact dictionary headword (Yomitan's longest-match principle; fixes fragment mining like 走り出した→走り). With no offline dictionary or `compound_matching` off, stage 1 is unchanged.
 
@@ -89,7 +89,6 @@ Three protocols in `interfaces/` define the system's extension points:
 - `show_info`, `show_success`, `show_warning`, `show_error`: message display.
 - `show_validation_result(ValidationResult)`: system check results.
 - `show_processing_result(ProcessingResult)`: episode processing summary.
-- `show_word_preview(list[TokenizedWord])`: discovered word listing.
 
 Implementations: `GUIPresenter` (Qt signals) and `NullPresenter` (tests). The protocol is preserved even without a CLI so that workers, orchestration, and services stay UI-agnostic and fully testable.
 
@@ -190,7 +189,6 @@ The import flow is in `gui/controllers/audio_pack_import_flow.py`; the panel it 
 - `process_youtube_url()` calls `YouTubeFetcherService.fetch_video`, then delegates to the unchanged `process_episode` with `episode_name_override=f"YT:{video_id}"` and `series_name_override="YouTube"`. The workspace is allocated and cleaned by the worker, not the orchestrator.
 - `process_reading()` mines mokuro manga volumes and Japanese novels. It reuses `_phase2_filter`, `_phase4_lookup`, and `_phase5_create` but swaps the video media stage for `_phase3_reading_media`, which materializes each word's page/cover image and expression audio (no ffmpeg, no sentence audio). Between filtering and media it applies a `reading_min_occurrence` floor (`WordFilterService.filter_by_episode_count`) that drops words appearing fewer than the configured number of times in the volume (1 = off); force-included words bypass the floor.
 - Cancellation checkpoints between each phase (`self._cancelled` flag); the YouTube flow additionally threads a `threading.Event` into the fetcher so an in-flight yt-dlp subprocess can be killed.
-- Supports `preview_mode` (exits after filtering, no cards created)
 - Supports `curation_callback` (GUI presents word selection dialog)
 - Supports `cross_episode_counts` for batch frequency filtering
 - Supports `episode_name_override` / `series_name_override` so YouTube-sourced sessions have stable, file-name-independent identity.
@@ -234,11 +232,11 @@ The `__post_init__` method uses `object.__setattr__` to convert string paths to 
 ### Window Structure
 
 `MainWindow` contains a `QTabWidget` with nine tabs (registered in `gui/app.py` as Episode Mining, Batch Mining, Deck Builder, YouTube, Audio, Reading, Analytics, Subtitles, Settings):
-1. **SingleEpisodeTab** ("Episode Mining"): file selectors (drag-and-drop), subtitle offset control, process/preview buttons, log widget, progress widget.
+1. **SingleEpisodeTab** ("Episode Mining"): file selectors (drag-and-drop), subtitle offset control, process button, log widget, progress widget.
 2. **BatchProcessingTab** ("Batch Mining"): folder selection, `BatchQueue` management via queue panel, dual progress bars.
 3. **Deck Builder**: whole-series deck mining over a corpus of subtitles, driven by `DeckBuilderWorker` (see Orchestration). Two phases (aggregate/select, then build) separated by a GUI confirm gate.
-4. **YouTubeTab** (`gui/widgets/youtube_tab.py`): URL input + Add button, `QListWidget` queue of `YouTubeQueueItemWidget` rows (per-row status glyph, title, duration, sub source line, remove button), action buttons (Preview / Mine / Clear / Stop All), progress widget, log widget. Deck/note-type/tags widgets are global (see `AnkiSettingsPanel`). URL classification (plain video, playlist, video-in-playlist, Mix) is done without network access by `utils/youtube_url.py` (`classify_youtube_url`); playlist URLs dispatch to `YouTubePlaylistResolveWorker` then `YouTubePlaylistProbeWorker`; mixed watch+list URLs show a choice dialog; playlists over the `youtube_playlist_max` cap show an over-cap confirm.
-5. **AudiobookTab** (`gui/widgets/audiobook_tab.py`): audio + subtitle file selectors (subtitle auto-filled from a same-stem `.srt`/`.vtt`/`.ass`/`.ssa` next to the audio file) + Add button, `QListWidget` queue of `AudiobookQueueItemWidget` rows, action buttons (Preview / Mine / Clear / Stop All), progress widget, log widget. No probe stage — local pairs enter the queue READY. Mining runs `process_episode` with `audio_only=True`: no per-word screenshots; embedded cover art is extracted once per book and shared as every card's Picture (blank if absent), and the keep/drop decision keys on audio clip success. Stats/history identity: `series_name_override="Audiobook"`, `episode_name_override=<audio file stem>`.
+4. **YouTubeTab** (`gui/widgets/youtube_tab.py`): URL input + Add button, `QListWidget` queue of `YouTubeQueueItemWidget` rows (per-row status glyph, title, duration, sub source line, remove button), action buttons (Mine / Clear / Stop All), progress widget, log widget. Deck/note-type/tags widgets are global (see `AnkiSettingsPanel`). URL classification (plain video, playlist, video-in-playlist, Mix) is done without network access by `utils/youtube_url.py` (`classify_youtube_url`); playlist URLs dispatch to `YouTubePlaylistResolveWorker` then `YouTubePlaylistProbeWorker`; mixed watch+list URLs show a choice dialog; playlists over the `youtube_playlist_max` cap show an over-cap confirm.
+5. **AudiobookTab** (`gui/widgets/audiobook_tab.py`): audio + subtitle file selectors (subtitle auto-filled from a same-stem `.srt`/`.vtt`/`.ass`/`.ssa` next to the audio file) + Add button, `QListWidget` queue of `AudiobookQueueItemWidget` rows, action buttons (Mine / Clear / Stop All), progress widget, log widget. No probe stage — local pairs enter the queue READY. Mining runs `process_episode` with `audio_only=True`: no per-word screenshots; embedded cover art is extracted once per book and shared as every card's Picture (blank if absent), and the keep/drop decision keys on audio clip success. Stats/history identity: `series_name_override="Audiobook"`, `episode_name_override=<audio file stem>`.
 6. **ReadingTab** (`gui/widgets/reading_tab.py`): a container nesting two mining sub-tabs. **Manga** (`ReadingMangaTab`) mines mokuro-processed manga volumes (an image folder or `.cbz`/`.zip` with its sibling `.mokuro` file; the OCR is mokuro's, none is done here) with a quick-folder picker + queue that expands a series folder into per-volume items. **Novels** (`ReadingNovelsTab`) mines a single `.epub` or Aozora/plain `.txt`. Both subclass `_ReadingMiningTabBase` → `MiningTabBase`; mining runs `EpisodeProcessor.process_reading` (see Orchestration).
 7. **AnalyticsTab**: mining statistics dashboard (queries `StatsService`).
 8. **SubtitlesTab** (`gui/widgets/subtitles_tab.py`): a container with two inner tabs. **Generate** (`SubtitleCreationTab`) transcribes a video/audio file into an SRT with a local Whisper model (`services/asr/`), with in-app model + GPU/VAD pack downloads and a CPU-fallback device selector. **Retime** (`SubtitleRetimeTab`) realigns an out-of-sync subtitle file to a video via `alass` (`services/subtitle_retimer.py`).
@@ -282,8 +280,6 @@ Theme singleton backed by JSON theme files in `gui/resources/styles/themes/`. 29
 ### Dialogs
 
 - `WordCurationDialog`: user selects which discovered words to mine (cross-thread via a `threading.Event` bridge). Embeds `SubtitlePlayerWidget` per row for in-place audio playback, and renders multi-dictionary lookup via `DefinitionService.lookup_all_offline`.
-- `WordPreviewDialog`: preview discovered words.
-- `PairPreviewDialog`: preview video/subtitle file pairing.
 - `ResultsDialog`: summary of a mining session with undo option.
 - `ExportDialog`: export results to file.
 
