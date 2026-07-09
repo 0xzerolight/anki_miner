@@ -302,9 +302,12 @@ class TestPerItemSignalsReadOnly:
         _run(tab, _book_file(tmp_path), [_make_ref()])
         tab._on_item_started(0)
 
+        tab._on_item_progress(0, "Fetching definitions", 42)
         tab._on_item_progress(0, "Parsing", -1)
 
-        assert tab.progress_widget.progress_bar.maximum() == 0  # busy indicator
+        # pct < 0 holds the composed bar with a status update (no marquee).
+        assert tab.progress_widget.progress_bar.maximum() == 100
+        assert tab.progress_widget.progress_bar.value() == 42
         assert "Parsing" in tab.progress_widget.status_label.text()
 
     def test_item_finished_success_logs_and_forwards(self, tmp_path, tab):
@@ -383,7 +386,7 @@ class TestAfterRunCleanup:
         assert tab.cancel_button.text() == "Cancel"
         assert tab.cancel_button.isEnabled()
         assert tab.progress_widget.progress_bar.maximum() == 100  # busy indicator reset
-        assert tab.progress_widget.status_label.text() == "Ready"
+        assert tab.progress_widget.status_label.text() == "Cancelled"
         assert tab.worker_thread is None
         assert tab._run_items == []
         # Idle again: Preview/Mine restored, Cancel hidden.

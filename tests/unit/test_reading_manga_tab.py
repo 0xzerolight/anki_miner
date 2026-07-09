@@ -146,9 +146,10 @@ class TestInitialState:
         ):
             assert not hasattr(tab, attr)
 
-    def test_overall_bar_hidden_initially(self, tab):
-        assert tab.overall_progress_widget.isHidden()
-        assert tab.overall_header.isHidden()
+    def test_single_bar_visible_initially(self, tab):
+        # One whole-run bar, always present (no hidden per-volume/overall split).
+        assert not hasattr(tab, "current_progress_widget")
+        assert not hasattr(tab, "overall_header")
 
     def test_section_header_says_manga(self, tab):
         from anki_miner.gui.widgets.enhanced import SectionHeader
@@ -218,11 +219,10 @@ class TestMineSingleVolume:
         _mine(tab, [_make_ref()])
         assert queue_cls.call_args.kwargs["preview_mode"] is False
 
-    def test_mine_single_hides_overall_bar(self, tab):
+    def test_mine_single_uses_single_bar(self, tab):
         _mine(tab, [_make_ref()])
-        assert tab.overall_progress_widget.isHidden()
-        assert tab.overall_header.isHidden()
-        assert "Starting" in tab.current_progress_widget.status_label.text()
+        assert "Starting" in tab.overall_progress_widget.status_label.text()
+        assert tab.overall_progress_widget.progress_bar.value() == 0
 
     def test_passes_prebuilt_processor_no_factory(self, tab):
         queue_cls = tab._queue_worker_cls
@@ -265,24 +265,32 @@ class TestMineSeries:
         assert [i.title for i in items] == [r.title for r in refs]
         assert len(items) == 4
 
-    def test_mine_series_shows_overall_bar(self, tab):
+    def test_mine_series_seeds_composition(self, tab):
         _mine(tab, _series(3))
-        assert not tab.overall_progress_widget.isHidden()
-        assert not tab.overall_header.isHidden()
+        assert tab._items_total == 3
 
-    def test_item_finished_advances_overall_bar(self, tab):
+    def test_item_finished_advances_composed_bar(self, tab):
         _mine(tab, _series(2))
         # Worker owns lifecycle: emulate it having completed item 0.
         tab._run_items[0].status = ReadingItemStatus.COMPLETED
-        tab._on_item_finished(0, MagicMock(cards_created=3), None, 1)
-        # set_progress renders a percentage: 1 of 2 volumes done → 50%.
+        tab._on_item_finished(0, MagicMock(cards_created=3, new_words_found=3), None, 1)
+        # Composed: 1 of 2 volumes done -> 50%.
         assert tab.overall_progress_widget.progress_bar.value() == 50
-        assert "1/2" in tab.overall_progress_widget.status_label.text()
 
     def test_item_started_series_label(self, tab):
         _mine(tab, _series(3))
         tab._on_item_started(1)
-        assert "Mining 2 of 3" in tab.current_progress_widget.status_label.text()
+        assert "Volume 2/3" in tab.overall_progress_widget.status_label.text()
+
+    def test_item_progress_composes_across_volumes(self, tab):
+        """Volume 2's own 50% renders as (1 + 0.5)/3 = 50% of the whole run —
+        the bar never resets at a volume boundary."""
+        _mine(tab, _series(3))
+        tab._on_item_started(1)
+        tab._on_item_progress(1, "Fetching definitions", 50)
+        assert tab.overall_progress_widget.progress_bar.value() == 50
+        text = tab.overall_progress_widget.status_label.text()
+        assert "Volume 2/3" in text and "Fetching definitions" in text
 
     def test_queue_finished_summary_for_series(self, tab):
         _mine(tab, _series(2))
@@ -363,22 +371,27 @@ class TestPerItemSignalsReadOnly:
 
         assert item.status == ReadingItemStatus.COMPLETED
         assert item.cards_created == 9
-        assert "Mining: Solo Vol" in tab.current_progress_widget.status_label.text()
-        assert tab.current_progress_widget.progress_bar.maximum() == 100
+        assert "Solo Vol" in tab.overall_progress_widget.status_label.text()
+        assert tab.overall_progress_widget.progress_bar.maximum() == 100
 
     def test_item_progress_determinate(self, tab):
         _mine(tab, [_make_ref()])
         tab._on_item_started(0)
         tab._on_item_progress(0, "Fetching definitions", 42)
-        assert tab.current_progress_widget.progress_bar.value() == 42
-        assert "Fetching definitions" in tab.current_progress_widget.status_label.text()
+        # Single item: composed value equals the item's own percent.
+        assert tab.overall_progress_widget.progress_bar.value() == 42
+        assert "Fetching definitions" in tab.overall_progress_widget.status_label.text()
 
-    def test_item_progress_indeterminate(self, tab):
+    def test_item_progress_indeterminate_holds_bar(self, tab):
+        """pct < 0 holds the composed bar (status update only) — a mid-run
+        marquee would read as a reset."""
         _mine(tab, [_make_ref()])
         tab._on_item_started(0)
+        tab._on_item_progress(0, "Fetching definitions", 42)
         tab._on_item_progress(0, "Parsing", -1)
-        assert tab.current_progress_widget.progress_bar.maximum() == 0  # busy indicator
-        assert "Parsing" in tab.current_progress_widget.status_label.text()
+        assert tab.overall_progress_widget.progress_bar.maximum() == 100
+        assert tab.overall_progress_widget.progress_bar.value() == 42
+        assert "Parsing" in tab.overall_progress_widget.status_label.text()
 
     def test_item_finished_success_logs_and_forwards(self, tab):
         _mine(tab, [_make_ref("mokuro", "Solo Vol")])
@@ -409,9 +422,9 @@ class TestPerItemSignalsReadOnly:
 
     def test_item_started_out_of_range_idx_is_noop(self, tab):
         _mine(tab, [_make_ref()])
-        status_before = tab.current_progress_widget.status_label.text()
+        status_before = tab.overall_progress_widget.status_label.text()
         tab._on_item_started(99)
-        assert tab.current_progress_widget.status_label.text() == status_before
+        assert tab.overall_progress_widget.status_label.text() == status_before
 
     def test_single_volume_queue_finished_is_noop(self, tab):
         _mine(tab, [_make_ref()])
@@ -427,7 +440,7 @@ class TestPerItemSignalsReadOnly:
 class TestAfterRunCleanup:
     """The base cleanup slot restores the Cancel button and both bars."""
 
-    def test_cleanup_restores_buttons_and_bars(self, tab):
+    def test_cleanup_cancelled_shows_cancelled(self, tab):
         _mine(tab, _series(2))
         tab._on_item_started(0)
         tab._on_cancel_clicked()
@@ -437,12 +450,33 @@ class TestAfterRunCleanup:
 
         assert tab.cancel_button.text() == "Cancel"
         assert tab.cancel_button.isEnabled()
-        assert tab.overall_progress_widget.isHidden()  # overall re-hidden
-        assert tab.current_progress_widget.status_label.text() == "Ready"
+        assert tab.overall_progress_widget.status_label.text() == "Cancelled"
+        assert tab.overall_progress_widget.progress_bar.value() == 0
         assert tab.worker_thread is None
         assert tab._run_items == []
         assert not tab.preview_button.isHidden()
         assert tab.cancel_button.isHidden()
+
+    def test_cleanup_success_pins_summary(self, tab):
+        _mine(tab, _series(2))
+        tab._on_item_finished(0, MagicMock(cards_created=3, new_words_found=4), None, 1)
+        tab._on_item_finished(1, MagicMock(cards_created=2, new_words_found=2), None, 1)
+
+        tab._on_worker_finished()
+
+        assert tab.overall_progress_widget.progress_bar.value() == 100
+        assert tab.overall_progress_widget.status_label.text() == "Complete — 5 cards created"
+
+    def test_cleanup_failed_shows_failed(self, tab):
+        """Run-level fatal (worker.error) must not render a success summary."""
+        _mine(tab, _series(2))
+        tab._on_run_error("stale dicts")
+
+        tab._on_worker_finished()
+
+        assert tab.overall_progress_widget.progress_bar.value() == 0
+        assert tab.overall_progress_widget.status_label.text() == "Failed — see log"
+        assert "stale dicts" in tab.log_widget.text_edit.toPlainText()
 
 
 class TestCancel:

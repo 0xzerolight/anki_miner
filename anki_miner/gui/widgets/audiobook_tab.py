@@ -359,6 +359,11 @@ class AudiobookTab(MiningTabBase):
         # Snapshot BEFORE constructing the worker so all idx-based signal
         # handlers resolve against a frozen list that survives mid-run removals.
         self._run_items = list(ready_items)
+        self._items_total = len(ready_items)
+        self._items_done = 0
+        self._cancel_requested = False
+        self._run_failed = False
+        self._item_bar_seen = False
 
         self.progress_widget.reset()
 
@@ -377,7 +382,7 @@ class AudiobookTab(MiningTabBase):
         worker.queue_finished.connect(self._on_queue_finished)
         # Fatal pre-loop failures (schema-stale dict gate, processor build) end
         # the run via error + queue_finished; surface the message in the log.
-        worker.error.connect(self.log_widget.append_error)
+        worker.error.connect(self._on_run_error)
         # QThread.finished fires on every run() exit (success, cancel, exception),
         # so run-end cleanup converges here rather than only on the success path.
         worker.finished.connect(self._on_worker_finished)
@@ -388,8 +393,14 @@ class AudiobookTab(MiningTabBase):
         self._recompute_buttons()
         worker.start()
 
+    def _on_run_error(self, message: str) -> None:
+        """Run-level fatal: flag for the terminal handler and log it."""
+        self._run_failed = True
+        self.log_widget.append_error(message)
+
     def _on_stop_all_clicked(self) -> None:
         """Cancel the active run."""
+        self._cancel_requested = True
         # Release any open curation dialog first so the blocked worker resumes
         # instead of hanging on _curation_event (Issue #65).
         self._cancel_active_curation_dialog()
@@ -424,21 +435,25 @@ class AudiobookTab(MiningTabBase):
         self._refresh_row(item)
 
         total = len(self._run_items)
+        # Status only — the composed bar never resets between items.
         self.progress_widget.set_status(tr_format(self.tr("Mining %1 of %2: %3"), idx + 1, total, item.audio_file.name))
-        self.progress_widget.set_determinate(100)
-        self.progress_widget.set_value(0)
         self._recompute_buttons()
 
     def _on_item_progress(self, idx: int, label: str, pct: int) -> None:
-        """Route worker progress into the progress widget."""
-        # Translation mirrors the queue worker's progress adapter:
-        # pct < 0 → indeterminate; otherwise determinate.
+        """Compose the item's percent into the whole-run bar.
+
+        ``pct < 0`` holds the bar at its current value with a status update
+        (marquee only before the first determinate value this run).
+        """
         if pct < 0:
-            self.progress_widget.set_indeterminate()
-        else:
-            self.progress_widget.set_determinate(100)
-            self.progress_widget.set_value(pct)
-        self.progress_widget.set_status(label)
+            if not getattr(self, "_item_bar_seen", False):
+                self.progress_widget.set_indeterminate()
+            self.progress_widget.set_status(label)
+            return
+        self._item_bar_seen = True
+        self.progress_widget.set_composed(
+            getattr(self, "_items_done", 0), pct, getattr(self, "_items_total", 0) or len(self._run_items), label
+        )
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Update the item with success/error and forward to the presenter."""
@@ -464,6 +479,8 @@ class AudiobookTab(MiningTabBase):
             self.log_widget.append_error(tr_format(self.tr("Failed %1: %2."), item.audio_file.name, error))
 
         self._refresh_row(item)
+        self._items_done = getattr(self, "_items_done", 0) + 1
+        self.progress_widget.set_composed(self._items_done, 0, getattr(self, "_items_total", 0))
         self._recompute_buttons()
 
     def _on_queue_finished(self) -> None:
@@ -497,7 +514,22 @@ class AudiobookTab(MiningTabBase):
         self._run_items = []
         self.stop_button.setText(self.tr("Stop All"))
         self.stop_button.setEnabled(True)
-        self.progress_widget.reset()
+        # Terminal end state (cancel -> failed -> success); counts from
+        # self._queue, never the just-cleared _run_items.
+        if getattr(self, "_cancel_requested", False):
+            self.progress_widget.reset()
+            self.progress_widget.set_status(self.tr("Cancelled"))
+        elif getattr(self, "_run_failed", False):
+            self.progress_widget.reset()
+            self.progress_widget.set_status(self.tr("Failed — see log"))
+        else:
+            succeeded = sum(1 for i in self._queue.all_items() if i.status == AudiobookItemStatus.COMPLETED)
+            failed = sum(1 for i in self._queue.all_items() if i.status == AudiobookItemStatus.ERROR)
+            if failed:
+                summary = tr_format(self.tr("Complete — %1 succeeded, %2 failed"), succeeded, failed)
+            else:
+                summary = tr_format(self.tr("Complete — %1 succeeded"), succeeded)
+            self.progress_widget.show_completion(summary)
         self._recompute_buttons()
         if self._config_dirty:
             if self._processor is not None:

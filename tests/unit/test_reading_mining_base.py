@@ -167,7 +167,9 @@ class TestLaunchRunStart:
         worker.item_finished.connect.assert_called_once_with(tab._on_item_finished)
         worker.queue_finished.connect.assert_called_once_with(tab._on_queue_finished)
         worker.finished.connect.assert_called_once_with(tab._on_worker_finished)
-        worker.error.connect.assert_called_once_with(tab.log_widget.append_error)
+        # error is wired to the combined log+flag slot (sets _run_failed so the
+        # terminal bar state reads Failed, then appends to the log).
+        worker.error.connect.assert_called_once_with(tab._on_run_error)
 
     def test_logs_run_banner(self, tab):
         tab._launch_run([_make_item(), _make_item(title="v2")], preview_mode=False)

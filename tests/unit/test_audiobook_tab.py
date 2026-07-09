@@ -606,7 +606,7 @@ class TestWorkerFinished:
         assert tab.stop_button.text() == "Stop All"
         assert tab.stop_button.isEnabled()
         assert tab.progress_widget.progress_bar.maximum() == 100
-        assert tab.progress_widget.status_label.text() == "Ready"
+        assert tab.progress_widget.status_label.text() == "Cancelled"
 
 
 class TestRemoveAndClear:
@@ -688,7 +688,8 @@ class TestRemoveAndClear:
         tab._on_clear_clicked()
 
         assert "Extracting audio" in tab.progress_widget.status_label.text()
-        assert tab.progress_widget.progress_bar.value() == 42
+        # Composed whole-run value: item 1 of 2 at 42% -> 21%.
+        assert tab.progress_widget.progress_bar.value() == 21
 
 
 class TestShutdown:

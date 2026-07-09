@@ -139,19 +139,12 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         )
         layout.addWidget(self.review_words_checkbox)
 
-        # Overall bar (vol N of M). Hidden unless a series run of >1 volume is
-        # active — a single volume shows just the per-volume bar below.
-        self.overall_header = self._progress_header(self.tr("Overall Progress"))
-        layout.addWidget(self.overall_header)
+        # Single whole-run bar: per-volume sweeps are composed into it
+        # ((volumes done + volume pct) / total), so a series run reads as one
+        # continuous fill; the status label carries the active volume + stage.
+        layout.addWidget(self._progress_header(self.tr("Progress")))
         self.overall_progress_widget = ProgressWidget()
         layout.addWidget(self.overall_progress_widget)
-        self.overall_header.hide()
-        self.overall_progress_widget.hide()
-
-        # Per-volume bar (the active volume's mining-stage sweep) — always shown.
-        layout.addWidget(self._progress_header(self.tr("Progress")))
-        self.current_progress_widget = ProgressWidget()
-        layout.addWidget(self.current_progress_widget)
 
         # LogWidget (carries its own header + Copy/Clear actions).
         self.log_widget = LogWidget()
@@ -301,23 +294,15 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         return self._detect_or_report(Path(raw))
 
     def _begin_progress(self, total: int) -> None:
-        """Reset both bars for a fresh run; show the overall bar only for a series.
-
-        A single volume (``total == 1``) hides the overall bar so the tab reads
-        like the Novels tab; a series (``total > 1``) shows it and seeds the
-        vol N of M tally.
-        """
+        """Reset the whole-run bar and seed the composition counters."""
+        self._items_total = total
+        self._current_item_title = ""
         self.overall_progress_widget.reset()
-        self.current_progress_widget.reset()
-        is_series = total > 1
-        self.overall_header.setVisible(is_series)
-        self.overall_progress_widget.setVisible(is_series)
-        if is_series:
-            self.overall_progress_widget.set_progress(0, total, self.tr("Starting…"))
-        self.current_progress_widget.set_status(self.tr("Starting…"))
+        self.overall_progress_widget.set_status(self.tr("Starting…"))
 
     def _on_cancel_clicked(self) -> None:
         """Cancel the active run."""
+        self._cancel_requested = True
         # Release any open curation dialog first so the blocked worker resumes
         # instead of hanging on _curation_event (Issue #65).
         self._cancel_active_curation_dialog()
@@ -327,6 +312,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         worker.cancel()
         self.cancel_button.setEnabled(False)
         self.cancel_button.setText(self.tr("Cancelling…"))
+        self.overall_progress_widget.set_status(self.tr("Cancelling…"))
 
     # ------------------------------------------------------------------
     # Curation context (D8 amended: manga shows page images)
@@ -370,21 +356,32 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             return
         total = len(self._run_items)
         if total > 1:
-            status = tr_format(self.tr("Mining %1 of %2: %3"), idx + 1, total, item.title)
+            self._current_item_title = tr_format(self.tr("Volume %1/%2: %3"), idx + 1, total, item.title)
         else:
-            status = tr_format(self.tr("Mining: %1"), item.title)
-        self.current_progress_widget.set_status(status)
-        self.current_progress_widget.set_determinate(100)
-        self.current_progress_widget.set_value(0)
+            self._current_item_title = item.title
+        # Status only — the composed whole-run bar never resets between volumes.
+        self.overall_progress_widget.set_status(self._current_item_title)
 
     def _on_item_progress(self, idx: int, label: str, pct: int) -> None:
-        """Route worker progress into the per-volume bar (pct < 0 → indeterminate)."""
-        if pct < 0:
-            self.current_progress_widget.set_indeterminate()
+        """Compose the volume's percent into the whole-run bar.
+
+        ``idx`` doubles as the count of volumes already finished (items run
+        sequentially), so the composed value is monotone across volume
+        boundaries. ``pct < 0`` holds the bar with a status update.
+        """
+        title = getattr(self, "_current_item_title", "")
+        status: str | None
+        if label and title:
+            status = f"{title} — {label}"
+        elif label:
+            status = label
         else:
-            self.current_progress_widget.set_determinate(100)
-            self.current_progress_widget.set_value(pct)
-        self.current_progress_widget.set_status(label)
+            status = title or None
+        if pct < 0:
+            if status:
+                self.overall_progress_widget.set_status(status)
+            return
+        self.overall_progress_widget.set_composed(idx, pct, len(self._run_items), status)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Log the outcome and advance the overall bar (series runs only).
@@ -399,6 +396,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
 
         if error is None:
             cards = int(getattr(result, "cards_created", 0) or 0)
+            self._record_item_result(result)
             self.log_widget.append_success(tr_format(self.tr("Mined %1: %2 cards."), item.title, cards))
             if self._presenter is not None:
                 # Presenter forwarding is best-effort — the worker has already
@@ -409,13 +407,11 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         else:
             self.log_widget.append_error(tr_format(self.tr("Failed %1: %2."), item.title, error))
 
-        # Advance the overall bar over items that have reached a terminal state
-        # (worker-owned), tallied against the frozen run snapshot. Only shown
-        # for a series run of more than one volume.
-        total = len(self._run_items)
-        if total > 1:
-            done = sum(1 for i in self._run_items if i.status in (ReadingItemStatus.COMPLETED, ReadingItemStatus.ERROR))
-            self.overall_progress_widget.set_progress(done, total, tr_format(self.tr("Completed: %1/%2"), done, total))
+        # Bar-only advance over items that reached a terminal state — keeps the
+        # composed fill correct when a volume errors mid-sweep. Count-unit
+        # writes (set_progress) are banned on the composition-driven widget.
+        done = sum(1 for i in self._run_items if i.status in (ReadingItemStatus.COMPLETED, ReadingItemStatus.ERROR))
+        self.overall_progress_widget.set_composed(done, 0, len(self._run_items))
 
     def _on_queue_finished(self) -> None:
         """Success-path summary log over the run snapshot. Cleanup is elsewhere.
@@ -441,10 +437,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         """
         self.cancel_button.setText(self.tr("Cancel"))
         self.cancel_button.setEnabled(True)
-        self.overall_progress_widget.reset()
-        self.overall_header.hide()
-        self.overall_progress_widget.hide()
-        self.current_progress_widget.reset()
+        self._apply_terminal_bar_state(self.overall_progress_widget)
         self._recompute_buttons()
 
     # ------------------------------------------------------------------

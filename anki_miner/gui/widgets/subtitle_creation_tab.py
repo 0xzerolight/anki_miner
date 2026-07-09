@@ -380,7 +380,6 @@ class SubtitleCreationTab(QWidget):
         self._total_files = len(video_files)
         self.log_widget.clear_log()
         self.progress_widget.reset()
-        self.progress_widget.set_determinate(self._total_files)
 
         worker = SubtitleGenWorker(
             self.config,
@@ -465,11 +464,15 @@ class SubtitleCreationTab(QWidget):
         )
 
     def _on_file_progress(self, idx: int, pct: int, message: str) -> None:
-        self.progress_widget.set_status(message)
+        # Compose the intra-file transcription fraction into the whole-run
+        # bar so long files show live movement, not a bar frozen per file.
+        self.progress_widget.set_composed(idx, pct, self._total_files, message)
 
     def _on_file_finished(self, idx: int, out_path: object, error_str: object) -> None:
-        # Advance the progress bar to reflect completed files.
-        self.progress_widget.set_progress(idx + 1, self._total_files)
+        # Whole-file advance in the same percent unit system as set_composed
+        # (a count-unit set_progress here would flip the ETA denominator).
+        if self._total_files:
+            self.progress_widget.set_percent(int((idx + 1) / self._total_files * 100))
         if error_str:
             self.log_widget.append_error(str(error_str))
         else:
@@ -478,7 +481,8 @@ class SubtitleCreationTab(QWidget):
 
     def _on_file_skipped(self, idx: int, out_path: object) -> None:
         # Advance the progress bar just like a finished file.
-        self.progress_widget.set_progress(idx + 1, self._total_files)
+        if self._total_files:
+            self.progress_widget.set_percent(int((idx + 1) / self._total_files * 100))
         path_label = str(out_path) if out_path else ""
         self.log_widget.append_info(self.tr("Skipped: ") + Path(path_label).name if path_label else self.tr("Skipped"))
 
@@ -488,7 +492,11 @@ class SubtitleCreationTab(QWidget):
         # Reset for the next run's cancel button.
         self.cancel_button.setText(self.tr("Cancel"))
         self.cancel_button.setEnabled(True)
-        self.progress_widget.set_status(self.tr("Cancelled") if self._cancelled else self.tr("Finished"))
+        if self._cancelled:
+            self.progress_widget.reset()
+            self.progress_widget.set_status(self.tr("Cancelled"))
+        else:
+            self.progress_widget.show_completion(tr_format(self.tr("Complete — %1 files processed"), self._total_files))
 
     def _on_worker_finished(self) -> None:
         """Release the QThread once it has actually exited."""
