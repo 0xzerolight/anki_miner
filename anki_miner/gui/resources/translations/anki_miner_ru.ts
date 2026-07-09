@@ -1150,20 +1150,36 @@ Total cards created: %2</source>
         <translation>Майньте лексику из аудиокниги или аудиофайла, используя его транскрипт.</translation>
     </message>
     <message>
-        <source>Mine from manga or novels</source>
+        <source>Mine from manga</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Mine vocabulary from manga volumes (mokuro) in the Manga sub-tab, or novels (EPUB/text) in the Novels sub-tab.</source>
+        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Generate or re-time subtitles</source>
-        <translation>Создать или пересинхронизировать субтитры</translation>
+        <source>Mine from novels</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Create subtitles from audio, or re-sync existing subtitles -- as a standalone tool.</source>
-        <translation>Создавайте субтитры из аудио или пересинхронизируйте существующие субтитры — как отдельный инструмент.</translation>
+        <source>Mine vocabulary from novels and other text (EPUB, Aozora, plain text).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Generate subtitles from audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create subtitles from audio with a local Whisper model -- as a standalone tool.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-time existing subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-sync existing subtitles against the video -- as a standalone tool.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>View mining history &amp; stats</source>
@@ -2934,20 +2950,12 @@ The frequency source was not removed.</source>
 </context><context>
     <name>MainWindow</name>
     <message>
-        <source>Episode Mining</source>
-        <translation>Майнинг эпизода</translation>
-    </message>
-    <message>
-        <source>Batch Mining</source>
-        <translation>Пакетный майнинг</translation>
+        <source>Video</source>
+        <translation type="unfinished">Видео</translation>
     </message>
     <message>
         <source>Deck Builder</source>
         <translation>Конструктор колод</translation>
-    </message>
-    <message>
-        <source>YouTube</source>
-        <translation>YouTube</translation>
     </message>
     <message>
         <source>Audio</source>
@@ -3160,6 +3168,18 @@ Continue?</source>
     <message>
         <source>Retime</source>
         <translation>Пересинхронизация</translation>
+    </message>
+    <message>
+        <source>Single</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Batch</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>YouTube</source>
+        <translation>YouTube</translation>
     </message>
 </context><context>
     <name>MediaExtractorService</name>

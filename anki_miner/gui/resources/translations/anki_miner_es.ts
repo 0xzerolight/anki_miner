@@ -1150,20 +1150,36 @@ Total de tarjetas creadas: %2</translation>
         <translation>Mina vocabulario de un audiolibro o archivo de audio usando su transcripción.</translation>
     </message>
     <message>
-        <source>Mine from manga or novels</source>
+        <source>Mine from manga</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Mine vocabulary from manga volumes (mokuro) in the Manga sub-tab, or novels (EPUB/text) in the Novels sub-tab.</source>
+        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Generate or re-time subtitles</source>
-        <translation>Generar o resincronizar subtítulos</translation>
+        <source>Mine from novels</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Create subtitles from audio, or re-sync existing subtitles -- as a standalone tool.</source>
-        <translation>Crea subtítulos a partir del audio, o resincroniza subtítulos existentes -- como herramienta independiente.</translation>
+        <source>Mine vocabulary from novels and other text (EPUB, Aozora, plain text).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Generate subtitles from audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create subtitles from audio with a local Whisper model -- as a standalone tool.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-time existing subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-sync existing subtitles against the video -- as a standalone tool.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>View mining history &amp; stats</source>
@@ -2924,20 +2940,12 @@ La fuente de frecuencia no se quitó.</translation>
 </context><context>
     <name>MainWindow</name>
     <message>
-        <source>Episode Mining</source>
-        <translation>Minería de episodios</translation>
-    </message>
-    <message>
-        <source>Batch Mining</source>
-        <translation>Minería por lotes</translation>
+        <source>Video</source>
+        <translation type="unfinished">Video</translation>
     </message>
     <message>
         <source>Deck Builder</source>
         <translation>Constructor de mazos</translation>
-    </message>
-    <message>
-        <source>YouTube</source>
-        <translation>YouTube</translation>
     </message>
     <message>
         <source>Audio</source>
@@ -3150,6 +3158,18 @@ Continue?</source>
     <message>
         <source>Retime</source>
         <translation>Resincronizar</translation>
+    </message>
+    <message>
+        <source>Single</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Batch</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>YouTube</source>
+        <translation>YouTube</translation>
     </message>
 </context><context>
     <name>MediaExtractorService</name>

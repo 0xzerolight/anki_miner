@@ -1150,20 +1150,36 @@ Total cards created: %2</source>
         <translation>使用有声书或音频文件的文字稿从中挖取词汇。</translation>
     </message>
     <message>
-        <source>Mine from manga or novels</source>
+        <source>Mine from manga</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Mine vocabulary from manga volumes (mokuro) in the Manga sub-tab, or novels (EPUB/text) in the Novels sub-tab.</source>
+        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Generate or re-time subtitles</source>
-        <translation>生成或重新校时字幕</translation>
+        <source>Mine from novels</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Create subtitles from audio, or re-sync existing subtitles -- as a standalone tool.</source>
-        <translation>从音频创建字幕，或重新同步现有字幕 -- 作为独立工具。</translation>
+        <source>Mine vocabulary from novels and other text (EPUB, Aozora, plain text).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Generate subtitles from audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create subtitles from audio with a local Whisper model -- as a standalone tool.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-time existing subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-sync existing subtitles against the video -- as a standalone tool.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>View mining history &amp; stats</source>
@@ -2914,20 +2930,12 @@ The frequency source was not removed.</source>
 </context><context>
     <name>MainWindow</name>
     <message>
-        <source>Episode Mining</source>
-        <translation>剧集挖掘</translation>
-    </message>
-    <message>
-        <source>Batch Mining</source>
-        <translation>批量挖掘</translation>
+        <source>Video</source>
+        <translation type="unfinished">视频</translation>
     </message>
     <message>
         <source>Deck Builder</source>
         <translation>牌组构建器</translation>
-    </message>
-    <message>
-        <source>YouTube</source>
-        <translation>YouTube</translation>
     </message>
     <message>
         <source>Audio</source>
@@ -3140,6 +3148,18 @@ Continue?</source>
     <message>
         <source>Retime</source>
         <translation>重新计时</translation>
+    </message>
+    <message>
+        <source>Single</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Batch</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>YouTube</source>
+        <translation>YouTube</translation>
     </message>
 </context><context>
     <name>MediaExtractorService</name>
