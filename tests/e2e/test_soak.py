@@ -1,21 +1,29 @@
-"""Tests for the soak runner (``tests/e2e/soak.py``) — no Anki, preview mode.
+"""Tests for the soak runner (``tests/e2e/soak.py``) — no live Anki needed.
 
 The soak runner's job is to loop mining sessions and instrument cross-session
-state. These tests verify the ORCHESTRATION without a live Anki by using PREVIEW
-mode + ``bypass_known_words=True`` (the offscreen, deterministic, no-AnkiConnect
-path — see ``app_config`` docstring):
+state. These tests verify the ORCHESTRATION against a ``FakeAnkiConnect``
+loopback server: full process runs (all five phases, real card creation into
+the fake) in two modes:
 
-* in-process preview soak (the primary path: one tab reused across sessions),
-* cross-process preview soak (real ``--one-session`` subprocesses),
-* a live process soak that SKIPS cleanly when Anki is down (the env here).
+* FAITHFUL multi-session soaks (the primary path: known-words subtraction +
+  sentence dedup live, so sessions mine a deterministic 4/4/4 ladder of the
+  12-lemma fixture — one word per subtitle line per session),
+* BYPASS single-session runs (card-everything, exact 12-word set — the
+  tokenizer-regression guard). Bypass is single-session ONLY: card creation is
+  stateful, so a repeat identical run dup-skips everything.
 
+Process mode extracts real media, so the pipeline-driving tests carry a
+per-test ffmpeg skipif (the pure-logic unit tests below keep running on CI,
+which has no ffmpeg). Fake-connecting tests carry ``@pytest.mark.network`` —
+the socket tripwire blocks unmarked TCP connects, loopback included.
 fugashi/MeCab is required for the real tokenizer, so the whole module skips if
-absent. Preview needs no ffmpeg/Anki.
+absent.
 """
 
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from unittest.mock import patch
 
@@ -24,19 +32,28 @@ import pytest
 from tests.e2e.anki_gateway import AnkiGateway, AnkiUnreachableError
 from tests.e2e.artifacts import RunDir
 from tests.e2e.config import E2EConfig
-from tests.e2e.fixtures_subtitle import EXPECTED_LEMMAS
+from tests.e2e.fixtures_subtitle import EXPECTED_LEMMAS, SUBTITLE_LINES
 from tests.e2e.soak import (
     SessionReport,
     SoakReport,
     _assert_safe_home,
+    _build_gateway,
     _child_cmd,
-    _maybe_gateway,
     _prepare_home,
     run_crossprocess_soak,
     run_inprocess_soak,
 )
 
 pytest.importorskip("fugashi")
+
+# Cards per faithful session: sentence dedup keeps the first unknown word per
+# subtitle line, so each session mines exactly one word per line.
+_CARDS_PER_FAITHFUL_SESSION = len(SUBTITLE_LINES)
+
+# Process-mode soaks run real phase-3 media extraction; guard per-test (NOT
+# module-level — the _child_cmd/_prepare_home/_build_gateway/_check_gui_state
+# unit tests below are ffmpeg-free and must keep running on CI).
+_needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg required for process-mode soaks")
 
 
 # --------------------------------------------------------------------------
@@ -64,7 +81,6 @@ def test_child_cmd_forwards_all_four_overrides(tmp_path: Path) -> None:
         test_home=tmp_path / "home",
         index=3,
         out=out,
-        preview=True,
         bypass_known_words=True,
     )
 
@@ -81,8 +97,7 @@ def test_child_cmd_forwards_all_four_overrides(tmp_path: Path) -> None:
     assert "--ankiconnect-url" in argv
     assert argv[argv.index("--ankiconnect-url") + 1] == "http://127.0.0.1:9999"
 
-    # Sanity: bool flags forwarded correctly.
-    assert "--preview" in argv
+    # Sanity: bool flag forwarded correctly.
     assert "--bypass-known-words" in argv
 
     # --index and --out forwarded.
@@ -100,14 +115,12 @@ def test_child_cmd_default_policy_forwarded(tmp_path: Path) -> None:
         test_home=tmp_path / "home",
         index=0,
         out=tmp_path / "s.json",
-        preview=False,
         bypass_known_words=False,
     )
     assert "--policy" in argv
     assert argv[argv.index("--policy") + 1] == "all"
     assert "--first-n" in argv
     assert argv[argv.index("--first-n") + 1] == "0"
-    assert "--preview" not in argv
     assert "--bypass-known-words" not in argv
 
 
@@ -120,7 +133,6 @@ def test_child_cmd_forwards_run_dir(tmp_path: Path) -> None:
         test_home=tmp_path / "home",
         index=0,
         out=tmp_path / "s.json",
-        preview=False,
         bypass_known_words=False,
         run_dir=parent_dir,
     )
@@ -136,28 +148,32 @@ def test_child_cmd_no_run_dir_by_default(tmp_path: Path) -> None:
         test_home=tmp_path / "home",
         index=0,
         out=tmp_path / "s.json",
-        preview=False,
         bypass_known_words=False,
     )
     assert "--run-dir" not in argv
 
 
-def test_inprocess_preview_soak(isolated_home: Path, tmp_path: Path, qtbot) -> None:
-    """3-session in-process preview soak: every session ok, report written + PASS.
+@pytest.mark.network
+@_needs_ffmpeg
+def test_inprocess_fake_soak(isolated_home: Path, tmp_path: Path, qtbot, fake_anki) -> None:
+    """3-session in-process faithful soak: the deterministic 4/4/4 ladder + PASS.
 
-    Reuses ONE tab across 3 sessions (the leak-hunting path). Preview +
-    bypass_known_words runs fully offscreen. Asserts each session found words and
-    has a screenshot + delta, the divergence verdict is PASS (preview shouldn't
-    leak across 3 sessions), and ``report.json`` is JSON-loadable.
+    Reuses ONE tab across 3 sessions (the leak-hunting path) against the fake.
+    Faithful mode makes the known-words machinery live: each session mines one
+    word per subtitle line (sentence dedup), the next session subtracts them
+    (known_words.db + the deck's cards via the vocab query), so the 12 fixture
+    lemmas are mined 4/4/4 with no re-mining. Asserts the full accumulation
+    contract: per-session cards, disjoint mined sets whose union is
+    EXPECTED_LEMMAS, the known_words.db row ladder, the cross-session
+    no-remine invariant, expected divergence deltas, and a PASS verdict.
     """
-    e2e = E2EConfig(test_home=isolated_home)
+    e2e = E2EConfig(test_home=isolated_home, ankiconnect_url=fake_anki.url)
     run_dir = RunDir(tmp_path / "runs", label="inproc")
 
     soak = run_inprocess_soak(
         e2e,
         sessions=3,
-        preview=True,
-        bypass_known_words=True,
+        bypass_known_words=False,
         run_dir=run_dir,
         test_home=isolated_home,
     )
@@ -165,17 +181,36 @@ def test_inprocess_preview_soak(isolated_home: Path, tmp_path: Path, qtbot) -> N
     assert isinstance(soak, SoakReport)
     assert soak.mode == "inprocess"
     assert len(soak.sessions) == 3
+    per = _CARDS_PER_FAITHFUL_SESSION
     for s in soak.sessions:
         assert isinstance(s, SessionReport)
         assert s.ok, s.errors
         assert s.words_found > 0
-        assert s.cards_created == 0  # preview creates nothing
+        assert s.cards_created == per
         assert s.delta, "per-session delta should be populated"
         assert s.snapshot_pre is not None and s.snapshot_post is not None
         shot = run_dir.path / s.screenshot
         assert s.screenshot and shot.is_file() and shot.stat().st_size > 0
 
-    # Divergence verdict present; preview shouldn't leak across 3 sessions.
+    # The 4/4/4 ladder: disjoint per-session mined sets covering all 12 lemmas.
+    mined = [set(s.mined_forms) for s in soak.sessions]
+    assert all(len(m) == per for m in mined)
+    assert sum(len(m) for m in mined) == len(EXPECTED_LEMMAS)  # pairwise disjoint
+    assert set().union(*mined) == set(EXPECTED_LEMMAS)
+
+    # known_words.db accumulates one session's worth of rows per session.
+    assert [s.known_words_count for s in soak.sessions] == [per, per * 2, per * 3]
+
+    # Cross-session no-remine invariant (set on every session but the last).
+    for s in soak.sessions[:-1]:
+        assert s.known_words_not_remined is True, s.errors
+    assert soak.sessions[-1].known_words_not_remined is None
+
+    # Expected-grower deltas: last-minus-first over post-session snapshots.
+    deltas = soak.divergence["expected_deltas"]
+    assert deltas["known_words.db"] == per * 2
+    assert deltas["anki_test_deck_count"] == per * 2
+
     assert soak.divergence.get("verdict") == "PASS"
     assert soak.verdict == "PASS"
 
@@ -186,24 +221,25 @@ def test_inprocess_preview_soak(isolated_home: Path, tmp_path: Path, qtbot) -> N
     assert len(loaded["sessions"]) == 3
 
 
-def test_inprocess_preview_soak_full_window(isolated_home: Path, tmp_path: Path, qtbot) -> None:
-    """2-session full-window preview soak: a real MainWindow drives each session.
+@pytest.mark.network
+@_needs_ffmpeg
+def test_inprocess_fake_soak_full_window(isolated_home: Path, tmp_path: Path, qtbot, fake_anki) -> None:
+    """2-session full-window faithful soak: a real MainWindow drives each session.
 
     The opt-in ``full_window=True`` path builds an ``AppDriver`` (real
     ``MainWindow`` with the episode tab mounted + dialogs patched) and reuses it
-    across sessions. Preview + bypass runs fully offscreen. Asserts every session
-    completed ok with words found and the soak verdict is PASS — i.e. the
+    across sessions against the fake. Asserts every session completed ok with
+    one card per subtitle line and the soak verdict is PASS — i.e. the
     full-window driver mines and disposes cleanly across sessions (no
     leak/freeze).
     """
-    e2e = E2EConfig(test_home=isolated_home)
+    e2e = E2EConfig(test_home=isolated_home, ankiconnect_url=fake_anki.url)
     run_dir = RunDir(tmp_path / "runs", label="inproc-fw")
 
     soak = run_inprocess_soak(
         e2e,
         sessions=2,
-        preview=True,
-        bypass_known_words=True,
+        bypass_known_words=False,
         run_dir=run_dir,
         test_home=isolated_home,
         full_window=True,
@@ -214,26 +250,30 @@ def test_inprocess_preview_soak_full_window(isolated_home: Path, tmp_path: Path,
     for s in soak.sessions:
         assert s.ok, s.errors
         assert s.words_found > 0
-        assert s.cards_created == 0  # preview creates nothing
+        assert s.cards_created == _CARDS_PER_FAITHFUL_SESSION
     assert soak.verdict == "PASS"
 
 
-def test_inprocess_soak_inject_cancel_appends_dedicated_session(isolated_home: Path, tmp_path: Path, qtbot) -> None:
+@pytest.mark.network
+@_needs_ffmpeg
+def test_inprocess_soak_inject_cancel_appends_dedicated_session(
+    isolated_home: Path, tmp_path: Path, qtbot, fake_anki
+) -> None:
     """--inject-cancel appends ONE dedicated cancel session that ends cleanly.
 
-    A 2-session preview soak plus an injected cancel yields 3 SessionReports; the
-    last is the cancel session. It must record a cancel outcome (worker joined +
-    tab idle) and be ``ok`` (run ended promptly, no leaked thread / stuck UI). The
-    normal sessions remain unaffected (the cancel is its own session).
+    A 2-session faithful soak plus an injected cancel yields 3 SessionReports;
+    the last is the cancel session. It must record a cancel outcome (worker
+    joined + tab idle) and be ``ok`` (run ended promptly, no leaked thread /
+    stuck UI). The normal sessions remain unaffected (the cancel is its own
+    session).
     """
-    e2e = E2EConfig(test_home=isolated_home)
+    e2e = E2EConfig(test_home=isolated_home, ankiconnect_url=fake_anki.url)
     run_dir = RunDir(tmp_path / "runs", label="cancel-soak")
 
     soak = run_inprocess_soak(
         e2e,
         sessions=2,
-        preview=True,
-        bypass_known_words=True,
+        bypass_known_words=False,
         run_dir=run_dir,
         test_home=isolated_home,
         inject_cancel=0.0,
@@ -256,28 +296,27 @@ def test_inprocess_soak_inject_cancel_appends_dedicated_session(isolated_home: P
     assert loaded["sessions"][2]["cancel_outcome"]["joined"] is True
 
 
-def test_inprocess_preview_soak_gui_checks_populated_and_pass(isolated_home: Path, tmp_path: Path, qtbot) -> None:
-    """GUI-state checks are recorded in every SessionReport and all pass for a healthy preview run.
+@pytest.mark.network
+@_needs_ffmpeg
+def test_inprocess_fake_soak_gui_checks_populated_and_pass(
+    isolated_home: Path, tmp_path: Path, qtbot, fake_anki
+) -> None:
+    """GUI-state checks are recorded in every SessionReport and all pass for a healthy run.
 
     After each session ``run_one_session`` calls ``_check_gui_state`` and stores
-    the result in ``SessionReport.gui_checks``.  For a healthy offscreen preview
+    the result in ``SessionReport.gui_checks``.  For a healthy process run
     every check must be ``ok=True`` (buttons idle, log non-empty, phase markers
-    present).  A failing check would also set ``session.ok=False`` which would
-    make the overall soak ``FAIL`` — verified by the verdict assertion.
-
-    Progress state (``progress_value`` / ``progress_text``) is recorded as data
-    in both modes — this test verifies those keys exist even in preview mode where
-    the progress bar is not advanced (value stays 0 by design).  No ok=False
-    assertion is made for progress in preview mode.
+    through Step 5/5 present, progress advanced).  A failing check would also
+    set ``session.ok=False`` which would make the overall soak ``FAIL`` —
+    verified by the verdict assertion.
     """
-    e2e = E2EConfig(test_home=isolated_home)
+    e2e = E2EConfig(test_home=isolated_home, ankiconnect_url=fake_anki.url)
     run_dir = RunDir(tmp_path / "runs", label="gui-checks")
 
     soak = run_inprocess_soak(
         e2e,
         sessions=2,
-        preview=True,
-        bypass_known_words=True,
+        bypass_known_words=False,
         run_dir=run_dir,
         test_home=isolated_home,
     )
@@ -297,39 +336,42 @@ def test_inprocess_preview_soak_gui_checks_populated_and_pass(isolated_home: Pat
         assert "log_contains:Step 2/5" in s.gui_checks
         # Phase markers recorded in order when all common markers found.
         assert "log_markers_in_order" in s.gui_checks
-        # Preview: process-only marker must NOT be in checks.
-        assert "log_contains:Step 5/5" not in s.gui_checks
-        # Progress state is ALWAYS recorded as data (both modes).
+        # Cards were created every session, so the phase-5 marker is asserted.
+        assert "log_contains:Step 5/5" in s.gui_checks
+        assert s.gui_checks["log_contains:Step 5/5"]["ok"] is True
+        # Progress state is ALWAYS recorded as data.
         assert "progress_value" in s.gui_checks, "progress_value must be recorded in gui_checks"
         assert "progress_text" in s.gui_checks, "progress_text must be recorded in gui_checks"
-        # In preview mode progress_value stays 0 (callback not invoked) — that's expected.
-        # The key point is that the value IS recorded (not absent).
         assert isinstance(s.gui_checks["progress_value"]["actual"], int)
         assert isinstance(s.gui_checks["progress_text"]["actual"], str)
-        # Preview: no stuck-progress assertion (progress_not_stuck absent in preview).
-        assert "progress_not_stuck" not in s.gui_checks
+        # Process mode advances progress: the stuck check fired and passed.
+        assert "progress_not_stuck" in s.gui_checks
+        assert s.gui_checks["progress_not_stuck"]["actual"] is False  # not stuck
+        assert s.gui_checks["progress_value"]["actual"] > 0
 
 
-def test_inprocess_preview_soak_temp_files_stable(isolated_home: Path, tmp_path: Path, qtbot) -> None:
+@pytest.mark.network
+@_needs_ffmpeg
+def test_inprocess_fake_soak_temp_files_stable(isolated_home: Path, tmp_path: Path, qtbot, fake_anki) -> None:
     """temp_files delta is 0 across sessions when ANKI_MINER_KEEP_TEMP is not set.
 
     The harness no longer forces ANKI_MINER_KEEP_TEMP, so the processor cleans
-    temp after each session. A healthy preview soak must show zero temp_files
-    growth between sessions — confirming ``temp_files`` is a real leak signal.
+    temp after each session. A healthy soak must show zero temp_files growth
+    between sessions — confirming ``temp_files`` is a real leak signal (process
+    mode creates real temp media, so this check now has teeth).
     """
     import os
 
     # Guarantee ANKI_MINER_KEEP_TEMP is unset for this test.
     env_backup = os.environ.pop("ANKI_MINER_KEEP_TEMP", None)
     try:
-        e2e = E2EConfig(test_home=isolated_home)
+        e2e = E2EConfig(test_home=isolated_home, ankiconnect_url=fake_anki.url)
         run_dir = RunDir(tmp_path / "runs", label="temp-stable")
 
         soak = run_inprocess_soak(
             e2e,
             sessions=2,
-            preview=True,
-            bypass_known_words=True,
+            bypass_known_words=False,
             run_dir=run_dir,
             test_home=isolated_home,
         )
@@ -348,21 +390,24 @@ def test_inprocess_preview_soak_temp_files_stable(isolated_home: Path, tmp_path:
             os.environ["ANKI_MINER_KEEP_TEMP"] = env_backup
 
 
-def test_crossprocess_preview_soak(isolated_home: Path, tmp_path: Path) -> None:
-    """2-session cross-process preview soak: real subprocesses aggregated + report.
+@pytest.mark.network
+@_needs_ffmpeg
+def test_crossprocess_fake_soak(isolated_home: Path, tmp_path: Path, fake_anki) -> None:
+    """2-session cross-process faithful soak: real subprocesses aggregated + report.
 
-    Spawns ``python -m tests.e2e.soak --one-session`` children (offscreen, no
-    Anki). Asserts 2 session reports aggregated, child JSONs produced, and the
-    report written.
+    Spawns ``python -m tests.e2e.soak --one-session`` children (offscreen)
+    against the fake — a real TCP server, so the children reach it over
+    ``--ankiconnect-url`` forwarding. Asserts 2 session reports aggregated
+    (one card per subtitle line each), child JSONs produced, and the report
+    written.
     """
-    e2e = E2EConfig(test_home=isolated_home)
+    e2e = E2EConfig(test_home=isolated_home, ankiconnect_url=fake_anki.url)
     run_dir = RunDir(tmp_path / "runs", label="crossproc")
 
     soak = run_crossprocess_soak(
         e2e,
         sessions=2,
-        preview=True,
-        bypass_known_words=True,
+        bypass_known_words=False,
         run_dir=run_dir,
         test_home=isolated_home,
     )
@@ -373,6 +418,7 @@ def test_crossprocess_preview_soak(isolated_home: Path, tmp_path: Path) -> None:
     for s in soak.sessions:
         assert s.ok, s.errors
         assert s.words_found > 0
+        assert s.cards_created == _CARDS_PER_FAITHFUL_SESSION
         assert s.snapshot_post is not None
 
     # Each session's screenshot must resolve under the PARENT run dir (not a child
@@ -419,6 +465,27 @@ def test_prepare_home_fresh_clears_existing_contents(tmp_path: Path) -> None:
     # Baseline captured BEFORE the wipe.
     assert result["home_pre_existed"] is True
     assert "home_baseline" in result
+
+
+def test_prepare_home_fresh_preserves_runs_dir(tmp_path: Path) -> None:
+    """_prepare_home(fresh=True) keeps the runs/ subdir (this run's RunDir lives there).
+
+    Regression guard: the runner creates the RunDir under ``test_home/runs``
+    BEFORE the soak calls _prepare_home; wiping it stranded report.json and
+    screenshot writes on a deleted directory (surfaced by --fake-anki, which
+    forces fresh_home).
+    """
+    home = tmp_path / "e2e_home"
+    home.mkdir()
+    (home / "known_words.db").write_text("stale state — must go")
+    run_dir = home / "runs" / "20260101_000000_soak"
+    run_dir.mkdir(parents=True)
+    (run_dir / "01_shot.png").write_text("artifact — must stay")
+
+    _prepare_home(home, fresh=True)
+
+    assert not (home / "known_words.db").exists(), "home state must be wiped"
+    assert (run_dir / "01_shot.png").is_file(), "runs/ artifacts must survive the wipe"
 
 
 def test_prepare_home_no_fresh_leaves_existing_contents(tmp_path: Path) -> None:
@@ -495,18 +562,21 @@ def test_prepare_home_fresh_true_refuses_real_home_and_preserves_sentinel(
     assert sentinel.exists(), "guard fired after rmtree — sentinel was deleted"
 
 
-def test_inprocess_soak_fresh_home_records_baseline_in_report(isolated_home: Path, tmp_path: Path, qtbot) -> None:
+@pytest.mark.network
+@_needs_ffmpeg
+def test_inprocess_soak_fresh_home_records_baseline_in_report(
+    isolated_home: Path, tmp_path: Path, qtbot, fake_anki
+) -> None:
     """run_inprocess_soak with fresh_home=True records home_pre_existed + baseline in report."""
     # Seed a file so the pre-existed=True path is exercised.
     (isolated_home / "sentinel.txt").write_text("stale")
 
-    e2e = E2EConfig(test_home=isolated_home)
+    e2e = E2EConfig(test_home=isolated_home, ankiconnect_url=fake_anki.url)
     run_dir = RunDir(tmp_path / "runs", label="fresh")
 
     soak = run_inprocess_soak(
         e2e,
         sessions=1,
-        preview=True,
         bypass_known_words=True,
         run_dir=run_dir,
         test_home=isolated_home,
@@ -524,18 +594,19 @@ def test_inprocess_soak_fresh_home_records_baseline_in_report(isolated_home: Pat
     assert not (isolated_home / "sentinel.txt").exists()
 
 
-def test_inprocess_soak_no_fresh_home_leaves_files(isolated_home: Path, tmp_path: Path, qtbot) -> None:
+@pytest.mark.network
+@_needs_ffmpeg
+def test_inprocess_soak_no_fresh_home_leaves_files(isolated_home: Path, tmp_path: Path, qtbot, fake_anki) -> None:
     """run_inprocess_soak with fresh_home=False does NOT delete the test home contents."""
     sentinel = isolated_home / "sentinel.txt"
     sentinel.write_text("keep me")
 
-    e2e = E2EConfig(test_home=isolated_home)
-    run_dir = RunDir(tmp_path / "runs", label="faithful")
+    e2e = E2EConfig(test_home=isolated_home, ankiconnect_url=fake_anki.url)
+    run_dir = RunDir(tmp_path / "runs", label="no-fresh")
 
     run_inprocess_soak(
         e2e,
         sessions=1,
-        preview=True,
         bypass_known_words=True,
         run_dir=run_dir,
         test_home=isolated_home,
@@ -550,20 +621,25 @@ def test_inprocess_soak_no_fresh_home_leaves_files(isolated_home: Path, tmp_path
 # --------------------------------------------------------------------------
 
 
-def test_session_report_records_mined_forms_in_bypass_soak(isolated_home: Path, tmp_path: Path, qtbot) -> None:
-    """Each SessionReport.mined_forms == set(EXPECTED_LEMMAS) in bypass preview soak.
+@pytest.mark.network
+@_needs_ffmpeg
+def test_session_report_mined_forms_exact_in_bypass_single_run(
+    isolated_home: Path, tmp_path: Path, qtbot, fake_anki
+) -> None:
+    """SessionReport.mined_forms == set(EXPECTED_LEMMAS) in a single bypass run.
 
     A tokenizer regression that changes WHICH words are mined (same count, wrong
     set) would set session.ok=False + a descriptive error — caught before it
-    reaches production.
+    reaches production. Single-session ONLY: bypass card creation is stateful,
+    so a second identical session would dup-skip everything (the runner rejects
+    multi-session bypass for the same reason).
     """
-    e2e = E2EConfig(test_home=isolated_home)
+    e2e = E2EConfig(test_home=isolated_home, ankiconnect_url=fake_anki.url)
     run_dir = RunDir(tmp_path / "runs", label="mined-set-soak")
 
     soak = run_inprocess_soak(
         e2e,
-        sessions=2,
-        preview=True,
+        sessions=1,
         bypass_known_words=True,
         run_dir=run_dir,
         test_home=isolated_home,
@@ -574,6 +650,8 @@ def test_session_report_records_mined_forms_in_bypass_soak(isolated_home: Path, 
         assert s.ok, f"session {s.index} failed: {s.errors}"
         # mined_forms field is populated.
         assert s.mined_forms, f"session {s.index}: mined_forms is empty"
+        # Every word became a card in bypass mode (dedup off, card-everything).
+        assert s.cards_created == len(EXPECTED_LEMMAS)
         # Set matches EXPECTED_LEMMAS exactly in bypass mode.
         assert set(s.mined_forms) == set(EXPECTED_LEMMAS), (
             f"session {s.index} mined-set mismatch:\n"
@@ -584,19 +662,20 @@ def test_session_report_records_mined_forms_in_bypass_soak(isolated_home: Path, 
         )
 
 
-def test_session_report_mined_forms_in_report_json(isolated_home: Path, tmp_path: Path, qtbot) -> None:
+@pytest.mark.network
+@_needs_ffmpeg
+def test_session_report_mined_forms_in_report_json(isolated_home: Path, tmp_path: Path, qtbot, fake_anki) -> None:
     """mined_forms is serialised into report.json and round-trips cleanly.
 
-    Verifies the new field is JSON-friendly (list[str]) so report.json always
+    Verifies the field is JSON-friendly (list[str]) so report.json always
     carries the mined set for post-hoc inspection.
     """
-    e2e = E2EConfig(test_home=isolated_home)
+    e2e = E2EConfig(test_home=isolated_home, ankiconnect_url=fake_anki.url)
     run_dir = RunDir(tmp_path / "runs", label="mined-json")
 
     run_inprocess_soak(
         e2e,
         sessions=1,
-        preview=True,
         bypass_known_words=True,
         run_dir=run_dir,
         test_home=isolated_home,
@@ -623,13 +702,13 @@ def test_live_process_soak_skips_when_anki_down(isolated_home: Path, tmp_path: P
     except AnkiUnreachableError:
         pytest.skip("Anki not running (AnkiConnect unreachable)")
 
-    # Reached only with Anki up: run a 2-session live in-process soak.
+    # Reached only with Anki up: run a 2-session live faithful in-process soak
+    # (bypass is single-session only — card creation is stateful).
     run_dir = RunDir(tmp_path / "runs", label="live")
     soak = run_inprocess_soak(
         e2e,
         sessions=2,
-        preview=False,
-        bypass_known_words=True,
+        bypass_known_words=False,
         run_dir=run_dir,
         test_home=isolated_home,
     )
@@ -638,42 +717,47 @@ def test_live_process_soak_skips_when_anki_down(isolated_home: Path, tmp_path: P
 
 
 # --------------------------------------------------------------------------
-# Unit tests for _maybe_gateway (no live Anki — gateway/post_action mocked)
+# Unit tests for _build_gateway (no live Anki — gateway/post_action mocked)
 # --------------------------------------------------------------------------
 
 _SOAK_GW = "tests.e2e.soak.AnkiGateway"
 
 
-def test_maybe_gateway_preview_returns_none_without_pinging(tmp_path: Path) -> None:
-    """preview=True returns None immediately — AnkiGateway is never constructed."""
-    e2e = E2EConfig(test_home=tmp_path)
-    with patch(_SOAK_GW) as mock_gw_cls:
-        result = _maybe_gateway(e2e, preview=True)
-    assert result is None
-    mock_gw_cls.assert_not_called()
-
-
-def test_maybe_gateway_non_preview_raises_when_anki_down(tmp_path: Path) -> None:
-    """preview=False re-raises AnkiUnreachableError so the runner's exit-2 handler fires."""
+def test_build_gateway_raises_when_anki_down(tmp_path: Path) -> None:
+    """_build_gateway re-raises AnkiUnreachableError so the runner's exit-2 handler fires."""
     e2e = E2EConfig(test_home=tmp_path)
     with patch(_SOAK_GW) as mock_gw_cls:
         mock_instance = mock_gw_cls.return_value
         mock_instance.ping.side_effect = AnkiUnreachableError("connection refused")
         with pytest.raises(AnkiUnreachableError):
-            _maybe_gateway(e2e, preview=False)
+            _build_gateway(e2e)
 
 
-def test_maybe_gateway_non_preview_returns_gateway_when_anki_up(tmp_path: Path) -> None:
-    """preview=False returns the gateway when ping succeeds."""
+def test_build_gateway_returns_gateway_when_anki_up(tmp_path: Path) -> None:
+    """_build_gateway returns the pinged, deck- and model-ensured gateway."""
     e2e = E2EConfig(test_home=tmp_path)
     with patch(_SOAK_GW) as mock_gw_cls:
         mock_instance = mock_gw_cls.return_value
         mock_instance.ping.return_value = None
-        result = _maybe_gateway(e2e, preview=False)
+        result = _build_gateway(e2e)
     assert result is mock_instance
     mock_instance.ping.assert_called_once()
-    mock_instance.ensure_test_deck.assert_called_once()
+    mock_instance.ensure_test_deck.assert_called_once_with(allow_existing=False)
     mock_instance.ensure_test_model.assert_called_once()
+
+
+def test_build_gateway_adopt_deck_allows_existing(tmp_path: Path) -> None:
+    """adopt_deck=True forwards allow_existing=True (the cross-process child path).
+
+    Guards the ForeignDeckError fix: a child's fresh gateway must adopt the deck
+    the parent/earlier sessions already populated.
+    """
+    e2e = E2EConfig(test_home=tmp_path)
+    with patch(_SOAK_GW) as mock_gw_cls:
+        mock_instance = mock_gw_cls.return_value
+        mock_instance.ping.return_value = None
+        _build_gateway(e2e, adopt_deck=True)
+    mock_instance.ensure_test_deck.assert_called_once_with(allow_existing=True)
 
 
 # --------------------------------------------------------------------------
@@ -722,7 +806,6 @@ def test_check_gui_state_process_cards_created_zero_no_step5_passes() -> None:
     driver = _make_mock_driver(log=log, progress_value=0, progress_text="")
     checks = _call_check_gui_state(
         driver=driver,
-        preview=False,
         result_ok=True,
         cards_created=0,
     )
@@ -754,7 +837,6 @@ def test_check_gui_state_process_cards_created_positive_missing_step5_fails() ->
     driver = _make_mock_driver(log=log, progress_value=50, progress_text="Processing")
     checks = _call_check_gui_state(
         driver=driver,
-        preview=False,
         result_ok=True,
         cards_created=5,
     )
@@ -775,7 +857,6 @@ def test_check_gui_state_process_cards_created_positive_stuck_progress_fails() -
     driver = _make_mock_driver(log=log, progress_value=0, progress_text="")
     checks = _call_check_gui_state(
         driver=driver,
-        preview=False,
         result_ok=True,
         cards_created=5,
     )
@@ -796,7 +877,6 @@ def test_check_gui_state_process_cards_created_positive_healthy_passes() -> None
     driver = _make_mock_driver(log=log, progress_value=100, progress_text="Complete")
     checks = _call_check_gui_state(
         driver=driver,
-        preview=False,
         result_ok=True,
         cards_created=12,
     )
@@ -809,22 +889,3 @@ def test_check_gui_state_process_cards_created_positive_healthy_passes() -> None
 
     stuck_check = checks["progress_not_stuck"]
     assert stuck_check["ok"] is True and stuck_check["actual"] is False
-
-
-def test_check_gui_state_preview_never_checks_step5_or_stuck() -> None:
-    """Preview run: log_contains:Step 5/5 and progress_not_stuck are absent entirely.
-
-    Preview is unchanged by the fix: both keys must not be in checks regardless
-    of cards_created (which is always 0 in preview anyway).
-    """
-    log = "Step 1/5\nStep 2/5\n"
-    driver = _make_mock_driver(log=log, progress_value=0, progress_text="")
-    checks = _call_check_gui_state(
-        driver=driver,
-        preview=True,
-        result_ok=True,
-        cards_created=0,
-    )
-
-    assert "log_contains:Step 5/5" not in checks, "Step 5/5 must not be checked in preview"
-    assert "progress_not_stuck" not in checks, "progress_not_stuck must not be checked in preview"

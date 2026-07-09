@@ -8,8 +8,8 @@ multi-session accumulation/leak bugs AND GUI-consistency/integration bugs (butto
 enable/disable, cancel paths, mined-word-set correctness) that unit tests cannot
 exercise with real services. It deliberately avoids ``MainWindow`` so there is no
 blocking ``ResultsDialog`` / welcome dialog and no heavy app startup; the tab
-itself shows results non-modally (via the presenter signal), so preview/process
-runs need nothing dismissed.
+itself shows results non-modally (via the presenter signal), so process runs
+need nothing dismissed.
 
 Capture mechanics (connect-before-start)
 ----------------------------------------
@@ -123,7 +123,7 @@ class EpisodeTabDriver:
     """Drive a real ``SingleEpisodeTab`` in-process like a user would.
 
     Construct it, register ``driver.tab`` with ``qtbot.addWidget`` in the test,
-    select files, click preview/process, then :meth:`wait_for_result`.
+    select files, click process, then :meth:`wait_for_result`.
 
     Args:
         config: The mining config (build via ``app_config.build_app_config``).
@@ -201,14 +201,6 @@ class EpisodeTabDriver:
         worker.result_ready.connect(_on_result)
         worker.error.connect(_on_error)
 
-    def click_preview(self) -> None:
-        """Click the real Preview button (preview mode).
-
-        Capture is armed by ``worker_created`` (see :meth:`_on_worker_created`),
-        emitted before the worker starts — not by the click itself.
-        """
-        self.tab.preview_button.click()
-
     def click_process(self) -> None:
         """Click the real Process button (card creation).
 
@@ -236,35 +228,13 @@ class EpisodeTabDriver:
                 return sc
         return None
 
-    def shortcut_preview_via_keyboard(self) -> None:
-        """Trigger the Ctrl+P preview shortcut through the real shortcut machinery.
-
-        ``QTest.keyClick`` requires the widget to be shown and have focus — it
-        does NOT fire ``QShortcut.activated`` for a never-``show()``-n offscreen
-        widget (empirically verified: the offscreen platform plugin accepts the
-        key event but the shortcut filter never activates). The robust offscreen
-        substitute is to call ``shortcut.activated.emit()`` directly on the real
-        ``QShortcut`` instance: the slot (``_on_preview_clicked``) is still the
-        real one, the signal is still the real one, and the driver's
-        ``worker_created`` capture is still armed — only the key-matching step is
-        bypassed. This is explicitly documented as the accepted fallback for this
-        low-value task.
-
-        Raises:
-            AssertionError: When the Ctrl+P shortcut is absent from the tab
-                (i.e. ``_setup_shortcuts`` did not register it).
-        """
-        sc = self._find_shortcut("Ctrl+P")
-        assert sc is not None, "Ctrl+P shortcut not found on SingleEpisodeTab"
-        sc.activated.emit()
-
     def assert_shortcuts_exist(self) -> None:
-        """Assert all three documented keyboard shortcuts are registered on the tab.
+        """Assert the documented keyboard shortcuts are registered on the tab.
 
-        Checks: Ctrl+O (browse video), Ctrl+P (preview), Ctrl+Return (process).
+        Checks: Ctrl+O (browse video), Ctrl+Return (process).
         Raises ``AssertionError`` if any is absent or if the shortcut is disabled.
         """
-        expected = ["Ctrl+O", "Ctrl+P", "Ctrl+Return"]
+        expected = ["Ctrl+O", "Ctrl+Return"]
         for key_seq in expected:
             sc = self._find_shortcut(key_seq)
             assert sc is not None, (
@@ -277,7 +247,7 @@ class EpisodeTabDriver:
         """Assert the focus/tab order among the tab's primary input widgets is correct.
 
         Verifies the order declared in ``_setup_accessibility``:
-        video_selector → subtitle_selector → offset_spinbox → preview_button → process_button.
+        video_selector → subtitle_selector → offset_spinbox → process_button.
 
         For each consecutive pair (A, B), walks ``nextInFocusChain()`` from A
         and asserts B appears before the chain cycles back to A (i.e. B follows
@@ -290,7 +260,6 @@ class EpisodeTabDriver:
             tab.video_selector,
             tab.subtitle_selector,
             tab.offset_spinbox,
-            tab.preview_button,
             tab.process_button,
         ]
         # Check only consecutive forward pairs (not the wrap-around edge).
@@ -467,7 +436,7 @@ class EpisodeTabDriver:
         """True when the tab is in idle state: process button shown+enabled, cancel hidden.
 
         This is the expected state AFTER a run completes (or errors). The tab
-        shows preview/process/timing/tracks buttons and hides cancel via
+        shows process/timing/tracks buttons and hides cancel via
         ``_restore_buttons``, which is connected to ``worker_thread.finished``.
         """
         return self.process_button_enabled() and not self.cancel_button_visible()
@@ -475,7 +444,7 @@ class EpisodeTabDriver:
     def buttons_running(self) -> bool:
         """True when the tab is in running state: cancel shown, process hidden.
 
-        The tab hides preview/process/timing/tracks and shows cancel inside
+        The tab hides process/timing/tracks and shows cancel inside
         ``_start_processing``; ``_restore_buttons`` reverses this when the
         worker finishes.
         """

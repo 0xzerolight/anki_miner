@@ -1,13 +1,14 @@
 """Tests for the full-window ``AppDriver`` (real ``MainWindow``, offscreen Qt).
 
-The headline acceptance is :func:`test_full_window_preview_drives_real_mainwindow`:
+The headline acceptance is :func:`test_full_window_process_drives_real_mainwindow`:
 it builds the ACTUAL :class:`~anki_miner.gui.main_window.MainWindow` under an
 isolated test home with the harness config injected, mounts the driver's real
-``SingleEpisodeTab`` into the window's tab bar, drives a preview run through the
-window's own ``_on_processing_result`` slot (which pops the patched
-``ResultsDialog``), and asserts the window saw the result without blocking.
-Preview mode parses + filters only, so it needs neither Anki nor card creation
-and runs fully offscreen.
+``SingleEpisodeTab`` into the window's tab bar, drives a full process run — card
+creation against the ``FakeAnkiConnect`` loopback server — through the window's
+own ``_on_processing_result`` slot (which pops the patched ``ResultsDialog``),
+and asserts the window saw the result without blocking. The test is
+``network``-marked (the fake is real loopback TCP; unmarked connects trip the
+socket tripwire) and skips without ffmpeg (real phase-3 extraction).
 
 This is the HIGHEST-RISK harness path (Qt lifecycle / MainWindow startup), so
 the tests pay particular attention to clean disposal. The ``AppDriver`` OWNS the
@@ -23,6 +24,7 @@ pytest-qt segfault hazard the conftest ``_drain_qt_deletes`` net backstops.
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import pytest
@@ -35,9 +37,13 @@ from tests.e2e.fixtures_dictionary import seed_offline_dict
 from tests.e2e.fixtures_media import get_test_video
 from tests.e2e.fixtures_subtitle import EXPECTED_LEMMAS, get_test_srt
 
-# fugashi/MeCab is required for the real tokenizer (preview run); skip cleanly
-# if it is absent (mirrors test_driver.py).
+# fugashi/MeCab is required for the real tokenizer; skip cleanly if it is
+# absent (mirrors test_driver.py).
 pytest.importorskip("fugashi")
+
+# Per-test guard (NOT module-level): only the process-run test extracts media;
+# the build/tab/menu tests are ffmpeg-free and must keep running on CI.
+_needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg required for process-mode runs")
 
 
 def test_full_window_builds_clean(tmp_path: Path, qtbot) -> None:
@@ -112,38 +118,42 @@ def test_full_window_menu_action_triggers(tmp_path: Path, qtbot) -> None:
         driver.dispose()
 
 
-def test_full_window_preview_drives_real_mainwindow(tmp_path: Path, qtbot) -> None:
-    """Drive a preview run through the real ``MainWindow`` end-to-end, no Anki.
+@pytest.mark.network
+@_needs_ffmpeg
+def test_full_window_process_drives_real_mainwindow(tmp_path: Path, qtbot, fake_anki) -> None:
+    """Drive a full process run through the real ``MainWindow`` against the fake.
 
-    Preview = parse + filter only, so it completes fully offscreen. The run's
-    result flows through the window's own ``_on_processing_result`` slot, which
-    pops the (patched) ``ResultsDialog`` — exercising the dialog wiring that the
-    bare-tab driver never touches. Asserts the pipeline genuinely ran (words ==
-    the fixture's ``EXPECTED_LEMMAS``), the window observed exactly one result,
-    and the (patched) dialog flow did not block.
+    All five phases run, with card creation landing on ``FakeAnkiConnect``. The
+    run's result flows through the window's own ``_on_processing_result`` slot,
+    which pops the (patched) ``ResultsDialog`` — exercising the dialog wiring
+    that the bare-tab driver never touches. The AppDriver's own held-open
+    curation responder (policy ``"all"``) answers the curation modal. Asserts
+    the pipeline genuinely ran (words == the fixture's ``EXPECTED_LEMMAS``, one
+    card per word), the window observed exactly one result, and the (patched)
+    dialog flow did not block.
     """
-    e2e = E2EConfig(test_home=tmp_path)
+    e2e = E2EConfig(test_home=tmp_path, ankiconnect_url=fake_anki.url)
     cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
     seed_offline_dict(cfg.dicts_root)
-    run_dir = RunDir(e2e.runs_root, label="full-window-preview")
+    run_dir = RunDir(e2e.runs_root, label="full-window-process")
 
-    driver = AppDriver(cfg, run_dir)
+    driver = AppDriver(cfg, run_dir, curation_policy="all")
     try:
         driver.switch_to_tab(driver.episode_tab_index)
         driver.select_video(get_test_video())
         driver.select_subtitle(get_test_srt())
-        driver.click_preview()
-        result = driver.wait_for_result(timeout_s=60)
+        driver.click_process()
+        result = driver.wait_for_result(timeout_s=120)
 
         assert result.success, result.errors
         assert result.total_words_found == len(EXPECTED_LEMMAS)
-        assert result.cards_created == 0  # preview creates nothing
+        assert result.cards_created == len(EXPECTED_LEMMAS)
         # The window's result slot fired exactly once (the patched ResultsDialog
         # was constructed + exec()'d non-blocking — no freeze).
         assert driver.window_results_seen == 1
         assert not driver.dialog_blocked
 
-        shot = driver.screenshot("full-window-preview-done")
+        shot = driver.screenshot("full-window-process-done")
         assert shot.is_file() and shot.stat().st_size > 0
     finally:
         driver.dispose()

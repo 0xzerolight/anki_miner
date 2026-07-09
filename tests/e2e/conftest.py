@@ -17,13 +17,39 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 
 
 def pytest_collection_modifyitems(items):
-    """Exempt e2e tests from the global per-test timeout (pyproject sets 120s as
-    a deadlock backstop for unit tests). Real-service e2e/soak runs drive ffmpeg,
-    Anki, and multi-session loops that legitimately exceed it. e2e is excluded
-    from CI, so this only affects explicit ``pytest -m e2e`` runs."""
+    """Exempt e2e AND network-marked harness tests from the global per-test
+    timeout (pyproject sets 120s as a deadlock backstop for unit tests).
+    Real-service e2e/soak runs drive ffmpeg, Anki, and multi-session loops that
+    legitimately exceed it. ``network``-marked tests here are the fake-AnkiConnect
+    process runs — the multi-session faithful soaks do several real ffmpeg
+    extractions per test and can blow the 120s cap on slow machines."""
     for item in items:
-        if item.get_closest_marker("e2e"):
+        if item.get_closest_marker("e2e") or item.get_closest_marker("network"):
             item.add_marker(pytest.mark.timeout(0))
+
+
+@pytest.fixture
+def fake_anki():
+    """A started FakeAnkiConnect server, pre-seeded with the E2E note model.
+
+    The pre-seed matters for gateway-less driver tests: a process run hits the
+    app's preflight (``verify_card_target``: ``modelNames`` +
+    ``modelFieldNames``), which raises ``SetupError`` unless the harness note
+    type already exists. Soak paths would create it via the gateway's
+    ``ensure_test_model()`` anyway; the seed makes both paths uniform.
+
+    Tests using this fixture talk real loopback HTTP — mark them
+    ``@pytest.mark.network`` or the socket tripwire fails them.
+    """
+    from tests.e2e.config import E2EConfig
+    from tests.e2e.fake_ankiconnect import FakeAnkiConnect
+
+    server = FakeAnkiConnect().start()
+    server.seed_model(E2EConfig().note_type, ["Front", "Back"])
+    try:
+        yield server
+    finally:
+        server.stop()
 
 
 @pytest.fixture

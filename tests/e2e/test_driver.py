@@ -1,20 +1,26 @@
 """Tests for the in-process episode-tab driver + run artifacts.
 
-The headline acceptance is :func:`test_preview_drives_real_tab_no_anki`: it
-builds the harness config against a ``tmp_path`` home, seeds the offline dict,
-constructs the REAL ``SingleEpisodeTab`` via :class:`EpisodeTabDriver`, clicks
-Preview, waits for the worker, and asserts the pipeline genuinely ran (words
-found == the fixture's ``EXPECTED_LEMMAS``). Preview mode parses + filters only,
-so it needs neither Anki nor card creation — it runs fully offscreen.
+The headline acceptance is :func:`test_process_drives_real_tab_fake_anki`: it
+builds the harness config against a ``tmp_path`` home + a ``FakeAnkiConnect``
+loopback server, seeds the offline dict, constructs the REAL
+``SingleEpisodeTab`` via :class:`EpisodeTabDriver`, clicks Process under an
+auto-answering curation responder, waits for the worker, and asserts the FULL
+pipeline genuinely ran: all fixture lemmas mined, cards created against the
+fake, phase-5 log markers present, and the deck read-back (through the real
+``AnkiGateway``) matching.
 
-The live card-creation test self-skips when Anki is unreachable (the env here),
-and the artifact tests stand alone. Per project Qt discipline every top-level
-widget is registered with ``qtbot.addWidget`` and the worker is joined via the
-driver's ``teardown`` before the test ends.
+Fake-connecting tests carry ``@pytest.mark.network`` (the socket tripwire
+blocks unmarked TCP connects, loopback included) and, where the run reaches
+phase-3 media extraction, an ffmpeg skipif. The live card-creation test
+self-skips when Anki is unreachable, and the artifact tests stand alone. Per
+project Qt discipline every top-level widget is registered with
+``qtbot.addWidget`` and the worker is joined via the driver's ``teardown``
+before the test ends.
 """
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import pytest
@@ -32,6 +38,11 @@ from tests.e2e.fixtures_subtitle import EXPECTED_LEMMAS, get_test_srt, write_cor
 # fugashi/MeCab is required for the real tokenizer; skip the whole module's
 # pipeline tests cleanly if it is absent.
 pytest.importorskip("fugashi")
+
+# Process-mode runs do real phase-3 media extraction; guard per-test (NOT
+# module-level — the artifact/unit tests here are ffmpeg-free and must keep
+# running on CI, which installs no ffmpeg).
+_needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg required for process-mode runs")
 
 
 # --------------------------------------------------------------------------
@@ -173,39 +184,44 @@ def test_build_app_config_bypass_known_words(tmp_path: Path) -> None:
 
 
 # --------------------------------------------------------------------------
-# Primary REAL acceptance: preview mode, no Anki needed
+# Primary REAL acceptance: full process run against the fake AnkiConnect
 # --------------------------------------------------------------------------
 
 
-def test_preview_drives_real_tab_no_anki(tmp_path: Path, qtbot) -> None:
-    """Drive the real tab in preview mode end-to-end with no Anki running.
+@pytest.mark.network
+@_needs_ffmpeg
+def test_process_drives_real_tab_fake_anki(tmp_path: Path, qtbot, fake_anki) -> None:
+    """Drive the real tab through a FULL process run against the fake server.
 
-    Preview = parse + filter only (no media extraction, no card creation, no
-    curation), so it completes fully offscreen. Asserts the returned
-    ``ProcessingResult`` reports the full expected lemma set, a screenshot was
-    written, the log/progress widgets are readable, and teardown is clean.
+    All five phases run: parse, filter, media extraction, definitions, and card
+    creation against ``FakeAnkiConnect``. Asserts the returned
+    ``ProcessingResult`` reports the full expected lemma set, every word became
+    a card (bypass mode: dedup off, card-everything), the phase markers reached
+    Step 5/5, the deck read-back through the real ``AnkiGateway`` matches, a
+    screenshot was written, and teardown is clean.
     """
-    e2e = E2EConfig(test_home=tmp_path)
-    # bypass_known_words: phase-2 makes no AnkiConnect call → runs offscreen, and
-    # mines every fixture word deterministically (dedup off → all EXPECTED_LEMMAS).
+    e2e = E2EConfig(test_home=tmp_path, ankiconnect_url=fake_anki.url)
+    # bypass_known_words: phase-2 makes no AnkiConnect call and mines every
+    # fixture word deterministically (dedup off → all EXPECTED_LEMMAS).
     cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
     seed_offline_dict(cfg.dicts_root)
 
-    run_dir = RunDir(e2e.runs_root, label="preview")
+    run_dir = RunDir(e2e.runs_root, label="process")
     driver = EpisodeTabDriver(cfg, run_dir)
     qtbot.addWidget(driver.tab)
     try:
         driver.select_video(get_test_video())
         driver.select_subtitle(get_test_srt())
-        driver.click_preview()
-        result = driver.wait_for_result(timeout_s=60)
+        with AutoCurationResponder(policy="all"):
+            driver.click_process()
+            result = driver.wait_for_result(timeout_s=120)
 
-        # The pipeline genuinely tokenized + filtered: total words equals the
-        # fixture's authoritative lemma count (dedup off → all of them mined).
+        # The pipeline genuinely tokenized + filtered + created cards: totals
+        # equal the fixture's authoritative lemma count (dedup off).
         assert result.success, result.errors
         assert result.total_words_found == len(EXPECTED_LEMMAS)
         assert result.new_words_found == len(EXPECTED_LEMMAS)
-        assert result.cards_created == 0  # preview creates nothing
+        assert result.cards_created == len(EXPECTED_LEMMAS)
 
         # Mined word-set must equal EXPECTED_LEMMAS exactly (bypass → dedup off).
         assert set(result.mined_forms) == set(EXPECTED_LEMMAS), (
@@ -216,32 +232,32 @@ def test_preview_drives_real_tab_no_anki(tmp_path: Path, qtbot) -> None:
             f"  missing={sorted(set(EXPECTED_LEMMAS) - set(result.mined_forms))}"
         )
 
+        # Deck read-back through the real gateway sees every created card.
+        assert AnkiGateway(e2e).deck_card_count() == len(EXPECTED_LEMMAS)
+
         # Real widgets are readable.
         assert isinstance(driver.log_text(), str)
         assert isinstance(driver.progress_text(), str)
         assert isinstance(driver.progress_value(), int)
 
         # Screenshot landed on disk.
-        shot = driver.screenshot("preview-done")
+        shot = driver.screenshot("process-done")
         assert shot.is_file() and shot.stat().st_size > 0
 
         # GUI state must have returned to idle after the run completes.
         assert driver.buttons_idle(), (
-            f"buttons not idle after preview: "
+            f"buttons not idle after process: "
             f"process_enabled={driver.process_button_enabled()}, "
             f"cancel_visible={driver.cancel_button_visible()}"
         )
         assert not driver.buttons_running(), "cancel must not be visible at idle"
 
-        # Activity log must contain the phase-1 and phase-2 markers.
+        # Activity log must contain markers for every phase, through card creation.
         log = driver.log_text()
-        assert log.strip(), "activity log is empty after preview run"
+        assert log.strip(), "activity log is empty after process run"
         assert "Step 1/5" in log, f"'Step 1/5' not found in log: {log[:500]}"
         assert "Step 2/5" in log, f"'Step 2/5' not found in log: {log[:500]}"
-
-        # Preview never emits phase 3–5 markers (no media/definitions/cards).
-        assert "Step 3/5" not in log, "phase-3 marker in preview log (should not appear)"
-        assert "Step 5/5" not in log, "phase-5 marker in preview log (should not appear)"
+        assert "Step 5/5" in log, f"'Step 5/5' not found in log: {log[:500]}"
     finally:
         driver.teardown()
 
@@ -385,19 +401,21 @@ def test_wait_for_result_times_out(tmp_path: Path, qtbot) -> None:
 
 
 # --------------------------------------------------------------------------
-# Mined word-set: preview populates result.mined_forms == EXPECTED_LEMMAS
+# Mined word-set: a process run populates result.mined_forms == EXPECTED_LEMMAS
 # --------------------------------------------------------------------------
 
 
-def test_preview_mined_forms_equals_expected_lemmas(tmp_path: Path, qtbot) -> None:
-    """result.mined_forms in preview mode equals EXPECTED_LEMMAS exactly.
+@pytest.mark.network
+@_needs_ffmpeg
+def test_process_mined_forms_equals_expected_lemmas(tmp_path: Path, qtbot, fake_anki) -> None:
+    """result.mined_forms in a process run equals EXPECTED_LEMMAS exactly.
 
     This is the direct check for Task 13's core invariant: a tokenizer regression
     that changes WHICH words are mined (same count, different set) is caught here.
     bypass_known_words=True ensures every fixture word is mined deterministically
-    (dedup off, no AnkiConnect call).
+    (dedup off, no phase-2 AnkiConnect call).
     """
-    e2e = E2EConfig(test_home=tmp_path)
+    e2e = E2EConfig(test_home=tmp_path, ankiconnect_url=fake_anki.url)
     cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
     seed_offline_dict(cfg.dicts_root)
 
@@ -407,8 +425,9 @@ def test_preview_mined_forms_equals_expected_lemmas(tmp_path: Path, qtbot) -> No
     try:
         driver.select_video(get_test_video())
         driver.select_subtitle(get_test_srt())
-        driver.click_preview()
-        result = driver.wait_for_result(timeout_s=60)
+        with AutoCurationResponder(policy="all"):
+            driver.click_process()
+            result = driver.wait_for_result(timeout_s=120)
 
         assert result.success, result.errors
         # Core invariant: the mined set must equal EXPECTED_LEMMAS exactly.
@@ -462,7 +481,8 @@ def test_mined_set_wrong_set_is_flagged() -> None:
 # --------------------------------------------------------------------------
 
 
-def test_corrupt_subtitle_fails_run_no_hang(tmp_path: Path, qtbot) -> None:
+@pytest.mark.network
+def test_corrupt_subtitle_fails_run_no_hang(tmp_path: Path, qtbot, fake_anki) -> None:
     """A parser-rejected subtitle yields a FAILED run (no hang) + screenshot.
 
     EMPIRICAL FINDING: a corrupt subtitle raises ``SubtitleParseError`` in
@@ -472,9 +492,11 @@ def test_corrupt_subtitle_fails_run_no_hang(tmp_path: Path, qtbot) -> None:
     NOT its ``error`` signal. The driver therefore RETURNS a failed
     ``ProcessingResult`` rather than raising ``E2EMiningError``. The point of this
     path is the GUI-bug surface: an unhandled failure must not hang the wait, and
-    the tab must return to idle so it stays usable.
+    the tab must return to idle so it stays usable. The run fails at phase 1 —
+    before media extraction — so no ffmpeg is needed; the fake only serves the
+    preflight (``modelNames``/``modelFieldNames``/``createDeck``).
     """
-    e2e = E2EConfig(test_home=tmp_path)
+    e2e = E2EConfig(test_home=tmp_path, ankiconnect_url=fake_anki.url)
     cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
     seed_offline_dict(cfg.dicts_root)
 
@@ -485,7 +507,7 @@ def test_corrupt_subtitle_fails_run_no_hang(tmp_path: Path, qtbot) -> None:
     try:
         driver.select_video(get_test_video())
         driver.select_subtitle(corrupt)
-        driver.click_preview()
+        driver.click_process()
         result = driver.wait_for_result(timeout_s=30)
 
         # Run completed (no hang) but failed, with the parse error surfaced.
@@ -547,7 +569,9 @@ def test_worker_error_signal_surfaces_as_mining_error(tmp_path: Path, qtbot, mon
 # --------------------------------------------------------------------------
 
 
-def test_cancel_ends_run_worker_joins_tab_reusable(tmp_path: Path, qtbot) -> None:
+@pytest.mark.network
+@_needs_ffmpeg
+def test_cancel_ends_run_worker_joins_tab_reusable(tmp_path: Path, qtbot, fake_anki) -> None:
     """Inject Cancel mid-run: the run ends promptly, worker joins, tab reusable.
 
     EMPIRICAL FINDING: a cancelled worker emits NEITHER ``result_ready`` NOR
@@ -557,10 +581,12 @@ def test_cancel_ends_run_worker_joins_tab_reusable(tmp_path: Path, qtbot) -> Non
     captured payload) and reports a :class:`CancelOutcome`. Asserts: the cancel
     won (no result captured), the worker joined, the tab returned to idle, and a
     SECOND run on the SAME tab still completes — proving no leaked/stuck state.
+    ffmpeg is needed for the second (completing) run; the cancelled one ends
+    during tokenize.
     """
     from tests.e2e.driver import CancelOutcome
 
-    e2e = E2EConfig(test_home=tmp_path)
+    e2e = E2EConfig(test_home=tmp_path, ankiconnect_url=fake_anki.url)
     cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
     seed_offline_dict(cfg.dicts_root)
 
@@ -571,9 +597,9 @@ def test_cancel_ends_run_worker_joins_tab_reusable(tmp_path: Path, qtbot) -> Non
         driver.select_video(get_test_video())
         driver.select_subtitle(get_test_srt())
 
-        # Preview mode (no Anki); cancel at delay 0 — the tokenize phase is the
-        # slow part, so the cancel reliably lands before the worker emits.
-        driver.click_preview()
+        # Cancel at delay 0 — the tokenize phase is the slow part, so the
+        # cancel reliably lands before the worker emits.
+        driver.click_process()
         outcome: CancelOutcome = driver.cancel_and_wait(delay_s=0.0, timeout_s=30)
 
         assert isinstance(outcome, CancelOutcome)
@@ -586,24 +612,28 @@ def test_cancel_ends_run_worker_joins_tab_reusable(tmp_path: Path, qtbot) -> Non
         # The SAME tab must be reusable for a fresh run after a cancel.
         driver.select_video(get_test_video())
         driver.select_subtitle(get_test_srt())
-        driver.click_preview()
-        result = driver.wait_for_result(timeout_s=60)
+        with AutoCurationResponder(policy="all"):
+            driver.click_process()
+            result = driver.wait_for_result(timeout_s=120)
         assert result.success, result.errors
         assert set(result.mined_forms) == set(EXPECTED_LEMMAS)
     finally:
         driver.teardown()
 
 
-def test_schedule_cancel_uses_qtimer_on_gui_thread(tmp_path: Path, qtbot) -> None:
+@pytest.mark.network
+def test_schedule_cancel_uses_qtimer_on_gui_thread(tmp_path: Path, qtbot, fake_anki) -> None:
     """``schedule_cancel`` arms a GUI-thread QTimer that clicks Cancel when fired.
 
     Light unit-level check that no raw thread is spawned: the cancel is dispatched
     via the event loop. We schedule with a tiny delay, pump events, and assert the
-    cancel reached the worker (cancel requested).
+    cancel reached the worker (cancel requested). The cancel lands during
+    tokenize — before media extraction — so no ffmpeg is needed; the fake serves
+    the preflight.
     """
     from tests.e2e.driver import _drain_until
 
-    e2e = E2EConfig(test_home=tmp_path)
+    e2e = E2EConfig(test_home=tmp_path, ankiconnect_url=fake_anki.url)
     cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
     seed_offline_dict(cfg.dicts_root)
 
@@ -613,7 +643,7 @@ def test_schedule_cancel_uses_qtimer_on_gui_thread(tmp_path: Path, qtbot) -> Non
     try:
         driver.select_video(get_test_video())
         driver.select_subtitle(get_test_srt())
-        driver.click_preview()
+        driver.click_process()
         worker = driver.tab.worker_thread
         assert worker is not None
         driver.schedule_cancel(0.0)
@@ -631,9 +661,9 @@ def test_schedule_cancel_uses_qtimer_on_gui_thread(tmp_path: Path, qtbot) -> Non
 
 
 def test_shortcuts_exist_and_enabled(tmp_path: Path, qtbot) -> None:
-    """All three documented QShortcuts are registered and enabled on the tab.
+    """The documented QShortcuts are registered and enabled on the tab.
 
-    Checks Ctrl+O / Ctrl+P / Ctrl+Return presence without activating them.
+    Checks Ctrl+O / Ctrl+Return presence without activating them.
     No Qt visibility required — ``findChildren`` works on an offscreen widget.
     """
     e2e = E2EConfig(test_home=tmp_path)
@@ -647,43 +677,8 @@ def test_shortcuts_exist_and_enabled(tmp_path: Path, qtbot) -> None:
         driver.teardown()
 
 
-def test_ctrl_p_keyboard_path_starts_preview_run(tmp_path: Path, qtbot) -> None:
-    """Ctrl+P shortcut path triggers a real preview run and a result is captured.
-
-    ``QTest.keyClick`` does NOT activate ``QShortcut.activated`` for a
-    never-shown offscreen widget (the offscreen platform plugin processes the
-    key event but the shortcut filter requires window/focus state). The robust
-    offscreen substitute is ``shortcut.activated.emit()`` on the real
-    ``QShortcut`` instance — the connected slot (``_on_preview_clicked``) is
-    still the real one, so the full pipeline runs: worker created, run
-    executes, result captured. This is the documented reduced check for this
-    low-value task (see driver.shortcut_preview_via_keyboard docstring).
-    """
-    e2e = E2EConfig(test_home=tmp_path)
-    cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)
-    seed_offline_dict(cfg.dicts_root)
-
-    run_dir = RunDir(e2e.runs_root, label="ctrl-p")
-    driver = EpisodeTabDriver(cfg, run_dir)
-    qtbot.addWidget(driver.tab)
-    try:
-        driver.select_video(get_test_video())
-        driver.select_subtitle(get_test_srt())
-
-        # Trigger via the real shortcut's activated signal (reduced offscreen check).
-        driver.shortcut_preview_via_keyboard()
-
-        result = driver.wait_for_result(timeout_s=60)
-        assert result.success, result.errors
-        # The pipeline genuinely ran: all fixture lemmas mined.
-        assert set(result.mined_forms) == set(EXPECTED_LEMMAS)
-        assert result.cards_created == 0  # preview never creates cards
-    finally:
-        driver.teardown()
-
-
 def test_tab_order_sane(tmp_path: Path, qtbot) -> None:
-    """The focus/tab order among primary inputs is video→subtitle→offset→preview→process.
+    """The focus/tab order among primary inputs is video→subtitle→offset→process.
 
     Verifies the ``setTabOrder`` calls in ``_setup_accessibility`` by walking
     ``nextInFocusChain()`` — no widget show required.
