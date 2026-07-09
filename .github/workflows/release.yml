@@ -657,9 +657,9 @@ jobs:
       # Install the built Vulkan wheel into the SAME env PyInstaller bundles from,
       # BEFORE PyInstaller runs, replacing any CPU pywhispercpp. --force-reinstall
       # so a pywhispercpp pulled in by [asr] (now or in future) is overwritten by
-      # the Vulkan build. Record the wheel's sha256 as a release artifact for
-      # provenance. shell: bash on both OSes (windows-latest has bash + sha256sum).
-      - name: Install Vulkan wheel into bundle env + record sha256
+      # the Vulkan build. shell: bash on both OSes (set -euo pipefail and
+      # ${VULKAN_WHEEL} expansion; windows-latest has bash).
+      - name: Install Vulkan wheel into bundle env
         if: matrix.build_vulkan == '1'
         shell: bash
         run: |
@@ -676,15 +676,6 @@ jobs:
           # Adding them to the [asr-vulkan] extra is NOT enough — the release job
           # installs [asr], not [asr-vulkan].
           pip install platformdirs requests tqdm
-          # Provenance artifact: the built wheel's sha256, next to the bundle.
-          mkdir -p dist
-          # Strip BOTH path separators: $VULKAN_WHEEL is a backslash path on
-          # Windows (PowerShell wrote it) and POSIX basename treats `\` literally.
-          WHEEL_BASENAME="${VULKAN_WHEEL##*[\\/]}"
-          sha256sum "${VULKAN_WHEEL}" | awk -v n="${WHEEL_BASENAME}" '{print $1"  "n}' \
-            > "dist/${{ matrix.artifact_name }}-pywhispercpp-vulkan.sha256"
-          echo "Recorded sha256:"
-          cat "dist/${{ matrix.artifact_name }}-pywhispercpp-vulkan.sha256"
 
       - name: Build with PyInstaller
         run: pyinstaller anki_miner.spec
@@ -877,7 +868,6 @@ jobs:
           path: |
             dist/AnkiMiner-${{ steps.version.outputs.version }}-Linux-x86_64.AppImage
             dist/anki-miner_${{ steps.version.outputs.version }}_amd64.deb
-            dist/${{ matrix.artifact_name }}-pywhispercpp-vulkan.sha256
 
       - name: Upload artifact (macOS)
         if: runner.os == 'macOS'
@@ -893,9 +883,7 @@ jobs:
         with:
           name: ${{ matrix.artifact_name }}
           if-no-files-found: error
-          path: |
-            dist/AnkiMiner-${{ steps.version.outputs.version }}-Windows-x86_64-Setup.exe
-            dist/${{ matrix.artifact_name }}-pywhispercpp-vulkan.sha256
+          path: dist/AnkiMiner-${{ steps.version.outputs.version }}-Windows-x86_64-Setup.exe
 
   release:
     needs: build
@@ -922,4 +910,3 @@ jobs:
             artifacts/**/*-Setup.exe
             artifacts/**/*.AppImage
             artifacts/**/*.deb
-            artifacts/**/*-pywhispercpp-vulkan.sha256

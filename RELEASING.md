@@ -83,7 +83,6 @@ and fix until green before tagging.
    - `AnkiMiner-*-Setup.exe`
    - `AnkiMiner-macOS-arm64.tar.gz`
    - `AnkiMiner-macOS-x86_64.tar.gz`
-   - `AnkiMiner-*-pywhispercpp-vulkan.sha256` (Linux + Windows — bundled Vulkan wheel provenance)
 
    And that PyPI lists the new version: <https://pypi.org/project/anki-miner/>.
 
