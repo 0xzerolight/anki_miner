@@ -158,6 +158,38 @@ class TestProcessEpisode:
         assert result.success is True
         assert result.elapsed_time > 0
 
+    def test_video_path_never_calls_sentence_tts(self, test_config, mock_services, tmp_path):
+        """Sentence TTS is reading-only: process_episode never consults the fetcher,
+        even with the feature fully enabled."""
+        from dataclasses import replace as dc_replace
+
+        cfg = dc_replace(test_config, reading_tts_enabled=True)
+        sentence_fetcher = MagicMock(name="SentenceFetcher")
+        proc = EpisodeProcessor(
+            config=cfg,
+            subtitle_parser=mock_services["subtitle_parser"],
+            word_filter=mock_services["word_filter"],
+            media_extractor=mock_services["media_extractor"],
+            definition_service=mock_services["definition_service"],
+            anki_service=mock_services["anki_service"],
+            presenter=NullPresenter(),
+            sentence_audio_fetcher=sentence_fetcher,
+        )
+        assert proc._reading_tts_active is True  # gate on; path is what protects video
+
+        words = [_make_word("食べる")]
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], _make_media("taberu"))]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        result = proc.process_episode(tmp_path / "ep01.mkv", tmp_path / "ep01.ass")
+
+        assert result.cards_created == 1
+        sentence_fetcher.fetch.assert_not_called()
+
     def test_skipped_duplicates_surfaced_as_warning(self, test_config, mock_services, tmp_path):
         """A non-zero last_skipped_duplicates from card creation is reported."""
         presenter = MagicMock()
@@ -3657,6 +3689,14 @@ class TestProcessorClose:
         proc = self._make(test_config, audio_fetcher=fetcher)
         proc.close()
         proc.definition_service.close.assert_called_once_with()
+        fetcher.close.assert_called_once_with()
+
+    def test_close_closes_sentence_audio_fetcher(self, test_config):
+        """Papago's requests.Session must join the close() fan-out."""
+        fetcher = MagicMock()
+        proc = self._make(test_config)
+        proc.sentence_audio_fetcher = fetcher
+        proc.close()
         fetcher.close.assert_called_once_with()
 
     def test_close_with_no_audio_fetcher_is_safe(self, test_config):
