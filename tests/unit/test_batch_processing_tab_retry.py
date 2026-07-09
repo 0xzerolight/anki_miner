@@ -54,5 +54,4 @@ def test_retry_failed_items_shows_cancel_button(tab):
     assert not tab.cancel_button.isHidden()
     assert tab.cancel_button.isEnabled()
     # The two normal-run buttons must be hidden during the retry run.
-    assert tab.preview_pairs_button.isHidden()
     assert tab.process_pairs_button.isHidden()

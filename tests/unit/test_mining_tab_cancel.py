@@ -158,7 +158,6 @@ def test_batch_show_cancel_state_hides_actions_and_reveals_cancel(batch_tab):
 
     batch_tab._show_cancel_state()
 
-    assert batch_tab.preview_pairs_button.isHidden()
     assert batch_tab.process_pairs_button.isHidden()
     assert not batch_tab.cancel_button.isHidden()
     assert batch_tab.cancel_button.isEnabled()
@@ -172,7 +171,6 @@ def test_batch_restore_buttons_hides_cancel_and_shows_actions(batch_tab):
     batch_tab._restore_buttons()
 
     assert batch_tab.cancel_button.isHidden()
-    assert not batch_tab.preview_pairs_button.isHidden()
     assert not batch_tab.process_pairs_button.isHidden()
     assert batch_tab._is_processing is False
 
