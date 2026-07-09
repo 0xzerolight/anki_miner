@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import html
-from collections.abc import Callable
+import logging
+from collections import OrderedDict
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
+    from anki_miner.services.reading.models import ImageRef, ReadingUnit
 
 from PyQt6.QtCore import QPoint, Qt, QTimer
-from PyQt6.QtGui import QColor, QFont, QKeySequence, QShortcut
+from PyQt6.QtGui import QColor, QFont, QImage, QKeySequence, QPixmap, QShortcut
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
@@ -35,17 +38,31 @@ from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.fonts import make_scaled_font
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
+from anki_miner.gui.utils.run_off_thread import join_tracked_workers, run_off_thread
 from anki_miner.gui.widgets.enhanced import ModernButton
+from anki_miner.gui.widgets.page_image_view import PageImageView, load_page_qimage
 from anki_miner.models import TokenizedWord
 from anki_miner.utils.i18n import tr_format
+
+logger = logging.getLogger(__name__)
+
+# Decoded-page LRU cap. A full-res manga page is ~13-22 MB as RGBA, so cap 4
+# bounds the cache at ~90 MB worst case — a deliberate memory/simplicity
+# tradeoff (vs. downscale-on-load + box rescale); consecutive words usually
+# share a page, so 4 pages of backtrack covers real navigation.
+_PAGE_CACHE_CAP = 4
 
 
 @dataclass(frozen=True)
 class CurationMediaContext:
-    """Media context for the word curation dialog's embedded player.
+    """Media context for the word curation dialog's preview panes.
 
-    Carries the video source and pre-parsed subtitle entries so the dialog
-    can seek to the correct frame when the user focuses a word row.
+    Video mining: carries the video source and pre-parsed subtitle entries so
+    the dialog can seek to the correct frame when the user focuses a word row.
+
+    Manga mining: carries ``page_units`` — the reading document's units keyed
+    by ``unit.index`` (== ``int(word.start_time)``) — so the dialog can show
+    the focused word's page image with its mokuro block highlighted.
     """
 
     video_file: Path | None
@@ -53,6 +70,7 @@ class CurationMediaContext:
     offset: float = 0.0
     audio_track_override: int | None = None
     ffprobe_cmd: str = "ffprobe"  # resolved ffprobe path/literal for audio-track auto-detection
+    page_units: Mapping[int, ReadingUnit] | None = None  # manga: unit.index -> ReadingUnit
 
 
 class _NumericTableWidgetItem(QTableWidgetItem):
@@ -84,9 +102,11 @@ class WordCurationDialog(QDialog):
 
     When ``media_context`` is supplied and its video file exists, an embedded
     ``SubtitlePlayerWidget`` is shown in the right pane so the user can preview
-    the scene for each word. When ``lookup_fn`` is supplied, a ``QTextBrowser``
-    below the player shows offline dictionary entries for the focused word.
-    Both panes are optional and backward-compatible; existing callers that pass
+    the scene for each word. When it carries ``page_units`` (manga mining), a
+    ``PageImageView`` shows the focused word's manga page with its mokuro
+    block highlighted. When ``lookup_fn`` is supplied, a ``QTextBrowser``
+    below shows offline dictionary entries for the focused word.
+    All panes are optional and backward-compatible; existing callers that pass
     only ``words`` receive the same pure-table behaviour as before.
     """
 
@@ -116,6 +136,15 @@ class WordCurationDialog(QDialog):
         ctx = media_context
         self._show_player = ctx is not None and ctx.video_file is not None and ctx.video_file.exists()
         self._show_dict = lookup_fn is not None
+        # Manga page pane: gated on page_units exactly like the player gates
+        # on video_file. Cache holds decoded QImages (GUI-thread only);
+        # _page_request_gen is the stale-guard for off-thread loads and
+        # _closing blocks any dispatch once teardown has run (see _stop_player).
+        self._page_units = ctx.page_units if ctx is not None else None
+        self._show_image = bool(self._page_units)
+        self._page_cache: OrderedDict[ImageRef, QImage] = OrderedDict()
+        self._page_request_gen = 0
+        self._closing = False
         # Sentence picker: shown when at least one word has alternative example
         # sentences (it appears on >= 2 subtitle lines). The chosen variant per
         # word index lives in self._chosen; get_selected_words falls back to the
@@ -161,7 +190,7 @@ class WordCurationDialog(QDialog):
         self.setWindowTitle(self.tr("Word Curation"))
         self.setMinimumWidth(900)
         self.setMinimumHeight(600)
-        if self._show_player or self._show_dict or self._has_candidates:
+        if self._show_player or self._show_image or self._show_dict or self._has_candidates:
             self.resize(1500, 760)
         else:
             self.resize(1100, 700)
@@ -178,8 +207,8 @@ class WordCurationDialog(QDialog):
         # Build the left pane (controls + table)
         left_pane = self._build_left_pane()
 
-        if self._show_player or self._show_dict or self._has_candidates:
-            # Horizontal splitter: left = word table, right = player + sentences + dict
+        if self._show_player or self._show_image or self._show_dict or self._has_candidates:
+            # Horizontal splitter: left = word table, right = player/page + sentences + dict
             h_splitter = QSplitter(Qt.Orientation.Horizontal)
             h_splitter.addWidget(left_pane)
 
@@ -294,7 +323,7 @@ class WordCurationDialog(QDialog):
         self.table.itemChanged.connect(self._on_item_changed)
 
         # Row-focus wiring — independent of checkbox state (itemSelectionChanged only).
-        if self._show_player or self._show_dict or self._has_candidates:
+        if self._show_player or self._show_image or self._show_dict or self._has_candidates:
             self.table.itemSelectionChanged.connect(self._on_row_focus_changed)
 
         # Right-click context menu (always present; useful for #43)
@@ -317,6 +346,12 @@ class WordCurationDialog(QDialog):
         if self._show_player:
             self.player_widget = self._create_player_widget()
             panes.append((self.player_widget, 480))
+
+        if self._show_image:
+            # Mutually exclusive with the player in practice (manga has no
+            # video), but the panes-list pattern composes either way.
+            self.page_image_view = PageImageView()
+            panes.append((self.page_image_view, 480))
 
         if self._has_candidates:
             panes.append((self._build_sentence_pane(), 240))
@@ -727,10 +762,69 @@ class WordCurationDialog(QDialog):
         QTimer.singleShot(0, lambda: self._preview_scene(start_time))
 
     def _preview_scene(self, start_time: float) -> None:
-        """Seek the player to ``start_time`` and pause, showing the frame."""
+        """Preview the scene for ``start_time``: seek the player / show the page.
+
+        The single funnel for both the debounced focus path and the sentence
+        candidate pick path — for manga, ``int(start_time)`` is the reading
+        unit index (the parser stamps ``start_time = float(unit.index)``).
+        """
         if self._show_player and hasattr(self, "player_widget"):
             self.player_widget.seek_seconds(start_time)
             self.player_widget.pause()
+        if self._show_image:
+            self._request_page_image(int(start_time))
+
+    def _request_page_image(self, unit_index: int) -> None:
+        """Show the page image (with block highlight) for ``unit_index``.
+
+        Loads off-thread with a generation-counter stale-guard; decoded pages
+        are LRU-cached so consecutive words on one page render instantly.
+        """
+        if self._closing or not hasattr(self, "page_image_view"):
+            return
+        # Bump on EVERY request (hit or miss): a newer request must supersede
+        # any in-flight load, otherwise a cache hit could be clobbered by a
+        # slower earlier miss that still carries the current generation.
+        self._page_request_gen += 1
+        gen = self._page_request_gen
+
+        assert self._page_units is not None  # guarded by self._show_image
+        unit = self._page_units.get(unit_index)
+        if unit is None or unit.image_ref is None:
+            caption = unit.location_label if unit is not None else ""
+            self.page_image_view.show_message(self.tr("No page image for this word"), caption)
+            return
+        ref = unit.image_ref
+        box = unit.block_box
+        caption = unit.location_label
+
+        cached = self._page_cache.get(ref)
+        if cached is not None:
+            self._page_cache.move_to_end(ref)
+            self.page_image_view.show_page(QPixmap.fromImage(cached), box, caption)
+            return
+
+        def on_done(image: object) -> None:
+            # Gen check FIRST: it reads only a plain Python attribute, so a
+            # late result after dialog teardown returns before touching any
+            # Qt object (teardown bumps the generation).
+            if gen != self._page_request_gen:
+                return
+            assert isinstance(image, QImage)
+            self._page_cache[ref] = image
+            while len(self._page_cache) > _PAGE_CACHE_CAP:
+                self._page_cache.popitem(last=False)
+            self.page_image_view.show_page(QPixmap.fromImage(image), box, caption)
+
+        def on_error(message: str) -> None:
+            if gen != self._page_request_gen:
+                return
+            logger.warning("page image load failed for %s: %s", ref, message)
+            self.page_image_view.show_message(self.tr("Could not load page image"), caption)
+
+        # QImage decodes off-thread (thread-safe); QPixmap conversion happens
+        # in on_done on the GUI thread (QPixmap is GUI-thread-only).
+        run_off_thread(self, lambda: load_page_qimage(ref), on_done, on_error)
 
     def _visual_row_for_index(self, idx: int) -> int | None:
         """Find the table row whose col-0 UserRole holds original word index ``idx``."""
@@ -741,12 +835,33 @@ class WordCurationDialog(QDialog):
         return None
 
     def _stop_player(self) -> None:
-        """Release the embedded player when the dialog closes (any exit path).
+        """Release preview resources when the dialog closes (any exit path).
 
         ``release`` (not ``stop``) so an in-flight ffprobe probe is joined: Qt
         does not forward the dialog's close to the child player widget, so a
         still-running probe worker would otherwise outlive it.
+
+        Image teardown ordering is load-bearing: the dialog is deleteLater()'d
+        right after exec() returns, and destroying a running QThread child
+        aborts the process. ``_closing`` is set FIRST so a pending
+        ``_focus_timer`` tick or the uncancelable ``QTimer.singleShot(0)``
+        from ``_on_candidate_chosen`` — either can fire after this drain but
+        before the deferred delete — can no longer dispatch a fresh worker
+        onto the dying dialog (``_request_page_image`` early-returns on it).
         """
+        if self._show_image:
+            self._closing = True
+            self._focus_timer.stop()
+            # Late results are dropped before touching any widget: on_done/
+            # on_error check the generation (a plain Python attribute) first.
+            self._page_request_gen += 1
+            laggards = join_tracked_workers(self, timeout_ms=200)
+            for worker in laggards:
+                # A PIL decode is not cancelable mid-call; detach laggards so
+                # the dialog's destruction never destroys a running QThread.
+                # Detached workers finish harmlessly and the global off-thread
+                # registry still reaps them at app close.
+                worker.setParent(None)
         if self._show_player and hasattr(self, "player_widget"):
             self.player_widget.release()
 
