@@ -377,7 +377,7 @@ def test_progress_callback_routes_to_item_progress_signal(make_worker, mock_proc
 
 
 # ---------------------------------------------------------------------------
-# D8: no curation media attributes are published
+# D8 (amended): no video curation attributes; manga publishes curation_document
 # ---------------------------------------------------------------------------
 
 
@@ -388,6 +388,46 @@ def test_no_curation_media_attributes_after_run(make_worker, mock_processor, fak
     assert not hasattr(worker, "_curation_video")
     assert not hasattr(worker, "_curation_subtitle")
     assert not hasattr(worker, "_curation_offset")
+
+
+def test_curation_document_none_before_run(make_worker):
+    # A constructed-but-not-run worker reads as "no document" (the manga tab's
+    # context builder relies on this instead of getattr fallbacks).
+    worker = make_worker(items=[_make_item()])
+    assert worker.curation_document is None
+
+
+def test_curation_document_is_loaded_document_at_curation_time(make_worker, mock_processor, fake_load):
+    seen: list[object] = []
+
+    def _capture(document, **kwargs):
+        # process_reading is where the curation callback would park the worker;
+        # by then the published document must already be the loaded one.
+        seen.append(worker.curation_document)
+        assert worker.curation_document is document
+        return _result(1)
+
+    mock_processor.process_reading.side_effect = _capture
+    worker = make_worker(items=[_make_item("vol01")])
+    worker.run()
+
+    assert len(seen) == 1
+    assert seen[0].doc_for == "vol01"  # type: ignore[union-attr]
+
+
+def test_curation_document_updates_per_item(make_worker, mock_processor, fake_load):
+    seen: list[str] = []
+
+    def _capture(document, **kwargs):
+        seen.append(document.doc_for)
+        assert worker.curation_document is document
+        return _result(1)
+
+    mock_processor.process_reading.side_effect = _capture
+    worker = make_worker(items=[_make_item("vol01"), _make_item("vol02")])
+    worker.run()
+
+    assert seen == ["vol01", "vol02"]
 
 
 # ---------------------------------------------------------------------------
