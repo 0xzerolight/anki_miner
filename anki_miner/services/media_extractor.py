@@ -11,6 +11,8 @@ from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 from typing import Any
 
+from PyQt6.QtCore import QCoreApplication
+
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces import ProgressCallback
 from anki_miner.models import MediaData, TokenizedWord
@@ -23,6 +25,7 @@ from anki_miner.utils import (
 )
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
+from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.subprocess_utils import no_window_kwargs
 
 logger = logging.getLogger(__name__)
@@ -287,7 +290,10 @@ class MediaExtractorService:
             other medium's failure does not exclude.
         """
         if progress_callback:
-            progress_callback.on_start(len(words), "Extracting media")
+            progress_callback.on_start(
+                len(words),
+                QCoreApplication.translate("MediaExtractorService", "Extracting media"),
+            )
 
         # Resolve the animated screenshot format once, before the pool, so every
         # worker shares one value (no per-word re-resolution). A threaded value
@@ -373,7 +379,13 @@ class MediaExtractorService:
                                 media.screenshot_filename = cover_path.name
                             media_data_list.append((word, media))
                             if progress_callback:
-                                progress_callback.on_progress(completed, f"Extracting media: {word.lemma}")
+                                progress_callback.on_progress(
+                                    completed,
+                                    tr_format(
+                                        QCoreApplication.translate("MediaExtractorService", "Extracting media: %1"),
+                                        word.lemma,
+                                    ),
+                                )
                             # OVH-044: screenshot succeeded but audio failed (default
                             # mode only).  The card is still kept — that is the
                             # intended curation policy — but the silent gap in the
@@ -382,11 +394,20 @@ class MediaExtractorService:
                             # keys on has_audio, so a word reaching here always has
                             # audio.
                             if not audio_only and not media.has_audio and progress_callback:
-                                progress_callback.on_error(word.lemma, "audio extraction failed")
+                                progress_callback.on_error(
+                                    word.lemma,
+                                    QCoreApplication.translate("MediaExtractorService", "audio extraction failed"),
+                                )
                         else:
-                            skip_reason = "No audio" if audio_only else "No screenshot"
+                            # Full translated templates — never compose from a
+                            # bare skip_reason variable (untranslatable).
+                            skip_template = (
+                                QCoreApplication.translate("MediaExtractorService", "No audio: %1")
+                                if audio_only
+                                else QCoreApplication.translate("MediaExtractorService", "No screenshot: %1")
+                            )
                             if progress_callback:
-                                progress_callback.on_progress(completed, f"{skip_reason}: {word.lemma}")
+                                progress_callback.on_progress(completed, tr_format(skip_template, word.lemma))
                             # OVH-043: word dropped because the primary medium
                             # failed (screenshot in default mode, audio in
                             # audio_only mode).  A frame can always be grabbed at a
@@ -395,7 +416,13 @@ class MediaExtractorService:
                             # the GUI error band shows it; on_error is non-fatal and
                             # does not abort the run.
                             if progress_callback:
-                                progress_callback.on_error(word.lemma, "media extraction failed — see log")
+                                progress_callback.on_error(
+                                    word.lemma,
+                                    QCoreApplication.translate(
+                                        "MediaExtractorService",
+                                        "media extraction failed — see log",
+                                    ),
+                                )
 
                     except Exception as e:
                         if progress_callback:

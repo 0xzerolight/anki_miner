@@ -615,7 +615,7 @@ def test_queue_mining_progress_adapter_bakes_idx_into_emit():
     assert emitted == [
         (7, "Extracting media", 0),
         (7, "word-05", 50),
-        (7, "Extracting media", 100),
+        (7, "Complete", 100),
     ]
 
 
@@ -627,6 +627,40 @@ def test_queue_mining_progress_adapter_on_error_emits_nothing():
     )
     adapter.on_error("word", "boom")
     assert emitted == []
+
+
+def test_queue_mining_progress_adapter_band_maps_sweep():
+    """band=(30, 100): mining occupies 30-100 of the item percent."""
+    emitted: list[tuple[int, str, int]] = []
+    adapter = _QueueMiningProgressAdapter(
+        idx=0,
+        emit=lambda idx, label, pct: emitted.append((idx, label, pct)),
+        band=(30, 100),
+    )
+    adapter.on_start(10, "Extracting media")
+    adapter.on_progress(5, "word-05")
+    adapter.on_progress(10, "word-10")
+    adapter.on_complete()
+
+    assert emitted == [
+        (0, "Extracting media", 30),
+        (0, "word-05", 65),
+        (0, "word-10", 100),
+        (0, "Complete", 100),
+    ]
+
+
+def test_queue_mining_progress_adapter_empty_label_falls_back_to_last():
+    """finish()'s on_progress(100, "") shows the LAST label, not stage 1's."""
+    emitted: list[tuple[int, str, int]] = []
+    adapter = _QueueMiningProgressAdapter(
+        idx=0,
+        emit=lambda idx, label, pct: emitted.append((idx, label, pct)),
+    )
+    adapter.on_start(2, "Extracting media")
+    adapter.on_progress(1, "Definition found: word-01")
+    adapter.on_progress(2, "")
+    assert emitted[-1] == (0, "Definition found: word-01", 100)
 
 
 def test_mining_progress_adapter_handles_zero_total():
@@ -765,10 +799,11 @@ def test_fetch_progress_emit_clamps_and_handles_none(make_worker, mock_processor
     fetch_cb("Downloading", 1.5)
     fetch_cb("Downloading", -0.5)
 
+    # Fetch fills the 0-30 band of the item percent (mining owns 30-100).
     assert caps["progress"].calls == [
-        (0, "Downloading", 50),
+        (0, "Downloading", 15),
         (0, "Merging", -1),
-        (0, "Downloading", 100),
+        (0, "Downloading", 30),
         (0, "Downloading", 0),
     ]
 

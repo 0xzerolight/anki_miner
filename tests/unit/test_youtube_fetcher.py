@@ -721,7 +721,7 @@ class TestFetchVideoProgress:
                 "manual_only",
                 progress_cb=lambda label, frac: calls.append((label, frac)),
             )
-        merging_calls = [c for c in calls if c == ("Merging", None)]
+        merging_calls = [c for c in calls if c == ("Merging audio and video", None)]
         assert len(merging_calls) == 1
 
 

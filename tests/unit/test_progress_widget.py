@@ -41,7 +41,6 @@ def test_set_progress_first_step_renders_8_percent_on_12_items(widget):
     widget.set_determinate(12)
     widget.set_progress(1, 12, "Episode 1")
     assert widget.progress_bar.value() == 8
-    assert widget.progress_bar.format() == "1/12"
 
 
 def test_set_progress_full_renders_100_percent(widget):
@@ -75,5 +74,77 @@ def test_reset_restores_default_state(widget):
     widget.reset()
     assert widget.progress_bar.maximum() == 100
     assert widget.progress_bar.value() == 0
-    assert widget.progress_bar.format() == "%p%"
     assert widget.status_label.text() == "Ready"
+
+
+# ---------------------------------------------------------------------------
+# set_percent / set_composed / show_completion (progress overhaul)
+# ---------------------------------------------------------------------------
+
+
+def test_set_percent_clamps_and_sets_value(widget):
+    widget.set_percent(150)
+    assert widget.progress_bar.value() == 100
+    widget.set_percent(-5)
+    assert widget.progress_bar.value() == 0
+    widget.set_percent(42)
+    assert widget.progress_bar.value() == 42
+
+
+def test_set_percent_recovers_from_indeterminate(widget):
+    widget.set_indeterminate()
+    assert widget.progress_bar.maximum() == 0
+    widget.set_percent(30)
+    assert widget.progress_bar.maximum() == 100
+    assert widget.progress_bar.value() == 30
+
+
+def test_set_percent_keeps_eta_units_in_percent(widget):
+    widget.set_determinate(12)  # would seed _total_items=12
+    widget.set_percent(50)
+    assert widget.total == 100
+
+
+def test_set_percent_falsy_status_does_not_blank_label(widget):
+    widget.set_percent(10, "Fetching definitions")
+    widget.set_percent(100, "")
+    assert widget.status_label.text() == "Fetching definitions"
+    widget.set_percent(100, None)
+    assert widget.status_label.text() == "Fetching definitions"
+
+
+def test_set_composed_formula(widget):
+    # item 2 of 4 at 50% -> (2 + 0.5) / 4 = 62%
+    widget.set_composed(2, 50, 4, "Episode 3/4")
+    assert widget.progress_bar.value() == 62
+    assert widget.status_label.text() == "Episode 3/4"
+
+
+def test_set_composed_zero_total_is_noop(widget):
+    widget.set_percent(37)
+    widget.set_composed(0, 50, 0, "nope")
+    assert widget.progress_bar.value() == 37
+    assert widget.status_label.text() != "nope"
+
+
+def test_set_composed_clamps_item_pct(widget):
+    widget.set_composed(0, 150, 2)
+    assert widget.progress_bar.value() == 50  # (0 + 1.0) / 2
+
+
+def test_show_completion_pins_100_and_freezes_stats(widget):
+    widget.set_percent(40, "working")
+    widget.show_completion("Complete — 87 cards created")
+    assert widget.progress_bar.value() == 100
+    assert widget.status_label.text() == "Complete — 87 cards created"
+    # Late straggler updates must not resurrect the ETA line.
+    stats_after = widget.stats_label.text()
+    widget.set_percent(100, "")
+    assert "ETA" not in widget.stats_label.text()
+    assert widget.progress_bar.value() == 100
+    del stats_after
+
+
+def test_stats_line_has_no_rate_display(widget):
+    widget.set_percent(50, "working")
+    assert "/sec" not in widget.stats_label.text()

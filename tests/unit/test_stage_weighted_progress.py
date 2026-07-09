@@ -162,7 +162,8 @@ def test_composition_real_adapter_refreshes_label_no_double_prefix():
     A later stage's on_start refreshes the emitted row label to the new stage
     description with no stage-1 prefix glued in front (the "Preparing page
     images: Expression audio: 語" bug), and the accepted finish() residue falls
-    back to the stage-1 description for its final emission.
+    back to the LAST label seen, and on_complete lands a translated
+    "Complete" at the band end.
     """
     emitted: list[tuple[int, str, int]] = []
     adapter = QueueMiningProgressAdapter(idx=0, emit=lambda idx, label, pct: emitted.append((idx, label, pct)))
@@ -189,6 +190,7 @@ def test_composition_real_adapter_refreshes_label_no_double_prefix():
     # No stage-1 desc glued in front of any later-stage label (the #1 bug).
     assert "Extracting media: Fetching definitions" not in labels
     assert "Extracting media: Definition found: word-01" not in labels
-    # Accepted cosmetic residue: finish()'s empty-desc emit falls back to the
-    # stage-1 description (momentary, immediately superseded — pinned here).
-    assert emitted[-1] == (0, "Extracting media", 100)
+    # finish()'s empty-desc emit falls back to the LAST label seen (not the
+    # frozen stage-1 desc), then on_complete lands "Complete" at band end.
+    assert emitted[-2] == (0, "Definition found: word-01", 100)
+    assert emitted[-1] == (0, "Complete", 100)

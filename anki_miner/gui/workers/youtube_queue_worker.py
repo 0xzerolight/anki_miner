@@ -19,7 +19,9 @@ Signal shapes (exact):
   Items removed mid-run via :meth:`YouTubeQueueWorker.skip_item` are
   silently skipped: no ``item_started`` / ``item_finished`` for them.
 * ``item_progress(int, str, int)`` — idx, label, pct. ``pct`` is an
-  ``int(round(0..100))`` percentage, or ``-1`` for indeterminate phases.
+  ``int(round(0..100))`` percentage covering the WHOLE item as one
+  continuous sweep — download fills 0-30, mining fills 30-100 — or ``-1``
+  for indeterminate phases (the merge step between download and mining).
 * ``item_finished(int, object, object, int)`` — idx, result-or-None,
   error-string-or-None, attempts. Fires exactly once per item that
   completes (cancel during retry path returns early instead).
@@ -271,7 +273,10 @@ class YouTubeQueueWorker(ProcessorOwningWorker):
                 f"READY item {item.url!r} missing video_id, resolved_sub_mode, or video_info — probe step incomplete"
             )
 
-        mining_cb = _QueueMiningProgressAdapter(idx, self.item_progress.emit)
+        # Mining occupies the 30-100 band of the item's percent; the fetch
+        # phase fills 0-30 (see _emit_fetch_progress) so one item is a single
+        # continuous sweep with no backward jump at the fetch->mine boundary.
+        mining_cb = _QueueMiningProgressAdapter(idx, self.item_progress.emit, band=(30, 100))
 
         assert self._processor is not None  # built at run() start
         return self._processor.process_youtube_url(
@@ -303,13 +308,18 @@ class YouTubeQueueWorker(ProcessorOwningWorker):
         """Translate fetcher progress into the ``item_progress`` signal.
 
         ``frac`` is a float in [0.0, 1.0] for determinate progress, or
-        ``None`` for indeterminate stages (e.g. "Merging"). Out-of-range
+        ``None`` for indeterminate stages (e.g. merging). Out-of-range
         floats are clamped defensively; yt-dlp occasionally emits tail
-        values >1.0.
+        values >1.0 — unclamped they would overshoot the mining band's
+        30% start and produce a backward step at the fetch->mine boundary.
+
+        The fetch maps into the 0-30 band of the item percent (mining takes
+        30-100 via the adapter band above) so the whole item reads as one
+        continuous sweep.
         """
         if frac is None:
             pct = -1
         else:
             clamped = max(0.0, min(1.0, frac))
-            pct = int(round(clamped * 100))
+            pct = int(round(clamped * 30))
         self.item_progress.emit(idx, label, pct)

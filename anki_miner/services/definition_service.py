@@ -6,8 +6,11 @@ import contextlib
 import logging
 from typing import TYPE_CHECKING
 
+from PyQt6.QtCore import QCoreApplication
+
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces import ProgressCallback
+from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.interfaces import DictionaryProvider
@@ -215,7 +218,10 @@ class DefinitionService:
         don't supply context.
         """
         if progress_callback:
-            progress_callback.on_start(len(words), "Fetching definitions")
+            progress_callback.on_start(
+                len(words),
+                QCoreApplication.translate("DefinitionService", "Fetching definitions"),
+            )
 
         self.ensure_loaded()
 
@@ -302,9 +308,21 @@ class DefinitionService:
             results.append(definition)
             if progress_callback:
                 if definition:
-                    progress_callback.on_progress(i, f"Definition found: {word}")
+                    progress_callback.on_progress(
+                        i,
+                        tr_format(
+                            QCoreApplication.translate("DefinitionService", "Definition found: %1"),
+                            word,
+                        ),
+                    )
                 else:
-                    progress_callback.on_progress(i, f"No definition: {word}")
+                    progress_callback.on_progress(
+                        i,
+                        tr_format(
+                            QCoreApplication.translate("DefinitionService", "No definition: %1"),
+                            word,
+                        ),
+                    )
 
         if progress_callback:
             progress_callback.on_complete()
@@ -503,7 +521,10 @@ class DefinitionService:
         are consulted per-word, matching the old behaviour.
         """
         if progress_callback:
-            progress_callback.on_start(len(words), "Fetching glossary entries")
+            progress_callback.on_start(
+                len(words),
+                QCoreApplication.translate("DefinitionService", "Fetching glossary entries"),
+            )
 
         self.ensure_loaded()
 
@@ -591,9 +612,21 @@ class DefinitionService:
             results.append(glossary)
             if progress_callback:
                 if glossary:
-                    progress_callback.on_progress(i, f"Glossary found: {word}")
+                    progress_callback.on_progress(
+                        i,
+                        tr_format(
+                            QCoreApplication.translate("DefinitionService", "Glossary found: %1"),
+                            word,
+                        ),
+                    )
                 else:
-                    progress_callback.on_progress(i, f"No glossary: {word}")
+                    progress_callback.on_progress(
+                        i,
+                        tr_format(
+                            QCoreApplication.translate("DefinitionService", "No glossary: %1"),
+                            word,
+                        ),
+                    )
 
         if progress_callback:
             progress_callback.on_complete()

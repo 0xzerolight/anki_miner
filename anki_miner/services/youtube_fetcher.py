@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Literal
 
 import psutil  # type: ignore[import-untyped]
+from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.youtube import (
@@ -499,7 +500,10 @@ class YouTubeFetcherService:
                     if progress_cb is not None:
                         downloaded_s, total_s = m.group(1), m.group(2)
                         if total_s == "NA":
-                            progress_cb("Downloading video", None)
+                            progress_cb(
+                                QCoreApplication.translate("YouTubeFetcher", "Downloading video"),
+                                None,
+                            )
                         else:
                             try:
                                 downloaded = float(downloaded_s)
@@ -507,13 +511,19 @@ class YouTubeFetcherService:
                                 frac = downloaded / total if total > 0 else None
                             except ValueError:
                                 frac = None
-                            progress_cb("Downloading video", frac)
+                            progress_cb(
+                                QCoreApplication.translate("YouTubeFetcher", "Downloading video"),
+                                frac,
+                            )
                     continue
 
                 if not postprocessing_seen and self._is_postprocess_line(line):
                     postprocessing_seen = True
                     if progress_cb is not None:
-                        progress_cb("Merging", None)
+                        progress_cb(
+                            QCoreApplication.translate("YouTubeFetcher", "Merging audio and video"),
+                            None,
+                        )
                     continue
 
                 # Forward other output to the presenter for visibility.

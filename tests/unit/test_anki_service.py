@@ -670,14 +670,56 @@ class TestCreateCardsBatch:
         assert recording_progress.starts[0][0] == 3
         assert "Creating Anki cards" in recording_progress.starts[0][1]
 
-        # on_progress called once (one batch)
+        # on_progress called once (one batch), reporting the cumulative total
         assert len(recording_progress.progresses) == 1
+        assert recording_progress.progresses[0][1] == "Cards created: 3/3"
 
         # on_complete called once
         assert recording_progress.completes == 1
 
         # no errors
         assert len(recording_progress.errors) == 0
+
+    def test_progress_label_is_cumulative_across_batches(self, test_config, make_tokenized_word, recording_progress):
+        """Regression (misleading "Cards created: 100/100"): the per-update
+        label reports the CUMULATIVE run total, never per-chunk figures."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=250)
+
+        responses = [
+            _mock_response(result=list(range(100))),
+            _mock_response(result=list(range(100, 200))),
+            _mock_response(result=list(range(200, 250))),
+        ]
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=responses):
+            service.create_cards_batch(items, recording_progress)
+
+        labels = [label for _, label in recording_progress.progresses]
+        assert labels == [
+            "Cards created: 100/250",
+            "Cards created: 200/250",
+            "Cards created: 250/250",
+        ]
+
+    def test_progress_label_cumulative_excludes_null_slots(self, test_config, make_tokenized_word, recording_progress):
+        """Null addNotes slots (duplicates) reduce the cumulative count."""
+        service = AnkiService(test_config)
+        items = self._make_word_data(make_tokenized_word, n=150)
+
+        responses = [
+            _mock_response(result=[*range(60), *([None] * 40)]),
+            _mock_response(result=list(range(60, 110))),
+        ]
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=responses):
+            service.create_cards_batch(items, recording_progress)
+
+        labels = [label for _, label in recording_progress.progresses]
+        assert labels == [
+            "Cards created: 60/150",
+            "Cards created: 110/150",
+        ]
 
     def test_batch_error_in_response_propagates(self, test_config, make_tokenized_word, recording_progress):
         """AnkiConnect error payloads now propagate as AnkiConnectionError.
