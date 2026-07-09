@@ -246,6 +246,42 @@ def test_cancel_mid_queue_stops_before_next_item(make_worker, mock_processor, fa
     assert len(caps["queue_finished"].calls) == 1
 
 
+def test_curation_reject_stops_queue_before_next_item(make_worker, mock_processor, fake_load):
+    """A curation reject stops the whole queue, not just the current volume.
+
+    Models the fixed ``_show_curation_dialog`` reject branch: the callback cancels
+    the running worker and returns ``None`` (the cancelled-curation contract). The
+    loop-top check must then stop before the next item, so the curator is never
+    requested again — the exact behaviour the bug lacked.
+    """
+    items = [_make_item("a"), _make_item("b"), _make_item("c")]
+    worker_box: dict = {}
+    curation_calls: list = []
+
+    def _reject_curation(words):
+        curation_calls.append(words)
+        worker_box["worker"].cancel()  # what the fixed GUI slot now does on reject
+        return None  # cancelled-curation contract
+
+    def _mine(document, **kw):
+        curated = kw["curation_callback"](["w"])
+        return _result(0) if curated is None else _result(3)
+
+    mock_processor.process_reading.side_effect = _mine
+
+    worker = make_worker(items=items, curation_callback=_reject_curation)
+    worker_box["worker"] = worker
+    caps = _connect_all(worker)
+    worker.run()
+
+    # Curator requested for item 0 only; items 1 and 2 never started.
+    assert curation_calls == [["w"]]
+    assert caps["started"].calls == [(0,)]
+    assert [c[0] for c in caps["finished"].calls] == [0]
+    mock_processor.cancel.assert_not_called()  # event-only cancel, no sticky poison
+    assert len(caps["queue_finished"].calls) == 1
+
+
 def test_cancel_before_run_emits_queue_finished_only(make_worker, mock_processor, fake_load):
     items = [_make_item("a"), _make_item("b")]
     worker = make_worker(items=items)

@@ -528,11 +528,27 @@ class MiningTabBase(QWidget):
             )
             self._active_curation_dialog = dialog
             if dialog.exec() == WordCurationDialog.DialogCode.Accepted:
-                # Accepted: the selection (possibly empty) is the result.
+                # Accepted: the selection (possibly empty) is the result. An
+                # empty list is the "skip just this item" verb — the queue
+                # continues (it stays out of the reject branch below).
                 self._curation_result = dialog.get_selected_words()
             else:
-                # Rejected/cancelled: None ⇒ cancelled result downstream.
+                # Rejected (dialog Cancel / window-X / Esc, or a programmatic
+                # reject from the tab Cancel button / teardown / shutdown) means
+                # "stop the run", not "skip one item". None ⇒ cancelled result
+                # downstream; without cancelling the worker, a queue worker turns
+                # that cancelled result into a recorded item and advances, so the
+                # curator re-pops for every remaining queued item (manga/novel
+                # volumes, batch pairs, YouTube/audiobook items). Cancelling the
+                # running worker makes each loop's between-items _cancel_event
+                # check break the run. cancel() is an idempotent Event.set(), so
+                # the reject paths that already cancel are unaffected; it runs
+                # before the finally releases _curation_event, so _cancel_event is
+                # already set when the worker unparks.
                 self._curation_result = None
+                worker = getattr(self, "worker_thread", None)
+                if worker is not None:
+                    worker.cancel()
         finally:
             self._active_curation_dialog = None
             self._curation_event.set()
