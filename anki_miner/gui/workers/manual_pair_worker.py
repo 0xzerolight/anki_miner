@@ -30,10 +30,11 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
 
     result_ready = pyqtSignal(list)  # List[ProcessingResult]
     # Overall (pair-level) progress, mirroring BatchQueueWorkerThread's
-    # queue_started/item_completed so the tab's Overall Progress bar advances
+    # queue_started/item_completed so the tab's single overall bar advances
     # per pair. Per-episode stage progress flows separately through
-    # progress_callback into the Current Episode bar.
+    # progress_callback and is composed into the same bar by the tab.
     batch_started = pyqtSignal(int)  # total pairs
+    pair_started = pyqtSignal(int, str)  # 1-based index, display name
     pair_finished = pyqtSignal(int, int)  # completed, total
 
     def __init__(
@@ -109,15 +110,16 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
 
             results = []
 
-            # Report overall (pair-level) progress on the dedicated signal so the
-            # tab's Overall Progress bar advances per pair. The Current Episode
-            # bar is driven separately by the per-episode stage sweep that
-            # process_episode reports through progress_callback below.
+            # Report overall (pair-level) progress on the dedicated signals so
+            # the tab's single overall bar can compose pair counts with the
+            # per-episode stage sweep from progress_callback below.
             self.batch_started.emit(len(self.pairs))
 
             for i, pair in enumerate(self.pairs, 1):
                 if self.check_cancelled():
                     break
+
+                self.pair_started.emit(i, pair.video.name)
 
                 # Process this pair
                 try:
@@ -127,9 +129,9 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
                     self._curation_subtitle = pair.subtitle
                     self._curation_offset = self.episode_processor.config.subtitle_offset
                     # Pass the callback through so per-episode stages (extract ->
-                    # definitions -> cards) drive the Current Episode bar; the
+                    # definitions -> cards) drive the composed overall bar; the
                     # processor wraps it in a fresh StageWeightedProgress per
-                    # episode, so the bars don't conflict.
+                    # episode.
                     result = self.episode_processor.process_episode(
                         pair.video,
                         pair.subtitle,

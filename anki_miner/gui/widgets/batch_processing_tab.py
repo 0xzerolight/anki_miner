@@ -80,7 +80,15 @@ class BatchProcessingTab(MiningTabBase):
         self.stats_service = stats_service
         self.worker_thread: ManualPairWorkerThread | BatchQueueWorkerThread | None = None
         self._is_processing = False
-        self._current_phase = ""
+        self._cancel_requested = False
+        self._run_failed = False
+        # Both start methods assign the same union-typed worker_thread, so the
+        # active path (Queue = two-level series items vs Quick = one episode
+        # per item) is tracked explicitly for _on_progress_update's branch.
+        self._queue_mode = False
+        self._items_done = 0
+        self._items_total = 0
+        self._current_item_label = ""
 
         # Initialize batch queue
         from anki_miner.models.batch_queue import BatchQueue
@@ -140,15 +148,6 @@ class BatchProcessingTab(MiningTabBase):
 
         self.overall_progress_widget = ProgressWidget()
         layout.addWidget(self.overall_progress_widget)
-
-        # Current Episode Progress
-        current_progress_header = QLabel(self.tr("Current Episode"))
-        current_progress_header.setObjectName("heading3")
-        current_progress_header.setFont(font)
-        layout.addWidget(current_progress_header)
-
-        self.current_progress_widget = ProgressWidget()
-        layout.addWidget(self.current_progress_widget)
 
         # Retry Failed button (hidden by default)
         self.retry_button = ModernButton(self.tr("Retry Failed"), variant="secondary")
@@ -346,8 +345,9 @@ class BatchProcessingTab(MiningTabBase):
         Args:
             pairs: List of FilePair objects to process
         """
-        # Clear log
+        # Clear log and reset the bar from the previous run's end state.
         self.log_widget.clear_log()
+        self._begin_run(queue_mode=False)
 
         # Hide action buttons, show cancel
         self._is_processing = True
@@ -379,10 +379,11 @@ class BatchProcessingTab(MiningTabBase):
             processor_factory=_processor_factory,
         )
 
-        # Drive the Overall Progress bar from the worker's pair-level signals;
-        # the Current Episode bar is driven by the per-episode stage sweep via
-        # progress_callback (wired in __init__), mirroring the queue path.
+        # Pair-level signals set the counters/labels; the per-episode stage
+        # sweep via progress_callback (wired in __init__) is composed into the
+        # single overall bar by _on_progress_update.
         self.worker_thread.batch_started.connect(self._on_batch_started)
+        self.worker_thread.pair_started.connect(self._on_pair_started)
         self.worker_thread.pair_finished.connect(self._on_pair_finished)
         self.worker_thread.result_ready.connect(self._on_processing_finished)
         self.worker_thread.error.connect(self._on_processing_error)
@@ -429,6 +430,10 @@ class BatchProcessingTab(MiningTabBase):
         self.worker_thread.item_completed.connect(self._on_item_completed)
         self.worker_thread.item_failed.connect(self._on_item_failed)
         self.worker_thread.queue_finished.connect(self._on_queue_finished)
+        # Run-level fatals (stale-dict gate, processor-build failure) emit
+        # error THEN queue_finished — without the flag the terminal handler
+        # would read "Complete — 0 cards created" on a failed run.
+        self.worker_thread.error.connect(self._on_queue_worker_error)
 
         self.worker_thread.start()
 
@@ -473,6 +478,7 @@ class BatchProcessingTab(MiningTabBase):
         # Prepare UI for processing
         self._is_processing = True
         self.log_widget.clear_log()
+        self._begin_run(queue_mode=True)
         self._show_cancel_state()
         self.presenter.show_info(
             tr_format(self.tr("Starting queue processing (%1 series)..."), self.batch_queue.pending_count)
@@ -507,16 +513,39 @@ class BatchProcessingTab(MiningTabBase):
         self.preview_pairs_button.show()
         self.process_pairs_button.show()
         self._set_buttons_enabled(True)
+        # Cancel recovery: the Quick-path worker suppresses result_ready on a
+        # cancelled run, so QThread.finished (always fires) is the only safe
+        # place to replace "Cancelling...". Idempotent for the queue path,
+        # whose _on_queue_finished also handles the flag.
+        if self._cancel_requested:
+            self.overall_progress_widget.reset()
+            self.overall_progress_widget.set_status(self.tr("Cancelled"))
 
     def _on_cancel_clicked(self) -> None:
         """Handle cancel button click."""
+        self._cancel_requested = True
         # Release any open curation dialog first so the worker doesn't hang (Issue #60).
         self._cancel_active_curation_dialog()
         if self.worker_thread is not None:
             self.worker_thread.cancel()
         self.cancel_button.setText(self.tr("Cancelling..."))
         self.cancel_button.setEnabled(False)
-        self.current_progress_widget.set_status(self.tr("Cancelling..."))
+        self.overall_progress_widget.set_status(self.tr("Cancelling..."))
+
+    def _begin_run(self, queue_mode: bool) -> None:
+        """Reset the bar, flags, and per-run counters at run start."""
+        self.overall_progress_widget.reset()
+        self._cancel_requested = False
+        self._run_failed = False
+        self._queue_mode = queue_mode
+        self._items_done = 0
+        self._items_total = 0
+        self._current_item_label = ""
+
+    def _on_queue_worker_error(self, message: str) -> None:
+        """Run-level fatal from the queue worker: flag it and surface it."""
+        self._run_failed = True
+        self.presenter.show_error(message)
 
     def _on_queue_started(self, total_items: int) -> None:
         """Called when queue processing starts.
@@ -524,32 +553,45 @@ class BatchProcessingTab(MiningTabBase):
         Args:
             total_items: Total number of series to process
         """
-        self.overall_progress_widget.set_determinate(total_items)
-        self.overall_progress_widget.set_progress(0, total_items, self.tr("Starting queue processing..."))
+        self._items_total = total_items
+        self._items_done = 0
+        self.overall_progress_widget.set_percent(0, self.tr("Starting queue processing..."))
 
     def _on_batch_started(self, total_pairs: int) -> None:
         """Quick Processing start: prime the Overall Progress bar with pair count.
 
         Mirrors :meth:`_on_queue_started` for the folder-pair path
-        (ManualPairWorkerThread). The Current Episode bar is driven separately
-        by the per-episode stage sweep via ``progress_callback``.
+        (ManualPairWorkerThread). The per-episode stage sweep via
+        ``progress_callback`` is composed into the same bar.
 
         Args:
             total_pairs: Total number of episode pairs to process
         """
-        self.overall_progress_widget.set_determinate(total_pairs)
-        self.overall_progress_widget.set_progress(0, total_pairs, self.tr("Starting batch processing..."))
+        self._items_total = total_pairs
+        self._items_done = 0
+        self.overall_progress_widget.set_percent(0, self.tr("Starting batch processing..."))
+
+    def _on_pair_started(self, index: int, name: str) -> None:
+        """Quick Processing per-pair start: refresh the persistent episode prefix.
+
+        Args:
+            index: 1-based pair index
+            name: Display name (video file name)
+        """
+        self._current_item_label = tr_format(self.tr("Episode %1/%2: %3"), index, self._items_total, name)
+        self.overall_progress_widget.set_status(self._current_item_label)
 
     def _on_pair_finished(self, completed: int, total: int) -> None:
-        """Quick Processing per-pair tick: advance the Overall Progress bar.
+        """Quick Processing per-pair tick: advance the composed bar.
 
         Args:
             completed: Number of pairs finished so far (1-based)
             total: Total number of pairs in the run
         """
-        self.overall_progress_widget.set_progress(
-            completed, total, tr_format(self.tr("Completed: %1/%2"), completed, total)
-        )
+        self._items_done = completed
+        # Bar-only advance (no status): keeps the fill correct when a pair
+        # errors mid-sweep; monotone with the composed per-episode updates.
+        self.overall_progress_widget.set_composed(completed, 0, total)
 
     def _on_item_started(self, item_id: str, display_name: str) -> None:
         """Called when processing starts for an item.
@@ -563,6 +605,10 @@ class BatchProcessingTab(MiningTabBase):
             display_name: Display name of series
         """
         self.presenter.show_info(tr_format(self.tr("Processing series: %1"), display_name))
+        self._current_item_label = tr_format(
+            self.tr("Series %1/%2: %3"), self._items_done + 1, self._items_total, display_name
+        )
+        self.overall_progress_widget.set_status(self._current_item_label)
         self.queue_panel.set_item_status(item_id, "processing")
 
     def _on_item_completed(self, item_id: str, cards_created: int) -> None:
@@ -576,12 +622,7 @@ class BatchProcessingTab(MiningTabBase):
             item_id: Item ID
             cards_created: Number of cards created
         """
-        completed = self.batch_queue.completed_count
-        total = self.batch_queue.total_items
-
-        self.overall_progress_widget.set_progress(
-            completed, total, tr_format(self.tr("Completed: %1/%2"), completed, total)
-        )
+        self._advance_queue_bar()
         self.presenter.show_success(tr_format(self.tr("Created %1 cards"), cards_created))
 
         # Update queue panel — address the completed row by id (T-30).
@@ -598,6 +639,18 @@ class BatchProcessingTab(MiningTabBase):
             error_message: Error message
         """
         self.presenter.show_error(error_message)
+        self._advance_queue_bar()
+
+    def _advance_queue_bar(self) -> None:
+        """Advance the series-granular bar after a terminal item outcome.
+
+        The queue path is TWO-LEVEL (one item = a series of N episodes whose
+        count is unknown up front), so the bar moves per series only; the
+        per-episode sweep drives the status label instead (see
+        _on_progress_update).
+        """
+        self._items_done = self.batch_queue.completed_count + self.batch_queue.failed_count
+        self.overall_progress_widget.set_composed(self._items_done, 0, self._items_total)
 
     def _on_queue_finished(self, total_cards: int) -> None:
         """Called when entire queue finishes.
@@ -607,9 +660,15 @@ class BatchProcessingTab(MiningTabBase):
         """
         self._restore_buttons()
 
-        # Reset progress bars to Ready state on any terminal path (cancel/success).
-        self.current_progress_widget.reset()
-        self.overall_progress_widget.reset()
+        # Terminal end state: cancel -> failed -> success.
+        if self._cancel_requested:
+            self.overall_progress_widget.reset()
+            self.overall_progress_widget.set_status(self.tr("Cancelled"))
+        elif self._run_failed:
+            self.overall_progress_widget.reset()
+            self.overall_progress_widget.set_status(self.tr("Failed — see log"))
+        else:
+            self.overall_progress_widget.show_completion(tr_format(self.tr("Complete — %1 cards created"), total_cards))
 
         # Update queue stats
         self.queue_panel.update_stats()
@@ -661,37 +720,57 @@ class BatchProcessingTab(MiningTabBase):
         # uncancellable (T-22).
         self.retry_button.setVisible(False)
         self._is_processing = True
+        self._begin_run(queue_mode=True)
         self._show_cancel_state()
 
         self.presenter.show_info(tr_format(self.tr("Retrying %1 failed items..."), reset_count))
         self._start_queue_worker()
 
+    def _compose_status(self, item_description: str) -> str | None:
+        """Glue the persistent item prefix onto the stage detail.
+
+        The empty item_description from StageWeightedProgress.finish()'s
+        terminal ``on_progress(100, "")`` shows the prefix alone — never a
+        dangling "name — ".
+        """
+        if item_description and self._current_item_label:
+            return f"{self._current_item_label} — {item_description}"
+        if item_description:
+            return item_description
+        return self._current_item_label or None
+
     def _on_progress_start(self, total: int, description: str) -> None:
-        """Handle progress start signal.
+        """Per-episode stage start: status only (the composed bar never resets).
 
         Args:
-            total: Total items
-            description: Description
+            total: Total items in the stage (unused; the bar is composed)
+            description: Stage description
         """
-        self._current_phase = description
-        self.current_progress_widget.set_determinate(total)
-        self.current_progress_widget.set_progress(0, total, description)
+        status = self._compose_status(description)
+        if status:
+            self.overall_progress_widget.set_status(status)
 
     def _on_progress_update(self, current: int, item_description: str) -> None:
-        """Handle progress update signal.
+        """Per-episode stage sweep, path-dependent.
+
+        Quick path (one episode per item): composed into the bar. Queue path
+        (one SERIES per item, episode count unknown): status label only — the
+        bar advances per series in _advance_queue_bar; composing the episode
+        sweep against the series count would sawtooth.
 
         Args:
-            current: Current progress value
-            item_description: Description of current item
+            current: Per-episode percent (StageWeightedProgress emits 0-100)
+            item_description: Stage/item detail
         """
-        total = self.current_progress_widget.total
-        self.current_progress_widget.set_progress(current, total, item_description)
+        status = self._compose_status(item_description)
+        if self._queue_mode:
+            if status:
+                self.overall_progress_widget.set_status(status)
+            return
+        self.overall_progress_widget.set_composed(self._items_done, current, self._items_total, status)
 
     def _on_progress_complete(self) -> None:
-        """Handle progress complete signal."""
-        self.current_progress_widget.set_status(
-            f"{self._current_phase} \u2014 done" if self._current_phase else "Complete"
-        )
+        """Per-episode stage complete: no-op (terminal handlers own the summary)."""
 
     def _on_processing_finished(self, results: list) -> None:
         """Handle processing finished signal (for manual pair processing).
@@ -701,9 +780,13 @@ class BatchProcessingTab(MiningTabBase):
         """
         self._restore_buttons()
 
-        # Reset progress bars to Ready state on any terminal path (cancel/success).
-        self.current_progress_widget.reset()
-        self.overall_progress_widget.reset()
+        # result_ready is suppressed on cancelled runs, so this is the
+        # success-side terminal handler (cancel recovery is in
+        # _restore_buttons); still guard against a late cancel race.
+        if not self._cancel_requested:
+            self.overall_progress_widget.show_completion(
+                tr_format(self.tr("Complete — %1 cards created"), sum(r.cards_created for r in results))
+            )
 
         # Show summary; failed episodes are returned as results with errors
         # populated (process_episode never raises), so count them explicitly
@@ -723,14 +806,15 @@ class BatchProcessingTab(MiningTabBase):
         Args:
             error_message: Error message
         """
+        self._run_failed = True
         self._restore_buttons()
 
         # Show error
         self.presenter.show_error(error_message)
 
         # Reset progress
-        self.current_progress_widget.reset()
         self.overall_progress_widget.reset()
+        self.overall_progress_widget.set_status(self.tr("Failed — see log"))
 
     def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:
         """Accept drag if any URL is a directory."""
