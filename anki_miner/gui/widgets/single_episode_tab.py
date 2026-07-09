@@ -96,7 +96,7 @@ class SingleEpisodeTab(MiningTabBase):
         self.stats_service = stats_service
         self.worker_thread: EpisodeWorkerThread | None = None
         self._is_processing = False
-        self._current_phase = ""
+        self._cancel_requested = False
         self.recent_manager = RecentFilesManager()
         self._audio_track_override: int | None = None
         self._last_run_was_preview = False
@@ -507,8 +507,11 @@ class SingleEpisodeTab(MiningTabBase):
         offset = self.offset_spinbox.value()
         config_with_offset = replace(self.config, subtitle_offset=offset)
 
-        # Clear log
+        # Clear log and reset the bar from the previous run's end state
+        # (success leaves the bar pinned at 100% with a summary).
         self.log_widget.clear_log()
+        self.progress_widget.reset()
+        self._cancel_requested = False
 
         # Hide action buttons, show cancel button
         self._is_processing = True
@@ -586,6 +589,7 @@ class SingleEpisodeTab(MiningTabBase):
 
     def _on_cancel_clicked(self) -> None:
         """Handle cancel button click."""
+        self._cancel_requested = True
         self._cancel_active_curation_dialog()
         if self.worker_thread is not None:
             self.worker_thread.cancel()
@@ -601,6 +605,13 @@ class SingleEpisodeTab(MiningTabBase):
         self.process_button.show()
         self.timing_button.show()
         self.tracks_button.show()
+        # Cancel recovery lives HERE (QThread.finished always fires), not in
+        # the result slot: the worker suppresses result_ready on a cancelled
+        # run (and on curation reject), so "Cancelling..." would otherwise be
+        # stranded forever.
+        if self._cancel_requested:
+            self.progress_widget.reset()
+            self.progress_widget.set_status(self.tr("Cancelled"))
 
     def _on_processing_finished(self, result) -> None:
         """Handle processing finished signal.
@@ -609,6 +620,19 @@ class SingleEpisodeTab(MiningTabBase):
             result: ProcessingResult object
         """
         self._restore_buttons()
+
+        if not self._cancel_requested:
+            if result.success and self._last_run_was_preview:
+                self.progress_widget.show_completion(
+                    tr_format(self.tr("Preview complete — %1 new words"), result.new_words_found)
+                )
+            elif result.success:
+                self.progress_widget.show_completion(
+                    tr_format(self.tr("Complete — %1 cards created"), result.cards_created)
+                )
+            else:
+                self.progress_widget.reset()
+                self.progress_widget.set_status(self.tr("Failed — see log"))
 
         if result.success:
             # Add to recent files
@@ -649,6 +673,7 @@ class SingleEpisodeTab(MiningTabBase):
 
         # Reset progress
         self.progress_widget.reset()
+        self.progress_widget.set_status(self.tr("Failed — see log"))
 
         # Keep the audio-track override on the error path so the user can retry
         # without having to reopen the Tracks dialog (consistent with failed results).

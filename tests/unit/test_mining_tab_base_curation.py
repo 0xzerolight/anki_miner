@@ -467,6 +467,10 @@ def test_reject_cancels_running_worker(qapp, qtbot):
     tab.worker_thread.cancel.assert_called_once()
     assert tab._curation_result is None  # cancelled → None downstream
     assert tab._curation_event.is_set()  # worker still released
+    # Reject is a cancel origin: the tab flag must be set so the terminal
+    # handler shows "Cancelled" instead of a success summary (result slots
+    # are suppressed on cancelled runs).
+    assert tab._cancel_requested is True
 
 
 def test_empty_accept_continues_without_cancel(qapp, qtbot):
