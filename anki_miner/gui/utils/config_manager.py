@@ -94,6 +94,18 @@ class GUIConfigManager:
         with path.open("r", encoding="utf-8") as f:
             config_dict = json.load(f)
 
+        return AnkiMinerConfig(**cls._migrate_dict(config_dict))
+
+    @classmethod
+    def _migrate_dict(cls, config_dict: dict[str, Any]) -> dict[str, Any]:
+        """Run the full pre-construction migration pipeline on a raw JSON dict.
+
+        Shared by the normal load path (:meth:`_parse_and_migrate`) and the
+        settings-import path, so both get identical version tolerance: string→
+        Path conversion, field renames, chain rebuilds, and the unknown-key
+        drop that keeps ``AnkiMinerConfig(**...)`` from raising on removed
+        fields.
+        """
         # Convert string paths back to Path objects
         config_dict = cls._strings_to_paths(config_dict)
 
@@ -127,9 +139,7 @@ class GUIConfigManager:
         dropped = set(config_dict) - valid_keys
         if dropped:
             logger.debug("Dropping unknown config keys: %s", sorted(dropped))
-        config_dict = {k: v for k, v in config_dict.items() if k in valid_keys}
-
-        return AnkiMinerConfig(**config_dict)
+        return {k: v for k, v in config_dict.items() if k in valid_keys}
 
     @classmethod
     def load_config(cls) -> AnkiMinerConfig:
