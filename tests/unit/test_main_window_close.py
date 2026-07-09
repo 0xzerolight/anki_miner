@@ -20,6 +20,7 @@ from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
+from anki_miner.gui.widgets.video_tab import VideoTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 
 
@@ -436,6 +437,100 @@ class TestCloseEventSettingsTabImportFlowWorkers:
         event = _trigger_close(main_window)
 
         assert w.cancel_called
+        event.accept.assert_not_called()
+        event.ignore.assert_called_once()
+
+
+class _FakeMiningChild:
+    """Single/Batch-shaped child: shutdown() poisons but never joins its worker."""
+
+    def __init__(self, *, worker_running: bool) -> None:
+        self.worker_thread: _FakeWorker | None = _FakeWorker(running=worker_running)
+        self.shutdown_called = False
+
+    def shutdown(self) -> None:
+        self.shutdown_called = True  # gate poison only; worker_thread stays live
+
+    def release_dictionary_resources(self) -> bool:
+        return True
+
+    def update_config(self, config) -> None: ...
+
+
+class _FakeYouTubeChild(_FakeMiningChild):
+    """YouTube-shaped child: shutdown() joins AND nulls its own worker."""
+
+    def shutdown(self) -> None:
+        self.shutdown_called = True
+        worker = self.worker_thread
+        if worker is not None and worker.isRunning():
+            worker.cancel()
+            worker.wait(30_000)
+        self.worker_thread = None
+
+
+class _FakeVideoTab(VideoTab):
+    """Real VideoTab subclass that skips the heavy ``__init__``.
+
+    Keeps the REAL ``shutdown``/``iter_close_workers``/``release_dictionary_resources``
+    methods so the container↔controller close contract is exercised for real;
+    only the children are fakes.
+    """
+
+    def __init__(self, *, single_running: bool, batch_running: bool, youtube_running: bool) -> None:
+        from PyQt6.QtWidgets import QWidget
+
+        QWidget.__init__(self)
+        self.single_tab = _FakeMiningChild(worker_running=single_running)
+        self.batch_tab = _FakeMiningChild(worker_running=batch_running)
+        self.youtube_tab = _FakeYouTubeChild(worker_running=youtube_running)
+
+
+class TestCloseEventVideoContainer:
+    """Nested Single/Batch/YouTube workers must survive the container hop.
+
+    The container exposes no ``worker_thread``, so the controller's top-level
+    probe yields None; the still-live Single/Batch workers must be reached via
+    ``iter_close_workers`` AFTER ``shutdown()`` poisoned the gates. YouTube's
+    own ``shutdown()`` joins+nulls its worker, so it must NOT be cancelled a
+    second time.
+    """
+
+    def test_live_single_and_batch_workers_joined_via_iter_close_workers(self, main_window):
+        tab = _FakeVideoTab(single_running=True, batch_running=True, youtube_running=False)
+        main_window.tabs.addTab(tab, "Video")
+
+        event = _trigger_close(main_window)
+
+        for child in (tab.single_tab, tab.batch_tab):
+            assert child.shutdown_called  # gate poison ran first
+            assert child.worker_thread.cancel_called
+            assert child.worker_thread.wait_called_with == 2000
+        event.accept.assert_called_once()
+
+    def test_youtube_worker_joined_once_by_its_own_shutdown_not_twice(self, main_window):
+        tab = _FakeVideoTab(single_running=False, batch_running=False, youtube_running=True)
+        yt_worker = tab.youtube_tab.worker_thread
+        main_window.tabs.addTab(tab, "Video")
+
+        event = _trigger_close(main_window)
+
+        # Joined exactly once, by the child's own shutdown (30s bound), then
+        # nulled — iter_close_workers skipped it (2000 would mean re-join).
+        assert tab.youtube_tab.shutdown_called
+        assert yt_worker.cancel_called
+        assert yt_worker.wait_called_with == 30_000
+        assert tab.youtube_tab.worker_thread is None
+        event.accept.assert_called_once()
+
+    def test_video_laggard_defers_close(self, main_window):
+        tab = _FakeVideoTab(single_running=False, batch_running=False, youtube_running=False)
+        tab.batch_tab.worker_thread = _FakeWorker(running=True, wait_result=False)
+        main_window.tabs.addTab(tab, "Video")
+
+        event = _trigger_close(main_window)
+
+        assert tab.batch_tab.worker_thread.cancel_called
         event.accept.assert_not_called()
         event.ignore.assert_called_once()
 

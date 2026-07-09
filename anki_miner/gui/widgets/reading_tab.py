@@ -116,10 +116,29 @@ class ReadingTab(QWidget):
             QCoreApplication.translate("MainWindow", "Subtitles"),
         )
 
+        # Stable sub-tab keys for reveal_capability (see capabilities.SUBTAB_KEYS).
+        self._subtab_index = {"manga": 0, "novels": 1}
+
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._inner_tabs)
         self.setLayout(layout)
+
+    # ------------------------------------------------------------------
+    # Sub-tab reveal
+    # ------------------------------------------------------------------
+
+    def open_subtab(self, key: str) -> None:
+        """Switch the inner tab to the one named by ``key``.
+
+        ``key`` is a stable identifier from
+        :data:`anki_miner.gui.capabilities.SUBTAB_KEYS` (``"manga"``,
+        ``"novels"``). Unknown keys are ignored so a stale caller can't crash
+        the UI.
+        """
+        index = self._subtab_index.get(key)
+        if index is not None:
+            self._inner_tabs.setCurrentIndex(index)
 
     # ------------------------------------------------------------------
     # Config refresh
