@@ -29,13 +29,19 @@ def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
 
 
 # Stub tab classes named exactly like the real ones, so _main_tab_index matches.
-class SingleEpisodeTab(QWidget): ...
+class VideoTab(QWidget):
+    def __init__(self) -> None:
+        super().__init__()
+        self.open_subtab = Mock()
 
 
-class YouTubeTab(QWidget): ...
+class ReadingTab(QWidget):
+    def __init__(self) -> None:
+        super().__init__()
+        self.open_subtab = Mock()
 
 
-class AnalyticsTab(QWidget): ...
+class AnalyticsTab(QWidget): ...  # deliberately no open_subtab
 
 
 class SettingsTab(QWidget):
@@ -54,13 +60,13 @@ def window(qtbot, monkeypatch, test_config):
     qtbot.addWidget(win)
     win.tabs.clear()
     win._tabs = {
-        "episode": SingleEpisodeTab(),
-        "youtube": YouTubeTab(),
+        "video": VideoTab(),
+        "reading": ReadingTab(),
         "analytics": AnalyticsTab(),
         "settings": SettingsTab(),
     }
-    win.tabs.addTab(win._tabs["episode"], "Episode")
-    win.tabs.addTab(win._tabs["youtube"], "YouTube")
+    win.tabs.addTab(win._tabs["video"], "Video")
+    win.tabs.addTab(win._tabs["reading"], "Reading")
     win.tabs.addTab(win._tabs["analytics"], "Analytics")
     win.tabs.addTab(win._tabs["settings"], "Settings")
     yield win
@@ -68,8 +74,20 @@ def window(qtbot, monkeypatch, test_config):
 
 
 def test_reveals_a_main_tab_by_key(window):
-    window.reveal_capability(CapabilityTarget("youtube"))
-    assert window.tabs.currentWidget() is window._tabs["youtube"]
+    window.reveal_capability(CapabilityTarget("video"))
+    assert window.tabs.currentWidget() is window._tabs["video"]
+
+
+def test_reveals_video_and_drives_subtab(window):
+    window.reveal_capability(CapabilityTarget("video", "single"))
+    assert window.tabs.currentWidget() is window._tabs["video"]
+    window._tabs["video"].open_subtab.assert_called_once_with("single")
+
+
+def test_reveals_reading_and_drives_subtab(window):
+    window.reveal_capability(CapabilityTarget("reading", "novels"))
+    assert window.tabs.currentWidget() is window._tabs["reading"]
+    window._tabs["reading"].open_subtab.assert_called_once_with("novels")
 
 
 def test_reveals_settings_and_drives_subtab(window):
@@ -82,6 +100,13 @@ def test_settings_target_without_subtab_does_not_call_open_subtab(window):
     window.reveal_capability(CapabilityTarget("settings"))
     assert window.tabs.currentWidget() is window._tabs["settings"]
     window._tabs["settings"].open_subtab.assert_not_called()
+
+
+def test_subtab_on_widget_without_open_subtab_still_reveals_main_tab(window):
+    # A stale subtab on a container that lost open_subtab must not crash;
+    # the main tab is still revealed.
+    window.reveal_capability(CapabilityTarget("analytics", "nonsense"))
+    assert window.tabs.currentWidget() is window._tabs["analytics"]
 
 
 def test_missing_tab_is_a_silent_noop(window):

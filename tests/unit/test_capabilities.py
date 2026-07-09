@@ -8,6 +8,7 @@ from anki_miner.gui.capabilities import (
     CAPABILITIES,
     MAIN_TABS,
     SETTINGS_SUBTABS,
+    SUBTAB_KEYS,
     Capability,
     search,
 )
@@ -28,9 +29,13 @@ def test_every_target_resolves(cap: Capability) -> None:
     target = cap.target
     assert target.main_tab in MAIN_TABS, f"{cap.id}: unknown main_tab {target.main_tab!r}"
     if target.main_tab == "settings":
-        assert target.settings_subtab in SETTINGS_SUBTABS, f"{cap.id}: unknown subtab {target.settings_subtab!r}"
+        # Settings targets must always name a sub-tab.
+        assert target.subtab in SETTINGS_SUBTABS, f"{cap.id}: unknown subtab {target.subtab!r}"
     else:
-        assert target.settings_subtab is None, f"{cap.id}: settings_subtab set on non-settings target"
+        # Other targets may name a sub-tab only if their container has one.
+        assert target.subtab is None or target.subtab in SUBTAB_KEYS.get(
+            target.main_tab, frozenset()
+        ), f"{cap.id}: unknown subtab {target.subtab!r} for {target.main_tab!r}"
 
 
 @pytest.mark.parametrize("cap", CAPABILITIES, ids=lambda c: c.id)

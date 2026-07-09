@@ -404,10 +404,8 @@ class MainWindow(QMainWindow):
     # Stable capability key -> the widget class name registered as that main tab.
     # Matched by class name (not index/label) so it survives tab reorder and i18n.
     _MAIN_TAB_CLASSES = {
-        "episode": "SingleEpisodeTab",
-        "batch": "BatchProcessingTab",
+        "video": "VideoTab",
         "deckbuilder": "DeckBuilderTab",
-        "youtube": "YouTubeTab",
         "audiobook": "AudiobookTab",
         "reading": "ReadingTab",
         "analytics": "AnalyticsTab",
@@ -438,11 +436,11 @@ class MainWindow(QMainWindow):
         if idx < 0:
             return
         self.tabs.setCurrentIndex(idx)
-        if target.settings_subtab:
-            settings_widget = self.tabs.widget(idx)
-            open_subtab = getattr(settings_widget, "open_subtab", None)
+        if target.subtab:
+            container = self.tabs.widget(idx)
+            open_subtab = getattr(container, "open_subtab", None)
             if callable(open_subtab):
-                open_subtab(target.settings_subtab)
+                open_subtab(target.subtab)
 
     def _open_settings(self) -> None:
         """Open the Settings tab."""
