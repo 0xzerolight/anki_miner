@@ -35,12 +35,17 @@ class ReadingUnit:
     ``index`` is document order and doubles as the dummy card start_time.
     ``location_label`` is a human page/chapter tag ("p.42" / "ch.3"). Frozen
     so a unit's ``image_ref`` can participate in per-ref materialization dedup.
+
+    ``block_box`` is the mokuro block bounding box in original-page pixel
+    coords (xmin, ymin, xmax, ymax); None for novels/txt and malformed blocks.
+    Sentence-split pieces of one oversized block share the parent block's box.
     """
 
     text: str
     index: int
     location_label: str
     image_ref: ImageRef | None = None
+    block_box: tuple[int, int, int, int] | None = None
 
 
 @dataclass(frozen=True)
