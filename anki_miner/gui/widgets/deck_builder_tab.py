@@ -66,6 +66,10 @@ class DeckBuilderTab(MiningTabBase):
         # Tracks the last value auto-filled from the video folder name so we can
         # distinguish "user typed something" from "still showing auto value".
         self._last_auto_deck_name: str = ""
+        self._cancel_requested = False
+        self._items_done = 0
+        self._items_total = 0
+        self._current_item_label = ""
 
         self._wire_progress_callback(self.progress_callback)
         self._setup_ui()
@@ -408,6 +412,11 @@ class DeckBuilderTab(MiningTabBase):
 
         self.log_widget.clear_log()
         self.log_widget.append_info(self.tr("Analyzing corpus…"))
+        self.progress_widget.reset()
+        self._cancel_requested = False
+        self._items_done = 0
+        self._items_total = 0
+        self._current_item_label = ""
         self.preview_frame.hide()
         self._set_buttons_running()
 
@@ -464,6 +473,10 @@ class DeckBuilderTab(MiningTabBase):
         self.preview_button.setEnabled(False)
         deck_name = self.worker_thread.request.deck_name
         self.log_widget.append_info(tr_format(self.tr("Building deck '%1'…"), deck_name))
+        # Seed the composed-bar counters: Phase 2 runs one process_episode per
+        # pair (each its own 0-100 sweep) — composed into one whole-build bar.
+        self._items_done = 0
+        self._items_total = len(self.worker_thread.request.pairs)
         self.worker_thread.confirm()
 
     # ------------------------------------------------------------------
@@ -471,10 +484,15 @@ class DeckBuilderTab(MiningTabBase):
     # ------------------------------------------------------------------
 
     def _on_item_started(self, name: str) -> None:
-        self.progress_widget.set_status(tr_format(self.tr("Processing: %1"), name))
+        self._current_item_label = tr_format(
+            self.tr("Episode %1/%2: %3"), self._items_done + 1, max(self._items_total, 1), name
+        )
+        self.progress_widget.set_status(self._current_item_label)
         self.log_widget.append_info(tr_format(self.tr("Processing: %1"), name))
 
     def _on_item_completed(self, name: str, cards: int) -> None:
+        self._items_done += 1
+        self.progress_widget.set_composed(self._items_done, 0, self._items_total)
         self.log_widget.append_info(tr_format(self.tr("  %1: %2 card(s) created"), name, cards))
 
     # ------------------------------------------------------------------
@@ -495,7 +513,7 @@ class DeckBuilderTab(MiningTabBase):
                 deck_name,
             )
         )
-        self.progress_widget.set_status(self.tr("Build complete"))
+        self.progress_widget.show_completion(tr_format(self.tr("Complete — %1 cards created"), total))
         self._restore_buttons()
 
     # ------------------------------------------------------------------
@@ -507,10 +525,12 @@ class DeckBuilderTab(MiningTabBase):
         # restored by the worker's ``finished`` signal once the thread actually
         # ends — restoring Preview here would let a new run reassign
         # ``self.worker_thread`` over a still-running thread.
+        self._cancel_requested = True
         if self.worker_thread is not None:
             self.worker_thread.cancel()
         self.cancel_button.setText(self.tr("Cancelling…"))
         self.cancel_button.setEnabled(False)
+        self.progress_widget.set_status(self.tr("Cancelling..."))
         self.log_widget.append_warning(self.tr("Cancelling…"))
 
     # ------------------------------------------------------------------
@@ -519,12 +539,41 @@ class DeckBuilderTab(MiningTabBase):
 
     def _on_error(self, msg: str) -> None:
         self.log_widget.append_error(tr_format(self.tr("Error: %1"), msg))
+        self.progress_widget.reset()
+        self.progress_widget.set_status(self.tr("Failed — see log"))
         self._restore_buttons()
 
-    # Progress slots (_on_progress_start/update/complete) are inherited from
-    # MiningTabBase — the percentage-scaled ``set_progress`` path. The old
-    # ``set_value(current)`` overrides clamped the bar to 100% past item 100
-    # (e.g. a 2,401-card build pinned at 100% during media extraction).
+    # ------------------------------------------------------------------
+    # Progress slots: composed whole-build bar
+    # ------------------------------------------------------------------
+    # Phase 2 runs one process_episode per pair, each wrapping a fresh
+    # StageWeightedProgress that forwards one on_start — the inherited base
+    # slot would set_determinate() and zero the bar at every episode
+    # boundary. Compose instead: bar = (episodes done + episode pct) / total.
+    # Phase 1 (corpus scan) emits no progress signals at all, so these slots
+    # only ever run during the build phase.
+
+    def _on_progress_start(self, total: int, description: str) -> None:
+        status = (
+            f"{self._current_item_label} — {description}"
+            if description and self._current_item_label
+            else (description or self._current_item_label)
+        )
+        if status:
+            self.progress_widget.set_status(status)
+
+    def _on_progress_update(self, current: int, item_description: str) -> None:
+        status: str | None
+        if item_description and self._current_item_label:
+            status = f"{self._current_item_label} — {item_description}"
+        elif item_description:
+            status = item_description
+        else:
+            status = self._current_item_label or None
+        self.progress_widget.set_composed(self._items_done, current, self._items_total, status)
+
+    def _on_progress_complete(self) -> None:
+        """No-op: build_finished owns the completion summary."""
 
     # ------------------------------------------------------------------
     # Button-state helpers
@@ -542,6 +591,11 @@ class DeckBuilderTab(MiningTabBase):
         self.build_button.setEnabled(False)
         self.cancel_button.setEnabled(False)
         self.cancel_button.setText(self.tr("Cancel"))
+        # Cancel recovery on the always-firing finished path; success set its
+        # summary in _on_build_finished before this fires (flag gates clobber).
+        if self._cancel_requested:
+            self.progress_widget.reset()
+            self.progress_widget.set_status(self.tr("Cancelled"))
 
     # ------------------------------------------------------------------
     # Config update

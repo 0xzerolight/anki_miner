@@ -101,10 +101,10 @@ class MiningTabBase(QWidget):
 
         Uses the percentage-scaled ``set_progress`` path (NOT ``set_value``):
         ``set_determinate`` pins the bar max at 100 and ``set_progress`` converts
-        ``current/total`` to a percentage. Subclasses with more than one progress
-        widget (``BatchProcessingTab``) override these three slots.
+        ``current/total`` to a percentage. Subclasses with more than one item
+        per run (``BatchProcessingTab``, ``DeckBuilderTab``) override these
+        slots.
         """
-        self._current_phase = description
         self.progress_widget.set_determinate(total)  # type: ignore[attr-defined]
         self.progress_widget.set_status(description)  # type: ignore[attr-defined]
 
@@ -119,9 +119,16 @@ class MiningTabBase(QWidget):
         widget.set_progress(current, widget.total, item_description)
 
     def _on_progress_complete(self) -> None:
-        """Default complete slot: mark the current phase done."""
-        phase = getattr(self, "_current_phase", "")
-        self.progress_widget.set_status(tr_format(self.tr("%1 — done"), phase) if phase else self.tr("Complete"))  # type: ignore[attr-defined]
+        """Default complete slot.
+
+        Deliberately a neutral "Complete" — the previous "<phase> — done" text
+        used a phase frozen at the FIRST stage description (the pipeline's
+        StageWeightedProgress forwards on_start exactly once per run), so it
+        read "Extracting media — done" at the end of every run. The result
+        handlers replace this with a meaningful summary via
+        ``show_completion``.
+        """
+        self.progress_widget.set_status(self.tr("Complete"))  # type: ignore[attr-defined]
 
     def _on_progress_error(self, item: str, error: str) -> None:
         """Default per-item error handler: append a failure line to ``self.log_widget``.
@@ -546,6 +553,10 @@ class MiningTabBase(QWidget):
                 # before the finally releases _curation_event, so _cancel_event is
                 # already set when the worker unparks.
                 self._curation_result = None
+                # Reject is a cancel origin: mark it so the tab's terminal
+                # handler shows "Cancelled" instead of a success summary
+                # (result slots are suppressed on cancelled runs).
+                self._cancel_requested = True
                 worker = getattr(self, "worker_thread", None)
                 if worker is not None:
                     worker.cancel()

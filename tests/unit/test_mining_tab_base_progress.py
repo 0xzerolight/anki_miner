@@ -56,7 +56,9 @@ def test_progress_bar_max_stays_100(tab):
     assert tab.progress_widget.progress_bar.maximum() == 100
 
 
-def test_complete_sets_phase_done_status(tab):
+def test_complete_sets_neutral_status(tab):
+    """Neutral "Complete" — the old "<phase> — done" used a phase frozen at the
+    FIRST stage description, so it was wrong at the end of every run."""
     tab._on_progress_start(10, "Fetching definitions")
     tab._on_progress_complete()
-    assert tab.progress_widget.status_label.text() == "Fetching definitions — done"
+    assert tab.progress_widget.status_label.text() == "Complete"
