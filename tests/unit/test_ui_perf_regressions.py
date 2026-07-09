@@ -7,7 +7,6 @@ synchronous disk work / lacking bulk-insert guards on click:
 - UISettingsPanel star toggle → surgical favorite-state update, no _populate
 - WordPreviewDialog search → debounce + bulk-insert guards
 - DictionarySettingsPanel._rebuild_list → setUpdatesEnabled wrapper
-- PairPreviewDialog populate → bulk-insert guards
 """
 
 from __future__ import annotations
@@ -21,14 +20,12 @@ import pytest
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.resources.styles.theme import REQUIRED_COLOR_KEYS, Theme
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
-from anki_miner.gui.widgets.dialogs.pair_preview_dialog import PairPreviewDialog
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 from anki_miner.gui.widgets.dialogs.word_preview_dialog import WordPreviewDialog
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
 from anki_miner.gui.widgets.panels.ui_settings_panel import _STAR_FILLED, _STAR_OUTLINE, UISettingsPanel
 from anki_miner.models import TokenizedWord
 from anki_miner.models.stats import OverallStats
-from anki_miner.utils.file_pairing import FilePair
 
 # ---------------------------------------------------------------------------
 # Fix 1: AnalyticsTab.showEvent staleness cache + bulk-insert guards
@@ -269,35 +266,6 @@ def test_dictionary_panel_rebuild_disables_updates(qtbot, tmp_path: Path):
         assert update_calls[-1] is True
     finally:
         panel.deleteLater()
-
-
-# ---------------------------------------------------------------------------
-# Fix 5: PairPreviewDialog populate guards
-# ---------------------------------------------------------------------------
-
-
-def test_pair_preview_populate_disables_updates(qtbot, tmp_path: Path):
-    """Pair preview populates with repaints suspended."""
-    # Create a couple of fake files so .stat() doesn't blow up.
-    vid = tmp_path / "ep1.mkv"
-    sub = tmp_path / "ep1.srt"
-    vid.write_bytes(b"x")
-    sub.write_text("subtitle")
-    pairs = [FilePair(video=vid, subtitle=sub)]
-
-    # We can't easily spy on the table inside __init__ before it's built, so
-    # verify the post-construct state instead: updates re-enabled at end of
-    # populate (a False-then-True ordering during __init__ would have been
-    # detected by Qt warnings, which pytest-qt would surface).
-    dialog = PairPreviewDialog(pairs)
-    qtbot.addWidget(dialog)
-    try:
-        # Repaints back on after populate finished.
-        assert dialog.table.updatesEnabled() is True
-        # And sorting state preserved (off by default for this dialog).
-        assert dialog.table.isSortingEnabled() is False
-    finally:
-        dialog.deleteLater()
 
 
 # ---------------------------------------------------------------------------

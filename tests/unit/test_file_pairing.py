@@ -88,8 +88,8 @@ class TestFilePairMatcher:
             assert len(pairs) == 1
 
         def test_pairs_sorted_by_episode_ascending(self, tmp_path):
-            """Preview consumes this order, so it must be ascending by episode
-            number regardless of filesystem iteration order (Issue #80)."""
+            """The batch queue consumes this order, so it must be ascending by
+            episode number regardless of filesystem iteration order (Issue #80)."""
             video_dir = tmp_path / "video"
             video_dir.mkdir()
             sub_dir = tmp_path / "subs"
