@@ -236,71 +236,6 @@ class TestEpisodePipeline:
         # addNotes actually fired with both mined words.
         assert {n["fields"]["word"] for n in added_notes} == {"食べる", "走る"}
 
-    def test_preview_mode_skips_media_and_cards(self, config, tmp_path):
-        """Preview mode should parse and filter but not extract media or create cards."""
-        video = tmp_path / "ep01.mkv"
-        sub = tmp_path / "ep01.ass"
-
-        mock_line = MagicMock()
-        mock_line.text = "勉強する"
-        mock_line.start = 1000
-        mock_line.end = 3000
-
-        mock_subs = MagicMock()
-        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
-
-        mock_token = MagicMock()
-        mock_token.surface = "勉強"
-        mock_token.feature.pos1 = "名詞"
-        mock_token.feature.pos2 = None
-        mock_token.feature.lemma = "勉強"
-        mock_token.feature.kana = "ベンキョウ"
-
-        mock_tagger = MagicMock()
-        mock_tagger.return_value = [mock_token]
-
-        find_resp = MagicMock()
-        find_resp.json.return_value = {"result": [], "error": None}
-
-        with (
-            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
-            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
-            patch("anki_miner.services.media_extractor.subprocess.run") as mock_subprocess,
-            patch("anki_miner.services.media_extractor.subprocess.Popen") as mock_popen,
-            patch("anki_miner.services.media_extractor.ensure_directory"),
-            patch("anki_miner.services.anki_service.requests.post", return_value=find_resp),
-            patch(
-                "anki_miner.services.definition_service.DefinitionService.has_offline_definitions",
-                side_effect=lambda lemmas: dict.fromkeys(lemmas, True),
-            ),
-        ):
-
-            subtitle_parser = SubtitleParserService(config)
-            word_filter = WordFilterService(config)
-            media_extractor = MediaExtractorService(config)
-            definition_service = DefinitionService(config, providers=[])
-            anki_service = AnkiService(config)
-
-            processor = EpisodeProcessor(
-                config=config,
-                subtitle_parser=subtitle_parser,
-                word_filter=word_filter,
-                media_extractor=media_extractor,
-                definition_service=definition_service,
-                anki_service=anki_service,
-                presenter=NullPresenter(),
-            )
-
-            result = processor.process_episode(video, sub, preview_mode=True)
-
-        # Preview mode should not touch media extraction
-        mock_subprocess.assert_not_called()
-        mock_popen.assert_not_called()
-        # One unknown noun (勉強) is parsed; preview surfaces it but cards none.
-        assert result.total_words_found == 1
-        assert result.new_words_found == 1
-        assert result.cards_created == 0
-
     def test_all_words_known_returns_early(self, config, tmp_path):
         """When all words are already in Anki, should return early."""
         video = tmp_path / "ep01.mkv"
@@ -421,50 +356,56 @@ class TestIPlusOneFilterIntegration:
             blocks.append(f"{i}\n{_ts(start)} --> {_ts(end)}\n{text}\n")
         path.write_text("\n".join(blocks), encoding="utf-8")
 
-    def _make_anki_post_mock(self, known_words):
+    def _make_anki_post_mock(self, config, known_words):
         """Build a requests.post side_effect that fakes AnkiConnect responses.
 
-        - findNotes returns a synthetic id per known word.
-        - notesInfo returns a fields dict whose first field is the word.
-        - createDeck / addNotes (only reachable if the pipeline gets that far)
-          return harmless successes; preview_mode keeps this path cold.
+        Action-dispatching (not ordered): serves the always-on pre-flight
+        (modelNames / modelFieldNames / createDeck), the known-words query
+        (findNotes returns a synthetic id per known word, notesInfo the fields),
+        and harmless successes for anything else — the capture path cancels at
+        curation, before card creation.
         """
-        find_resp = MagicMock()
-        find_resp.json.return_value = {
-            "result": list(range(1, len(known_words) + 1)),
-            "error": None,
-        }
-        notes_resp = MagicMock()
-        notes_resp.json.return_value = {
-            "result": [{"fields": {"word": {"value": w}}} for w in known_words],
-            "error": None,
-        }
-        if known_words:
-            return [find_resp, notes_resp]
-        # No known words → findNotes returns []; notesInfo is never called.
-        empty_find = MagicMock()
-        empty_find.json.return_value = {"result": [], "error": None}
-        return [empty_find]
+        fields = list(config.anki_fields.values())
 
-    def _run_preview(self, config, srt_path, known_words):
-        """Run process_episode in preview mode and capture the previewed words.
+        def _responder(*args, **kwargs):
+            payload = args[1] if len(args) > 1 else kwargs.get("json", {})
+            action = payload.get("action", "")
+            r = MagicMock()
+            if action == "modelNames":
+                r.json.return_value = {"result": [config.anki_note_type], "error": None}
+            elif action == "modelFieldNames":
+                r.json.return_value = {"result": fields, "error": None}
+            elif action == "findNotes":
+                r.json.return_value = {"result": list(range(1, len(known_words) + 1)), "error": None}
+            elif action == "notesInfo":
+                r.json.return_value = {
+                    "result": [{"fields": {"word": {"value": w}}} for w in known_words],
+                    "error": None,
+                }
+            else:
+                r.json.return_value = {"result": 1, "error": None}
+            return r
 
-        Returns the list of TokenizedWord that reached the preview stage —
-        which is exactly the post-filter mining set, including i+1 swaps
-        when the flag is on.
+        return _responder
+
+    def _run_capture(self, config, srt_path, known_words):
+        """Run process_episode and capture the post-filter mining set.
+
+        A curation callback that returns ``None`` (a user cancel) records the
+        words it was offered and stops the run before phase 3 — exactly the
+        stop-after-filter semantics the old preview path had, including i+1
+        swaps when the flag is on.
         """
         captured: list[list] = []
 
-        class _CaptureP(NullPresenter):
-            def show_word_preview(self, words):
-                captured.append(list(words))
-
-        post_seq = self._make_anki_post_mock(known_words)
+        def _capture_and_cancel(words):
+            captured.append(list(words))
+            return None
 
         with (
             patch(
                 "anki_miner.services.anki_service.requests.post",
-                side_effect=post_seq,
+                side_effect=self._make_anki_post_mock(config, known_words),
             ),
             patch(
                 "anki_miner.services.definition_service.DefinitionService.has_offline_definitions",
@@ -484,14 +425,15 @@ class TestIPlusOneFilterIntegration:
                 media_extractor=media_extractor,
                 definition_service=definition_service,
                 anki_service=anki_service,
-                presenter=_CaptureP(),
+                presenter=NullPresenter(),
             )
 
             video = srt_path.with_suffix(".mkv")
-            processor.process_episode(video, srt_path, preview_mode=True)
+            processor.process_episode(video, srt_path, curation_callback=_capture_and_cancel)
 
-        # preview_mode always calls show_word_preview exactly once on the
-        # post-filter set, even when empty.
+        # The curation callback is offered the post-filter set exactly once,
+        # even when empty... unless the filter left nothing (no callback then),
+        # which none of these tests exercise.
         assert len(captured) == 1
         return captured[0]
 
@@ -512,10 +454,10 @@ class TestIPlusOneFilterIntegration:
         known = {"単語", "出る", "言葉"}
 
         config_off = replace(base_config, use_i_plus_one_filter=False)
-        words_off = self._run_preview(config_off, srt, known)
+        words_off = self._run_capture(config_off, srt, known)
 
         config_on = replace(base_config, use_i_plus_one_filter=True)
-        words_on = self._run_preview(config_on, srt, known)
+        words_on = self._run_capture(config_on, srt, known)
 
         by_lemma_off = {w.lemma: w for w in words_off}
         by_lemma_on = {w.lemma: w for w in words_on}
@@ -557,7 +499,7 @@ class TestIPlusOneFilterIntegration:
         known = {"単語", "好き"}
 
         config_on = replace(base_config, use_i_plus_one_filter=True)
-        words_on = self._run_preview(config_on, srt, known)
+        words_on = self._run_capture(config_on, srt, known)
 
         by_lemma_on = {w.lemma: w for w in words_on}
         assert "言葉" in by_lemma_on

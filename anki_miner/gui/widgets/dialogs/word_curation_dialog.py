@@ -170,7 +170,7 @@ class WordCurationDialog(QDialog):
         self._pending_index: int | None = None
 
         # Debounce search keystrokes so a fast typist doesn't run setRowHidden
-        # N times for N characters typed.  150 ms matches WordPreviewDialog.
+        # N times for N characters typed.  150 ms keeps typing latency invisible.
         self._search_debounce_timer = QTimer(self)
         self._search_debounce_timer.setSingleShot(True)
         self._search_debounce_timer.setInterval(150)

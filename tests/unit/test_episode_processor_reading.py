@@ -211,7 +211,7 @@ def test_phases_in_order_cards_created(test_config):
 
 
 def test_d4_line_index_fused_for_iplus_one(test_config):
-    """2. D4: i+1 on + curation None + not preview → line index built, cards created."""
+    """2. D4: i+1 on + curation None → line index built, cards created."""
     cfg = replace(test_config, use_i_plus_one_filter=True)
     words = [_word("犬", 0), _word("猫", 1)]
     # Each lemma is the sole unknown on its own line → both are i+1.
@@ -708,24 +708,6 @@ def test_source_label_manga_vs_book(test_config):
         _document([_unit(0, label="ch.3")], kind="book", series="ignored", episode="A Fine Novel", title="A Fine Novel")
     )
     assert _sources(anki_b)[0] == "A Fine Novel @ ch.3"
-
-
-def test_preview_mode_returns_words_no_cards(test_config):
-    """15. Preview mode returns the word list, creates no cards, skips phase 3'."""
-    words = [_word("犬", 0), _word("猫", 1)]
-    counts = collections.Counter({"犬": 1, "猫": 1})
-    sp = MagicMock()
-    sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
-    anki = _make_anki_service()
-    proc = _make_processor(test_config, subtitle_parser=sp, anki_service=anki)
-
-    with patch(_IMG) as prep:
-        res = proc.process_reading(_document([_unit(0), _unit(1)]), preview_mode=True)
-
-    prep.assert_not_called()
-    anki.create_cards_batch.assert_not_called()
-    assert res.cards_created == 0
-    assert set(res.mined_forms) == {"犬", "猫"}
 
 
 def test_partial_failure_carries_partial_ids(test_config):

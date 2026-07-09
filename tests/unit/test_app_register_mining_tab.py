@@ -124,30 +124,6 @@ class TestRegisterMiningTabPresenterConnections:
         msgs = {r[0] for r in received}
         assert msgs == {"i", "s", "w", "e"}, f"unexpected received: {received}"
 
-    def test_word_preview_signal_connected(self, bare_window, qtbot, monkeypatch):
-        """word_preview_signal is wired to _on_word_preview.
-
-        The patch must be applied BEFORE register_mining_tab so the Qt
-        connection captures the patched bound method (Qt freezes the callable
-        reference at connect time; patching the class after connect does not
-        redirect an already-registered slot).
-        """
-        from anki_miner.gui import app as app_module
-        from anki_miner.gui import main_window as mw_module
-        from anki_miner.gui.presenters import GUIPresenter
-
-        calls: list = []
-        monkeypatch.setattr(mw_module.MainWindow, "_on_word_preview", lambda self, w: calls.append(w))
-
-        tab = QWidget()
-        tab.update_config = MagicMock()
-        qtbot.addWidget(tab)
-        presenter = GUIPresenter(bare_window)
-        app_module.register_mining_tab(bare_window, tab, presenter, "WP Tab")
-
-        presenter.word_preview_signal.emit([])
-        assert calls == [[]], f"word_preview_signal not received: {calls}"
-
     def test_config_refreshed_reaches_tab_update_config(self, registered):
         """window.config_refreshed emission calls tab.update_config."""
         window, tab, _presenter = registered

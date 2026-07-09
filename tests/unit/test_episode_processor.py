@@ -243,20 +243,6 @@ class TestProcessEpisode:
         assert result.cards_created == 0
         mock_services["media_extractor"].extract_media_batch.assert_not_called()
 
-    def test_preview_mode(self, processor, mock_services, tmp_path):
-        """Preview mode should not extract media or create cards."""
-        words = [_make_word()]
-        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
-        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
-        mock_services["word_filter"].filter_unknown.return_value = words
-
-        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", preview_mode=True)
-
-        assert result.new_words_found == 1
-        assert result.cards_created == 0
-        mock_services["media_extractor"].extract_media_batch.assert_not_called()
-        mock_services["anki_service"].create_cards_batch.assert_not_called()
-
     def test_early_return_no_media(self, processor, mock_services, tmp_path):
         """No media extracted → early return with error."""
         words = [_make_word()]
@@ -2508,27 +2494,8 @@ class TestProcessYoutubeUrl:
         assert result.new_words_found == 0
         assert "Processing cancelled by user" not in result.errors
 
-    def test_preview_mode_true_forwarded_to_process_episode(self, test_config, mock_services, tmp_path):
-        """preview_mode=True short-circuits before card creation."""
-        processor = self._make_processor_with_fetcher(test_config, mock_services, tmp_path)
-
-        result = processor.process_youtube_url(
-            url="https://youtu.be/abc123",
-            video_id="abc123",
-            workspace=tmp_path,
-            sub_mode="manual_only",
-            cancel_event=threading.Event(),
-            preview_mode=True,
-        )
-
-        # Preview mode never hits anki_service.create_cards_batch.
-        mock_services["anki_service"].create_cards_batch.assert_not_called()
-        # And no media extraction is done either.
-        mock_services["media_extractor"].extract_media_batch.assert_not_called()
-        assert result.cards_created == 0
-
-    def test_curation_and_preview_default_to_none_and_false(self, test_config, mock_services, tmp_path):
-        """Omitting the new kwargs preserves pre-C3 behaviour: curation off, cards created."""
+    def test_curation_defaults_to_none(self, test_config, mock_services, tmp_path):
+        """Omitting the optional kwargs preserves default behaviour: curation off, cards created."""
         processor = self._make_processor_with_fetcher(test_config, mock_services, tmp_path)
 
         result = processor.process_youtube_url(
@@ -2539,8 +2506,8 @@ class TestProcessYoutubeUrl:
             cancel_event=threading.Event(),
         )
 
-        # Default behaviour: cards are created (no preview), and the pipeline
-        # did not attempt to run a curation callback (we didn't pass one).
+        # Default behaviour: cards are created, and the pipeline did not
+        # attempt to run a curation callback (we didn't pass one).
         mock_services["anki_service"].create_cards_batch.assert_called_once()
         assert result.cards_created == 1
 
@@ -3438,17 +3405,6 @@ class TestPreflightCardTarget:
 
         mock_services["anki_service"].verify_card_target.assert_called_once()
 
-    def test_preview_mode_skips_preflight(self, processor, mock_services, tmp_path):
-        """preview_mode=True must not call verify_card_target."""
-        word = _make_word("食べる")
-        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
-        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
-        mock_services["word_filter"].filter_unknown.return_value = [word]
-
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", preview_mode=True)
-
-        mock_services["anki_service"].verify_card_target.assert_not_called()
-
     # --- process_youtube_url pre-flight tests ---
 
     def _make_youtube_processor(self, test_config, mock_services, mock_fetcher):
@@ -3538,38 +3494,6 @@ class TestPreflightCardTarget:
         preflight_idx = call_names.index("anki_service.verify_card_target")
         fetch_idx = call_names.index("fetcher.fetch_video")
         assert preflight_idx < fetch_idx
-
-    def test_youtube_preview_mode_skips_preflight(self, test_config, mock_services, tmp_path):
-        """process_youtube_url with preview_mode=True must not call verify_card_target."""
-        video_file = tmp_path / "abc.mp4"
-        subtitle_file = tmp_path / "abc.ja.srt"
-        video_file.touch()
-        subtitle_file.touch()
-
-        word = _make_word("食べる")
-        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
-        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
-        mock_services["word_filter"].filter_unknown.return_value = [word]
-
-        mock_fetcher = MagicMock()
-        mock_fetcher.fetch_video.return_value = FetchedMedia(
-            video_file=video_file,
-            subtitle_file=subtitle_file,
-            sub_source="manual",
-        )
-
-        processor = self._make_youtube_processor(test_config, mock_services, mock_fetcher)
-
-        processor.process_youtube_url(
-            url="https://youtu.be/abc",
-            video_id="abc",
-            workspace=tmp_path,
-            sub_mode="manual_only",
-            cancel_event=threading.Event(),
-            preview_mode=True,
-        )
-
-        mock_services["anki_service"].verify_card_target.assert_not_called()
 
 
 class TestDictionaryResourceFacade:
@@ -4688,7 +4612,7 @@ class TestMinedFormsOnResult:
 
 class TestOfflineDefinitionPreFilter:
     """Pre-curator offline definition filter — words with no offline definition
-    are dropped before the curation dialog (and preview/batch) sees them."""
+    are dropped before the curation dialog (and batch) sees them."""
 
     @pytest.fixture
     def mock_services(self):
@@ -5086,16 +5010,6 @@ class TestDictionaryStalenessGate:
         result = proc.process_episode(tmp_path / "ep01.mkv", tmp_path / "ep01.ass")
         assert result is not None
         proc.subtitle_parser.parse_subtitle_file.assert_called_once()
-
-    def test_preview_mode_skips_gate(self, test_config, tmp_path):
-        """Preview creates no cards, so the gate (like the card-target preflight)
-        does not fire."""
-        registry = MagicMock()
-        registry.stale_enabled.return_value = [self._make_meta(tmp_path)]
-        proc = self._make_processor(test_config, registry)
-        proc.subtitle_parser.parse_subtitle_file.return_value = []
-        # Should not raise in preview mode.
-        proc.process_episode(tmp_path / "ep01.mkv", tmp_path / "ep01.ass", preview_mode=True)
 
     def test_no_registry_is_noop(self, test_config, tmp_path):
         proc = self._make_processor(test_config, None)
