@@ -20,12 +20,30 @@ scripts/release_preflight.sh --skip-package  # fast ~2min path: build + smokes o
 ```
 
 It mirrors the Linux release job (isolated `.[asr]` venv + pinned PyInstaller,
-SHA-verified ffmpeg/alass vendor fetch, PyInstaller build, then the three bundle
+SHA-verified ffmpeg/alass vendor fetch, PyInstaller build, then the four bundle
 smokes via `scripts/bundle_smoke.sh` — the same script CI runs) and must print
 `PREFLIGHT ALL GREEN` before you tag. It cannot reproduce the Windows (Inno Setup,
-from-source bootloader) or macOS arch-native ffmpeg steps; those stay CI-only. The
-three smokes are pure-Python import checks, so import/collection failures surface on
-Linux identically to Windows/macOS.
+from-source bootloader) or macOS arch-native ffmpeg steps; those stay CI-only. Three
+of the four smokes are pure-Python import checks, so import/collection failures
+surface on Linux identically to Windows/macOS; the fourth (whisper.cpp/pywhispercpp
+Vulkan loadability) is a native `ctypes` cold-load that runs only on Linux and
+Windows (skipped on macOS, which stays on the CT2/Metal path).
+
+For a full-matrix rehearsal without cutting a release, run the dry-run gate:
+
+```bash
+scripts/release_dryrun.sh                 # default: linux-windows
+scripts/release_dryrun.sh all             # all four legs (run once, green, right before tagging)
+```
+
+It dispatches the real `release.yml` build matrix via `workflow_dispatch` (`gh
+workflow run --ref <branch>`). Dispatch is a dry-run by construction — the `ci-gate`
+and `release` jobs are `push`-only and `publish.yml` has no dispatch trigger, so it
+cuts **no tag, no GitHub Release, and no PyPI upload**. After a green build it proves
+those negatives and that the Vulkan smoke actually executed, then prints `RELEASE
+DRY-RUN GREEN`. Two preconditions: the dispatch-enabled `release.yml` must be on the
+default branch (`main`), and the branch under test must be pushed to origin. Re-run
+and fix until green before tagging.
 
 ## Steps
 
@@ -52,8 +70,9 @@ Linux identically to Windows/macOS.
    - Linux: PyInstaller bundle, AppImage, `nfpm`-built `.deb`.
    - Windows: PyInstaller bundle, Inno Setup installer.
    - macOS (arm64): PyInstaller bundle.
+   - macOS (Intel, `macos-15-intel`): PyInstaller bundle, without the `[asr]` extra (see the Intel-macOS note below).
 
-   Each Linux/Windows/macOS build runs `scripts/bundle_smoke.sh` — three bundle smokes (youtube extractor registry, offline ASR native-lib resolution, ffmpeg encoder set), the same script the preflight runs. Artifacts upload to the GitHub Release for the tag.
+   Each Linux/Windows/macOS build runs `scripts/bundle_smoke.sh` — four bundle smokes (youtube extractor registry, offline ASR native-lib resolution, ffmpeg encoder set, and a whisper.cpp/pywhispercpp Vulkan import-loadability gate — a Linux+Windows-only native loadability check, skipped on macOS), the same script the preflight runs. Artifacts upload to the GitHub Release for the tag.
 
 6. **PyPI publish runs.** `.github/workflows/publish.yml` builds and publishes the sdist + wheel to PyPI via trusted publishing on the same tag.
 
@@ -64,6 +83,7 @@ Linux identically to Windows/macOS.
    - `AnkiMiner-*-Setup.exe`
    - `AnkiMiner-macOS-arm64.tar.gz`
    - `AnkiMiner-macOS-x86_64.tar.gz`
+   - `AnkiMiner-*-pywhispercpp-vulkan.sha256` (Linux + Windows — bundled Vulkan wheel provenance)
 
    And that PyPI lists the new version: <https://pypi.org/project/anki-miner/>.
 
