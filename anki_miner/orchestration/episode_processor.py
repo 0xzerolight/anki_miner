@@ -1922,6 +1922,13 @@ class EpisodeProcessor:
                 image_stage_desc,
             )
         for i, word in enumerate(unknown_words):
+            # Honor cancel WITHIN the loop (mirrors _fetch_expression_audio): a
+            # large mokuro volume can hold hundreds of pages, and without this a
+            # cancel would only take effect after every page is materialized. Break
+            # and return the partial results — the audio fetchers below and the
+            # phase-boundary check in process_reading each re-check cancelled.
+            if self.cancelled:
+                break
             media = MediaData()
             unit = units_by_index.get(int(word.start_time))
             ref = unit.image_ref if unit is not None else None
