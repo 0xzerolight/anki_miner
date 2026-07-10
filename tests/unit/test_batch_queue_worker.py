@@ -775,3 +775,38 @@ def test_stale_dict_aborts_queue_once(qapp):
     queue.get_next_pending.assert_not_called()
     assert item_started == [] and item_completed == [] and item_failed == []
     assert finished == [0]  # queue_finished(total_cards=0)
+
+
+# ---------------------------------------------------------------------------
+# G1: a setup failure OUTSIDE the per-item try must not abort the run() thread.
+# Code before the item loop (stale-dict gate, AnkiService construction,
+# get_next_pending) runs OUTSIDE the per-item ``try/except``; run() itself was
+# ``try/finally`` with NO ``except``. An exception there (e.g. AnkiService
+# raising ValueError on missing anki_fields) propagated straight out of the
+# reimplemented QThread.run() → PyQt6 FATAL abort. run() must instead catch it,
+# emit ``error`` then ``queue_finished``, and return normally.
+# ---------------------------------------------------------------------------
+
+
+def test_setup_failure_emits_error_and_queue_finished(qapp):
+    """AnkiService construction raising is caught: error + queue_finished, no propagation."""
+    queue = MagicMock()
+    queue.pending_count = 2
+    worker = BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock(), None)
+
+    errors: list[str] = []
+    finished: list[int] = []
+    worker.error.connect(errors.append)
+    worker.queue_finished.connect(finished.append)
+
+    with patch(
+        "anki_miner.gui.workers.batch_queue_worker.AnkiService",
+        side_effect=ValueError("Missing required field mappings: Expression"),
+    ):
+        worker.run()  # must NOT raise out of the reimplemented run()
+
+    assert len(errors) == 1
+    assert "Missing required field mappings" in errors[0]
+    assert finished == [0]  # queue_finished(total_cards=0) even on setup failure
+    # The item loop was never entered — the failure was before get_next_pending.
+    queue.get_next_pending.assert_not_called()
