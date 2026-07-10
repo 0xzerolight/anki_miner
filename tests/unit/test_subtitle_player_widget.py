@@ -1337,6 +1337,38 @@ class TestAv1WatchdogFallback:
         player.setPosition.assert_not_called()
         player.pause.assert_not_called()
 
+    def test_nudge_skipped_while_playing(self, qtbot, fake_media_classes):
+        """The nudge must not seek/pause an actively-playing stream (Bug A2).
+
+        A requested play would otherwise be cancelled and the position yanked to
+        the first entry; a playing stream is already decoding so the nudge is
+        unnecessary.
+        """
+        widget = self._make_widget_av1(qtbot, fake_media_classes, show=True)
+        player = fake_media_classes["player"]
+        player.playbackState.return_value = fake_media_classes["player_cls"].PlaybackState.PlayingState
+        player.setPosition.reset_mock()
+        player.pause.reset_mock()
+
+        widget._nudge_first_frame()
+
+        player.setPosition.assert_not_called()
+        player.pause.assert_not_called()
+
+    def test_arm_while_playing_skips_nudge_but_arms_watchdog(self, qtbot, fake_media_classes):
+        """Even while playing, arming still starts the watchdog (only the nudge is skipped)."""
+        widget = self._make_widget_av1(qtbot, fake_media_classes, show=True)
+        player = fake_media_classes["player"]
+        player.playbackState.return_value = fake_media_classes["player_cls"].PlaybackState.PlayingState
+        player.setPosition.reset_mock()
+        player.pause.reset_mock()
+
+        widget._arm_av1_decode_check()
+
+        player.setPosition.assert_not_called()
+        player.pause.assert_not_called()
+        assert widget._av1_watchdog.isActive()
+
     def test_watchdog_uses_configured_timeout(self, qtbot, fake_media_classes):
         """The armed watchdog uses the cold-init-tolerant timeout constant (Issue #82)."""
         widget = self._make_widget_av1(qtbot, fake_media_classes, show=True)
