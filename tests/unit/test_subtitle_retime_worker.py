@@ -303,6 +303,32 @@ def test_overwrite_calls_retimer_on_existing(qapp, tmp_path):
     assert out_path == out
 
 
+def test_aliased_output_reports_distinct_message(qapp, tmp_path):
+    """When the resolved output IS the input subtitle (sub named <video stem><suffix>
+    next to the video), overwrite off yields the distinct in-place message, not the
+    generic 'Skipped, exists' — and the retimer is still not called."""
+    v = tmp_path / "ep01.mkv"
+    in_sub = tmp_path / "ep01.srt"  # video.stem + suffix == in_sub.name → out aliases input
+    v.write_bytes(b"")
+    in_sub.write_text("SUB")
+
+    retimer_calls: list = []
+
+    def _recording_retimer(*args, cancel_event=None, log_cb=None, **kwargs):
+        retimer_calls.append(1)
+        return True
+
+    worker = _make_worker([(v, in_sub)], overwrite=False, retimer=_recording_retimer)
+    cap = _capture(worker)
+    worker.run()
+
+    assert cap["skipped"] == [(0, in_sub)]
+    assert retimer_calls == []
+    progress_msgs = [p[2] for p in cap["progress"] if p[0] == 0 and p[1] == 100]
+    assert any("Overwrite" in m for m in progress_msgs)
+    assert not any(m == "Skipped, exists" for m in progress_msgs)
+
+
 # ---------------------------------------------------------------------------
 # Success and failure
 # ---------------------------------------------------------------------------
