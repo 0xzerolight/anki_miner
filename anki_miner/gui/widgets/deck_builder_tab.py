@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
-import logging
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
@@ -33,8 +31,6 @@ from anki_miner.gui.workers.deck_builder_worker import DeckBuilderWorker
 from anki_miner.models.deck_build import DeckBuildPreview, DeckBuildRequest, DeckSelectionMode
 from anki_miner.utils.file_pairing import FilePairMatcher
 from anki_miner.utils.i18n import tr_format
-
-logger = logging.getLogger(__name__)
 
 
 class DeckBuilderTab(MiningTabBase):
@@ -384,31 +380,17 @@ class DeckBuilderTab(MiningTabBase):
             collection_filter=self.collection_filter_checkbox.isChecked(),
         )
 
-        # Defensive: cancel any lingering worker before replacing it. In normal
-        # flow Preview is disabled while a worker is gated or building, so this
-        # is rarely hit — but if it is, disconnect the old worker's finished
-        # handler first so its termination does not restore buttons mid-new-run.
-        if self.worker_thread is not None:
-            with contextlib.suppress(TypeError, RuntimeError):
-                self.worker_thread.finished.disconnect(self._restore_buttons)
-            self.worker_thread.cancel()
-            # Bounded join: cancel() unblocks the confirm gate / active
-            # processor, so the thread winds down quickly. Reassigning
-            # self.worker_thread below would otherwise drop the only reference
-            # to a live QThread — "QThread: Destroyed while thread is still
-            # running" — and crash. Bounded so a stuck worker cannot freeze
-            # the GUI forever.
-            joined = self.worker_thread.wait(5000)
-            if not joined:
-                logger.warning("Lingering deck-builder worker did not stop within 5 s; replacing it anyway")
-            # Release the survivor processor's sqlite handles + HTTP session
-            # before dropping the worker reference on reassignment below; single
-            # and batch tabs do the same in _teardown_previous_run. Only when
-            # joined: never close() under a still-running worker.
-            old_processor = self.worker_thread.curation_processor
-            if joined and old_processor is not None:
-                with contextlib.suppress(Exception):
-                    old_processor.close()
+        # Cancel + bounded-join any lingering worker before replacing it. In
+        # normal flow Preview is disabled while a worker is gated or building, so
+        # this is rarely hit — but if it is, reassigning self.worker_thread below
+        # would drop the only reference to a live QThread ("QThread: Destroyed
+        # while thread is still running", a fatal abort). Delegate to the shared
+        # MiningTabBase teardown: it disconnects the stale finished handler,
+        # cancels + bounded-joins, closes the survivor processor when joined, and
+        # (on join timeout) parks the still-running (worker, processor) in
+        # _leaked_runs so it is retained — not GC'd mid-run — and reaped later
+        # (next teardown + shutdown) instead of leaking or crashing.
+        self._teardown_previous_run("deck-builder")
 
         self.log_widget.clear_log()
         self.log_widget.append_info(self.tr("Analyzing corpus…"))
