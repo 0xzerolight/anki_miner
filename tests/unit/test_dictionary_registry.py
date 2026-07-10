@@ -100,7 +100,7 @@ class TestDictionaryRegistry:
         assert len(chain) == 1
         assert isinstance(chain[0], JishoProvider)
 
-    def test_build_chain_drops_missing_dict_with_warning(self, tmp_path: Path, caplog):
+    def test_build_chain_drops_missing_dict_with_debug_log(self, tmp_path: Path, caplog):
         # No dicts on disk; config references one
         config = AnkiMinerConfig()
         config = replace(
@@ -113,7 +113,9 @@ class TestDictionaryRegistry:
 
         registry = DictionaryRegistry(tmp_path)
         registry.load()
-        caplog.set_level(logging.WARNING)
+        # A missing on-disk dict is logged at DEBUG (not WARNING) and skipped;
+        # the chain continues with the remaining providers.
+        caplog.set_level(logging.DEBUG)
         chain = registry.build_provider_chain(config)
         assert len(chain) == 1
         assert isinstance(chain[0], JishoProvider)
