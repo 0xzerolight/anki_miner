@@ -668,6 +668,30 @@ Formatos suportados: AJT (index.json + media/), NHK16 (entries.json + audio/), F
         <translation>Tentar novamente na próxima execução as palavras para as quais o JapanesePod101 não tinha áudio</translation>
     </message>
     <message>
+        <source>Sentence Audio (Reading Sources)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Generate spoken sentence audio for cards mined from manga and books (these have no source audio). Sentence text is sent to the selected online services.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Generate TTS sentence audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Google Translate TTS (tried first)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Naver Papago (fallback)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select at least one service.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Google Translate (synthetic TTS)</source>
         <translation>Google Translate (TTS sintético)</translation>
     </message>
@@ -2034,6 +2058,18 @@ O dicionário não foi removido.</translation>
         <translation>A fonte de áudio de palavras retornou respostas que não são áudio (provavelmente limitada por taxa) — áudio ignorado nesta execução, será tentado novamente na próxima</translation>
     </message>
     <message>
+        <source>Sentence-audio TTS connection/certificate failure — sentence audio skipped this run, will retry next run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence-audio TTS returned repeated server errors — sentence audio skipped this run, will retry next run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
         <translation type="unfinished" />
     </message>
@@ -2159,6 +2195,18 @@ O dicionário não foi removido.</translation>
     <message>
         <source>Expression audio: %1/%2 available</source>
         <translation>Áudio de expressão: %1/%2 disponíveis</translation>
+    </message>
+    <message>
+        <source>Generating sentence audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence audio: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence audio: %1/%2 sentences</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Step 4/5 — Fetching definitions</source>
