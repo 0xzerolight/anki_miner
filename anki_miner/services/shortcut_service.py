@@ -42,6 +42,21 @@ def _get_icon_source() -> Path:
     return Path(__file__).resolve().parent.parent / "gui" / "resources" / "icons"
 
 
+def _format_desktop_exec(exe_path: Path) -> str:
+    """Quote and escape *exe_path* for a freedesktop ``Exec=`` value.
+
+    Per the Desktop Entry spec, a value containing reserved characters (notably
+    spaces) must be double-quoted, with backslash escaping for the literal
+    ``"``, `` ` ``, ``$`` and ``\\`` inside the quotes. A literal ``%`` is a
+    field-code introducer and must be doubled to ``%%``.
+    """
+    escaped = str(exe_path).replace("\\", "\\\\")
+    for ch in ('"', "`", "$"):
+        escaped = escaped.replace(ch, "\\" + ch)
+    escaped = escaped.replace("%", "%%")
+    return f'"{escaped}"'
+
+
 class ShortcutService:
     """Create and detect desktop shortcuts for the GUI app."""
 
@@ -135,7 +150,7 @@ class ShortcutService:
 Type=Application
 Name={APP_NAME}
 Comment={APP_COMMENT}
-Exec={exe_path}
+Exec={_format_desktop_exec(exe_path)}
 Icon={APP_ID}
 Categories=Education;Languages;
 Terminal=false

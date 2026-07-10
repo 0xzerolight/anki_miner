@@ -145,8 +145,39 @@ class TestCreateShortcut:
         assert desktop_file.exists()
         content = desktop_file.read_text()
         assert f"Name={APP_NAME}" in content
-        assert f"Exec={fake_exe}" in content
+        assert f'Exec="{fake_exe}"' in content
         assert desktop_file in result.paths_created
+
+    def test_linux_exec_line_is_quoted_when_path_has_space(self, tmp_path, monkeypatch):
+        """A path with spaces must be double-quoted so the launcher doesn't word-split it."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        fake_exe = Path("/home/u/My Apps/AnkiMiner.AppImage")
+
+        with (
+            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch("sys.platform", "linux"),
+            patch("subprocess.run"),
+        ):
+            ShortcutService.create_shortcut()
+
+        content = (tmp_path / ".local" / "share" / "applications" / f"{APP_ID}.desktop").read_text()
+        assert f'Exec="{fake_exe}"' in content
+
+    def test_linux_exec_line_doubles_percent(self, tmp_path, monkeypatch):
+        """A literal '%' is a field-code introducer and must be escaped as '%%'."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        fake_exe = Path("/opt/100%cool/AnkiMiner")
+
+        with (
+            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch("sys.platform", "linux"),
+            patch("subprocess.run"),
+        ):
+            ShortcutService.create_shortcut()
+
+        content = (tmp_path / ".local" / "share" / "applications" / f"{APP_ID}.desktop").read_text()
+        assert 'Exec="/opt/100%%cool/AnkiMiner"' in content
+        assert "100%cool" not in content
 
     def test_macos_returns_unsupported_message(self, tmp_path):
         fake_exe = tmp_path / "anki_miner_gui"
