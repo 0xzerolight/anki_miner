@@ -1,6 +1,7 @@
 """Settings tab with category organization using extracted panels."""
 
 import dataclasses
+import json
 import os
 import re
 from dataclasses import replace
@@ -11,6 +12,7 @@ from typing import Protocol, runtime_checkable
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -29,7 +31,10 @@ from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFl
 from anki_miner.gui.controllers.frequency_import_flow import FrequencyImportFlow
 from anki_miner.gui.controllers.zip_import_flow import YomitanCsvLabels, ZipImportFlow
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.config_manager import GUIConfigManager
+from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels import (
     AnkiSettingsPanel,
     AudioPackSettingsPanel,
@@ -262,6 +267,20 @@ class SettingsTab(QWidget):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.sm)
         button_layout.addStretch()
+
+        self.export_settings_button = ModernButton(self.tr("Export Settings…"), variant="secondary")
+        self.export_settings_button.setToolTip(
+            self.tr("Save a portable settings file (machine-specific paths and resources excluded).")
+        )
+        self.export_settings_button.clicked.connect(self._on_export_settings)
+        button_layout.addWidget(self.export_settings_button)
+
+        self.import_settings_button = ModernButton(self.tr("Import Settings…"), variant="secondary")
+        self.import_settings_button.setToolTip(
+            self.tr("Apply settings from an exported file; anything not in the file is kept.")
+        )
+        self.import_settings_button.clicked.connect(self._on_import_settings)
+        button_layout.addWidget(self.import_settings_button)
 
         # Inline, non-modal save confirmation. Flashed by _flash_save_status()
         # and auto-cleared by a timer; validation warnings park here sticky.
@@ -843,6 +862,79 @@ class SettingsTab(QWidget):
             self.save_status_label.setText(tr_format(self.tr("⚠ Saved — kept previous: %1"), ", ".join(kept_back)))
         else:
             self._flash_save_status(self.tr("✓ Saved"))
+
+    def _on_export_settings(self) -> None:
+        """Export a portable settings file (machine-specific fields stripped)."""
+        target, _ = QFileDialog.getSaveFileName(
+            self,
+            self.tr("Export Settings"),
+            str(Path(resolve_start_dir(None, file_mode=True)) / "anki_miner_settings.json"),
+            self.tr("JSON Files (*.json);;All Files (*)"),
+        )
+        if not target:
+            return
+        try:
+            GUIConfigManager.export_config(self.config, Path(target))
+        except OSError as e:
+            QMessageBox.critical(
+                self,
+                self.tr("Export Failed"),
+                tr_format(self.tr("Could not write %1:\n%2"), target, e),
+            )
+            return
+        QMessageBox.information(
+            self,
+            self.tr("Settings Exported"),
+            tr_format(self.tr("Portable settings written to %1."), target),
+        )
+
+    def _on_import_settings(self) -> None:
+        """Overlay a settings file onto the current config (confirm first).
+
+        Values in the file override the current settings; anything missing
+        from the file — including every machine-specific field the export
+        strips — keeps its current value. Applies via the same
+        ``config_changed`` path as a commit, then reloads every panel.
+        """
+        source, _ = QFileDialog.getOpenFileName(
+            self,
+            self.tr("Import Settings"),
+            resolve_start_dir(None, file_mode=True),
+            self.tr("JSON Files (*.json);;All Files (*)"),
+        )
+        if not source:
+            return
+        reply = QMessageBox.question(
+            self,
+            self.tr("Import Settings?"),
+            tr_format(
+                self.tr(
+                    "Apply settings from %1?\n\n"
+                    "Imported values override your current settings; anything "
+                    "not in the file is kept."
+                ),
+                source,
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            new_config = GUIConfigManager.import_config(Path(source), self.config)
+        except (json.JSONDecodeError, TypeError, ValueError, OSError) as e:
+            QMessageBox.critical(
+                self,
+                self.tr("Import Failed"),
+                tr_format(self.tr("Could not import %1:\n%2"), source, e),
+            )
+            return
+        # Import can touch any field — full reload, unlike the targeted
+        # auto-save commit.
+        self.config = new_config
+        self._load_config()
+        self.config_changed.emit(new_config)
+        self._flash_save_status(self.tr("✓ Imported"))
 
     def _flash_save_status(self, text: str) -> None:
         """Show a transient, non-modal confirmation beside the Save button.
