@@ -730,7 +730,11 @@ class SubtitlePlayerWidget(QWidget):
         """
         if self.player is None:  # safety: signal only fires after set_source
             return
-        self.position_slider.setValue(position)
+        # Don't fight the user mid-drag: while the handle is held down, a
+        # playback-driven setValue yanks it back and the scrub tugs-of-war
+        # (Bug A4). The user's own drag drives position via _on_slider_moved.
+        if not self.position_slider.isSliderDown():
+            self.position_slider.setValue(position)
 
         duration = self.player.duration()
         self.time_label.setText(f"{self._format_time(position)} / {self._format_time(duration)}")

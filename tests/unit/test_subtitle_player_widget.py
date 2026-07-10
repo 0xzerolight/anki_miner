@@ -1595,3 +1595,39 @@ class TestSetSourceAsyncProbe:
             # Release + join so the thread does not leak out of the test.
             release.set()
             assert worker.wait(5000), "detached probe never finished after release"
+
+
+class TestPositionSliderScrubGuard:
+    """Bug A4: playback position updates must not fight a user scrubbing the slider."""
+
+    def _make_widget(self, qtbot, fake_media_classes):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
+        fake_media_classes["player"].duration.return_value = 10000
+        widget.position_slider.setRange(0, 10000)
+        return widget
+
+    def test_position_change_ignored_while_slider_down(self, qtbot, fake_media_classes):
+        """While the handle is held, a playback position update must not move it."""
+        widget = self._make_widget(qtbot, fake_media_classes)
+        widget.position_slider.setValue(1000)
+        widget.position_slider.setSliderDown(True)
+
+        widget._on_position_changed(5000)
+
+        assert widget.position_slider.value() == 1000
+
+    def test_position_change_applied_when_slider_not_down(self, qtbot, fake_media_classes):
+        """With the handle released, a playback position update moves the slider normally."""
+        widget = self._make_widget(qtbot, fake_media_classes)
+        widget.position_slider.setValue(1000)
+        widget.position_slider.setSliderDown(False)
+
+        widget._on_position_changed(5000)
+
+        assert widget.position_slider.value() == 5000
