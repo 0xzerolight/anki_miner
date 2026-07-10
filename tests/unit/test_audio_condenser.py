@@ -152,6 +152,18 @@ def test_filter_lines_keeps_partially_bracketed_line():
     assert filter_lines(events, "") == [(0, 1000, "hello (world)")]
 
 
+def test_filter_lines_keeps_dialogue_between_two_bracket_captions():
+    """A line that opens and closes with brackets but has dialogue between two
+    separate SFX spans is kept (only ONE balanced span is a whole-line aside)."""
+    events = [(0, 1000, "（拍手）だが断る（ため息）")]
+    assert filter_lines(events, "") == [(0, 1000, "（拍手）だが断る（ため息）")]
+
+
+@pytest.mark.parametrize("text", ["（拍手）", "（笑い声だけ）"])
+def test_filter_lines_still_drops_single_bracket_span(text):
+    assert filter_lines([(0, 1000, text)], "") == []
+
+
 def test_filter_lines_music_note_only_line_dropped():
     events = [(0, 1000, "♪")]
     assert filter_lines(events, "♪♫♬") == []

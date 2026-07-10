@@ -136,10 +136,31 @@ def filter_lines(events: list[Event], filtered_chars: str) -> list[Event]:
 
 
 def _is_whole_line_bracketed(text: str) -> bool:
-    """True iff *text* opens and closes with one bracket pair (whole-line)."""
+    """True iff *text* is a single balanced bracket span (whole-line).
+
+    The opening bracket's matching close must be the **final** character. A line
+    that merely starts and ends with brackets but carries dialogue between two
+    separate spans (``（拍手）だが断る（ため息）`` — SFX caption + line + SFX
+    caption) is dialogue and kept; a genuinely whole-bracketed aside
+    (``（拍手）``) is dropped.
+    """
     if len(text) < 2:
         return False
-    return any(text[0] == open_c and text[-1] == close_c for open_c, close_c in _BRACKET_PAIRS)
+    for open_c, close_c in _BRACKET_PAIRS:
+        if text[0] != open_c:
+            continue
+        depth = 0
+        for index, char in enumerate(text):
+            if char == open_c:
+                depth += 1
+            elif char == close_c:
+                depth -= 1
+                if depth == 0:
+                    # First point the opening bracket balances: it is whole-line
+                    # only if that close is the last character.
+                    return index == len(text) - 1
+        return False
+    return False
 
 
 def build_periods(events: list[Event], padding_ms: int) -> list[Period]:
