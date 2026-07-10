@@ -93,15 +93,34 @@ def _stub_importer(monkeypatch, *, result=None, error=None):
 
 
 class TestPassthroughBranches:
-    def test_empty_path_returns_empty_path(self, tab, monkeypatch):
+    def test_cleared_selector_keeps_current_path(self, tab, monkeypatch):
+        # A cleared selector means "no change" — keep the current pitch path,
+        # never round-trip through Path("") (which persists PosixPath('.')).
         _capture_messagebox(monkeypatch)
         calls = _stub_importer(monkeypatch)
         tab.dictionary_panel.pitch_accent_selector.set_path("")
 
         out = tab._resolve_pitch_accent_path()
 
-        assert out == Path("")
+        assert out == tab.config.pitch_accent_path
+        assert out != Path(".")
         assert calls == []
+
+    def test_cleared_selector_commit_does_not_persist_dot(self, tab, monkeypatch):
+        # End-to-end: clearing the selector and committing keeps the prior path
+        # instead of persisting the literal "." into config.
+        _capture_messagebox(monkeypatch)
+        _stub_importer(monkeypatch)
+        prior = tab.config.pitch_accent_path
+        tab.dictionary_panel.pitch_accent_selector.set_path("")
+
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+        tab.commit_settings()
+
+        assert len(received) == 1
+        assert received[0].pitch_accent_path == prior
+        assert received[0].pitch_accent_path != Path(".")
 
     def test_csv_path_returns_unchanged(self, tab, tmp_path, monkeypatch):
         _capture_messagebox(monkeypatch)

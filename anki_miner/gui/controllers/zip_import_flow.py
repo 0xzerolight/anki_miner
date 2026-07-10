@@ -111,7 +111,8 @@ class ZipImportFlow:
         existing CSV half-overwritten. CSV/TSV paths pass through unchanged.
 
         Returns:
-            * ``Path("")`` if no path is selected.
+            * ``decline_fallback`` if no path is selected (a cleared selector
+              means "no change" — keep the current path, never persist ``.``).
             * The original CSV/TSV path if not a zip.
             * The destination CSV path on successful import (promotion deferred).
             * ``decline_fallback`` if the user declined to overwrite an existing
@@ -124,7 +125,11 @@ class ZipImportFlow:
 
         raw = selector.get_path()
         if not raw:
-            return Path("")
+            # A cleared selector means "no change" — keep the current path.
+            # Returning Path("") here round-tripped through PosixPath('.'),
+            # which the caller then persisted and re-synced into the selector,
+            # losing the default pitch_accent.csv.
+            return decline_fallback
         if not raw.lower().endswith(".zip"):
             return Path(raw)
 
