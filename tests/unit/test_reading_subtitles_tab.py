@@ -8,8 +8,7 @@ Behaviour under test:
 * File-list management: Add (deduped), Remove Selected, Clear; drops append
   ALL dropped subtitle files; manga/novel drops earn a cross-tab hint.
 * Start: each listed file is classified by ``detect`` into one ephemeral item;
-  the whole list launches as one run. Preview is gated to exactly one listed
-  file (the worker preview dialog fires once per file — N would stack).
+  the whole list launches as one run.
 * Per-item signals are READ-ONLY on item state (the worker owns the lifecycle):
   they compose the whole-run bar + log outcomes, never write status.
 * Cleanup restores the Cancel button and the progress bar on every exit path.
@@ -79,21 +78,17 @@ def _sub_file(tmp_path: Path, name: str = "Ep01.srt") -> Path:
     return sub
 
 
-def _mine(tab, paths: list[Path], *, preview: bool = False):
-    """List *paths*, patch ``detect`` to one subtitle ref per path, click."""
+def _mine(tab, paths: list[Path]):
+    """List *paths*, patch ``detect`` to one subtitle ref per path, click Mine."""
     tab._add_paths(paths)
     with patch(_DETECT, side_effect=lambda p: [_make_ref(Path(p).stem)]):
-        if preview:
-            tab._on_preview_clicked()
-        else:
-            tab._on_mine_clicked()
+        tab._on_mine_clicked()
 
 
 class TestInitialState:
-    """Idle tab: Preview/Mine visible, Cancel hidden, empty list."""
+    """Idle tab: Mine visible, Cancel hidden, empty list."""
 
     def test_buttons_idle(self, tab):
-        assert not tab.preview_button.isHidden()
         assert not tab.mine_button.isHidden()
         assert tab.cancel_button.isHidden()
         assert tab.worker_thread is None
@@ -101,9 +96,8 @@ class TestInitialState:
     def test_review_checkbox_default_unchecked(self, tab):
         assert tab.review_words_checkbox.isChecked() is False
 
-    def test_list_empty_preview_disabled(self, tab):
+    def test_list_starts_empty(self, tab):
         assert tab.file_list.count() == 0
-        assert not tab.preview_button.isEnabled()
         assert tab.mine_button.isEnabled()
 
     def test_section_header_says_subtitle_files(self, tab):
@@ -126,12 +120,6 @@ class TestFileList:
         tab._add_paths([a])
         tab._add_paths([a, a])
         assert tab.listed_paths() == [a]
-
-    def test_exactly_one_file_enables_preview(self, tab, tmp_path):
-        tab._add_paths([_sub_file(tmp_path, "a.srt")])
-        assert tab.preview_button.isEnabled()
-        tab._add_paths([_sub_file(tmp_path, "b.srt")])
-        assert not tab.preview_button.isEnabled()
 
     def test_remove_selected(self, tab, tmp_path):
         a, b = _sub_file(tmp_path, "a.srt"), _sub_file(tmp_path, "b.srt")
@@ -218,22 +206,6 @@ class TestStartRun:
         assert tab.worker_thread is not None
         tab.worker_thread.start.assert_called_once()
 
-    def test_mine_preview_flag_false(self, tab, tmp_path):
-        queue_cls = tab._queue_worker_cls
-        _mine(tab, [_sub_file(tmp_path)])
-        assert queue_cls.call_args.kwargs["preview_mode"] is False
-
-    def test_preview_single_file_flag_true(self, tab, tmp_path):
-        queue_cls = tab._queue_worker_cls
-        _mine(tab, [_sub_file(tmp_path)], preview=True)
-        assert queue_cls.call_args.kwargs["preview_mode"] is True
-
-    def test_preview_refused_with_multiple_files(self, tab, tmp_path):
-        queue_cls = tab._queue_worker_cls
-        _mine(tab, [_sub_file(tmp_path, "a.srt"), _sub_file(tmp_path, "b.srt")], preview=True)
-        queue_cls.assert_not_called()
-        assert "exactly one" in tab.log_widget.text_edit.toPlainText()
-
     def test_empty_list_warns_no_run(self, tab):
         queue_cls = tab._queue_worker_cls
         tab._on_mine_clicked()
@@ -270,7 +242,6 @@ class TestStartRun:
 
     def test_start_resets_bar_and_swaps_buttons(self, tab, tmp_path):
         _mine(tab, [_sub_file(tmp_path)])
-        assert tab.preview_button.isHidden()
         assert tab.mine_button.isHidden()
         assert not tab.cancel_button.isHidden()
         assert not tab.add_files_button.isEnabled()
@@ -350,7 +321,6 @@ class TestCleanup:
     def test_cleanup_restores_buttons_and_bar(self, tab, tmp_path):
         _mine(tab, [_sub_file(tmp_path)])
         tab._on_worker_finished()
-        assert not tab.preview_button.isHidden()
         assert not tab.mine_button.isHidden()
         assert tab.cancel_button.isHidden()
         assert tab.add_files_button.isEnabled()
