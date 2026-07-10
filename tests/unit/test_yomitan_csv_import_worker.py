@@ -92,14 +92,18 @@ class TestPitchImport:
 
         failed_errors: list[str] = []
         finished_results: list[YomitanPitchImportResult] = []
+        cancelled_count: list[int] = []
         worker.failed.connect(lambda err: failed_errors.append(err))
         worker.import_finished.connect(lambda res: finished_results.append(res))
+        worker.cancelled.connect(lambda: cancelled_count.append(1))
 
         # Pre-cancel so the importer aborts on the very first cancel_check.
         worker.cancel()
         worker.run()
 
         assert finished_results == []
-        assert any("cancel" in err.lower() for err in failed_errors)
+        # Cancellation fires the distinct ``cancelled`` signal, never ``failed``.
+        assert cancelled_count == [1]
+        assert failed_errors == []
         # Atomic-write semantic: no CSV produced on cancel.
         assert not dest_csv.exists()

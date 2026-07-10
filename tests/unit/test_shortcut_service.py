@@ -56,6 +56,16 @@ class TestShortcutExists:
         with patch("sys.platform", "win32"):
             assert ShortcutService.shortcut_exists() is True
 
+    def test_windows_exists_checks_home_fallback_when_no_desktop(self, tmp_path, monkeypatch):
+        """Creation falls back to Path.home() when ~/Desktop is absent (OneDrive
+        redirect); shortcut_exists must check the same fallback location."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        # No ~/Desktop directory; shortcut lives directly in home.
+        (tmp_path / f"{APP_NAME}.lnk").write_text("dummy")
+
+        with patch("sys.platform", "win32"):
+            assert ShortcutService.shortcut_exists() is True
+
     def test_returns_false_on_unsupported_platform(self, tmp_path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
         with patch("sys.platform", "freebsd"):
@@ -145,8 +155,39 @@ class TestCreateShortcut:
         assert desktop_file.exists()
         content = desktop_file.read_text()
         assert f"Name={APP_NAME}" in content
-        assert f"Exec={fake_exe}" in content
+        assert f'Exec="{fake_exe}"' in content
         assert desktop_file in result.paths_created
+
+    def test_linux_exec_line_is_quoted_when_path_has_space(self, tmp_path, monkeypatch):
+        """A path with spaces must be double-quoted so the launcher doesn't word-split it."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        fake_exe = Path("/home/u/My Apps/AnkiMiner.AppImage")
+
+        with (
+            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch("sys.platform", "linux"),
+            patch("subprocess.run"),
+        ):
+            ShortcutService.create_shortcut()
+
+        content = (tmp_path / ".local" / "share" / "applications" / f"{APP_ID}.desktop").read_text()
+        assert f'Exec="{fake_exe}"' in content
+
+    def test_linux_exec_line_doubles_percent(self, tmp_path, monkeypatch):
+        """A literal '%' is a field-code introducer and must be escaped as '%%'."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        fake_exe = Path("/opt/100%cool/AnkiMiner")
+
+        with (
+            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch("sys.platform", "linux"),
+            patch("subprocess.run"),
+        ):
+            ShortcutService.create_shortcut()
+
+        content = (tmp_path / ".local" / "share" / "applications" / f"{APP_ID}.desktop").read_text()
+        assert 'Exec="/opt/100%%cool/AnkiMiner"' in content
+        assert "100%cool" not in content
 
     def test_macos_returns_unsupported_message(self, tmp_path):
         fake_exe = tmp_path / "anki_miner_gui"
@@ -178,6 +219,44 @@ class TestCreateShortcut:
         assert mock_run.called
         first_call_args = mock_run.call_args_list[0].args[0]
         assert first_call_args[0] == "powershell"
+
+
+class TestWindowsPowerShellQuoting:
+    """Paths must be single-quoted so PowerShell doesn't expand $ / backtick."""
+
+    def test_ps_single_quotes_dollar_path(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        (tmp_path / "Desktop").mkdir()
+        fake_exe = Path(r"C:\Users\j$on\anki_miner_gui.exe")
+
+        completed = MagicMock(returncode=0, stderr="")
+        with (
+            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch("sys.platform", "win32"),
+            patch("subprocess.run", return_value=completed) as mock_run,
+        ):
+            ShortcutService.create_shortcut()
+
+        ps_script = mock_run.call_args_list[0].args[0][3]
+        assert f"'{fake_exe}'" in ps_script
+        # The $-bearing path must never appear inside a double-quoted PS string.
+        assert f'"{fake_exe}"' not in ps_script
+
+    def test_ps_doubles_embedded_single_quote(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        (tmp_path / "Desktop").mkdir()
+        fake_exe = Path("/home/o'brien/anki_miner_gui")
+
+        completed = MagicMock(returncode=0, stderr="")
+        with (
+            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch("sys.platform", "win32"),
+            patch("subprocess.run", return_value=completed) as mock_run,
+        ):
+            ShortcutService.create_shortcut()
+
+        ps_script = mock_run.call_args_list[0].args[0][3]
+        assert "'/home/o''brien/anki_miner_gui'" in ps_script
 
 
 class TestSubprocessTimeouts:

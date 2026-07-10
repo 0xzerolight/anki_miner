@@ -15,6 +15,10 @@ from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.word import select_mined_form
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, TermLookup
 from anki_miner.services.deinflection import find_highlight_end
+from anki_miner.services.ja_normalize import (
+    normalize_for_tokenization,
+    standardize_kanji_variants,
+)
 from anki_miner.services.morphology import (
     TokenInclusionRule,
     extract_lemma,
@@ -32,6 +36,7 @@ from anki_miner.utils import (
     katakana_to_hiragana,
     wrap_target_plain,
 )
+from anki_miner.utils.subtitle_encoding import load_with_fallback_encoding
 from anki_miner.utils.text_utils import (
     generate_furigana_from_tokens,
     generate_reading_from_tokens,
@@ -168,10 +173,16 @@ class SubtitleParserService:
         """Load a subtitle file via pysubs2 with normalized error wrapping.
 
         Shared by every public parse_* method so error wrapping stays
-        consistent regardless of entry point.
+        consistent regardless of entry point. The UTF-8 default is tried first
+        (the ``pysubs2.load`` seam patched by tests); on a decode failure the
+        shared cp932-first fallback (see utils/subtitle_encoding.py) runs so
+        Shift-JIS subtitles parse instead of aborting the episode.
         """
         try:
-            return pysubs2.load(str(subtitle_file))
+            try:
+                return pysubs2.load(str(subtitle_file))
+            except UnicodeDecodeError as utf8_error:
+                return load_with_fallback_encoding(subtitle_file, utf8_error)
         except FileNotFoundError as e:
             raise SubtitleParseError(f"Subtitle file not found: {subtitle_file}") from e
         except Exception as e:
@@ -302,25 +313,34 @@ class SubtitleParserService:
         duration: float,
         sentence_furigana: str,
         sentence_reading: str,
-        seen_lemmas: set[str],
+        seen_mined_forms: set[str],
     ) -> TokenizedWord | None:
-        """Build the ``TokenizedWord`` for one included token, lemma-deduped.
+        """Build the ``TokenizedWord`` for one included token, mined_form-deduped.
 
         Shared tail of ``parse_subtitle_file`` and
-        ``parse_subtitle_file_with_index``: lemma-keyed dedup (first
-        occurrence wins, recorded in ``seen_lemmas``), reading/expression
+        ``parse_subtitle_file_with_index``: mined_form-keyed dedup (first
+        occurrence wins, recorded in ``seen_mined_forms``), reading/expression
         assembly and the optional bold-target sentence variants. Returns
-        ``None`` when the token's lemma was already emitted.
+        ``None`` when the token's mined_form was already emitted.
         """
-        # Get lemma (dictionary form) for lookups and deduplication
+        # Get lemma (dictionary form) for lookups; surface is the raw token.
         lemma = self._extract_lemma(word_token)
         surface = word_token.surface
 
-        # Dedup on lemma alone: surface variants of the same dictionary
-        # form should collapse, not block each other.
-        if lemma in seen_lemmas:
+        # mined_form is the card-front spelling: orthBase (source orthography)
+        # for verbs/adjectives, surface otherwise (see select_mined_form).
+        pos = word_token.feature.pos1
+        orth_base = self._mining_base(word_token)
+        mined = select_mined_form(pos, orth_base, lemma, surface)
+
+        # Dedup on mined_form, NOT lemma: UniDic collapses kanji-variant
+        # homographs onto one canonical lemma (賭ける/掛ける → 掛ける), but they
+        # are distinct card fronts driving distinct definition/frequency/audio/
+        # known-word lookups, so lemma-keyed dedup silently dropped the second
+        # variant. mined_form is the identity every other stage already uses.
+        if mined in seen_mined_forms:
             return None
-        seen_lemmas.add(lemma)
+        seen_mined_forms.add(mined)
 
         # Get reading if available
         reading = self._extract_reading(word_token)
@@ -335,13 +355,9 @@ class SubtitleParserService:
             # (same source as expression_reading below).
             reading = self._reading(lemma)
 
-        # ExpressionFurigana/Reading match the mined card front: orthBase
-        # (source-orthography dictionary form) for verbs/adjectives, surface
-        # for nouns (see TokenizedWord.mined_form / select_mined_form for
-        # the trade-off).
-        pos = word_token.feature.pos1
-        orth_base = self._mining_base(word_token)
-        mined = select_mined_form(pos, orth_base, lemma, surface)
+        # ExpressionFurigana/Reading match the mined card front (computed above):
+        # orthBase for verbs/adjectives, surface for nouns (see
+        # TokenizedWord.mined_form / select_mined_form for the trade-off).
         if mined == surface and getattr(word_token, "compound", False) is not True:
             # Single source of truth for the target reading (Task 1.2). When the
             # card front IS the surface token, keep the context-disambiguated
@@ -411,15 +427,17 @@ class SubtitleParserService:
     def _emit_line_words_and_index(
         self,
         line_state: tuple[str, list[Any], list[Any], float, float, float],
-        seen_lemmas: set[str],
+        seen_mined_forms: set[str],
         *,
         collect_index: bool,
     ) -> tuple[list[TokenizedWord], LineLemmas | None]:
         """Emit one line's deduped words plus its optional per-line lemma index.
 
         Returns ``(line_words, line_lemmas)``. ``line_words`` is the list of
-        ``TokenizedWord`` objects emitted from this line, lemma-deduped against
-        ``seen_lemmas`` (first occurrence across the whole file wins).
+        ``TokenizedWord`` objects emitted from this line, mined_form-deduped
+        against ``seen_mined_forms`` (first occurrence across the whole file
+        wins). The per-line ``line_lemmas`` index stays lemma-keyed (the i+1
+        filter counts distinct lemmas, not card fronts).
         ``line_lemmas`` is the line's ``LineLemmas`` index entry when
         ``collect_index`` is set — or ``None`` when ``collect_index`` is set but
         the line has zero content lemmas (skipped, so it returns ``([], None)``),
@@ -480,7 +498,7 @@ class SubtitleParserService:
                 ),
             )
 
-        # Second pass: emit deduped TokenizedWord entries (lemma-keyed).
+        # Second pass: emit deduped TokenizedWord entries (mined_form-keyed).
         line_words: list[TokenizedWord] = []
         for word_token, (tok_start, tok_end, highlight_end) in zip(included_tokens, included_spans, strict=True):
             word = self._emit_word(
@@ -495,7 +513,7 @@ class SubtitleParserService:
                 duration=duration,
                 sentence_furigana=sentence_furigana,
                 sentence_reading=sentence_reading,
-                seen_lemmas=seen_lemmas,
+                seen_mined_forms=seen_mined_forms,
             )
             if word is not None:
                 line_words.append(word)
@@ -548,7 +566,7 @@ class SubtitleParserService:
         self._reset_caches()
 
         all_words: list[TokenizedWord] = []
-        seen_lemmas: set[str] = set()  # Track unique words by dictionary form (lemma).
+        seen_mined_forms: set[str] = set()  # Track unique words by card-front mined_form.
 
         for (
             text,
@@ -585,7 +603,7 @@ class SubtitleParserService:
                     duration=duration,
                     sentence_furigana=sentence_furigana,
                     sentence_reading=sentence_reading,
-                    seen_lemmas=seen_lemmas,
+                    seen_mined_forms=seen_mined_forms,
                 )
                 if word is not None:
                     all_words.append(word)
@@ -596,7 +614,7 @@ class SubtitleParserService:
         """Parse a subtitle file and produce both the deduped mining list and a per-line lemma index.
 
         ``all_words`` is identical to ``parse_subtitle_file(subtitle_file)`` —
-        same dedup-by-lemma semantics, same first-wins ordering.
+        same dedup-by-mined_form semantics, same first-wins ordering.
 
         ``line_index`` is a parallel structure keyed by line: each entry holds
         every content lemma that appeared on that line (NO dedup against
@@ -622,10 +640,12 @@ class SubtitleParserService:
 
         all_words: list[TokenizedWord] = []
         line_index: list[LineLemmas] = []
-        seen_lemmas: set[str] = set()
+        seen_mined_forms: set[str] = set()
 
         for line_state in self._iter_parsed_lines(subtitle_file):
-            line_words, line_lemmas_entry = self._emit_line_words_and_index(line_state, seen_lemmas, collect_index=True)
+            line_words, line_lemmas_entry = self._emit_line_words_and_index(
+                line_state, seen_mined_forms, collect_index=True
+            )
             if line_lemmas_entry is not None:
                 line_index.append(line_lemmas_entry)
             all_words.extend(line_words)
@@ -641,12 +661,15 @@ class SubtitleParserService:
 
         The reading pipeline (manga volumes / novels) hands mined text as
         ``ReadingUnit``s — one paragraph or manga text block each — instead of a
-        subtitle file. Each unit's ``text`` becomes the card sentence *verbatim*:
-        there is no re-windowing, no ``clean_subtitle_text``, no regex filter,
-        no pysubs2 and no per-file line cache on this path. ``unit.index``
-        (document order) doubles as the dummy start AND end time, so
-        ``duration`` is ``0.0`` and every duration-based optional filter is inert
-        by design.
+        subtitle file. Each unit's ``text`` is normalized for tokenization (the
+        same ``normalize_for_tokenization`` + ``standardize_kanji_variants`` the
+        subtitle path applies via ``clean_subtitle_text`` — mokuro OCR emits
+        Kangxi radicals and halfwidth katakana that otherwise mis-tokenize), and
+        that normalized form becomes the card sentence: there is no re-windowing,
+        no markup strip, no regex filter, no pysubs2 and no per-file line cache
+        on this path. ``unit.index`` (document order) doubles as the dummy start
+        AND end time, so ``duration`` is ``0.0`` and every duration-based
+        optional filter is inert by design.
 
         One tokenize pass per unit: ``_build_line_state`` tokenizes once and both
         the returned Counter and the emitted words reuse its ``merged_tokens``.
@@ -664,7 +687,7 @@ class SubtitleParserService:
                 element of the returned tuple is ``None``.
 
         Returns:
-            ``(words, line_index, counts)``. ``words`` is lemma-deduped
+            ``(words, line_index, counts)``. ``words`` is mined_form-deduped
             (first-occurrence-wins across the whole call, like the subtitle
             entrypoints); ``line_index`` is the ``LineLemmas`` list when
             ``want_line_index`` else ``None``; ``counts`` maps lemma → total
@@ -677,13 +700,22 @@ class SubtitleParserService:
 
         all_words: list[TokenizedWord] = []
         line_index: list[LineLemmas] = []
-        seen_lemmas: set[str] = set()
+        seen_mined_forms: set[str] = set()
         counts: collections.Counter[str] = collections.Counter()
 
         for unit in units:
+            # Reading/OCR text needs the same pre-tokenization JP normalization
+            # the subtitle path gets via clean_subtitle_text: mokuro OCR emits
+            # Kangxi radicals (⼝) and halfwidth katakana (ﾊﾟｿｺﾝ) that mis-tokenize
+            # into garbage otherwise. The normalized text is BOTH tokenized and
+            # stored as the card sentence, so the displayed sentence matches what
+            # was mined (as on the subtitle path). Order mirrors clean_subtitle_text
+            # (normalize_for_tokenization then standardize_kanji_variants); the
+            # markup strip / regex filter it also runs are subtitle-only.
+            text = standardize_kanji_variants(normalize_for_tokenization(unit.text))
             # Dummy timing: the index is both start and end (duration 0.0). No
-            # re-windowing exists — unit.text is the card sentence verbatim.
-            line_state = self._build_line_state(unit.text, float(unit.index), float(unit.index))
+            # re-windowing exists — the normalized unit text is the card sentence.
+            line_state = self._build_line_state(text, float(unit.index), float(unit.index))
             text, _raw_tokens, merged_tokens, *_ = line_state
 
             # Count through the SAME locator as the mining loop below (and
@@ -695,7 +727,7 @@ class SubtitleParserService:
                     counts[self._extract_lemma(token)] += 1
 
             line_words, line_lemmas_entry = self._emit_line_words_and_index(
-                line_state, seen_lemmas, collect_index=want_line_index
+                line_state, seen_mined_forms, collect_index=want_line_index
             )
             all_words.extend(line_words)
             if line_lemmas_entry is not None:

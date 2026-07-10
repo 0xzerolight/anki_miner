@@ -231,6 +231,10 @@ def _place_zip_member(part_path: Path, spec: _AlassSpec, target: Path) -> None:
         with contextlib.suppress(OSError):
             staged.unlink()
         raise
+    except OSError as exc:
+        with contextlib.suppress(OSError):
+            staged.unlink()
+        raise SetupError(f"Failed to write alass binary: {exc}") from exc
     _promote(staged, target)
 
 

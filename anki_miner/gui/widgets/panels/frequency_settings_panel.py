@@ -355,6 +355,17 @@ class FrequencySettingsPanel(FormPanel):
             out.append(FreqEntry(source_id=entry.source_id, enabled=enabled))
         return tuple(out)
 
+    def _on_row_toggled(self) -> None:
+        """Fold the live checkbox states back into ``self._chain`` before emitting.
+
+        ``_rebuild_list`` renders checkboxes from ``self._chain``, so an unguarded
+        rescan (set_dicts_root → _on_scan_done → _rebuild_list) would re-render a
+        just-disabled row from the stale chain and the next commit would re-persist
+        ``enabled=True``. Syncing here keeps ``_chain`` authoritative.
+        """
+        self._chain = list(self.get_chain())
+        self.chain_changed.emit()
+
     def move_up(self, index: int) -> None:
         if index <= 0 or index >= len(self._chain):
             return
@@ -460,6 +471,13 @@ class FrequencySettingsPanel(FormPanel):
 
     def _on_row_context_menu(self, pos: QPoint) -> None:
         """Right-click a source row to re-import or remove it."""
+        # While an async scan is in flight the list shows a single disabled
+        # "Loading…" placeholder, not real rows. Resolving a right-click through
+        # self._chain then targets an arbitrary real source the user never
+        # clicked — and Remove would rmtree it. Bail, mirroring the dictionary
+        # panel's "meta is None → return" guard.
+        if self._scan_in_flight:
+            return
         item = self._list.itemAt(pos)
         if item is None:
             return
@@ -511,7 +529,7 @@ class FrequencySettingsPanel(FormPanel):
                 count = meta.entry_count if meta else 0
                 is_categorical = meta.is_categorical if meta else False
                 row = _FreqRow(entry, display, fmt, count, missing=missing, is_categorical=is_categorical)
-                row.toggled.connect(self.chain_changed.emit)
+                row.toggled.connect(self._on_row_toggled)
                 item = QListWidgetItem()
                 item.setSizeHint(row.sizeHint())
                 self._list.addItem(item)

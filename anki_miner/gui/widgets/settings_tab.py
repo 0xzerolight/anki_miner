@@ -763,9 +763,11 @@ class SettingsTab(QWidget):
 
         # Validate subtitle regex filter so we never persist a pattern that
         # crashes the parser. Only validated when the filter is enabled; an
-        # unchecked invalid pattern is harmless. The toggle+pattern pair is
-        # kept back together — committing "enabled" with the old pattern (or
-        # a new pattern disabled) would not match what the user sees.
+        # unchecked invalid pattern is harmless. The toggle, pattern AND
+        # replacement are kept back together — the replacement is folded in by
+        # the filtering panel's contribute(), so reverting only pattern+toggle
+        # would leave the last-good pattern paired with a new replacement the
+        # user never previewed.
         subtitle_regex = self.filtering_panel.get_subtitle_regex_filter()
         use_subtitle_regex = self.filtering_panel.get_use_subtitle_regex_filter()
         if use_subtitle_regex and subtitle_regex:
@@ -776,6 +778,7 @@ class SettingsTab(QWidget):
                 new_config = replace(
                     new_config,
                     subtitle_regex_filter=self.config.subtitle_regex_filter,
+                    subtitle_regex_replacement=self.config.subtitle_regex_replacement,
                     use_subtitle_regex_filter=self.config.use_subtitle_regex_filter,
                 )
 
@@ -929,6 +932,24 @@ class SettingsTab(QWidget):
                 tr_format(self.tr("Could not import %1:\n%2"), source, e),
             )
             return
+        # Validate an imported subtitle regex the same way the commit path does
+        # (re.compile). import_config applies the pattern without validation, so
+        # an invalid pattern with the filter enabled would otherwise persist and
+        # be silently disabled at parse time (only a log line). Disable it here
+        # and warn the user, so the failure is surfaced rather than swallowed.
+        if new_config.use_subtitle_regex_filter and new_config.subtitle_regex_filter:
+            try:
+                re.compile(new_config.subtitle_regex_filter)
+            except re.error as e:
+                new_config = replace(new_config, use_subtitle_regex_filter=False)
+                QMessageBox.warning(
+                    self,
+                    self.tr("Invalid Subtitle Regex"),
+                    tr_format(
+                        self.tr("The imported subtitle regex filter is invalid and has " "been disabled:\n%1"),
+                        e,
+                    ),
+                )
         # Import can touch any field — full reload, unlike the targeted
         # auto-save commit.
         self.config = new_config

@@ -1,6 +1,63 @@
 """Data models for processing results and validation."""
 
 from dataclasses import dataclass, field
+from enum import Enum
+
+#: Exact ``errors`` entry a cancelled run carries (see
+#: ``EpisodeProcessor._make_cancelled_result``). The queue-result classifier
+#: keys the CANCELLED verdict on this marker, so it is the single source of
+#: truth — the orchestrator imports it rather than re-spelling the literal.
+CANCELLED_ERROR = "Processing cancelled by user"
+
+
+class MiningOutcome(Enum):
+    """Terminal classification of a non-raising ``process_*`` return.
+
+    The queue workers/tabs get a ``ProcessingResult`` back whether the run
+    succeeded, failed, or was Stopped mid-mine (none of these raise). Mapping
+    the result to this enum lets every queue site route it identically:
+    SUCCESS → COMPLETED, CANCELLED → re-minable (READY), FAILED → ERROR.
+    """
+
+    SUCCESS = "success"
+    CANCELLED = "cancelled"
+    FAILED = "failed"
+
+
+def classify_result(result: object | None) -> MiningOutcome:
+    """Classify a non-raising ``process_*`` return into a :class:`MiningOutcome`.
+
+    * ``None`` or any non-empty ``errors`` that includes :data:`CANCELLED_ERROR`
+      → :attr:`MiningOutcome.CANCELLED` (a Stop mid-mine — re-minable).
+    * Any other non-empty ``errors`` (or a missing result) → FAILED.
+    * Empty ``errors`` → SUCCESS.
+
+    ``errors`` is only honoured when it is a genuine ``list``. Bare
+    ``MagicMock``/``SimpleNamespace`` stand-ins (whose auto-generated ``errors``
+    attribute is a truthy Mock, not a list) therefore classify as SUCCESS —
+    matching the historical behaviour of the queue sites, which keyed success
+    solely on the worker's ``error is None`` and never inspected ``errors``.
+    """
+    if result is None:
+        return MiningOutcome.FAILED
+    errors = getattr(result, "errors", None)
+    if not isinstance(errors, list) or not errors:
+        return MiningOutcome.SUCCESS
+    if CANCELLED_ERROR in errors:
+        return MiningOutcome.CANCELLED
+    return MiningOutcome.FAILED
+
+
+def result_error_text(result: object | None, default: str = "Mining failed") -> str:
+    """Join a result's ``errors`` into a display string, or ``default``.
+
+    Used by the queue sites to surface a FAILED result's reason when the worker
+    passed no explicit error string (the return-based failure path).
+    """
+    errors = getattr(result, "errors", None)
+    if isinstance(errors, list) and errors:
+        return "; ".join(str(e) for e in errors)
+    return default
 
 
 @dataclass

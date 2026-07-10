@@ -150,6 +150,38 @@ class TestParseTextUnits:
 
         assert index is None
 
+    def test_normalizes_reading_text_before_tokenizing(self, tmp_path):
+        """Reading/OCR units get pre-tokenization JP normalization (Bug J4).
+
+        mokuro OCR emits Kangxi radicals (⼝ U+2F1D) and halfwidth katakana
+        (ﾊﾟｿｺﾝ) that mis-tokenize verbatim — the content word is dropped and the
+        radical/halfwidth glyphs reach the card sentence. parse_text_units now
+        applies the same normalize_for_tokenization + standardize_kanji_variants
+        the subtitle path runs via clean_subtitle_text, so the unit tokenizes to
+        the real word and the stored sentence is the normalized form.
+        """
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+
+        # Halfwidth katakana ﾊﾟｿｺﾝ → パソコン; Kangxi radical ⼝ → 口.
+        units = [
+            ReadingUnit(text="ﾊﾟｿｺﾝを使う", index=0, location_label="p.0"),
+            ReadingUnit(text="⼝を開ける", index=1, location_label="p.1"),
+        ]
+        words, _index, counts = service.parse_text_units(units, want_line_index=False)
+
+        mined = {w.mined_form for w in words}
+        assert "パソコン" in mined  # halfwidth-folded, not dropped as garbage
+        assert "口" in mined  # Kangxi radical folded to the real kanji
+
+        # Displayed sentence matches what was tokenized (normalized, not raw).
+        sentences = {w.sentence for w in words}
+        assert sentences == {"パソコンを使う", "口を開ける"}
+        assert "ﾊﾟｿｺﾝ" not in "".join(sentences)
+        assert "⼝" not in "".join(sentences)
+        # Counter keys on the normalized lemmas too.
+        assert counts["パソコン"] == 1
+
     def test_resets_caches_and_handles_empty_units(self, test_config):
         """_reset_caches runs first (seeded caches cleared); empty units → empty results."""
         with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):

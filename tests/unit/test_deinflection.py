@@ -253,7 +253,11 @@ class TestMaskForCtype:
         assert deinflector.mask_for_ctype("五段-カ行") == deinflector.condition_flags("v5")
         assert deinflector.mask_for_ctype("上一段-ア行") == deinflector.condition_flags("v1")
         assert deinflector.mask_for_ctype("下一段-バ行") == deinflector.condition_flags("v1")
-        assert deinflector.mask_for_ctype("サ行変格") == deinflector.condition_flags("vs")
+        # サ行変格 satisfies BOTH vs and vz: unidic tags じる/ずる verbs (感じる,
+        # 信じる) as サ行変格 while the transform rules to 〜ずる carry vz.
+        assert deinflector.mask_for_ctype("サ行変格") == (
+            deinflector.condition_flags("vs") | deinflector.condition_flags("vz")
+        )
         assert deinflector.mask_for_ctype("カ行変格") == deinflector.condition_flags("vk")
         assert deinflector.mask_for_ctype("形容詞") == deinflector.condition_flags("adj-i")
 
@@ -280,7 +284,7 @@ class TestJapaneseTableIntegrity:
 
         deinflector = get_japanese_deinflector()
         assert deinflector.transform_count == 54
-        assert deinflector.rule_count == 834
+        assert deinflector.rule_count == 833
         assert len(CONDITIONS) == 22
         whole_word = [r for t in TRANSFORMS for r in t["rules"] if r["type"] == "wholeWord"]
         # The special-honorific -masu helper generates exactly these.
@@ -396,6 +400,17 @@ def _tok(surface, pos1=None, lemma=None, orth_base=None, ctype=None):
 
 
 class TestFindHighlightEnd:
+    def test_jiru_zuru_verb_extends_full_span(self):
+        # 感じた: unidic surface 感じ / cType サ行変格 / orthBase 感ずる. The
+        # transform chain 感じた→感ずる carries vz, so the サ行変格 mask must
+        # accept vz or the highlight stops at the 感じ stem (Bug J1).
+        text = "感じた"
+        tokens = [
+            _tok("感じ", "動詞", lemma="感ずる", orth_base="感ずる", ctype="サ行変格"),
+            _tok("た", "助動詞"),
+        ]
+        assert find_highlight_end(text, tokens, 0, 2, tokens[0]) == 3
+
     def test_verb_extends_over_auxiliary(self):
         text = "種を蒔いた"
         tokens = [

@@ -900,9 +900,9 @@ class TestOptionalServices:
         ), presenter.show_warning.call_args_list
 
     def test_freq_cutoff_skipped_when_source_unavailable(self, test_config, mock_services, tmp_path):
-        """Regression A2: the gate is two-part — service present AND is_available().
-        A service whose on-disk index failed to load (is_available False) must also
-        skip the cutoff, not wipe every word."""
+        """Regression A2: the gate is two-part — service present AND has a loaded
+        numeric source. A service whose on-disk index failed to load
+        (has_numeric_source False) must also skip the cutoff, not wipe every word."""
         config = replace(test_config, max_frequency_rank=15000, deduplicate_sentences=False)
         word = _make_word("食べる")
 
@@ -914,6 +914,7 @@ class TestOptionalServices:
 
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = False
+        mock_frequency.has_numeric_source.return_value = False
 
         presenter = MagicMock(spec=NullPresenter())
         services = {**mock_services, "word_filter": WordFilterService(config)}
@@ -928,6 +929,40 @@ class TestOptionalServices:
 
         mock_services["anki_service"].create_cards_batch.assert_called_once()
         assert any("frequency source" in str(c.args[0]).lower() for c in presenter.show_warning.call_args_list)
+
+    def test_freq_cutoff_skipped_when_only_categorical_source(self, test_config, mock_services, tmp_path):
+        """Bug F1: a chain whose ONLY loaded source is categorical (e.g. a JLPT-band
+        dict) reports is_available True but has_numeric_source False — every row is
+        CATEGORICAL_RANK, so no word gets a numeric rank. Gating the cutoff on
+        is_available (pre-fix) dropped 100% of words → silent 0 cards. The cutoff
+        must stay inert and the word must survive to card creation."""
+        config = replace(test_config, max_frequency_rank=15000, deduplicate_sentences=False)
+        word = _make_word("食べる")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = True  # a source IS loaded...
+        mock_frequency.has_numeric_source.return_value = False  # ...but it's categorical-only
+        mock_frequency.lookup_all.return_value = []  # categorical rows excluded from scalars
+
+        presenter = MagicMock(spec=NullPresenter())
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=presenter,
+            frequency_service=mock_frequency,
+            **services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # The word is NOT dropped by the inert cutoff and reaches card creation.
+        mock_services["anki_service"].create_cards_batch.assert_called_once()
 
     def test_all_filtered_out_message_names_filters_not_anki(self, test_config, mock_services, tmp_path):
         """Regression B: when a LOADED frequency source removes every surviving
@@ -1436,6 +1471,51 @@ class TestKnownWordDBIntegration:
         assert result.card_ids == [12345]
         assert not result.errors
 
+    def test_locked_db_on_phase2_known_words_access_does_not_abort_run(self, test_config, mock_services, tmp_path):
+        """Bug F6: a locked/raising known_words.db during the PHASE-2 read
+        (get_words_by_source / get_known_words / sync_with_anki) must NOT abort the
+        run. Pre-fix these reads were unguarded, so a Manage-Known-Words dialog or a
+        second concurrent run holding the file threw OperationalError into the generic
+        except and turned a whole run into a failure. The run must fall back to Anki's
+        existing vocabulary and still create cards."""
+        import sqlite3
+
+        word = _make_word("食べる")
+        media = _make_media()
+
+        mock_known_db = MagicMock()
+        mock_known_db.is_available.return_value = True
+        # Every phase-2 read raises as if the file were locked.
+        mock_known_db.get_words_by_source.side_effect = sqlite3.OperationalError("database is locked")
+        mock_known_db.get_known_words.side_effect = sqlite3.OperationalError("database is locked")
+        mock_known_db.sync_with_anki.side_effect = sqlite3.OperationalError("database is locked")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+
+        def _create_batch(card_data, progress_callback=None):
+            mock_services["anki_service"].last_created_note_ids = [999]
+            return 1
+
+        mock_services["anki_service"].create_cards_batch.side_effect = _create_batch
+
+        processor = EpisodeProcessor(
+            config=replace(test_config, use_known_words_db=True),
+            presenter=NullPresenter(),
+            known_word_db=mock_known_db,
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # The locked DB was hit but the run completed, falling back to Anki vocab.
+        mock_services["anki_service"].get_existing_vocabulary.assert_called()
+        assert result.cards_created == 1
+        assert not result.errors
+
     def test_user_ignore_list_applied_when_cache_disabled(self, test_config, mock_services, tmp_path):
         """source='user' words filter the candidate set even when use_known_words_db is off (Issue #42).
 
@@ -1917,6 +1997,58 @@ class TestCrossEpisodeFiltering:
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", cross_episode_counts=cross_counts)
 
         mock_services["word_filter"].filter_by_episode_count.assert_called_once_with([word1, word2], cross_counts, 3)
+        assert result.cards_created == 1
+
+    def test_episode_count_runs_before_dedup_so_mate_can_win(self, test_config, mock_services, tmp_path):
+        """Bug F5: the cross-episode floor must run BEFORE sentence dedup. Two words
+        share a sentence — A (1 episode) sorted first, B (3 episodes). Pre-fix dedup
+        kept A (first-per-sentence) then the floor dropped A → the sentence yielded no
+        card even though its mate B would have passed. Correct order: the floor drops
+        A first, then dedup keeps B. Uses a REAL WordFilterService so the ordering
+        actually executes."""
+        shared_sentence = "共有された例文"
+        word_a = TokenizedWord(
+            surface="食べた",
+            lemma="食べる",
+            reading="タベル",
+            sentence=shared_sentence,
+            start_time=1.0,
+            end_time=3.0,
+            duration=2.0,
+            pos="動詞",
+        )
+        word_b = TokenizedWord(
+            surface="走った",
+            lemma="走る",
+            reading="ハシル",
+            sentence=shared_sentence,
+            start_time=1.0,
+            end_time=3.0,
+            duration=2.0,
+            pos="動詞",
+        )
+        cross_counts = {"食べる": 1, "走る": 3}
+        config = replace(
+            test_config,
+            min_episode_appearances=2,
+            deduplicate_sentences=True,
+            use_i_plus_one_filter=False,
+        )
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word_a, word_b]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word_b, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to run"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **services)
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", cross_episode_counts=cross_counts)
+
+        # B (the 3-episode mate) survives and is carded; the sentence is not lost.
+        card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
+        assert [c.word.lemma for c in card_data] == ["走る"]
         assert result.cards_created == 1
 
 

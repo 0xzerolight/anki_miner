@@ -172,7 +172,14 @@ def test_cancel_before_run_no_import_finished(tmp_path: Path, qapp):
     worker.cancel()
 
     finished: list[str] = []
+    failed: list[str] = []
+    cancelled: list[int] = []
     worker.import_finished.connect(lambda source_id, meta: finished.append(source_id))
+    worker.failed.connect(lambda err: failed.append(err))
+    worker.cancelled.connect(lambda: cancelled.append(1))
     worker.run()
 
     assert finished == []
+    # Cancellation fires the distinct ``cancelled`` signal, never ``failed``.
+    assert cancelled == [1]
+    assert failed == []

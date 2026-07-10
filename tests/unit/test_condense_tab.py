@@ -534,7 +534,10 @@ def test_worker_kwargs_from_widget_state_single(qtbot, tmp_path):
 
     assert worker_cls.call_count == 1
     args, kwargs = worker_cls.call_args
-    assert args[0] is config
+    # Editing the run options now folds them into tab.config (persistence);
+    # the worker receives that live config, carrying the edited values.
+    assert args[0] is tab.config
+    assert args[0].condenser_padding_ms == 700
     assert args[1] == [CondenseItem(media, sub)]
     assert kwargs["output_dir"] is None
     assert kwargs["overwrite"] is True
@@ -878,6 +881,60 @@ def test_update_config_does_not_refresh_defaults_during_run(qtbot, tmp_path):
     assert tab.offset_spinbox.value() == 0
     # But the config handle itself is swapped.
     assert tab.config.condenser_padding_ms == 1234
+
+
+# ---------------------------------------------------------------------------
+# Run-option persistence (config_changed) + refresh no-clobber
+# ---------------------------------------------------------------------------
+
+
+def test_editing_option_persists_to_config(qtbot, tmp_path):
+    """Editing a run option updates config and emits config_changed."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    emitted: list = []
+    tab.config_changed.connect(emitted.append)
+
+    tab.padding_spinbox.setValue(777)
+    tab.offset_spinbox.setValue(-250)
+    tab.format_combo.setCurrentIndex(tab.format_combo.findData("flac"))
+    tab.write_subs_checkbox.setChecked(True)
+
+    assert tab.config.condenser_padding_ms == 777
+    assert tab.config.condenser_offset_ms == -250
+    assert tab.config.condenser_output_format == "flac"
+    assert tab.config.condenser_write_subtitles is True
+    # Each edit emitted a fresh config carrying the new value.
+    assert emitted
+    assert emitted[-1].condenser_write_subtitles is True
+
+
+def test_seeding_does_not_emit_config_changed(qtbot, tmp_path):
+    """Construction/reseed seeds widgets without emitting config_changed."""
+    emitted: list = []
+    with patch(_AVAILABLE, return_value=True):
+        tab = CondenseTab(_make_config(tmp_path))
+    qtbot.addWidget(tab)
+    tab.config_changed.connect(emitted.append)
+
+    with patch(_AVAILABLE, return_value=True):
+        tab.update_config(_config_with_defaults(tmp_path))
+
+    assert emitted == []
+
+
+def test_unrelated_refresh_keeps_edited_option(qtbot, tmp_path):
+    """A refresh carrying the same condenser values must not reset the widget."""
+    import dataclasses
+
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.padding_spinbox.setValue(777)  # user edit → folded into tab.config
+
+    # A theme-toggle-style refresh carries the latest config (incl. the edit).
+    refreshed = dataclasses.replace(tab.config, ffmpeg_location="/x")
+    with patch(_AVAILABLE, return_value=True):
+        tab.update_config(refreshed)
+
+    assert tab.padding_spinbox.value() == 777
 
 
 # ---------------------------------------------------------------------------

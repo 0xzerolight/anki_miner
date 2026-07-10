@@ -640,3 +640,58 @@ def test_update_config_stores_new_config(tab, test_config):
     new_config = replace(test_config, anki_deck_name="updated_deck")
     tab.update_config(new_config)
     assert tab.config is new_config
+
+
+# ---------------------------------------------------------------------------
+# 12. Re-Preview whose old worker times out on join: retain + reap (G2)
+# ---------------------------------------------------------------------------
+
+
+def test_timed_out_survivor_retained_and_reaped_on_shutdown(tab, tmp_path):
+    """A re-Preview whose old worker times out on join must RETAIN the worker.
+
+    On join timeout the old worker is still running; reassigning
+    ``self.worker_thread`` would drop the last reference to a live QThread —
+    "QThread: Destroyed while thread is still running" (a fatal abort). The
+    pair must be parked in ``_leaked_runs`` (mirroring MiningTabBase) and reaped
+    once the orphaned worker finishes (here, at shutdown).
+    """
+    pairs = _make_pairs(tmp_path)
+    tab.deck_name_edit.setText("Deck")
+
+    worker1 = MagicMock(name="worker1")
+    worker1.wait.return_value = False  # join times out: still running
+    worker1.isRunning.return_value = True
+    processor1 = worker1.curation_processor
+    worker2 = MagicMock(name="worker2")
+
+    with (
+        patch(
+            "anki_miner.gui.widgets.deck_builder_tab.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=pairs,
+        ),
+        patch(
+            "anki_miner.gui.widgets.deck_builder_tab.DeckBuilderWorker",
+            side_effect=[worker1, worker2],
+        ),
+    ):
+        tab.video_folder_selector.get_path = MagicMock(return_value=str(tmp_path))
+        tab.video_folder_selector.is_valid = MagicMock(return_value=True)
+        tab.subtitle_folder_selector.get_path = MagicMock(return_value=str(tmp_path))
+        tab.subtitle_folder_selector.is_valid = MagicMock(return_value=True)
+
+        tab._on_preview_clicked()  # worker1 blocks on gate
+        tab._on_preview_clicked()  # worker1 join times out -> retained
+
+    # Retained (not GC'd); processor untouched while the worker is still running.
+    assert (worker1, processor1) in tab._leaked_runs
+    processor1.close.assert_not_called()
+    assert tab.worker_thread is worker2
+
+    # The orphaned worker later finishes; shutdown reaps the leaked pair.
+    worker1.isRunning.return_value = False
+    worker1.wait.return_value = True
+    tab.shutdown()
+
+    processor1.close.assert_called_once_with()
+    assert (worker1, processor1) not in tab._leaked_runs

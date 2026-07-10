@@ -2,6 +2,7 @@
 
 import contextlib
 import hashlib
+import itertools
 import logging
 import subprocess
 import threading
@@ -159,6 +160,13 @@ class MediaExtractorService:
         # Keyed by ffmpeg encoder name (e.g. "libsvtav1", "libwebp_anim").
         self._animated_encoder_ok: dict[str, bool] = {}
         self._encoder_probe_lock = threading.Lock()
+        # Per-extraction discriminator for temp clip filenames. Two words that
+        # share lemma+start_time (kanji-variant collapse, or the Deck Builder's
+        # dedup bypass) would otherwise map to the same {word}_{ms} name and, run
+        # in parallel by extract_media_batch's ThreadPoolExecutor, race two
+        # ``ffmpeg -y`` writes to one path → a corrupt clip. next() on
+        # itertools.count is atomic under the GIL, so no lock is needed.
+        self._clip_seq = itertools.count()
 
     def extract_media(
         self,
@@ -198,6 +206,9 @@ class MediaExtractorService:
         # Sanitize filename
         safe_word = safe_filename(word.lemma)
         timestamp = int(word.start_time * 1000)
+        # Unique per extraction so parallel siblings sharing lemma+timestamp
+        # (kanji-variant collapse / dedup bypass) never collide on one temp path.
+        seq = next(self._clip_seq)
 
         # Effective animated format (str = encode it; None = animated unavailable).
         # _RESOLVE means "not threaded" — resolve here for direct callers/tests.
@@ -212,8 +223,8 @@ class MediaExtractorService:
         # match the container _extract_animated_screenshot writes (both derive
         # from effective_fmt), or a WebP clip lands in a .avif filename.
         screenshot_ext = effective_fmt if (self.config.screenshot_animated and effective_fmt is not None) else "jpg"
-        screenshot_file = f"{safe_word}_{timestamp}.{screenshot_ext}"
-        audio_file = f"{safe_word}_{timestamp}.{self.config.audio_format}"
+        screenshot_file = f"{safe_word}_{timestamp}_{seq}.{screenshot_ext}"
+        audio_file = f"{safe_word}_{timestamp}_{seq}.{self.config.audio_format}"
 
         output_dir = temp_folder if temp_folder is not None else self.config.media_temp_folder
         screenshot_path = output_dir / screenshot_file
@@ -671,6 +682,8 @@ class MediaExtractorService:
             # raises UnicodeDecodeError. Mirrors audio_track_detector._run_ffprobe_json.
             proc = subprocess.Popen(
                 cmd,
+                stdin=subprocess.DEVNULL,  # detach from the TTY: a backgrounded ffmpeg reading
+                # the controlling terminal gets SIGTTIN-stopped and the extraction times out.
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,

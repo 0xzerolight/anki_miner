@@ -46,6 +46,7 @@ from anki_miner.services.asr.srt_writer import segments_to_srt
 from anki_miner.services.media_extractor import MediaExtractorService
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg
 from anki_miner.utils.subprocess_utils import no_window_kwargs
+from anki_miner.utils.subtitle_encoding import load_with_fallback_encoding
 from anki_miner.utils.text_utils import strip_subtitle_markup
 
 if TYPE_CHECKING:
@@ -88,50 +89,12 @@ def load_subtitle_events(path: str | Path) -> list[Event]:
     try:
         subs = pysubs2.load(str(path))
     except UnicodeDecodeError as utf8_error:
-        subs = _load_with_fallback_encoding(path, utf8_error)
+        subs = load_with_fallback_encoding(path, utf8_error)
     except pysubs2.exceptions.FormatAutodetectionError:
         # Empty (or contentless) file — no cues to condense.
         return []
 
     return [(event.start, event.end, event.text) for event in subs if not event.is_comment]
-
-
-def _load_with_fallback_encoding(path: Path, original_error: UnicodeDecodeError) -> pysubs2.SSAFile:
-    """Retry loading *path* with cp932, then a detected encoding (D10).
-
-    cp932 is tried before the charset-normalizer detector on purpose: the
-    detector confidently mis-detects real cp932 Japanese as ``cp949`` and
-    decodes it *without* raising (silent mojibake), so for the app's dominant
-    non-UTF-8 input the explicit cp932 attempt must win first. Only if cp932
-    itself raises :class:`UnicodeDecodeError` do we consult the (soft-imported)
-    detector; if that also fails, *original_error* (the UTF-8 error) is raised.
-    """
-    try:
-        return pysubs2.load(str(path), encoding="cp932")
-    except UnicodeDecodeError:
-        pass
-    encoding = _detect_encoding(path)
-    if encoding:
-        try:
-            return pysubs2.load(str(path), encoding=encoding)
-        except (UnicodeDecodeError, LookupError):
-            pass
-    raise original_error
-
-
-def _detect_encoding(path: Path) -> str | None:
-    """Best-guess encoding for *path* via charset-normalizer, or None.
-
-    charset-normalizer is soft-imported so its absence simply means the
-    detector leg of :func:`_load_with_fallback_encoding` is skipped (the cp932
-    attempt there runs first and independently).
-    """
-    try:
-        from charset_normalizer import from_path
-    except ImportError:
-        return None
-    match = from_path(str(path)).best()
-    return match.encoding if match is not None else None
 
 
 # ---------------------------------------------------------------------------
@@ -173,10 +136,31 @@ def filter_lines(events: list[Event], filtered_chars: str) -> list[Event]:
 
 
 def _is_whole_line_bracketed(text: str) -> bool:
-    """True iff *text* opens and closes with one bracket pair (whole-line)."""
+    """True iff *text* is a single balanced bracket span (whole-line).
+
+    The opening bracket's matching close must be the **final** character. A line
+    that merely starts and ends with brackets but carries dialogue between two
+    separate spans (``（拍手）だが断る（ため息）`` — SFX caption + line + SFX
+    caption) is dialogue and kept; a genuinely whole-bracketed aside
+    (``（拍手）``) is dropped.
+    """
     if len(text) < 2:
         return False
-    return any(text[0] == open_c and text[-1] == close_c for open_c, close_c in _BRACKET_PAIRS)
+    for open_c, close_c in _BRACKET_PAIRS:
+        if text[0] != open_c:
+            continue
+        depth = 0
+        for index, char in enumerate(text):
+            if char == open_c:
+                depth += 1
+            elif char == close_c:
+                depth -= 1
+                if depth == 0:
+                    # First point the opening bracket balances: it is whole-line
+                    # only if that close is the last character.
+                    return index == len(text) - 1
+        return False
+    return False
 
 
 def build_periods(events: list[Event], padding_ms: int) -> list[Period]:
@@ -297,6 +281,13 @@ _PROBE_REQUIRED: frozenset[str] = frozenset({"libmp3lame", "libopus"})
 # routed to the diagnostic tail instead of parsed as progress.
 _PROGRESS_KEY_RE = re.compile(r"^[A-Za-z0-9_]+$")
 
+# Ceiling for the embedded-subtitle demux (D9). Same full-demux cost class as
+# MediaExtractorService.extract_full_audio (flat 30-minute ceiling): a large
+# remux has to be fully demuxed even though only the subtitle stream is written,
+# so the old flat 300 s could time out a valid multi-hour source. A ceiling, not
+# a target — extraction is far faster than realtime in practice.
+_EMBEDDED_SUBTITLE_TIMEOUT = 1800.0
+
 
 class EncoderUnavailableError(Exception):
     """Raised by :meth:`AudioCondenserService.condense` when the required audio
@@ -404,7 +395,7 @@ class AudioCondenserService:
         ok = self._run_streaming(
             cmd,
             total_period_ms=0,
-            timeout=300.0,
+            timeout=_EMBEDDED_SUBTITLE_TIMEOUT,
             progress_cb=None,
             cancel_event=cancel_event,
         )
@@ -492,13 +483,22 @@ class AudioCondenserService:
             # the kept duration with a floor for tiny selections.
             timeout = max(600.0, total_ms / 1000 * 4)
 
-            return self._run_streaming(
+            ok = self._run_streaming(
                 cmd,
                 total_period_ms=total_ms,
                 timeout=timeout,
                 progress_cb=progress_cb,
                 cancel_event=cancel_event,
             )
+            if not ok:
+                # Failure/cancel: ffmpeg's ``-y`` may have left a truncated
+                # ``<stem>_condensed.mp3``. Drop it so the next run's skip gate
+                # (``out_audio.exists() and not overwrite``) doesn't mistake the
+                # corrupt partial for a finished condense. Mirrors the
+                # partial-cleanup in extract_embedded_subtitle.
+                with contextlib.suppress(OSError):
+                    out_audio.unlink(missing_ok=True)
+            return ok
         finally:
             # The graph file is the ONLY temp this service owns (extracted subs
             # belong to the caller). Clean it on every path.

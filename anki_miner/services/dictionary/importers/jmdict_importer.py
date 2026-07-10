@@ -99,10 +99,15 @@ def import_jmdict_xml(
                         terms.append(keb)
 
                 readings: list[str] = []
+                # Parallel to ``readings``: the kanji headwords each reading is
+                # restricted to via ``re_restr``. Empty list = applies to all
+                # kanji headwords.
+                reading_restrs: list[list[str]] = []
                 for r in entry.findall("r_ele"):
                     reb = r.findtext("reb")
                     if reb:
                         readings.append(reb)
+                        reading_restrs.append([x.text for x in r.findall("re_restr") if x.text])
 
                 senses: list[list[str]] = []
                 for sense in entry.findall("sense"):
@@ -113,16 +118,36 @@ def import_jmdict_xml(
                     continue
 
                 content = _format_senses_html(senses)
-                primary_reading = readings[0] if readings else None
 
-                # One row per kanji term, keyed by that term.
+                # One kanji-keyed row per APPLICABLE reading, respecting
+                # ``re_restr``: a reading with no restriction applies to every
+                # kanji headword; a restricted reading pairs only with its
+                # permitted kanji. Attesting every applicable reading against
+                # the kanji headword lets reading-scoped lookups of secondary
+                # readings (e.g. 行く/ゆく) still match and earn the reading boost.
                 for term in terms:
-                    yield DictRow(
-                        term=term,
-                        reading=primary_reading,
-                        content=content,
-                        sequence=sequence,
-                    )
+                    applicable = [
+                        reb
+                        for reb, restrs in zip(readings, reading_restrs, strict=True)
+                        if not restrs or term in restrs
+                    ]
+                    if applicable:
+                        for reb in applicable:
+                            yield DictRow(
+                                term=term,
+                                reading=reb,
+                                content=content,
+                                sequence=sequence,
+                            )
+                    else:
+                        # No reading applies to this kanji headword (unusual);
+                        # still emit the term so its definition remains lookable.
+                        yield DictRow(
+                            term=term,
+                            reading=None,
+                            content=content,
+                            sequence=sequence,
+                        )
 
                 # One row per reading, keyed by the reading (term and reading equal).
                 for reading in readings:

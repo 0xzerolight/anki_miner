@@ -28,10 +28,11 @@ from __future__ import annotations
 import logging
 import os
 import shutil
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Collection, Iterator, cast
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -100,11 +101,23 @@ class CondenseTab(QWidget):
     Args:
         config: Frozen application configuration.
         parent: Optional parent widget.
+
+    Signals:
+        config_changed: Emitted with a new ``AnkiMinerConfig`` when the user
+            edits a run option (padding / offset / format / write-subs), so the
+            host can persist ``condenser_*`` to ``gui_config.json`` and survive
+            restart. Mirrors ``SettingsTab.config_changed`` → ``update_config``.
     """
+
+    config_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
 
     def __init__(self, config: AnkiMinerConfig, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.config = config
+        # Suppresses the persist slot while _apply_config_defaults programmatically
+        # seeds the option widgets (setValue/setChecked would otherwise feed back
+        # through config_changed and re-persist during a refresh).
+        self._seeding: bool = False
         self.worker_thread: CondenseWorker | None = None
         self._custom_output_dir: Path | None = None
         self._total_files: int = 0
@@ -131,23 +144,64 @@ class CondenseTab(QWidget):
 
         A config change is exactly when ffmpeg can appear/disappear, so the
         availability cache is recomputed here. Option-widget defaults are
-        re-seeded only when idle: a run already in flight captured its own
-        values, and re-seeding would stomp what the user set for the next run.
+        re-seeded only when idle AND only when the new config's condenser_*
+        values actually differ from the live widgets: a run already in flight
+        captured its own values, and an unrelated refresh (e.g. a header theme
+        toggle) must not stomp what the user typed but hasn't yet committed.
         """
         self.config = config
         self._ffmpeg_is_available = self._compute_ffmpeg_available()
-        if self.worker_thread is None or not self.worker_thread.isRunning():
+        idle = self.worker_thread is None or not self.worker_thread.isRunning()
+        if idle and self._options_differ_from_widgets():
             self._apply_config_defaults()
         self._refresh_engine_state()
 
     def _apply_config_defaults(self) -> None:
-        """Seed the option widgets from the current config's persisted defaults."""
-        self.padding_spinbox.setValue(self.config.condenser_padding_ms)
-        self.offset_spinbox.setValue(self.config.condenser_offset_ms)
-        idx = self.format_combo.findData(self.config.condenser_output_format)
-        if idx >= 0:
-            self.format_combo.setCurrentIndex(idx)
-        self.write_subs_checkbox.setChecked(self.config.condenser_write_subtitles)
+        """Seed the option widgets from the current config's persisted defaults.
+
+        Guarded by ``_seeding`` so the programmatic setValue/setChecked calls
+        don't feed back through ``_on_option_changed`` and re-emit config_changed.
+        """
+        self._seeding = True
+        try:
+            self.padding_spinbox.setValue(self.config.condenser_padding_ms)
+            self.offset_spinbox.setValue(self.config.condenser_offset_ms)
+            idx = self.format_combo.findData(self.config.condenser_output_format)
+            if idx >= 0:
+                self.format_combo.setCurrentIndex(idx)
+            self.write_subs_checkbox.setChecked(self.config.condenser_write_subtitles)
+        finally:
+            self._seeding = False
+
+    def _options_differ_from_widgets(self) -> bool:
+        """Whether the config's condenser_* values differ from the live widgets."""
+        return (
+            self.config.condenser_padding_ms != self.padding_spinbox.value()
+            or self.config.condenser_offset_ms != self.offset_spinbox.value()
+            or self.config.condenser_output_format != self.format_combo.currentData()
+            or self.config.condenser_write_subtitles != self.write_subs_checkbox.isChecked()
+        )
+
+    def _on_option_changed(self, *_: object) -> None:
+        """Persist an edited run option to config so it survives restart.
+
+        Folds all four widgets into a fresh config and emits ``config_changed``
+        for the host to save. No-ops during programmatic seeding and when
+        nothing actually changed (guards against a save/refresh feedback loop).
+        """
+        if self._seeding:
+            return
+        new_config = replace(
+            self.config,
+            condenser_padding_ms=self.padding_spinbox.value(),
+            condenser_offset_ms=self.offset_spinbox.value(),
+            condenser_output_format=self.format_combo.currentData(),
+            condenser_write_subtitles=self.write_subs_checkbox.isChecked(),
+        )
+        if new_config == self.config:
+            return
+        self.config = new_config
+        self.config_changed.emit(new_config)
 
     # ------------------------------------------------------------------
     # UI construction
@@ -362,6 +416,13 @@ class CondenseTab(QWidget):
             self.tr("Write time-mapped .srt and .lrc files alongside the condensed audio.")
         )
         layout.addWidget(self.write_subs_checkbox)
+
+        # Persist any run-option edit to config (survives restart). Guarded by
+        # _seeding so _apply_config_defaults' programmatic writes don't re-emit.
+        self.padding_spinbox.valueChanged.connect(self._on_option_changed)
+        self.offset_spinbox.valueChanged.connect(self._on_option_changed)
+        self.format_combo.currentIndexChanged.connect(self._on_option_changed)
+        self.write_subs_checkbox.toggled.connect(self._on_option_changed)
 
         group.setLayout(layout)
         return group

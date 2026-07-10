@@ -12,7 +12,7 @@ from PyQt6.QtCore import QCoreApplication, Qt, QTimer
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QWidget
 
-from anki_miner.config import AnkiMinerConfig
+from anki_miner.config import AnkiMinerConfig, create_default_config
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui.i18n import install_translators
 from anki_miner.gui.main_window import MainWindow
@@ -244,7 +244,7 @@ def _configure_logging(log_path: Path) -> None:
     logging.getLogger("anki_miner").setLevel(logging.DEBUG)
 
 
-def _apply_ui_zoom(config: AnkiMinerConfig) -> None:
+def _apply_ui_zoom(config: AnkiMinerConfig | None) -> None:
     """Inject the whole-UI zoom factor as ``QT_SCALE_FACTOR``.
 
     Qt reads ``QT_SCALE_FACTOR`` only once, when the first ``QApplication`` is
@@ -252,6 +252,10 @@ def _apply_ui_zoom(config: AnkiMinerConfig) -> None:
     restart-to-apply. An explicit user-set env override wins (we never clobber
     it), and the no-op 1.0 case is left unset so the env stays clean.
     """
+    if config is None:
+        # Config failed to load at startup — leave the env untouched so Qt uses
+        # its default 1.0 scale rather than crashing the whole app over zoom.
+        return
     if "QT_SCALE_FACTOR" in os.environ:
         return
     if config.ui_zoom != 1.0:
@@ -481,7 +485,10 @@ def main():
         _early_config = GUIConfigManager.load_config()
         _log_path = _early_config.log_path
     except Exception:
-        logger.exception("Failed to load config at startup; using default log path")
+        # Never leave _early_config unbound (would NameError at the zoom call
+        # and every later read) — fall back to defaults so startup can proceed.
+        logger.exception("Failed to load config at startup; using default config")
+        _early_config = create_default_config()
         _log_path = _default_log_path
     # Honour a user-customised log_path by re-pointing the handler (idempotent,
     # so no duplicate sink). No-op in the common case where it equals the default.
@@ -688,6 +695,10 @@ def main():
     # so its config_refreshed connection is wired here too. SubtitlesTab.update_config
     # fans out to both Generate and Retime children.
     window.config_refreshed.connect(subtitles_tab.update_config)
+    # The Condense tab persists its inline run options (padding/offset/format/
+    # write-subs) by emitting config_changed; route it through window.update_config
+    # so condenser_* land in gui_config.json and survive restart.
+    subtitles_tab.condense_tab.config_changed.connect(window.update_config)
 
     # All tabs are now registered — create the count-driven Ctrl+N shortcuts.
     # This must come AFTER all addTab calls so self.tabs.count() is final.

@@ -112,7 +112,7 @@ def test_undo_callback_uses_rebuilt_anki_service(main_window, monkeypatch):
     class _FakeDialog:
         undo_completed = False
 
-        def __init__(self, result, parent, undo_callback=None):
+        def __init__(self, result, parent, undo_callback=None, on_undo_committed=None):
             captured["cb"] = undo_callback
 
         def exec(self):

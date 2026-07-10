@@ -168,6 +168,7 @@ class FrequencySourceRegistry:
                     source_id=meta.source_id,
                     db_path=meta.db_path,
                     display_name=meta.source_name,
+                    is_categorical=meta.is_categorical,
                 )
             )
         return sources

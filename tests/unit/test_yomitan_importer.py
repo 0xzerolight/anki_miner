@@ -71,6 +71,32 @@ class TestImportYomitanZip:
         finally:
             conn.close()
 
+    def test_import_skips_type_malformed_entry(self, tmp_path: Path):
+        """An arity-valid but type-bad entry (non-numeric score) is counted and
+        skipped, not raised — the valid entries in the bank still import."""
+        term_banks = [
+            [
+                ["食べる", "たべる", "", "", 0, ["to eat"], 1, ""],
+                # score column (index 4) is a non-numeric string: int() would raise.
+                ["飲む", "のむ", "", "", "high", ["to drink"], 2, ""],
+                ["犬", "いぬ", "", "", 0, ["dog"], 3, ""],
+            ]
+        ]
+        zip_path = build_yomitan_zip(tmp_path / "src" / "bad_type.zip", term_banks=term_banks)
+        dest_root = tmp_path / "dicts"
+
+        result = import_yomitan_zip(zip_path, dest_root)
+
+        assert result.entry_count == 2
+        assert result.skipped_malformed == 1
+        db_path = dest_root / result.dict_id / "index.sqlite"
+        conn = open_readonly(db_path)
+        try:
+            terms = {r[0] for r in conn.execute("SELECT term FROM entries").fetchall()}
+            assert terms == {"食べる", "犬"}
+        finally:
+            conn.close()
+
     def test_progress_callback_fires(self, tmp_path: Path):
         zip_path = build_yomitan_zip(tmp_path / "src" / "test.zip")
         dest_root = tmp_path / "dicts"

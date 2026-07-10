@@ -2,6 +2,7 @@
 
 import logging
 import re
+from collections.abc import Iterator
 
 import requests
 from PyQt6.QtCore import QCoreApplication
@@ -28,6 +29,38 @@ logger = logging.getLogger(__name__)
 
 # Matches any hiragana, katakana, or CJK ideograph (kanji)
 _JAPANESE_RE = re.compile(r"[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF]")
+
+# updateNoteFields batching. Restyled glossary fields run 10-20 KB each, so a
+# count-only chunk of 500 notes can hit ~7-8 MB in one `multi` body and trip the
+# AnkiConnect oversized-body connection reset (mirrors anki_media_store's
+# _MEDIA_BATCH_MAX_BYTES). Bound each POST by cumulative serialized field bytes
+# AND note count, with a per-note fallback when a chunk still trips the reset.
+_UPDATE_NOTES_CHUNK = 500
+_UPDATE_NOTES_MAX_BYTES = 4 * 1024 * 1024
+
+
+def _chunk_note_updates(
+    updates: list[tuple[int, dict[str, str]]],
+) -> Iterator[list[tuple[int, dict[str, str]]]]:
+    """Yield ``(note_id, fields)`` sublists bounded by count and serialized-field bytes.
+
+    Flushes the current chunk before adding a note that would push it past
+    ``_UPDATE_NOTES_CHUNK`` notes or ``_UPDATE_NOTES_MAX_BYTES`` of cumulative
+    field bytes. A single note larger than the byte budget still ships alone.
+    Mirrors ``anki_media_store._chunk_media_actions``.
+    """
+    chunk: list[tuple[int, dict[str, str]]] = []
+    chunk_bytes = 0
+    for nid, fields in updates:
+        entry_bytes = sum(len(v.encode("utf-8")) for v in fields.values())
+        if chunk and (len(chunk) >= _UPDATE_NOTES_CHUNK or chunk_bytes + entry_bytes > _UPDATE_NOTES_MAX_BYTES):
+            yield chunk
+            chunk = []
+            chunk_bytes = 0
+        chunk.append((nid, fields))
+        chunk_bytes += entry_bytes
+    if chunk:
+        yield chunk
 
 
 # Yomitan's backend.js `_findDuplicates` classifies a note as a duplicate iff
@@ -264,13 +297,51 @@ class AnkiService:
         """
         if not updates:
             return 0
+        updated = 0
+        for chunk in _chunk_note_updates(updates):
+            updated += self._post_note_update_chunk(chunk)
+        return updated
+
+    def _post_note_update_chunk(self, chunk: list[tuple[int, dict[str, str]]]) -> int:
+        """POST one ``updateNoteFields`` chunk via ``multi``; fall back per-note on transport failure.
+
+        Returns the count of notes updated without an AnkiConnect error. A chunk
+        oversized enough to trip the connection reset surfaces as an
+        ``AnkiConnectionError``; we then retry each note in its own tiny POST
+        (like ``AnkiMediaStore._store_media_files_individually``) so one bad chunk
+        doesn't abort the whole restyle.
+        """
         actions = [
             {"action": "updateNoteFields", "version": 6, "params": {"note": {"id": nid, "fields": fields}}}
-            for nid, fields in updates
+            for nid, fields in chunk
         ]
-        results = post_multi(self.config.ankiconnect_url, actions, timeout=60)
+        try:
+            results = post_multi(self.config.ankiconnect_url, actions, timeout=60)
+        except AnkiConnectionError as e:
+            logger.warning(
+                "updateNoteFields multi POST failed (%s); retrying %d note(s) individually",
+                e,
+                len(actions),
+            )
+            return self._update_notes_individually(chunk)
         errors = sum(1 for sub in results[: len(actions)] if isinstance(sub, dict) and sub.get("error"))
         return len(actions) - errors
+
+    def _update_notes_individually(self, chunk: list[tuple[int, dict[str, str]]]) -> int:
+        """Per-note ``updateNoteFields`` fallback (tiny bodies) for a failed-multi chunk."""
+        updated = 0
+        for nid, fields in chunk:
+            try:
+                post_action(
+                    self.config.ankiconnect_url,
+                    "updateNoteFields",
+                    params={"note": {"id": nid, "fields": fields}},
+                    timeout=60,
+                )
+                updated += 1
+            except AnkiConnectionError as e:
+                logger.warning("Failed to update note %s individually: %s", nid, e)
+        return updated
 
     def get_existing_vocabulary(self) -> set[str]:
         """Get all Japanese vocabulary words already in Anki.

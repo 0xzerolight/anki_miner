@@ -111,7 +111,8 @@ class ZipImportFlow:
         existing CSV half-overwritten. CSV/TSV paths pass through unchanged.
 
         Returns:
-            * ``Path("")`` if no path is selected.
+            * ``decline_fallback`` if no path is selected (a cleared selector
+              means "no change" — keep the current path, never persist ``.``).
             * The original CSV/TSV path if not a zip.
             * The destination CSV path on successful import (promotion deferred).
             * ``decline_fallback`` if the user declined to overwrite an existing
@@ -124,7 +125,11 @@ class ZipImportFlow:
 
         raw = selector.get_path()
         if not raw:
-            return Path("")
+            # A cleared selector means "no change" — keep the current path.
+            # Returning Path("") here round-tripped through PosixPath('.'),
+            # which the caller then persisted and re-synced into the selector,
+            # losing the default pitch_accent.csv.
+            return decline_fallback
         if not raw.lower().endswith(".zip"):
             return Path(raw)
 
@@ -178,9 +183,14 @@ class ZipImportFlow:
             result_holder["err"] = err
             loop.quit()
 
+        def on_cancelled() -> None:
+            result_holder["cancelled"] = True
+            loop.quit()
+
         worker.progress.connect(on_progress)
         worker.import_finished.connect(on_done)
         worker.failed.connect(on_failed)
+        worker.cancelled.connect(on_cancelled)
         dlg.canceled.connect(worker.cancel)
 
         worker.start()
@@ -195,10 +205,15 @@ class ZipImportFlow:
                 _IMPORT_JOIN_TIMEOUT_MS,
             )
 
+        if "cancelled" in result_holder:
+            # User-initiated cancel — no error dialog. Signalled explicitly by
+            # the worker, never inferred from the error text.
+            pending_csv.unlink(missing_ok=True)
+            return None
+
         if "err" in result_holder:
-            err_msg = str(result_holder["err"])
-            if "cancel" not in err_msg.lower():
-                QMessageBox.warning(self._parent, labels.failure_title, err_msg)
+            # Genuine failure only — cancellation is handled above.
+            QMessageBox.warning(self._parent, labels.failure_title, str(result_holder["err"]))
             # Drop the staging file so a failed import leaves nothing behind.
             pending_csv.unlink(missing_ok=True)
             return None

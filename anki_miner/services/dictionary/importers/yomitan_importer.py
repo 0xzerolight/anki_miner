@@ -175,9 +175,18 @@ def import_yomitan_zip(
                         continue
                     term = str(entry[0]).strip()
                     reading = str(entry[1]) if entry[1] else None
-                    score = int(entry[4]) if len(entry) > 4 and entry[4] is not None else 0
+                    # score (col 5) and sequence (col 7) are arity-checked by
+                    # is_valid_term_bank_entry but not type-checked: a present-but-
+                    # non-numeric value (e.g. score:"high") would raise out of this
+                    # generator and abort the whole import. Count+skip the entry
+                    # instead, matching how malformed entries are handled above.
+                    try:
+                        score = int(entry[4]) if len(entry) > 4 and entry[4] is not None else 0
+                        sequence = int(entry[6]) if len(entry) > 6 and entry[6] is not None else None
+                    except (TypeError, ValueError):
+                        skipped_malformed += 1
+                        continue
                     glossary = entry[5] if isinstance(entry[5], list) else [entry[5]]
-                    sequence = int(entry[6]) if len(entry) > 6 and entry[6] is not None else None
                     # Yomitan term-bank tag columns: column 3 (entry[2]) is
                     # `definitionTags`; column 8 (entry[7]) is `termTags`. Distinct
                     # tags are separated by an ASCII space, but a multi-word tag

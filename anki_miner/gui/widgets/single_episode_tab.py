@@ -100,6 +100,15 @@ class SingleEpisodeTab(MiningTabBase):
         self.recent_manager = RecentFilesManager()
         self._audio_track_override: int | None = None
 
+        # Curation snapshots — captured on the GUI thread at _start_processing so
+        # the off-thread _build_curation_context never reads live QWidgets
+        # (cross-thread QWidget access is undefined behaviour). Mirrors the Batch
+        # worker's _curation_* snapshot.
+        self._curation_video: Path | None = None
+        self._curation_subtitle: Path | None = None
+        self._curation_offset: float = 0.0
+        self._curation_audio_track_override: int | None = None
+
         self._init_curation_bridge()
 
         # Connect progress callback signals via shared base.
@@ -484,6 +493,13 @@ class SingleEpisodeTab(MiningTabBase):
         offset = self.offset_spinbox.value()
         config_with_offset = replace(self.config, subtitle_offset=offset)
 
+        # Snapshot the selector values on the GUI thread so the off-thread
+        # _build_curation_context reads plain attributes, never live QWidgets.
+        self._curation_video = video_file
+        self._curation_subtitle = subtitle_file
+        self._curation_offset = offset
+        self._curation_audio_track_override = self._audio_track_override
+
         # Clear log and reset the bar from the previous run's end state
         # (success leaves the bar pinned at 100% with a summary).
         self.log_widget.clear_log()
@@ -545,19 +561,20 @@ class SingleEpisodeTab(MiningTabBase):
     def _build_curation_context(
         self,
     ) -> tuple[CurationMediaContext | None, Callable[[str], list[tuple[str, str]]] | None]:
-        """Build (media_context, lookup_fn) from this tab's selectors + live worker.
+        """Build (media_context, lookup_fn) from GUI-thread snapshots + live worker.
 
+        Runs off the GUI thread (dispatched by ``MiningTabBase._on_curation_requested``),
+        so it reads the ``_curation_*`` snapshots captured at ``_start_processing``
+        rather than the live selector QWidgets (cross-thread QWidget access is UB).
         The only tab that passes a real ``audio_track_override`` — the per-run
         Tracks-dialog pick must carry into the curation player.
         """
-        video_path = self.video_selector.get_path().strip()
-        subtitle_path = self.subtitle_selector.get_path().strip()
         media_context = self._make_curation_media_context(
             self.config,
-            Path(video_path) if video_path else None,
-            Path(subtitle_path) if subtitle_path else None,
-            offset=self.offset_spinbox.value(),
-            audio_track_override=self._audio_track_override,
+            self._curation_video,
+            self._curation_subtitle,
+            offset=self._curation_offset,
+            audio_track_override=self._curation_audio_track_override,
         )
         proc = self.worker_thread.curation_processor if self.worker_thread is not None else None
         return media_context, self._lookup_fn_from_processor(proc)

@@ -1061,7 +1061,6 @@ TRANSFORMS: list[dict[str, Any]] = [
             suffix_inflection("ぜえ", "ずい", [], ["adj-i"]),
             suffix_inflection("っぜえ", "ずい", [], ["adj-i"]),
             suffix_inflection("れえ", "らい", [], ["adj-i"]),
-            suffix_inflection("れえ", "らい", [], ["adj-i"]),
             suffix_inflection("ちぇえ", "ちゃい", [], ["adj-i"]),
             suffix_inflection("でえ", "どい", [], ["adj-i"]),
             suffix_inflection("れえ", "れい", [], ["adj-i"]),

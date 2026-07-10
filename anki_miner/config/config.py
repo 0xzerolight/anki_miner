@@ -134,8 +134,10 @@ class AnkiMinerConfig:
     audio_bitrate: int = 192  # kbps; applies to both mp3 and opus
 
     # Audio Condenser settings. Persisted defaults for the Condense tab's inline
-    # run options; the tab seeds its widgets from these and writes them back.
-    # All plain scalars (auto-persist; no __post_init__ coercion).
+    # run options; the tab seeds its widgets from these on load and writes them
+    # back on edit via config_changed → MainWindow.update_config (see
+    # CondenseTab._on_option_changed). All plain scalars (auto-persist; no
+    # __post_init__ coercion).
     condenser_padding_ms: int = 500  # Silence kept on each side of every dialogue line
     condenser_offset_ms: int = 0  # Shift every subtitle cue before condensing
     condenser_output_format: str = "mp3"  # "mp3" | "opus" | "flac"

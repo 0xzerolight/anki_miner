@@ -58,6 +58,16 @@ class TestGoogleTranslateAudioFetcher:
         assert calls[0]["text"] == "つらい"
         assert calls[0]["lang"] == "ja"
 
+    def test_gtts_constructed_with_timeout(self, tmp_path):
+        """gTTS is bounded with timeout=10 so a stalled connection cannot hang."""
+        fake, calls = _gtts_stub(_VALID_MP3)
+        fetcher = GoogleTranslateAudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch(f"{MODULE}.gtts.gTTS", fake):
+            fetcher.fetch("食べる", "たべる")
+
+        assert len(calls) == 1
+        assert calls[0]["timeout"] == 10
+
     def test_cache_hit_skips_second_synthesis(self, tmp_path):
         """A warm-cache hit returns the same path without calling gTTS again."""
         fake, calls = _gtts_stub(_VALID_MP3)
