@@ -141,18 +141,13 @@ class CondenseTab(QWidget):
         self._refresh_engine_state()
 
     def _apply_config_defaults(self) -> None:
-        """Seed the option widgets from the current config's persisted defaults.
-
-        The ``condenser_*`` fields are added to :class:`AnkiMinerConfig` in Task 8;
-        until then ``getattr`` supplies the defaults so this reads defensively.
-        """
-        self.padding_spinbox.setValue(getattr(self.config, "condenser_padding_ms", 500))
-        self.offset_spinbox.setValue(getattr(self.config, "condenser_offset_ms", 0))
-        fmt = getattr(self.config, "condenser_output_format", "mp3")
-        idx = self.format_combo.findData(fmt)
+        """Seed the option widgets from the current config's persisted defaults."""
+        self.padding_spinbox.setValue(self.config.condenser_padding_ms)
+        self.offset_spinbox.setValue(self.config.condenser_offset_ms)
+        idx = self.format_combo.findData(self.config.condenser_output_format)
         if idx >= 0:
             self.format_combo.setCurrentIndex(idx)
-        self.write_subs_checkbox.setChecked(bool(getattr(self.config, "condenser_write_subtitles", False)))
+        self.write_subs_checkbox.setChecked(self.config.condenser_write_subtitles)
 
     # ------------------------------------------------------------------
     # UI construction
@@ -725,8 +720,8 @@ class CondenseTab(QWidget):
             padding_ms=self.padding_spinbox.value(),
             offset_ms=self.offset_spinbox.value(),
             output_format=self.format_combo.currentData(),
-            bitrate_kbps=getattr(self.config, "condenser_bitrate_kbps", 96),
-            filtered_chars=getattr(self.config, "condenser_filtered_chars", "♪♫♬♩〜～"),
+            bitrate_kbps=self.config.condenser_bitrate_kbps,
+            filtered_chars=self.config.condenser_filtered_chars,
             write_subs=self.write_subs_checkbox.isChecked(),
             audio_track_override=audio_override,
             subtitle_track_override=subtitle_override,

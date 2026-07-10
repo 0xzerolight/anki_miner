@@ -290,3 +290,46 @@ class TestRoundTripImmutabilityAndPaths:
         loaded = GUIConfigManager.load_config()
         assert isinstance(loaded.excluded_subtypes, tuple)
         assert loaded.excluded_subtypes == ("非自立", "数詞")
+
+    def test_condenser_fields_round_trip(self, tmp_config: Path):
+        """All six condenser_* fields must survive save→load into gui_config.json."""
+        import json
+
+        cfg = replace(
+            create_default_config(),
+            condenser_padding_ms=750,
+            condenser_offset_ms=-250,
+            condenser_output_format="flac",
+            condenser_bitrate_kbps=128,
+            condenser_filtered_chars="XYZ★",
+            condenser_write_subtitles=True,
+        )
+        GUIConfigManager.save_config(cfg)
+
+        # Fields are actually serialized into the on-disk JSON.
+        on_disk = json.loads(tmp_config.read_text(encoding="utf-8"))
+        assert on_disk["condenser_padding_ms"] == 750
+        assert on_disk["condenser_offset_ms"] == -250
+        assert on_disk["condenser_output_format"] == "flac"
+        assert on_disk["condenser_bitrate_kbps"] == 128
+        assert on_disk["condenser_filtered_chars"] == "XYZ★"
+        assert on_disk["condenser_write_subtitles"] is True
+
+        loaded = GUIConfigManager.load_config()
+        assert loaded.condenser_padding_ms == 750
+        assert loaded.condenser_offset_ms == -250
+        assert loaded.condenser_output_format == "flac"
+        assert loaded.condenser_bitrate_kbps == 128
+        assert loaded.condenser_filtered_chars == "XYZ★"
+        assert loaded.condenser_write_subtitles is True
+
+    def test_condenser_defaults_round_trip(self, tmp_config: Path):
+        """A default config round-trips with the documented condenser defaults."""
+        GUIConfigManager.save_config(create_default_config())
+        loaded = GUIConfigManager.load_config()
+        assert loaded.condenser_padding_ms == 500
+        assert loaded.condenser_offset_ms == 0
+        assert loaded.condenser_output_format == "mp3"
+        assert loaded.condenser_bitrate_kbps == 96
+        assert loaded.condenser_filtered_chars == "♪♫♬♩〜～"
+        assert loaded.condenser_write_subtitles is False
