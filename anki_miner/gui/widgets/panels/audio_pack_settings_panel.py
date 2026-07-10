@@ -227,6 +227,9 @@ class AudioPackSettingsPanel(FormPanel):
     # persist the new chain immediately — a delete is destructive and
     # asymmetric with reorder/toggle.
     pack_removed = pyqtSignal()
+    # Emitted when any sentence-TTS control (master / provider checkbox)
+    # changes; the settings tab persists the three reading_tts_* bools.
+    reading_tts_changed = pyqtSignal()
 
     def __init__(self, packs_root: Path, parent=None):
         super().__init__("Audio Pack Settings", parent=parent)
@@ -397,7 +400,85 @@ class AudioPackSettingsPanel(FormPanel):
         layout.addLayout(retry_row)
 
         self.add_field("", container)
+
+        # Sentence TTS for reading sources (manga/novels). Deliberately simpler
+        # than the chain editor above: fixed 2-provider order (Google first),
+        # the checkboxes only select membership; the master flag is the opt-in.
+        self.add_section(self.tr("Sentence Audio (Reading Sources)"))
+        tts_container = QWidget()
+        tts_layout = QVBoxLayout(tts_container)
+        tts_layout.setContentsMargins(0, 0, 0, 0)
+
+        tts_blurb = QLabel(
+            self.tr(
+                "Generate spoken sentence audio for cards mined from manga and books "
+                "(these have no source audio). Sentence text is sent to the selected "
+                "online services."
+            )
+        )
+        tts_blurb.setWordWrap(True)
+        tts_layout.addWidget(tts_blurb)
+
+        self._reading_tts_checkbox = QCheckBox(self.tr("Generate TTS sentence audio"))
+        self._reading_tts_checkbox.toggled.connect(self._on_reading_tts_toggled)
+        tts_layout.addWidget(self._reading_tts_checkbox)
+
+        provider_row = QVBoxLayout()
+        provider_row.setContentsMargins(24, 0, 0, 0)
+        self._reading_tts_google = QCheckBox(self.tr("Google Translate TTS (tried first)"))
+        self._reading_tts_google.toggled.connect(self._on_reading_tts_provider_toggled)
+        provider_row.addWidget(self._reading_tts_google)
+        self._reading_tts_papago = QCheckBox(self.tr("Naver Papago (fallback)"))
+        self._reading_tts_papago.toggled.connect(self._on_reading_tts_provider_toggled)
+        provider_row.addWidget(self._reading_tts_papago)
+        tts_layout.addLayout(provider_row)
+
+        # Master ON + both providers OFF is silently inactive at mining time;
+        # surface why instead of leaving the user guessing.
+        self._reading_tts_hint = QLabel(self.tr("Select at least one service."))
+        self._reading_tts_hint.setWordWrap(True)
+        self._reading_tts_hint.setVisible(False)
+        tts_layout.addWidget(self._reading_tts_hint)
+
+        self.add_field("", tts_container)
+        self._sync_reading_tts_enabled_states()
         self.add_stretch()
+
+    def _on_reading_tts_toggled(self, _checked: bool) -> None:
+        self._sync_reading_tts_enabled_states()
+        self.reading_tts_changed.emit()
+
+    def _on_reading_tts_provider_toggled(self, _checked: bool) -> None:
+        self._sync_reading_tts_enabled_states()
+        self.reading_tts_changed.emit()
+
+    def _sync_reading_tts_enabled_states(self) -> None:
+        """Grey provider boxes when the master is off; show the no-provider hint."""
+        master_on = self._reading_tts_checkbox.isChecked()
+        self._reading_tts_google.setEnabled(master_on)
+        self._reading_tts_papago.setEnabled(master_on)
+        both_off = not (self._reading_tts_google.isChecked() or self._reading_tts_papago.isChecked())
+        self._reading_tts_hint.setVisible(master_on and both_off)
+
+    def set_reading_tts(self, enabled: bool, google_on: bool, papago_on: bool) -> None:
+        """Load the three reading_tts_* config bools into the controls (no signals)."""
+        for box, value in (
+            (self._reading_tts_checkbox, enabled),
+            (self._reading_tts_google, google_on),
+            (self._reading_tts_papago, papago_on),
+        ):
+            box.blockSignals(True)
+            box.setChecked(value)
+            box.blockSignals(False)
+        self._sync_reading_tts_enabled_states()
+
+    def get_reading_tts(self) -> tuple[bool, bool, bool]:
+        """Return (master enabled, google enabled, papago enabled)."""
+        return (
+            self._reading_tts_checkbox.isChecked(),
+            self._reading_tts_google.isChecked(),
+            self._reading_tts_papago.isChecked(),
+        )
 
     def set_retry_missing_enabled(self, enabled: bool) -> None:
         """Enable/disable the retry button while its off-thread sweep runs."""
