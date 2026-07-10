@@ -77,6 +77,13 @@ class SubtitlePlayerWidget(QWidget):
         # remembered here and honoured once the player exists. pause()/stop()
         # clear it; a new set_source resets it.
         self._pending_play: bool = False
+        # seek_seconds()/pause() are async-symmetric with play(): a seek or pause
+        # issued while the probe is still in flight (player is None) is remembered
+        # here and applied in _configure_player once the player exists — otherwise
+        # WordCurationDialog's seek-then-pause preview (issued during construction,
+        # before the probe lands) silently no-ops and the player rests at frame 0.
+        self._pending_seek_ms: int | None = None
+        self._pending_pause: bool = False
 
         # AV1 watchdog state — populated by set_source
         self._is_av1: bool = False
@@ -208,8 +215,10 @@ class SubtitlePlayerWidget(QWidget):
         self._offset = offset
         self._audio_track_override = audio_track_override
 
-        # A new source cancels any auto-play queued against the previous one.
+        # A new source cancels any auto-play / queued seek / pause against the previous one.
         self._pending_play = False
+        self._pending_seek_ms = None
+        self._pending_pause = False
 
         # Bump the generation and capture it for the closure: a later set_source
         # supersedes this probe, so its callback must no-op when it finally lands.
@@ -279,7 +288,15 @@ class SubtitlePlayerWidget(QWidget):
 
         self.player.setSource(QUrl.fromLocalFile(str(video_path)))
 
-        # Honour a play() that arrived while the probe was still in flight.
+        # Honour a seek/pause/play that arrived while the probe was still in
+        # flight. Seek first so playback (or the paused first-frame preview)
+        # lands at the requested position rather than frame 0.
+        if self._pending_seek_ms is not None:
+            self.player.setPosition(self._pending_seek_ms)
+            self._pending_seek_ms = None
+        if self._pending_pause:
+            self._pending_pause = False
+            self.player.pause()
         if self._pending_play:
             self._pending_play = False
             self.player.play()
@@ -445,11 +462,17 @@ class SubtitlePlayerWidget(QWidget):
     def seek_seconds(self, seconds: float) -> None:
         """Seek to an absolute position.
 
+        If the source's ffprobe is still in flight (player not built yet), the
+        seek is queued and applied when the player is configured.
+
         Args:
             seconds: Target position in seconds (clamped to >= 0).
         """
+        target_ms = max(0, int(seconds * 1000))
         if self.player is not None:
-            self.player.setPosition(max(0, int(seconds * 1000)))
+            self.player.setPosition(target_ms)
+        else:
+            self._pending_seek_ms = target_ms
 
     def set_offset(self, offset: float) -> None:
         """Update the subtitle timing offset (overlay sync only).
@@ -465,20 +488,28 @@ class SubtitlePlayerWidget(QWidget):
         If the source's ffprobe is still in flight (player not built yet), the
         request is queued and honoured when the player is configured.
         """
+        self._pending_pause = False
         if self.player is not None:
             self.player.play()
         else:
             self._pending_play = True
 
     def pause(self) -> None:
-        """Pause playback."""
+        """Pause playback.
+
+        If the source's ffprobe is still in flight (player not built yet), the
+        pause is queued and applied when the player is configured.
+        """
         self._pending_play = False
         if self.player is not None:
             self.player.pause()
+        else:
+            self._pending_pause = True
 
     def stop(self) -> None:
         """Stop playback (no-op if no source has been loaded)."""
         self._pending_play = False
+        self._pending_pause = False
         if self.player is not None:
             self.player.stop()
 
