@@ -108,7 +108,12 @@ class TokenizedWord:
         sentence actually used. Yomitan behaves the same way — it
         deinflects the raw string and never normalizes to a canonical
         headword. ``lemma`` remains the fallback when ``orth_base`` is
-        empty and stays the key for definition/frequency/pitch lookups.
+        empty. Definition and frequency lookups also key on ``mined_form``
+        (with a miss-only ``lemma`` fallback) so the fetched data matches
+        the spelling the card shows — 殺る must not get 遣る's "to do"
+        definition or 掛ける's rank; only pitch stays lemma-keyed
+        (variants share the reading, canonical orthography has the better
+        hit rate in reading-scoped pitch CSVs).
         Kana-surface verbs never reach mining (TokenInclusionRule requires
         kanji or katakana), so orthBase-vs-lemma only ever differs on
         kanji-surface variant tokens. Verbs carded before this change
