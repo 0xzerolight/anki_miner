@@ -623,8 +623,16 @@ class SubtitlePlayerWidget(QWidget):
 
         No audio: ``pause()`` only enters PausedState (audio flows in PlayingState),
         so the player stays silent until the user presses Play.
+
+        Skipped entirely while the user is actively playing: the nudge's
+        ``setPosition`` + ``pause`` would cancel a requested play and jump to the
+        first entry (Bug A2). A playing stream is already decoding frames, so the
+        nudge is unnecessary; the watchdog is still armed by the caller and a
+        decoded frame disarms it as usual.
         """
         if self.player is not None and self._is_av1 and not self._got_video_frame:
+            if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
+                return
             self.player.setPosition(self._nudge_position_ms())
             self.player.pause()
 
