@@ -323,6 +323,7 @@ class TestZipImportBoundedJoin:
         worker.progress = MagicMock()
         worker.import_finished = MagicMock()
         worker.failed = MagicMock()
+        worker.cancelled = MagicMock()
         worker.start = MagicMock()
 
         # Drive the local QEventLoop deterministically: quit it as soon as it
