@@ -305,6 +305,43 @@ def test_folder_mode_collects_pairs_and_logs_matched(qtbot, tmp_path):
     assert "Matched 2 of 2" in log_text
 
 
+def test_pairing_summary_survives_log_clear_on_start(qtbot, tmp_path):
+    """The 'Matched N of M' line logged during collection survives the pre-run
+    log clear (clear happens before _collect_pairs, not after)."""
+    config = _make_config(tmp_path)
+    video_folder = tmp_path / "videos"
+    sub_folder = tmp_path / "subs"
+    video_folder.mkdir()
+    sub_folder.mkdir()
+
+    v1 = video_folder / "ep01.mp4"
+    v2 = video_folder / "ep02.mp4"
+    v1.write_bytes(b"fake")
+    v2.write_bytes(b"fake")
+    s1 = sub_folder / "ep01.srt"
+    s2 = sub_folder / "ep02.srt"
+    s1.write_text("1\n")
+    s2.write_text("1\n")
+
+    tab = _make_tab(config, qtbot)
+    tab.folder_mode_button.click()
+    tab.video_folder_selector.set_path(str(video_folder))
+    tab.subtitle_folder_selector.set_path(str(sub_folder))
+
+    fake_pairs = [FilePair(v1, s1), FilePair(v2, s2)]
+    fake_worker = _FakeWorker()
+    with (
+        patch(_FIND_PAIRS, return_value=fake_pairs),
+        patch(_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker),
+    ):
+        tab.retime_button.click()
+
+    assert fake_worker._started
+    assert "Matched 2 of 2" in tab.log_widget.text_edit.toPlainText()
+
+
 def test_folder_mode_unmatched_logs_warning(qtbot, tmp_path):
     """Folder mode with fewer matches than videos logs a warning."""
     config = _make_config(tmp_path)

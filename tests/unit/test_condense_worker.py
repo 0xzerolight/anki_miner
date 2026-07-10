@@ -702,6 +702,32 @@ def test_sub_write_failure_does_not_fail_audio(qapp, tmp_path, monkeypatch):
     assert "disk full" in final_msg
 
 
+def test_sub_write_non_oserror_does_not_fail_audio(qapp, tmp_path, monkeypatch):
+    """A non-OSError sidecar failure (e.g. ValueError) is also non-fatal: the
+    already-written audio must stay a success, with the error surfaced as a warning."""
+    config = _make_config(tmp_path)
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "ep01.srt", [(1000, 2000, "hi")])
+
+    def _boom(events, path):
+        raise ValueError("bad cue")
+
+    monkeypatch.setattr(cw, "write_condensed_srt", _boom)
+
+    service = _FakeService()
+    worker = _make_worker([CondenseItem(media, sub)], config, service=service, write_subs=True)
+    cap = _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    idx, out, err = cap["finished"][0]
+    assert out == tmp_path / "ep01_condensed.mp3"  # audio still succeeded
+    assert err is None
+    final_msg = [p for p in cap["progress"] if p[0] == 0][-1][2]
+    assert "bad cue" in final_msg
+
+
 # ---------------------------------------------------------------------------
 # Miscellaneous contract checks
 # ---------------------------------------------------------------------------
