@@ -50,6 +50,7 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
+    from anki_miner.interfaces.sentence_audio import SentenceAudioFetcher
     from anki_miner.models import LineLemmas
     from anki_miner.services.dictionary.registry import DictionaryRegistry
     from anki_miner.services.frequency.multi_frequency_service import MultiFrequencyService
@@ -112,17 +113,15 @@ def _expression_audio_candidates(word: TokenizedWord) -> list[tuple[str, str]]:
     return candidates
 
 
-def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | None:
-    """Name the dominant expression-audio failure cause, or None.
+def _dominant_transient_failure(counts: dict[str, int], attempts: int) -> str | None:
+    """Return the dominant failure bucket when transient failures dominate.
 
-    ``counts`` is a ChainedExpressionAudioFetcher ``stats()`` tally keyed by
-    failure bucket (ssl/connection/timeout/http_status/non_audio), aggregated
-    across every enabled word-audio source (packs, JPod101, custom URL/JSON,
-    gTTS). Only surfaces a diagnosis when transient failures DOMINATE the
-    run — a genuine "word not in any source" miss is never counted, so a high
-    total means something systemic (expired certificate, outage, rate-limit)
-    rather than words simply being absent. Scattered failures among
-    mostly-successful fetches stay quiet.
+    Shared threshold logic for the expression- and sentence-audio diagnoses.
+    Only reports when failures cover at least half the attempted items — a
+    genuine "not in any source" miss is never counted, so a high total means
+    something systemic (expired certificate, outage, rate-limit) rather than
+    items simply being absent. Scattered failures among mostly-successful
+    fetches stay quiet (None).
 
     Ties resolve to the earliest bucket (ssl first) via ``max`` over a stable
     key order, matching Yomitan's priority on the most actionable cause.
@@ -130,11 +129,25 @@ def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | Non
     total = sum(counts.values())
     if attempts <= 0 or total == 0:
         return None
-    # Require failures to cover at least half the attempted words before raising
+    # Require failures to cover at least half the attempts before raising
     # the alarm; below that they are noise beside real hits and misses.
     if total * 2 < attempts:
         return None
-    dominant = max(counts, key=lambda key: counts[key])
+    return max(counts, key=lambda key: counts[key])
+
+
+def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | None:
+    """Name the dominant expression-audio failure cause, or None.
+
+    ``counts`` is a ChainedExpressionAudioFetcher ``stats()`` tally keyed by
+    failure bucket (ssl/connection/timeout/http_status/non_audio), aggregated
+    across every enabled word-audio source (packs, JPod101, custom URL/JSON,
+    gTTS). Threshold/tie-break semantics live in
+    :func:`_dominant_transient_failure`.
+    """
+    dominant = _dominant_transient_failure(counts, attempts)
+    if dominant is None:
+        return None
     if dominant in ("ssl", "connection", "timeout"):
         return QCoreApplication.translate(
             "EpisodeProcessor",
@@ -148,6 +161,34 @@ def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | Non
     return QCoreApplication.translate(
         "EpisodeProcessor",
         "Word-audio source returned non-audio responses (likely rate-limited) — audio skipped this run, will retry next run",
+    )
+
+
+def _sentence_audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | None:
+    """Name the dominant sentence-TTS failure cause, or None.
+
+    Sentence analogue of :func:`_audio_failure_diagnosis`. ``attempts`` must
+    be the UNIQUE-sentence count (the per-run memo dedups fetch calls, so the
+    stats tally is per unique sentence) — a word-count denominator would
+    dilute the ratio and silence the warning exactly when many words share a
+    few failing sentences.
+    """
+    dominant = _dominant_transient_failure(counts, attempts)
+    if dominant is None:
+        return None
+    if dominant in ("ssl", "connection", "timeout"):
+        return QCoreApplication.translate(
+            "EpisodeProcessor",
+            "Sentence-audio TTS connection/certificate failure — sentence audio skipped this run, will retry next run",
+        )
+    if dominant == "http_status":
+        return QCoreApplication.translate(
+            "EpisodeProcessor",
+            "Sentence-audio TTS returned repeated server errors — sentence audio skipped this run, will retry next run",
+        )
+    return QCoreApplication.translate(
+        "EpisodeProcessor",
+        "Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run",
     )
 
 
@@ -253,6 +294,7 @@ class EpisodeProcessor:
         youtube_fetcher: YouTubeFetcherService | None = None,
         expression_audio_fetcher: ExpressionAudioFetcher | None = None,
         dictionary_registry: DictionaryRegistry | None = None,
+        sentence_audio_fetcher: SentenceAudioFetcher | None = None,
     ):
         """Initialize the episode processor.
 
@@ -282,6 +324,12 @@ class EpisodeProcessor:
                 service factory injects the same handle that built the provider
                 chain; ``None`` (test construction / callers that skip the gate)
                 disables the backstop.
+            sentence_audio_fetcher: Optional sentence-TTS fetcher. Consulted
+                ONLY by ``process_reading`` phase 3' (reading sources have no
+                source audio); video/YouTube/audiobook paths never touch it.
+                Gated by ``_reading_tts_active``. ``None`` is only valid for
+                test construction; the service factory always provides a
+                (possibly empty-chain) fetcher.
         """
         self.config = config
         self.subtitle_parser = subtitle_parser
@@ -298,6 +346,7 @@ class EpisodeProcessor:
         self.stats_service = stats_service
         self._youtube_fetcher = youtube_fetcher
         self.expression_audio_fetcher = expression_audio_fetcher
+        self.sentence_audio_fetcher = sentence_audio_fetcher
         self._dictionary_registry = dictionary_registry
         self._cancelled = False
         # Per-run external cancel source (e.g. a worker's threading.Event
@@ -341,6 +390,26 @@ class EpisodeProcessor:
         this property so the conditions can't drift apart.
         """
         return self.expression_audio_fetcher is not None and bool(self.config.anki_fields.get("expression_audio"))
+
+    @property
+    def _reading_tts_active(self) -> bool:
+        """True when the sentence-TTS stage should run and occupy a progress band.
+
+        Four-part gate: fetcher injected AND the master flag on AND the
+        sentence-audio Anki field (key ``audio``) mapped AND at least one
+        provider selected. The dedicated ``reading_tts_enabled`` flag exists
+        because — unlike expression_audio — the ``audio`` field is mapped by
+        default, so field-presence cannot express consent. Checked in two
+        places — ``process_reading`` (band registration) and
+        ``_fetch_sentence_audio`` (band consumption) — via this property so
+        the conditions can't drift apart.
+        """
+        return (
+            self.sentence_audio_fetcher is not None
+            and self.config.reading_tts_enabled
+            and bool(self.config.anki_fields.get("audio"))
+            and (self.config.reading_tts_google_enabled or self.config.reading_tts_papago_enabled)
+        )
 
     # ------------------------------------------------------------------
     # Dictionary-resource facade
@@ -400,6 +469,11 @@ class EpisodeProcessor:
             self.frequency_service.close()
         if self.expression_audio_fetcher is not None:
             close = getattr(self.expression_audio_fetcher, "close", None)
+            if callable(close):
+                with contextlib.suppress(Exception):
+                    close()
+        if self.sentence_audio_fetcher is not None:
+            close = getattr(self.sentence_audio_fetcher, "close", None)
             if callable(close):
                 with contextlib.suppress(Exception):
                     close()
@@ -1089,6 +1163,83 @@ class EpisodeProcessor:
                     if diagnosis is not None:
                         self.presenter.show_warning(diagnosis)
 
+    def _fetch_sentence_audio(
+        self,
+        media_results: list[tuple[TokenizedWord, MediaData]],
+        progress_callback: ProgressCallback | None,
+    ) -> None:
+        # Sentence TTS for reading sources. Structural clone of
+        # _fetch_expression_audio: sequential on purpose (the fetcher
+        # rate-limits, caches, and never raises — no try/except, no sleep, no
+        # parallelism here). Reads word.sentence AFTER curation/i+1 swap
+        # (phase order guarantees it), so audio always matches the card's
+        # final sentence.
+        #
+        # Progress note: on_start/on_complete MUST be called unconditionally
+        # when _reading_tts_active (even when media_results is empty) to
+        # consume the band process_reading registered — same discipline as
+        # the expression-audio stage.
+        if not self._reading_tts_active:
+            return
+        # Words share sentences (novel sentence-units, manga bubbles):
+        # synthesize once per unique sentence and share the Path. Failures
+        # are memoized too, so a failing shared bubble is not re-hammered.
+        memo: dict[str, Path | None] = {}
+        fetched_words = 0
+        if progress_callback is not None:
+            progress_callback.on_start(
+                len(media_results),
+                QCoreApplication.translate("EpisodeProcessor", "Generating sentence audio"),
+            )
+        for i, (word, media) in enumerate(media_results):
+            if self.cancelled:
+                if progress_callback is not None:
+                    progress_callback.on_complete()
+                return
+            sentence = word.sentence
+            if sentence.strip():
+                if sentence in memo:
+                    path = memo[sentence]
+                else:
+                    path = self.sentence_audio_fetcher.fetch(  # type: ignore[union-attr]
+                        sentence,
+                        cancelled_check=lambda: self.cancelled,
+                    )
+                    memo[sentence] = path
+                if path is not None:
+                    media.audio_path = path
+                    media.audio_filename = path.name
+                    fetched_words += 1
+            if progress_callback is not None:
+                progress_callback.on_progress(
+                    i + 1,
+                    tr_format(
+                        QCoreApplication.translate("EpisodeProcessor", "Sentence audio: %1"),
+                        word.mined_form,
+                    ),
+                )
+        if progress_callback is not None:
+            progress_callback.on_complete()
+        hits = sum(1 for p in memo.values() if p is not None)
+        self.presenter.show_info(
+            tr_format(
+                QCoreApplication.translate("EpisodeProcessor", "Sentence audio: %1/%2 sentences"),
+                hits,
+                len(memo),
+            )
+        )
+        # Diagnose *why* TTS failed when transient failures dominate. The
+        # attempts denominator is the UNIQUE-sentence count (len(memo)): the
+        # memo dedups fetch calls, so stats() failures are per unique
+        # sentence — a word-count denominator would dilute the ratio.
+        stats_fn = getattr(self.sentence_audio_fetcher, "stats", None)
+        if callable(stats_fn):
+            counts = stats_fn()
+            if isinstance(counts, dict):
+                diagnosis = _sentence_audio_failure_diagnosis(counts, len(memo))
+                if diagnosis is not None:
+                    self.presenter.show_warning(diagnosis)
+
     def _phase4_lookup(
         self,
         ctx: _EpisodeContext,
@@ -1751,6 +1902,8 @@ class EpisodeProcessor:
 
         self._fetch_expression_audio(media_results, progress_callback)
 
+        self._fetch_sentence_audio(media_results, progress_callback)
+
         return media_results
 
     def process_reading(
@@ -1887,12 +2040,15 @@ class EpisodeProcessor:
 
             # Wrap only phases 3'/4/5 in one weighted sweep (no parse/filter
             # bands). Bands, in firing order: image prep, [expression audio],
-            # definitions, [glossaries], cards — renormalized internally.
+            # [sentence TTS], definitions, [glossaries], cards — renormalized
+            # internally.
             stage_progress = progress_callback
             if progress_callback is not None:
                 stage_weights = [0.40]  # image prep
                 if self._expression_audio_active:
                     stage_weights.append(0.10)  # expression audio
+                if self._reading_tts_active:
+                    stage_weights.append(0.10)  # sentence TTS
                 stage_weights.append(0.25)  # definitions
                 if self.config.anki_fields.get("glossary"):
                     stage_weights.append(0.10)  # glossaries

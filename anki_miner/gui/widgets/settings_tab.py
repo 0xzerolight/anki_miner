@@ -309,6 +309,8 @@ class SettingsTab(QWidget):
         # consumer needs the removal-specific notification.
         self.audio_panel.chain_changed.connect(lambda: self._persist_audio_chain_change(self.audio_panel.get_chain()))
         self.audio_panel.retry_missing_audio_requested.connect(self._on_retry_missing_audio)
+        # Sentence-TTS toggles persist immediately, like the chain above.
+        self.audio_panel.reading_tts_changed.connect(self._persist_reading_tts_change)
 
         # Frequency panel signals — wire Add/Reimport to the import flow.
         self.frequency_panel.add_source_requested.connect(self._frequency_import_flow.add_source)
@@ -494,6 +496,11 @@ class SettingsTab(QWidget):
 
         # Audio source chain (same — immediate persist via its own signal).
         self.audio_panel.set_chain(self.config.expression_audio_chain)
+        self.audio_panel.set_reading_tts(
+            self.config.reading_tts_enabled,
+            self.config.reading_tts_google_enabled,
+            self.config.reading_tts_papago_enabled,
+        )
 
         # Frequency source chain lives in the Frequency tab; the chain persists
         # immediately via its own signal. Frequency activation is derived from an
@@ -689,6 +696,10 @@ class SettingsTab(QWidget):
             # Audio source chain — persisted immediately via chain_changed, but
             # also included in the full Save so it is always in sync.
             expression_audio_chain=self.audio_panel.get_chain(),
+            # Sentence-TTS toggles — same immediate-persist + full-Save sync.
+            reading_tts_enabled=self.audio_panel.get_reading_tts()[0],
+            reading_tts_google_enabled=self.audio_panel.get_reading_tts()[1],
+            reading_tts_papago_enabled=self.audio_panel.get_reading_tts()[2],
             # Update settings
             check_for_updates=now_enabled,
             skipped_update_version=skipped_update_version,
@@ -892,6 +903,18 @@ class SettingsTab(QWidget):
         requiring the user to click Save in Settings.
         """
         new_config = replace(self.config, expression_audio_chain=new_chain)
+        self.config = new_config
+        self.config_changed.emit(new_config)
+
+    def _persist_reading_tts_change(self) -> None:
+        """Save the sentence-TTS toggles immediately (no Save click needed)."""
+        enabled, google_on, papago_on = self.audio_panel.get_reading_tts()
+        new_config = replace(
+            self.config,
+            reading_tts_enabled=enabled,
+            reading_tts_google_enabled=google_on,
+            reading_tts_papago_enabled=papago_on,
+        )
         self.config = new_config
         self.config_changed.emit(new_config)
 
