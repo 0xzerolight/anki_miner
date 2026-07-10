@@ -59,9 +59,10 @@ if TYPE_CHECKING:
     from anki_miner.orchestration import EpisodeProcessor
 
 # Extensions accepted from a drag-drop (directories are always accepted). Manga
-# sources fill the selector; novel drops earn a cross-tab hint.
+# sources fill the selector; novel/subtitle drops earn a cross-tab hint.
 _MANGA_EXTS = (".mokuro", ".cbz", ".zip")
 _NOVEL_EXTS = (".epub", ".txt")
+_SUBTITLE_EXTS = (".srt", ".ass", ".ssa", ".vtt")
 
 
 class ReadingMangaTab(_ReadingMiningTabBase):
@@ -214,23 +215,24 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:
         """Accept a drag holding a directory or any reading file.
 
-        Novels are accepted too so the drop can be delivered and answered with
-        the cross-tab hint (they never fill the selector here).
+        Novels and subtitles are accepted too so the drop can be delivered and
+        answered with the cross-tab hint (they never fill the selector here).
         """
         if event is None:
             return
         for url in urls_from_event(event):
             local = Path(url.toLocalFile())
             suffix = local.suffix.lower()
-            if local.is_dir() or suffix in _MANGA_EXTS or suffix in _NOVEL_EXTS:
+            if local.is_dir() or suffix in _MANGA_EXTS or suffix in _NOVEL_EXTS or suffix in _SUBTITLE_EXTS:
                 event.acceptProposedAction()
                 return
 
     def dropEvent(self, event: QDropEvent | None) -> None:
-        """Fill the selector from the first dropped folder/manga file; hint novels."""
+        """Fill the selector from the first dropped folder/manga file; hint others."""
         if event is None:
             return
         novel_seen = False
+        subtitle_seen = False
         source_set = False
         for url in urls_from_event(event):
             local = Path(url.toLocalFile())
@@ -241,8 +243,12 @@ class ReadingMangaTab(_ReadingMiningTabBase):
                     source_set = True
             elif suffix in _NOVEL_EXTS:
                 novel_seen = True
+            elif suffix in _SUBTITLE_EXTS:
+                subtitle_seen = True
         if novel_seen and not source_set:
             self.log_widget.append_info(self.tr("Novels are mined in the Novels tab."))
+        if subtitle_seen and not source_set:
+            self.log_widget.append_info(self.tr("Subtitle files are mined in the Subtitles tab."))
         event.acceptProposedAction()
 
     # ------------------------------------------------------------------
