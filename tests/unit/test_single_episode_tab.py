@@ -415,6 +415,12 @@ def test_curation_requested_passes_media_context_and_lookup_fn(tab, facade_proce
     tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
     tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
     tab.offset_spinbox.setValue(1.5)
+    # _build_curation_context reads the GUI-thread snapshots (captured at
+    # _start_processing), not live widgets — set them as that start would.
+    tab._curation_video = fake_video
+    tab._curation_subtitle = fake_subs
+    tab._curation_offset = 1.5
+    tab._curation_audio_track_override = tab._audio_track_override
 
     # Worker exposing a real processor (T-60 typed contract): lookup_fn must
     # resolve through the offline_lookup_fn facade to the definition service.
@@ -488,6 +494,11 @@ def test_curation_media_context_uses_resolved_ffprobe(qapp, qtbot, test_config, 
         fake_subs.touch()
         tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
         tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
+        # _build_curation_context reads GUI-thread snapshots, not live widgets.
+        tab._curation_video = fake_video
+        tab._curation_subtitle = fake_subs
+        tab._curation_offset = 0.0
+        tab._curation_audio_track_override = tab._audio_track_override
 
         fake_entry = (0.0, 2.5, "テスト")
         mock_parser_cls = MagicMock()
@@ -686,6 +697,12 @@ def test_build_curation_context_routes_through_shared_helpers(tab, facade_proces
     tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
     tab.offset_spinbox.setValue(2.5)
     tab._audio_track_override = 3
+    # _build_curation_context reads the GUI-thread snapshots (captured at
+    # _start_processing), not live widgets — set them as that start would.
+    tab._curation_video = fake_video
+    tab._curation_subtitle = fake_subs
+    tab._curation_offset = 2.5
+    tab._curation_audio_track_override = 3
 
     worker = MagicMock(name="EpisodeWorkerThread")
     worker.curation_processor = facade_processor
