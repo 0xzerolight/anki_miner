@@ -103,6 +103,28 @@ def test_set_chain_renders_correct_row_count(qapp, qtbot, tmp_path):
     assert panel._list.count() == 2
 
 
+def test_row_toggle_survives_rescan(qapp, qtbot, tmp_path):
+    """Disabling a row must survive an unguarded rescan rebuild (Bug S2)."""
+    panel = FrequencySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(
+        (
+            FreqEntry(source_id="jpdb", enabled=True),
+            FreqEntry(source_id="bccwj", enabled=True),
+        )
+    )
+    row = panel._row_widget(0)
+    assert row is not None
+    row.checkbox.setChecked(False)  # user disables the entry
+
+    panel._rebuild_list()  # a rescan re-renders from self._chain
+
+    row = panel._row_widget(0)
+    assert row is not None
+    assert row.checkbox.isChecked() is False
+    assert panel.get_chain()[0].enabled is False
+
+
 def test_row_shows_format_and_entry_count(qapp, qtbot, tmp_path):
     meta = _make_meta("jpdb", fmt="yomitan-freq", source_name="JPDB", entry_count=5000)
     panel = FrequencySettingsPanel(tmp_path)

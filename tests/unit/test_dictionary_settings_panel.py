@@ -147,6 +147,28 @@ def test_chain_changed_emits_on_reorder_remove_and_toggle(qapp, qtbot, monkeypat
     assert len(events) == 4
 
 
+def test_row_toggle_survives_rescan(qapp, qtbot, tmp_path):
+    """Disabling a row must survive an unguarded rescan rebuild (Bug S2)."""
+    panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="a", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
+    row = panel._row_widget(0)
+    assert row is not None
+    row.checkbox.setChecked(False)  # user disables the entry
+
+    panel._rebuild_list()  # a rescan re-renders from self._chain
+
+    row = panel._row_widget(0)
+    assert row is not None
+    assert row.checkbox.isChecked() is False
+    assert panel.get_chain()[0].enabled is False
+
+
 def test_jisho_remove_is_noop(qapp, qtbot, monkeypatch, tmp_path):
     panel = DictionarySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
