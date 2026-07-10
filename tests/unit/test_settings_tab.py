@@ -293,22 +293,27 @@ class TestSettingsTabRoundTrip:
         assert len(received) == 1
         assert received[0].youtube_cookies_file is None
 
-    def test_save_blocks_on_missing_cookies_file(self, tab, monkeypatch, tmp_path):
+    def test_missing_cookies_file_kept_back_without_modal(self, tab, test_config, monkeypatch, tmp_path):
+        """Per-field auto-save validation: a missing cookies file keeps its
+        last-good value and shows the sticky inline warning — no modal, and the
+        rest of the commit still goes through."""
         from PyQt6.QtWidgets import QMessageBox
 
-        warnings: list[tuple] = []
+        def _no_modal(*a, **k):  # pragma: no cover - failure path
+            raise AssertionError("no modal may fire during an auto-save commit")
+
+        monkeypatch.setattr(QMessageBox, "warning", _no_modal)
         monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
-        monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: warnings.append(a))
 
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
-        # A path that does not exist must block the save.
         tab.youtube_panel.set_cookies_file(tmp_path / "does-not-exist.txt")
 
         tab._on_save_clicked()
 
-        assert warnings, "expected a warning dialog for the missing cookies file"
-        assert received == [], "config must not be emitted when validation fails"
+        assert len(received) == 1, "the commit must still go through"
+        assert received[0].youtube_cookies_file == test_config.youtube_cookies_file
+        assert "⚠" in tab.save_status_label.text()
 
 
 class TestIPlusOneFilterRoundTrip:
@@ -517,8 +522,9 @@ class TestDictsRootRoundTrip:
             widget.deleteLater()
 
     def test_save_rejects_nonexistent_dicts_root(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch, qtbot):
-        """Picking a path that vanished between selection and save must surface a
-        warning and abort — never write Path('') to the config."""
+        """Picking a path that vanished between selection and commit keeps the
+        last-good root (never writes the bad path) and shows the sticky inline
+        warning — no modal, the rest of the commit still goes through."""
         from PyQt6.QtWidgets import QMessageBox
 
         starting = tmp_path / "starting"
@@ -527,8 +533,11 @@ class TestDictsRootRoundTrip:
         widget = SettingsTab(cfg)
         qtbot.addWidget(widget)
         try:
-            warnings: list[tuple] = []
-            monkeypatch.setattr(QMessageBox, "warning", lambda *args, **kwargs: warnings.append(args) or 0)
+
+            def _no_modal(*args, **kwargs):  # pragma: no cover - failure path
+                raise AssertionError("no modal may fire during an auto-save commit")
+
+            monkeypatch.setattr(QMessageBox, "warning", _no_modal)
             monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
 
             received: list[AnkiMinerConfig] = []
@@ -537,8 +546,9 @@ class TestDictsRootRoundTrip:
             widget.dictionary_panel.dicts_root_selector.set_path(str(tmp_path / "does_not_exist"))
             widget._on_save_clicked()
 
-            assert received == [], "save must abort when dicts_root is invalid"
-            assert warnings, "user must see a warning explaining the rejection"
+            assert len(received) == 1, "the commit must still go through"
+            assert received[0].dicts_root == starting, "invalid root must keep the last-good value"
+            assert "⚠" in widget.save_status_label.text()
         finally:
             widget.deleteLater()
 
@@ -632,8 +642,11 @@ class TestDictsRootRoundTrip:
         widget = SettingsTab(cfg)
         qtbot.addWidget(widget)
         try:
-            warnings: list[tuple] = []
-            monkeypatch.setattr(QMessageBox, "warning", lambda *args, **kwargs: warnings.append(args) or 0)
+
+            def _no_modal(*args, **kwargs):  # pragma: no cover - failure path
+                raise AssertionError("no modal may fire during an auto-save commit")
+
+            monkeypatch.setattr(QMessageBox, "warning", _no_modal)
             monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
             # Force os.access to claim the path is not writable so the test is
             # portable across CI runners that may ignore chmod (e.g. root in
@@ -652,8 +665,9 @@ class TestDictsRootRoundTrip:
             widget.dictionary_panel.dicts_root_selector.set_path(str(readonly))
             widget._on_save_clicked()
 
-            assert received == [], "save must abort when dicts_root is not writable"
-            assert warnings, "user must see a warning explaining the rejection"
+            assert len(received) == 1, "the commit must still go through"
+            assert received[0].dicts_root == starting, "unwritable root must keep the last-good value"
+            assert "⚠" in widget.save_status_label.text()
         finally:
             widget.deleteLater()
 

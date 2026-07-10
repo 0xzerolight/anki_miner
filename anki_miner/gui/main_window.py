@@ -922,7 +922,22 @@ class MainWindow(QMainWindow):
         Args:
             event: Close event
         """
-        # Stop the main-thread stall watchdog first so its monitor thread and
+        # Flush a pending Settings auto-save FIRST. Ordering is load-bearing:
+        # background_tasks.shutdown below fans out to SettingsTab.shutdown,
+        # which stops the debounce timer — a flush placed after it would see
+        # an inactive timer and silently drop an edit made <1s before quit.
+        # The deferred-close path also returns before the save_config at the
+        # bottom, so this is the only spot both close paths pass through.
+        # Committing routes through config_changed → update_config, which
+        # writes gui_config.json and refreshes self.config for both the
+        # immediate save below and the deferred _poll_deferred_close save.
+        settings_idx = self._settings_tab_index()
+        if settings_idx >= 0:
+            flush = getattr(self.tabs.widget(settings_idx), "flush_pending_settings", None)
+            if callable(flush):
+                flush()
+
+        # Stop the main-thread stall watchdog so its monitor thread and
         # heartbeat timer don't outlive shutdown. The monitor is daemon=True as
         # a backstop, but stopping it cleanly avoids a stray WARNING if a worker
         # join briefly blocks the GUI thread during close. Guarded: it may be

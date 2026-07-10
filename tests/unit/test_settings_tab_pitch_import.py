@@ -256,19 +256,21 @@ class TestNoReimportOnSecondSave:
 
 
 class TestPitchSaveStillAbortsOnFailure:
-    """A failing pitch import must abort the save and leave the user's existing
+    """A failing pitch import must keep the last-good pitch path (the rest of
+    the auto-save commit still goes through), re-sync the selector so the next
+    commit can't silently retry the import, and leave the user's existing
     pitch_accent.csv byte-for-byte untouched (frequency no longer participates
     in this staged-import flow)."""
 
     def test_pitch_failure_does_not_overwrite_existing_pitch_csv(self, tab, tmp_path, pitch_home, monkeypatch):
         captured = _capture_messagebox(monkeypatch)
 
-        # Seed an existing pitch_accent.csv whose bytes must survive the failed save.
+        # Seed an existing pitch_accent.csv whose bytes must survive the failed import.
         original_pitch = "reading,kanji,pattern\nオリジナル,original,0\n"
         existing_pitch = pitch_home / "pitch_accent.csv"
         existing_pitch.write_text(original_pitch, encoding="utf-8")
 
-        # Pitch importer FAILS — this must abort the save before any promotion.
+        # Pitch importer FAILS — the commit must keep the last-good path.
         def fake_pitch(zip_path, dest_csv, *, progress=None, cancel_check=None):
             raise SetupError("pitch zip is broken")
 
@@ -286,9 +288,13 @@ class TestPitchSaveStillAbortsOnFailure:
 
         tab._on_save_clicked()
 
-        # Save aborted: no config emitted, pitch failure surfaced.
-        assert received == [], "save must abort when the pitch import fails"
+        # Commit went through with the LAST-GOOD pitch path; failure surfaced.
+        assert len(received) == 1, "the commit must still go through on pitch failure"
+        assert received[0].pitch_accent_path == existing_pitch
         assert any("Pitch" in title for title, _ in captured["warning"])
+        # Selector re-synced off the failed .zip so the next commit can't
+        # silently retry the import.
+        assert tab.dictionary_panel.pitch_accent_selector.get_path() == str(existing_pitch)
         # The existing pitch_accent.csv is byte-for-byte untouched.
         assert existing_pitch.read_text(encoding="utf-8") == original_pitch
         # No staging file is left behind.
