@@ -794,10 +794,13 @@ class MainWindow(QMainWindow):
         # Update session statistics
         self.status_bar.increment_cards_created(result.cards_created)
 
-        # Create undo callback
+        # Create undo callback. This is the BLOCKING work handed to
+        # ResultsDialog, which runs it off the GUI thread (a slow AnkiConnect
+        # delete must not freeze the modal dialog) — so it must not touch Qt
+        # widgets. The session-counter decrement runs on the GUI thread via the
+        # on_undo_committed continuation below.
         def undo_callback(note_ids: list[int]) -> int:
             deleted = self._anki_service.delete_notes(note_ids)
-            self.status_bar.increment_cards_created(-deleted)
             # Revert the session's source='mined' known-words rows so the user
             # can re-mine the same words on the next run (OVH-030). Only the
             # 'mined' rows written by this session are removed — source='user'
@@ -819,8 +822,15 @@ class MainWindow(QMainWindow):
                     logger.warning("Undo: could not revert mined words in known_words.db", exc_info=True)
             return deleted
 
-        # Show results dialog with undo support
-        dialog = ResultsDialog(result, self, undo_callback=undo_callback)
+        # Show results dialog with undo support. The dialog runs undo_callback
+        # off-thread; on_undo_committed decrements the session counter on the
+        # GUI thread once the delete succeeds.
+        dialog = ResultsDialog(
+            result,
+            self,
+            undo_callback=undo_callback,
+            on_undo_committed=lambda deleted: self.status_bar.increment_cards_created(-deleted),
+        )
         dialog.exec()
 
         # Record to history after dialog closes (skip if user undid the cards)

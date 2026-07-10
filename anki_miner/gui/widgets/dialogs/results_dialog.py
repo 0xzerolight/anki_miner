@@ -1,12 +1,13 @@
 """Enhanced dialog for displaying processing results with stat cards."""
 
 import logging
-from typing import Callable
+from typing import Callable, cast
 
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QVBoxLayout
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import EnhancedDialog
 from anki_miner.gui.widgets.enhanced import StatCard
 from anki_miner.models import ProcessingResult
@@ -33,17 +34,24 @@ class ResultsDialog(EnhancedDialog):
         result: ProcessingResult,
         parent=None,
         undo_callback: Callable[[list[int]], int] | None = None,
+        on_undo_committed: Callable[[int], None] | None = None,
     ):
         """Initialize the results dialog.
 
         Args:
             result: Processing result to display
             parent: Optional parent widget
-            undo_callback: Optional callback that accepts card IDs and returns deleted count
+            undo_callback: Optional BLOCKING callback that accepts card IDs and
+                returns the deleted count. Run off the GUI thread — must not
+                touch Qt widgets.
+            on_undo_committed: Optional GUI-thread callback invoked with the
+                deleted count after a successful undo (used to decrement the
+                session card counter).
         """
         super().__init__(parent, title=self.tr("Processing Results"))
         self.processing_result = result
         self._undo_callback = undo_callback
+        self._on_undo_committed = on_undo_committed
         self.undo_completed = False
         self._setup_content()
 
@@ -142,7 +150,16 @@ class ResultsDialog(EnhancedDialog):
         self.add_close_button(self.tr("Close"))
 
     def _on_undo_clicked(self) -> None:
-        """Handle undo button click with confirmation."""
+        """Confirm, then run the card delete OFF the GUI thread.
+
+        The delete (AnkiConnect ``delete_notes`` + known-words revert) can block
+        on a slow AnkiConnect call, so it runs via ``run_off_thread`` rather than
+        freezing this modal dialog. The undo button is disabled for the duration
+        and updated from the done/error continuations, which run on the GUI
+        thread.
+        """
+        if self._undo_callback is None:
+            return
         count = len(self.processing_result.card_ids)
         reply = QMessageBox.question(
             self,
@@ -155,16 +172,28 @@ class ResultsDialog(EnhancedDialog):
         if reply != QMessageBox.StandardButton.Yes:
             return
 
+        undo_callback = self._undo_callback
+        card_ids = self.processing_result.card_ids
         self._undo_button.setEnabled(False)
-        try:
-            if self._undo_callback is None:
-                return
-            deleted = self._undo_callback(self.processing_result.card_ids)
-            self._undo_button.setText(tr_format(self.tr("Undone (%1 cards deleted)"), deleted))
-            self.undo_completed = True
-        except Exception as e:
-            self._undo_button.setEnabled(True)
-            logger.error(f"Undo failed: {e}")
-            QMessageBox.critical(
-                self, self.tr("Undo Failed"), self.tr("Failed to delete cards. Check Anki is running.")
-            )
+        self._undo_button.setText(self.tr("Undoing…"))
+        run_off_thread(
+            self,
+            lambda: undo_callback(card_ids),
+            self._on_undo_done,
+            self._on_undo_error,
+        )
+
+    def _on_undo_done(self, result: object) -> None:
+        """GUI-thread continuation after the off-thread delete succeeds."""
+        deleted = cast(int, result)
+        self._undo_button.setText(tr_format(self.tr("Undone (%1 cards deleted)"), deleted))
+        self.undo_completed = True
+        if self._on_undo_committed is not None:
+            self._on_undo_committed(deleted)
+
+    def _on_undo_error(self, message: str) -> None:
+        """GUI-thread continuation after the off-thread delete fails."""
+        self._undo_button.setEnabled(True)
+        self._undo_button.setText(tr_format(self.tr("Undo (%1 cards)"), len(self.processing_result.card_ids)))
+        logger.error("Undo failed: %s", message)
+        QMessageBox.critical(self, self.tr("Undo Failed"), self.tr("Failed to delete cards. Check Anki is running."))

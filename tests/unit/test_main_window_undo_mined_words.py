@@ -52,7 +52,7 @@ def _capture_undo_callback(monkeypatch) -> dict:
     class _FakeDialog:
         undo_completed = False
 
-        def __init__(self, result, parent, undo_callback=None):
+        def __init__(self, result, parent, undo_callback=None, on_undo_committed=None):
             captured["cb"] = undo_callback
 
         def exec(self):
