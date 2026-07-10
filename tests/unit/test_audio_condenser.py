@@ -727,6 +727,26 @@ def test_condense_graph_temp_cleaned_on_failure(tmp_path):
     assert list(tmp_path.glob("condense_graph_*.txt")) == []
 
 
+def test_condense_removes_partial_output_on_failure(tmp_path):
+    """A failed ffmpeg run must not leave a truncated ``<stem>_condensed.mp3``.
+
+    ffmpeg's ``-y`` writes the output non-atomically, so a crash/timeout leaves a
+    corrupt partial that the next run's skip gate would treat as complete.
+    """
+    svc = _service(tmp_path, global_index=0)
+    out_audio = tmp_path / "ep01_condensed.mp3"
+
+    def _make(cmd: list[str], **kwargs: Any) -> _FakePopen:
+        Path(cmd[-1]).write_text("partial", encoding="utf-8")  # simulate ffmpeg -y partial write
+        return _FakePopen(["Conversion failed!"], returncode=1)
+
+    with patch(_RESOLVE, return_value="ffmpeg"), patch(_POPEN, side_effect=_make):
+        ok = svc.condense(Path("/v/ep01.mkv"), [(0, 2000)], out_audio)
+
+    assert ok is False
+    assert not out_audio.exists()
+
+
 # --- extract_embedded_subtitle ---------------------------------------------
 
 
