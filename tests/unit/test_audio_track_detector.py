@@ -7,12 +7,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from anki_miner.utils.audio_track_detector import (
+    BITMAP_SUBTITLE_CODECS,
     JAPANESE_LANGUAGE_CODES,
     AudioStream,
     JapaneseAudioStream,
+    SubtitleStream,
     find_japanese_audio_stream,
     get_primary_video_codec,
     list_audio_streams,
+    list_subtitle_streams,
 )
 
 MODULE = "anki_miner.utils.audio_track_detector"
@@ -437,3 +440,163 @@ class TestUnicodeDecodeFallback:
         kwargs = mock_run.call_args.kwargs
         assert kwargs["encoding"] == "utf-8"
         assert kwargs["errors"] == "replace"
+
+
+def _subtitle_ffprobe_json(streams: list[dict]) -> str:
+    """Build an ffprobe JSON payload of subtitle streams from descriptors.
+
+    Required key: ``index`` (int).
+    Optional keys: ``codec_name``, ``language``, ``title``.
+
+    ffprobe with ``-select_streams s`` returns only subtitle streams, so the
+    ``index`` values may be non-contiguous (interleaved with audio/video in the
+    real container) while the returned list order defines the ``s:N`` ordinal.
+    """
+    out = []
+    for s in streams:
+        entry: dict = {"index": s["index"], "codec_type": "subtitle", "tags": {}}
+        if "codec_name" in s:
+            entry["codec_name"] = s["codec_name"]
+        if "language" in s:
+            entry["tags"]["language"] = s["language"]
+        if "title" in s:
+            entry["tags"]["title"] = s["title"]
+        out.append(entry)
+    return json.dumps({"streams": out})
+
+
+class TestListSubtitleStreams:
+    def test_empty_streams_returns_empty_list(self, video_file):
+        stdout = json.dumps({"streams": []})
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            assert list_subtitle_streams(video_file) == []
+
+    def test_single_text_stream_all_fields(self, video_file):
+        stdout = _subtitle_ffprobe_json([{"index": 2, "codec_name": "subrip", "language": "jpn", "title": "Full"}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_subtitle_streams(video_file)
+        assert len(result) == 1
+        s = result[0]
+        assert isinstance(s, SubtitleStream)
+        assert s.index == 2
+        assert s.sub_index == 0
+        assert s.codec_name == "subrip"
+        assert s.language_tag == "jpn"
+        assert s.title == "Full"
+        assert s.is_text is True
+
+    @pytest.mark.parametrize("codec", sorted(BITMAP_SUBTITLE_CODECS))
+    def test_bitmap_codecs_classified_not_text(self, video_file, codec):
+        stdout = _subtitle_ffprobe_json([{"index": 0, "codec_name": codec}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_subtitle_streams(video_file)
+        assert result[0].is_text is False
+        assert result[0].codec_name == codec
+
+    @pytest.mark.parametrize("codec", ["subrip", "ass", "ssa", "mov_text", "webvtt"])
+    def test_text_codecs_classified_text(self, video_file, codec):
+        stdout = _subtitle_ffprobe_json([{"index": 0, "codec_name": codec}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_subtitle_streams(video_file)
+        assert result[0].is_text is True
+
+    def test_sub_index_is_ordinal_not_global_index(self, video_file):
+        """Interleaved container: global indices non-contiguous, sub_index is s:N."""
+        stdout = _subtitle_ffprobe_json(
+            [
+                {"index": 3, "codec_name": "subrip", "language": "eng"},
+                {"index": 5, "codec_name": "ass", "language": "jpn"},
+                {"index": 8, "codec_name": "hdmv_pgs_subtitle", "language": "jpn"},
+            ]
+        )
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_subtitle_streams(video_file)
+        assert [(s.index, s.sub_index) for s in result] == [(3, 0), (5, 1), (8, 2)]
+        assert result[2].is_text is False
+
+    def test_missing_language_tag_is_none(self, video_file):
+        stdout = _subtitle_ffprobe_json([{"index": 0, "codec_name": "subrip"}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_subtitle_streams(video_file)
+        assert result[0].language_tag is None
+
+    def test_missing_title_tag_is_none(self, video_file):
+        stdout = _subtitle_ffprobe_json([{"index": 0, "codec_name": "subrip"}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_subtitle_streams(video_file)
+        assert result[0].title is None
+
+    def test_language_tag_lowercased(self, video_file):
+        stdout = _subtitle_ffprobe_json([{"index": 0, "codec_name": "subrip", "language": "JPN"}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_subtitle_streams(video_file)
+        assert result[0].language_tag == "jpn"
+
+    def test_missing_codec_name_is_none_and_text(self, video_file):
+        """Absent codec_name is not a known bitmap codec, so it defaults to text."""
+        stdout = _subtitle_ffprobe_json([{"index": 0}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_subtitle_streams(video_file)
+        assert result[0].codec_name is None
+        assert result[0].is_text is True
+
+    def test_missing_index_skipped_but_sub_index_slot_consumed(self, video_file):
+        payload = {
+            "streams": [
+                {"codec_type": "subtitle", "codec_name": "subrip", "tags": {}},  # no index
+                {"index": 5, "codec_type": "subtitle", "codec_name": "ass", "tags": {}},
+            ]
+        }
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=json.dumps(payload))):
+            result = list_subtitle_streams(video_file)
+        assert len(result) == 1
+        assert result[0].index == 5
+        assert result[0].sub_index == 1  # slot 0 consumed by skipped stream
+
+    def test_ffprobe_nonzero_returncode_returns_empty(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(returncode=1, stderr="boom")):
+            assert list_subtitle_streams(video_file) == []
+
+    def test_ffprobe_timeout_returns_empty(self, video_file):
+        with patch(
+            f"{MODULE}.subprocess.run",
+            side_effect=subprocess.TimeoutExpired(cmd="ffprobe", timeout=30),
+        ):
+            assert list_subtitle_streams(video_file) == []
+
+    def test_ffprobe_os_error_returns_empty(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", side_effect=FileNotFoundError("ffprobe missing")):
+            assert list_subtitle_streams(video_file) == []
+
+    def test_malformed_json_returns_empty(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout="not json{")):
+            assert list_subtitle_streams(video_file) == []
+
+    def test_unicode_decode_returns_empty(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", side_effect=_unicode_decode_error()):
+            assert list_subtitle_streams(video_file) == []
+
+    def test_ffprobe_command_uses_select_subtitle_streams(self, video_file):
+        stdout = _subtitle_ffprobe_json([{"index": 0, "codec_name": "subrip"}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)) as mock_run:
+            list_subtitle_streams(video_file)
+        args = mock_run.call_args[0][0]
+        assert args[0] == "ffprobe"
+        assert "-select_streams" in args
+        assert args[args.index("-select_streams") + 1] == "s"
+        assert str(video_file) in args
+
+    def test_default_ffprobe_cmd_is_bare_literal(self, video_file):
+        stdout = _subtitle_ffprobe_json([{"index": 0, "codec_name": "subrip"}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)) as mock_run:
+            list_subtitle_streams(video_file)
+        assert mock_run.call_args[0][0][0] == "ffprobe"
+
+    def test_custom_ffprobe_cmd_becomes_cmd0(self, video_file):
+        stdout = _subtitle_ffprobe_json([{"index": 0, "codec_name": "subrip"}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)) as mock_run:
+            list_subtitle_streams(video_file, ffprobe_cmd="/custom/ffprobe")
+        args = mock_run.call_args[0][0]
+        assert args[0] == "/custom/ffprobe"
+        assert "-select_streams" in args
+        assert str(video_file) in args

@@ -1,11 +1,14 @@
 """Utility functions for Anki Miner."""
 
 from .audio_track_detector import (
+    BITMAP_SUBTITLE_CODECS,
     AudioStream,
     JapaneseAudioStream,
+    SubtitleStream,
     find_japanese_audio_stream,
     get_primary_video_codec,
     list_audio_streams,
+    list_subtitle_streams,
 )
 from .file_utils import ensure_directory, safe_filename
 from .text_utils import (
@@ -23,6 +26,7 @@ from .text_utils import (
 
 __all__ = [
     "AudioStream",
+    "BITMAP_SUBTITLE_CODECS",
     "ensure_directory",
     "safe_filename",
     "clean_subtitle_text",
@@ -37,6 +41,8 @@ __all__ = [
     "JapaneseAudioStream",
     "katakana_to_hiragana",
     "list_audio_streams",
+    "list_subtitle_streams",
+    "SubtitleStream",
     "wrap_target_furigana",
     "wrap_target_plain",
 ]
