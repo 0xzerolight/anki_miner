@@ -388,6 +388,26 @@ class TestContentHashStoreBatch:
         assert store.last_store_failures == 1
 
 
+class TestStoreFailureCounting:
+    """A collected-but-unreadable file is counted as a store failure so the user
+    is warned about the empty media field (not silently undercounted)."""
+
+    def test_unreadable_collected_file_counts_as_failure(self, test_config, make_tokenized_word, tmp_path):
+        # File exists on disk (enters paths_by_filename) but cannot be encoded —
+        # _build_store_media_action returns None, so it never enters a chunk.
+        path = tmp_path / "clip.mp3"
+        path.write_bytes(b"data")
+        media = MediaData(audio_path=path, audio_filename="clip.mp3")
+        item = CardPayload(word=make_tokenized_word(lemma="w"), media=media, definition="d")
+
+        with patch.object(anki_media_store, "_build_store_media_action", return_value=None):
+            store = AnkiMediaStore(test_config)
+            stored = store.store_batch([item])
+
+        assert stored == set()
+        assert store.last_store_failures == 1
+
+
 class TestDictMediaSrcUnescaping:
     """A dict-media basename with an HTML-special char (``&``) is stored escaped
     in the rendered ``<img src>`` but must resolve to the raw on-disk file."""

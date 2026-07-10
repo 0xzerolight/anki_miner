@@ -312,9 +312,7 @@ class AnkiMediaStore:
         # pre-hash name -> final stored name (content hash, or AnkiConnect's own
         # rename if it differs from what we sent).
         rename: dict[str, str] = {}
-        attempted: set[str] = set()
         for chunk in _stream_encode_chunks(paths_by_filename.items()):
-            attempted.update(orig for orig, _, _ in chunk)
             result_map = self._store_media_chunk([(sent, action) for _, sent, action in chunk])
             for orig, sent, _ in chunk:
                 actual = result_map.get(sent)
@@ -328,7 +326,12 @@ class AnkiMediaStore:
             for media, attr in refs.get(orig, ()):
                 setattr(media, attr, final)
 
-        self.last_store_failures = len(attempted) - len(rename) + len(vanished)
+        # Every collected file is either stored (in ``rename``) or a failure.
+        # Counting off ``paths_by_filename`` (not just the files that survived
+        # stat/encode into a chunk) means a file that fails stat()/open() inside
+        # _stream_encode_chunks is still counted, so the user is warned about the
+        # resulting empty media field instead of it being silently undercounted.
+        self.last_store_failures = len(paths_by_filename) - len(rename) + len(vanished)
         return stored_finals
 
     def upload_dict_media(self, word_data_list: list[CardPayload]) -> None:
