@@ -668,6 +668,30 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
         <translation>Coba lagi kata yang tidak ada audionya dari JapanesePod101 pada proses berikutnya</translation>
     </message>
     <message>
+        <source>Sentence Audio (Reading Sources)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Generate spoken sentence audio for cards mined from manga and books (these have no source audio). Sentence text is sent to the selected online services.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Generate TTS sentence audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Google Translate TTS (tried first)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Naver Papago (fallback)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select at least one service.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Google Translate (synthetic TTS)</source>
         <translation>Google Translate (TTS sintetis)</translation>
     </message>
@@ -2034,6 +2058,18 @@ Kamus tidak dihapus.</translation>
         <translation>Sumber audio kata mengembalikan respons non-audio (kemungkinan dibatasi laju) — audio dilewati pada proses ini, akan dicoba ulang pada proses berikutnya</translation>
     </message>
     <message>
+        <source>Sentence-audio TTS connection/certificate failure — sentence audio skipped this run, will retry next run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence-audio TTS returned repeated server errors — sentence audio skipped this run, will retry next run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
         <translation type="unfinished" />
     </message>
@@ -2156,6 +2192,18 @@ Kamus tidak dihapus.</translation>
     <message>
         <source>Expression audio: %1/%2 available</source>
         <translation>Audio ekspresi: %1/%2 tersedia</translation>
+    </message>
+    <message>
+        <source>Generating sentence audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence audio: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence audio: %1/%2 sentences</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Step 4/5 — Fetching definitions</source>
