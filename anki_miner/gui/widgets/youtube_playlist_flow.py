@@ -405,8 +405,16 @@ class PlaylistAddController:
         )
 
     def _on_playlist_resolve_finished(self) -> None:
-        """Drop the resolve handle once its QThread emits finished."""
+        """Drop the resolve handle once its QThread emits finished.
+
+        Release the finished QThread via deleteLater() (mirrors the single-video
+        ``_on_probe_finished``) so its C++ object is reclaimed promptly instead
+        of one lingering per playlist add.
+        """
+        worker = self._playlist_resolve_worker
         self._playlist_resolve_worker = None
+        if worker is not None:
+            worker.deleteLater()
         self._callbacks.recompute_buttons()
 
     def _on_playlist_resolved(
@@ -602,7 +610,15 @@ class PlaylistAddController:
         self._mark_probe_error(item, message)
 
     def _on_playlist_probe_finished(self) -> None:
-        """Drop the probe handle + snapshot once its QThread emits finished."""
+        """Drop the probe handle + snapshot once its QThread emits finished.
+
+        Release the finished QThread via deleteLater() (mirrors the single-video
+        ``_on_probe_finished``) so its C++ object is reclaimed promptly instead
+        of one lingering per playlist add.
+        """
+        worker = self._playlist_probe_worker
         self._playlist_probe_worker = None
         self._playlist_probe_items = []
+        if worker is not None:
+            worker.deleteLater()
         self._callbacks.recompute_buttons()

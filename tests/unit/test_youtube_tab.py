@@ -1297,6 +1297,19 @@ class TestPlaylistAdd:
         assert tab._add_flow._playlist_resolve_worker is None
         assert tab.add_button.isEnabled()
 
+    def test_resolve_finished_calls_delete_later(self, tab):
+        """Y7: the finished resolve QThread is released via deleteLater() (as
+        the single-video path does), so handles don't accumulate per playlist."""
+        tab.url_edit.setText(PLAYLIST_URL)
+        tab._on_add_clicked()
+        worker = tab._add_flow._playlist_resolve_worker
+        assert worker is not None
+
+        tab._add_flow._on_playlist_resolve_finished()
+
+        assert tab._add_flow._playlist_resolve_worker is None
+        worker.deleteLater.assert_called_once()
+
 
 class TestPlaylistResolved:
     """Resolved playlists expand (optionally via the choice dialog)."""
@@ -1560,6 +1573,18 @@ class TestPlaylistEntryProbes:
 
         assert tab._add_flow._playlist_probe_worker is None
         assert tab._add_flow._playlist_probe_items == []
+
+    def test_probe_finished_calls_delete_later(self, tab):
+        """Y7: the finished playlist-probe QThread is released via deleteLater()
+        (as the single-video path does), so handles don't accumulate."""
+        self._expand(tab)
+        worker = tab._add_flow._playlist_probe_worker
+        assert worker is not None
+
+        tab._add_flow._on_playlist_probe_finished()
+
+        assert tab._add_flow._playlist_probe_worker is None
+        worker.deleteLater.assert_called_once()
 
 
 class TestPlaylistClearAndShutdown:
