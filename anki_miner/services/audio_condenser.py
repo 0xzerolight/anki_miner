@@ -281,6 +281,13 @@ _PROBE_REQUIRED: frozenset[str] = frozenset({"libmp3lame", "libopus"})
 # routed to the diagnostic tail instead of parsed as progress.
 _PROGRESS_KEY_RE = re.compile(r"^[A-Za-z0-9_]+$")
 
+# Ceiling for the embedded-subtitle demux (D9). Same full-demux cost class as
+# MediaExtractorService.extract_full_audio (flat 30-minute ceiling): a large
+# remux has to be fully demuxed even though only the subtitle stream is written,
+# so the old flat 300 s could time out a valid multi-hour source. A ceiling, not
+# a target — extraction is far faster than realtime in practice.
+_EMBEDDED_SUBTITLE_TIMEOUT = 1800.0
+
 
 class EncoderUnavailableError(Exception):
     """Raised by :meth:`AudioCondenserService.condense` when the required audio
@@ -388,7 +395,7 @@ class AudioCondenserService:
         ok = self._run_streaming(
             cmd,
             total_period_ms=0,
-            timeout=300.0,
+            timeout=_EMBEDDED_SUBTITLE_TIMEOUT,
             progress_cb=None,
             cancel_event=cancel_event,
         )

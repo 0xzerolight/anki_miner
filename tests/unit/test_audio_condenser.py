@@ -822,6 +822,23 @@ def test_extract_embedded_subtitle_refuses_bitmap_without_running_ffmpeg(tmp_pat
     mock_popen.assert_not_called()
 
 
+def test_extract_embedded_subtitle_uses_full_demux_timeout(tmp_path):
+    """The demux ceiling matches extract_full_audio's (1800s), not the old 300s.
+
+    A large remux is fully demuxed even to write only the subtitle stream, so the
+    old flat 300 s timed out valid long sources.
+    """
+    svc = _service(tmp_path)
+    stream = _sub_stream(sub_index=0, codec="subrip")
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch.object(svc, "_run_streaming", return_value=True) as run_streaming,
+    ):
+        svc.extract_embedded_subtitle(Path("/v/ep01.mkv"), stream, tmp_path)
+
+    assert run_streaming.call_args.kwargs["timeout"] == 1800.0
+
+
 def test_extract_embedded_subtitle_cleans_partial_on_failure(tmp_path):
     svc = _service(tmp_path)
     stream = _sub_stream(sub_index=0, codec="subrip")
