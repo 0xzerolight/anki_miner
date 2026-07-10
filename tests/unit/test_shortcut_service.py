@@ -221,6 +221,44 @@ class TestCreateShortcut:
         assert first_call_args[0] == "powershell"
 
 
+class TestWindowsPowerShellQuoting:
+    """Paths must be single-quoted so PowerShell doesn't expand $ / backtick."""
+
+    def test_ps_single_quotes_dollar_path(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        (tmp_path / "Desktop").mkdir()
+        fake_exe = Path(r"C:\Users\j$on\anki_miner_gui.exe")
+
+        completed = MagicMock(returncode=0, stderr="")
+        with (
+            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch("sys.platform", "win32"),
+            patch("subprocess.run", return_value=completed) as mock_run,
+        ):
+            ShortcutService.create_shortcut()
+
+        ps_script = mock_run.call_args_list[0].args[0][3]
+        assert f"'{fake_exe}'" in ps_script
+        # The $-bearing path must never appear inside a double-quoted PS string.
+        assert f'"{fake_exe}"' not in ps_script
+
+    def test_ps_doubles_embedded_single_quote(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        (tmp_path / "Desktop").mkdir()
+        fake_exe = Path("/home/o'brien/anki_miner_gui")
+
+        completed = MagicMock(returncode=0, stderr="")
+        with (
+            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch("sys.platform", "win32"),
+            patch("subprocess.run", return_value=completed) as mock_run,
+        ):
+            ShortcutService.create_shortcut()
+
+        ps_script = mock_run.call_args_list[0].args[0][3]
+        assert "'/home/o''brien/anki_miner_gui'" in ps_script
+
+
 class TestSubprocessTimeouts:
     """Subprocess invocations must be bounded so a hung helper can't freeze the GUI."""
 
