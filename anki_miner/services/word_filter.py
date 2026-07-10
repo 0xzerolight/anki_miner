@@ -118,11 +118,16 @@ class WordFilterService:
     ) -> list[TokenizedWord]:
         """Filter words using the user blacklist.
 
-        Blacklist entries match against ``word.lemma`` (dictionary form). Users
-        should enter dictionary forms in their list files (e.g. 食べる, not
-        食べた). The whitelist is NOT consulted here: whitelisted words are
-        force-included by :meth:`partition_whitelisted` before this filter runs,
-        so they never reach it.
+        Blacklist entries match against ``word.mined_form`` (the card-front
+        spelling) with a miss-only ``word.lemma`` fallback — a word is dropped
+        when EITHER form is blacklisted. UniDic collapses kanji variants
+        (賭ける→掛ける) into one lemma, so keying on lemma alone let a blacklist
+        entry for the card front (賭ける) be ignored; mirrors the def/freq lookup
+        convention (commit 99e2c04). Users should enter dictionary forms in
+        their list files (e.g. 食べる, not 食べた). The whitelist is NOT consulted
+        here: whitelisted words are force-included by
+        :meth:`partition_whitelisted` before this filter runs, so they never
+        reach it.
 
         Args:
             words: List of words to filter.
@@ -131,7 +136,11 @@ class WordFilterService:
         Returns:
             Filtered list of words.
         """
-        return [word for word in words if not word_list_service.is_blacklisted(word.lemma)]
+        return [
+            word
+            for word in words
+            if not (word_list_service.is_blacklisted(word.mined_form) or word_list_service.is_blacklisted(word.lemma))
+        ]
 
     def partition_whitelisted(
         self,
@@ -140,13 +149,16 @@ class WordFilterService:
     ) -> tuple[list[TokenizedWord], list[TokenizedWord]]:
         """Split words into ``(forced, rest)`` by user whitelist membership.
 
-        Force-included words (lemma on the whitelist) bypass every optional
-        coverage filter — the caller runs the filter chain on ``rest`` only and
-        merges ``forced`` back in before the integrity gates. Matching is on
-        ``word.lemma``, the dictionary-form convention shared with
-        :meth:`filter_by_word_lists`. ``all_words`` is already lemma-deduped
-        upstream (``SubtitleParserService``), so exactly one word per whitelisted
-        lemma is moved to ``forced``.
+        Force-included words bypass every optional coverage filter — the caller
+        runs the filter chain on ``rest`` only and merges ``forced`` back in
+        before the integrity gates. Matching is on ``word.mined_form`` (the
+        card-front spelling) with a miss-only ``word.lemma`` fallback, the
+        convention shared with :meth:`filter_by_word_lists`: UniDic collapses
+        kanji variants (賭ける→掛ける) into one lemma, so whitelisting the card
+        front must force-include it even though its lemma differs.
+        ``all_words`` is already lemma-deduped upstream
+        (``SubtitleParserService``), so exactly one word per whitelisted form is
+        moved to ``forced``.
 
         Args:
             words: List of candidate words.
@@ -158,7 +170,7 @@ class WordFilterService:
         forced: list[TokenizedWord] = []
         rest: list[TokenizedWord] = []
         for word in words:
-            if word_list_service.is_whitelisted(word.lemma):
+            if word_list_service.is_whitelisted(word.mined_form) or word_list_service.is_whitelisted(word.lemma):
                 forced.append(word)
             else:
                 rest.append(word)

@@ -248,6 +248,44 @@ class TestWordFilterService:
             result = service.filter_by_word_lists([], wls)
             assert result == []
 
+        def test_blacklists_on_mined_form_not_lemma(self, test_config, tmp_path):
+            """Blacklisting a kanji-variant card front (賭ける) drops that card but
+            NOT its distinct homograph. UniDic collapses 賭ける's lemma to 掛ける,
+            so keying on lemma alone ignored the blacklist entry (Bug F3)."""
+            bl = tmp_path / "bl.txt"
+            bl.write_text("賭ける\n", encoding="utf-8")
+            wls = WordListService(blacklist_path=bl)
+            wls.load()
+
+            service = WordFilterService(test_config)
+            # 賭ける card: mined_form == orth_base == 賭ける, lemma collapsed to 掛ける.
+            kakeru_bet = TokenizedWord(
+                surface="賭ける",
+                lemma="掛ける",
+                reading="かける",
+                sentence="Test",
+                start_time=0.0,
+                end_time=1.0,
+                duration=1.0,
+                orth_base="賭ける",
+                pos="動詞",
+            )
+            # Distinct homograph 掛ける: mined_form == lemma == 掛ける.
+            kakeru_hang = TokenizedWord(
+                surface="掛ける",
+                lemma="掛ける",
+                reading="かける",
+                sentence="Test",
+                start_time=0.0,
+                end_time=1.0,
+                duration=1.0,
+                orth_base="掛ける",
+                pos="動詞",
+            )
+
+            result = service.filter_by_word_lists([kakeru_bet, kakeru_hang], wls)
+            assert [w.mined_form for w in result] == ["掛ける"]
+
     class TestPartitionWhitelisted:
         """Tests for partition_whitelisted (whitelist force-include split)."""
 
@@ -276,6 +314,33 @@ class TestWordFilterService:
             forced, rest = service.partition_whitelisted(words, wls)
             assert forced == []
             assert [w.lemma for w in rest] == ["食べる", "飲む"]
+
+        def test_force_includes_kanji_variant_on_mined_form(self, test_config, tmp_path):
+            """Whitelisting the card front (賭ける) force-includes it even though
+            UniDic collapses its lemma to 掛ける. Keying on lemma alone left the
+            whitelist entry dead (Bug F3)."""
+            wl = tmp_path / "wl.txt"
+            wl.write_text("賭ける\n", encoding="utf-8")
+            wls = WordListService(whitelist_path=wl)
+            wls.load()
+
+            service = WordFilterService(test_config)
+            kakeru_bet = TokenizedWord(
+                surface="賭ける",
+                lemma="掛ける",
+                reading="かける",
+                sentence="Test",
+                start_time=0.0,
+                end_time=1.0,
+                duration=1.0,
+                orth_base="賭ける",
+                pos="動詞",
+            )
+            other = create_word("飲む")
+
+            forced, rest = service.partition_whitelisted([kakeru_bet, other], wls)
+            assert [w.mined_form for w in forced] == ["賭ける"]
+            assert [w.mined_form for w in rest] == ["飲む"]
 
     class TestFilterByScriptType:
         """Tests for filter_by_script_type method (Issue #57)."""
