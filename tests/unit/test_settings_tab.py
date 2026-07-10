@@ -301,6 +301,50 @@ class TestSettingsTabRoundTrip:
         assert "⚠" in tab.save_status_label.text()
 
 
+class TestSubtitleRegexValidationRevert:
+    """An invalid subtitle regex keeps the pattern, toggle AND replacement at
+    their last-good values (all three revert together — never a last-good
+    pattern paired with a new, never-previewed replacement)."""
+
+    def test_invalid_regex_reverts_pattern_toggle_and_replacement(self, test_config, monkeypatch, qtbot):
+        from PyQt6.QtWidgets import QMessageBox
+
+        monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: None)
+        monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+
+        cfg = replace(
+            test_config,
+            subtitle_regex_filter=r"\(keep\)",
+            subtitle_regex_replacement="KEEP",
+            use_subtitle_regex_filter=True,
+        )
+        widget = SettingsTab(cfg)
+        qtbot.addWidget(widget)
+        try:
+            # User edits: an invalid pattern paired with a brand-new replacement.
+            widget.filtering_panel.set_subtitle_regex_filter("(")  # unbalanced → re.error
+            widget.filtering_panel.set_subtitle_regex_replacement("NEW")
+            widget.filtering_panel.set_use_subtitle_regex_filter(True)
+
+            received: list[AnkiMinerConfig] = []
+            widget.config_changed.connect(received.append)
+            widget.commit_settings()
+
+            assert len(received) == 1
+            assert received[0].subtitle_regex_filter == r"\(keep\)"
+            assert received[0].use_subtitle_regex_filter is True
+            # The replacement must revert too — not the never-previewed "NEW".
+            assert received[0].subtitle_regex_replacement == "KEEP"
+        finally:
+            widget.shutdown()
+            for w in widget.iter_close_workers():
+                if w is not None:
+                    w.wait(3000)
+            qtbot.wait(10)
+            with contextlib.suppress(RuntimeError):
+                widget.deleteLater()
+
+
 class TestIPlusOneFilterRoundTrip:
     """Load/save round-trip for the i+1 sentence filter checkbox."""
 
