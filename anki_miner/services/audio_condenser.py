@@ -54,17 +54,19 @@ _BRACKET_PAIRS: tuple[tuple[str, str], ...] = (
 def load_subtitle_events(path: str | Path) -> list[Event]:
     """Load *path* into ``(start_ms, end_ms, text)`` tuples.
 
-    Uses pysubs2 with a UTF-8 default; on a decode failure it detects the
-    encoding with charset-normalizer, retries, and finally falls back to
-    ``cp932`` (D10). ``Comment`` events are skipped. Times come straight from
-    ``event.start`` / ``event.end`` (millisecond ints); text is the raw cue
-    text — markup stripping happens later in :func:`filter_lines`.
+    Uses pysubs2 with a UTF-8 default; on a decode failure it retries with
+    ``cp932`` first (the dominant non-UTF-8 input), then — only if cp932 also
+    fails to decode — with a charset-normalizer-detected encoding, and finally
+    re-raises the original UTF-8 error (D10). ``Comment`` events are skipped.
+    Times come straight from ``event.start`` / ``event.end`` (millisecond
+    ints); text is the raw cue text — markup stripping happens later in
+    :func:`filter_lines`.
     """
     path = Path(path)
     try:
         subs = pysubs2.load(str(path))
-    except UnicodeDecodeError:
-        subs = _load_with_fallback_encoding(path)
+    except UnicodeDecodeError as utf8_error:
+        subs = _load_with_fallback_encoding(path, utf8_error)
     except pysubs2.exceptions.FormatAutodetectionError:
         # Empty (or contentless) file — no cues to condense.
         return []
@@ -72,22 +74,35 @@ def load_subtitle_events(path: str | Path) -> list[Event]:
     return [(event.start, event.end, event.text) for event in subs if not event.is_comment]
 
 
-def _load_with_fallback_encoding(path: Path) -> pysubs2.SSAFile:
-    """Retry loading *path* with a detected encoding, else ``cp932``."""
+def _load_with_fallback_encoding(path: Path, original_error: UnicodeDecodeError) -> pysubs2.SSAFile:
+    """Retry loading *path* with cp932, then a detected encoding (D10).
+
+    cp932 is tried before the charset-normalizer detector on purpose: the
+    detector confidently mis-detects real cp932 Japanese as ``cp949`` and
+    decodes it *without* raising (silent mojibake), so for the app's dominant
+    non-UTF-8 input the explicit cp932 attempt must win first. Only if cp932
+    itself raises :class:`UnicodeDecodeError` do we consult the (soft-imported)
+    detector; if that also fails, *original_error* (the UTF-8 error) is raised.
+    """
+    try:
+        return pysubs2.load(str(path), encoding="cp932")
+    except UnicodeDecodeError:
+        pass
     encoding = _detect_encoding(path)
     if encoding:
         try:
             return pysubs2.load(str(path), encoding=encoding)
         except (UnicodeDecodeError, LookupError):
             pass
-    return pysubs2.load(str(path), encoding="cp932")
+    raise original_error
 
 
 def _detect_encoding(path: Path) -> str | None:
     """Best-guess encoding for *path* via charset-normalizer, or None.
 
-    charset-normalizer is soft-imported so its absence just routes straight to
-    the ``cp932`` fallback in :func:`_load_with_fallback_encoding`.
+    charset-normalizer is soft-imported so its absence simply means the
+    detector leg of :func:`_load_with_fallback_encoding` is skipped (the cp932
+    attempt there runs first and independently).
     """
     try:
         from charset_normalizer import from_path
@@ -147,9 +162,20 @@ def build_periods(events: list[Event], padding_ms: int) -> list[Period]:
 
     Each cue is padded by ``padding_ms`` on both sides, the period start is
     floored at 0 **after** padding, then periods are sorted and overlapping or
-    adjacent ones merged. The trailing pad on the last period is kept (D3).
+    adjacent ones merged. A cue shifted fully before t=0 (its padded end is
+    ``<= 0``) is dropped rather than emitted as an inverted period. The trailing
+    pad on the last period is kept (D3).
     """
-    intervals: list[Period] = [(max(0, start - padding_ms), end + padding_ms) for start, end, _text in events]
+    intervals: list[Period] = []
+    for start, end, _text in events:
+        period_start = max(0, start - padding_ms)
+        period_end = end + padding_ms
+        # A cue shifted fully before t=0 (end + padding <= 0) would clamp to an
+        # inverted (0, negative) period; dropping it here keeps every downstream
+        # condensed-timestamp non-negative (D3/D4).
+        if period_start >= period_end:
+            continue
+        intervals.append((period_start, period_end))
     intervals.sort()
 
     merged: list[Period] = []

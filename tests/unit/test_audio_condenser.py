@@ -94,6 +94,28 @@ def test_build_periods_empty_events():
     assert build_periods([], 500) == []
 
 
+def test_build_periods_drops_cue_shifted_fully_before_zero():
+    # Regression: a cue whose padded end is <= 0 must NOT emit an inverted
+    # (0, negative) period, which would drive the condensed offset accumulator
+    # negative and map every later cue to negative timestamps.
+    raw = [(100, 500, "early"), (3000, 4000, "later")]
+    shifted = shift_events(raw, -2000)
+    periods = build_periods(shifted, 500)
+    # "early" (shifted to -1900..-1500, padded end -1000) is dropped; only the
+    # non-inverted "later" period survives.
+    assert periods == [(500, 2500)]
+    assert all(start < end for start, end in periods)
+
+    out = map_events_to_condensed(shifted, periods)
+    # One 1000ms-duration condensed cue for "later"; leading pad becomes silence
+    # ahead of it, so it lands at (500, 1500). Crucially: no negative timestamp.
+    assert out == [(500, 1500, "later")]
+    for start, end, _t in out:
+        assert start >= 0
+        assert end >= 0
+        assert start < end
+
+
 # ---------------------------------------------------------------------------
 # filter_lines
 # ---------------------------------------------------------------------------
@@ -273,17 +295,13 @@ def test_load_subtitle_events_all_comment_file(tmp_path):
     assert load_subtitle_events(path) == []
 
 
-def test_load_subtitle_events_cp932_fallback(tmp_path, monkeypatch):
-    # A cp932-encoded SRT is not valid UTF-8. When charset-normalizer is
-    # unavailable (soft-import fails → _detect_encoding returns None), D10 routes
-    # straight to the cp932 final fallback, which must read the Japanese text
-    # correctly. (charset-normalizer is deliberately stubbed to None here: on a
-    # real system it can confidently mis-detect cp932 Japanese as Korean cp949,
-    # so this test pins the cp932 leg deterministically — see the report.)
-    monkeypatch.setattr(
-        "anki_miner.services.audio_condenser._detect_encoding",
-        lambda _path: None,
-    )
+def test_load_subtitle_events_cp932_fallback(tmp_path):
+    # Key regression (D10 amended): a real cp932-encoded SRT — the app's
+    # dominant non-UTF-8 input — must decode correctly with NO monkeypatching of
+    # the detector. cp932 is now tried before charset-normalizer precisely
+    # because the detector confidently mis-detects cp932 Japanese as cp949 and
+    # decodes it without error (silent mojibake). This test would produce
+    # garbage under the old detector-first order.
     text = "1\r\n" "00:00:01,000 --> 00:00:02,000\r\n" "こんにちは、世界。ありがとうございました。\r\n" "\r\n"
     path = tmp_path / "cp932.srt"
     path.write_bytes(text.encode("cp932"))
@@ -292,18 +310,35 @@ def test_load_subtitle_events_cp932_fallback(tmp_path, monkeypatch):
     assert events == [(1000, 2000, "こんにちは、世界。ありがとうございました。")]
 
 
-def test_load_subtitle_events_uses_detected_encoding(tmp_path, monkeypatch):
-    # When charset-normalizer yields an encoding, D10 retries the load with it
-    # (before ever reaching the cp932 fallback).
+# This UTF-16 fixture text is chosen so its UTF-16LE bytes contain a cp932 lead
+# byte with no valid trail (0x93 mid-string): the cp932 retry raises
+# UnicodeDecodeError, so the load deterministically reaches the detector leg.
+_UTF16_DETECTOR_TEXT = "1\r\n00:00:01,000 --> 00:00:02,000\r\nこんにちは、世界。ありがとうございました。\r\n\r\n"
+
+
+def test_load_subtitle_events_detector_leg_utf16(tmp_path):
+    # Detector leg (D10 amended): UTF-16-with-BOM fails the UTF-8 default AND the
+    # cp932 retry, so the load falls through to charset-normalizer, which detects
+    # utf_16. No monkeypatch — this exercises the real detector branch end to end
+    # (charset-normalizer detects utf_16 reliably for this fixture).
+    path = tmp_path / "utf16.srt"
+    path.write_bytes(_UTF16_DETECTOR_TEXT.encode("utf-16"))  # includes a BOM
+
+    assert load_subtitle_events(path) == [(1000, 2000, "こんにちは、世界。ありがとうございました。")]
+
+
+def test_load_subtitle_events_detector_unavailable_raises_original(tmp_path, monkeypatch):
+    # If cp932 also fails to decode and the detector is unavailable (or yields
+    # nothing), D10 re-raises the original UTF-8 error rather than swallowing it.
     monkeypatch.setattr(
         "anki_miner.services.audio_condenser._detect_encoding",
-        lambda _path: "cp932",
+        lambda _path: None,
     )
-    text = "1\r\n00:00:01,000 --> 00:00:02,000\r\n日本語のテスト\r\n\r\n"
-    path = tmp_path / "detected.srt"
-    path.write_bytes(text.encode("cp932"))
+    path = tmp_path / "utf16_no_detector.srt"
+    path.write_bytes(_UTF16_DETECTOR_TEXT.encode("utf-16"))
 
-    assert load_subtitle_events(path) == [(1000, 2000, "日本語のテスト")]
+    with pytest.raises(UnicodeDecodeError):
+        load_subtitle_events(path)
 
 
 # ---------------------------------------------------------------------------
