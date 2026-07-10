@@ -48,6 +48,7 @@ from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.audiobook_queue_worker import AudiobookQueueWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
+from anki_miner.models import MiningOutcome, classify_result, result_error_text
 from anki_miner.models.audiobook_queue import AudiobookItemStatus, AudiobookQueue, AudiobookQueueItem
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.utils.i18n import tr_format
@@ -451,8 +452,14 @@ class AudiobookTab(MiningTabBase):
         if item is None:
             return
 
-        if error is None:
-            cards = int(getattr(result, "cards_created", 0) or 0)
+        # A worker exception arrives as a non-None error string; a non-raising
+        # return (success, failure, or Stop mid-mine) arrives as error=None with
+        # the ProcessingResult carrying the verdict in its ``errors``. Classify
+        # both so a failed run isn't logged as a green "Mined 0 cards" and a
+        # cancelled item returns to READY (re-minable) instead of COMPLETED.
+        cards = int(getattr(result, "cards_created", 0) or 0)
+        outcome = MiningOutcome.FAILED if error is not None else classify_result(result)
+        if outcome is MiningOutcome.SUCCESS:
             item.status = AudiobookItemStatus.COMPLETED
             item.cards_created = cards
             item.error_message = None
@@ -463,10 +470,17 @@ class AudiobookTab(MiningTabBase):
                 # shouldn't take down the queue.
                 with contextlib.suppress(Exception):
                     self._presenter.show_processing_result(result)  # type: ignore[arg-type]
+        elif outcome is MiningOutcome.CANCELLED:
+            item.status = AudiobookItemStatus.READY
+            item.cards_created = cards
+            item.error_message = None
+            self.log_widget.append_info(tr_format(self.tr("Cancelled %1."), item.audio_file.name))
         else:
+            message = str(error) if error is not None else result_error_text(result)
             item.status = AudiobookItemStatus.ERROR
-            item.error_message = str(error)
-            self.log_widget.append_error(tr_format(self.tr("Failed %1: %2."), item.audio_file.name, error))
+            item.cards_created = cards
+            item.error_message = message
+            self.log_widget.append_error(tr_format(self.tr("Failed %1: %2."), item.audio_file.name, message))
 
         self._refresh_row(item)
         self._items_done = getattr(self, "_items_done", 0) + 1

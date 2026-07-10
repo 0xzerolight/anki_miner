@@ -482,6 +482,36 @@ class TestPerItemSignals:
         assert item.error_message == "FFmpegError: oops"
         assert "FFmpegError: oops" in tab._row_widgets[item].detail_label.full_text
 
+    def test_item_finished_failed_result_marks_error(self, tab, tmp_path):
+        """A non-raising failed ProcessingResult (error=None) routes to ERROR."""
+        from anki_miner.models import ProcessingResult
+
+        item = _add_pair(tab, tmp_path)
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+
+        result = ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0, errors=["anki went away"])
+        tab._on_item_finished(0, result, None, 1)
+
+        assert item.status == AudiobookItemStatus.ERROR
+        assert item.error_message == "anki went away"
+        tab._presenter.show_processing_result.assert_not_called()
+
+    def test_item_finished_cancelled_result_marks_ready(self, tab, tmp_path):
+        """A Stop-mid-mine cancelled result leaves the item re-minable (READY)."""
+        from anki_miner.models import ProcessingResult
+        from anki_miner.models.processing import CANCELLED_ERROR
+
+        item = _add_pair(tab, tmp_path)
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+
+        result = ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0, errors=[CANCELLED_ERROR])
+        tab._on_item_finished(0, result, None, 1)
+
+        assert item.status == AudiobookItemStatus.READY
+        assert item.error_message is None
+
     def test_item_finished_presenter_error_swallowed(self, tab, tmp_path):
         item = _add_pair(tab, tmp_path)
         tab._on_mine_clicked()

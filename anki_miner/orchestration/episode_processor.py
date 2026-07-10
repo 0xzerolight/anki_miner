@@ -23,7 +23,7 @@ from PyQt6.QtCore import QCoreApplication
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiMinerException, SetupError
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
-from anki_miner.models import CardPayload, MediaData, ProcessingResult, TokenizedWord
+from anki_miner.models import CANCELLED_ERROR, CardPayload, MediaData, ProcessingResult, TokenizedWord
 from anki_miner.models.youtube import FetchedMedia, SubMode
 from anki_miner.orchestration.stage_weighted_progress import StageWeightedProgress
 from anki_miner.services import (
@@ -511,7 +511,7 @@ class EpisodeProcessor:
             total_words_found=total_words_found,
             new_words_found=new_words_found,
             cards_created=cards_created,
-            errors=["Processing cancelled by user"],
+            errors=[CANCELLED_ERROR],
             elapsed_time=time.time() - start_time,
         )
 
