@@ -3728,3 +3728,31 @@ class TestNoteFieldPrimitives:
         with patch("anki_miner.services.anki_service.post_multi") as pm:
             assert service.update_notes_fields([]) == 0
         pm.assert_not_called()
+
+    def test_update_notes_fields_splits_by_byte_budget(self, test_config, monkeypatch):
+        """Large-field notes are split into multiple POSTs by byte budget, not one."""
+        service = AnkiService(test_config)
+        # Tiny budget so two small notes exceed it and flush into separate chunks.
+        monkeypatch.setattr("anki_miner.services.anki_service._UPDATE_NOTES_MAX_BYTES", 10)
+        updates = [(1, {"Glossary": "aaaaaaaa"}), (2, {"Glossary": "bbbbbbbb"})]
+        with patch("anki_miner.services.anki_service.post_multi", return_value=[None]) as pm:
+            assert service.update_notes_fields(updates) == 2
+        # Two separate multi POSTs (one note each), not a single combined body.
+        assert pm.call_count == 2
+        assert [len(call[0][1]) for call in pm.call_args_list] == [1, 1]
+
+    def test_update_notes_fields_falls_back_to_per_note_on_connection_error(self, test_config):
+        """A simulated connection error on a chunk falls back to per-note updates."""
+        service = AnkiService(test_config)
+        updates = [(1, {"Glossary": "a"}), (2, {"Glossary": "b"})]
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_multi",
+                side_effect=AnkiConnectionError("connection reset"),
+            ),
+            patch("anki_miner.services.anki_service.post_action", return_value=None) as pa,
+        ):
+            assert service.update_notes_fields(updates) == 2
+        # One tiny per-note POST per note in the failed chunk.
+        assert pa.call_count == 2
+        assert all(call[0][1] == "updateNoteFields" for call in pa.call_args_list)
