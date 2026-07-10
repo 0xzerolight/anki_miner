@@ -749,10 +749,13 @@ def _transcribe_ct2(
     #  * temperature=0.0 — collapse Whisper's decode-temperature fallback ladder to
     #    greedy, so the same media transcribes to the SAME text run-to-run (the app
     #    re-mines media and de-dups on episode identity; a nondeterministic
-    #    transcript would defeat that). With fallback off, a high compression_ratio
-    #    no longer means "already retried and failed", so the compression drop is
-    #    gated on being out-of-speech (see _is_nonspeech_ct2_segment) — a looped but
-    #    real line inside a speech region is never deleted by compression alone.
+    #    transcript would defeat that). Note: _is_junk_segment drops
+    #    compression_ratio > 2.4 UNCONDITIONALLY — everywhere, NOT only out of
+    #    speech (the extra out-of-speech-corroborated arm in
+    #    _is_nonspeech_ct2_segment is on top of, not a replacement for, that
+    #    unconditional drop). With the fallback ladder collapsed a high ratio no
+    #    longer means "already retried and failed", so this is an accepted aggressive
+    #    junk filter: a genuinely repetitive line above the ratio is dropped too.
     #  * vad_filter=False — DELIBERATELY OFF. With it ON, faster-whisper removes
     #    silence, transcribes the concatenated speech, then restores the timeline;
     #    Whisper groups words across removed silences into one segment whose restored
