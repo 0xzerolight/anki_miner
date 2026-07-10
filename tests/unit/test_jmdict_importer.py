@@ -155,6 +155,62 @@ class TestImportJmdictXmlEdgeCases:
         finally:
             conn.close()
 
+    def test_kanji_row_attests_every_unrestricted_reading(self, tmp_path: Path):
+        """A kanji headword with multiple readings (no re_restr) yields one
+        kanji-keyed row per reading, so a reading-scoped lookup of either
+        reading attests against the kanji headword."""
+        xml_text = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            "<JMdict><entry><ent_seq>4000001</ent_seq>"
+            "<k_ele><keb>行く</keb></k_ele>"
+            "<r_ele><reb>いく</reb></r_ele>"
+            "<r_ele><reb>ゆく</reb></r_ele>"
+            "<sense><gloss>to go</gloss></sense>"
+            "</entry></JMdict>"
+        )
+        xml = tmp_path / "JMdict_e"
+        xml.write_text(xml_text, encoding="utf-8")
+
+        import_jmdict_xml(xml, tmp_path / "dicts")
+
+        db = tmp_path / "dicts" / JMDICT_DICT_ID / "index.sqlite"
+        conn = open_readonly(db)
+        try:
+            readings = {r[0] for r in conn.execute("SELECT reading FROM entries WHERE term = ?", ("行く",)).fetchall()}
+            assert readings == {"いく", "ゆく"}
+        finally:
+            conn.close()
+
+    def test_re_restr_pairs_reading_only_with_permitted_kanji(self, tmp_path: Path):
+        """A restricted reading (re_restr) is paired only with its permitted
+        kanji headwords; an unrestricted reading applies to all of them."""
+        xml_text = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            "<JMdict><entry><ent_seq>4000002</ent_seq>"
+            "<k_ele><keb>甲</keb></k_ele>"
+            "<k_ele><keb>乙</keb></k_ele>"
+            "<r_ele><reb>こう</reb><re_restr>甲</re_restr></r_ele>"
+            "<r_ele><reb>おつ</reb><re_restr>乙</re_restr></r_ele>"
+            "<r_ele><reb>きのえ</reb></r_ele>"
+            "<sense><gloss>marker</gloss></sense>"
+            "</entry></JMdict>"
+        )
+        xml = tmp_path / "JMdict_e"
+        xml.write_text(xml_text, encoding="utf-8")
+
+        import_jmdict_xml(xml, tmp_path / "dicts")
+
+        db = tmp_path / "dicts" / JMDICT_DICT_ID / "index.sqlite"
+        conn = open_readonly(db)
+        try:
+            kou = {r[0] for r in conn.execute("SELECT reading FROM entries WHERE term = ?", ("甲",)).fetchall()}
+            otsu = {r[0] for r in conn.execute("SELECT reading FROM entries WHERE term = ?", ("乙",)).fetchall()}
+            # Restricted reading stays with its kanji; unrestricted applies to all.
+            assert kou == {"こう", "きのえ"}
+            assert otsu == {"おつ", "きのえ"}
+        finally:
+            conn.close()
+
     def test_always_overwrites_existing_index(self, tmp_path: Path):
         """Second import replaces the first; only the latest content is queryable."""
         xml1 = tmp_path / "first.xml"
