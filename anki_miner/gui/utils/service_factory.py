@@ -9,6 +9,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
 from anki_miner.interfaces.presenter import PresenterProtocol
+from anki_miner.interfaces.sentence_audio import SentenceAudioFetcher
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.audio_packs.fetcher import LocalAudioPackFetcher
@@ -23,6 +24,11 @@ from anki_miner.services.google_translate_audio_fetcher import GoogleTranslateAu
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.media_extractor import MediaExtractorService
 from anki_miner.services.pitch_accent_service import PitchAccentService
+from anki_miner.services.sentence_tts_fetcher import (
+    ChainedSentenceAudioFetcher,
+    GoogleSentenceTtsFetcher,
+    PapagoSentenceTtsFetcher,
+)
 from anki_miner.services.stats_service import StatsService
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.services.word_filter import WordFilterService
@@ -68,6 +74,9 @@ class Services:
     wordset_service: WordsetService | None
     youtube_fetcher: YouTubeFetcherService
     expression_audio_fetcher: ExpressionAudioFetcher
+    # Sentence-TTS chain for reading sources (manga/novels). Non-Optional like
+    # expression_audio_fetcher: a disabled feature yields an empty chain.
+    sentence_audio_fetcher: SentenceAudioFetcher
     # Loaded dictionary registry (same handle that built the provider chain),
     # injected into the EpisodeProcessor so its per-slot DictMeta.schema_ok
     # backs the 4.0 staleness gate — NOT the built chain, which drops stale
@@ -264,6 +273,28 @@ def _build_expression_audio_fetcher(
     return ChainedExpressionAudioFetcher(fetchers)
 
 
+def _build_sentence_audio_fetcher(config: AnkiMinerConfig) -> SentenceAudioFetcher:
+    """Build the sentence-TTS chain for reading sources.
+
+    Fixed provider order (Google first, Papago fallback); the two config bools
+    only select membership. I/O neutrality: with the master flag off the chain
+    is returned empty immediately — no ``requests.Session`` (Papago) is ever
+    constructed for a disabled feature, so a default config is byte-for-byte
+    pre-feature. Constructors touch no disk or network (Session only); the
+    cache dir is created lazily on first fetch.
+    """
+    if not config.reading_tts_enabled:
+        return ChainedSentenceAudioFetcher([])
+
+    cache_dir = ANKI_MINER_HOME / "audio_cache" / "sentence_tts"
+    fetchers: list[SentenceAudioFetcher] = []
+    if config.reading_tts_google_enabled:
+        fetchers.append(GoogleSentenceTtsFetcher(cache_dir=cache_dir, delay=config.expression_audio_delay))
+    if config.reading_tts_papago_enabled:
+        fetchers.append(PapagoSentenceTtsFetcher(cache_dir=cache_dir, delay=config.expression_audio_delay))
+    return ChainedSentenceAudioFetcher(fetchers)
+
+
 def create_services(
     config: AnkiMinerConfig,
     subtitle_parser: SubtitleParserService | None = None,
@@ -326,6 +357,7 @@ def create_services(
         anki_service = AnkiService(config)
     youtube_fetcher = YouTubeFetcherService(config=config)
     expression_audio_fetcher = _build_expression_audio_fetcher(config, load_result)
+    sentence_audio_fetcher = _build_sentence_audio_fetcher(config)
 
     # Optional services
     pitch_accent_service = None
@@ -434,6 +466,7 @@ def create_services(
         wordset_service=wordset_service,
         youtube_fetcher=youtube_fetcher,
         expression_audio_fetcher=expression_audio_fetcher,
+        sentence_audio_fetcher=sentence_audio_fetcher,
         dictionary_registry=dictionary_registry,
         load_result=load_result,
     )
@@ -487,6 +520,7 @@ def create_episode_processor(
         stats_service=stats_service,
         youtube_fetcher=services.youtube_fetcher,
         expression_audio_fetcher=services.expression_audio_fetcher,
+        sentence_audio_fetcher=services.sentence_audio_fetcher,
         dictionary_registry=services.dictionary_registry,
     )
 
