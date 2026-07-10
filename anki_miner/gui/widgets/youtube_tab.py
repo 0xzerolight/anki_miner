@@ -505,6 +505,17 @@ class YouTubeTab(MiningTabBase):
         # release it. No-op when _processor was already set (prebuilt path).
         if self._processor is None and self.worker_thread is not None:
             self._processor = self.worker_thread.curation_processor
+        # Recover any item stranded mid-flight by a worker early-return that
+        # emitted no item_finished — chiefly a cancel inside the fetch-error
+        # handler (Bug Y1), which returns without touching the in-flight row.
+        # Left alone it stays PROCESSING forever: Mine skips it (not READY),
+        # Remove refuses it, Clear filters it out. Demote it to READY so it is
+        # re-minable and removable. Runs before _run_items is cleared below.
+        for stranded in self._run_items:
+            if stranded.status == YouTubeItemStatus.PROCESSING:
+                stranded.status = YouTubeItemStatus.READY
+                stranded.error_message = None
+                self._refresh_row(stranded)
         self.worker_thread = None
         self._run_items = []
         self.stop_button.setText(self.tr("Stop All"))
