@@ -117,7 +117,7 @@ class ReadingTab(QWidget):
         )
 
         # Stable sub-tab keys for reveal_capability (see capabilities.SUBTAB_KEYS).
-        self._subtab_index = {"manga": 0, "novels": 1}
+        self._subtab_index = {"manga": 0, "novels": 1, "subtitles": 2}
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)

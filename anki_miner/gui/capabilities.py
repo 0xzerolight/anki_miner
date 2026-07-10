@@ -40,7 +40,7 @@ SETTINGS_SUBTABS: frozenset[str] = frozenset(
 SUBTAB_KEYS: dict[str, frozenset[str]] = {
     "settings": SETTINGS_SUBTABS,
     "video": frozenset({"single", "batch", "youtube"}),
-    "reading": frozenset({"manga", "novels"}),
+    "reading": frozenset({"manga", "novels", "subtitles"}),
     "subtitles": frozenset({"generate", "retime"}),
 }
 
