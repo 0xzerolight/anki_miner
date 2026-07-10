@@ -1068,7 +1068,7 @@ class SubtitlesSettingsPanel(FormPanel):
         """Return a new config with this panel's fields applied.
 
         Uses ``dataclasses.replace`` so the frozen-config invariant is
-        preserved. Called by :meth:`SettingsTab._on_save_clicked` as part of
+        preserved. Called by :meth:`SettingsTab.commit_settings` as part of
         the contribute fold.
         """
         path = self.alass_selector.get_path().strip()

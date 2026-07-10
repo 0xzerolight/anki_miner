@@ -95,7 +95,7 @@ def test_save_writes_frequency_chain(tab, monkeypatch):
     received: list[AnkiMinerConfig] = []
     tab.config_changed.connect(received.append)
 
-    tab._on_save_clicked()
+    tab.commit_settings()
 
     assert received
     cfg = received[-1]

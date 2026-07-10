@@ -750,7 +750,7 @@ class AnkiSettingsPanel(FormPanel):
         """Return a new config with this panel's fields applied.
 
         Uses ``dataclasses.replace`` so the frozen-config invariant is preserved.
-        Called by :meth:`SettingsTab._on_save_clicked` as part of the contribute fold.
+        Called by :meth:`SettingsTab.commit_settings` as part of the contribute fold.
         ``anki_word_field`` is derived from ``anki_fields["word"]`` (same logic as
         before — keeps the two in sync).
         """

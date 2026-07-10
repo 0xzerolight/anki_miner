@@ -175,7 +175,7 @@ class TestSettingsTabAsrWiring:
         monkeypatch.setattr(tab, "_resolve_pitch_accent_path", lambda: tab.config.pitch_accent_path)
         monkeypatch.setattr(tab, "_commit_pending_csv_imports", lambda: None)
 
-        tab._on_save_clicked()
+        tab.commit_settings()
 
         assert len(saved_configs) >= 1
         assert saved_configs[-1].asr_model == "small"

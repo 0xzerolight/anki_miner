@@ -253,3 +253,19 @@ class TestCommitRetainsSaveSemantics:
         tab.commit_settings()
         assert received[-1].check_for_updates is True
         assert received[-1].skipped_update_version == ""
+
+
+class TestManualControlsRemoved:
+    """Auto-save replaces the Save button; the destructive Reset button dies
+    with it. Neither widget nor their Ctrl+S/Ctrl+R shortcuts may remain."""
+
+    def test_save_and_reset_buttons_gone(self, tab):
+        assert not hasattr(tab, "save_button")
+        assert not hasattr(tab, "reset_button")
+
+    def test_ctrl_s_and_ctrl_r_shortcuts_gone(self, tab):
+        from PyQt6.QtGui import QShortcut
+
+        sequences = {s.key().toString() for s in tab.findChildren(QShortcut)}
+        assert "Ctrl+S" not in sequences
+        assert "Ctrl+R" not in sequences
