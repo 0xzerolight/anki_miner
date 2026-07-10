@@ -290,3 +290,30 @@ def test_balanced_quote_with_attribution_stays_one_unit(tmp_path):
     p = _write(tmp_path, "「行くぞ。」と彼は言った。", "utf-8")
     doc = load(_ref(p))
     assert [u.text for u in doc.units] == ["「行くぞ。」と彼は言った。"]
+
+
+# --- Bug Y4: bare 《…》 must not misclassify a plain novel as Aozora ---------
+
+
+def test_standalone_double_angle_not_treated_as_aozora(tmp_path):
+    # A plain novel that writes a work title with the double-angle bracket
+    # (《作品名》) — 《 stands alone (line-start / after whitespace), NOT attached
+    # to a kanji/kana base as ruby is. It must NOT be read as Aozora: the first
+    # block stays and the 《…》 text is preserved verbatim (no ruby strip, no
+    # header drop).
+    text = "\n".join(["《作品名》は面白い。", "二行目もある。"])
+    p = _write(tmp_path, text, "utf-8", name="plain.txt")
+    doc = load(_ref(p, title="plain"))
+    assert doc.title == "plain"  # provisional ref title, no header extraction
+    assert [u.text for u in doc.units] == ["《作品名》は面白い。", "二行目もある。"]
+
+
+def test_ruby_attached_base_detected_as_aozora(tmp_path):
+    # Ruby attached to a kanji base (山道《やまみち》) is a genuine Aozora signal
+    # even without a ruler or ［＃ annotation: the file is detected, the header
+    # extracted, and the reading stripped.
+    text = "\n".join(["峠の物語", "著者", "", "　山道《やまみち》を歩いた。"])
+    p = _write(tmp_path, text, "utf-8", name="ruby.txt")
+    doc = load(_ref(p, title="ruby"))
+    assert doc.title == "峠の物語"  # Aozora path extracts the header title
+    assert [u.text for u in doc.units] == ["山道を歩いた。"]  # ruby reading gone
