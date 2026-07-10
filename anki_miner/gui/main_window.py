@@ -571,7 +571,18 @@ class MainWindow(QMainWindow):
         if reply != QMessageBox.StandardButton.Yes:
             return
 
-        service = AnkiService(self.config)
+        try:
+            service = AnkiService(self.config)
+        except ValueError as exc:
+            # Corrupted anki_fields — surface, don't crash the slot (mirror
+            # AnkiProbeController's guarded construction).
+            logger.warning("Cannot build AnkiService for restyle: %s", exc)
+            QMessageBox.warning(
+                self,
+                self.tr("Restyle Mined Cards"),
+                tr_format(self.tr("Cannot start restyle — Anki fields are misconfigured: %1"), str(exc)),
+            )
+            return
         self.status_bar.set_operation(self.tr("Restyling mined cards…"), "info")
 
         def on_progress(scanned: int, total: int) -> None:
@@ -800,6 +811,8 @@ class MainWindow(QMainWindow):
         # widgets. The session-counter decrement runs on the GUI thread via the
         # on_undo_committed continuation below.
         def undo_callback(note_ids: list[int]) -> int:
+            if self._anki_service is None:
+                raise RuntimeError("Anki service is unavailable; check the note-type field mapping.")
             deleted = self._anki_service.delete_notes(note_ids)
             # Revert the session's source='mined' known-words rows so the user
             # can re-mine the same words on the next run (OVH-030). Only the
@@ -901,7 +914,20 @@ class MainWindow(QMainWindow):
         captures the old service.
         """
         self.validation_service = ValidationService(self.config)
-        self._anki_service = AnkiService(self.config)
+        # A corrupted anki_fields (missing a required key) makes AnkiService's
+        # constructor raise ValueError. This runs inside __init__ and every
+        # update_config (a Qt slot), so an unguarded raise is fatal. Guard it —
+        # mirror AnkiProbeController — and leave _anki_service None; the Undo
+        # callback re-checks for None and surfaces a clear error.
+        self._anki_service: AnkiService | None = None
+        try:
+            self._anki_service = AnkiService(self.config)
+        except ValueError as exc:
+            logger.warning("Cannot build AnkiService (invalid anki_fields): %s", exc)
+            if hasattr(self, "status_bar"):
+                self.status_bar.set_operation(
+                    self.tr("Anki note-type fields are misconfigured; check Settings."), "error"
+                )
 
     def release_dictionary_resources(self) -> bool:
         """Ask every tab to release cached dictionary handles.
