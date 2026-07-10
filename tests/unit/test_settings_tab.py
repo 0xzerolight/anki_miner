@@ -345,6 +345,49 @@ class TestSubtitleRegexValidationRevert:
                 widget.deleteLater()
 
 
+class TestImportInvalidSubtitleRegex:
+    """Importing an invalid regex with the filter enabled must warn, not be silent."""
+
+    def test_import_invalid_regex_warns_and_disables_filter(self, test_config, monkeypatch, qtbot, tmp_path):
+        import json
+
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+
+        # A config file with an unbalanced group (re.error) + filter enabled.
+        source = tmp_path / "settings.json"
+        source.write_text(
+            json.dumps({"subtitle_regex_filter": "(", "use_subtitle_regex_filter": True}),
+            encoding="utf-8",
+        )
+
+        widget = SettingsTab(test_config)
+        qtbot.addWidget(widget)
+        try:
+            monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **k: (str(source), ""))
+            monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+            warnings: list = []
+            monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: warnings.append(a) or None)
+
+            received: list[AnkiMinerConfig] = []
+            widget.config_changed.connect(received.append)
+
+            widget._on_import_settings()
+
+            # The invalid pattern must surface a warning, not be silently applied.
+            assert len(warnings) == 1
+            assert len(received) == 1
+            # And the filter must be disabled so parse-time never swallows it.
+            assert received[0].use_subtitle_regex_filter is False
+        finally:
+            widget.shutdown()
+            for w in widget.iter_close_workers():
+                if w is not None:
+                    w.wait(3000)
+            qtbot.wait(10)
+            with contextlib.suppress(RuntimeError):
+                widget.deleteLater()
+
+
 class TestIPlusOneFilterRoundTrip:
     """Load/save round-trip for the i+1 sentence filter checkbox."""
 
