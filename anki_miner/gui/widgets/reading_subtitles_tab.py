@@ -1,15 +1,15 @@
 """Subtitles sub-tab of the Reading tab: multi-file subtitle-only mining.
 
 Mines subtitle files (``.srt``/``.ass``/``.ssa``/``.vtt``) as text — no video,
-no sentence audio, no screenshots — through the shared reading pipeline. Add
-files via the multi-select picker (or drop several); **Mine** runs them
-sequentially as one job (one ephemeral :class:`ReadingQueueItem` per file)
-through the shared
+so no screenshots and no extracted sentence audio (synthetic sentence TTS, if
+enabled in Audio settings, still applies like any reading-sourced card) —
+through the shared reading pipeline. Add files via the multi-select picker (or
+drop several); **Mine** runs them sequentially as one job (one ephemeral
+:class:`ReadingQueueItem` per file) through the shared
 :class:`~anki_miner.gui.widgets._reading_mining_base._ReadingMiningTabBase`
 lifecycle, composing per-file progress into one whole-run bar like the manga
-sub-tab ("File N/M" in the status label). **Preview** is enabled only when
-exactly one file is listed: the worker preview dialog fires once per file, so
-a multi-file preview would stack dialogs.
+sub-tab ("File N/M" in the status label). Word inspection happens via the
+"Review words before mining" curation popup (no Preview — removed app-wide).
 
 The worker OWNS the item lifecycle (it sets ``status``/``cards_created``/
 ``error_message`` on each item, on the worker thread, before emitting its
@@ -74,9 +74,8 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
     Owns, via the base, at most one running
     :class:`~anki_miner.gui.workers.reading_queue_worker.ReadingQueueWorker`
     mining the listed subtitle files. Button state is purely derived from the
-    worker handle and the file list by :meth:`_recompute_buttons`: idle shows
-    Preview/Mine, a run swaps them for Cancel; Preview additionally requires
-    exactly one listed file.
+    worker handle by :meth:`_recompute_buttons`: idle shows Mine, a run swaps
+    it for Cancel.
 
     Subtitle curation is table-only: the base inherits the ``(None, None)``
     curation context — this tab does NOT override ``_build_curation_context``.
@@ -167,7 +166,7 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         return header
 
     def _create_subtitles_card(self) -> QFrame:
-        """Subtitles card: file list + Add/Remove/Clear + Preview/Mine/Cancel."""
+        """Subtitles card: file list + Add/Remove/Clear + Mine/Cancel."""
         card = QFrame()
         card.setObjectName("card")
         card_layout = QVBoxLayout()
@@ -176,7 +175,7 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
 
         card_layout.addWidget(SectionHeader(title=self.tr("Subtitle Files")))
 
-        note = QLabel(self.tr("Mines subtitle files as text — cards get no sentence audio or screenshots."))
+        note = QLabel(self.tr("Mines subtitle files as text — no screenshots or audio extracted from video."))
         note.setObjectName("caption")
         note.setWordWrap(True)
         card_layout.addWidget(note)
@@ -208,13 +207,6 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
 
         button_row = QHBoxLayout()
         button_row.setSpacing(SPACING.sm)
-
-        self.preview_button = ModernButton(self.tr("Preview"), variant="secondary")
-        self.preview_button.setToolTip(
-            self.tr("Preview the word list for a single file — no cards created. Enabled with exactly one file.")
-        )
-        self.preview_button.clicked.connect(self._on_preview_clicked)
-        button_row.addWidget(self.preview_button)
 
         self.mine_button = ModernButton(self.tr("Mine"), variant="primary")
         self.mine_button.setToolTip(self.tr("Mine the listed subtitle files into Anki cards."))
@@ -323,33 +315,19 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
     # Run lifecycle
     # ------------------------------------------------------------------
 
-    def _on_preview_clicked(self) -> None:
-        """Preview the single listed file's word list — no cards."""
-        self._start_run(preview_mode=True)
-
     def _on_mine_clicked(self) -> None:
-        """Mine every listed file sequentially."""
-        self._start_run(preview_mode=False)
-
-    def _start_run(self, *, preview_mode: bool) -> None:
-        """Validate the listed files and mine them as ephemeral items.
+        """Mine every listed file sequentially.
 
         Each file is classified by ``detector.detect`` (one subtitle ref per
         valid file) into an ephemeral :class:`ReadingQueueItem`; the items are
         never stored — the QListWidget is the only queue-like state. A ``True``
-        launch swaps Preview/Mine for Cancel and resets the progress bar.
+        launch swaps Mine for Cancel and resets the progress bar.
         """
         if self.worker_thread is not None:
             return
         paths = self.listed_paths()
         if not paths:
             self.log_widget.append_warning(self.tr("Add at least one subtitle file first."))
-            return
-        if preview_mode and len(paths) != 1:
-            # The worker preview dialog fires once per file — stacking N
-            # dialogs is not a preview. The button is disabled in this state;
-            # this guards programmatic calls.
-            self.log_widget.append_warning(self.tr("Preview works with exactly one listed file."))
             return
         missing = [p for p in paths if not p.is_file()]
         if missing:
@@ -363,7 +341,7 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
                 return
             items.extend(ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind) for ref in refs)
 
-        if self._launch_run(items, preview_mode=preview_mode):
+        if self._launch_run(items):
             self._begin_progress()
 
     def _begin_progress(self) -> None:
@@ -479,15 +457,11 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
     def _recompute_buttons(self) -> None:
         """Refresh button state from the worker handle and the file list.
 
-        Pure derived state: a live run hides Preview/Mine and shows Cancel;
-        idle shows Preview/Mine and hides Cancel. Preview additionally
-        requires exactly one listed file (the worker preview dialog fires
-        once per file — a multi-file preview would stack dialogs).
+        Pure derived state: a live run hides Mine and shows Cancel; idle shows
+        Mine and hides Cancel. List-management buttons lock during a run.
         """
         run_active = self.worker_thread is not None
-        self.preview_button.setVisible(not run_active)
         self.mine_button.setVisible(not run_active)
-        self.preview_button.setEnabled(not run_active and self.file_list.count() == 1)
         self.mine_button.setEnabled(not run_active)
         self.cancel_button.setVisible(run_active)
         self.add_files_button.setEnabled(not run_active)
