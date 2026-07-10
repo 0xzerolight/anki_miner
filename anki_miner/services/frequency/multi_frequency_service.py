@@ -73,6 +73,17 @@ class MultiFrequencyService:
         """True if any wrapped provider is available."""
         return any(p.is_available() for p in self._providers)
 
+    def has_numeric_source(self) -> bool:
+        """True if any loaded provider is a numeric (non-categorical) source.
+
+        The ``max_frequency_rank`` cutoff must gate on this, NOT ``is_available``:
+        a chain whose only loaded source is categorical (JLPT-band etc.) reports
+        every row at ``CATEGORICAL_RANK``, which ``min_rank`` excludes — so every
+        word ends up rank None and ``filter_by_frequency`` would drop 100% of them.
+        Only a numeric source can produce a rank the cutoff can meaningfully apply.
+        """
+        return any(p.is_available() and not p.is_categorical for p in self._providers)
+
     def lookup_all(self, term: str, reading: str | None = None) -> list[tuple[str, int, str | None]]:
         """``(provider name, rank, display_value)`` for each provider ranking ``term``.
 

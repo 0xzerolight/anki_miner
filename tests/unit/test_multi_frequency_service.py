@@ -20,11 +20,13 @@ class _FakeProvider:
         *,
         available: bool = True,
         displays: dict[str, str] | None = None,
+        is_categorical: bool = False,
     ):
         self._name = name
         self._ranks = ranks
         self._displays = displays or {}
         self._available = available
+        self.is_categorical = is_categorical
         self.close_calls = 0
         self.last_reading: str | None = None
 
@@ -307,3 +309,33 @@ class TestCategoricalSentinelExclusion:
         # But the scalar rank/sort come from the numeric source only.
         assert svc.lookup_min("猫") == 45000
         assert svc.lookup_harmonic("猫") == 45000
+
+
+class TestHasNumericSource:
+    """has_numeric_source() drives the max_frequency_rank cutoff gate: a chain of
+    ONLY categorical sources yields no numeric rank, so the cutoff must stay inert."""
+
+    def test_no_providers(self) -> None:
+        assert MultiFrequencyService([]).has_numeric_source() is False
+
+    def test_numeric_source_present(self) -> None:
+        svc = MultiFrequencyService([_FakeProvider("Freq", {"猫": 1})])
+        assert svc.has_numeric_source() is True
+
+    def test_categorical_only_is_false(self) -> None:
+        svc = MultiFrequencyService([_FakeProvider("JLPT", {"猫": CATEGORICAL_RANK}, is_categorical=True)])
+        assert svc.has_numeric_source() is False
+
+    def test_mixed_chain_is_true(self) -> None:
+        svc = MultiFrequencyService(
+            [
+                _FakeProvider("JLPT", {"猫": CATEGORICAL_RANK}, is_categorical=True),
+                _FakeProvider("Freq", {"猫": 1}),
+            ]
+        )
+        assert svc.has_numeric_source() is True
+
+    def test_unavailable_numeric_source_ignored(self) -> None:
+        # A numeric source that failed to load must not count as usable.
+        svc = MultiFrequencyService([_FakeProvider("Freq", {"猫": 1}, available=False)])
+        assert svc.has_numeric_source() is False

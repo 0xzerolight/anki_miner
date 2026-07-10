@@ -71,10 +71,15 @@ class IndexedFreqProvider:
     a bad source without aborting the chain.
     """
 
-    def __init__(self, source_id: str, db_path: Path, display_name: str):
+    def __init__(self, source_id: str, db_path: Path, display_name: str, is_categorical: bool = False):
         self.source_id = source_id
         self._db_path = db_path
         self._display_name = display_name
+        # Word-based (categorical) source: its rows carry the CATEGORICAL_RANK
+        # sentinel, so it never contributes a numeric rank. Threaded from
+        # FreqSourceMeta so MultiFrequencyService.has_numeric_source can keep the
+        # max_frequency_rank cutoff inert on a categorical-only chain.
+        self.is_categorical = is_categorical
         self._conn: sqlite3.Connection | None = None
         # Set at load() from PRAGMA table_info: a v1 index predates the
         # display_value column, so its detail lookups report display None.

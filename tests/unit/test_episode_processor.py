@@ -900,9 +900,9 @@ class TestOptionalServices:
         ), presenter.show_warning.call_args_list
 
     def test_freq_cutoff_skipped_when_source_unavailable(self, test_config, mock_services, tmp_path):
-        """Regression A2: the gate is two-part — service present AND is_available().
-        A service whose on-disk index failed to load (is_available False) must also
-        skip the cutoff, not wipe every word."""
+        """Regression A2: the gate is two-part — service present AND has a loaded
+        numeric source. A service whose on-disk index failed to load
+        (has_numeric_source False) must also skip the cutoff, not wipe every word."""
         config = replace(test_config, max_frequency_rank=15000, deduplicate_sentences=False)
         word = _make_word("食べる")
 
@@ -914,6 +914,7 @@ class TestOptionalServices:
 
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = False
+        mock_frequency.has_numeric_source.return_value = False
 
         presenter = MagicMock(spec=NullPresenter())
         services = {**mock_services, "word_filter": WordFilterService(config)}
@@ -928,6 +929,40 @@ class TestOptionalServices:
 
         mock_services["anki_service"].create_cards_batch.assert_called_once()
         assert any("frequency source" in str(c.args[0]).lower() for c in presenter.show_warning.call_args_list)
+
+    def test_freq_cutoff_skipped_when_only_categorical_source(self, test_config, mock_services, tmp_path):
+        """Bug F1: a chain whose ONLY loaded source is categorical (e.g. a JLPT-band
+        dict) reports is_available True but has_numeric_source False — every row is
+        CATEGORICAL_RANK, so no word gets a numeric rank. Gating the cutoff on
+        is_available (pre-fix) dropped 100% of words → silent 0 cards. The cutoff
+        must stay inert and the word must survive to card creation."""
+        config = replace(test_config, max_frequency_rank=15000, deduplicate_sentences=False)
+        word = _make_word("食べる")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = True  # a source IS loaded...
+        mock_frequency.has_numeric_source.return_value = False  # ...but it's categorical-only
+        mock_frequency.lookup_all.return_value = []  # categorical rows excluded from scalars
+
+        presenter = MagicMock(spec=NullPresenter())
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = EpisodeProcessor(
+            config=config,
+            presenter=presenter,
+            frequency_service=mock_frequency,
+            **services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # The word is NOT dropped by the inert cutoff and reaches card creation.
+        mock_services["anki_service"].create_cards_batch.assert_called_once()
 
     def test_all_filtered_out_message_names_filters_not_anki(self, test_config, mock_services, tmp_path):
         """Regression B: when a LOADED frequency source removes every surviving
