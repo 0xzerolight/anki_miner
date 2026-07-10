@@ -331,6 +331,39 @@ def test_remove_invalid_index_noop(qapp, qtbot, tmp_path):
     assert len(panel.get_chain()) == 1
 
 
+def test_context_menu_bails_during_scan_placeholder(qapp, qtbot, tmp_path, monkeypatch):
+    """Right-clicking the Loading placeholder must not open a destructive menu (Bug S3)."""
+    from unittest.mock import MagicMock
+
+    from PyQt6.QtCore import QPoint
+
+    panel = FrequencySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((FreqEntry(source_id="jpdb", enabled=True),))
+
+    # Enter the async-scan placeholder state (single disabled "Loading…" row).
+    panel._scan_in_flight = True
+    panel._show_loading_placeholder()
+    placeholder_item = panel._list.item(0)
+    # Force the (buggy) resolution path: a click resolves to the placeholder,
+    # whose row index (0) would otherwise dereference a real source in _chain.
+    monkeypatch.setattr(panel._list, "itemAt", lambda _pos: placeholder_item)
+
+    menu_cls = MagicMock()
+    monkeypatch.setattr(fsp_mod, "QMenu", menu_cls)
+    reimports: list = []
+    removed: list = []
+    panel.reimport_source_requested.connect(reimports.append)
+    panel.source_removed.connect(lambda: removed.append(1))
+
+    panel._on_row_context_menu(QPoint(1, 1))
+
+    # No menu constructed, nothing removed or re-imported.
+    menu_cls.assert_not_called()
+    assert reimports == []
+    assert removed == []
+
+
 # ---------------------------------------------------------------------------
 # Signals
 # ---------------------------------------------------------------------------

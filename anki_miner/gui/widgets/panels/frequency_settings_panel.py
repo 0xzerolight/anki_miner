@@ -471,6 +471,13 @@ class FrequencySettingsPanel(FormPanel):
 
     def _on_row_context_menu(self, pos: QPoint) -> None:
         """Right-click a source row to re-import or remove it."""
+        # While an async scan is in flight the list shows a single disabled
+        # "Loading…" placeholder, not real rows. Resolving a right-click through
+        # self._chain then targets an arbitrary real source the user never
+        # clicked — and Remove would rmtree it. Bail, mirroring the dictionary
+        # panel's "meta is None → return" guard.
+        if self._scan_in_flight:
+            return
         item = self._list.itemAt(pos)
         if item is None:
             return
