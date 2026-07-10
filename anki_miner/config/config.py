@@ -133,6 +133,16 @@ class AnkiMinerConfig:
     audio_format: str = "mp3"  # "mp3" | "opus"
     audio_bitrate: int = 192  # kbps; applies to both mp3 and opus
 
+    # Audio Condenser settings. Persisted defaults for the Condense tab's inline
+    # run options; the tab seeds its widgets from these and writes them back.
+    # All plain scalars (auto-persist; no __post_init__ coercion).
+    condenser_padding_ms: int = 500  # Silence kept on each side of every dialogue line
+    condenser_offset_ms: int = 0  # Shift every subtitle cue before condensing
+    condenser_output_format: str = "mp3"  # "mp3" | "opus" | "flac"
+    condenser_bitrate_kbps: int = 96  # kbps; mp3/opus only (flac ignores)
+    condenser_filtered_chars: str = "♪♫♬♩〜～"  # Cues consisting only of these are dropped
+    condenser_write_subtitles: bool = False  # Also write condensed .srt + .lrc sidecars
+
     # Animated screenshot settings (opt-in; static JPEG remains default)
     screenshot_animated: bool = False
     screenshot_animated_format: str = "avif"  # "avif" | "webp"

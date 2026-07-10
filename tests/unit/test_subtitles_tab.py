@@ -1,9 +1,9 @@
 """Tests for SubtitlesTab container.
 
 Covers:
-- Inner QTabWidget has exactly two tabs: "Generate" (index 0) and "Retime" (index 1).
-- update_config fans out to both child tabs.
-- iter_close_workers yields workers from both children.
+- Inner QTabWidget has exactly three tabs: "Generate" (0), "Retime" (1), "Condense" (2).
+- update_config fans out to all child tabs.
+- iter_close_workers yields workers from all children.
 - SubtitlesTab has no worker_thread attribute (or it is None-safe via getattr).
 """
 
@@ -53,16 +53,17 @@ def _make_tab(config: AnkiMinerConfig, qtbot) -> SubtitlesTab:
 
 
 def test_inner_tab_count(qtbot, tmp_path):
-    """Inner QTabWidget must have exactly two tabs."""
+    """Inner QTabWidget must have exactly three tabs."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab._inner_tabs.count() == 2
+    assert tab._inner_tabs.count() == 3
 
 
 def test_inner_tab_labels(qtbot, tmp_path):
-    """First inner tab is 'Generate', second is 'Retime'."""
+    """First inner tab is 'Generate', second 'Retime', third 'Condense'."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     assert tab._inner_tabs.tabText(0) == "Generate"
     assert tab._inner_tabs.tabText(1) == "Retime"
+    assert tab._inner_tabs.tabText(2) == "Condense"
 
 
 def test_generate_tab_is_first(qtbot, tmp_path):
@@ -75,6 +76,12 @@ def test_retime_tab_is_second(qtbot, tmp_path):
     """retime_tab is the widget at index 1."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     assert tab._inner_tabs.widget(1) is tab.retime_tab
+
+
+def test_condense_tab_is_third(qtbot, tmp_path):
+    """condense_tab is the widget at index 2."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    assert tab._inner_tabs.widget(2) is tab.condense_tab
 
 
 # ---------------------------------------------------------------------------
@@ -92,6 +99,7 @@ def test_update_config_propagates_to_generate_tab(qtbot, tmp_path):
     new_config = dataclasses.replace(config, asr_model="small")
     tab.generate_tab.update_config = MagicMock()
     tab.retime_tab.update_config = MagicMock()
+    tab.condense_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -108,10 +116,28 @@ def test_update_config_propagates_to_retime_tab(qtbot, tmp_path):
     new_config = dataclasses.replace(config, asr_model="small")
     tab.generate_tab.update_config = MagicMock()
     tab.retime_tab.update_config = MagicMock()
+    tab.condense_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
     tab.retime_tab.update_config.assert_called_once_with(new_config)
+
+
+def test_update_config_propagates_to_condense_tab(qtbot, tmp_path):
+    """update_config must call condense_tab.update_config with the new config."""
+    import dataclasses
+
+    config = _make_config(tmp_path)
+    tab = _make_tab(config, qtbot)
+
+    new_config = dataclasses.replace(config, asr_model="small")
+    tab.generate_tab.update_config = MagicMock()
+    tab.retime_tab.update_config = MagicMock()
+    tab.condense_tab.update_config = MagicMock()
+
+    tab.update_config(new_config)
+
+    tab.condense_tab.update_config.assert_called_once_with(new_config)
 
 
 def test_update_config_stores_config(qtbot, tmp_path):
@@ -146,6 +172,7 @@ def test_iter_close_workers_yields_generate_worker(qtbot, tmp_path):
     fake_gen_worker = MagicMock()
     tab.generate_tab.iter_close_workers = MagicMock(return_value=iter([fake_gen_worker]))
     tab.retime_tab.iter_close_workers = MagicMock(return_value=iter([]))
+    tab.condense_tab.iter_close_workers = MagicMock(return_value=iter([]))
 
     workers = list(tab.iter_close_workers())
     assert fake_gen_worker in workers
@@ -158,24 +185,41 @@ def test_iter_close_workers_yields_retime_worker(qtbot, tmp_path):
     fake_retime_worker = MagicMock()
     tab.generate_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.retime_tab.iter_close_workers = MagicMock(return_value=iter([fake_retime_worker]))
+    tab.condense_tab.iter_close_workers = MagicMock(return_value=iter([]))
 
     workers = list(tab.iter_close_workers())
     assert fake_retime_worker in workers
 
 
-def test_iter_close_workers_yields_both_when_both_active(qtbot, tmp_path):
-    """iter_close_workers yields workers from BOTH children when both are active."""
+def test_iter_close_workers_yields_condense_worker(qtbot, tmp_path):
+    """iter_close_workers yields a worker from condense_tab when it is active."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+
+    fake_condense_worker = MagicMock()
+    tab.generate_tab.iter_close_workers = MagicMock(return_value=iter([]))
+    tab.retime_tab.iter_close_workers = MagicMock(return_value=iter([]))
+    tab.condense_tab.iter_close_workers = MagicMock(return_value=iter([fake_condense_worker]))
+
+    workers = list(tab.iter_close_workers())
+    assert fake_condense_worker in workers
+
+
+def test_iter_close_workers_yields_all_when_all_active(qtbot, tmp_path):
+    """iter_close_workers yields workers from ALL children when all are active."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
 
     fake_gen_worker = MagicMock(name="gen_worker")
     fake_retime_worker = MagicMock(name="retime_worker")
+    fake_condense_worker = MagicMock(name="condense_worker")
     tab.generate_tab.iter_close_workers = MagicMock(return_value=iter([fake_gen_worker]))
     tab.retime_tab.iter_close_workers = MagicMock(return_value=iter([fake_retime_worker]))
+    tab.condense_tab.iter_close_workers = MagicMock(return_value=iter([fake_condense_worker]))
 
     workers = list(tab.iter_close_workers())
     assert fake_gen_worker in workers
     assert fake_retime_worker in workers
-    assert len(workers) == 2
+    assert fake_condense_worker in workers
+    assert len(workers) == 3
 
 
 # ---------------------------------------------------------------------------
