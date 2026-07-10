@@ -582,6 +582,30 @@ class TestQueueFinished:
         assert tab.worker_thread is worker
         assert tab._run_items != []
 
+    def test_queue_finished_counts_current_run_only(self, tab, tmp_path):
+        """A prior run's finished rows must not inflate the next run's summary."""
+        _add_pair(tab, tmp_path, "old1")
+        _add_pair(tab, tmp_path, "old2")
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+        tab._on_item_finished(0, MagicMock(cards_created=1), None, 1)
+        tab._on_item_started(1)
+        tab._on_item_finished(1, MagicMock(cards_created=1), None, 1)
+        tab._on_queue_finished()
+        tab._on_worker_finished()
+
+        _add_pair(tab, tmp_path, "new")
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+        tab._on_item_finished(0, MagicMock(cards_created=3), None, 1)
+        tab._on_queue_finished()
+
+        last_line = tab.log_widget.text_edit.toPlainText().strip().splitlines()[-1]
+        assert "1 succeeded" in last_line
+        assert "0 failed" in last_line
+        tab._on_worker_finished()
+        assert tab.progress_widget.status_label.text() == "Complete — 1 succeeded"
+
 
 class TestWorkerFinished:
     """``QThread.finished`` is the single cleanup signal for every run-exit path."""

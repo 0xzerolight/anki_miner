@@ -485,8 +485,12 @@ class YouTubeTab(MiningTabBase):
         path. Splitting the two keeps the cancel-mid-fetch case from leaking
         worker state, while still logging a per-run summary on success.
         """
-        succeeded = sum(1 for i in self._queue.all_items() if i.status == YouTubeItemStatus.COMPLETED)
-        failed = sum(1 for i in self._queue.all_items() if i.status == YouTubeItemStatus.ERROR)
+        # Count THIS run only (the frozen _run_items snapshot) — self._queue
+        # retains prior runs' finished rows, so counting there over-reports
+        # (e.g. "6 succeeded" for a 1-item run). _run_items is still intact here
+        # (queue_finished fires before QThread.finished clears it).
+        succeeded = sum(1 for i in self._run_items if i.status == YouTubeItemStatus.COMPLETED)
+        failed = sum(1 for i in self._run_items if i.status == YouTubeItemStatus.ERROR)
         self.log_widget.append_info(tr_format(self.tr("Queue done: %1 succeeded, %2 failed."), succeeded, failed))
 
     def _on_worker_finished(self) -> None:
@@ -516,12 +520,15 @@ class YouTubeTab(MiningTabBase):
                 stranded.status = YouTubeItemStatus.READY
                 stranded.error_message = None
                 self._refresh_row(stranded)
+        # Snapshot THIS run's items before clearing so the completion summary
+        # counts the current run only — self._queue retains prior runs' rows.
+        run_items = list(self._run_items)
         self.worker_thread = None
         self._run_items = []
         self.stop_button.setText(self.tr("Stop All"))
         self.stop_button.setEnabled(True)
         # Terminal end state (cancel -> failed -> success). Counts come from
-        # self._queue (still intact) — never _run_items, just cleared above.
+        # the run_items snapshot above — never self._queue (retains old rows).
         if getattr(self, "_cancel_requested", False):
             self.progress_widget.reset()
             self.progress_widget.set_status(self.tr("Cancelled"))
@@ -529,8 +536,8 @@ class YouTubeTab(MiningTabBase):
             self.progress_widget.reset()
             self.progress_widget.set_status(self.tr("Failed — see log"))
         else:
-            succeeded = sum(1 for i in self._queue.all_items() if i.status == YouTubeItemStatus.COMPLETED)
-            failed = sum(1 for i in self._queue.all_items() if i.status == YouTubeItemStatus.ERROR)
+            succeeded = sum(1 for i in run_items if i.status == YouTubeItemStatus.COMPLETED)
+            failed = sum(1 for i in run_items if i.status == YouTubeItemStatus.ERROR)
             if failed:
                 summary = tr_format(self.tr("Complete — %1 succeeded, %2 failed"), succeeded, failed)
             else:
