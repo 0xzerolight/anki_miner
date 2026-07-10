@@ -605,7 +605,12 @@ class YouTubeFetcherService:
 
     def _build_fetch_cmd(self, url: str, workspace: Path, sub_mode: SubMode) -> list[str]:
         max_height = self._config.youtube_max_height
-        output_tpl = f"{workspace}/%(id)s.%(ext)s"
+        # Route the workspace directory through --paths (a literal path) and keep
+        # -o a bare, relative template. Embedding the (user-configurable) temp
+        # folder in the -o template treated any '%' in the path as a template
+        # metacharacter, so a folder like "100% Japanese" produced an invalid
+        # template and the fetch failed with a misleading "outputs are missing".
+        output_tpl = "%(id)s.%(ext)s"
         fmt = f"bestvideo[height<={max_height}]+bestaudio/" f"best[height<={max_height}]"
 
         cmd: list[str] = [self._ytdlp()]
@@ -627,6 +632,10 @@ class YouTubeFetcherService:
                 "srt",
                 "--format",
                 fmt,
+                # The "home:" prefix is explicit so a Windows drive letter in the
+                # path (e.g. "C:\\...") is never mistaken for a --paths TYPE.
+                "--paths",
+                f"home:{workspace}",
                 "--output",
                 output_tpl,
                 "--newline",

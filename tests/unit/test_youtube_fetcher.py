@@ -561,6 +561,43 @@ class TestBuildFetchCmdSocketTimeout:
         assert "--socket-timeout" in cmd
 
 
+class TestBuildFetchCmdPercentPath:
+    """Bug Y5: a media_temp_folder containing '%' must not corrupt yt-dlp's
+    output template. The directory goes via --paths (a literal path where % is
+    not a metacharacter); -o stays a bare, un-prefixed template."""
+
+    def test_percent_dir_not_embedded_in_output_template(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        workspace = tmp_path / "100% Japanese"
+        workspace.mkdir()
+        cmd = service._build_fetch_cmd("https://youtu.be/abc123", workspace, "manual_only")
+
+        template = cmd[cmd.index("--output") + 1]
+        # The template is still a real yt-dlp template, but the workspace path
+        # (with its stray %) is NOT embedded in it.
+        assert template == "%(id)s.%(ext)s"
+        assert str(workspace) not in template
+
+    def test_percent_dir_carried_via_paths(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        workspace = tmp_path / "100% Japanese"
+        workspace.mkdir()
+        cmd = service._build_fetch_cmd("https://youtu.be/abc123", workspace, "manual_only")
+
+        assert "--paths" in cmd
+        paths_value = cmd[cmd.index("--paths") + 1]
+        assert str(workspace) in paths_value
+
+    def test_resolution_still_finds_outputs_in_percent_dir(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        workspace = tmp_path / "100% Japanese"
+        workspace.mkdir()
+        _touch(workspace / "abc123.mp4", b"v")
+        _touch(workspace / "abc123.ja.srt", b"1\n00:00:01,000 --> 00:00:02,000\nhi\n")
+        result = service._resolve_outputs(workspace, "abc123", "manual_only")
+        assert result.video_file.name == "abc123.mp4"
+        assert result.subtitle_file.name == "abc123.ja.srt"
+
+
 class TestFetchVideoResolverFallback:
     """When ``youtube_ffmpeg_location`` is unset, the fetcher falls back to
     ``resolve_ffmpeg`` so frozen builds use the bundled binary instead of
