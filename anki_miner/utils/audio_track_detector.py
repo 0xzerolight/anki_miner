@@ -12,6 +12,10 @@ logger = logging.getLogger(__name__)
 
 JAPANESE_LANGUAGE_CODES = frozenset({"jpn", "ja", "japanese", "jp"})
 
+# Image-based subtitle codecs: these carry rendered bitmaps, not extractable
+# text, so the condenser detects and reports them but never attempts extraction.
+BITMAP_SUBTITLE_CODECS = frozenset({"hdmv_pgs_subtitle", "dvd_subtitle", "dvb_subtitle", "xsub"})
+
 
 @dataclass(frozen=True)
 class AudioStream:
@@ -43,6 +47,25 @@ class JapaneseAudioStream:
     global_index: int
     audio_index: int
     language_tag: str
+
+
+@dataclass(frozen=True)
+class SubtitleStream:
+    """Full metadata for a single subtitle stream from ffprobe.
+
+    `index` is the ffprobe global stream index, suitable for ffmpeg `-map 0:N`.
+    `sub_index` is the position within the subtitle-only track list (0-indexed),
+    suitable for ffmpeg `-map 0:s:N`.
+    `is_text` is False for image-based codecs (:data:`BITMAP_SUBTITLE_CODECS`),
+    whose bitmaps cannot be extracted as text.
+    """
+
+    index: int
+    sub_index: int
+    codec_name: str | None
+    language_tag: str | None
+    title: str | None
+    is_text: bool
 
 
 def _run_ffprobe_json(video_path: Path, select_streams: str, ffprobe_cmd: str) -> dict | None:
@@ -154,6 +177,60 @@ def list_audio_streams(video_path: Path, ffprobe_cmd: str = "ffprobe") -> list[A
                 codec=codec,
                 channels=channels,
                 is_default=is_default,
+            )
+        )
+
+    return result
+
+
+def list_subtitle_streams(video_path: Path, ffprobe_cmd: str = "ffprobe") -> list[SubtitleStream]:
+    """Probe a video file with ffprobe and return all subtitle streams.
+
+    Returns an empty list if ffprobe fails, times out, raises an OSError,
+    returns a non-zero exit code, or returns malformed JSON. Streams missing the
+    top-level ``index`` field are skipped, but still consume a ``sub_index``
+    slot (preserving parity with :func:`list_audio_streams`).
+
+    ``sub_index`` is the position within the subtitle-only track list, suitable
+    for ffmpeg ``-map 0:s:N``; ``index`` is the global stream index. These
+    diverge whenever subtitle streams are interleaved with audio/video in the
+    container.
+
+    ``ffprobe_cmd`` is the executable to invoke (``cmd[0]``); it defaults to the
+    bare ``"ffprobe"`` literal so direct callers are unaffected. Config-bearing
+    callers should pass ``resolve_ffprobe(config)`` so frozen bundles use the
+    bundled binary.
+    """
+    data = _run_ffprobe_json(video_path, "s", ffprobe_cmd)
+    if data is None:
+        return []
+
+    raw_streams = data.get("streams", [])
+    result: list[SubtitleStream] = []
+
+    for sub_index, stream in enumerate(raw_streams):
+        try:
+            index = int(stream["index"])
+        except (KeyError, TypeError, ValueError):
+            # sub_index slot is consumed but stream is skipped
+            continue
+
+        tags = stream.get("tags", {}) or {}
+        lang_raw = tags.get("language")
+        language_tag = lang_raw.lower() if lang_raw else None
+        title = tags.get("title") or None
+
+        codec_name = stream.get("codec_name") or None
+        is_text = codec_name not in BITMAP_SUBTITLE_CODECS
+
+        result.append(
+            SubtitleStream(
+                index=index,
+                sub_index=sub_index,
+                codec_name=codec_name,
+                language_tag=language_tag,
+                title=title,
+                is_text=is_text,
             )
         )
 
