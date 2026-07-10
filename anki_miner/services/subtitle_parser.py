@@ -32,6 +32,7 @@ from anki_miner.utils import (
     katakana_to_hiragana,
     wrap_target_plain,
 )
+from anki_miner.utils.subtitle_encoding import load_with_fallback_encoding
 from anki_miner.utils.text_utils import (
     generate_furigana_from_tokens,
     generate_reading_from_tokens,
@@ -168,10 +169,16 @@ class SubtitleParserService:
         """Load a subtitle file via pysubs2 with normalized error wrapping.
 
         Shared by every public parse_* method so error wrapping stays
-        consistent regardless of entry point.
+        consistent regardless of entry point. The UTF-8 default is tried first
+        (the ``pysubs2.load`` seam patched by tests); on a decode failure the
+        shared cp932-first fallback (see utils/subtitle_encoding.py) runs so
+        Shift-JIS subtitles parse instead of aborting the episode.
         """
         try:
-            return pysubs2.load(str(subtitle_file))
+            try:
+                return pysubs2.load(str(subtitle_file))
+            except UnicodeDecodeError as utf8_error:
+                return load_with_fallback_encoding(subtitle_file, utf8_error)
         except FileNotFoundError as e:
             raise SubtitleParseError(f"Subtitle file not found: {subtitle_file}") from e
         except Exception as e:
