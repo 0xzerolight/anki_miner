@@ -688,6 +688,10 @@ def main():
     # so its config_refreshed connection is wired here too. SubtitlesTab.update_config
     # fans out to both Generate and Retime children.
     window.config_refreshed.connect(subtitles_tab.update_config)
+    # The Condense tab persists its inline run options (padding/offset/format/
+    # write-subs) by emitting config_changed; route it through window.update_config
+    # so condenser_* land in gui_config.json and survive restart.
+    subtitles_tab.condense_tab.config_changed.connect(window.update_config)
 
     # All tabs are now registered — create the count-driven Ctrl+N shortcuts.
     # This must come AFTER all addTab calls so self.tabs.count() is final.
