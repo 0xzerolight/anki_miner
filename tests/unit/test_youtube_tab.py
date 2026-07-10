@@ -865,6 +865,25 @@ class TestWorkerFinished:
         assert tab.progress_widget.status_label.text() == "Cancelled"
         assert tab.progress_widget.progress_bar.value() == 0
 
+    def test_worker_finished_demotes_stranded_processing_item(self, tab):
+        """Cancel inside the fetch handler returns with no item_finished; the
+        in-flight PROCESSING row must not stay stranded — it is demoted to
+        READY (re-minable) and becomes removable."""
+        item = _add_ready_item(tab)
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+        assert item.status == YouTubeItemStatus.PROCESSING
+        tab._on_stop_all_clicked()
+        # Worker returned early inside the YouTubeFetchError handler: no
+        # item_finished, no queue_finished — only QThread.finished fires.
+
+        tab._on_worker_finished()
+
+        assert item.status == YouTubeItemStatus.READY
+        # Now removable (remove refuses only PROCESSING rows).
+        tab._on_remove_clicked(item)
+        assert item not in tab._queue.all_items()
+
 
 class TestRemoveAndClear:
     """Remove button and Clear button manage queue contents."""
