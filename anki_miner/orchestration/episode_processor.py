@@ -747,16 +747,19 @@ class EpisodeProcessor:
             )
             ctx.forced_include_lemmas = {w.lemma for w in forced_include}
 
-        # Frequency rank cutoff. Gate on an actually-loaded frequency service —
-        # NOT just max_frequency_rank > 0. With no source, the rank-assignment
-        # loop above is skipped so every word keeps frequency_rank=None, and
-        # filter_by_frequency drops every None-ranked word (word_filter.py) — a
-        # configured cutoff would then silently wipe 100% of words and produce
-        # zero cards. This mirrors the exact guard used for rank assignment above.
+        # Frequency rank cutoff. Gate on an actually-loaded NUMERIC frequency
+        # source — NOT just max_frequency_rank > 0, and NOT is_available(). With
+        # no source (or only a categorical one, e.g. a JLPT-band dict whose rows
+        # all carry CATEGORICAL_RANK), no word gets a numeric rank, so every word
+        # keeps frequency_rank=None and filter_by_frequency drops every None-ranked
+        # word (word_filter.py) — a configured cutoff would then silently wipe 100%
+        # of words and produce zero cards. has_numeric_source() is True only when a
+        # non-categorical source is loaded, which is the sole case the cutoff can
+        # meaningfully apply.
         if (
             self.config.max_frequency_rank > 0
             and self.frequency_service
-            and self.frequency_service.is_available()
+            and self.frequency_service.has_numeric_source()
             and not self.config.bypass_optional_filters
         ):
             before = len(unknown_words)
