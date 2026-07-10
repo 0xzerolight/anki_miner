@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **TTS sentence audio for manga and book cards (Settings → Audio → Sentence Audio).** Cards mined from the Reading tab have no source audio to clip; enabling the new "Generate TTS sentence audio" toggle synthesizes each card's sentence with free text-to-speech and fills the sentence-audio field, just like video cards. Two services, tried in order: Google Translate TTS first, Naver Papago as fallback — each selectable with its own checkbox. Off by default (turning it on sends sentence text to the selected services and adds one network request per unique sentence). Synthesized audio is cached under `~/.anki_miner/audio_cache/sentence_tts/` so re-mining a volume reuses it, and a sentence shared by several cards is synthesized once. Video, YouTube, and audiobook mining are unaffected — they keep real clipped audio.
 
 ### Changed
 

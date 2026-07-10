@@ -106,6 +106,7 @@ def _make_processor(
     presenter=None,
     stats_service=None,
     expression_audio_fetcher=None,
+    sentence_audio_fetcher=None,
     word_list_service=None,
 ) -> EpisodeProcessor:
     subtitle_parser = subtitle_parser or MagicMock(name="SubtitleParser")
@@ -141,6 +142,7 @@ def _make_processor(
         presenter=presenter or NullPresenter(),
         stats_service=stats_service,
         expression_audio_fetcher=expression_audio_fetcher,
+        sentence_audio_fetcher=sentence_audio_fetcher,
         word_list_service=word_list_service,
     )
 
@@ -731,3 +733,279 @@ def test_partial_failure_carries_partial_ids(test_config):
     assert res.card_ids == [1, 2]
     assert res.cards_created == 2
     assert not res.success  # errors recorded
+
+
+# --------------------------------------------------------------------------- #
+# Sentence TTS (reading-only sentence audio)
+# --------------------------------------------------------------------------- #
+def _tts_config(test_config, **overrides):
+    """test_config with sentence TTS switched on (master flag)."""
+    return replace(test_config, reading_tts_enabled=True, **overrides)
+
+
+def _make_sentence_fetcher(path: Path | None = Path("/tmp/tts/sentencetts_google_abc.mp3")):
+    fetcher = MagicMock(name="SentenceFetcher")
+    fetcher.fetch.side_effect = lambda sentence, cancelled_check=None: path
+    fetcher.stats.return_value = {}
+    return fetcher
+
+
+class TestReadingSentenceTts:
+    def test_gate_default_off_fetcher_never_called(self, test_config):
+        """Default config (master OFF) never touches the fetcher; bands unchanged."""
+        words = [_word("犬", 0)]
+        counts = collections.Counter({"犬": 1})
+        sp = MagicMock()
+        sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+        fetcher = _make_sentence_fetcher()
+        proc = _make_processor(test_config, subtitle_parser=sp, sentence_audio_fetcher=fetcher)
+        assert proc._reading_tts_active is False
+
+        rec = _RecordingProgress()
+        with patch(_IMG):
+            proc.process_reading(_document([_unit(0)]), progress_callback=rec)
+
+        fetcher.fetch.assert_not_called()
+        # Band math identical to the pre-feature default (image+defs+cards).
+        assert len(rec.pcts) == 3 * len(words) + (3 - 1) + 1
+        assert rec.pcts[-1] == 100
+
+    def test_gate_matrix(self, test_config):
+        """Gate inactive when: master off / audio unmapped / both providers off / no fetcher."""
+        fetcher = _make_sentence_fetcher()
+        # master off
+        proc = _make_processor(test_config, sentence_audio_fetcher=fetcher)
+        assert proc._reading_tts_active is False
+        # audio field unmapped
+        cfg = _tts_config(test_config, anki_fields={**dict(test_config.anki_fields), "audio": ""})
+        assert _make_processor(cfg, sentence_audio_fetcher=fetcher)._reading_tts_active is False
+        # both providers off
+        cfg = _tts_config(test_config, reading_tts_google_enabled=False, reading_tts_papago_enabled=False)
+        assert _make_processor(cfg, sentence_audio_fetcher=fetcher)._reading_tts_active is False
+        # fetcher missing
+        assert _make_processor(_tts_config(test_config))._reading_tts_active is False
+        # fully on
+        assert _make_processor(_tts_config(test_config), sentence_audio_fetcher=fetcher)._reading_tts_active is True
+
+    def test_sentence_audio_after_expression_audio(self, test_config):
+        """TTS runs after images AND after expression audio; progress monotonic to 100."""
+        cfg = _tts_config(
+            test_config,
+            anki_fields={**dict(test_config.anki_fields), "expression_audio": "ExprAudio"},
+        )
+        units = [_unit(0, image_ref=ImageRef(Path("/p0.png"))), _unit(1, image_ref=ImageRef(Path("/p1.png")))]
+        words = [_word("犬", 0), _word("猫", 1)]
+        counts = collections.Counter({"犬": 1, "猫": 1})
+        sp = MagicMock()
+        sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+        order: list[str] = []
+        expr = MagicMock(name="ExprFetcher")
+        expr.stats.return_value = {}
+        expr.fetch_candidates.side_effect = lambda cands, cancelled_check=None: order.append("expr") or None
+        tts = MagicMock(name="SentenceFetcher")
+        tts.stats.return_value = {}
+        tts.fetch.side_effect = lambda sentence, cancelled_check=None: order.append("tts") or None
+        proc = _make_processor(cfg, subtitle_parser=sp, expression_audio_fetcher=expr, sentence_audio_fetcher=tts)
+
+        rec = _RecordingProgress()
+        with patch(_IMG, side_effect=lambda ref, dest: order.append("prep") or Path("/tmp/reading_x.jpg")):
+            proc.process_reading(_document(units), progress_callback=rec)
+
+        assert order == ["prep", "prep", "expr", "expr", "tts", "tts"]
+        assert rec.pcts == sorted(rec.pcts) and rec.pcts[-1] == 100
+
+    def test_sentence_audio_sets_media_fields(self, test_config, tmp_path):
+        """A fetch hit lands on media.audio_path/audio_filename; cards carry it."""
+        mp3 = tmp_path / "sentencetts_google_deadbeef.mp3"
+        mp3.write_bytes(b"ID3")
+        words = [_word("犬", 0)]
+        counts = collections.Counter({"犬": 1})
+        sp = MagicMock()
+        sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+        anki = _make_anki_service()
+        fetcher = _make_sentence_fetcher(mp3)
+        proc = _make_processor(
+            _tts_config(test_config), subtitle_parser=sp, anki_service=anki, sentence_audio_fetcher=fetcher
+        )
+
+        with patch(_IMG):
+            res = proc.process_reading(_document([_unit(0)]))
+
+        assert res.cards_created == 1
+        payload = anki.last_card_data[0]
+        assert payload.media.audio_path == mp3
+        assert payload.media.audio_filename == mp3.name
+
+    def test_sentence_audio_failure_leaves_fields_none_cards_still_created(self, test_config):
+        words = [_word("犬", 0)]
+        counts = collections.Counter({"犬": 1})
+        sp = MagicMock()
+        sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+        anki = _make_anki_service()
+        fetcher = _make_sentence_fetcher(None)
+        proc = _make_processor(
+            _tts_config(test_config), subtitle_parser=sp, anki_service=anki, sentence_audio_fetcher=fetcher
+        )
+
+        with patch(_IMG):
+            res = proc.process_reading(_document([_unit(0)]))
+
+        assert res.cards_created == 1
+        payload = anki.last_card_data[0]
+        assert payload.media.audio_path is None
+        assert payload.media.audio_filename is None
+
+    def test_dedup_one_fetch_per_unique_sentence(self, test_config, tmp_path):
+        """Words sharing a sentence trigger ONE synthesis; both cards share the file."""
+        mp3 = tmp_path / "sentencetts_google_cafe.mp3"
+        mp3.write_bytes(b"ID3")
+        shared = "犬と猫の文"
+        w1 = replace(_word("犬", 0), sentence=shared)
+        w2 = replace(_word("猫", 0), sentence=shared)
+        counts = collections.Counter({"犬": 1, "猫": 1})
+        sp = MagicMock()
+        sp.parse_text_units.side_effect = _parse_returning([w1, w2], None, counts)
+        anki = _make_anki_service()
+        fetcher = _make_sentence_fetcher(mp3)
+        # deduplicate_sentences would collapse the pair in phase 2 before TTS
+        # ever sees it; disable so BOTH words reach phase 3' sharing a sentence.
+        cfg = _tts_config(test_config, deduplicate_sentences=False)
+        proc = _make_processor(cfg, subtitle_parser=sp, anki_service=anki, sentence_audio_fetcher=fetcher)
+
+        with patch(_IMG):
+            proc.process_reading(_document([_unit(0)]))
+
+        assert fetcher.fetch.call_count == 1
+        assert [p.media.audio_filename for p in anki.last_card_data] == [mp3.name, mp3.name]
+
+    def test_dedup_memoizes_failures(self, test_config):
+        """A failing shared sentence is fetched once, not re-hammered."""
+        shared = "共有の文"
+        w1 = replace(_word("犬", 0), sentence=shared)
+        w2 = replace(_word("猫", 0), sentence=shared)
+        counts = collections.Counter({"犬": 1, "猫": 1})
+        sp = MagicMock()
+        sp.parse_text_units.side_effect = _parse_returning([w1, w2], None, counts)
+        fetcher = _make_sentence_fetcher(None)
+        cfg = _tts_config(test_config, deduplicate_sentences=False)
+        proc = _make_processor(cfg, subtitle_parser=sp, sentence_audio_fetcher=fetcher)
+
+        with patch(_IMG):
+            proc.process_reading(_document([_unit(0)]))
+
+        assert fetcher.fetch.call_count == 1
+
+    def test_empty_sentence_skipped_still_ticks_progress(self, test_config):
+        w = replace(_word("犬", 0), sentence="   ")
+        counts = collections.Counter({"犬": 1})
+        sp = MagicMock()
+        sp.parse_text_units.side_effect = _parse_returning([w], None, counts)
+        fetcher = _make_sentence_fetcher()
+        proc = _make_processor(_tts_config(test_config), subtitle_parser=sp, sentence_audio_fetcher=fetcher)
+
+        rec = _RecordingProgress()
+        with patch(_IMG):
+            res = proc.process_reading(_document([_unit(0)]), progress_callback=rec)
+
+        fetcher.fetch.assert_not_called()
+        assert res.cards_created == 1
+        # 4 bands active (image/tts/defs/cards), every one fully consumed.
+        assert rec.pcts == sorted(rec.pcts) and rec.pcts[-1] == 100
+        assert len(rec.pcts) == 4 * 1 + (4 - 1) + 1
+
+    def test_band_consumed_when_zero_words(self, test_config):
+        """Active gate + zero mineable words: band still consumed, progress sane."""
+        counts: collections.Counter = collections.Counter()
+        sp = MagicMock()
+        sp.parse_text_units.side_effect = _parse_returning([], None, counts)
+        fetcher = _make_sentence_fetcher()
+        proc = _make_processor(_tts_config(test_config), subtitle_parser=sp, sentence_audio_fetcher=fetcher)
+
+        rec = _RecordingProgress()
+        with patch(_IMG):
+            res = proc.process_reading(_document([_unit(0)]), progress_callback=rec)
+
+        fetcher.fetch.assert_not_called()
+        assert res.cards_created == 0
+
+    def test_cancellation_mid_loop_completes_band(self, test_config):
+        """Cancel during the TTS loop: on_complete fires, run reports cancelled."""
+        words = [_word("犬", 0), _word("猫", 1)]
+        counts = collections.Counter({"犬": 1, "猫": 1})
+        sp = MagicMock()
+        sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+        fetcher = MagicMock(name="SentenceFetcher")
+        fetcher.stats.return_value = {}
+        proc = _make_processor(_tts_config(test_config), subtitle_parser=sp, sentence_audio_fetcher=fetcher)
+
+        def _fetch_and_cancel(sentence, cancelled_check=None):
+            proc.cancel()
+            return None
+
+        fetcher.fetch.side_effect = _fetch_and_cancel
+
+        with patch(_IMG):
+            res = proc.process_reading(_document([_unit(0), _unit(1)]))
+
+        assert fetcher.fetch.call_count == 1  # second word never fetched
+        assert res.cards_created == 0
+        assert not res.success
+
+    def test_tts_reads_post_phase2_sentence(self, test_config):
+        """Invariant: TTS synthesizes the FINAL word.sentence (post i+1/curation swap)."""
+        cfg = _tts_config(test_config, use_i_plus_one_filter=True)
+        words = [_word("犬", 0)]
+        counts = collections.Counter({"犬": 1})
+        sp = MagicMock()
+        sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+        fetched: list[str] = []
+        fetcher = MagicMock(name="SentenceFetcher")
+        fetcher.stats.return_value = {}
+        fetcher.fetch.side_effect = lambda sentence, cancelled_check=None: fetched.append(sentence) or None
+        proc = _make_processor(cfg, subtitle_parser=sp, sentence_audio_fetcher=fetcher)
+        # Simulate the i+1 swap re-stamping the card sentence in phase 2.
+        swapped = replace(words[0], sentence="i+1で入れ替えた文")
+        proc.word_filter.filter_i_plus_one = MagicMock(return_value=[swapped])
+
+        with patch(_IMG):
+            proc.process_reading(_document([_unit(0)]))
+
+        assert fetched == ["i+1で入れ替えた文"]
+
+    def test_aggregated_summary_counts_unique_sentences(self, test_config):
+        """Info line reports hits/unique-sentences; warning uses len(memo) denominator."""
+        shared = "共有の文"
+        w1 = replace(_word("犬", 0), sentence=shared)
+        w2 = replace(_word("猫", 0), sentence=shared)
+        w3 = _word("鳥", 1)
+        counts = collections.Counter({"犬": 1, "猫": 1, "鳥": 1})
+        sp = MagicMock()
+        sp.parse_text_units.side_effect = _parse_returning([w1, w2, w3], None, counts)
+        presenter = MagicMock(name="Presenter")
+        fetcher = MagicMock(name="SentenceFetcher")
+        fetcher.fetch.side_effect = lambda sentence, cancelled_check=None: None
+        # Both unique sentences failed with connection errors -> dominant cause.
+        fetcher.stats.return_value = {"ssl": 0, "connection": 2, "timeout": 0, "http_status": 0, "non_audio": 0}
+        cfg = _tts_config(test_config, deduplicate_sentences=False)
+        proc = _make_processor(cfg, subtitle_parser=sp, presenter=presenter, sentence_audio_fetcher=fetcher)
+
+        with patch(_IMG):
+            proc.process_reading(_document([_unit(0), _unit(1)]))
+
+        infos = [c.args[0] for c in presenter.show_info.call_args_list]
+        assert "Sentence audio: 0/2 sentences" in infos  # unique sentences, not 3 words
+        warnings = [c.args[0] for c in presenter.show_warning.call_args_list]
+        assert any("Sentence-audio TTS connection" in w for w in warnings)
+
+    def test_preview_mode_skips_tts(self, test_config):
+        words = [_word("犬", 0)]
+        counts = collections.Counter({"犬": 1})
+        sp = MagicMock()
+        sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+        fetcher = _make_sentence_fetcher()
+        proc = _make_processor(_tts_config(test_config), subtitle_parser=sp, sentence_audio_fetcher=fetcher)
+
+        with patch(_IMG):
+            proc.process_reading(_document([_unit(0)]), preview_mode=True)
+
+        fetcher.fetch.assert_not_called()
