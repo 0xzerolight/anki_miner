@@ -137,6 +137,41 @@ def test_two_item_success_signal_sequence(make_worker, mock_processor, fake_load
     assert [i.error_message for i in items] == [None, None]
 
 
+def test_failed_result_marks_item_error(make_worker, mock_processor, fake_load):
+    """A non-raising failed ProcessingResult routes to ERROR, not COMPLETED."""
+    from anki_miner.models import ProcessingResult
+
+    failed = ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0, errors=["ffmpeg exploded"])
+    mock_processor.process_reading.side_effect = lambda *a, **kw: failed
+    items = [_make_item("vol01")]
+
+    worker = make_worker(items=items)
+    caps = _connect_all(worker)
+    worker.run()
+
+    assert items[0].status == ReadingItemStatus.ERROR
+    assert items[0].error_message == "ffmpeg exploded"
+    # item_finished carries the error string (result=None), so the tab logs a failure.
+    assert caps["finished"].calls[0][1] is None
+    assert caps["finished"].calls[0][2] == "ffmpeg exploded"
+
+
+def test_cancelled_result_marks_item_ready(make_worker, mock_processor, fake_load):
+    """A Stop-mid-mine cancelled result leaves the item re-minable (READY)."""
+    from anki_miner.models import ProcessingResult
+    from anki_miner.models.processing import CANCELLED_ERROR
+
+    cancelled = ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0, errors=[CANCELLED_ERROR])
+    mock_processor.process_reading.side_effect = lambda *a, **kw: cancelled
+    items = [_make_item("vol01")]
+
+    worker = make_worker(items=items)
+    worker.run()
+
+    assert items[0].status == ReadingItemStatus.READY
+    assert items[0].error_message is None
+
+
 def test_process_reading_receives_loaded_document(make_worker, mock_processor, fake_load):
     doc = SimpleNamespace(name="loaded-doc")
     fake_load.side_effect = lambda source: doc

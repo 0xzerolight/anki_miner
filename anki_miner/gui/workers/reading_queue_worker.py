@@ -44,6 +44,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
+from anki_miner.models import MiningOutcome, classify_result, result_error_text
 from anki_miner.models.reading_queue import ReadingItemStatus, ReadingQueueItem
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.dictionary.registry import stale_dict_reimport_error
@@ -165,12 +166,37 @@ class ReadingQueueWorker(ProcessorOwningWorker):
                 logger.exception("ReadingQueueWorker item %d failed", idx)
                 self._fail_item(idx, item, f"{type(exc).__name__}: {exc}")
             else:
-                cards = int(getattr(result, "cards_created", 0) or 0)
-                item.status = ReadingItemStatus.COMPLETED
-                item.cards_created = cards
-                item.error_message = None
-                self.item_finished.emit(idx, result, None, 1)
+                self._record_result(idx, item, result)
         self.queue_finished.emit()
+
+    def _record_result(self, idx: int, item: ReadingQueueItem, result: object) -> None:
+        """Route a non-raising ``process_reading`` return by its outcome.
+
+        ``process_reading`` never raises on a failed or Stopped-mid-mine run; it
+        returns a ``ProcessingResult`` whose ``errors`` is populated. Marking any
+        such return COMPLETED (the old behaviour) hid failures behind a green
+        "Mined 0 cards" and stranded a cancelled item as un-re-minable. Classify
+        instead: SUCCESS → COMPLETED, CANCELLED → back to READY (re-minable),
+        FAILED → ERROR (keeping any partial ``cards_created``).
+        """
+        cards = int(getattr(result, "cards_created", 0) or 0)
+        outcome = classify_result(result)
+        if outcome is MiningOutcome.SUCCESS:
+            item.status = ReadingItemStatus.COMPLETED
+            item.cards_created = cards
+            item.error_message = None
+            self.item_finished.emit(idx, result, None, 1)
+        elif outcome is MiningOutcome.CANCELLED:
+            item.status = ReadingItemStatus.READY
+            item.cards_created = cards
+            item.error_message = None
+            self.item_finished.emit(idx, result, None, 1)
+        else:
+            message = result_error_text(result)
+            item.status = ReadingItemStatus.ERROR
+            item.cards_created = cards
+            item.error_message = message
+            self.item_finished.emit(idx, None, message, 1)
 
     def _fail_item(self, idx: int, item: ReadingQueueItem, message: str) -> None:
         """Record a per-item failure on the item and via ``item_finished``."""
