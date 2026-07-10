@@ -397,6 +397,11 @@ class BatchProcessingTab(MiningTabBase):
         # error THEN queue_finished — without the flag the terminal handler
         # would read "Complete — 0 cards created" on a failed run.
         self.worker_thread.error.connect(self._on_queue_worker_error)
+        # Safety net (G1): restore the action buttons once the thread ends. The
+        # quick (manual-pair) path already wires this; without it a caught
+        # run-level failure (stale-dict gate, AnkiService construction) leaves
+        # the buttons stranded in the running state.
+        self.worker_thread.finished.connect(self._restore_buttons)
 
         self.worker_thread.start()
 

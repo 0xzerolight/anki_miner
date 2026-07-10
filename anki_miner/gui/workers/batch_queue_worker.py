@@ -108,7 +108,19 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
         self.queue_started.emit(total_items)
 
         try:
-            self._run_queue(total_cards)
+            try:
+                self._run_queue(total_cards)
+            except Exception as e:  # noqa: BLE001 — surface every failure to GUI
+                # Setup work OUTSIDE the per-item try (stale-dict gate,
+                # AnkiService construction — which raises ValueError on missing
+                # anki_fields — and get_next_pending) runs in the reimplemented
+                # QThread.run(); an escaping exception here is a PyQt6 FATAL
+                # abort. Catch it, surface via error, and still emit
+                # queue_finished so the GUI leaves the running state (mirrors
+                # ManualPairWorkerThread.run()).
+                logger.exception("BatchQueueWorker run failed before/around the item loop")
+                self.error.emit(str(e))
+                self.queue_finished.emit(total_cards)
         finally:
             # Close the final item's processor on every exit (normal, cancel,
             # or exception) so its sqlite handles / Session don't leak.
