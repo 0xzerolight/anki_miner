@@ -21,6 +21,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.models.word import WordData
 from anki_miner.services.export_service import ExportService
@@ -221,25 +222,43 @@ class ExportDialog(QDialog):
 
         fmt_id = self._format_group.checkedId()
         service = ExportService(self._config)
+        output_path = self._output_path
+        words = self._words
 
-        try:
-            if fmt_id == FORMAT_CSV:
-                count = service.export_csv(self._words, self._output_path, include_media_refs=True)
-            elif fmt_id == FORMAT_TSV:
-                count = service.export_tsv(self._words, self._output_path)
-            else:
-                vocab_fmt = ["plain", "takoboto", "jpdb"][self._vocab_format_combo.currentIndex()]
-                count = service.export_vocab_list(self._words, self._output_path, fmt=vocab_fmt)
+        # The export is file I/O that can be slow on large word lists, so it
+        # must run off the GUI thread (run_off_thread convention) — a synchronous
+        # call here froze the UI. The button is disabled in flight; the result
+        # surfaces on the on_done/on_error callbacks (both on the GUI thread).
+        if fmt_id == FORMAT_CSV:
 
-            QMessageBox.information(
-                self,
-                self.tr("Export Complete"),
-                tr_format(self.tr("Successfully exported %1 words to:\n%2"), count, self._output_path),
-            )
-            self.accept()
+            def work() -> object:
+                return service.export_csv(words, output_path, include_media_refs=True)
 
-        except Exception as e:
-            QMessageBox.critical(self, self.tr("Export Failed"), tr_format(self.tr("Failed to export:\n%1"), e))
+        elif fmt_id == FORMAT_TSV:
+
+            def work() -> object:
+                return service.export_tsv(words, output_path)
+
+        else:
+            vocab_fmt = ["plain", "takoboto", "jpdb"][self._vocab_format_combo.currentIndex()]
+
+            def work() -> object:
+                return service.export_vocab_list(words, output_path, fmt=vocab_fmt)
+
+        self._export_btn.setEnabled(False)
+        run_off_thread(self, work, self._on_export_done, self._on_export_error)
+
+    def _on_export_done(self, count: object) -> None:
+        QMessageBox.information(
+            self,
+            self.tr("Export Complete"),
+            tr_format(self.tr("Successfully exported %1 words to:\n%2"), count, self._output_path),
+        )
+        self.accept()
+
+    def _on_export_error(self, message: str) -> None:
+        self._export_btn.setEnabled(True)
+        QMessageBox.critical(self, self.tr("Export Failed"), tr_format(self.tr("Failed to export:\n%1"), message))
 
     # ── Helpers ─────────────────────────────────────────────
 
