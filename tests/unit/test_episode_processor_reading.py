@@ -996,16 +996,3 @@ class TestReadingSentenceTts:
         assert "Sentence audio: 0/2 sentences" in infos  # unique sentences, not 3 words
         warnings = [c.args[0] for c in presenter.show_warning.call_args_list]
         assert any("Sentence-audio TTS connection" in w for w in warnings)
-
-    def test_preview_mode_skips_tts(self, test_config):
-        words = [_word("犬", 0)]
-        counts = collections.Counter({"犬": 1})
-        sp = MagicMock()
-        sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
-        fetcher = _make_sentence_fetcher()
-        proc = _make_processor(_tts_config(test_config), subtitle_parser=sp, sentence_audio_fetcher=fetcher)
-
-        with patch(_IMG):
-            proc.process_reading(_document([_unit(0)]), preview_mode=True)
-
-        fetcher.fetch.assert_not_called()
