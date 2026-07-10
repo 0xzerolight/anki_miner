@@ -596,11 +596,7 @@ class SingleEpisodeTab(MiningTabBase):
         self._restore_buttons()
 
         if not self._cancel_requested:
-            if result.success and self._last_run_was_preview:
-                self.progress_widget.show_completion(
-                    tr_format(self.tr("Preview complete — %1 new words"), result.new_words_found)
-                )
-            elif result.success:
+            if result.success:
                 self.progress_widget.show_completion(
                     tr_format(self.tr("Complete — %1 cards created"), result.cards_created)
                 )

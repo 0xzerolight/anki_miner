@@ -3710,10 +3710,6 @@ Vous pourrez ajuster cela plus tard dans Paramètres → Anki.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview complete — %1 new words</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Complete — %1 cards created</source>
         <translation type="unfinished" />
     </message>
@@ -4238,10 +4234,6 @@ Détails : %2</translation>
     <message>
         <source>Cancelled</source>
         <translation type="unfinished">Annulé</translation>
-    </message>
-    <message>
-        <source>Preview complete — %1 new words</source>
-        <translation type="unfinished" />
     </message>
     <message>
         <source>Complete — %1 cards created</source>
