@@ -73,9 +73,10 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
     worker handle by :meth:`_recompute_buttons`: idle shows Mine, a run
     swaps it for Cancel.
 
-    Novels curation is table-only (D8): the base inherits the ``(None, None)``
-    curation context — this tab does NOT override ``_build_curation_context``
-    (only the manga sub-tab does, for its page-image context).
+    Novels curation has no media context but shows the definition pane: the
+    base's ``_build_curation_context`` returns ``(None, lookup_fn)`` from the
+    worker's ``curation_processor`` — this tab does NOT override it (only the
+    manga sub-tab does, to add a page-image context).
     """
 
     def __init__(

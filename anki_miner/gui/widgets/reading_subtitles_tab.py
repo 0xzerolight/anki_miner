@@ -77,8 +77,9 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
     worker handle by :meth:`_recompute_buttons`: idle shows Mine, a run swaps
     it for Cancel.
 
-    Subtitle curation is table-only: the base inherits the ``(None, None)``
-    curation context — this tab does NOT override ``_build_curation_context``.
+    Subtitle curation has no media context but shows the definition pane: the
+    base's ``_build_curation_context`` returns ``(None, lookup_fn)`` from the
+    worker's ``curation_processor`` — this tab does NOT override it.
     """
 
     def __init__(

@@ -15,13 +15,14 @@ the row display and summary counts, never write status/cards/error. A queued
 ``item_started`` slot arriving late must not overwrite a COMPLETED status back
 to PROCESSING.
 
-D8 (amended): novels curation is table-only; manga supplies a page-image
-context. The ``ReadingQueueWorker`` publishes no ``_curation_video``/
-``_curation_subtitle``/``_curation_offset``, so this base does NOT override
-:meth:`_build_curation_context` — it inherits :class:`MiningTabBase`'s
-``(None, None)`` context (a plain word table). The manga sub-tab overrides it
-to read the worker's published ``curation_document`` (page images + block
-boxes); the novels sub-tab keeps the base behaviour.
+D8 (amended): reading curation has no player/subtitle media context (the
+``ReadingQueueWorker`` publishes no ``_curation_video``/``_curation_subtitle``/
+``_curation_offset``), so this base's :meth:`_build_curation_context` returns a
+``None`` media context — but it DOES wire the definition pane's ``lookup_fn``
+from the worker's ``curation_processor``, so novels and subtitles show word
+meanings on row focus. The manga sub-tab overrides it to add a page-image
+context (from the worker's published ``curation_document``) while keeping the
+same lookup_fn.
 
 This base deliberately does NOT wire :meth:`MiningTabBase._teardown_previous_run`.
 Single-episode/batch tabs build a fresh processor per run, so teardown closes
@@ -70,6 +71,7 @@ if TYPE_CHECKING:
     from PyQt6.QtWidgets import QWidget
 
     from anki_miner.config import AnkiMinerConfig
+    from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
     from anki_miner.interfaces.presenter import PresenterProtocol
     from anki_miner.models.reading_queue import ReadingQueueItem
     from anki_miner.orchestration import EpisodeProcessor
@@ -89,9 +91,9 @@ class _ReadingMiningTabBase(MiningTabBase):
     Owns at most one running :class:`ReadingQueueWorker` and a single cached
     :class:`EpisodeProcessor` reused across runs within the sub-tab. The
     worker→GUI curation bridge is provided by :class:`MiningTabBase`; this
-    base does NOT override :meth:`_build_curation_context` — it inherits the
-    base ``(None, None)`` (D8 amended: novels stays table-only; the manga
-    sub-tab overrides it with a page-image context).
+    base overrides :meth:`_build_curation_context` to inherit the definition-pane
+    lookup_fn (from ``curation_processor``) with a ``None`` media context. The
+    manga sub-tab overrides it further to add a page-image context.
     """
 
     def __init__(
@@ -418,15 +420,23 @@ class _ReadingMiningTabBase(MiningTabBase):
     # ------------------------------------------------------------------
     # Subclass hooks
     # ------------------------------------------------------------------
-    #
-    # D8 (amended): intentionally NO ``_build_curation_context`` override HERE.
-    # The ReadingQueueWorker publishes no ``_curation_video``/
-    # ``_curation_subtitle``/``_curation_offset``, so the base
-    # ``MiningTabBase._build_curation_context`` (returns ``(None, None)``) is
-    # exactly right for novels; cloning the audiobook override would
-    # AttributeError on those missing worker attributes. The MANGA sub-tab
-    # overrides it to build a page-image context from the worker's published
-    # ``curation_document``.
+
+    def _build_curation_context(
+        self,
+    ) -> tuple[CurationMediaContext | None, Callable[[str], list[tuple[str, str]]] | None]:
+        """Table-only media context plus the offline-dictionary lookup pane.
+
+        Reading has no player/subtitle media context (the ReadingQueueWorker
+        publishes no ``_curation_video``/``_curation_subtitle``/``_curation_offset``,
+        so touching those would AttributeError) — hence media stays ``None``. It
+        does wire the definition pane: ``lookup_fn`` is sourced from the worker's
+        ``curation_processor`` exactly like the video paths, so novels and
+        subtitles show word meanings on row focus. The MANGA sub-tab overrides
+        this to add a page-image context, keeping the same lookup_fn.
+        """
+        w = self.worker_thread
+        proc = w.curation_processor if w is not None else None
+        return None, self._lookup_fn_from_processor(proc)
 
     def _after_run_cleanup(self) -> None:
         """Per-tab UI recovery after a run ends. Overridden by each sub-tab.

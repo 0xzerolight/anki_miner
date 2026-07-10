@@ -16,9 +16,10 @@ Behaviour under test:
   both have drops disabled, so a drop lands on the tab (folder/manga file fills
   the selector; a dropped novel earns a cross-tab hint).
 * D8 (amended): ``_build_curation_context`` builds a page-image context from
-  the worker's published manga ``curation_document``; it falls back to the
-  base ``(None, None)`` for no worker / no document / book-kind documents /
-  image-less volumes. Novels curation stays table-only.
+  the worker's published manga ``curation_document`` and wires the definition-
+  pane ``lookup_fn`` from ``curation_processor``; the media context falls back
+  to ``None`` for no document / book-kind documents / image-less volumes (with
+  no worker at all, both are ``None``).
 
 Qt threads are never started — ``ReadingQueueWorker`` is class-level patched at
 the base module so ``start()`` is a no-op and constructor kwargs can be
@@ -541,11 +542,14 @@ def _manga_document(*, kind: str = "manga", with_images: bool = True) -> Reading
 class TestCurationContext:
     """D8 (amended): manga builds a page-image context off the parked worker.
 
-    Falls back to the base (None, None) when there is no worker, no published
-    document, a book-kind document, or a volume with no page images.
+    The definition-pane ``lookup_fn`` is always wired from the worker's
+    ``curation_processor`` (like novels/subtitles). The media context falls back
+    to ``None`` when there is no published document, a book-kind document, or a
+    volume with no page images; with no worker at all both are ``None``.
     """
 
     def test_build_curation_context_is_none_none_without_worker(self, tab):
+        # No worker → no processor → no lookup_fn either.
         assert tab._build_curation_context() == (None, None)
 
     def test_manga_document_yields_page_units_context(self, tab):
@@ -555,7 +559,8 @@ class TestCurationContext:
 
         ctx, lookup_fn = tab._build_curation_context()
 
-        assert lookup_fn is None
+        # Definition pane wired from the worker's processor.
+        assert lookup_fn is tab.worker_thread.curation_processor.offline_lookup_fn
         assert ctx is not None
         assert ctx.video_file is None
         # Every unit is mapped by index — including imageless ones, so
@@ -565,17 +570,23 @@ class TestCurationContext:
     def test_none_document_falls_back(self, tab):
         _mine(tab, [_make_ref()])
         tab.worker_thread.curation_document = None
-        assert tab._build_curation_context() == (None, None)
+        ctx, lookup_fn = tab._build_curation_context()
+        assert ctx is None
+        assert lookup_fn is tab.worker_thread.curation_processor.offline_lookup_fn
 
     def test_book_kind_falls_back(self, tab):
         _mine(tab, [_make_ref()])
         tab.worker_thread.curation_document = _manga_document(kind="book")
-        assert tab._build_curation_context() == (None, None)
+        ctx, lookup_fn = tab._build_curation_context()
+        assert ctx is None
+        assert lookup_fn is tab.worker_thread.curation_processor.offline_lookup_fn
 
     def test_imageless_volume_falls_back(self, tab):
         _mine(tab, [_make_ref()])
         tab.worker_thread.curation_document = _manga_document(with_images=False)
-        assert tab._build_curation_context() == (None, None)
+        ctx, lookup_fn = tab._build_curation_context()
+        assert ctx is None
+        assert lookup_fn is tab.worker_thread.curation_processor.offline_lookup_fn
 
 
 class TestShutdownRelease:

@@ -342,7 +342,12 @@ class TestShutdown:
 
 
 class TestCurationContext:
-    """D8 (amended): the base stays (None, None) — only the manga tab overrides."""
+    """D8 (amended): the base has no media context and no worker in this fixture.
+
+    With no ``worker_thread`` there is no processor to source a lookup_fn from,
+    so it returns ``(None, None)``; a live worker wires the definition-pane
+    lookup_fn (covered in the novels/subtitles/manga tab tests).
+    """
 
     def test_build_curation_context_is_none_none(self, tab):
         assert tab._build_curation_context() == (None, None)
