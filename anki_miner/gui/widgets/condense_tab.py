@@ -29,7 +29,7 @@ import logging
 import os
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator, cast
+from typing import TYPE_CHECKING, Collection, Iterator, cast
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -76,7 +76,7 @@ CONDENSE_MEDIA_EXTENSIONS: frozenset[str] = CONDENSE_VIDEO_EXTENSIONS | CONDENSE
 CONDENSE_SUBTITLE_EXTENSIONS: tuple[str, ...] = (".ass", ".ssa", ".srt", ".vtt")
 
 
-def _build_filter(label: str, extensions) -> str:
+def _build_filter(label: str, extensions: Collection[str]) -> str:
     """Return a Qt file-dialog filter string for *extensions* (condenser-local)."""
     patterns = " ".join(f"*{ext}" for ext in sorted(extensions))
     return f"{label} ({patterns});;All Files (*)"
@@ -689,11 +689,16 @@ class CondenseTab(QWidget):
         if self.worker_thread is not None and self.worker_thread.isRunning():
             return
 
+        # Clear the log before collecting: _collect_items logs the pairing
+        # summary ("Matched N of M") we must not wipe afterwards.
+        self.log_widget.clear_log()
+        self.progress_widget.reset()
+
         items = self._collect_items()
         if not items:
             return
 
-        out_dir = self._custom_output_dir if self._custom_output_dir is not None else None
+        out_dir = self._custom_output_dir
 
         # Pre-run writable check. When out_dir is None every output lands next to
         # its source media, so check the first item's parent.
@@ -704,8 +709,6 @@ class CondenseTab(QWidget):
 
         self._cancelled = False
         self._total_files = len(items)
-        self.log_widget.clear_log()
-        self.progress_widget.reset()
 
         # Single-file mode honors the per-file track picks; folder mode auto-detects.
         single_mode = not self.media_file_selector.isHidden()

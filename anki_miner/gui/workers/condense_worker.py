@@ -351,6 +351,6 @@ class CondenseWorker(CancellableWorker):
             write_condensed_srt(condensed, srt_path)
             write_condensed_lrc(condensed, lrc_path)
             return None
-        except OSError as exc:
+        except Exception as exc:  # noqa: BLE001 — sidecar failure must never fail an already-written audio
             logger.warning("condense_worker: condensed subtitle write failed for %s: %s", out_audio, exc)
             return tr_format(self.tr("Audio done; subtitle write failed: %1"), str(exc))

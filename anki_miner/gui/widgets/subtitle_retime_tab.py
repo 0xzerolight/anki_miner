@@ -529,6 +529,11 @@ class SubtitleRetimeTab(QWidget):
         if self.worker_thread is not None and self.worker_thread.isRunning():
             return
 
+        # Clear the log before collecting: _collect_pairs logs the pairing
+        # summary ("Matched N of M") we must not wipe afterwards.
+        self.log_widget.clear_log()
+        self.progress_widget.reset()
+
         # Collect pairs
         pairs = self._collect_pairs()
         if not pairs:
@@ -550,8 +555,6 @@ class SubtitleRetimeTab(QWidget):
         # Build and start worker
         self._cancelled = False
         self._total_pairs = len(pairs)
-        self.log_widget.clear_log()
-        self.progress_widget.reset()
 
         # Single-file mode honors the per-file track pick; folder mode auto-detects.
         track_override = self._audio_track_override if not self.video_file_selector.isHidden() else None

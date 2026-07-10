@@ -471,6 +471,42 @@ def test_folder_mode_subfolder_no_pairs_warns(qtbot, tmp_path):
     assert items == []
 
 
+def test_pairing_summary_survives_log_clear_on_start(qtbot, tmp_path):
+    """The 'Matched N of M' line logged during collection survives the pre-run
+    log clear (clear happens before _collect_items, not after)."""
+    config = _make_config(tmp_path)
+    media_folder = tmp_path / "media"
+    sub_folder = tmp_path / "subs"
+    media_folder.mkdir()
+    sub_folder.mkdir()
+    m1 = media_folder / "ep01.mkv"
+    m2 = media_folder / "ep02.mkv"
+    m1.write_bytes(b"fake")
+    m2.write_bytes(b"fake")
+    s1 = sub_folder / "ep01.srt"
+    s2 = sub_folder / "ep02.srt"
+    s1.write_text("1\n")
+    s2.write_text("1\n")
+
+    tab = _make_tab(config, qtbot)
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(media_folder))
+    tab.subtitle_folder_selector.set_path(str(sub_folder))
+
+    fake_pairs = [FilePair(m1, s1), FilePair(m2, s2)]
+    fake_worker = _FakeWorker()
+    with (
+        patch(_FIND_PAIRS, return_value=fake_pairs),
+        patch(_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker),
+    ):
+        tab.condense_button.click()
+
+    assert fake_worker._started
+    assert "Matched 2 of 2" in tab.log_widget.text_edit.toPlainText()
+
+
 # ---------------------------------------------------------------------------
 # Worker kwargs assembly
 # ---------------------------------------------------------------------------
@@ -796,7 +832,7 @@ def test_file_skipped_logs_skipped_not_done(qtbot, tmp_path):
 
 
 def _config_with_defaults(tmp_path: Path, **overrides):
-    """A stand-in config carrying the condenser_* defaults (real fields land in Task 8)."""
+    """A stand-in config carrying the condenser_* defaults."""
     base = {
         "ffmpeg_location": None,
         "ffprobe_location": None,
