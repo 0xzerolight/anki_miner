@@ -226,6 +226,12 @@ class _FakeSettingsTab(SettingsTab):
             persist_chain=MagicMock(),
         )
         self._zip_import_flow = ZipImportFlow(self)
+        # Real SettingsTab shape: shutdown()/flush_pending_settings touch the
+        # auto-save debounce timer, so the fake needs one too (idle).
+        from PyQt6.QtCore import QTimer
+
+        self._debounce_timer = QTimer(self)
+        self._debounce_timer.setSingleShot(True)
 
 
 def _trigger_close(window) -> MagicMock:
@@ -675,3 +681,58 @@ class TestCloseEventReleasesDictResources:
 
         assert release_calls == [True], "release must run when the deferred close completes"
         assert quit_calls == [True]
+
+
+class TestCloseEventFlushesSettingsAutosave:
+    """closeEvent must flush a pending Settings auto-save BEFORE the shutdown
+    fan-out stops the debounce timer, on BOTH close paths (immediate and
+    deferred) — otherwise an edit made <1s before quit is silently dropped."""
+
+    def _settings_tab(self, main_window, test_config, qtbot):
+        """Insert a REAL SettingsTab (tab composition normally lives in app.py)
+        and mirror app.py's config_changed → update_config wiring so a flushed
+        commit actually reaches MainWindow.config."""
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        main_window.tabs.addTab(tab, "Settings")
+        tab.config_changed.connect(lambda cfg: main_window.update_config(cfg, from_settings=True))
+        return tab
+
+    def test_flush_runs_before_background_shutdown(self, main_window, test_config, qtbot, monkeypatch):
+        call_order: list[str] = []
+        settings_tab = self._settings_tab(main_window, test_config, qtbot)
+        monkeypatch.setattr(settings_tab, "flush_pending_settings", lambda: call_order.append("flush"))
+        original_shutdown = main_window.background_tasks.shutdown
+        monkeypatch.setattr(
+            main_window.background_tasks,
+            "shutdown",
+            lambda tabs: call_order.append("shutdown") or original_shutdown(tabs),
+        )
+
+        _trigger_close(main_window)
+
+        assert call_order[:2] == ["flush", "shutdown"]
+
+    def test_flush_runs_on_deferred_close_path(self, main_window, test_config, qtbot, monkeypatch):
+        flush_calls: list[bool] = []
+        settings_tab = self._settings_tab(main_window, test_config, qtbot)
+        monkeypatch.setattr(settings_tab, "flush_pending_settings", lambda: flush_calls.append(True))
+        # A laggard worker whose wait() times out → close is deferred and
+        # closeEvent returns before its final save_config.
+        tab = _FakeEpisodeTab(worker_running=True, wait_result=False)
+        main_window.tabs.addTab(tab, "Episode")
+
+        event = _trigger_close(main_window)
+
+        event.accept.assert_not_called()  # close was deferred...
+        assert flush_calls == [True]  # ...but the flush already ran
+
+    def test_pending_edit_persists_through_close(self, main_window, test_config, qtbot):
+        """End-to-end: an armed debounce edit reaches MainWindow.config on close."""
+        settings_tab = self._settings_tab(main_window, test_config, qtbot)
+        settings_tab.deck_input.setText("EditedJustBeforeQuit")
+        assert settings_tab._debounce_timer.isActive()
+
+        _trigger_close(main_window)
+
+        assert main_window.config.anki_deck_name == "EditedJustBeforeQuit"
