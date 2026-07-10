@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Audio Condenser tool (Tools → Condense).** Produces condensed dialogue-only audio from a video or audio file plus its subtitles — external `.ass`/`.ssa`/`.srt`/`.vtt` or an embedded text track picked from the file — by keeping only the spans where lines are spoken. Adjustable padding and gap-merge, a subtitle offset, and line filtering trim the timeline; output is `mp3`, `opus`, or `flac`, with an optional re-timed `.srt`+`.lrc` alongside. A batch folder mode condenses many pairs at once.
 
 ### Changed
 

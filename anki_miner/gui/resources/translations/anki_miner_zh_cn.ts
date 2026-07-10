@@ -1436,6 +1436,358 @@ Total cards created: %2</source>
         <translation>限制视频画质、最大时长以及获取多少个播放列表视频。</translation>
     </message>
 </context><context>
+    <name>CondenseTab</name>
+    <message>
+        <source>Input</source>
+        <translation type="unfinished">输入</translation>
+    </message>
+    <message>
+        <source>ffmpeg not found; install it or set its path in Settings to enable condensing.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Condense a video or audio file down to just its spoken dialogue.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mode:</source>
+        <translation type="unfinished">模式：</translation>
+    </message>
+    <message>
+        <source>Single File</source>
+        <translation type="unfinished">单个文件</translation>
+    </message>
+    <message>
+        <source>Condense one selected media file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation type="unfinished">文件夹</translation>
+    </message>
+    <message>
+        <source>Condense every media file in a selected folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Media File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle File:</source>
+        <translation type="unfinished">字幕文件：</translation>
+    </message>
+    <message>
+        <source>Leave empty to auto-detect (sibling file or embedded track).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio track:</source>
+        <translation type="unfinished">音轨：</translation>
+    </message>
+    <message>
+        <source>Japanese (auto-detect)</source>
+        <translation type="unfinished">日语（自动检测）</translation>
+    </message>
+    <message>
+        <source>Choose…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose which audio track to condense.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle track:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Auto (external → embedded Japanese)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose which embedded subtitle track to condense against.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Media Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle Folder:</source>
+        <translation type="unfinished">字幕文件夹：</translation>
+    </message>
+    <message>
+        <source>Optional. When set, media is paired to subtitles by episode number; otherwise each file auto-detects.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Options</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Padding:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> ms</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Silence kept on each side of every dialogue line before merging.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Offset:</source>
+        <translation type="unfinished">偏移：</translation>
+    </message>
+    <message>
+        <source>Shift every subtitle cue by this amount before condensing.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Format:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Also write condensed subtitles (SRT + LRC)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Write time-mapped .srt and .lrc files alongside the condensed audio.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output</source>
+        <translation type="unfinished">输出</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation type="unfinished">输出：</translation>
+    </message>
+    <message>
+        <source>Next to source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation type="unfinished">选择文件夹…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation type="unfinished">重置</translation>
+    </message>
+    <message>
+        <source>Overwrite existing condensed files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>When unchecked, files whose condensed audio already exists are skipped, not overwritten.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Actions</source>
+        <translation type="unfinished">操作</translation>
+    </message>
+    <message>
+        <source>Condense Audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">取消</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">进度</translation>
+    </message>
+    <message>
+        <source>No Media File Selected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a media file first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>File Not Found</source>
+        <translation type="unfinished">未找到文件</translation>
+    </message>
+    <message>
+        <source>Media file not found: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No Audio Tracks</source>
+        <translation type="unfinished">无音轨</translation>
+    </message>
+    <message>
+        <source>No audio tracks detected. Check that ffprobe is installed and the file has audio.</source>
+        <translation type="unfinished">未检测到音轨。请检查是否已安装 ffprobe 且文件包含音频。</translation>
+    </message>
+    <message>
+        <source>Track %1</source>
+        <translation type="unfinished">音轨 %1</translation>
+    </message>
+    <message>
+        <source>Probe Failed</source>
+        <translation type="unfinished">探测失败</translation>
+    </message>
+    <message>
+        <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
+        <translation type="unfinished">检测音轨失败。请检查是否已安装 ffprobe。</translation>
+    </message>
+    <message>
+        <source>No Subtitle Tracks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No embedded subtitle tracks detected in this file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed to detect subtitle tracks. Check that ffprobe is installed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation type="unfinished">选择输出文件夹</translation>
+    </message>
+    <message>
+        <source>Output directory is not writable: </source>
+        <translation type="unfinished">输出目录不可写：</translation>
+    </message>
+    <message>
+        <source>Select a media file before condensing.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle file not found: </source>
+        <translation type="unfinished">未找到字幕文件：</translation>
+    </message>
+    <message>
+        <source>No Media Folder Selected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a media folder before condensing.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Folder Not Found</source>
+        <translation type="unfinished">未找到文件夹</translation>
+    </message>
+    <message>
+        <source>Media folder not found: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle folder not found: </source>
+        <translation type="unfinished">未找到字幕文件夹：</translation>
+    </message>
+    <message>
+        <source>No Media Files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No media files found in the selected folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Matched %1 of %2 media files.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Warning: %1 media file(s) could not be matched.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No Pairs Matched</source>
+        <translation type="unfinished">未匹配到配对</translation>
+    </message>
+    <message>
+        <source>No subtitle files could be matched to the media files in the selected folders.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Condensing file %1 of %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation type="unfinished">完成：</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished">完成</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation type="unfinished">已跳过：</translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation type="unfinished">已跳过</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">已取消</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">正在取消…</translation>
+    </message>
+</context><context>
+    <name>CondenseWorker</name>
+    <message>
+        <source>Skipped, exists</source>
+        <translation type="unfinished">已跳过，已存在</translation>
+    </message>
+    <message>
+        <source>No dialogue lines found in %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Condensing: %1%</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">已取消</translation>
+    </message>
+    <message>
+        <source>Condensing failed for %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished">完成</translation>
+    </message>
+    <message>
+        <source>No subtitle source found for %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle track %1 not found in %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Only image-based subtitles (%1) in %2, which can't be condensed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed to extract embedded subtitle from %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio done; subtitle write failed: %1</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>CudaPackDownloadWorker</name>
     <message>
         <source>%1 (%2%)</source>
@@ -3110,6 +3462,10 @@ Continue?</source>
     <message>
         <source>Retime</source>
         <translation>重新计时</translation>
+    </message>
+    <message>
+        <source>Condense</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>MangaVolumesPreviewDialog</name>
@@ -4934,6 +5290,32 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Retiming failed for %1</source>
         <translation>重新计时 %1 失败</translation>
+    </message>
+</context><context>
+    <name>SubtitleTracksDialog</name>
+    <message>
+        <source>Subtitle Track</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No subtitle tracks found in this file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This file has only one subtitle track.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Auto-detect (currently: Track %1 — %2)</source>
+        <translation type="unfinished">自动检测（当前：音轨 %1 — %2）</translation>
+    </message>
+    <message>
+        <source>Auto-detect (no Japanese subtitle track found — will use first text track)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation type="unfinished">应用</translation>
     </message>
 </context><context>
     <name>SubtitleViewer</name>
