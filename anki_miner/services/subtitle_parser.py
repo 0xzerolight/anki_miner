@@ -15,6 +15,10 @@ from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.word import select_mined_form
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, TermLookup
 from anki_miner.services.deinflection import find_highlight_end
+from anki_miner.services.ja_normalize import (
+    normalize_for_tokenization,
+    standardize_kanji_variants,
+)
 from anki_miner.services.morphology import (
     TokenInclusionRule,
     extract_lemma,
@@ -657,12 +661,15 @@ class SubtitleParserService:
 
         The reading pipeline (manga volumes / novels) hands mined text as
         ``ReadingUnit``s — one paragraph or manga text block each — instead of a
-        subtitle file. Each unit's ``text`` becomes the card sentence *verbatim*:
-        there is no re-windowing, no ``clean_subtitle_text``, no regex filter,
-        no pysubs2 and no per-file line cache on this path. ``unit.index``
-        (document order) doubles as the dummy start AND end time, so
-        ``duration`` is ``0.0`` and every duration-based optional filter is inert
-        by design.
+        subtitle file. Each unit's ``text`` is normalized for tokenization (the
+        same ``normalize_for_tokenization`` + ``standardize_kanji_variants`` the
+        subtitle path applies via ``clean_subtitle_text`` — mokuro OCR emits
+        Kangxi radicals and halfwidth katakana that otherwise mis-tokenize), and
+        that normalized form becomes the card sentence: there is no re-windowing,
+        no markup strip, no regex filter, no pysubs2 and no per-file line cache
+        on this path. ``unit.index`` (document order) doubles as the dummy start
+        AND end time, so ``duration`` is ``0.0`` and every duration-based
+        optional filter is inert by design.
 
         One tokenize pass per unit: ``_build_line_state`` tokenizes once and both
         the returned Counter and the emitted words reuse its ``merged_tokens``.
@@ -697,9 +704,18 @@ class SubtitleParserService:
         counts: collections.Counter[str] = collections.Counter()
 
         for unit in units:
+            # Reading/OCR text needs the same pre-tokenization JP normalization
+            # the subtitle path gets via clean_subtitle_text: mokuro OCR emits
+            # Kangxi radicals (⼝) and halfwidth katakana (ﾊﾟｿｺﾝ) that mis-tokenize
+            # into garbage otherwise. The normalized text is BOTH tokenized and
+            # stored as the card sentence, so the displayed sentence matches what
+            # was mined (as on the subtitle path). Order mirrors clean_subtitle_text
+            # (normalize_for_tokenization then standardize_kanji_variants); the
+            # markup strip / regex filter it also runs are subtitle-only.
+            text = standardize_kanji_variants(normalize_for_tokenization(unit.text))
             # Dummy timing: the index is both start and end (duration 0.0). No
-            # re-windowing exists — unit.text is the card sentence verbatim.
-            line_state = self._build_line_state(unit.text, float(unit.index), float(unit.index))
+            # re-windowing exists — the normalized unit text is the card sentence.
+            line_state = self._build_line_state(text, float(unit.index), float(unit.index))
             text, _raw_tokens, merged_tokens, *_ = line_state
 
             # Count through the SAME locator as the mining loop below (and
