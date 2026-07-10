@@ -58,13 +58,13 @@ class ReadingSourceRef:
       ``.mokuro`` JSON — ``title`` (= series), ``volume`` (= episode), and
       ``image_root`` (archive file Path for .cbz/.zip-backed volumes,
       directory Path for dir-backed, None for text-only). Loaders trust these.
-    * kind in {"epub","txt"}: the detector sets ``title`` = ``path.stem`` (a
-      provisional label for queue rows only), ``volume`` = None and
-      ``image_root`` = None; the loader is authoritative for the final
-      ``ReadingDocument`` metadata.
+    * kind in {"epub","txt","subtitle"}: the detector sets ``title`` =
+      ``path.stem`` (a provisional label for queue rows only), ``volume`` =
+      None and ``image_root`` = None; the loader is authoritative for the
+      final ``ReadingDocument`` metadata.
     """
 
-    kind: Literal["mokuro", "epub", "txt"]
+    kind: Literal["mokuro", "epub", "txt", "subtitle"]
     path: Path
     image_root: Path | None
     title: str
@@ -81,7 +81,7 @@ class ReadingDocument:
     """
 
     title: str
-    kind: Literal["manga", "book"]
+    kind: Literal["manga", "book", "subtitle"]
     series: str
     episode: str
     units: list[ReadingUnit] = field(default_factory=list)
