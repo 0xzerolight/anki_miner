@@ -1471,6 +1471,51 @@ class TestKnownWordDBIntegration:
         assert result.card_ids == [12345]
         assert not result.errors
 
+    def test_locked_db_on_phase2_known_words_access_does_not_abort_run(self, test_config, mock_services, tmp_path):
+        """Bug F6: a locked/raising known_words.db during the PHASE-2 read
+        (get_words_by_source / get_known_words / sync_with_anki) must NOT abort the
+        run. Pre-fix these reads were unguarded, so a Manage-Known-Words dialog or a
+        second concurrent run holding the file threw OperationalError into the generic
+        except and turned a whole run into a failure. The run must fall back to Anki's
+        existing vocabulary and still create cards."""
+        import sqlite3
+
+        word = _make_word("食べる")
+        media = _make_media()
+
+        mock_known_db = MagicMock()
+        mock_known_db.is_available.return_value = True
+        # Every phase-2 read raises as if the file were locked.
+        mock_known_db.get_words_by_source.side_effect = sqlite3.OperationalError("database is locked")
+        mock_known_db.get_known_words.side_effect = sqlite3.OperationalError("database is locked")
+        mock_known_db.sync_with_anki.side_effect = sqlite3.OperationalError("database is locked")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+
+        def _create_batch(card_data, progress_callback=None):
+            mock_services["anki_service"].last_created_note_ids = [999]
+            return 1
+
+        mock_services["anki_service"].create_cards_batch.side_effect = _create_batch
+
+        processor = EpisodeProcessor(
+            config=replace(test_config, use_known_words_db=True),
+            presenter=NullPresenter(),
+            known_word_db=mock_known_db,
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # The locked DB was hit but the run completed, falling back to Anki vocab.
+        mock_services["anki_service"].get_existing_vocabulary.assert_called()
+        assert result.cards_created == 1
+        assert not result.errors
+
     def test_user_ignore_list_applied_when_cache_disabled(self, test_config, mock_services, tmp_path):
         """source='user' words filter the candidate set even when use_known_words_db is off (Issue #42).
 

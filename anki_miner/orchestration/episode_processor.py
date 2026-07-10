@@ -661,28 +661,49 @@ class EpisodeProcessor:
             # mining path, regardless of the use_known_words_db toggle. The DB
             # object is always present now, but the file may not exist for users
             # who never added a word — is_available guards.
+            # A locked/raising known_words.db (Manage-Known-Words dialog open, or a
+            # second concurrent run holding the file) must NOT abort the run — the
+            # same T-19 rationale as the guarded writes below. Each read is wrapped;
+            # on failure we drop the user ignore list and fall back to Anki's
+            # existing vocabulary, warning and continuing rather than bubbling the
+            # sqlite3.OperationalError into process_episode's generic except.
             user_words: set[str] = set()
             if self.known_word_db and self.known_word_db.is_available():
-                user_words = self.known_word_db.get_words_by_source("user")
+                try:
+                    user_words = self.known_word_db.get_words_by_source("user")
+                except (sqlite3.Error, OSError) as e:
+                    logger.warning(
+                        "Could not read the user ignore list from known_words.db (%s); "
+                        "proceeding without it this run.",
+                        e,
+                    )
 
             if self.config.use_known_words_db and self.known_word_db and self.known_word_db.is_available():
-                known_words = self.known_word_db.get_known_words()
-                # Sync with Anki to keep DB up to date. Pass the pre-fetched
-                # ``known_words`` so the DB skips its internal scan; merge the
-                # diff in-memory below to avoid a post-sync re-read.
-                anki_vocab = self.anki_service.get_existing_vocabulary()
-                added, total = self.known_word_db.sync_with_anki(anki_vocab, existing=known_words)
-                if added > 0:
-                    self.presenter.show_info(
-                        tr_format(
-                            QCoreApplication.translate(
-                                "EpisodeProcessor", "Known word DB synced: %1 new words (%2 total)"
-                            ),
-                            added,
-                            total,
+                try:
+                    known_words = self.known_word_db.get_known_words()
+                    # Sync with Anki to keep DB up to date. Pass the pre-fetched
+                    # ``known_words`` so the DB skips its internal scan; merge the
+                    # diff in-memory below to avoid a post-sync re-read.
+                    anki_vocab = self.anki_service.get_existing_vocabulary()
+                    added, total = self.known_word_db.sync_with_anki(anki_vocab, existing=known_words)
+                    if added > 0:
+                        self.presenter.show_info(
+                            tr_format(
+                                QCoreApplication.translate(
+                                    "EpisodeProcessor", "Known word DB synced: %1 new words (%2 total)"
+                                ),
+                                added,
+                                total,
+                            )
                         )
+                        known_words = known_words | (anki_vocab - known_words)
+                except (sqlite3.Error, OSError) as e:
+                    logger.warning(
+                        "Could not access known_words.db (%s); falling back to Anki's "
+                        "existing vocabulary for this run.",
+                        e,
                     )
-                    known_words = known_words | (anki_vocab - known_words)
+                    known_words = self.anki_service.get_existing_vocabulary()
             else:
                 known_words = self.anki_service.get_existing_vocabulary()
 
