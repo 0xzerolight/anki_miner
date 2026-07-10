@@ -506,6 +506,17 @@ class AudioPackSettingsPanel(FormPanel):
             out.append(AudioSourceEntry(kind=entry.kind, pack_id=entry.pack_id, url=entry.url, enabled=enabled))
         return tuple(out)
 
+    def _on_row_toggled(self) -> None:
+        """Fold the live checkbox states back into ``self._chain`` before emitting.
+
+        ``_rebuild_list`` renders checkboxes from ``self._chain``, so an unguarded
+        rescan would re-render a just-disabled row from the stale chain and the
+        next commit would re-persist ``enabled=True``. Syncing here keeps
+        ``_chain`` authoritative.
+        """
+        self._chain = list(self.get_chain())
+        self.chain_changed.emit()
+
     def add_source_entry(self, entry: AudioSourceEntry) -> None:
         """Append an online audio source to the chain and persist immediately.
 
@@ -699,7 +710,7 @@ class AudioPackSettingsPanel(FormPanel):
             for entry in self._chain:
                 display, fmt, count, dir_missing = self._describe_entry(entry, view)
                 row = _PackRow(entry, display, fmt, count, dir_missing=dir_missing)
-                row.toggled.connect(self.chain_changed.emit)
+                row.toggled.connect(self._on_row_toggled)
                 item = QListWidgetItem()
                 item.setSizeHint(row.sizeHint())
                 self._list.addItem(item)
