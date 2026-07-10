@@ -494,8 +494,12 @@ class AudiobookTab(MiningTabBase):
         fires later on every exit path. Splitting the two keeps cleanup on the
         single converged path while still logging a per-run summary.
         """
-        succeeded = sum(1 for i in self._queue.all_items() if i.status == AudiobookItemStatus.COMPLETED)
-        failed = sum(1 for i in self._queue.all_items() if i.status == AudiobookItemStatus.ERROR)
+        # Count THIS run only (the frozen _run_items snapshot) — self._queue
+        # retains prior runs' finished rows, so counting there over-reports
+        # (e.g. "6 succeeded" for a 1-item run). _run_items is still intact here
+        # (queue_finished fires before QThread.finished clears it).
+        succeeded = sum(1 for i in self._run_items if i.status == AudiobookItemStatus.COMPLETED)
+        failed = sum(1 for i in self._run_items if i.status == AudiobookItemStatus.ERROR)
         self.log_widget.append_info(tr_format(self.tr("Queue done: %1 succeeded, %2 failed."), succeeded, failed))
 
     def _on_worker_finished(self) -> None:
@@ -514,12 +518,15 @@ class AudiobookTab(MiningTabBase):
         # release it. No-op when _processor was already set (prebuilt path).
         if self._processor is None and self.worker_thread is not None:
             self._processor = self.worker_thread.curation_processor
+        # Snapshot THIS run's items before clearing so the completion summary
+        # counts the current run only — self._queue retains prior runs' rows.
+        run_items = list(self._run_items)
         self.worker_thread = None
         self._run_items = []
         self.stop_button.setText(self.tr("Stop All"))
         self.stop_button.setEnabled(True)
-        # Terminal end state (cancel -> failed -> success); counts from
-        # self._queue, never the just-cleared _run_items.
+        # Terminal end state (cancel -> failed -> success); counts from the
+        # run_items snapshot above, never self._queue (retains old rows).
         if getattr(self, "_cancel_requested", False):
             self.progress_widget.reset()
             self.progress_widget.set_status(self.tr("Cancelled"))
@@ -527,8 +534,8 @@ class AudiobookTab(MiningTabBase):
             self.progress_widget.reset()
             self.progress_widget.set_status(self.tr("Failed — see log"))
         else:
-            succeeded = sum(1 for i in self._queue.all_items() if i.status == AudiobookItemStatus.COMPLETED)
-            failed = sum(1 for i in self._queue.all_items() if i.status == AudiobookItemStatus.ERROR)
+            succeeded = sum(1 for i in run_items if i.status == AudiobookItemStatus.COMPLETED)
+            failed = sum(1 for i in run_items if i.status == AudiobookItemStatus.ERROR)
             if failed:
                 summary = tr_format(self.tr("Complete — %1 succeeded, %2 failed"), succeeded, failed)
             else:
