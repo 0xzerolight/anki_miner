@@ -538,6 +538,18 @@ class TokenInclusionRule:
             # Must be at least 2 chars to be valid katakana word
             return len(surface) >= 2
 
+        # Mixed katakana+hiragana loanword verbs/adjectives (サボる, ググる,
+        # ディスる, ヤバい): has_kanji is False and is_katakana is False because
+        # the hiragana okurigana breaks the all-katakana test, so the script
+        # gate below would drop them. Accept when the dictionary form carries
+        # katakana — 動詞/形容詞 only, never pure-hiragana tokens (dropped by
+        # design) or other POS.
+        if pos1 in ("動詞", "形容詞"):
+            orth_base = getattr(word_token.feature, "orthBase", None)
+            dict_form = orth_base if isinstance(orth_base, str) and orth_base else lemma
+            if any("゠" <= c <= "ヿ" for c in dict_form):
+                return True
+
         # Words with kanji are included; pure hiragana (no kanji, not katakana)
         # is rejected — the pre-existing script gate.
         return has_kanji
