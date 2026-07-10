@@ -1246,3 +1246,41 @@ class TestRescanWhileInFlight:
         assert panel._registry is not None
         meta = panel._registry.get("latedict")
         assert meta is not None and meta.source_name == "Late Dict"
+
+
+def test_context_menu_bails_during_scan_placeholder(qapp, qtbot, tmp_path, monkeypatch):
+    """Right-clicking the Loading placeholder must not open a destructive menu."""
+    from unittest.mock import MagicMock
+
+    from PyQt6.QtCore import QPoint
+
+    panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((ChainEntry(kind="indexed", dict_id="a", enabled=True),))
+
+    # Enter the async-scan placeholder state (single disabled "Loading…" row).
+    panel._scan_in_flight = True
+    panel._show_loading_placeholder()
+    placeholder_item = panel._list.item(0)
+    # Force the (buggy) resolution path: a click resolves to the placeholder,
+    # whose row index (0) would otherwise dereference a real dict in _chain.
+    monkeypatch.setattr(panel._list, "itemAt", lambda _pos: placeholder_item)
+
+    # Populate the registry with matching meta so the ONLY thing preventing a
+    # destructive menu is the scan-in-flight guard (not the meta-is-None guard).
+    meta = MagicMock()
+    meta.format = "yomitan"
+    registry = MagicMock()
+    registry.get.return_value = meta
+    panel._registry = registry
+
+    menu_cls = MagicMock()
+    monkeypatch.setattr(dsp_mod, "QMenu", menu_cls)
+    remove_spy = MagicMock()
+    monkeypatch.setattr(panel, "remove", remove_spy)
+
+    panel._on_row_context_menu(QPoint(1, 1))
+
+    # No menu constructed and nothing removed.
+    menu_cls.assert_not_called()
+    remove_spy.assert_not_called()
