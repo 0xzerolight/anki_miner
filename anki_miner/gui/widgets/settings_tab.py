@@ -932,6 +932,24 @@ class SettingsTab(QWidget):
                 tr_format(self.tr("Could not import %1:\n%2"), source, e),
             )
             return
+        # Validate an imported subtitle regex the same way the commit path does
+        # (re.compile). import_config applies the pattern without validation, so
+        # an invalid pattern with the filter enabled would otherwise persist and
+        # be silently disabled at parse time (only a log line). Disable it here
+        # and warn the user, so the failure is surfaced rather than swallowed.
+        if new_config.use_subtitle_regex_filter and new_config.subtitle_regex_filter:
+            try:
+                re.compile(new_config.subtitle_regex_filter)
+            except re.error as e:
+                new_config = replace(new_config, use_subtitle_regex_filter=False)
+                QMessageBox.warning(
+                    self,
+                    self.tr("Invalid Subtitle Regex"),
+                    tr_format(
+                        self.tr("The imported subtitle regex filter is invalid and has " "been disabled:\n%1"),
+                        e,
+                    ),
+                )
         # Import can touch any field — full reload, unlike the targeted
         # auto-save commit.
         self.config = new_config
