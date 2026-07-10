@@ -290,6 +290,26 @@ class TestTraversalGuard:
         assert result is None
 
 
+class TestPermissionErrorGuard:
+    def test_is_file_permission_error_returns_none(self, tmp_path: Path, monkeypatch):
+        """is_file() raising EACCES must not abort the never-raises fetch."""
+        pack_dir = tmp_path / "pack"
+        pack_dir.mkdir()
+        fetcher = LocalAudioPackFetcher(
+            db_path=tmp_path / "index.sqlite",
+            pack_dir=pack_dir,
+            pack_id="x",
+            cache_dir=tmp_path / "cache",
+        )
+
+        def _boom(self: Path) -> bool:
+            raise PermissionError("EACCES")
+
+        monkeypatch.setattr(Path, "is_file", _boom)
+
+        assert fetcher._resolve_safe("ok.mp3") is None
+
+
 # ---------------------------------------------------------------------------
 # Corrupt / missing DB
 # ---------------------------------------------------------------------------

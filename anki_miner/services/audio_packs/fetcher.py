@@ -203,7 +203,13 @@ class LocalAudioPackFetcher:
             )
             return None
 
-        if not resolved.is_file():
+        # is_file() does not suppress EACCES: a PermissionError here (e.g. an
+        # unreadable dir on the resolved path) would propagate out of fetch and
+        # abort the never-raises mining loop.
+        try:
+            if not resolved.is_file():
+                return None
+        except OSError:
             return None
 
         return resolved
