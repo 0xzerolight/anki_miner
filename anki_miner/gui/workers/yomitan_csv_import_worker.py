@@ -36,9 +36,10 @@ class YomitanCsvImportWorker(CancellableWorker):
             result dataclass (e.g. ``YomitanPitchImportResult``). Typed as
             ``object`` to dodge Qt's signal-type registration limitations for
             arbitrary dataclasses.
-        failed(str): error message. Cancellation surfaces here with a message
-            containing the word "cancelled" so callers can suppress the
-            user-facing error dialog.
+        cancelled(): emitted (in place of ``failed``) when the run aborts because
+            the user cancelled — a distinct signal so callers suppress the error
+            dialog explicitly instead of substring-matching the error text.
+        failed(str): error message for a genuine failure (never fired on cancel).
 
     The completion signal is named ``import_finished`` (not ``finished``) to
     avoid colliding with ``QThread.finished``, which the codebase uses for
@@ -47,6 +48,7 @@ class YomitanCsvImportWorker(CancellableWorker):
 
     progress = pyqtSignal(int, int, str)
     import_finished = pyqtSignal(object)
+    cancelled = pyqtSignal()
     failed = pyqtSignal(str)
 
     def __init__(
@@ -72,5 +74,11 @@ class YomitanCsvImportWorker(CancellableWorker):
             )
             self.import_finished.emit(result)
         except Exception as exc:  # noqa: BLE001 - surface every failure to GUI
-            logger.exception("YomitanCsvImportWorker unhandled exception")
-            self.failed.emit(str(exc))
+            # A cancel aborts the importer with an exception too; route it to the
+            # distinct ``cancelled`` signal so callers never confuse it with a
+            # genuine error whose message merely contains the word "cancel".
+            if self.check_cancelled():
+                self.cancelled.emit()
+            else:
+                logger.exception("YomitanCsvImportWorker unhandled exception")
+                self.failed.emit(str(exc))
