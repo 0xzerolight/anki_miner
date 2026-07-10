@@ -233,8 +233,9 @@ class _EpisodeContext:
     source_label: str
 
     # Reading-tab only (Issue: Reading tab): maps a unit index (= int of the
-    # dummy start_time) to its human page/chapter label ("p.42"). None on the
-    # video/subtitle path, where phase5 keeps the HH:MM:SS timestamp format.
+    # dummy start_time) to its human page/chapter/cue label ("p.42" / "1:23").
+    # None on the video path (process_episode, where phase5 keeps the HH:MM:SS
+    # timestamp format); set by process_reading for manga/novels/subtitles.
     unit_labels: dict[int, str] | None = None
 
     # Accumulator fields populated as phases progress.
@@ -1786,11 +1787,11 @@ class EpisodeProcessor:
         ``failed_refs`` memos) even when the ref is shared by many words.
         """
         # Label-only kind split: manga cards carry a distinct page image each,
-        # while a book attaches one cover to every card (txt has none) — so the
-        # image-stage wording differs. The three emissions below stay strictly
-        # UNCONDITIONAL (band accounting must not depend on kind); only the text
-        # varies. Derived once here, used at the three sites.
-        is_book = document.kind == "book"
+        # while a book attaches one cover to every card (txt and subtitles have
+        # none) — so the image-stage wording differs. The three emissions below
+        # stay strictly UNCONDITIONAL (band accounting must not depend on kind);
+        # only the text varies. Derived once here, used at the three sites.
+        is_book = document.kind in ("book", "subtitle")
         step_banner = (
             QCoreApplication.translate("EpisodeProcessor", "Step 3/5 — Preparing card images")
             if is_book
@@ -1941,7 +1942,9 @@ class EpisodeProcessor:
                 index needs reimport.
             AnkiConnectionError: AnkiConnect is unreachable.
         """
-        if document.kind == "manga":
+        # Manga and subtitle sources carry a meaningful series (mokuro title /
+        # parent folder), so prefix it; books use the bare episode title.
+        if document.kind in ("manga", "subtitle"):
             source_label = _sanitize_source_label(f"{document.series} — {document.episode}")
         else:
             source_label = document.episode

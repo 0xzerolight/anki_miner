@@ -712,6 +712,41 @@ def test_source_label_manga_vs_book(test_config):
     assert _sources(anki_b)[0] == "A Fine Novel @ ch.3"
 
 
+def test_subtitle_kind_locks_label_and_image_wording(test_config):
+    """14b. Subtitle document → 'Series — Episode @ m:ss' source (manga-style
+    label) but book-style 'card images' wording — locks BOTH kind switches."""
+    words = [_word("犬", 0)]
+    counts = collections.Counter({"犬": 1})
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+    anki = _make_anki_service()
+    presenter = MagicMock(name="Presenter")
+    proc = _make_processor(test_config, subtitle_parser=sp, anki_service=anki, presenter=presenter)
+
+    rec = _RecordingProgress()
+    with patch(_IMG) as prep:
+        proc.process_reading(
+            _document(
+                [_unit(0, label="1:23", image_ref=None)],
+                kind="subtitle",
+                series="MyShow",
+                episode="Ep01",
+                title="Ep01",
+            ),
+            progress_callback=rec,
+        )
+
+    prep.assert_not_called()
+    # Source label: series-prefixed like manga, with the cue-time unit label.
+    assert _sources(anki)[0] == "MyShow — Ep01 @ 1:23"
+    # Image-stage wording: book-style, never manga's "page images".
+    infos = [c.args[0] for c in presenter.show_info.call_args_list]
+    assert "Step 3/5 — Preparing card images" in infos
+    assert rec.start_descs[0] == "Preparing card images"
+    assert "Step 3/5 — Preparing page images" not in infos
+    assert "Preparing page images" not in rec.start_descs
+
+
 def test_partial_failure_carries_partial_ids(test_config):
     """16. Exception mid-phase-5 with partial ids → _partial_failure_result path."""
     words = [_word("犬", 0)]
