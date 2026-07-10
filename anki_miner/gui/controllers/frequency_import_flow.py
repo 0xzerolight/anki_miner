@@ -182,16 +182,22 @@ class FrequencyImportFlow:
         def on_failed(err: str) -> None:
             dlg.close()
             self._set_import_buttons_enabled(True)
-            if "cancel" not in err.lower():
-                QMessageBox.warning(
-                    self._parent,
-                    QCoreApplication.translate("FrequencyImportFlow", "Import Failed"),
-                    err,
-                )
+            # The worker fires this only for a genuine failure — a user cancel
+            # comes through on_cancelled instead, so no error-text sniffing here.
+            QMessageBox.warning(
+                self._parent,
+                QCoreApplication.translate("FrequencyImportFlow", "Import Failed"),
+                err,
+            )
+
+        def on_cancelled() -> None:
+            dlg.close()
+            self._set_import_buttons_enabled(True)
 
         worker.progress.connect(on_progress)
         worker.import_finished.connect(on_done)
         worker.failed.connect(on_failed)
+        worker.cancelled.connect(on_cancelled)
         dlg.canceled.connect(worker.cancel)
         worker.start()
 
@@ -263,16 +269,21 @@ class FrequencyImportFlow:
         def on_failed(err: str) -> None:
             dlg.close()
             self._set_import_buttons_enabled(True)
-            if "cancel" not in err.lower():
-                QMessageBox.warning(
-                    self._parent,
-                    QCoreApplication.translate("FrequencyImportFlow", "Re-import Failed"),
-                    err,
-                )
+            # Genuine failure only — cancellation routes to on_cancelled.
+            QMessageBox.warning(
+                self._parent,
+                QCoreApplication.translate("FrequencyImportFlow", "Re-import Failed"),
+                err,
+            )
+
+        def on_cancelled() -> None:
+            dlg.close()
+            self._set_import_buttons_enabled(True)
 
         worker.progress.connect(on_progress)
         worker.import_finished.connect(on_done)
         worker.failed.connect(on_failed)
+        worker.cancelled.connect(on_cancelled)
         dlg.canceled.connect(worker.cancel)
         worker.start()
 

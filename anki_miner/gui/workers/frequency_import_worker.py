@@ -33,7 +33,10 @@ class FrequencyImportWorker(CancellableWorker):
         import_finished(str, dict): ``(source_id, meta)`` — emitted once on
             success. ``meta`` carries ``entry_count``, ``source_name``, and
             ``format``.
-        failed(str): error message, including cancellation.
+        cancelled(): emitted (in place of ``failed``) when the run aborts because
+            the user cancelled — a distinct signal so callers suppress the error
+            dialog explicitly instead of substring-matching the error text.
+        failed(str): error message for a genuine failure (never fired on cancel).
 
     The completion signal is named ``import_finished`` to avoid collision with
     ``QThread.finished``, which the codebase uses for cleanup wiring.
@@ -43,6 +46,8 @@ class FrequencyImportWorker(CancellableWorker):
     progress = pyqtSignal(int, int, str)
     # source_id, meta dict (entry_count, source_name, format)
     import_finished = pyqtSignal(str, dict)
+    # emitted instead of failed when the user cancelled
+    cancelled = pyqtSignal()
     # error message
     failed = pyqtSignal(str)
 
@@ -96,5 +101,11 @@ class FrequencyImportWorker(CancellableWorker):
             }
             self.import_finished.emit(result.source_id, meta)
         except Exception as exc:  # noqa: BLE001 - surface every failure to GUI
-            logger.exception("FrequencyImportWorker unhandled exception")
-            self.failed.emit(str(exc))
+            # A cancel aborts the importer with an exception too; route it to the
+            # distinct ``cancelled`` signal so callers never confuse it with a
+            # genuine error whose message merely contains the word "cancel".
+            if self.check_cancelled():
+                self.cancelled.emit()
+            else:
+                logger.exception("FrequencyImportWorker unhandled exception")
+                self.failed.emit(str(exc))

@@ -229,9 +229,32 @@ class TestWorkerOutcomes:
         assert len(captured["warning"]) == 1
         assert "Invalid index.json" in captured["warning"][0][1]
 
-    def test_cancelled_import_returns_none_without_warning(self, tab, tmp_path, monkeypatch):
+    def test_real_cancellation_returns_none_without_warning(self, tab, tmp_path, monkeypatch):
+        # An ACTUAL user cancel (worker cancelled → importer aborts on its
+        # cancel_check) is silent — routed through the worker's distinct
+        # ``cancelled`` signal, not inferred from the error text.
         captured = _capture_messagebox(monkeypatch)
-        _stub_importer(monkeypatch, error=SetupError("Import cancelled"))
+
+        def fake(zip_path, dest_csv, *, progress=None, cancel_check=None):
+            if cancel_check and cancel_check():
+                raise SetupError("Import cancelled")
+            dest_csv.write_text("reading,kanji,pattern\nネコ,猫,0\n", encoding="utf-8")
+            return YomitanPitchImportResult(
+                source_name="X", source_revision="v1", entry_count=1, skipped_display_only=0
+            )
+
+        monkeypatch.setattr("anki_miner.gui.widgets.settings_tab.import_yomitan_pitch_zip", fake)
+
+        # Pre-cancel the real worker so the importer aborts on its first check.
+        from anki_miner.gui.workers.yomitan_csv_import_worker import YomitanCsvImportWorker as _RealWorker
+
+        def precancel(import_fn, zip_path, dest_csv, parent=None):
+            worker = _RealWorker(import_fn, zip_path, dest_csv, parent)
+            worker.cancel()
+            return worker
+
+        monkeypatch.setattr("anki_miner.gui.widgets.settings_tab.YomitanCsvImportWorker", precancel)
+
         zip_path = tmp_path / "pitch.zip"
         zip_path.write_bytes(b"")
         tab.dictionary_panel.pitch_accent_selector.set_path(str(zip_path))
@@ -239,8 +262,22 @@ class TestWorkerOutcomes:
         out = tab._resolve_pitch_accent_path()
 
         assert out is None
-        # Cancellation is user-initiated — no error dialog.
         assert captured["warning"] == []
+
+    def test_error_containing_word_cancel_still_shows_warning(self, tab, tmp_path, monkeypatch):
+        # A genuine failure whose message merely CONTAINS "cancel" (the worker
+        # was NOT cancelled) must still surface the error dialog.
+        captured = _capture_messagebox(monkeypatch)
+        _stub_importer(monkeypatch, error=SetupError("download cancelled: connection reset"))
+        zip_path = tmp_path / "pitch.zip"
+        zip_path.write_bytes(b"")
+        tab.dictionary_panel.pitch_accent_selector.set_path(str(zip_path))
+
+        out = tab._resolve_pitch_accent_path()
+
+        assert out is None
+        assert len(captured["warning"]) == 1
+        assert "cancelled" in captured["warning"][0][1]
 
 
 class TestNoReimportOnSecondSave:
