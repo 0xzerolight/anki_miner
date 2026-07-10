@@ -17,6 +17,7 @@ resident in memory at a time.  ``_chunk_media_actions`` is kept for the
 
 import base64
 import hashlib
+import html
 import logging
 import re
 from collections.abc import Iterable, Iterator
@@ -62,14 +63,22 @@ _MEDIA_BATCH_MAX_BYTES = 4 * 1024 * 1024
 
 
 def _extract_dict_media_srcs(definition_html: str) -> list[str]:
-    """Return every dict-media `src` referenced in a definition HTML blob."""
+    """Return every dict-media `src` referenced in a definition HTML blob.
+
+    The renderer HTML-escapes the src (``escape(img_src, quote=True)``), so a
+    basename carrying ``&``/``"``/``<`` appears here as ``&amp;`` etc. Unescape it
+    back to the on-disk / browser-requested name so downstream disk resolution
+    (``_resolve_dict_media_path``), the ``storeMediaFile`` name, and the upload
+    cache all key on the same unescaped string (else the file never matches on
+    disk and re-misses forever).
+    """
     if not definition_html:
         return []
     out: list[str] = []
     for tag in _DICT_MEDIA_IMG_RE.findall(definition_html):
         m = _IMG_SRC_RE.search(tag)
         if m:
-            out.append(m.group(1))
+            out.append(html.unescape(m.group(1)))
     return out
 
 

@@ -1,5 +1,6 @@
 """Tests for anki_media_store streaming / lazy-encode path (OVH-051)."""
 
+import base64
 import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -10,6 +11,7 @@ from anki_miner.services.anki_media_store import (
     AnkiMediaStore,
     _build_store_media_action,
     _content_addressed_name,
+    _extract_dict_media_srcs,
     _stream_encode_chunks,
 )
 
@@ -384,3 +386,38 @@ class TestContentHashStoreBatch:
         assert stored == set()
         assert item.media.audio_filename == "w_100.mp3"  # unchanged (not renamed)
         assert store.last_store_failures == 1
+
+
+class TestDictMediaSrcUnescaping:
+    """A dict-media basename with an HTML-special char (``&``) is stored escaped
+    in the rendered ``<img src>`` but must resolve to the raw on-disk file."""
+
+    def test_extract_unescapes_amp(self):
+        html_blob = '<img class="anki-miner-dict-media" src="d__a&amp;b.svg">'
+        assert _extract_dict_media_srcs(html_blob) == ["d__a&b.svg"]
+
+    def test_escaped_src_resolves_to_on_disk_file(self, test_config, tmp_path, make_tokenized_word):
+        from dataclasses import replace
+
+        # On-disk flattened name carries the raw '&'; the renderer HTML-escaped it.
+        media_dir = tmp_path / "dicts" / "d" / "media"
+        media_dir.mkdir(parents=True)
+        (media_dir / "a&b.svg").write_bytes(b"<svg/>")
+        config = replace(test_config, dicts_root=tmp_path / "dicts")
+
+        definition = '<img class="anki-miner-dict-media" src="d__a&amp;b.svg">'
+        item = CardPayload(word=make_tokenized_word(), media=MediaData(), definition=definition)
+
+        resp = _mock_response(result=["d__a&b.svg"])
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
+            store = AnkiMediaStore(config)
+            store.upload_dict_media([item])
+
+        # storeMediaFile shipped under the UNescaped name with the real file bytes.
+        payload = mock_post.call_args[1]["json"]
+        actions = payload["params"]["actions"]
+        assert len(actions) == 1
+        assert actions[0]["params"]["filename"] == "d__a&b.svg"
+        assert base64.b64decode(actions[0]["params"]["data"]) == b"<svg/>"
+        # Cached under the same unescaped key so it never double-misses.
+        assert "d__a&b.svg" in store._dict_media_uploaded
