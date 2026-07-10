@@ -112,10 +112,13 @@ ALLOWLIST: dict[str, set[str]] = {
     r"\burllib\b": {
         "widgets/youtube_playlist_flow.py",
     },
-    # shutil.which — a single cheap PATH scan to test for the `alass` binary,
-    # cached on the widget (`_alass_is_available`); readers use the cache.
+    # shutil.which — a single cheap PATH scan to test for a binary, cached on the
+    # widget (`_alass_is_available` / `_ffmpeg_is_available`); readers use the cache.
     r"shutil\.which\(": {
         "widgets/subtitle_retime_tab.py",
+        # ffmpeg/ffprobe PATH probe, cached in `_ffmpeg_is_available`; recomputed
+        # only in __init__/update_config, never per read.
+        "widgets/condense_tab.py",
     },
     # untimed .wait() — each is a legitimate join/event-wait, not a GUI freeze:
     r"\.wait\(\s*\)": {
@@ -184,6 +187,9 @@ ALLOWLIST: dict[str, set[str]] = {
     r"list_audio_streams\(": {
         "widgets/single_episode_tab.py",
         "widgets/subtitle_retime_tab.py",
+        # Inside _on_audio_tracks_clicked's `_probe` callable, dispatched via
+        # run_off_thread. Off-thread.
+        "widgets/condense_tab.py",
     },
     # get_primary_video_codec / find_japanese_audio_stream — both inside
     # subtitle_player_widget._probe (run_off_thread). Off-thread.
