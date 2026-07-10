@@ -273,6 +273,41 @@ def test_notetype_page_auto_map_stages_fields(qtbot, wiz_config):
     assert isinstance(cfg.anki_fields, _types.MappingProxyType)
 
 
+def test_auto_map_merges_over_current_fields_and_maps_pitch(qtbot, wiz_config):
+    """Auto-Map must merge only matched keys, preserving manual mappings (S3).
+
+    A manual mapping for a key the field list can't match must survive, and
+    pitch_graph/pitch_text must be mappable (added to _FIELD_KEYWORDS).
+    """
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    # Seed a manual mapping for a key that won't match the field list below.
+    seeded = dict(wiz_config.anki_fields)
+    seeded["source"] = "MyCustomSource"
+    cfg = replace(wiz_config, anki_fields=seeded)
+
+    wiz = SetupWizard(cfg)
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    wiz.validation_service = MagicMock(  # type: ignore[method-assign]
+        return_value=MagicMock(check_field_names=lambda: (True, ""))
+    )
+    page.notetype_combo.setCurrentText("Lapis")
+    # No "source"/"origin" field here, but PitchGraph and PitchText are present.
+    page._on_fields_fetched(["Expression", "Sentence", "PitchGraph", "PitchText"])
+    page._on_auto_map_clicked()
+
+    fields = wiz.working_config().anki_fields
+    # Matched keys mapped.
+    assert fields["word"] == "Expression"
+    assert fields["sentence"] == "Sentence"
+    # pitch_graph/pitch_text are no longer dropped.
+    assert fields["pitch_graph"] == "PitchGraph"
+    assert fields["pitch_text"] == "PitchText"
+    # The manual, unmatched key is preserved (not clobbered to "").
+    assert fields["source"] == "MyCustomSource"
+
+
 def test_notetype_page_unsuitable_fieldlist_shows_guidance(qtbot, wiz_config):
     """A field list missing a word+sentence shape triggers the import-note-type guidance."""
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
