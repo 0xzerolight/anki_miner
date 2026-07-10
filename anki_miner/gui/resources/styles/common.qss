@@ -1213,6 +1213,11 @@ QLabel#queue-status-badge[status="complete"] {
     color: ${color-badge-success-text};
 }
 
+QLabel#queue-status-badge[status="error"] {
+    background-color: ${color-badge-error-bg};
+    color: ${color-badge-error-text};
+}
+
 /* --- Settings Tab --- */
 
 QLabel#validation-status[status="success"] {
