@@ -2,7 +2,7 @@
 
 Reuses the ``_build_tabs`` helper from ``test_app_deck_builder_tab`` (which
 mirrors ``anki_miner.gui.app.main``'s tab-construction block) and asserts the
-"Audio" tab is present, correctly typed, and ordered right after YouTube.
+"Audio" tab is present, correctly typed, and ordered right after Deck Builder.
 """
 
 from __future__ import annotations
@@ -33,10 +33,10 @@ def test_audiobook_tab_is_correct_type(wired_window):
     assert isinstance(tabs["Audio"], AudiobookTab)
 
 
-def test_audiobook_tab_after_youtube(wired_window):
-    """Audio must appear right after YouTube."""
+def test_audiobook_tab_after_deck_builder(wired_window):
+    """Audio must appear right after Deck Builder."""
     _window, titles, _tabs = wired_window
-    assert titles.index("Audio") == titles.index("YouTube") + 1
+    assert titles.index("Audio") == titles.index("Deck Builder") + 1
 
 
 def test_audiobook_tab_before_analytics(wired_window):

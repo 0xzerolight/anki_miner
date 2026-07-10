@@ -87,12 +87,10 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Tabs
 
-- **Episode Mining**: mine one video/subtitle pair with word curation.
-- **Batch Mining**: batch mine a folder of episode/subtitle pairs for sequential processing. Files are paired by episode number, so each folder / queue item should hold a single show (use Multi-Series Queue for mining multiple series at a time).
+- **Video**: mine video, in three sub-tabs. **Single**: one video/subtitle pair with word curation. **Batch**: a folder of episode/subtitle pairs for sequential processing — files are paired by episode number, so each folder / queue item should hold a single show (use Multi-Series Queue for mining multiple series at a time). **YouTube**: paste one or more URLs, then mine the queue.
 - **Deck Builder**: point at a folder of episode/subtitle pairs and mine the full series into one named deck. Ranked by frequency; pick how many to include (all, top N, or a coverage target) and preview before cards are created.
-- **YouTube**: paste one or more URLs, then mine the queue.
 - **Audio**: queue local audio + subtitle/transcript pairs (audiobooks, podcasts, radio, songs, lectures) and mine them audio-only; embedded cover art stands in for screenshots.
-- **Reading**: mine manga and novels instead of video. Point at a mokuro-processed manga volume (an image folder or `.cbz` with its sibling `.mokuro` file) or a novel (`.epub`, or Aozora/plain `.txt`); cards carry the page image or the book cover. Anki Miner reads mokuro's output and does no OCR itself. Word curation and preview work as in the other tabs.
+- **Reading**: mine manga and novels instead of video. Point at a mokuro-processed manga volume (an image folder or `.cbz` with its sibling `.mokuro` file) or a novel (`.epub`, or Aozora/plain `.txt`); cards carry the page image or the book cover. Anki Miner reads mokuro's output and does no OCR itself. Word curation works as in the other tabs.
 - **Analytics**: history, series difficulty rankings, milestones, undo.
 - **Tools**: generate subtitles from speech with a local Whisper model (no GPU required; optional CUDA/VAD packs install in-app), retime an out-of-sync subtitle file to your video with alass, or condense a video/audio file down to dialogue-only audio using its subtitles.
 - **Settings**: Anki, Media, Dictionaries, Audio, Filtering, Frequency, Subtitles, YouTube, Themes. Saved to `~/.anki_miner/gui_config.json`.

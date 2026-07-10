@@ -33,7 +33,6 @@ from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
-from anki_miner.gui.widgets.dialogs.word_preview_dialog import WordPreviewDialog
 from anki_miner.gui.widgets.header_widget import HeaderWidget
 from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
 from anki_miner.models import ProcessingResult, ValidationResult
@@ -51,12 +50,12 @@ class MainWindow(QMainWindow):
     """Main application window for Anki Miner.
 
     This window provides a tabbed interface for:
-    - Episode Mining (single video + subtitle pair)
-    - Batch Mining (folder of paired files)
+    - Video (container: Single episode / Batch folder / YouTube sub-tabs)
     - Deck Builder (corpus-driven deck assembly)
-    - YouTube (URL probe + fetch + mine)
     - Audiobook (audio + subtitle pair queue)
+    - Reading (container: Manga / Novels sub-tabs)
     - Analytics (mining statistics dashboard)
+    - Tools (container: Generate / Retime subtitle sub-tabs)
     - Settings (configuration)
 
     Signals:
@@ -227,8 +226,7 @@ class MainWindow(QMainWindow):
         # Set accessible names for main components
         self.tabs.setAccessibleName("Main Tabs")
         self.tabs.setAccessibleDescription(
-            "Navigate between Episode Mining, Batch Mining, Deck Builder, YouTube, "
-            "Audiobook, Analytics, and Settings"
+            "Navigate between Video, Deck Builder, Audio, Reading, Analytics, Tools, and Settings"
         )
 
         self.header.setAccessibleName("Application Header")
@@ -405,10 +403,8 @@ class MainWindow(QMainWindow):
     # Stable capability key -> the widget class name registered as that main tab.
     # Matched by class name (not index/label) so it survives tab reorder and i18n.
     _MAIN_TAB_CLASSES = {
-        "episode": "SingleEpisodeTab",
-        "batch": "BatchProcessingTab",
+        "video": "VideoTab",
         "deckbuilder": "DeckBuilderTab",
-        "youtube": "YouTubeTab",
         "audiobook": "AudiobookTab",
         "reading": "ReadingTab",
         "analytics": "AnalyticsTab",
@@ -439,11 +435,11 @@ class MainWindow(QMainWindow):
         if idx < 0:
             return
         self.tabs.setCurrentIndex(idx)
-        if target.settings_subtab:
-            settings_widget = self.tabs.widget(idx)
-            open_subtab = getattr(settings_widget, "open_subtab", None)
+        if target.subtab:
+            container = self.tabs.widget(idx)
+            open_subtab = getattr(container, "open_subtab", None)
             if callable(open_subtab):
-                open_subtab(target.settings_subtab)
+                open_subtab(target.subtab)
 
     def _open_settings(self) -> None:
         """Open the Settings tab."""
@@ -705,7 +701,6 @@ class MainWindow(QMainWindow):
         self.presenter.error_signal.connect(self._on_error_message)
         self.presenter.validation_result_signal.connect(self._on_validation_result)
         self.presenter.processing_result_signal.connect(self._on_processing_result)
-        self.presenter.word_preview_signal.connect(self._on_word_preview)
 
     def _on_info_message(self, message: str) -> None:
         """Handle info message from presenter.
@@ -852,15 +847,6 @@ class MainWindow(QMainWindow):
         except Exception:
             logger.debug("Failed to record history", exc_info=True)
 
-    def _on_word_preview(self, words: list) -> None:
-        """Handle word preview from presenter.
-
-        Args:
-            words: List of TokenizedWord objects
-        """
-        dialog = WordPreviewDialog(words, self.config, self)
-        dialog.exec()
-
     def get_config(self) -> AnkiMinerConfig:
         """Get current configuration.
 
@@ -933,7 +919,22 @@ class MainWindow(QMainWindow):
         Args:
             event: Close event
         """
-        # Stop the main-thread stall watchdog first so its monitor thread and
+        # Flush a pending Settings auto-save FIRST. Ordering is load-bearing:
+        # background_tasks.shutdown below fans out to SettingsTab.shutdown,
+        # which stops the debounce timer — a flush placed after it would see
+        # an inactive timer and silently drop an edit made <1s before quit.
+        # The deferred-close path also returns before the save_config at the
+        # bottom, so this is the only spot both close paths pass through.
+        # Committing routes through config_changed → update_config, which
+        # writes gui_config.json and refreshes self.config for both the
+        # immediate save below and the deferred _poll_deferred_close save.
+        settings_idx = self._settings_tab_index()
+        if settings_idx >= 0:
+            flush = getattr(self.tabs.widget(settings_idx), "flush_pending_settings", None)
+            if callable(flush):
+                flush()
+
+        # Stop the main-thread stall watchdog so its monitor thread and
         # heartbeat timer don't outlive shutdown. The monitor is daemon=True as
         # a backstop, but stopping it cleanly avoids a stray WARNING if a worker
         # join briefly blocks the GUI thread during close. Guarded: it may be

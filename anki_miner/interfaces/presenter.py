@@ -4,7 +4,6 @@ from typing import Protocol, runtime_checkable
 
 from anki_miner.models import (
     ProcessingResult,
-    TokenizedWord,
     ValidationResult,
 )
 
@@ -64,13 +63,5 @@ class PresenterProtocol(Protocol):
 
         Args:
             result: The processing result to display
-        """
-        ...
-
-    def show_word_preview(self, words: list[TokenizedWord]) -> None:
-        """Display a preview of discovered words.
-
-        Args:
-            words: List of words to preview
         """
         ...

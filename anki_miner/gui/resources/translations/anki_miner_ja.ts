@@ -668,6 +668,30 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>JapanesePod101 に音声がなかった単語を次回実行時に再試行</translation>
     </message>
     <message>
+        <source>Sentence Audio (Reading Sources)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Generate spoken sentence audio for cards mined from manga and books (these have no source audio). Sentence text is sent to the selected online services.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Generate TTS sentence audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Google Translate TTS (tried first)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Naver Papago (fallback)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select at least one service.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Google Translate (synthetic TTS)</source>
         <translation>Google 翻訳（合成 TTS）</translation>
     </message>
@@ -786,14 +810,6 @@ The audio pack was not removed.</source>
         <translation>カードを作成する前に、各音声ファイルの単語選択ポップアップを表示します。</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation>プレビュー</translation>
-    </message>
-    <message>
-        <source>Run the queue in preview mode — no cards created.</source>
-        <translation>キューをプレビューモードで実行します — カードは作成されません。</translation>
-    </message>
-    <message>
         <source>Mine</source>
         <translation>マイニング</translation>
     </message>
@@ -908,14 +924,6 @@ The audio pack was not removed.</source>
         <translation>字幕フォルダ:</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation>プレビュー</translation>
-    </message>
-    <message>
-        <source>Preview video/subtitle pairs before processing</source>
-        <translation>処理する前に動画と字幕のペアをプレビューします。</translation>
-    </message>
-    <message>
         <source>Process Folder</source>
         <translation>フォルダを処理</translation>
     </message>
@@ -942,12 +950,6 @@ The audio pack was not removed.</source>
     <message>
         <source>No Pairs Found</source>
         <translation>ペアが見つかりません</translation>
-    </message>
-    <message>
-        <source>No matching video/subtitle pairs found.
-Files pair by episode number — point each folder at a single show.</source>
-        <translation>一致する動画・字幕のペアが見つかりません。
-ファイルはエピソード番号でペアになります — 各フォルダには 1 つの番組のみを指定してください。</translation>
     </message>
     <message>
         <source>No matching video/subtitle pairs found</source>
@@ -1148,20 +1150,44 @@ Total cards created: %2</source>
         <translation>オーディオブックや音声ファイルからその文字起こしを使って語彙をマイニングします。</translation>
     </message>
     <message>
-        <source>Mine from manga or novels</source>
+        <source>Mine from manga</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Mine vocabulary from manga volumes (mokuro) in the Manga sub-tab, or novels (EPUB/text) in the Novels sub-tab.</source>
+        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Generate or re-time subtitles</source>
-        <translation>字幕の生成または再タイミング</translation>
+        <source>Mine from novels</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Create subtitles from audio, or re-sync existing subtitles -- as a standalone tool.</source>
-        <translation>音声から字幕を作成、または既存の字幕を再同期します — 単独のツールとして利用できます。</translation>
+        <source>Mine vocabulary from novels and other text (EPUB, Aozora, plain text).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Generate subtitles from audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create subtitles from audio with a local Whisper model -- as a standalone tool.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-time existing subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-sync existing subtitles against the video -- as a standalone tool.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Condense audio from subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Build dialogue-only condensed audio from a video or audio file and its subtitles.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>View mining history &amp; stats</source>
@@ -2386,6 +2412,18 @@ The dictionary was not removed.</source>
         <translation>単語音声ソースが音声以外の応答を返しました（レート制限の可能性）— 今回の実行では音声をスキップしました。次回の実行で再試行します</translation>
     </message>
     <message>
+        <source>Sentence-audio TTS connection/certificate failure — sentence audio skipped this run, will retry next run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence-audio TTS returned repeated server errors — sentence audio skipped this run, will retry next run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
         <translation type="unfinished" />
     </message>
@@ -2508,6 +2546,18 @@ The dictionary was not removed.</source>
     <message>
         <source>Expression audio: %1/%2 available</source>
         <translation>表現音声: %1/%2 が利用可能</translation>
+    </message>
+    <message>
+        <source>Generating sentence audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence audio: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence audio: %1/%2 sentences</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Step 4/5 — Fetching definitions</source>
@@ -3240,20 +3290,12 @@ The frequency source was not removed.</source>
 </context><context>
     <name>MainWindow</name>
     <message>
-        <source>Episode Mining</source>
-        <translation>エピソードマイニング</translation>
-    </message>
-    <message>
-        <source>Batch Mining</source>
-        <translation>一括マイニング</translation>
+        <source>Video</source>
+        <translation type="unfinished">動画</translation>
     </message>
     <message>
         <source>Deck Builder</source>
         <translation>デッキビルダー</translation>
-    </message>
-    <message>
-        <source>YouTube</source>
-        <translation>YouTube</translation>
     </message>
     <message>
         <source>Audio</source>
@@ -3456,6 +3498,10 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Subtitles</source>
+        <translation type="unfinished">字幕</translation>
+    </message>
+    <message>
         <source>Generate</source>
         <translation>生成</translation>
     </message>
@@ -3467,39 +3513,17 @@ Continue?</source>
         <source>Condense</source>
         <translation type="unfinished" />
     </message>
-</context><context>
-    <name>MangaVolumesPreviewDialog</name>
     <message>
-        <source>Preview Volumes — %1 found</source>
+        <source>Single</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Volume Preview: %1 volume(s)</source>
+        <source>Batch</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Title</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volume</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Format</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Source</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volumes mine in order. No cards are created by Preview.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Close</source>
-        <translation type="unfinished">閉じる</translation>
+        <source>YouTube</source>
+        <translation>YouTube</translation>
     </message>
 </context><context>
     <name>MediaExtractorService</name>
@@ -3718,60 +3742,6 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Silence-removal library installed successfully.</source>
         <translation>無音除去ライブラリのインストールが完了しました。</translation>
-    </message>
-</context><context>
-    <name>PairPreviewDialog</name>
-    <message>
-        <source>Preview File Pairs - %1 pairs found</source>
-        <translation>ファイルペアのプレビュー - %1 ペアが見つかりました</translation>
-    </message>
-    <message>
-        <source>File Pair Preview: %1 pairs</source>
-        <translation>ファイルペアのプレビュー: %1 ペア</translation>
-    </message>
-    <message>
-        <source>%1 video/subtitle pairs</source>
-        <translation>%1 個の動画/字幕ペア</translation>
-    </message>
-    <message>
-        <source>Total size: %1</source>
-        <translation>合計サイズ: %1</translation>
-    </message>
-    <message>
-        <source>Video: %1 • Subtitles: %2</source>
-        <translation>動画: %1 • 字幕: %2</translation>
-    </message>
-    <message>
-        <source>Paired Files</source>
-        <translation>ペアになったファイル</translation>
-    </message>
-    <message>
-        <source>Video File</source>
-        <translation>動画ファイル</translation>
-    </message>
-    <message>
-        <source>Video Size</source>
-        <translation>動画サイズ</translation>
-    </message>
-    <message>
-        <source>Subtitle File</source>
-        <translation>字幕ファイル</translation>
-    </message>
-    <message>
-        <source>Subtitle Size</source>
-        <translation>字幕サイズ</translation>
-    </message>
-    <message>
-        <source>Pairs process in order.</source>
-        <translation>ペアは順番に処理されます。</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>キャンセル</translation>
-    </message>
-    <message>
-        <source>Proceed with Processing</source>
-        <translation>処理を続行</translation>
     </message>
 </context><context>
     <name>PlaylistAddController</name>
@@ -4018,14 +3988,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">プレビュー</translation>
-    </message>
-    <message>
-        <source>List the volume(s) this folder would mine — no cards created.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Mine</source>
         <translation type="unfinished">マイニング</translation>
     </message>
@@ -4043,6 +4005,10 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Novels are mined in the Novels tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle files are mined in the Subtitles tab.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4104,14 +4070,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">プレビュー</translation>
-    </message>
-    <message>
-        <source>Preview the selected book — no cards created.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Mine</source>
         <translation type="unfinished">マイニング</translation>
     </message>
@@ -4129,6 +4087,10 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Manga is mined in the Manga tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle files are mined in the Subtitles tab.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4156,22 +4118,124 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished">%1 が失敗しました: %2。</translation>
     </message>
 </context><context>
-    <name>ReadingTab</name>
+    <name>ReadingSubtitlesTab</name>
     <message>
-        <source>Mining unavailable — services not initialized.</source>
-        <translation type="unfinished">マイニングを利用できません — サービスが初期化されていません。</translation>
+        <source>Review words before mining</source>
+        <translation type="unfinished">マイニング前に単語を確認</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">プレビュー</translation>
+        <source>Show the word-selection popup for each file before creating cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">進捗</translation>
+    </message>
+    <message>
+        <source>Subtitle Files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mines subtitle files as text — no screenshots or audio extracted from video.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle files to mine, one card run per file, in list order.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Files…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add subtitle files (.srt, .ass, .ssa, .vtt) to the list.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove Selected</source>
+        <translation type="unfinished">選択項目を削除</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation type="unfinished">クリア</translation>
     </message>
     <message>
         <source>Mine</source>
         <translation type="unfinished">マイニング</translation>
     </message>
     <message>
+        <source>Mine the listed subtitle files into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">キャンセル</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation type="unfinished">実行中の処理をキャンセルします。</translation>
+    </message>
+    <message>
+        <source>Add Subtitle Files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitles</source>
+        <translation type="unfinished">字幕</translation>
+    </message>
+    <message>
+        <source>Manga is mined in the Manga tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Novels are mined in the Novels tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add at least one subtitle file first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>File not found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">キャンセル中…</translation>
+    </message>
+    <message>
+        <source>File %1/%2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation type="unfinished">%1 をマイニングしました: %2 枚のカード。</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation type="unfinished">%1 が失敗しました: %2。</translation>
+    </message>
+    <message>
+        <source>Finished %1 subtitle files.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ReadingTab</name>
+    <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation type="unfinished">マイニングを利用できません — サービスが初期化されていません。</translation>
+    </message>
+    <message>
         <source>%1 run starting — %2 items.</source>
         <translation type="unfinished">%1 の実行を開始します — %2 件。</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation type="unfinished">マイニング</translation>
     </message>
     <message>
         <source>Could not process %1: %2</source>
@@ -4183,10 +4247,6 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Preview complete — %1 new words</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4404,20 +4464,20 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>有効にすると、Anki Miner は起動時に GitHub で新しいリリースを確認します。</translation>
     </message>
     <message>
-        <source>Reset to Defaults</source>
-        <translation>デフォルトに戻す</translation>
+        <source>Export Settings…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Reset all settings to default values (Ctrl+R)</source>
-        <translation>すべての設定をデフォルト値に戻します (Ctrl+R)</translation>
+        <source>Save a portable settings file (machine-specific paths and resources excluded).</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Save Settings</source>
-        <translation>設定を保存</translation>
+        <source>Import Settings…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Save settings to disk (Ctrl+S)</source>
-        <translation>設定をディスクに保存します (Ctrl+S)</translation>
+        <source>Apply settings from an exported file; anything not in the file is kept.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Updating yt-dlp…</source>
@@ -4436,60 +4496,76 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>yt-dlp を更新できませんでした。接続を確認して再試行してください。</translation>
     </message>
     <message>
-        <source>Invalid dictionary folder</source>
-        <translation>無効な辞書フォルダ</translation>
+        <source>dictionary folder (Dictionaries)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>%1 is not a directory.
-
-Pick an existing folder or click Reset to default.</source>
-        <translation>%1 はディレクトリではありません。
-
-既存のフォルダを選択するか、「デフォルトに戻す」をクリックしてください。</translation>
+        <source>cookies file (YouTube)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Dictionary folder not writable</source>
-        <translation>辞書フォルダに書き込めません</translation>
+        <source>subtitle regex (Filtering)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Cannot write to %1.
-
-Pick a folder you own.</source>
-        <translation>%1 に書き込めません。
-
-自分が所有するフォルダを選択してください。</translation>
-    </message>
-    <message>
-        <source>Cookies file not found</source>
-        <translation>Cookie ファイルが見つかりません</translation>
-    </message>
-    <message>
-        <source>%1 is not a file.
-
-Pick an exported cookies.txt or clear the field.</source>
-        <translation>%1 はファイルではありません。
-
-エクスポートした cookies.txt を選択するか、フィールドを空にしてください。</translation>
-    </message>
-    <message>
-        <source>Invalid Subtitle Regex</source>
-        <translation>無効な字幕正規表現</translation>
-    </message>
-    <message>
-        <source>Pattern: %1
-
-Fix or disable the filter before saving.
-
-Details: %2</source>
-        <translation>パターン: %1
-
-保存する前にフィルターを修正するか無効にしてください。
-
-詳細: %2</translation>
+        <source>⚠ Saved — kept previous: %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>✓ Saved</source>
         <translation>✓ 保存しました</translation>
+    </message>
+    <message>
+        <source>Export Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>JSON Files (*.json);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export Failed</source>
+        <translation type="unfinished">エクスポート失敗</translation>
+    </message>
+    <message>
+        <source>Could not write %1:
+%2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings Exported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Portable settings written to %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Settings?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Apply settings from %1?
+
+Imported values override your current settings; anything not in the file is kept.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Failed</source>
+        <translation type="unfinished">インポート失敗</translation>
+    </message>
+    <message>
+        <source>Could not import %1:
+%2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>✓ Imported</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Importing pitch accent dictionary…</source>
@@ -4506,18 +4582,6 @@ Details: %2</source>
     <message>
         <source>Pitch accent dictionary imported</source>
         <translation>ピッチアクセント辞書をインポートしました</translation>
-    </message>
-    <message>
-        <source>Reset Settings</source>
-        <translation>設定をリセット</translation>
-    </message>
-    <message>
-        <source>Reset all settings to defaults?</source>
-        <translation>すべての設定をデフォルトに戻しますか？</translation>
-    </message>
-    <message>
-        <source>✓ Reset to defaults</source>
-        <translation>✓ デフォルトに戻しました</translation>
     </message>
     <message>
         <source>Retry missing expression audio</source>
@@ -4574,14 +4638,6 @@ Details: %2</source>
     <message>
         <source>Actions</source>
         <translation>操作</translation>
-    </message>
-    <message>
-        <source>Preview Words</source>
-        <translation>単語をプレビュー</translation>
-    </message>
-    <message>
-        <source>Preview discovered words before creating cards</source>
-        <translation>カードを作成する前に検出された単語をプレビューします</translation>
     </message>
     <message>
         <source>Process Episode</source>
@@ -4722,10 +4778,6 @@ Details: %2</source>
     <message>
         <source>Cancelled</source>
         <translation type="unfinished">キャンセルされました</translation>
-    </message>
-    <message>
-        <source>Preview complete — %1 new words</source>
-        <translation type="unfinished" />
     </message>
     <message>
         <source>Complete — %1 cards created</source>
@@ -5730,140 +5782,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>%2 単語中 %1 件を選択</translation>
     </message>
 </context><context>
-    <name>WordPreviewDialog</name>
-    <message>
-        <source>Word Preview - %1 words found</source>
-        <translation>単語プレビュー - %1 件の単語が見つかりました</translation>
-    </message>
-    <message>
-        <source>Word Preview: %1 words found</source>
-        <translation>単語プレビュー: %1 件の単語が見つかりました</translation>
-    </message>
-    <message>
-        <source>Search:</source>
-        <translation>検索:</translation>
-    </message>
-    <message>
-        <source>Filter by any field...</source>
-        <translation>任意のフィールドで絞り込み...</translation>
-    </message>
-    <message>
-        <source>Group by:</source>
-        <translation>グループ化:</translation>
-    </message>
-    <message>
-        <source>None (Flat List)</source>
-        <translation>なし（フラットリスト）</translation>
-    </message>
-    <message>
-        <source>Time Range</source>
-        <translation>時間範囲</translation>
-    </message>
-    <message>
-        <source>Alphabetical</source>
-        <translation>アルファベット順</translation>
-    </message>
-    <message>
-        <source>Word Length</source>
-        <translation>単語の長さ</translation>
-    </message>
-    <message>
-        <source>Export...</source>
-        <translation>エクスポート...</translation>
-    </message>
-    <message>
-        <source>Discovered Words</source>
-        <translation>検出した単語</translation>
-    </message>
-    <message>
-        <source>Surface</source>
-        <translation>表層形</translation>
-    </message>
-    <message>
-        <source>Lemma</source>
-        <translation>見出し語</translation>
-    </message>
-    <message>
-        <source>Reading</source>
-        <translation>読み</translation>
-    </message>
-    <message>
-        <source>Sentence</source>
-        <translation>例文</translation>
-    </message>
-    <message>
-        <source>Time</source>
-        <translation>時間</translation>
-    </message>
-    <message>
-        <source>Video</source>
-        <translation>動画</translation>
-    </message>
-    <message>
-        <source>Close</source>
-        <translation>閉じる</translation>
-    </message>
-    <message>
-        <source>Showing %1 of %2 words</source>
-        <translation>%2 件中 %1 件の単語を表示</translation>
-    </message>
-    <message>
-        <source>Start: %1s, End: %2s, Duration: %3s</source>
-        <translation>開始: %1s、終了: %2s、長さ: %3s</translation>
-    </message>
-    <message>
-        <source>%1 (%2 words)</source>
-        <translation>%1（%2 単語）</translation>
-    </message>
-    <message>
-        <source>1-2 characters</source>
-        <translation>1〜2文字</translation>
-    </message>
-    <message>
-        <source>3-4 characters</source>
-        <translation>3〜4文字</translation>
-    </message>
-    <message>
-        <source>5-6 characters</source>
-        <translation>5〜6文字</translation>
-    </message>
-    <message>
-        <source>7+ characters</source>
-        <translation>7文字以上</translation>
-    </message>
-    <message>
-        <source>0 words</source>
-        <translation>0 単語</translation>
-    </message>
-    <message>
-        <source>0 unique</source>
-        <translation>0 ユニーク</translation>
-    </message>
-    <message>
-        <source>Avg: 0 chars</source>
-        <translation>平均: 0 文字</translation>
-    </message>
-    <message>
-        <source>Span: 00:00</source>
-        <translation>範囲: 00:00</translation>
-    </message>
-    <message>
-        <source>%1 words</source>
-        <translation>%1 単語</translation>
-    </message>
-    <message>
-        <source>%1 unique</source>
-        <translation>%1 ユニーク</translation>
-    </message>
-    <message>
-        <source>Avg: %1 chars</source>
-        <translation>平均: %1 文字</translation>
-    </message>
-    <message>
-        <source>Span: %1</source>
-        <translation>範囲: %1</translation>
-    </message>
-</context><context>
     <name>YouTubeFetcher</name>
     <message>
         <source>Downloading video</source>
@@ -5986,14 +5904,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Show the word-selection popup for each video before creating cards.</source>
         <translation>カードを作成する前に、各動画の単語選択ポップアップを表示します。</translation>
-    </message>
-    <message>
-        <source>Preview</source>
-        <translation>プレビュー</translation>
-    </message>
-    <message>
-        <source>Run the queue in preview mode — no cards created.</source>
-        <translation>キューをプレビューモードで実行します — カードは作成されません。</translation>
     </message>
     <message>
         <source>Mine</source>

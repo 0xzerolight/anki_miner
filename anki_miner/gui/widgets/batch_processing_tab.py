@@ -185,10 +185,6 @@ class BatchProcessingTab(MiningTabBase):
             lambda: (self.video_folder_selector.browse() if hasattr(self, "video_folder_selector") else None)
         )
 
-        # Ctrl+P: Preview/Scan pairs
-        preview_shortcut = QShortcut(QKeySequence("Ctrl+P"), self)
-        preview_shortcut.activated.connect(lambda: self._process_pairs() if hasattr(self, "scan_button") else None)
-
         # Ctrl+Return: Process queue
         process_shortcut = QShortcut(QKeySequence("Ctrl+Return"), self)
         process_shortcut.activated.connect(self._process_queue)
@@ -231,11 +227,6 @@ class BatchProcessingTab(MiningTabBase):
         # Action buttons
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.sm)
-
-        self.preview_pairs_button = ModernButton(self.tr("Preview"), variant="secondary")
-        self.preview_pairs_button.clicked.connect(self._preview_pairs)
-        self.preview_pairs_button.setToolTip(self.tr("Preview video/subtitle pairs before processing"))
-        button_layout.addWidget(self.preview_pairs_button)
 
         self.process_pairs_button = ModernButton(self.tr("Process Folder"), variant="primary")
         self.process_pairs_button.clicked.connect(self._process_pairs)
@@ -289,34 +280,6 @@ class BatchProcessingTab(MiningTabBase):
         from anki_miner.utils.file_pairing import FilePairMatcher
 
         return FilePairMatcher.find_pairs_by_episode_number(video_folder, subtitle_folder)
-
-    def _preview_pairs(self) -> None:
-        """Preview video/subtitle pairs before processing."""
-        folders = self._get_validated_folders()
-        if not folders:
-            QMessageBox.warning(
-                self, self.tr("Invalid Folders"), self.tr("Please select valid video and subtitle folders")
-            )
-            return
-
-        video_folder, subtitle_folder = folders
-        pairs = self._find_episode_pairs(video_folder, subtitle_folder)
-
-        if not pairs:
-            QMessageBox.warning(
-                self,
-                self.tr("No Pairs Found"),
-                self.tr(
-                    "No matching video/subtitle pairs found.\n"
-                    "Files pair by episode number — point each folder at a single show."
-                ),
-            )
-            return
-
-        from anki_miner.gui.widgets.dialogs.pair_preview_dialog import PairPreviewDialog
-
-        dialog = PairPreviewDialog(pairs, self)
-        dialog.exec()
 
     def _process_pairs(self) -> None:
         """Process all discovered pairs from quick processing section."""
@@ -493,13 +456,11 @@ class BatchProcessingTab(MiningTabBase):
         Args:
             enabled: Whether buttons should be enabled
         """
-        self.preview_pairs_button.setEnabled(enabled)
         self.process_pairs_button.setEnabled(enabled)
         self.queue_panel.set_buttons_enabled(enabled)
 
     def _show_cancel_state(self) -> None:
         """Hide action buttons and show cancel button."""
-        self.preview_pairs_button.hide()
         self.process_pairs_button.hide()
         self.cancel_button.setText(self.tr("\u25a0 Cancel"))
         self.cancel_button.setEnabled(True)
@@ -510,7 +471,6 @@ class BatchProcessingTab(MiningTabBase):
         """Restore normal button state after processing ends."""
         self._is_processing = False
         self.cancel_button.hide()
-        self.preview_pairs_button.show()
         self.process_pairs_button.show()
         self._set_buttons_enabled(True)
         # Cancel recovery: the Quick-path worker suppresses result_ready on a

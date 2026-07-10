@@ -28,3 +28,42 @@ def is_junk_path(name: str) -> bool:
     in nested components too, e.g. ``foo/__MACOSX/bar.jpg``.
     """
     return any(part in JUNK_NAMES for part in name.replace("\\", "/").split("/") if part)
+
+
+# --- decoding (shared by the aozora and subtitle loaders) ------------------
+
+
+def _is_jp(ch: str) -> bool:
+    o = ord(ch)
+    return (
+        0x3040 <= o <= 0x30FF  # hiragana + katakana
+        or 0x3400 <= o <= 0x9FFF  # CJK ideographs (+ ext A)
+        or 0xF900 <= o <= 0xFAFF  # CJK compatibility ideographs
+    )
+
+
+def _jp_ratio(text: str) -> float:
+    return sum(_is_jp(c) for c in text) / len(text) if text else 0.0
+
+
+def _decode(raw: bytes) -> str:
+    """Decode bytes: BOM sniff → strict utf-8 → cp932/euc_jp (JP-ratio tiebreak)."""
+    if raw[:3] == b"\xef\xbb\xbf":
+        return raw.decode("utf-8-sig")
+    if raw[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        return raw.decode("utf-16")  # BOM picks endianness
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        pass
+    candidates: list[str] = []
+    for enc in ("cp932", "euc_jp"):
+        try:
+            candidates.append(raw.decode(enc))
+        except UnicodeDecodeError:
+            continue
+    if not candidates:
+        return raw.decode("cp932", errors="replace")
+    if len(candidates) == 1:
+        return candidates[0]
+    return max(candidates, key=_jp_ratio)

@@ -2,7 +2,6 @@
 
 from anki_miner.models import (
     ProcessingResult,
-    TokenizedWord,
     ValidationResult,
 )
 
@@ -32,10 +31,6 @@ class NullPresenter:
 
     def show_processing_result(self, result: ProcessingResult) -> None:
         """Display the result of processing an episode (no-op)."""
-        pass
-
-    def show_word_preview(self, words: list[TokenizedWord]) -> None:
-        """Display a preview of discovered words (no-op)."""
         pass
 
 

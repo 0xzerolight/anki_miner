@@ -5,9 +5,7 @@ synchronous disk work / lacking bulk-insert guards on click:
 
 - AnalyticsTab.showEvent → refresh_data staleness cache + bulk-insert guards
 - UISettingsPanel star toggle → surgical favorite-state update, no _populate
-- WordPreviewDialog search → debounce + bulk-insert guards
 - DictionarySettingsPanel._rebuild_list → setUpdatesEnabled wrapper
-- PairPreviewDialog populate → bulk-insert guards
 """
 
 from __future__ import annotations
@@ -18,17 +16,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from anki_miner.config import AnkiMinerConfig, ChainEntry
+from anki_miner.config import ChainEntry
 from anki_miner.gui.resources.styles.theme import REQUIRED_COLOR_KEYS, Theme
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
-from anki_miner.gui.widgets.dialogs.pair_preview_dialog import PairPreviewDialog
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
-from anki_miner.gui.widgets.dialogs.word_preview_dialog import WordPreviewDialog
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
 from anki_miner.gui.widgets.panels.ui_settings_panel import _STAR_FILLED, _STAR_OUTLINE, UISettingsPanel
 from anki_miner.models import TokenizedWord
 from anki_miner.models.stats import OverallStats
-from anki_miner.utils.file_pairing import FilePair
 
 # ---------------------------------------------------------------------------
 # Fix 1: AnalyticsTab.showEvent staleness cache + bulk-insert guards
@@ -180,70 +175,6 @@ def test_themes_family_toggle_does_not_call_populate(qtbot, tmp_path: Path):
 
 
 # ---------------------------------------------------------------------------
-# Fix 3: WordPreviewDialog search debounce + populate guards
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def sample_words() -> list[TokenizedWord]:
-    return [
-        TokenizedWord(
-            surface=f"word{i}",
-            lemma=f"lemma{i}",
-            reading=f"reading{i}",
-            sentence=f"sentence {i}",
-            start_time=float(i),
-            end_time=float(i + 1),
-            duration=1.0,
-        )
-        for i in range(20)
-    ]
-
-
-def test_word_preview_search_debounces_keystrokes(
-    qtbot, test_config: AnkiMinerConfig, sample_words: list[TokenizedWord]
-):
-    """Three keystrokes in a row only run one filter+populate after the timer fires."""
-    dialog = WordPreviewDialog(sample_words, test_config)
-    qtbot.addWidget(dialog)
-    try:
-        with patch.object(dialog, "_apply_search", wraps=dialog._apply_search) as apply_spy:
-            dialog.search_input.setText("w")
-            dialog.search_input.setText("wo")
-            dialog.search_input.setText("wor")
-            # Timer is single-shot; restarted on each keystroke, never fired
-            # synchronously.
-            assert apply_spy.call_count == 0
-            # Force the timer to fire.
-            dialog._search_debounce_timer.stop()
-            dialog._apply_search()
-            assert apply_spy.call_count == 1
-    finally:
-        dialog.deleteLater()
-
-
-def test_word_preview_populate_disables_updates(qtbot, test_config: AnkiMinerConfig, sample_words: list[TokenizedWord]):
-    """_populate_table suspends repaints across the loop."""
-    dialog = WordPreviewDialog(sample_words, test_config)
-    qtbot.addWidget(dialog)
-    try:
-        update_calls: list[bool] = []
-        original = dialog.table.setUpdatesEnabled
-
-        def spy(enabled: bool) -> None:
-            update_calls.append(enabled)
-            original(enabled)
-
-        with patch.object(dialog.table, "setUpdatesEnabled", side_effect=spy):
-            dialog._populate_table()
-        # Must contain at least one False (suspend) followed by True (resume).
-        assert False in update_calls
-        assert update_calls[-1] is True
-    finally:
-        dialog.deleteLater()
-
-
-# ---------------------------------------------------------------------------
 # Fix 4: DictionarySettingsPanel._rebuild_list wraps in setUpdatesEnabled
 # ---------------------------------------------------------------------------
 
@@ -269,35 +200,6 @@ def test_dictionary_panel_rebuild_disables_updates(qtbot, tmp_path: Path):
         assert update_calls[-1] is True
     finally:
         panel.deleteLater()
-
-
-# ---------------------------------------------------------------------------
-# Fix 5: PairPreviewDialog populate guards
-# ---------------------------------------------------------------------------
-
-
-def test_pair_preview_populate_disables_updates(qtbot, tmp_path: Path):
-    """Pair preview populates with repaints suspended."""
-    # Create a couple of fake files so .stat() doesn't blow up.
-    vid = tmp_path / "ep1.mkv"
-    sub = tmp_path / "ep1.srt"
-    vid.write_bytes(b"x")
-    sub.write_text("subtitle")
-    pairs = [FilePair(video=vid, subtitle=sub)]
-
-    # We can't easily spy on the table inside __init__ before it's built, so
-    # verify the post-construct state instead: updates re-enabled at end of
-    # populate (a False-then-True ordering during __init__ would have been
-    # detected by Qt warnings, which pytest-qt would surface).
-    dialog = PairPreviewDialog(pairs)
-    qtbot.addWidget(dialog)
-    try:
-        # Repaints back on after populate finished.
-        assert dialog.table.updatesEnabled() is True
-        # And sorting state preserved (off by default for this dialog).
-        assert dialog.table.isSortingEnabled() is False
-    finally:
-        dialog.deleteLater()
 
 
 # ---------------------------------------------------------------------------

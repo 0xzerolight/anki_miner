@@ -221,6 +221,19 @@ class AnkiMinerConfig:
     )
     audio_packs_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "audio_packs")
 
+    # Sentence TTS for reading sources (manga/novels), which have no source
+    # audio. Reading-path only: video/YouTube/audiobook keep real ffmpeg clips.
+    # The master flag is the sole opt-in switch — the target Anki field
+    # (anki_fields["audio"]) is mapped by default, so field-presence gating
+    # (the expression_audio pattern) cannot express consent here. Default OFF:
+    # enabling sends full sentence text to Google/Naver and adds one network
+    # round-trip per unique sentence, so it must be a deliberate choice.
+    # Provider order is fixed (Google first, Papago fallback); the two bools
+    # only select membership. Plain bools => no config migrator needed.
+    reading_tts_enabled: bool = False
+    reading_tts_google_enabled: bool = True
+    reading_tts_papago_enabled: bool = True
+
     # Pitch accent settings. Activation is resource-driven (see the pitch_active
     # property): the lookup runs iff a pitch data file is present. There is no
     # separate on/off flag — importing/downloading the file is the switch.

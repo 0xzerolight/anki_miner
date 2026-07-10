@@ -3,7 +3,7 @@
 No live Anki / no network: gateway calls are patched at the soak / gateway level.
 These tests assert:
 
-* ``ForeignDeckError`` raised by ``_maybe_gateway`` (via ``ensure_test_deck``) is
+* ``ForeignDeckError`` raised by ``_build_gateway`` (via ``ensure_test_deck``) is
   caught by both ``_cmd_smoke`` and ``_cmd_soak``, surfaces a clean one-line
   ``ERROR:`` message on stderr, produces no traceback, and returns exit code 2.
 * ``cleanup`` calls ``delete_test_deck`` directly (no ``ensure_test_deck`` call).
@@ -44,13 +44,14 @@ def _args(command: str, **kwargs):
         "ankiconnect_url": None,
         "timeout": None,
         "fresh_home": False,
+        # Both smoke and soak read args.fake_anki (via _start_fake_anki).
+        "fake_anki": False,
     }
     if command == "soak":
         defaults.update(
             {
                 "mode": "inprocess",
                 "sessions": 1,
-                "preview": False,
                 "bypass_known_words": True,
                 "policy": "all",
                 "first_n": 0,
@@ -93,7 +94,7 @@ def test_cmd_smoke_foreign_deck_clean_exit(tmp_path, capsys, monkeypatch):
     """_cmd_smoke catches ForeignDeckError, prints ERROR: to stderr, returns 2.
 
     The gateway is patched at the soak level: run_inprocess_soak raises
-    ForeignDeckError (the real propagation path from _maybe_gateway).
+    ForeignDeckError (the real propagation path from _build_gateway).
     """
     monkeypatch.setenv("ANKI_MINER_E2E_HOME", str(tmp_path / "e2e_home"))
     monkeypatch.delenv("ANKI_MINER_E2E_ANKICONNECT_URL", raising=False)
@@ -187,9 +188,9 @@ def test_cmd_soak_foreign_deck_crossprocess(tmp_path, capsys, monkeypatch):
 
 
 def test_cmd_smoke_anki_down_clean_exit(tmp_path, capsys, monkeypatch):
-    """_cmd_smoke catches AnkiUnreachableError (from _maybe_gateway), returns 2.
+    """_cmd_smoke catches AnkiUnreachableError (from _build_gateway), returns 2.
 
-    The soak runner raises AnkiUnreachableError (now that _maybe_gateway re-raises
+    The soak runner raises AnkiUnreachableError (now that _build_gateway re-raises
     instead of swallowing it).  The runner's existing except clause must produce a
     single-line ERROR: on stderr with no traceback and nothing on stdout.
     """

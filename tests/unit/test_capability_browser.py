@@ -72,7 +72,7 @@ def test_clicking_open_button_selects_that_row(dialog, qtbot):
 
 def test_runner_navigates_on_selection(qtbot, monkeypatch):
     main_window = Mock()
-    target = CapabilityTarget("youtube")
+    target = CapabilityTarget("video")
 
     def fake_exec(self):
         self.selected_target = target

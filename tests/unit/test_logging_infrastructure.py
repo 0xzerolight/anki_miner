@@ -345,7 +345,6 @@ class TestWorkerExceptionLogging:
             processor=processor,
             video_file=Path("/fake/video.mkv"),
             subtitle_file=Path("/fake/subs.ass"),
-            preview_mode=False,
             progress_callback=MagicMock(),
         )
 
@@ -386,7 +385,6 @@ class TestWorkerExceptionLogging:
             processor.process_episode(
                 Path("/fake/video.mkv"),
                 Path("/fake/subs.ass"),
-                preview_mode=False,
                 progress_callback=NullProgressCallback(),
             )
 
@@ -553,10 +551,8 @@ class TestMainUsesConfigLogPath:
             patch("anki_miner.gui.app.GUIProgressCallback"),
             patch("anki_miner.gui.app.StatsService"),
             patch("anki_miner.gui.app.Theme"),
-            patch("anki_miner.gui.app.SingleEpisodeTab"),
-            patch("anki_miner.gui.app.BatchProcessingTab"),
+            patch("anki_miner.gui.app.VideoTab"),
             patch("anki_miner.gui.app.DeckBuilderTab"),
-            patch("anki_miner.gui.app.YouTubeTab"),
             patch("anki_miner.gui.app.AudiobookTab"),
             patch("anki_miner.gui.app.AnalyticsTab"),
             patch("anki_miner.gui.app.SettingsTab"),

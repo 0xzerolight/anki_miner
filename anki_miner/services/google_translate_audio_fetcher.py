@@ -44,6 +44,100 @@ from anki_miner.utils.file_utils import safe_filename
 logger = logging.getLogger(__name__)
 
 
+def _synthesize_gtts_to_cache(
+    cache_dir: Path,
+    text: str,
+    stem: str,
+    delay: float,
+    failure_counts: dict[str, int],
+    cancelled_check: Callable[[], bool] | None,
+) -> Path | None:
+    """Synthesize *text* via gTTS and atomically cache it as ``<stem>.mp3``.
+
+    Shared synthesis leaf for the word (expression) and sentence gtts fetchers.
+    Owns the whole cached-synthesis lifecycle: mkdir, cache-hit check,
+    politeness sleep, gTTS call, body validation (size cap / empty / mp3
+    sniff), and the atomic ``.part`` + ``os.replace`` write — callers only
+    compute their stem and delegate. Never raises: any failure tallies into
+    *failure_counts* (see FAILURE_KEYS) and returns None. No ``.miss`` markers
+    are ever written — synthesis failures are transient (network / 429) and
+    must be retried on the next run.
+    """
+    mp3_path = cache_dir / f"{stem}.mp3"
+
+    try:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+
+        if mp3_path.exists() and mp3_path.stat().st_size > 0:
+            return mp3_path
+
+        if cancelled_check is not None and cancelled_check():
+            return None
+
+        time.sleep(delay)
+
+        if cancelled_check is not None and cancelled_check():
+            return None
+
+        # lang="ja" is fixed; calling gtts.lang.tts_langs() would make a
+        # network request, so it is deliberately avoided.
+        buffer = io.BytesIO()
+        tts = gtts.gTTS(text=text, lang="ja")
+        tts.write_to_fp(buffer)
+        body = buffer.getvalue()
+
+        # Oversized body is almost certainly an error response — transient,
+        # nothing written.
+        if len(body) > MAX_AUDIO_BYTES:
+            failure_counts["non_audio"] += 1
+            return None
+
+        # Empty body is a transient failure (premature close, etc.).
+        if not body:
+            failure_counts["connection"] += 1
+            return None
+
+        # Reject non-audio bodies (HTML error / rate-limit pages) as
+        # transient; no marker so the input is retried next run.
+        if not _is_mp3(body):
+            failure_counts["non_audio"] += 1
+            return None
+
+        # Write atomically: stage to a unique temp file then rename so a
+        # killed process cannot leave a truncated mp3 that passes the
+        # st_size > 0 cache-hit check on the next run.
+        with tempfile.NamedTemporaryFile(dir=cache_dir, suffix=".part", delete=False) as tmp_fd:
+            tmp_name = tmp_fd.name
+            try:
+                tmp_fd.write(body)
+            except OSError:
+                with contextlib.suppress(OSError):
+                    Path(tmp_name).unlink()
+                raise
+        try:
+            os.replace(tmp_name, mp3_path)
+        except OSError:
+            with contextlib.suppress(OSError):
+                Path(tmp_name).unlink()
+            raise
+        return mp3_path
+
+    # Broad Exception is intentional and correct: gtts raises gTTSError and
+    # assorted network/value exceptions, and the processor loops have no
+    # try/except by design — the fetcher owns all error handling and must
+    # never raise per the fetcher protocol contracts.
+    except Exception as exc:
+        # gtts wraps requests, so a network/SSL failure surfaces as a
+        # requests exception _classify_request_exception recognizes; a
+        # gTTSError or other synthesis fault falls to "connection".
+        failure_counts[_classify_request_exception(exc)] += 1
+        # Log the stem, not the input text: the stem identifies the item for
+        # both the word fetcher (embeds mined_form+reading) and the sentence
+        # fetcher (content hash) without dumping sentence text into logs.
+        logger.debug("google translate audio fetch failed for %s: %s", stem, exc)
+        return None
+
+
 class GoogleTranslateAudioFetcher:
     """Synthesizes word pronunciation audio via Google Translate TTS.
 
@@ -100,81 +194,17 @@ class GoogleTranslateAudioFetcher:
         if cancelled_check is not None and cancelled_check():
             return None
 
-        stem = safe_filename(f"googletts_{mined_form}_{reading}")
-        mp3_path = self._cache_dir / f"{stem}.mp3"
-
-        try:
-            self._cache_dir.mkdir(parents=True, exist_ok=True)
-
-            if mp3_path.exists() and mp3_path.stat().st_size > 0:
-                return mp3_path
-
-            # No .miss markers: failures are transient (network / 429) and must
-            # be retried next run, so nothing negative is ever cached.
-
-            if cancelled_check is not None and cancelled_check():
-                return None
-
-            time.sleep(self._delay)
-
-            if cancelled_check is not None and cancelled_check():
-                return None
-
-            # Synthesize from the kana reading. lang="ja" is fixed; calling
-            # gtts.lang.tts_langs() would make a network request, so it is
-            # deliberately avoided.
-            buffer = io.BytesIO()
-            tts = gtts.gTTS(text=reading, lang="ja")
-            tts.write_to_fp(buffer)
-            body = buffer.getvalue()
-
-            # Oversized body is almost certainly an error response — transient,
-            # nothing written.
-            if len(body) > MAX_AUDIO_BYTES:
-                self._failure_counts["non_audio"] += 1
-                return None
-
-            # Empty body is a transient failure (premature close, etc.).
-            if not body:
-                self._failure_counts["connection"] += 1
-                return None
-
-            # Reject non-audio bodies (HTML error / rate-limit pages) as
-            # transient; no marker so the word is retried next run.
-            if not _is_mp3(body):
-                self._failure_counts["non_audio"] += 1
-                return None
-
-            # Write atomically: stage to a unique temp file then rename so a
-            # killed process cannot leave a truncated mp3 that passes the
-            # st_size > 0 cache-hit check on the next run.
-            with tempfile.NamedTemporaryFile(dir=self._cache_dir, suffix=".part", delete=False) as tmp_fd:
-                tmp_name = tmp_fd.name
-                try:
-                    tmp_fd.write(body)
-                except OSError:
-                    with contextlib.suppress(OSError):
-                        Path(tmp_name).unlink()
-                    raise
-            try:
-                os.replace(tmp_name, mp3_path)
-            except OSError:
-                with contextlib.suppress(OSError):
-                    Path(tmp_name).unlink()
-                raise
-            return mp3_path
-
-        # Broad Exception is intentional and correct: gtts raises gTTSError and
-        # assorted network/value exceptions, and the processor loop has no
-        # try/except by design — the fetcher owns all error handling and must
-        # never raise per the ExpressionAudioFetcher contract.
-        except Exception as exc:
-            # gtts wraps requests, so a network/SSL failure surfaces as a
-            # requests exception _classify_request_exception recognizes; a
-            # gTTSError or other synthesis fault falls to "connection".
-            self._failure_counts[_classify_request_exception(exc)] += 1
-            logger.debug("google translate audio fetch failed for %s: %s", mined_form, exc)
-            return None
+        # Synthesize from the kana reading (homograph-safe); mined_form only
+        # keys the cache filename. The shared leaf owns cache-hit, sleep,
+        # synthesis, validation, and the atomic write.
+        return _synthesize_gtts_to_cache(
+            self._cache_dir,
+            text=reading,
+            stem=safe_filename(f"googletts_{mined_form}_{reading}"),
+            delay=self._delay,
+            failure_counts=self._failure_counts,
+            cancelled_check=cancelled_check,
+        )
 
     def fetch_candidates(
         self,

@@ -188,7 +188,6 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                         result = episode_processor.process_episode(
                             pair.video,
                             pair.subtitle,
-                            preview_mode=False,
                             progress_callback=self.progress_callback,
                             curation_callback=self.curation_callback,
                         )

@@ -1,6 +1,6 @@
 """Data models for reading (manga/novel) mining.
 
-Each Preview/Mine run builds an ephemeral :class:`ReadingQueueItem` per source
+Each Mine run builds an ephemeral :class:`ReadingQueueItem` per source
 (one manga volume or one novel file) and hands the list to the reading queue
 worker; there is no persistent queue collection.
 """

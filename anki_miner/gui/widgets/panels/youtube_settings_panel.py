@@ -188,10 +188,10 @@ class YouTubeSettingsPanel(FormPanel):
         """Return a new config with this panel's fields applied.
 
         Uses ``dataclasses.replace`` so the frozen-config invariant is preserved.
-        Called by :meth:`SettingsTab._on_save_clicked` as part of the contribute fold.
+        Called by :meth:`SettingsTab.commit_settings` as part of the contribute fold.
 
         Note: validation of ``cookies_file`` (file must exist when non-empty)
-        stays in :meth:`SettingsTab._on_save_clicked` — it runs before the fold
+        stays in :meth:`SettingsTab.commit_settings` — it runs before the fold
         so an invalid path aborts Save before ``contribute`` is ever called.
         """
         cookies_file_str = self.get_cookies_file()

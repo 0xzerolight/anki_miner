@@ -294,6 +294,44 @@ def download_audio_to_cache(
         return None
 
 
+def _aggregate_failure_stats(fetchers: "Sequence[object]") -> dict[str, int]:
+    """Aggregate per-run failure-cause counts across member fetchers.
+
+    Shared by the expression- and sentence-audio chains. ``stats()`` is
+    optional/duck-typed: members without it are skipped, and a member raising
+    is suppressed so diagnostics never break a run. Unknown keys from a member
+    are ignored; missing keys default to zero.
+    """
+    totals = _new_failure_counts()
+    for fetcher in fetchers:
+        stats = getattr(fetcher, "stats", None)
+        if not callable(stats):
+            continue
+        with contextlib.suppress(Exception):
+            counts = stats()
+            if not isinstance(counts, dict):
+                continue
+            for key, value in counts.items():
+                if key in totals:
+                    totals[key] += value
+    return totals
+
+
+def _close_all(fetchers: "Sequence[object]") -> None:
+    """Fan out ``close()`` to every member fetcher that defines one.
+
+    Shared by the expression- and sentence-audio chains. ``close()`` is
+    optional/duck-typed, so members without it are skipped. Called between
+    sequential mining runs to release per-run sockets / sqlite handles before
+    the next run opens new ones (Windows back-to-back-mining freeze).
+    """
+    for fetcher in fetchers:
+        close = getattr(fetcher, "close", None)
+        if callable(close):
+            with contextlib.suppress(Exception):
+                close()
+
+
 def _first_candidate_hit(
     fetcher: "ExpressionAudioFetcher",
     candidates: list[tuple[str, str]],
@@ -607,31 +645,14 @@ class ChainedExpressionAudioFetcher:
 
         ``stats()`` is optional/duck-typed (not on the ExpressionAudioFetcher
         Protocol), exactly like ``close()``: members without it (e.g.
-        LocalAudioPackFetcher) are skipped, and a member raising is suppressed
-        so diagnostics never break a run. Unknown keys from a member are
-        ignored; missing keys default to zero.
+        LocalAudioPackFetcher) are skipped. See ``_aggregate_failure_stats``.
         """
-        totals = _new_failure_counts()
-        for fetcher in self._fetchers:
-            stats = getattr(fetcher, "stats", None)
-            if not callable(stats):
-                continue
-            with contextlib.suppress(Exception):
-                for key, value in stats().items():
-                    if key in totals:
-                        totals[key] += value
-        return totals
+        return _aggregate_failure_stats(self._fetchers)
 
     def close(self) -> None:
         """Fan out ``close()`` to every member fetcher that defines one.
 
         ``close()`` is optional/duck-typed (not on the ExpressionAudioFetcher
-        Protocol), so members without it are skipped. Called between sequential
-        mining runs to release per-run sockets / sqlite handles before the next
-        run opens new ones (Windows back-to-back-mining freeze).
+        Protocol), so members without it are skipped. See ``_close_all``.
         """
-        for fetcher in self._fetchers:
-            close = getattr(fetcher, "close", None)
-            if callable(close):
-                with contextlib.suppress(Exception):
-                    close()
+        _close_all(self._fetchers)

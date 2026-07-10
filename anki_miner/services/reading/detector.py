@@ -1,9 +1,10 @@
 """Input classification and load dispatch for the reading-tab pipeline.
 
 The GUI hands dropped paths to :func:`detect`, which classifies each into one or
-more :class:`ReadingSourceRef` items (one manga volume or one novel file each).
-The queue worker later calls :func:`load` per ref, which lazily dispatches to the
-matching source loader (``mokuro_source`` / ``epub_source`` / ``aozora_source``).
+more :class:`ReadingSourceRef` items (one manga volume, novel file, or subtitle
+file each). The queue worker later calls :func:`load` per ref, which lazily
+dispatches to the matching source loader (``mokuro_source`` / ``epub_source`` /
+``aozora_source`` / ``subtitle_source``).
 
 For ``kind="mokuro"`` refs, ``detect`` is the *sole* metadata reader: it validates
 the ``.mokuro`` JSON sidecar and fully populates ``title`` (series), ``volume``
@@ -39,6 +40,11 @@ _MOKURO_REQUIRED_KEYS: tuple[str, ...] = (
 # order (``.cbz`` before ``.zip``); matched case-insensitively.
 _ARCHIVE_EXTS: tuple[str, ...] = (".cbz", ".zip")
 
+# Subtitle-file extensions mined as text (Reading → Subtitles sub-tab). No
+# MicroDVD ``.sub``: frame-based, pysubs2 needs a media-derived fps we don't
+# have without the video.
+_SUBTITLE_EXTS: tuple[str, ...] = (".srt", ".ass", ".ssa", ".vtt")
+
 
 def detect(path: Path) -> list[ReadingSourceRef]:
     """Classify a dropped path into loadable reading sources.
@@ -50,6 +56,8 @@ def detect(path: Path) -> list[ReadingSourceRef]:
     3. directory → its ``*.mokuro`` children (title dir), else the sibling
        ``<name>.mokuro`` (user dropped the image dir itself), else error.
     4. ``.epub``/``.txt`` → one book (metadata deferred to the loader).
+    5. ``.srt``/``.ass``/``.ssa``/``.vtt`` → one subtitle document (metadata
+       deferred to the loader).
 
     Raises :class:`SetupError` on unusable input (missing sidecar, invalid
     ``.mokuro`` JSON/schema, unrecognized path).
@@ -66,11 +74,13 @@ def detect(path: Path) -> list[ReadingSourceRef]:
         return [_book_ref(path, "epub")]
     if suffix == ".txt":
         return [_book_ref(path, "txt")]
+    if suffix in _SUBTITLE_EXTS:
+        return [_subtitle_ref(path)]
 
     raise SetupError(
         f"'{path.name}' is not a recognized reading source. Supported: .mokuro, "
-        ".cbz/.zip (with a matching .mokuro), .epub, .txt, or a folder of "
-        ".mokuro volumes."
+        ".cbz/.zip (with a matching .mokuro), .epub, .txt, subtitle files "
+        "(.srt/.ass/.ssa/.vtt), or a folder of .mokuro volumes."
     )
 
 
@@ -92,6 +102,10 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
         from . import aozora_source
 
         return aozora_source.load(ref)
+    if ref.kind == "subtitle":
+        from . import subtitle_source
+
+        return subtitle_source.load(ref)
 
     raise SetupError(f"Unknown reading source kind: {ref.kind!r}")
 
@@ -117,6 +131,17 @@ def _book_ref(path: Path, kind: Literal["epub", "txt"]) -> ReadingSourceRef:
     """Build a provisional book ref by extension alone (no file open)."""
     return ReadingSourceRef(
         kind=kind,
+        path=path,
+        image_root=None,
+        title=path.stem,
+        volume=None,
+    )
+
+
+def _subtitle_ref(path: Path) -> ReadingSourceRef:
+    """Build a provisional subtitle ref by extension alone (no file open)."""
+    return ReadingSourceRef(
+        kind="subtitle",
         path=path,
         image_root=None,
         title=path.stem,

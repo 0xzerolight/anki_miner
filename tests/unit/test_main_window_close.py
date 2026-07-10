@@ -20,6 +20,7 @@ from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
+from anki_miner.gui.widgets.video_tab import VideoTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 
 
@@ -226,6 +227,12 @@ class _FakeSettingsTab(SettingsTab):
             persist_chain=MagicMock(),
         )
         self._zip_import_flow = ZipImportFlow(self)
+        # Real SettingsTab shape: shutdown()/flush_pending_settings touch the
+        # auto-save debounce timer, so the fake needs one too (idle).
+        from PyQt6.QtCore import QTimer
+
+        self._debounce_timer = QTimer(self)
+        self._debounce_timer.setSingleShot(True)
 
 
 def _trigger_close(window) -> MagicMock:
@@ -430,6 +437,100 @@ class TestCloseEventSettingsTabImportFlowWorkers:
         event = _trigger_close(main_window)
 
         assert w.cancel_called
+        event.accept.assert_not_called()
+        event.ignore.assert_called_once()
+
+
+class _FakeMiningChild:
+    """Single/Batch-shaped child: shutdown() poisons but never joins its worker."""
+
+    def __init__(self, *, worker_running: bool) -> None:
+        self.worker_thread: _FakeWorker | None = _FakeWorker(running=worker_running)
+        self.shutdown_called = False
+
+    def shutdown(self) -> None:
+        self.shutdown_called = True  # gate poison only; worker_thread stays live
+
+    def release_dictionary_resources(self) -> bool:
+        return True
+
+    def update_config(self, config) -> None: ...
+
+
+class _FakeYouTubeChild(_FakeMiningChild):
+    """YouTube-shaped child: shutdown() joins AND nulls its own worker."""
+
+    def shutdown(self) -> None:
+        self.shutdown_called = True
+        worker = self.worker_thread
+        if worker is not None and worker.isRunning():
+            worker.cancel()
+            worker.wait(30_000)
+        self.worker_thread = None
+
+
+class _FakeVideoTab(VideoTab):
+    """Real VideoTab subclass that skips the heavy ``__init__``.
+
+    Keeps the REAL ``shutdown``/``iter_close_workers``/``release_dictionary_resources``
+    methods so the container↔controller close contract is exercised for real;
+    only the children are fakes.
+    """
+
+    def __init__(self, *, single_running: bool, batch_running: bool, youtube_running: bool) -> None:
+        from PyQt6.QtWidgets import QWidget
+
+        QWidget.__init__(self)
+        self.single_tab = _FakeMiningChild(worker_running=single_running)
+        self.batch_tab = _FakeMiningChild(worker_running=batch_running)
+        self.youtube_tab = _FakeYouTubeChild(worker_running=youtube_running)
+
+
+class TestCloseEventVideoContainer:
+    """Nested Single/Batch/YouTube workers must survive the container hop.
+
+    The container exposes no ``worker_thread``, so the controller's top-level
+    probe yields None; the still-live Single/Batch workers must be reached via
+    ``iter_close_workers`` AFTER ``shutdown()`` poisoned the gates. YouTube's
+    own ``shutdown()`` joins+nulls its worker, so it must NOT be cancelled a
+    second time.
+    """
+
+    def test_live_single_and_batch_workers_joined_via_iter_close_workers(self, main_window):
+        tab = _FakeVideoTab(single_running=True, batch_running=True, youtube_running=False)
+        main_window.tabs.addTab(tab, "Video")
+
+        event = _trigger_close(main_window)
+
+        for child in (tab.single_tab, tab.batch_tab):
+            assert child.shutdown_called  # gate poison ran first
+            assert child.worker_thread.cancel_called
+            assert child.worker_thread.wait_called_with == 2000
+        event.accept.assert_called_once()
+
+    def test_youtube_worker_joined_once_by_its_own_shutdown_not_twice(self, main_window):
+        tab = _FakeVideoTab(single_running=False, batch_running=False, youtube_running=True)
+        yt_worker = tab.youtube_tab.worker_thread
+        main_window.tabs.addTab(tab, "Video")
+
+        event = _trigger_close(main_window)
+
+        # Joined exactly once, by the child's own shutdown (30s bound), then
+        # nulled — iter_close_workers skipped it (2000 would mean re-join).
+        assert tab.youtube_tab.shutdown_called
+        assert yt_worker.cancel_called
+        assert yt_worker.wait_called_with == 30_000
+        assert tab.youtube_tab.worker_thread is None
+        event.accept.assert_called_once()
+
+    def test_video_laggard_defers_close(self, main_window):
+        tab = _FakeVideoTab(single_running=False, batch_running=False, youtube_running=False)
+        tab.batch_tab.worker_thread = _FakeWorker(running=True, wait_result=False)
+        main_window.tabs.addTab(tab, "Video")
+
+        event = _trigger_close(main_window)
+
+        assert tab.batch_tab.worker_thread.cancel_called
         event.accept.assert_not_called()
         event.ignore.assert_called_once()
 
@@ -675,3 +776,58 @@ class TestCloseEventReleasesDictResources:
 
         assert release_calls == [True], "release must run when the deferred close completes"
         assert quit_calls == [True]
+
+
+class TestCloseEventFlushesSettingsAutosave:
+    """closeEvent must flush a pending Settings auto-save BEFORE the shutdown
+    fan-out stops the debounce timer, on BOTH close paths (immediate and
+    deferred) — otherwise an edit made <1s before quit is silently dropped."""
+
+    def _settings_tab(self, main_window, test_config, qtbot):
+        """Insert a REAL SettingsTab (tab composition normally lives in app.py)
+        and mirror app.py's config_changed → update_config wiring so a flushed
+        commit actually reaches MainWindow.config."""
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        main_window.tabs.addTab(tab, "Settings")
+        tab.config_changed.connect(lambda cfg: main_window.update_config(cfg, from_settings=True))
+        return tab
+
+    def test_flush_runs_before_background_shutdown(self, main_window, test_config, qtbot, monkeypatch):
+        call_order: list[str] = []
+        settings_tab = self._settings_tab(main_window, test_config, qtbot)
+        monkeypatch.setattr(settings_tab, "flush_pending_settings", lambda: call_order.append("flush"))
+        original_shutdown = main_window.background_tasks.shutdown
+        monkeypatch.setattr(
+            main_window.background_tasks,
+            "shutdown",
+            lambda tabs: call_order.append("shutdown") or original_shutdown(tabs),
+        )
+
+        _trigger_close(main_window)
+
+        assert call_order[:2] == ["flush", "shutdown"]
+
+    def test_flush_runs_on_deferred_close_path(self, main_window, test_config, qtbot, monkeypatch):
+        flush_calls: list[bool] = []
+        settings_tab = self._settings_tab(main_window, test_config, qtbot)
+        monkeypatch.setattr(settings_tab, "flush_pending_settings", lambda: flush_calls.append(True))
+        # A laggard worker whose wait() times out → close is deferred and
+        # closeEvent returns before its final save_config.
+        tab = _FakeEpisodeTab(worker_running=True, wait_result=False)
+        main_window.tabs.addTab(tab, "Episode")
+
+        event = _trigger_close(main_window)
+
+        event.accept.assert_not_called()  # close was deferred...
+        assert flush_calls == [True]  # ...but the flush already ran
+
+    def test_pending_edit_persists_through_close(self, main_window, test_config, qtbot):
+        """End-to-end: an armed debounce edit reaches MainWindow.config on close."""
+        settings_tab = self._settings_tab(main_window, test_config, qtbot)
+        settings_tab.deck_input.setText("EditedJustBeforeQuit")
+        assert settings_tab._debounce_timer.isActive()
+
+        _trigger_close(main_window)
+
+        assert main_window.config.anki_deck_name == "EditedJustBeforeQuit"

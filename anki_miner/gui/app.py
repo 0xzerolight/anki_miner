@@ -3,6 +3,7 @@
 import logging
 import os
 import sys
+from collections.abc import Sequence
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Protocol, runtime_checkable
@@ -23,13 +24,11 @@ from anki_miner.gui.utils.service_factory import create_youtube_fetcher
 from anki_miner.gui.utils.stall_watchdog import install_stall_watchdog
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
-from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.reading_tab import ReadingTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
-from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
-from anki_miner.gui.widgets.youtube_tab import YouTubeTab
+from anki_miner.gui.widgets.video_tab import VideoTab
 from anki_miner.services.stats_service import StatsService
 from anki_miner.utils import alass_resolver
 
@@ -266,16 +265,37 @@ class _HasUpdateConfig(Protocol):
     def update_config(self, config: AnkiMinerConfig) -> None: ...
 
 
-def register_mining_tab(window: "MainWindow", tab: "_HasUpdateConfig", presenter: "GUIPresenter", label: str) -> None:
-    """Register a mining tab and wire its presenter to the main window.
+def _wire_presenter(window: "MainWindow", presenter: "GUIPresenter") -> None:
+    """Connect one presenter's five output signals to the window handlers."""
+    presenter.info_signal.connect(window._on_info_message)
+    presenter.success_signal.connect(window._on_success_message)
+    presenter.warning_signal.connect(window._on_warning_message)
+    presenter.error_signal.connect(window._on_error_message)
+    presenter.processing_result_signal.connect(window._on_processing_result)
+
+
+def register_mining_tab(
+    window: "MainWindow",
+    tab: "_HasUpdateConfig",
+    presenter: "GUIPresenter",
+    label: str,
+    *,
+    extra_presenters: Sequence["GUIPresenter"] = (),
+) -> None:
+    """Register a mining tab and wire its presenter(s) to the main window.
 
     One call replaces the hand-repeated boilerplate that used to appear at
-    three separate sites in ``main()``:
+    separate sites in ``main()``:
 
     1. ``window.tabs.addTab(tab, label)``
-    2. Six presenter-signal → ``window._on_*`` handler connections.
+    2. Five presenter-signal → ``window._on_*`` handler connections, for
+       ``presenter`` and every entry in ``extra_presenters``.
     3. ``window.config_refreshed`` → ``tab.update_config`` (non-settings refreshes,
        e.g. JMdict migration finishing in the background).
+
+    ``extra_presenters`` exists for container tabs whose children each own a
+    presenter (``VideoTab``): the container is added once, but every child
+    presenter still needs the window connections.
 
     The ``settings_tab.config_changed`` → ``tab.update_config`` connection is NOT
     wired here because ``SettingsTab`` does not yet exist when mining tabs are
@@ -288,17 +308,14 @@ def register_mining_tab(window: "MainWindow", tab: "_HasUpdateConfig", presenter
         tab: The tab widget to add; must expose ``update_config``.
         presenter: The :class:`GUIPresenter` for this tab.
         label: The text label for the tab.
+        extra_presenters: Additional child presenters to wire (container tabs).
     """
     assert isinstance(tab, QWidget), "tab must be a QWidget"
 
     window.tabs.addTab(tab, label)
 
-    presenter.info_signal.connect(window._on_info_message)
-    presenter.success_signal.connect(window._on_success_message)
-    presenter.warning_signal.connect(window._on_warning_message)
-    presenter.error_signal.connect(window._on_error_message)
-    presenter.processing_result_signal.connect(window._on_processing_result)
-    presenter.word_preview_signal.connect(window._on_word_preview)
+    for p in (presenter, *extra_presenters):
+        _wire_presenter(window, p)
 
     window.config_refreshed.connect(tab.update_config)
 
@@ -513,30 +530,37 @@ def main():
     # and the user sees feedback while disk I/O finishes.
     stats_service = StatsService(window.get_config().stats_db_path)
 
-    # Create per-tab presenters and progress callbacks to avoid cross-tab signal pollution.
-    # register_mining_tab() handles: addTab + six presenter-signal connections +
-    # window.config_refreshed → tab.update_config.
+    # Create per-child presenters and progress callbacks to avoid cross-tab signal
+    # pollution (Single/Batch wire presenter signals into their own log widgets).
+    # register_mining_tab() handles: addTab + six presenter-signal connections per
+    # presenter + window.config_refreshed → tab.update_config; the container fans
+    # config out to its children. The YouTube child keeps the lazy-processor
+    # startup optimization (processor=None inside VideoTab) so the dictionary
+    # chain — which opens every installed dict's sqlite — does not block the
+    # initial window paint.
     episode_presenter = GUIPresenter(window)
     episode_progress = GUIProgressCallback(window)
-    episode_tab = SingleEpisodeTab(
+    batch_presenter = GUIPresenter(window)
+    batch_progress = GUIProgressCallback(window)
+    youtube_presenter = GUIPresenter(window)
+    youtube_fetcher = create_youtube_fetcher(window.get_config())
+    video_tab = VideoTab(
         window.get_config(),
-        episode_presenter,
-        episode_progress,
+        episode_presenter=episode_presenter,
+        episode_progress=episode_progress,
+        batch_presenter=batch_presenter,
+        batch_progress=batch_progress,
+        youtube_presenter=youtube_presenter,
+        youtube_fetcher=youtube_fetcher,
         stats_service=stats_service,
     )
     register_mining_tab(
-        window, episode_tab, episode_presenter, QCoreApplication.translate("MainWindow", "Episode Mining")
+        window,
+        video_tab,
+        episode_presenter,
+        QCoreApplication.translate("MainWindow", "Video"),
+        extra_presenters=(batch_presenter, youtube_presenter),
     )
-
-    batch_presenter = GUIPresenter(window)
-    batch_progress = GUIProgressCallback(window)
-    batch_tab = BatchProcessingTab(
-        window.get_config(),
-        batch_presenter,
-        batch_progress,
-        stats_service=stats_service,
-    )
-    register_mining_tab(window, batch_tab, batch_presenter, QCoreApplication.translate("MainWindow", "Batch Mining"))
 
     deck_builder_presenter = GUIPresenter(window)
     deck_builder_progress = GUIProgressCallback(window)
@@ -549,23 +573,6 @@ def main():
     register_mining_tab(
         window, deck_builder_tab, deck_builder_presenter, QCoreApplication.translate("MainWindow", "Deck Builder")
     )
-
-    # YouTube tab (uses its own presenter + shared stats service). The
-    # processor is built lazily on the first Mine click so the dictionary
-    # chain — which opens every installed dict's sqlite — does not block
-    # the initial window paint. ``stats_service`` is threaded through so
-    # mining sessions still land in analytics regardless of when the
-    # processor materializes.
-    youtube_presenter = GUIPresenter(window)
-    youtube_fetcher = create_youtube_fetcher(window.get_config())
-    youtube_tab = YouTubeTab(
-        config=window.get_config(),
-        processor=None,
-        fetcher=youtube_fetcher,
-        presenter=youtube_presenter,
-        stats_service=stats_service,
-    )
-    register_mining_tab(window, youtube_tab, youtube_presenter, QCoreApplication.translate("MainWindow", "YouTube"))
 
     # Audiobook tab (Issue #71). Same lazy-processor pattern as YouTube:
     # processor=None defers the dictionary-chain build to the first Mine

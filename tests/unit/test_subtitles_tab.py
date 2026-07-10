@@ -85,6 +85,30 @@ def test_condense_tab_is_third(qtbot, tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# open_subtab
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(("key", "expected_index"), [("generate", 0), ("retime", 1)])
+def test_open_subtab_switches_inner_tab(qtbot, tmp_path, key, expected_index):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab._inner_tabs.setCurrentIndex(1 if expected_index == 0 else 0)
+
+    tab.open_subtab(key)
+
+    assert tab._inner_tabs.currentIndex() == expected_index
+
+
+def test_open_subtab_unknown_key_is_ignored(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab._inner_tabs.setCurrentIndex(1)
+
+    tab.open_subtab("definitely-not-a-subtab")
+
+    assert tab._inner_tabs.currentIndex() == 1
+
+
+# ---------------------------------------------------------------------------
 # update_config propagation
 # ---------------------------------------------------------------------------
 

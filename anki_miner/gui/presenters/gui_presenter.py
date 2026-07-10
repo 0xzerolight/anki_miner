@@ -4,7 +4,6 @@ from PyQt6.QtCore import QObject, pyqtSignal
 
 from anki_miner.models import (
     ProcessingResult,
-    TokenizedWord,
     ValidationResult,
 )
 
@@ -28,7 +27,6 @@ class GUIPresenter(QObject):
     error_signal = pyqtSignal(str)
     validation_result_signal = pyqtSignal(object)  # ValidationResult
     processing_result_signal = pyqtSignal(object)  # ProcessingResult
-    word_preview_signal = pyqtSignal(list)  # List[TokenizedWord]
 
     def __init__(self, parent=None):
         """Initialize the GUI presenter.
@@ -85,11 +83,3 @@ class GUIPresenter(QObject):
             result: The processing result to display
         """
         self.processing_result_signal.emit(result)
-
-    def show_word_preview(self, words: list[TokenizedWord]) -> None:
-        """Display a preview of discovered words.
-
-        Args:
-            words: List of words to preview
-        """
-        self.word_preview_signal.emit(words)

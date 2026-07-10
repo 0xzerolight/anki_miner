@@ -99,19 +99,6 @@ def test_show_processing_result_emits_processing_signal_with_same_object(qapp):
     assert cap.calls[0][0] is result
 
 
-def test_show_word_preview_emits_word_preview_signal_with_same_list(qapp):
-    p = GUIPresenter()
-    cap = _Capture()
-    p.word_preview_signal.connect(cap)
-    words = [MagicMock(name="TokenizedWord")]
-
-    p.show_word_preview(words)
-
-    assert cap.calls == [(words,)]
-    # The same list object is delivered (identity preserved across the signal).
-    assert cap.calls[0][0] == words
-
-
 def test_gui_presenter_satisfies_runtime_checkable_protocol(qapp):
     """The Qt presenter structurally satisfies the runtime-checkable protocol."""
     assert isinstance(GUIPresenter(), PresenterProtocol)

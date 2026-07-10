@@ -1,6 +1,7 @@
 """Settings tab with category organization using extracted panels."""
 
 import dataclasses
+import json
 import os
 import re
 from dataclasses import replace
@@ -9,9 +10,9 @@ from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -30,6 +31,8 @@ from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFl
 from anki_miner.gui.controllers.frequency_import_flow import FrequencyImportFlow
 from anki_miner.gui.controllers.zip_import_flow import YomitanCsvLabels, ZipImportFlow
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.config_manager import GUIConfigManager
+from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels import (
@@ -48,6 +51,11 @@ from anki_miner.services.expression_audio_fetcher import purge_miss_markers
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.pitch_accent import import_yomitan_pitch_zip
 from anki_miner.utils.i18n import tr_format
+
+# Debounce for the Settings auto-save: a burst of edits coalesces into one
+# commit this many ms after the last change. Long enough to not commit per
+# keystroke, short enough that settings apply near-immediately.
+_AUTOSAVE_DEBOUNCE_MS = 1000
 
 
 @runtime_checkable
@@ -126,6 +134,13 @@ class SettingsTab(QWidget):
         # True between a manual "Update yt-dlp now" click and its result, so the
         # shared result signal can surface a dialog on the manual path only.
         self._ytdlp_manual_pending = False
+        # Auto-save guards. _loading suppresses edit signals fired by
+        # programmatic widget repopulation (_load_config, selector re-syncs);
+        # _committing suppresses re-entry when the debounce fires while a
+        # commit is already in flight (the pitch zip import spins a nested
+        # modal event loop that can let the timer fire mid-commit).
+        self._loading = False
+        self._committing = False
         self._setup_ui()
         # Controllers (T-66) own worker lifecycles + dialogs; the tab keeps
         # widgets, signal wiring, and config assembly. Dependency is one-way:
@@ -167,7 +182,7 @@ class SettingsTab(QWidget):
             get_config=lambda: self.config,
         )
         # Ordered list of panels that participate in the Save round-trip.
-        # _load_config calls load_from_config on each; _on_save_clicked folds
+        # _load_config calls load_from_config on each; commit_settings folds
         # contribute() over them.  Dictionary/audio chain panels and the UI
         # panel are intentionally excluded — they persist via their own signals.
         self._save_panels: list[_SavePathPanel] = [
@@ -179,6 +194,15 @@ class SettingsTab(QWidget):
         ]
         self._connect_signals()
         self._load_config()
+
+        # Debounced auto-save: any edit in the save-path panels restarts this
+        # timer; expiry commits everything at once. Created and wired AFTER the
+        # initial _load_config so construction can't arm it.
+        self._debounce_timer = QTimer(self)
+        self._debounce_timer.setSingleShot(True)
+        self._debounce_timer.setInterval(_AUTOSAVE_DEBOUNCE_MS)
+        self._debounce_timer.timeout.connect(self._commit_settings)
+        self._wire_edit_signals()
 
     def _setup_ui(self) -> None:
         """Set up the user interface."""
@@ -235,23 +259,31 @@ class SettingsTab(QWidget):
         )
         layout.addWidget(self.check_for_updates_checkbox)
 
-        # Action buttons at bottom
+        # Status row at bottom. The Save Settings button is gone — settings
+        # auto-save (debounced) — but its inline "✓ Saved" confirmation stays
+        # so each auto-commit is still visible. The Reset to Defaults button
+        # was removed deliberately: an accidental press destroyed the whole
+        # user config for near-zero utility; do not reintroduce it.
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.sm)
         button_layout.addStretch()
 
-        self.reset_button = ModernButton(self.tr("Reset to Defaults"), variant="secondary")
-        self.reset_button.clicked.connect(self._on_reset_clicked)
-        self.reset_button.setToolTip(self.tr("Reset all settings to default values (Ctrl+R)"))
-        button_layout.addWidget(self.reset_button)
+        self.export_settings_button = ModernButton(self.tr("Export Settings…"), variant="secondary")
+        self.export_settings_button.setToolTip(
+            self.tr("Save a portable settings file (machine-specific paths and resources excluded).")
+        )
+        self.export_settings_button.clicked.connect(self._on_export_settings)
+        button_layout.addWidget(self.export_settings_button)
 
-        self.save_button = ModernButton(self.tr("Save Settings"), variant="primary")
-        self.save_button.clicked.connect(self._on_save_clicked)
-        self.save_button.setToolTip(self.tr("Save settings to disk (Ctrl+S)"))
-        button_layout.addWidget(self.save_button)
+        self.import_settings_button = ModernButton(self.tr("Import Settings…"), variant="secondary")
+        self.import_settings_button.setToolTip(
+            self.tr("Apply settings from an exported file; anything not in the file is kept.")
+        )
+        self.import_settings_button.clicked.connect(self._on_import_settings)
+        button_layout.addWidget(self.import_settings_button)
 
-        # Inline, non-modal save confirmation (replaces the old "Settings Saved"
-        # popup). Flashed by _flash_save_status() and auto-cleared by a timer.
+        # Inline, non-modal save confirmation. Flashed by _flash_save_status()
+        # and auto-cleared by a timer; validation warnings park here sticky.
         self.save_status_label = QLabel("")
         self.save_status_label.setObjectName("settings-save-status")
         button_layout.addWidget(self.save_status_label)
@@ -263,9 +295,6 @@ class SettingsTab(QWidget):
         layout.addLayout(button_layout)
 
         self.setLayout(layout)
-
-        # Set up keyboard shortcuts
-        self._setup_shortcuts()
 
     def _connect_signals(self) -> None:
         """Connect panel signals to tab handlers."""
@@ -284,7 +313,7 @@ class SettingsTab(QWidget):
         self.dictionary_panel.rescan_requested.connect(self._dict_import_flow.restore_unlisted)
         # Persist chain immediately after reorder/toggle or destructive remove.
         # Use a NARROW persist of just the chain — NOT the full Save pipeline
-        # (T-08): _on_save_clicked has unrelated early-return aborts (bad
+        # (T-08): the commit pipeline has unrelated validation gates (bad
         # dicts_root, missing cookies file, invalid regex, pitch/freq import
         # failure), any of which would skip persisting a removal and leave the
         # deleted dict_id orphaned — the exact Issue #30 bug this wiring
@@ -309,6 +338,8 @@ class SettingsTab(QWidget):
         # consumer needs the removal-specific notification.
         self.audio_panel.chain_changed.connect(lambda: self._persist_audio_chain_change(self.audio_panel.get_chain()))
         self.audio_panel.retry_missing_audio_requested.connect(self._on_retry_missing_audio)
+        # Sentence-TTS toggles persist immediately, like the chain above.
+        self.audio_panel.reading_tts_changed.connect(self._persist_reading_tts_change)
 
         # Frequency panel signals — wire Add/Reimport to the import flow.
         self.frequency_panel.add_source_requested.connect(self._frequency_import_flow.add_source)
@@ -344,6 +375,56 @@ class SettingsTab(QWidget):
         self.subtitles_panel.cuda_pack_download_requested.connect(self._on_cuda_pack_download_clicked)
         self.subtitles_panel.vad_pack_download_requested.connect(self._on_vad_pack_download_clicked)
         self.subtitles_panel.vulkan_model_download_requested.connect(self._on_vulkan_download_clicked)
+
+    def _wire_edit_signals(self) -> None:
+        """Arm the auto-save debounce on any user edit in the save-path panels.
+
+        Uses recursive ``findChildren`` — load-bearing: the FileSelectors
+        embedded in the Filtering/YouTube panels (blacklist, whitelist,
+        cookies) expose edits only through their NESTED QLineEdit; a
+        direct-children walk would silently never auto-save those fields.
+        Redundant arming (e.g. a spinbox's inner line edit) is harmless — the
+        slot just restarts the timer. Programmatic repopulation is filtered by
+        the ``_loading`` guard, not here.
+        """
+        from PyQt6.QtWidgets import QComboBox, QDoubleSpinBox, QLineEdit, QListWidget, QSpinBox
+
+        panels: tuple[QWidget, ...] = (
+            self.anki_panel,
+            self.media_panel,
+            self.filtering_panel,
+            self.youtube_panel,
+            self.subtitles_panel,
+        )
+        for panel in panels:
+            for line_edit in panel.findChildren(QLineEdit):
+                line_edit.textChanged.connect(self._on_settings_edited)
+            for checkbox in panel.findChildren(QCheckBox):
+                checkbox.toggled.connect(self._on_settings_edited)
+            for spinbox in panel.findChildren(QSpinBox):
+                spinbox.valueChanged.connect(self._on_settings_edited)
+            for double_spinbox in panel.findChildren(QDoubleSpinBox):
+                double_spinbox.valueChanged.connect(self._on_settings_edited)
+            for combo in panel.findChildren(QComboBox):
+                combo.currentIndexChanged.connect(self._on_settings_edited)
+            for list_widget in panel.findChildren(QListWidget):
+                # Excluded-decks list mutates via Add/Remove buttons, so the
+                # widget itself has no edit signal — watch its model instead.
+                model = list_widget.model()
+                if model is not None:
+                    model.rowsInserted.connect(self._on_settings_edited)
+                    model.rowsRemoved.connect(self._on_settings_edited)
+
+        # Fields outside the save panels that commit through the same path.
+        self.check_for_updates_checkbox.toggled.connect(self._on_settings_edited)
+        self.dictionary_panel.dicts_root_selector.path_changed.connect(self._on_settings_edited)
+        self.dictionary_panel.pitch_accent_selector.path_changed.connect(self._on_settings_edited)
+
+    def _on_settings_edited(self, *_args) -> None:
+        """Restart the auto-save debounce on a user edit (no-op while loading)."""
+        if self._loading:
+            return
+        self._debounce_timer.start()
 
     def _on_ytdlp_update_clicked(self) -> None:
         """Mark the next yt-dlp result as user-initiated, then request the update.
@@ -448,16 +529,6 @@ class SettingsTab(QWidget):
                 message or self.tr("Could not update yt-dlp. Check your connection and retry."),
             )
 
-    def _setup_shortcuts(self) -> None:
-        """Set up keyboard shortcuts."""
-        # Ctrl+S: Save settings
-        save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
-        save_shortcut.activated.connect(self._on_save_clicked)
-
-        # Ctrl+R: Reset to defaults
-        reset_shortcut = QShortcut(QKeySequence("Ctrl+R"), self)
-        reset_shortcut.activated.connect(self._on_reset_clicked)
-
     def _wrap_in_scroll_area(self, widget: QWidget) -> QScrollArea:
         """Wrap a widget in a scrollable container.
 
@@ -482,33 +553,46 @@ class SettingsTab(QWidget):
         in one place (OVH-019).  Dictionary/audio chain panels and the
         top-level update checkbox persist via their own paths and are handled
         directly here.
+
+        Runs under the ``_loading`` guard: the setText/setChecked/setValue
+        calls below fire the same change signals user edits do, and must not
+        arm the auto-save debounce (a reload would otherwise commit itself).
         """
-        # Save-path panels — each owns its field list.
-        for panel in self._save_panels:
-            panel.load_from_config(self.config)
+        self._loading = True
+        try:
+            # Save-path panels — each owns its field list.
+            for panel in self._save_panels:
+                panel.load_from_config(self.config)
 
-        # Dictionary chain (not part of the Save round-trip — persisted
-        # immediately via chain_changed / _persist_chain_change).
-        self.dictionary_panel.set_dicts_root(self.config.dicts_root)
-        self.dictionary_panel.set_chain(self.config.dictionary_chain)
+            # Dictionary chain (not part of the Save round-trip — persisted
+            # immediately via chain_changed / _persist_chain_change).
+            self.dictionary_panel.set_dicts_root(self.config.dicts_root)
+            self.dictionary_panel.set_chain(self.config.dictionary_chain)
 
-        # Audio source chain (same — immediate persist via its own signal).
-        self.audio_panel.set_chain(self.config.expression_audio_chain)
+            # Audio source chain (same — immediate persist via its own signal).
+            self.audio_panel.set_chain(self.config.expression_audio_chain)
+            self.audio_panel.set_reading_tts(
+                self.config.reading_tts_enabled,
+                self.config.reading_tts_google_enabled,
+                self.config.reading_tts_papago_enabled,
+            )
 
-        # Frequency source chain lives in the Frequency tab; the chain persists
-        # immediately via its own signal. Frequency activation is derived from an
-        # enabled source being present (config.frequency_active) — no toggle. The
-        # max-rank threshold is owned by filtering_panel and already loaded above.
-        self.frequency_panel.set_chain(self.config.frequency_chain)
+            # Frequency source chain lives in the Frequency tab; the chain persists
+            # immediately via its own signal. Frequency activation is derived from an
+            # enabled source being present (config.frequency_active) — no toggle. The
+            # max-rank threshold is owned by filtering_panel and already loaded above.
+            self.frequency_panel.set_chain(self.config.frequency_chain)
 
-        # Pitch accent settings — file selector lives in the Dictionaries tab.
-        # Activation is derived from the file being present (config.pitch_active).
-        self.dictionary_panel.pitch_accent_selector.set_path(str(self.config.pitch_accent_path))
+            # Pitch accent settings — file selector lives in the Dictionaries tab.
+            # Activation is derived from the file being present (config.pitch_active).
+            self.dictionary_panel.pitch_accent_selector.set_path(str(self.config.pitch_accent_path))
 
-        # Update settings — standalone checkbox outside all panels.
-        self.check_for_updates_checkbox.setChecked(self.config.check_for_updates)
+            # Update settings — standalone checkbox outside all panels.
+            self.check_for_updates_checkbox.setChecked(self.config.check_for_updates)
 
-        self.ui_panel.set_language(self.config.ui_language)
+            self.ui_panel.set_language(self.config.ui_language)
+        finally:
+            self._loading = False
 
     def open_subtab(self, key: str) -> None:
         """Switch the settings sub-tab to the one named by ``key``.
@@ -585,8 +669,60 @@ class SettingsTab(QWidget):
         self.config = replace(self.config, ui_language=language)
         self.config_changed.emit(self.config)
 
-    def _on_save_clicked(self) -> None:
-        """Handle save button click."""
+    def commit_settings(self, skip_zip_import: bool = False) -> None:
+        """Commit the save-path panels into the config and emit ``config_changed``.
+
+        Public entry point for tests and the close flush; the auto-save
+        debounce timer drives :meth:`_commit_settings` directly.
+        """
+        self._commit_settings(skip_zip_import=skip_zip_import)
+
+    def flush_pending_settings(self) -> None:
+        """Commit a pending debounced edit immediately (close-time flush).
+
+        MainWindow.closeEvent calls this at its very TOP — before the
+        background-task shutdown fan-out reaches :meth:`shutdown` (which stops
+        the timer, so a later flush would see an inactive timer and no-op),
+        and before the deferred-close path returns without ever reaching the
+        final save. Committing here routes through config_changed →
+        MainWindow.update_config, which writes gui_config.json and updates
+        MainWindow.config, so both close paths persist the edit.
+
+        ``skip_zip_import=True`` keeps the modal pitch-zip import (nested
+        event loop + dialogs) out of closeEvent: non-pitch fields commit and
+        an unconfirmed .zip selection is dropped — the next launch repaints
+        the selector from the persisted config.
+        """
+        if self._debounce_timer.isActive():
+            self._debounce_timer.stop()
+            self._commit_settings(skip_zip_import=True)
+
+    def _commit_settings(self, skip_zip_import: bool = False) -> None:
+        """Debounced auto-save commit with per-field validation.
+
+        Unlike the old Save-button flow (modal warning + whole-save abort),
+        an invalid field must NOT block unrelated edits: under silent
+        auto-save a stale invalid value (deleted cookies.txt, bad regex —
+        both gates fire even when untouched) would otherwise stop EVERY
+        setting from persisting, with only a small label as evidence. Each
+        failing field keeps its last-good value from ``self.config``, the
+        rest commits, and a sticky inline warning names what was kept.
+        """
+        if self._committing:
+            # The debounce fired while a commit is in flight (the pitch zip
+            # import spins a nested modal event loop) — retry afterwards.
+            self._debounce_timer.start()
+            return
+        self._committing = True
+        try:
+            # This commit consumes whatever edits armed the timer — cancel a
+            # still-pending expiry so it can't fire a redundant second commit.
+            self._debounce_timer.stop()
+            self._commit_settings_locked(skip_zip_import)
+        finally:
+            self._committing = False
+
+    def _commit_settings_locked(self, skip_zip_import: bool) -> None:
         # If the user just re-enabled startup checks (False -> True), clear any
         # previously skipped version so a fresh check runs next launch.
         was_enabled = self.config.check_for_updates
@@ -595,71 +731,21 @@ class SettingsTab(QWidget):
         if now_enabled and not was_enabled:
             skipped_update_version = ""
 
+        # Human-readable names of fields whose edit was kept back (last-good
+        # value re-used) because validation failed. Drives the sticky warning.
+        kept_back: list[str] = []
+
         # Validate dictionary storage folder (Issue #45). Only enforced when
         # the user has changed the path — reuse-of-current always passes so a
         # transiently-unavailable mount (external SSD) doesn't block other
         # unrelated edits from saving.
         new_dicts_root = self.dictionary_panel.get_dicts_root()
-        if new_dicts_root != self.config.dicts_root:
-            if not new_dicts_root.is_dir():
-                QMessageBox.warning(
-                    self,
-                    self.tr("Invalid dictionary folder"),
-                    tr_format(
-                        self.tr("%1 is not a directory.\n\nPick an existing folder or click Reset to default."),
-                        new_dicts_root,
-                    ),
-                )
-                return
-            if not os.access(new_dicts_root, os.W_OK):
-                QMessageBox.warning(
-                    self,
-                    self.tr("Dictionary folder not writable"),
-                    tr_format(self.tr("Cannot write to %1.\n\nPick a folder you own."), new_dicts_root),
-                )
-                return
+        if new_dicts_root != self.config.dicts_root and (
+            not new_dicts_root.is_dir() or not os.access(new_dicts_root, os.W_OK)
+        ):
+            kept_back.append(self.tr("dictionary folder (Dictionaries)"))
+            new_dicts_root = self.config.dicts_root
 
-        # Validate the YouTube cookies file (Issue #62). yt-dlp would otherwise
-        # fail mid-fetch with a cryptic message; catch a bad path up front.
-        # An empty field is valid (no cookies file).
-        cookies_file = self.youtube_panel.get_cookies_file()
-        if cookies_file and not Path(cookies_file).is_file():
-            QMessageBox.warning(
-                self,
-                self.tr("Cookies file not found"),
-                tr_format(
-                    self.tr("%1 is not a file.\n\nPick an exported cookies.txt or clear the field."), cookies_file
-                ),
-            )
-            return
-
-        # Validate subtitle regex filter before saving so we never persist a
-        # pattern that crashes the parser. Only validate when the user has
-        # enabled the filter; an unchecked invalid pattern is harmless.
-        subtitle_regex = self.filtering_panel.get_subtitle_regex_filter()
-        use_subtitle_regex = self.filtering_panel.get_use_subtitle_regex_filter()
-        if use_subtitle_regex and subtitle_regex:
-            try:
-                re.compile(subtitle_regex)
-            except re.error as e:
-                QMessageBox.warning(
-                    self,
-                    self.tr("Invalid Subtitle Regex"),
-                    tr_format(
-                        self.tr("Pattern: %1\n\nFix or disable the filter before saving.\n\nDetails: %2"),
-                        subtitle_regex,
-                        e,
-                    ),
-                )
-                return
-
-        # Build the candidate config from all Save-path panels FIRST, then run
-        # the pitch-zip import LAST so any current or future pre-import
-        # validation step has a chance to abort before we touch
-        # ~/.anki_miner/pitch_accent.csv on disk. The import stages to a
-        # ``.pending`` sibling and only promotes over the real CSV once it has
-        # passed (see _commit_pending_csv_imports).
-        #
         # Fold: each panel's contribute() returns a new frozen config with its
         # own fields applied.  Panels outside the Save round-trip (dictionary /
         # audio / frequency chain, themes) are handled separately below.
@@ -667,12 +753,32 @@ class SettingsTab(QWidget):
         for panel in self._save_panels:
             new_config = panel.contribute(new_config)
 
-        # Non-panel fields that live in _on_save_clicked scope:
-        # - dicts_root validated and resolved above
-        # - pitch_accent_path deferred to the zip-import resolver
-        # - dictionary/audio/frequency chain — persisted immediately via their
-        #   own signals, but also folded in here so a full Save stays in sync
-        # - update-settings handled per the was/now_enabled logic above
+        # Validate the YouTube cookies file (Issue #62). yt-dlp would otherwise
+        # fail mid-fetch with a cryptic message; catch a bad path up front.
+        # An empty field is valid (no cookies file).
+        cookies_file = self.youtube_panel.get_cookies_file()
+        if cookies_file and not Path(cookies_file).is_file():
+            kept_back.append(self.tr("cookies file (YouTube)"))
+            new_config = replace(new_config, youtube_cookies_file=self.config.youtube_cookies_file)
+
+        # Validate subtitle regex filter so we never persist a pattern that
+        # crashes the parser. Only validated when the filter is enabled; an
+        # unchecked invalid pattern is harmless. The toggle+pattern pair is
+        # kept back together — committing "enabled" with the old pattern (or
+        # a new pattern disabled) would not match what the user sees.
+        subtitle_regex = self.filtering_panel.get_subtitle_regex_filter()
+        use_subtitle_regex = self.filtering_panel.get_use_subtitle_regex_filter()
+        if use_subtitle_regex and subtitle_regex:
+            try:
+                re.compile(subtitle_regex)
+            except re.error:
+                kept_back.append(self.tr("subtitle regex (Filtering)"))
+                new_config = replace(
+                    new_config,
+                    subtitle_regex_filter=self.config.subtitle_regex_filter,
+                    use_subtitle_regex_filter=self.config.use_subtitle_regex_filter,
+                )
+
         new_config = replace(
             new_config,
             # Dictionary chain — chain is the single source of truth now.
@@ -689,44 +795,146 @@ class SettingsTab(QWidget):
             # Audio source chain — persisted immediately via chain_changed, but
             # also included in the full Save so it is always in sync.
             expression_audio_chain=self.audio_panel.get_chain(),
+            # Sentence-TTS toggles — same immediate-persist + full-Save sync.
+            reading_tts_enabled=self.audio_panel.get_reading_tts()[0],
+            reading_tts_google_enabled=self.audio_panel.get_reading_tts()[1],
+            reading_tts_papago_enabled=self.audio_panel.get_reading_tts()[2],
             # Update settings
             check_for_updates=now_enabled,
             skipped_update_version=skipped_update_version,
         )
 
-        # Last step before commit: import the Yomitan pitch-accent zip if the
-        # user picked one. Any pre-import validation belongs ABOVE this call.
-        # None here means the import failed OR was cancelled — abort the whole
-        # save (the user already saw the error dialog, if any). The resolver
-        # only STAGES its CSV to a sibling ``.pending`` file and defers the
-        # destructive promotion (os.replace + selector update + success dialog)
-        # into a commit closure; nothing on disk is clobbered until
-        # _commit_pending_csv_imports() runs below.
-        resolved_pitch_path = self._resolve_pitch_accent_path()
-        if resolved_pitch_path is None:
-            return
+        # Pitch-zip import (modal: nested event loop + dialogs). Runs LAST so
+        # any validation above happens before we touch pitch_accent.csv on
+        # disk; the resolver only STAGES to a ``.pending`` sibling and the
+        # destructive promotion happens in _commit_pending_csv_imports. None
+        # means the import failed OR was cancelled — keep the last-good path
+        # and commit the rest (the user already saw the error dialog, if any).
+        # Skipped entirely on the close flush (never spin a modal loop inside
+        # closeEvent); an unconfirmed .zip pick is dropped there.
+        if not skip_zip_import:
+            # The whole block runs under the _loading guard: the import flow's
+            # commit closure and the re-sync below both set_path the selector,
+            # which re-emits path_changed and must not re-arm the debounce.
+            self._loading = True
+            try:
+                resolved_pitch_path = self._resolve_pitch_accent_path()
+                if resolved_pitch_path is None:
+                    resolved_pitch_path = self.config.pitch_accent_path
+                else:
+                    # Pitch import validated (or passthrough) — promote the
+                    # staged CSV and run its UI feedback now.
+                    self._commit_pending_csv_imports()
+                new_config = replace(new_config, pitch_accent_path=resolved_pitch_path)
 
-        # Pitch import validated — promote the staged CSV to disk and run its
-        # UI feedback now, after which the path is safe to persist.
-        self._commit_pending_csv_imports()
-        new_config = replace(
-            new_config,
-            pitch_accent_path=resolved_pitch_path,
-        )
+                # Re-sync the selector to whatever was actually committed.
+                # Covers cancel/failure (resolver returned None) AND
+                # overwrite-decline (resolver returns the fallback path, not
+                # None): without this the declined .zip stays in the selector
+                # and every later commit re-pops the overwrite modal.
+                selector = self.dictionary_panel.pitch_accent_selector
+                if selector.get_path() != str(resolved_pitch_path):
+                    selector.set_path(str(resolved_pitch_path))
+            finally:
+                self._loading = False
 
         # Sync the dictionary panel to the committed root (T-07). Done here —
         # alongside the config assignment, after every validation/import has
         # passed — so the panel never points at a root the save then aborted on.
         # Without this the panel keeps scanning/rmtree-targeting the OLD root
         # until restart: refresh_registry() renders fresh imports as "(missing)"
-        # and remove() deletes from the wrong directory.
+        # and remove() deletes from the wrong directory. Under the _loading
+        # guard: set_dicts_root re-emits the selector's path_changed.
         if new_dicts_root != self.config.dicts_root:
-            self.dictionary_panel.set_dicts_root(new_dicts_root)
+            self._loading = True
+            try:
+                self.dictionary_panel.set_dicts_root(new_dicts_root)
+            finally:
+                self._loading = False
 
         # Emit signal to notify listeners of config change
         self.config = new_config
         self.config_changed.emit(new_config)
-        self._flash_save_status(self.tr("✓ Saved"))
+        if kept_back:
+            # Sticky (no auto-clear): stays visible until the next fully-valid
+            # commit replaces it with the ✓ flash.
+            self._save_status_timer.stop()
+            self.save_status_label.setText(tr_format(self.tr("⚠ Saved — kept previous: %1"), ", ".join(kept_back)))
+        else:
+            self._flash_save_status(self.tr("✓ Saved"))
+
+    def _on_export_settings(self) -> None:
+        """Export a portable settings file (machine-specific fields stripped)."""
+        target, _ = QFileDialog.getSaveFileName(
+            self,
+            self.tr("Export Settings"),
+            str(Path(resolve_start_dir(None, file_mode=True)) / "anki_miner_settings.json"),
+            self.tr("JSON Files (*.json);;All Files (*)"),
+        )
+        if not target:
+            return
+        try:
+            GUIConfigManager.export_config(self.config, Path(target))
+        except OSError as e:
+            QMessageBox.critical(
+                self,
+                self.tr("Export Failed"),
+                tr_format(self.tr("Could not write %1:\n%2"), target, e),
+            )
+            return
+        QMessageBox.information(
+            self,
+            self.tr("Settings Exported"),
+            tr_format(self.tr("Portable settings written to %1."), target),
+        )
+
+    def _on_import_settings(self) -> None:
+        """Overlay a settings file onto the current config (confirm first).
+
+        Values in the file override the current settings; anything missing
+        from the file — including every machine-specific field the export
+        strips — keeps its current value. Applies via the same
+        ``config_changed`` path as a commit, then reloads every panel.
+        """
+        source, _ = QFileDialog.getOpenFileName(
+            self,
+            self.tr("Import Settings"),
+            resolve_start_dir(None, file_mode=True),
+            self.tr("JSON Files (*.json);;All Files (*)"),
+        )
+        if not source:
+            return
+        reply = QMessageBox.question(
+            self,
+            self.tr("Import Settings?"),
+            tr_format(
+                self.tr(
+                    "Apply settings from %1?\n\n"
+                    "Imported values override your current settings; anything "
+                    "not in the file is kept."
+                ),
+                source,
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            new_config = GUIConfigManager.import_config(Path(source), self.config)
+        except (json.JSONDecodeError, TypeError, ValueError, OSError) as e:
+            QMessageBox.critical(
+                self,
+                self.tr("Import Failed"),
+                tr_format(self.tr("Could not import %1:\n%2"), source, e),
+            )
+            return
+        # Import can touch any field — full reload, unlike the targeted
+        # auto-save commit.
+        self.config = new_config
+        self._load_config()
+        self.config_changed.emit(new_config)
+        self._flash_save_status(self.tr("✓ Imported"))
 
     def _flash_save_status(self, text: str) -> None:
         """Show a transient, non-modal confirmation beside the Save button.
@@ -763,23 +971,6 @@ class SettingsTab(QWidget):
     def _commit_pending_csv_imports(self) -> None:
         """Promote any staged pitch CSV import (delegates to the flow)."""
         self._zip_import_flow.commit_pending_csv_imports()
-
-    def _on_reset_clicked(self) -> None:
-        """Handle reset button click."""
-        reply = QMessageBox.question(
-            self,
-            self.tr("Reset Settings"),
-            self.tr("Reset all settings to defaults?"),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-
-        if reply == QMessageBox.StandardButton.Yes:
-            from anki_miner.config import create_default_config
-
-            self.config = create_default_config()
-            self._load_config()
-            self.config_changed.emit(self.config)
-            self._flash_save_status(self.tr("✓ Reset to defaults"))
 
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Update configuration from external source.
@@ -829,7 +1020,14 @@ class SettingsTab(QWidget):
 
         Explicit-teardown entry point mirroring the YouTube tab; delegates to
         :class:`AnkiProbeController`, which owns the workers (T-66).
+
+        Also stops the auto-save debounce so an armed timer can never fire
+        into a torn-down widget (the pytest-qt ``_drain_qt_deletes`` segfault
+        class). Pending edits are persisted by ``flush_pending_settings``,
+        which MainWindow.closeEvent runs BEFORE the shutdown fan-out reaches
+        this method.
         """
+        self._debounce_timer.stop()
         self._anki_probe.shutdown()
 
     # === Expose panel inputs for backward compatibility ===
@@ -892,6 +1090,18 @@ class SettingsTab(QWidget):
         requiring the user to click Save in Settings.
         """
         new_config = replace(self.config, expression_audio_chain=new_chain)
+        self.config = new_config
+        self.config_changed.emit(new_config)
+
+    def _persist_reading_tts_change(self) -> None:
+        """Save the sentence-TTS toggles immediately (no Save click needed)."""
+        enabled, google_on, papago_on = self.audio_panel.get_reading_tts()
+        new_config = replace(
+            self.config,
+            reading_tts_enabled=enabled,
+            reading_tts_google_enabled=google_on,
+            reading_tts_papago_enabled=papago_on,
+        )
         self.config = new_config
         self.config_changed.emit(new_config)
 

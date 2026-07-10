@@ -50,6 +50,7 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
+    from anki_miner.interfaces.sentence_audio import SentenceAudioFetcher
     from anki_miner.models import LineLemmas
     from anki_miner.services.dictionary.registry import DictionaryRegistry
     from anki_miner.services.frequency.multi_frequency_service import MultiFrequencyService
@@ -112,17 +113,15 @@ def _expression_audio_candidates(word: TokenizedWord) -> list[tuple[str, str]]:
     return candidates
 
 
-def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | None:
-    """Name the dominant expression-audio failure cause, or None.
+def _dominant_transient_failure(counts: dict[str, int], attempts: int) -> str | None:
+    """Return the dominant failure bucket when transient failures dominate.
 
-    ``counts`` is a ChainedExpressionAudioFetcher ``stats()`` tally keyed by
-    failure bucket (ssl/connection/timeout/http_status/non_audio), aggregated
-    across every enabled word-audio source (packs, JPod101, custom URL/JSON,
-    gTTS). Only surfaces a diagnosis when transient failures DOMINATE the
-    run — a genuine "word not in any source" miss is never counted, so a high
-    total means something systemic (expired certificate, outage, rate-limit)
-    rather than words simply being absent. Scattered failures among
-    mostly-successful fetches stay quiet.
+    Shared threshold logic for the expression- and sentence-audio diagnoses.
+    Only reports when failures cover at least half the attempted items — a
+    genuine "not in any source" miss is never counted, so a high total means
+    something systemic (expired certificate, outage, rate-limit) rather than
+    items simply being absent. Scattered failures among mostly-successful
+    fetches stay quiet (None).
 
     Ties resolve to the earliest bucket (ssl first) via ``max`` over a stable
     key order, matching Yomitan's priority on the most actionable cause.
@@ -130,11 +129,25 @@ def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | Non
     total = sum(counts.values())
     if attempts <= 0 or total == 0:
         return None
-    # Require failures to cover at least half the attempted words before raising
+    # Require failures to cover at least half the attempts before raising
     # the alarm; below that they are noise beside real hits and misses.
     if total * 2 < attempts:
         return None
-    dominant = max(counts, key=lambda key: counts[key])
+    return max(counts, key=lambda key: counts[key])
+
+
+def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | None:
+    """Name the dominant expression-audio failure cause, or None.
+
+    ``counts`` is a ChainedExpressionAudioFetcher ``stats()`` tally keyed by
+    failure bucket (ssl/connection/timeout/http_status/non_audio), aggregated
+    across every enabled word-audio source (packs, JPod101, custom URL/JSON,
+    gTTS). Threshold/tie-break semantics live in
+    :func:`_dominant_transient_failure`.
+    """
+    dominant = _dominant_transient_failure(counts, attempts)
+    if dominant is None:
+        return None
     if dominant in ("ssl", "connection", "timeout"):
         return QCoreApplication.translate(
             "EpisodeProcessor",
@@ -148,6 +161,34 @@ def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | Non
     return QCoreApplication.translate(
         "EpisodeProcessor",
         "Word-audio source returned non-audio responses (likely rate-limited) — audio skipped this run, will retry next run",
+    )
+
+
+def _sentence_audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | None:
+    """Name the dominant sentence-TTS failure cause, or None.
+
+    Sentence analogue of :func:`_audio_failure_diagnosis`. ``attempts`` must
+    be the UNIQUE-sentence count (the per-run memo dedups fetch calls, so the
+    stats tally is per unique sentence) — a word-count denominator would
+    dilute the ratio and silence the warning exactly when many words share a
+    few failing sentences.
+    """
+    dominant = _dominant_transient_failure(counts, attempts)
+    if dominant is None:
+        return None
+    if dominant in ("ssl", "connection", "timeout"):
+        return QCoreApplication.translate(
+            "EpisodeProcessor",
+            "Sentence-audio TTS connection/certificate failure — sentence audio skipped this run, will retry next run",
+        )
+    if dominant == "http_status":
+        return QCoreApplication.translate(
+            "EpisodeProcessor",
+            "Sentence-audio TTS returned repeated server errors — sentence audio skipped this run, will retry next run",
+        )
+    return QCoreApplication.translate(
+        "EpisodeProcessor",
+        "Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run",
     )
 
 
@@ -192,8 +233,9 @@ class _EpisodeContext:
     source_label: str
 
     # Reading-tab only (Issue: Reading tab): maps a unit index (= int of the
-    # dummy start_time) to its human page/chapter label ("p.42"). None on the
-    # video/subtitle path, where phase5 keeps the HH:MM:SS timestamp format.
+    # dummy start_time) to its human page/chapter/cue label ("p.42" / "1:23").
+    # None on the video path (process_episode, where phase5 keeps the HH:MM:SS
+    # timestamp format); set by process_reading for manga/novels/subtitles.
     unit_labels: dict[int, str] | None = None
 
     # Accumulator fields populated as phases progress.
@@ -253,6 +295,7 @@ class EpisodeProcessor:
         youtube_fetcher: YouTubeFetcherService | None = None,
         expression_audio_fetcher: ExpressionAudioFetcher | None = None,
         dictionary_registry: DictionaryRegistry | None = None,
+        sentence_audio_fetcher: SentenceAudioFetcher | None = None,
     ):
         """Initialize the episode processor.
 
@@ -282,6 +325,12 @@ class EpisodeProcessor:
                 service factory injects the same handle that built the provider
                 chain; ``None`` (test construction / callers that skip the gate)
                 disables the backstop.
+            sentence_audio_fetcher: Optional sentence-TTS fetcher. Consulted
+                ONLY by ``process_reading`` phase 3' (reading sources have no
+                source audio); video/YouTube/audiobook paths never touch it.
+                Gated by ``_reading_tts_active``. ``None`` is only valid for
+                test construction; the service factory always provides a
+                (possibly empty-chain) fetcher.
         """
         self.config = config
         self.subtitle_parser = subtitle_parser
@@ -298,6 +347,7 @@ class EpisodeProcessor:
         self.stats_service = stats_service
         self._youtube_fetcher = youtube_fetcher
         self.expression_audio_fetcher = expression_audio_fetcher
+        self.sentence_audio_fetcher = sentence_audio_fetcher
         self._dictionary_registry = dictionary_registry
         self._cancelled = False
         # Per-run external cancel source (e.g. a worker's threading.Event
@@ -341,6 +391,26 @@ class EpisodeProcessor:
         this property so the conditions can't drift apart.
         """
         return self.expression_audio_fetcher is not None and bool(self.config.anki_fields.get("expression_audio"))
+
+    @property
+    def _reading_tts_active(self) -> bool:
+        """True when the sentence-TTS stage should run and occupy a progress band.
+
+        Four-part gate: fetcher injected AND the master flag on AND the
+        sentence-audio Anki field (key ``audio``) mapped AND at least one
+        provider selected. The dedicated ``reading_tts_enabled`` flag exists
+        because — unlike expression_audio — the ``audio`` field is mapped by
+        default, so field-presence cannot express consent. Checked in two
+        places — ``process_reading`` (band registration) and
+        ``_fetch_sentence_audio`` (band consumption) — via this property so
+        the conditions can't drift apart.
+        """
+        return (
+            self.sentence_audio_fetcher is not None
+            and self.config.reading_tts_enabled
+            and bool(self.config.anki_fields.get("audio"))
+            and (self.config.reading_tts_google_enabled or self.config.reading_tts_papago_enabled)
+        )
 
     # ------------------------------------------------------------------
     # Dictionary-resource facade
@@ -400,6 +470,11 @@ class EpisodeProcessor:
             self.frequency_service.close()
         if self.expression_audio_fetcher is not None:
             close = getattr(self.expression_audio_fetcher, "close", None)
+            if callable(close):
+                with contextlib.suppress(Exception):
+                    close()
+        if self.sentence_audio_fetcher is not None:
+            close = getattr(self.sentence_audio_fetcher, "close", None)
             if callable(close):
                 with contextlib.suppress(Exception):
                     close()
@@ -1089,6 +1164,83 @@ class EpisodeProcessor:
                     if diagnosis is not None:
                         self.presenter.show_warning(diagnosis)
 
+    def _fetch_sentence_audio(
+        self,
+        media_results: list[tuple[TokenizedWord, MediaData]],
+        progress_callback: ProgressCallback | None,
+    ) -> None:
+        # Sentence TTS for reading sources. Structural clone of
+        # _fetch_expression_audio: sequential on purpose (the fetcher
+        # rate-limits, caches, and never raises — no try/except, no sleep, no
+        # parallelism here). Reads word.sentence AFTER curation/i+1 swap
+        # (phase order guarantees it), so audio always matches the card's
+        # final sentence.
+        #
+        # Progress note: on_start/on_complete MUST be called unconditionally
+        # when _reading_tts_active (even when media_results is empty) to
+        # consume the band process_reading registered — same discipline as
+        # the expression-audio stage.
+        if not self._reading_tts_active:
+            return
+        # Words share sentences (novel sentence-units, manga bubbles):
+        # synthesize once per unique sentence and share the Path. Failures
+        # are memoized too, so a failing shared bubble is not re-hammered.
+        memo: dict[str, Path | None] = {}
+        fetched_words = 0
+        if progress_callback is not None:
+            progress_callback.on_start(
+                len(media_results),
+                QCoreApplication.translate("EpisodeProcessor", "Generating sentence audio"),
+            )
+        for i, (word, media) in enumerate(media_results):
+            if self.cancelled:
+                if progress_callback is not None:
+                    progress_callback.on_complete()
+                return
+            sentence = word.sentence
+            if sentence.strip():
+                if sentence in memo:
+                    path = memo[sentence]
+                else:
+                    path = self.sentence_audio_fetcher.fetch(  # type: ignore[union-attr]
+                        sentence,
+                        cancelled_check=lambda: self.cancelled,
+                    )
+                    memo[sentence] = path
+                if path is not None:
+                    media.audio_path = path
+                    media.audio_filename = path.name
+                    fetched_words += 1
+            if progress_callback is not None:
+                progress_callback.on_progress(
+                    i + 1,
+                    tr_format(
+                        QCoreApplication.translate("EpisodeProcessor", "Sentence audio: %1"),
+                        word.mined_form,
+                    ),
+                )
+        if progress_callback is not None:
+            progress_callback.on_complete()
+        hits = sum(1 for p in memo.values() if p is not None)
+        self.presenter.show_info(
+            tr_format(
+                QCoreApplication.translate("EpisodeProcessor", "Sentence audio: %1/%2 sentences"),
+                hits,
+                len(memo),
+            )
+        )
+        # Diagnose *why* TTS failed when transient failures dominate. The
+        # attempts denominator is the UNIQUE-sentence count (len(memo)): the
+        # memo dedups fetch calls, so stats() failures are per unique
+        # sentence — a word-count denominator would dilute the ratio.
+        stats_fn = getattr(self.sentence_audio_fetcher, "stats", None)
+        if callable(stats_fn):
+            counts = stats_fn()
+            if isinstance(counts, dict):
+                diagnosis = _sentence_audio_failure_diagnosis(counts, len(memo))
+                if diagnosis is not None:
+                    self.presenter.show_warning(diagnosis)
+
     def _phase4_lookup(
         self,
         ctx: _EpisodeContext,
@@ -1349,7 +1501,6 @@ class EpisodeProcessor:
         self,
         video_file: Path,
         subtitle_file: Path,
-        preview_mode: bool = False,
         progress_callback: ProgressCallback | None = None,
         curation_callback: Callable[[list], list | None] | None = None,
         cross_episode_counts: dict[str, int] | None = None,
@@ -1370,7 +1521,6 @@ class EpisodeProcessor:
         Args:
             video_file: Path to video file.
             subtitle_file: Path to subtitle file.
-            preview_mode: If True, only show words without creating cards.
             progress_callback: Optional progress callback.
             curation_callback: Optional callback for word curation. Receives
                 filtered words. Returns the user-selected subset (an empty list
@@ -1425,9 +1575,8 @@ class EpisodeProcessor:
         # allocation so no dir is leaked on failure. The staleness backstop (4.0)
         # runs first: a stale-index run would otherwise drop every word for lack
         # of a definition and report a silent zero-card success.
-        if not preview_mode:
-            self.check_dictionary_staleness()
-            self._preflight_card_target()
+        self.check_dictionary_staleness()
+        self._preflight_card_target()
         run_temp_folder = self._allocate_run_temp_folder()
         keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
 
@@ -1459,7 +1608,7 @@ class EpisodeProcessor:
         # Interactive curation offers a per-word sentence picker, which needs
         # the line index (all lines each lemma appears on). Build it for that
         # path too — not just the i+1 filter.
-        want_line_index = curation_callback is not None and not preview_mode
+        want_line_index = curation_callback is not None
         try:
             all_words, line_index = self._phase1_parse(ctx, subtitle_file, want_line_index=want_line_index)
             if not all_words:
@@ -1477,7 +1626,7 @@ class EpisodeProcessor:
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
-            if curation_callback is not None and not preview_mode:
+            if curation_callback is not None:
                 if line_index is not None:
                     # Attach alternative example sentences so the curator can
                     # offer a per-word sentence picker (no-op for words that
@@ -1506,19 +1655,6 @@ class EpisodeProcessor:
                     return ctx.build_result(new_words_found=0)
                 self.presenter.show_info(
                     QCoreApplication.translate("EpisodeProcessor", "Mining %n selected word(s)", "", len(unknown_words))
-                )
-
-            if preview_mode:
-                self.presenter.show_word_preview(unknown_words)
-                # Preview reports the would-be-mined forms (no cards are created
-                # here). This overloads mined_forms' usual "cards actually created"
-                # meaning, but is safe: every consumer is gated on card creation —
-                # the Undo button only renders when card_ids exist, the undo
-                # callback's remove_words finds no source='mined' rows (preview
-                # returns before _phase5_create, the sole writer), and history/
-                # stats are gated on cards_created > 0.
-                return ctx.build_result(
-                    mined_forms=[w.mined_form for w in unknown_words],
                 )
 
             # Wrap the raw callback so the bar reflects whole-episode progress
@@ -1651,11 +1787,11 @@ class EpisodeProcessor:
         ``failed_refs`` memos) even when the ref is shared by many words.
         """
         # Label-only kind split: manga cards carry a distinct page image each,
-        # while a book attaches one cover to every card (txt has none) — so the
-        # image-stage wording differs. The three emissions below stay strictly
-        # UNCONDITIONAL (band accounting must not depend on kind); only the text
-        # varies. Derived once here, used at the three sites.
-        is_book = document.kind == "book"
+        # while a book attaches one cover to every card (txt and subtitles have
+        # none) — so the image-stage wording differs. The three emissions below
+        # stay strictly UNCONDITIONAL (band accounting must not depend on kind);
+        # only the text varies. Derived once here, used at the three sites.
+        is_book = document.kind in ("book", "subtitle")
         step_banner = (
             QCoreApplication.translate("EpisodeProcessor", "Step 3/5 — Preparing card images")
             if is_book
@@ -1767,13 +1903,14 @@ class EpisodeProcessor:
 
         self._fetch_expression_audio(media_results, progress_callback)
 
+        self._fetch_sentence_audio(media_results, progress_callback)
+
         return media_results
 
     def process_reading(
         self,
         document: ReadingDocument,
         *,
-        preview_mode: bool = False,
         progress_callback: ProgressCallback | None = None,
         curation_callback: Callable[[list], list | None] | None = None,
         cancel_event: threading.Event | None = None,
@@ -1790,8 +1927,6 @@ class EpisodeProcessor:
 
         Args:
             document: The loaded document to mine.
-            preview_mode: If True, show the word list without creating cards
-                (returns before phase 3').
             progress_callback: Optional progress callback; wraps only phases
                 3'/4/5 in a single weighted sweep.
             curation_callback: Optional per-word curation callback; same
@@ -1807,7 +1942,9 @@ class EpisodeProcessor:
                 index needs reimport.
             AnkiConnectionError: AnkiConnect is unreachable.
         """
-        if document.kind == "manga":
+        # Manga and subtitle sources carry a meaningful series (mokuro title /
+        # parent folder), so prefix it; books use the bare episode title.
+        if document.kind in ("manga", "subtitle"):
             source_label = _sanitize_source_label(f"{document.series} — {document.episode}")
         else:
             source_label = document.episode
@@ -1828,9 +1965,8 @@ class EpisodeProcessor:
 
         # Outside the try so SetupError propagates to callers (staleness backstop
         # first, for the same silent-zero-card reason as process_episode).
-        if not preview_mode:
-            self.check_dictionary_staleness()
-            self._preflight_card_target()
+        self.check_dictionary_staleness()
+        self._preflight_card_target()
         run_temp_folder = self._allocate_run_temp_folder()
         keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
 
@@ -1847,7 +1983,7 @@ class EpisodeProcessor:
         # parse_text_units directly, so an i+1-enabled Mine run must set
         # want_line_index itself — otherwise the filter gets an empty index and
         # silently drops every word.
-        want_line_index = self.config.use_i_plus_one_filter or (curation_callback is not None and not preview_mode)
+        want_line_index = self.config.use_i_plus_one_filter or curation_callback is not None
         try:
             self.presenter.show_info(
                 tr_format(
@@ -1887,7 +2023,7 @@ class EpisodeProcessor:
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
-            if curation_callback is not None and not preview_mode:
+            if curation_callback is not None:
                 if line_index is not None:
                     self.word_filter.attach_sentence_candidates(unknown_words, line_index)
                 self.word_filter.attach_occurrence_counts(unknown_words, counts)
@@ -1905,18 +2041,17 @@ class EpisodeProcessor:
                     QCoreApplication.translate("EpisodeProcessor", "Mining %n selected word(s)", "", len(unknown_words))
                 )
 
-            if preview_mode:
-                self.presenter.show_word_preview(unknown_words)
-                return ctx.build_result(mined_forms=[w.mined_form for w in unknown_words])
-
             # Wrap only phases 3'/4/5 in one weighted sweep (no parse/filter
             # bands). Bands, in firing order: image prep, [expression audio],
-            # definitions, [glossaries], cards — renormalized internally.
+            # [sentence TTS], definitions, [glossaries], cards — renormalized
+            # internally.
             stage_progress = progress_callback
             if progress_callback is not None:
                 stage_weights = [0.40]  # image prep
                 if self._expression_audio_active:
                     stage_weights.append(0.10)  # expression audio
+                if self._reading_tts_active:
+                    stage_weights.append(0.10)  # sentence TTS
                 stage_weights.append(0.25)  # definitions
                 if self.config.anki_fields.get("glossary"):
                     stage_weights.append(0.10)  # glossaries
@@ -2034,7 +2169,6 @@ class EpisodeProcessor:
         fetch_progress_cb: Callable[[str, float | None], None] | None = None,
         curation_callback: Callable[[list], list | None] | None = None,
         on_fetched: Callable[[FetchedMedia], None] | None = None,
-        preview_mode: bool = False,
         source_label: str | None = None,
     ) -> ProcessingResult:
         """Fetch a YouTube video + subs then run the standard mining pipeline.
@@ -2072,8 +2206,6 @@ class EpisodeProcessor:
             on_fetched: Optional callback invoked with the ``FetchedMedia``
                 result after download completes, before the mining pipeline
                 starts. Called on the calling thread (the worker thread).
-            preview_mode: If True, skip card creation and show previews only.
-                Forwarded unchanged to ``process_episode``.
             source_label: Optional origin string for the card "source" field
                 (typically the YouTube video title). Forwarded to
                 ``process_episode`` as ``source_label_override``. The stats/dedup
@@ -2097,14 +2229,13 @@ class EpisodeProcessor:
         if cancel_event.is_set():
             return self._make_cancelled_result(start_time)
 
-        if not preview_mode:
-            # Deliberate early check: fail before the video download rather than
-            # after.  process_episode re-runs the same pre-flight post-fetch;
-            # that double-check is intentional — cheap idempotent localhost calls.
-            # The staleness backstop is likewise cheap and fails before the
-            # download when an enabled index needs reimport.
-            self.check_dictionary_staleness()
-            self._preflight_card_target()
+        # Deliberate early check: fail before the video download rather than
+        # after.  process_episode re-runs the same pre-flight post-fetch;
+        # that double-check is intentional — cheap idempotent localhost calls.
+        # The staleness backstop is likewise cheap and fails before the
+        # download when an enabled index needs reimport.
+        self.check_dictionary_staleness()
+        self._preflight_card_target()
 
         # The fetch stage consults cancel_event directly (fetch_video gets it
         # verbatim and the post-fetch check below polls it); the mining stage
@@ -2130,7 +2261,6 @@ class EpisodeProcessor:
         return self.process_episode(
             fetched.video_file,
             fetched.subtitle_file,
-            preview_mode=preview_mode,
             progress_callback=progress_callback,
             curation_callback=curation_callback,
             episode_name_override=f"YT:{video_id}",
