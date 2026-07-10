@@ -132,10 +132,19 @@ class SubtitleRetimeWorker(CancellableWorker):
             out_dir = self._output_dir if self._output_dir is not None else video.parent
             out_sub = resolve_output_path(out_dir, name)
 
-            # Skip-if-exists logic.
+            # Skip-if-exists logic. When the resolved output is the INPUT subtitle
+            # itself (a sub already named ``<video stem><suffix>`` next to the
+            # video), the generic "exists" skip misleadingly reports the input as a
+            # pre-existing output. The retimer supports safe in-place aliasing, so
+            # tell the user to enable Overwrite rather than implying a stale twin.
             if out_sub.exists() and not self._overwrite:
-                logger.debug("subtitle_retime_worker: skipped %s (exists)", out_sub)
-                self.file_progress.emit(idx, 100, self.tr("Skipped, exists"))
+                if self._aliases_input(out_sub, in_sub):
+                    logger.debug("subtitle_retime_worker: skipped %s (output equals input)", out_sub)
+                    msg = self.tr("Output equals input; enable Overwrite to retime in place")
+                else:
+                    logger.debug("subtitle_retime_worker: skipped %s (exists)", out_sub)
+                    msg = self.tr("Skipped, exists")
+                self.file_progress.emit(idx, 100, msg)
                 self.file_skipped.emit(idx, out_sub)
                 continue
 
@@ -144,6 +153,22 @@ class SubtitleRetimeWorker(CancellableWorker):
                 self._output_dir.mkdir(parents=True, exist_ok=True)
 
             self._process_pair(idx, video, in_sub, out_sub)
+
+    @staticmethod
+    def _aliases_input(out_sub: Path, in_sub: Path) -> bool:
+        """Return True when the resolved output path is the input subtitle itself.
+
+        Uses ``samefile`` to catch on-disk aliases (symlink / NFC-NFD or
+        case-variant names that ``resolve_output_path`` may have collapsed onto
+        the input) and falls back to path equality; ``samefile`` needs both paths
+        to exist, so a missing input degrades to the equality check.
+        """
+        if out_sub == in_sub:
+            return True
+        try:
+            return out_sub.samefile(in_sub)
+        except OSError:
+            return False
 
     def _process_pair(self, idx: int, video: Path, in_sub: Path, out_sub: Path) -> None:
         """Process a single (video, subtitle) pair; never raises (errors forwarded as signals)."""
