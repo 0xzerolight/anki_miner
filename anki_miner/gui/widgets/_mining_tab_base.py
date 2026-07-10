@@ -215,12 +215,16 @@ class MiningTabBase(QWidget):
         if joined and old_processor is not None:
             with contextlib.suppress(Exception):
                 old_processor.close()
-        elif not joined and old_processor is not None:
-            # Timed out: the worker may still be mid-process_episode using the
-            # processor's sqlite/Session, so closing now can segfault on Windows.
-            # Record the (worker, processor) pair so _reap_leaked_runs can close
-            # it later, once the orphaned worker has actually finished — instead
-            # of leaking those handles for the rest of the session.
+        elif not joined:
+            # Timed out: retain the still-running worker regardless of whether
+            # its processor exists yet (G3). A worker still inside
+            # create_episode_processor has processor is None; if we don't record
+            # it here the caller reassigns self.worker_thread and drops the last
+            # ref to a live QThread → "QThread: Destroyed while running" abort.
+            # When the processor DOES exist, closing now can segfault on Windows
+            # (worker may be mid-process_episode using its sqlite/Session), so we
+            # defer either way. _reap_leaked_runs closes any processor later,
+            # once the orphaned worker has actually finished.
             self._leaked_runs.append((self.worker_thread, old_processor))  # type: ignore[attr-defined]
         # Re-arm the gate for the upcoming run. The predecessor is now joined
         # (or timed-out + cancelled, so it bails before re-reaching curation)
@@ -230,7 +234,7 @@ class MiningTabBase(QWidget):
             self._reset_curation_gate()
 
     @property
-    def _leaked_runs(self) -> list[tuple[QThread, EpisodeProcessor]]:
+    def _leaked_runs(self) -> list[tuple[QThread, EpisodeProcessor | None]]:
         """Lazily-created list of (worker, processor) pairs leaked at join timeout.
 
         Each entry is an old run whose bounded join in
@@ -260,7 +264,7 @@ class MiningTabBase(QWidget):
         close hazard the leak deferral avoids. Called at the top of every
         :meth:`_teardown_previous_run` and from :meth:`shutdown`.
         """
-        survivors: list[tuple[QThread, EpisodeProcessor]] = []
+        survivors: list[tuple[QThread, EpisodeProcessor | None]] = []
         for worker, processor in self._leaked_runs:
             try:
                 still_running = worker.isRunning() and not worker.wait(0)
@@ -271,8 +275,11 @@ class MiningTabBase(QWidget):
             if still_running:
                 survivors.append((worker, processor))
                 continue
-            with contextlib.suppress(Exception):
-                processor.close()
+            # processor may be None when the worker timed out before its
+            # EpisodeProcessor was constructed (G3) — nothing to close then.
+            if processor is not None:
+                with contextlib.suppress(Exception):
+                    processor.close()
         self._leaked_runs = survivors
 
     # ------------------------------------------------------------------
@@ -608,8 +615,9 @@ class MiningTabBase(QWidget):
             with contextlib.suppress(RuntimeError):
                 joined = bool(worker.wait(_LEAKED_RUN_CLOSE_JOIN_MS))
             if joined:
-                with contextlib.suppress(Exception):
-                    processor.close()
+                if processor is not None:
+                    with contextlib.suppress(Exception):
+                        processor.close()
                 with contextlib.suppress(ValueError):
                     self._leaked_runs.remove((worker, processor))
 

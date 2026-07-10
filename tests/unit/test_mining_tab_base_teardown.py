@@ -381,8 +381,14 @@ class TestLeakedRunReaper:
         tab._reap_leaked_runs()
         assert (worker, proc) not in tab._leaked_runs
 
-    def test_none_processor_at_timeout_not_recorded(self, qapp, qtbot):
-        """A timed-out worker with no processor is not added to _leaked_runs."""
+    def test_none_processor_at_timeout_is_retained(self, qapp, qtbot):
+        """A timed-out worker with no processor is retained (G3).
+
+        A worker still inside create_episode_processor (processor is None) that
+        times out on join must still be held in _leaked_runs — otherwise the
+        caller reassigns self.worker_thread, dropping the last ref to a still-
+        running QThread ("QThread: Destroyed while running" abort).
+        """
         tab = _Bare()
         qtbot.addWidget(tab)
         tab._init_curation_bridge()
@@ -391,4 +397,35 @@ class TestLeakedRunReaper:
         tab.worker_thread = worker
         tab._teardown_previous_run("test")
 
+        assert (worker, None) in tab._leaked_runs
+
+    def test_none_processor_leak_reaped_on_shutdown_without_error(self, qapp, qtbot):
+        """A retained None-processor leak is reaped on shutdown without error."""
+        tab = _Bare()
+        qtbot.addWidget(tab)
+        tab._init_curation_bridge()
+
+        worker = _LeakWorker(None, timeout_result=False)
+        tab.worker_thread = worker
+        tab._teardown_previous_run("test")
+        assert (worker, None) in tab._leaked_runs
+
+        # Orphaned worker self-finishes; reaper drops the entry, skipping the
+        # (absent) processor close.
+        worker.mark_finished()
+        tab._reap_leaked_runs()
+        assert (worker, None) not in tab._leaked_runs
+
+    def test_reaper_tolerates_none_processor(self, qapp, qtbot):
+        """The reaper skips the processor close when the processor is None."""
+        tab = _Bare()
+        qtbot.addWidget(tab)
+        tab._init_curation_bridge()
+
+        worker = _LeakWorker(None, timeout_result=False)
+        worker.mark_finished()
+        tab._leaked_runs = [(worker, None)]
+
+        # Must not raise even though there is no processor to close.
+        tab._reap_leaked_runs()
         assert tab._leaked_runs == []
