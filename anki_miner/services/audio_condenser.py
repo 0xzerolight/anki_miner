@@ -46,6 +46,7 @@ from anki_miner.services.asr.srt_writer import segments_to_srt
 from anki_miner.services.media_extractor import MediaExtractorService
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg
 from anki_miner.utils.subprocess_utils import no_window_kwargs
+from anki_miner.utils.subtitle_encoding import load_with_fallback_encoding
 from anki_miner.utils.text_utils import strip_subtitle_markup
 
 if TYPE_CHECKING:
@@ -88,50 +89,12 @@ def load_subtitle_events(path: str | Path) -> list[Event]:
     try:
         subs = pysubs2.load(str(path))
     except UnicodeDecodeError as utf8_error:
-        subs = _load_with_fallback_encoding(path, utf8_error)
+        subs = load_with_fallback_encoding(path, utf8_error)
     except pysubs2.exceptions.FormatAutodetectionError:
         # Empty (or contentless) file — no cues to condense.
         return []
 
     return [(event.start, event.end, event.text) for event in subs if not event.is_comment]
-
-
-def _load_with_fallback_encoding(path: Path, original_error: UnicodeDecodeError) -> pysubs2.SSAFile:
-    """Retry loading *path* with cp932, then a detected encoding (D10).
-
-    cp932 is tried before the charset-normalizer detector on purpose: the
-    detector confidently mis-detects real cp932 Japanese as ``cp949`` and
-    decodes it *without* raising (silent mojibake), so for the app's dominant
-    non-UTF-8 input the explicit cp932 attempt must win first. Only if cp932
-    itself raises :class:`UnicodeDecodeError` do we consult the (soft-imported)
-    detector; if that also fails, *original_error* (the UTF-8 error) is raised.
-    """
-    try:
-        return pysubs2.load(str(path), encoding="cp932")
-    except UnicodeDecodeError:
-        pass
-    encoding = _detect_encoding(path)
-    if encoding:
-        try:
-            return pysubs2.load(str(path), encoding=encoding)
-        except (UnicodeDecodeError, LookupError):
-            pass
-    raise original_error
-
-
-def _detect_encoding(path: Path) -> str | None:
-    """Best-guess encoding for *path* via charset-normalizer, or None.
-
-    charset-normalizer is soft-imported so its absence simply means the
-    detector leg of :func:`_load_with_fallback_encoding` is skipped (the cp932
-    attempt there runs first and independently).
-    """
-    try:
-        from charset_normalizer import from_path
-    except ImportError:
-        return None
-    match = from_path(str(path)).best()
-    return match.encoding if match is not None else None
 
 
 # ---------------------------------------------------------------------------

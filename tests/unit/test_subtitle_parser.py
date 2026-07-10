@@ -107,6 +107,25 @@ class TestParseSubtitleFile:
         ):
             service.parse_subtitle_file(bad_file)
 
+    def test_parses_cp932_shift_jis_encoded_subtitle(self, test_config, tmp_path):
+        """A cp932/Shift-JIS-encoded subtitle loads via the encoding fallback (Bug J5).
+
+        pysubs2 defaults to UTF-8, so a cp932 file used to raise
+        UnicodeDecodeError and fail the whole episode. ``_load_subs`` now retries
+        cp932 (the dominant non-UTF-8 input) before consulting the detector, so
+        real Shift-JIS subtitles parse instead of aborting the run.
+        """
+        srt = "1\r\n00:00:01,000 --> 00:00:03,000\r\n本を読む\r\n\r\n"
+        sub_file = tmp_path / "cp932.srt"
+        sub_file.write_bytes(srt.encode("cp932"))
+
+        service = SubtitleParserService(test_config)
+        words = service.parse_subtitle_file(sub_file)
+
+        lemmas = {w.lemma for w in words}
+        assert "本" in lemmas
+        assert "読む" in lemmas
+
     def test_parses_words_from_lines(self, test_config, tmp_path):
         """Should extract TokenizedWord objects from subtitle lines."""
         sub_file = tmp_path / "test.ass"

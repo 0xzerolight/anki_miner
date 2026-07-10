@@ -342,7 +342,7 @@ def test_load_subtitle_events_detector_unavailable_raises_original(tmp_path, mon
     # If cp932 also fails to decode and the detector is unavailable (or yields
     # nothing), D10 re-raises the original UTF-8 error rather than swallowing it.
     monkeypatch.setattr(
-        "anki_miner.services.audio_condenser._detect_encoding",
+        "anki_miner.utils.subtitle_encoding._detect_encoding",
         lambda _path: None,
     )
     path = tmp_path / "utf16_no_detector.srt"
