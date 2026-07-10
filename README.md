@@ -94,7 +94,7 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Audio**: queue local audio + subtitle/transcript pairs (audiobooks, podcasts, radio, songs, lectures) and mine them audio-only; embedded cover art stands in for screenshots.
 - **Reading**: mine manga and novels instead of video. Point at a mokuro-processed manga volume (an image folder or `.cbz` with its sibling `.mokuro` file) or a novel (`.epub`, or Aozora/plain `.txt`); cards carry the page image or the book cover. Anki Miner reads mokuro's output and does no OCR itself. Word curation and preview work as in the other tabs.
 - **Analytics**: history, series difficulty rankings, milestones, undo.
-- **Subtitles**: generate subtitles from speech with a local Whisper model (no GPU required; optional CUDA/VAD packs install in-app), or retime an out-of-sync subtitle file to your video with alass.
+- **Tools**: generate subtitles from speech with a local Whisper model (no GPU required; optional CUDA/VAD packs install in-app), retime an out-of-sync subtitle file to your video with alass, or condense a video/audio file down to dialogue-only audio using its subtitles.
 - **Settings**: Anki, Media, Dictionaries, Audio, Filtering, Frequency, Subtitles, YouTube, Themes. Saved to `~/.anki_miner/gui_config.json`.
 
 ## Other Features

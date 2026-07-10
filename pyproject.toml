@@ -45,6 +45,10 @@ dependencies = [
     # via Pillow (must ship in the bundle and pip installs). Also used soft-import
     # for the E2E screenshot diff and the yomitan importer's image-decode probe.
     "pillow>=10.0.0",
+    # Runtime: services/audio_condenser.py decodes subtitle bytes with a
+    # charset-normalizer detector fallback (external non-UTF-8 subtitle files).
+    # Previously only a transitive requests dep; declared explicitly now.
+    "charset-normalizer>=3.4.0",
 ]
 
 [project.optional-dependencies]
