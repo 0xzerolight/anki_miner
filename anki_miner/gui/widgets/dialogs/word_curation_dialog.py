@@ -668,19 +668,28 @@ class WordCurationDialog(QDialog):
         # so the seek can be issued directly — see _on_candidate_chosen.
         self._preview_scene(chosen.start_time)
 
-        # Dictionary pane: look up by lemma (definitions key on lemma, not mined_form).
+        # Dictionary pane: look up by mined_form (the card-front spelling, same
+        # primary key Phase 4 uses) with a miss-only lemma retry — unidic's
+        # canonical lemma collapses kanji variants (殺る → 遣る), so a
+        # lemma-keyed pane showed the wrong homograph's entry.
         if self._show_dict and hasattr(self, "definition_view"):
-            self._lookup_and_render(word.lemma)
+            self._lookup_and_render(word.mined_form, word.lemma)
 
-    def _lookup_and_render(self, lemma: str) -> None:
-        """Fetch definition entries for ``lemma`` (with cache) and render into the view."""
-        if lemma not in self._lookup_cache:
+    def _lookup_and_render(self, term: str, fallback_term: str | None = None) -> None:
+        """Fetch definition entries for ``term`` (with cache) and render into the
+        view, retrying once under ``fallback_term`` when the primary misses."""
+        if term not in self._lookup_cache:
             assert self._lookup_fn is not None  # guarded by self._show_dict
-            self._lookup_cache[lemma] = self._lookup_fn(lemma)
+            self._lookup_cache[term] = self._lookup_fn(term)
 
-        entries = self._lookup_cache[lemma]
+        entries = self._lookup_cache[term]
+        if not entries and fallback_term and fallback_term != term:
+            if fallback_term not in self._lookup_cache:
+                assert self._lookup_fn is not None
+                self._lookup_cache[fallback_term] = self._lookup_fn(fallback_term)
+            entries = self._lookup_cache[fallback_term]
         if not entries:
-            escaped = html.escape(lemma)
+            escaped = html.escape(term)
             self.definition_view.setHtml(f'<p style="color:gray">No offline dictionary entry for <b>{escaped}</b></p>')
             return
 

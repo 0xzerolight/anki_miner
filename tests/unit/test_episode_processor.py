@@ -4,7 +4,7 @@ import re
 import threading
 from dataclasses import replace
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
@@ -331,8 +331,9 @@ class TestProcessEpisode:
         mock_services["definition_service"].get_definitions_batch.assert_called_once()
         ds_args = mock_services["definition_service"].get_definitions_batch.call_args
         assert ds_args[0][0] == [("食べる", "たべる")]
-        # Lookup-miss fallback context (5.2): lemma → (orth_base, cType=None).
-        assert ds_args[0][2] == {"食べる": ("", None)}
+        # Lookup-miss fallback context (5.2): mined_form → (lemma, cType=None),
+        # set unconditionally (equal lemma is skipped by the candidate builder).
+        assert ds_args[0][2] == {"食べる": ("食べる", None)}
 
         # Verify anki_service gets combined CardPayload entries
         mock_services["anki_service"].create_cards_batch.assert_called_once()
@@ -349,26 +350,31 @@ class TestProcessEpisode:
             extra_fields={"source": expected_source},
         )
 
-    def test_fallback_context_carries_orth_base(self, processor, mock_services, tmp_path):
-        """5.2: the miss-only fallback context threads each lemma's orth_base
-        (source-orthography variant) so 乞う resolves when the lemma is 請う."""
+    def test_variant_spelling_keys_definition_lookup(self, processor, mock_services, tmp_path):
+        """Definitions key on mined_form (source spelling) with the canonical
+        lemma as the miss-only fallback: 殺る must query 殺る, not fetch 遣る's
+        "to do" entry (the lemma is only in the 5.2 fallback context)."""
         video = tmp_path / "v.mkv"
         sub = tmp_path / "s.ass"
-        word = _make_word(lemma="請う")
-        word.orth_base = "乞う"
+        word = _make_word(lemma="遣る")
+        word.orth_base = "殺る"
+        word.pos = "動詞"
+        word.lemma_reading = "やる"
+        word.expression_reading = "やる"
         media = _make_media()
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
-        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to beg"]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to do someone in"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
         processor.process_episode(video, sub)
 
         ds_args = mock_services["definition_service"].get_definitions_batch.call_args
-        assert ds_args[0][2] == {"請う": ("乞う", None)}
+        assert ds_args[0][0] == [("殺る", "やる")]
+        assert ds_args[0][2] == {"殺る": ("遣る", None)}
 
     def test_audio_only_flag_reaches_extract_media_batch(self, processor, mock_services, tmp_path):
         """audio_only=True is threaded down to extract_media_batch."""
@@ -667,6 +673,68 @@ class TestOptionalServices:
         assert word.frequency_rank == 200
         assert word.frequency_harmonic_rank == 266
         assert word.frequency_sources == [("BCCWJ", 400, None), ("JPDB", 200, None)]
+
+    def test_variant_spelling_frequency_lemma_retry_on_miss(self, test_config, mock_services, tmp_path):
+        """Frequency keys on mined_form (賭ける), retrying under the canonical
+        lemma (掛ける) ONLY when no source attests the spelling — whole-result
+        fallback, never per-source."""
+        word = _make_word(lemma="掛ける")
+        word.orth_base = "賭ける"
+        word.lemma_reading = "かける"
+        word.expression_reading = "かける"
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = True
+        mock_frequency.lookup_all.side_effect = [[], [("BCCWJ", 1500, None)]]
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to bet"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            frequency_service=mock_frequency,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert mock_frequency.lookup_all.call_args_list == [
+            call("賭ける", "かける"),
+            call("掛ける", "かける"),
+        ]
+        assert word.frequency_rank == 1500
+
+    def test_variant_spelling_frequency_no_retry_when_spelling_ranked(self, test_config, mock_services, tmp_path):
+        """A spelling any source ranks keeps its own rank — no lemma retry, so
+        賭ける never inherits 掛ける's rank (the reported bug)."""
+        word = _make_word(lemma="掛ける")
+        word.orth_base = "賭ける"
+        word.lemma_reading = "かける"
+        word.expression_reading = "かける"
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = True
+        mock_frequency.lookup_all.return_value = [("JPDB", 12000, None)]
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to bet"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = EpisodeProcessor(
+            config=test_config,
+            presenter=NullPresenter(),
+            frequency_service=mock_frequency,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_frequency.lookup_all.assert_called_once_with("賭ける", "かける")
+        assert word.frequency_rank == 12000
 
     def test_categorical_only_word_gets_no_numeric_rank_but_keeps_label(self, test_config, mock_services, tmp_path):
         """A word ranked ONLY by a word-based (categorical) source has no numeric
@@ -3127,6 +3195,53 @@ class TestGlossaryFetch:
         # style-free (the card-wide <style> only needs to appear once).
         assert not payload.definition.startswith("<style>")
 
+    def test_glossary_miss_retries_variant_under_lemma(self, test_config, mock_services, tmp_path, monkeypatch):
+        """A variant spelling (殺る) whose glossary misses retries ONCE under the
+        canonical lemma (遣る), merged by index; get_glossaries_batch has no
+        fallback mechanism of its own."""
+        cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
+        processor = self._build_processor(cfg, mock_services)
+
+        word = _make_word(lemma="遣る")
+        word.orth_base = "殺る"
+        word.lemma_reading = "やる"
+        word.expression_reading = "やる"
+        media = _make_media("yaru")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to do someone in"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        lemma_glossary = '<div class="yomitan-glossary"><ol><li>to do</li></ol></div>'
+        mock_services["definition_service"].get_glossaries_batch.side_effect = [[None], [lemma_glossary]]
+        monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css", lambda cfg: "")
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        gb_calls = mock_services["definition_service"].get_glossaries_batch.call_args_list
+        assert len(gb_calls) == 2
+        assert gb_calls[0][0][0] == [("殺る", "やる")]
+        # Retry batch: lemma-keyed, no progress callback (second positional arg None).
+        assert gb_calls[1][0][0] == [("遣る", "やる")]
+        assert gb_calls[1][0][1] is None
+        payload = mock_services["anki_service"].create_cards_batch.call_args[0][0][0]
+        assert payload.extra_fields["glossary"].endswith(lemma_glossary)
+
+    def test_glossary_miss_no_retry_for_non_variant(self, test_config, mock_services, tmp_path, monkeypatch):
+        """A miss on a word whose mined_form == lemma retries nothing — there is
+        no second spelling to try."""
+        cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
+        processor = self._build_processor(cfg, mock_services)
+        video, sub = self._seed_happy_path(mock_services, tmp_path)
+        mock_services["definition_service"].get_glossaries_batch.return_value = [None]
+        monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css", lambda cfg: "")
+
+        processor.process_episode(video, sub)
+
+        mock_services["definition_service"].get_glossaries_batch.assert_called_once()
+
     def test_glossary_skipped_when_field_unmapped(self, test_config, mock_services, tmp_path, monkeypatch):
         # Default test_config has anki_fields["glossary"] == "" but definition
         # mapped, so the style block is still built (it rides the definition
@@ -4747,6 +4862,35 @@ class TestOfflineDefinitionPreFilter:
 
         mock_services["definition_service"].has_offline_definitions.assert_not_called()
         assert captured["lemmas"] == ["食べる", "走る"]
+
+    def test_probe_covers_mined_form_and_lemma_union(self, test_config, mock_services, tmp_path):
+        """The probe queries the union of mined_form + lemma and keeps a word
+        when EITHER hits — matching Phase 4's mined_form-primary /
+        lemma-fallback resolution. 殺る (variant-only dict entry) and a
+        hypothetical lemma-only entry both survive; a both-miss word drops."""
+        variant_hit = _make_word("遣る")  # dict knows 殺る, not 遣る
+        variant_hit.orth_base = "殺る"
+        lemma_hit = _make_word("請う", start_time=5.0)  # dict knows 請う, not 乞う
+        lemma_hit.orth_base = "乞う"
+        both_miss = _make_word("走る", start_time=9.0)
+        self._prime(mock_services, [variant_hit, lemma_hit, both_miss])
+        defs = {"殺る": True, "遣る": False, "乞う": False, "請う": True, "走る": False}
+        mock_services["definition_service"].has_offline_definitions.side_effect = lambda terms: {
+            t: defs.get(t, False) for t in terms
+        }
+
+        captured: dict = {}
+
+        def cb(words):
+            captured["mined_forms"] = [w.mined_form for w in words]
+            return None
+
+        proc = self._build(test_config, mock_services)
+        proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=cb)
+
+        probe_args = mock_services["definition_service"].has_offline_definitions.call_args[0][0]
+        assert set(probe_args) == {"殺る", "遣る", "乞う", "請う", "走る"}
+        assert captured["mined_forms"] == ["殺る", "乞う"]
 
 
 class TestWithinRunDuplicateCollapse:

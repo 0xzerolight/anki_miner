@@ -596,18 +596,39 @@ class EpisodeProcessor:
         # harmonic-mean rank (frequency_harmonic_rank) that drives the sort field.
         if self.frequency_service and self.frequency_service.is_available():
             for word in all_words:
-                # Reading-scope the lookup so homographs stop inheriting each
-                # other's ranks. The lemma reading (dictionary-form reading) is
-                # the right key since ranks are keyed on word.lemma; fall back to
-                # the surface reading. Hiragana-normalize so a katakana subtitle
-                # reading matches a hiragana-stored frequency reading.
-                reading = katakana_to_hiragana(word.lemma_reading or word.reading)
+                # Keyed on mined_form (the card-front spelling), NOT lemma:
+                # unidic's canonical lemma collapses kanji variants
+                # (懸ける/賭ける/架ける → 掛ける), so lemma-keyed lookups gave
+                # every variant the common spelling's rank. Per-spelling sources
+                # (JPDB) carry distinct rows per orthography — query the spelling
+                # the card actually shows. Reading-scope so homographs stop
+                # inheriting each other's ranks; hiragana-normalize so a katakana
+                # subtitle reading matches a hiragana-stored frequency reading.
+                reading = katakana_to_hiragana(word.expression_reading or word.lemma_reading or word.reading)
                 # One per-source fetch, then derive min + harmonic locally: the
                 # service's lookup_min/lookup_harmonic each re-run lookup_all
                 # internally, so calling all three would run the per-source SQL
                 # three times per word. min_rank/harmonic_rank are the same pure
                 # derivations lookup_min/lookup_harmonic wrap.
-                sources = self.frequency_service.lookup_all(word.lemma, reading)
+                sources = self.frequency_service.lookup_all(word.mined_form, reading)
+                # Whole-result miss-only lemma fallback (mirrors the JPod101
+                # audio retry ladder): fires only when NO source attests the
+                # variant spelling, so a ranked breakdown is always uniformly
+                # keyed — all spelling-true or all lemma. Deliberately NOT
+                # per-source: a per-source cascade would re-inject the lemma
+                # rank from any source lacking the per-spelling row, and since
+                # frequency_rank = min_rank(sources) gates the top-N filter,
+                # that low lemma rank would keep a rare variant above the
+                # max_frequency_rank cutoff it should now fall past. Known
+                # edge: a variant attested ONLY by a categorical source (JLPT
+                # band, CATEGORICAL_RANK sentinel) counts as attested and
+                # suppresses the numeric lemma fallback — accepted for
+                # breakdown uniformity; unreachable for per-spelling numeric
+                # sources.
+                if not sources and word.lemma and word.lemma != word.mined_form:
+                    sources = self.frequency_service.lookup_all(
+                        word.lemma, katakana_to_hiragana(word.lemma_reading or word.reading)
+                    )
                 word.frequency_sources = sources
                 word.frequency_rank = min_rank(sources)
                 word.frequency_harmonic_rank = harmonic_rank(sources)
@@ -934,25 +955,30 @@ class EpisodeProcessor:
                 )
             )
 
-        # Offline definition existence filter. Drops words whose lemma has no
-        # entry in any OFFLINE dictionary so the curation dialog never surfaces
-        # words that can never become cards (they would otherwise be silently
-        # skipped at Phase 5). Offline-only by design: matches the curator's
-        # no-network def-pane and the project's offline-first default (Jisho is
-        # off by default). Keyed on word.lemma, the same key Phase 4 looks up.
-        # Gated on bypass_optional_filters so the Deck Builder preview-parity
-        # path is unaffected (Phase 5 stays the skip point there).
+        # Offline definition existence filter. Drops words with no entry in any
+        # OFFLINE dictionary so the curation dialog never surfaces words that
+        # can never become cards (they would otherwise be silently skipped at
+        # Phase 5). Offline-only by design: matches the curator's no-network
+        # def-pane and the project's offline-first default (Jisho is off by
+        # default). Probes the union of mined_form + lemma per word — the same
+        # two keys Phase 4 can resolve (mined_form primary, lemma miss-only
+        # fallback) — and keeps a word when either hits. Gated on
+        # bypass_optional_filters so the Deck Builder preview-parity path is
+        # unaffected (Phase 5 stays the skip point there).
         #
         # Known, intentional asymmetry: this probe is offline-only, but Phase 5
         # looks definitions up over the FULL chain (get_definitions_batch, which
         # includes Jisho when enabled). A user who turns Jisho on therefore has
         # words with a Jisho-only definition dropped here before the curator —
         # accepted on purpose so Phase 2 never blocks on network I/O. Do not
-        # "fix" this by calling online providers here.
+        # "fix" this by calling online providers here. (The probe also doesn't
+        # mirror Phase 4's kana-fold/deinflection miss fallback — pre-existing
+        # accepted asymmetry.)
         if not self.config.bypass_optional_filters and unknown_words:
-            has_def = self.definition_service.has_offline_definitions([w.lemma for w in unknown_words])
-            kept_words = [w for w in unknown_words if has_def.get(w.lemma)]
-            dropped = [w.lemma for w in unknown_words if not has_def.get(w.lemma)]
+            probe_terms = list({t for w in unknown_words for t in (w.mined_form, w.lemma) if t})
+            has_def = self.definition_service.has_offline_definitions(probe_terms)
+            kept_words = [w for w in unknown_words if has_def.get(w.mined_form) or has_def.get(w.lemma)]
+            dropped = [w.mined_form for w in unknown_words if not (has_def.get(w.mined_form) or has_def.get(w.lemma))]
             unknown_words = kept_words
             if dropped:
                 preview = ", ".join(dropped[:10])
@@ -1254,23 +1280,31 @@ class EpisodeProcessor:
         """Phase 4: look up definitions, optional glossaries, and pitch accents."""
         self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Step 4/5 — Fetching definitions"))
         words_with_media = [word for word, _ in media_results]
-        # Thread the sentence's contextual reading into definition lookup as a
+        # Keyed on mined_form (the card-front spelling), NOT lemma: unidic's
+        # canonical lemma collapses kanji variants (殺る → 遣る), so lemma-keyed
+        # lookups returned the wrong homograph's definition for the spelling
+        # the card shows. The sentence's contextual reading rides along as a
         # ranking BOOST (5.1): a homograph like 辛い(からい/つらい) leads with the
         # sense matching this occurrence's reading, the other survives below.
-        # lemma_reading (falling back to surface reading) hiragana-normalized to
-        # match the folded stored readings — same source pitch lookup uses below.
+        # expression_reading (the mined form's own, context-disambiguated
+        # reading; falling back to lemma/surface reading) hiragana-normalized
+        # to match the folded stored readings.
         lookup_pairs: list[tuple[str, str | None]] = [
-            (w.lemma, katakana_to_hiragana(w.lemma_reading or w.reading)) for w in words_with_media
+            (w.mined_form, katakana_to_hiragana(w.expression_reading or w.lemma_reading or w.reading))
+            for w in words_with_media
         ]
-        # Lookup-miss fallback context (5.2): lemma → (orth_base, cType). Only
-        # consulted for lemmas the whole chain misses, so a dictionary storing
-        # only the source-orthography variant (乞う vs canonical lemma 請う) still
-        # resolves. cType is unavailable on TokenizedWord post-parse, so the
-        # deinflection mask stays inert here and the rules-column POS check does
-        # the gating. First-seen orth_base wins, mirroring the batch's dedup.
+        # Lookup-miss fallback context (5.2): mined_form → (lemma, cType). Only
+        # consulted for keys the whole chain misses, so a dictionary storing
+        # only the canonical lemma spelling (請う when the source wrote 乞う)
+        # still resolves. Set unconditionally: when lemma == mined_form the
+        # candidate builder skips the equal alternate but still emits the
+        # kana-fold + deinflection miss fallbacks. cType is unavailable on
+        # TokenizedWord post-parse, so the deinflection mask stays inert here
+        # and the rules-column POS check does the gating. First-seen lemma
+        # wins, mirroring the batch's dedup.
         fallback_context: dict[str, tuple[str, str | None]] = {}
         for w in words_with_media:
-            fallback_context.setdefault(w.lemma, (w.orth_base, None))
+            fallback_context.setdefault(w.mined_form, (w.lemma, None))
         definitions = self.definition_service.get_definitions_batch(
             lookup_pairs,
             progress_callback,
@@ -1291,8 +1325,33 @@ class EpisodeProcessor:
                 lookup_pairs,
                 progress_callback,
             )
+            # get_glossaries_batch has no miss-fallback mechanism, so variant
+            # spellings absent from every dictionary retry once under the
+            # canonical lemma (miss-only, merge by index). Non-variant words
+            # and hits pay nothing; None progress avoids a second cycle.
+            retry_idx = [
+                i
+                for i, g in enumerate(glossaries)
+                if not g and words_with_media[i].lemma != words_with_media[i].mined_form
+            ]
+            if retry_idx:
+                retry_pairs: list[tuple[str, str | None]] = [
+                    (
+                        words_with_media[i].lemma,
+                        katakana_to_hiragana(words_with_media[i].lemma_reading or words_with_media[i].reading),
+                    )
+                    for i in retry_idx
+                ]
+                retry_glossaries = self.definition_service.get_glossaries_batch(retry_pairs, None)
+                for i, g in zip(retry_idx, retry_glossaries, strict=True):
+                    glossaries[i] = g
 
-        # Pitch accents if available.
+        # Pitch accents if available. Deliberately still lemma-keyed (unlike
+        # the mined_form-keyed definition/frequency lookups above): pitch is a
+        # property of (accent word, reading), kanji variants of one lemma share
+        # the reading, and the canonical lemma orthography has the better hit
+        # rate in reading-scoped pitch CSVs. Re-keying buys nothing and risks
+        # misses.
         pitch_data: list[tuple[str | None, str | None]] = [(None, None)] * len(words_with_media)
         if self.pitch_accent_service and self.pitch_accent_service.is_available():
             pitch_data = self.pitch_accent_service.lookup_batch_detailed(
@@ -1418,8 +1477,10 @@ class EpisodeProcessor:
                 )
             )
 
+        # Name the mined_form (the lookup key / card front), not the lemma, so
+        # the warning lists the spelling that actually missed.
         skipped_words = [
-            word.lemma for (word, _), definition in zip(media_results, definitions, strict=True) if not definition
+            word.mined_form for (word, _), definition in zip(media_results, definitions, strict=True) if not definition
         ]
         if skipped_words:
             preview = ", ".join(skipped_words[:10])
