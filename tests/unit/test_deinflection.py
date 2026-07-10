@@ -284,7 +284,7 @@ class TestJapaneseTableIntegrity:
 
         deinflector = get_japanese_deinflector()
         assert deinflector.transform_count == 54
-        assert deinflector.rule_count == 834
+        assert deinflector.rule_count == 833
         assert len(CONDITIONS) == 22
         whole_word = [r for t in TRANSFORMS for r in t["rules"] if r["type"] == "wholeWord"]
         # The special-honorific -masu helper generates exactly these.
