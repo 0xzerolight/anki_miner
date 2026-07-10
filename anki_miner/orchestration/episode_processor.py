@@ -23,7 +23,7 @@ from PyQt6.QtCore import QCoreApplication
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiMinerException, SetupError
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
-from anki_miner.models import CardPayload, MediaData, ProcessingResult, TokenizedWord
+from anki_miner.models import CANCELLED_ERROR, CardPayload, MediaData, ProcessingResult, TokenizedWord
 from anki_miner.models.youtube import FetchedMedia, SubMode
 from anki_miner.orchestration.stage_weighted_progress import StageWeightedProgress
 from anki_miner.services import (
@@ -511,7 +511,7 @@ class EpisodeProcessor:
             total_words_found=total_words_found,
             new_words_found=new_words_found,
             cards_created=cards_created,
-            errors=["Processing cancelled by user"],
+            errors=[CANCELLED_ERROR],
             elapsed_time=time.time() - start_time,
         )
 
@@ -661,28 +661,49 @@ class EpisodeProcessor:
             # mining path, regardless of the use_known_words_db toggle. The DB
             # object is always present now, but the file may not exist for users
             # who never added a word — is_available guards.
+            # A locked/raising known_words.db (Manage-Known-Words dialog open, or a
+            # second concurrent run holding the file) must NOT abort the run — the
+            # same T-19 rationale as the guarded writes below. Each read is wrapped;
+            # on failure we drop the user ignore list and fall back to Anki's
+            # existing vocabulary, warning and continuing rather than bubbling the
+            # sqlite3.OperationalError into process_episode's generic except.
             user_words: set[str] = set()
             if self.known_word_db and self.known_word_db.is_available():
-                user_words = self.known_word_db.get_words_by_source("user")
+                try:
+                    user_words = self.known_word_db.get_words_by_source("user")
+                except (sqlite3.Error, OSError) as e:
+                    logger.warning(
+                        "Could not read the user ignore list from known_words.db (%s); "
+                        "proceeding without it this run.",
+                        e,
+                    )
 
             if self.config.use_known_words_db and self.known_word_db and self.known_word_db.is_available():
-                known_words = self.known_word_db.get_known_words()
-                # Sync with Anki to keep DB up to date. Pass the pre-fetched
-                # ``known_words`` so the DB skips its internal scan; merge the
-                # diff in-memory below to avoid a post-sync re-read.
-                anki_vocab = self.anki_service.get_existing_vocabulary()
-                added, total = self.known_word_db.sync_with_anki(anki_vocab, existing=known_words)
-                if added > 0:
-                    self.presenter.show_info(
-                        tr_format(
-                            QCoreApplication.translate(
-                                "EpisodeProcessor", "Known word DB synced: %1 new words (%2 total)"
-                            ),
-                            added,
-                            total,
+                try:
+                    known_words = self.known_word_db.get_known_words()
+                    # Sync with Anki to keep DB up to date. Pass the pre-fetched
+                    # ``known_words`` so the DB skips its internal scan; merge the
+                    # diff in-memory below to avoid a post-sync re-read.
+                    anki_vocab = self.anki_service.get_existing_vocabulary()
+                    added, total = self.known_word_db.sync_with_anki(anki_vocab, existing=known_words)
+                    if added > 0:
+                        self.presenter.show_info(
+                            tr_format(
+                                QCoreApplication.translate(
+                                    "EpisodeProcessor", "Known word DB synced: %1 new words (%2 total)"
+                                ),
+                                added,
+                                total,
+                            )
                         )
+                        known_words = known_words | (anki_vocab - known_words)
+                except (sqlite3.Error, OSError) as e:
+                    logger.warning(
+                        "Could not access known_words.db (%s); falling back to Anki's "
+                        "existing vocabulary for this run.",
+                        e,
                     )
-                    known_words = known_words | (anki_vocab - known_words)
+                    known_words = self.anki_service.get_existing_vocabulary()
             else:
                 known_words = self.anki_service.get_existing_vocabulary()
 
@@ -747,16 +768,19 @@ class EpisodeProcessor:
             )
             ctx.forced_include_lemmas = {w.lemma for w in forced_include}
 
-        # Frequency rank cutoff. Gate on an actually-loaded frequency service —
-        # NOT just max_frequency_rank > 0. With no source, the rank-assignment
-        # loop above is skipped so every word keeps frequency_rank=None, and
-        # filter_by_frequency drops every None-ranked word (word_filter.py) — a
-        # configured cutoff would then silently wipe 100% of words and produce
-        # zero cards. This mirrors the exact guard used for rank assignment above.
+        # Frequency rank cutoff. Gate on an actually-loaded NUMERIC frequency
+        # source — NOT just max_frequency_rank > 0, and NOT is_available(). With
+        # no source (or only a categorical one, e.g. a JLPT-band dict whose rows
+        # all carry CATEGORICAL_RANK), no word gets a numeric rank, so every word
+        # keeps frequency_rank=None and filter_by_frequency drops every None-ranked
+        # word (word_filter.py) — a configured cutoff would then silently wipe 100%
+        # of words and produce zero cards. has_numeric_source() is True only when a
+        # non-categorical source is loaded, which is the sole case the cutoff can
+        # meaningfully apply.
         if (
             self.config.max_frequency_rank > 0
             and self.frequency_service
-            and self.frequency_service.is_available()
+            and self.frequency_service.has_numeric_source()
             and not self.config.bypass_optional_filters
         ):
             before = len(unknown_words)
@@ -837,27 +861,12 @@ class EpisodeProcessor:
                     )
                 )
 
-        # Sentence deduplication. i+1 filter does its own sentence picking;
-        # dedup would be a no-op (post-i+1 sentences are unique by construction).
-        if (
-            self.config.deduplicate_sentences
-            and not self.config.use_i_plus_one_filter
-            and not self.config.bypass_optional_filters
-        ):
-            before = len(unknown_words)
-            unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
-            deduped = before - len(unknown_words)
-            if deduped > 0:
-                self.presenter.show_info(
-                    tr_format(
-                        QCoreApplication.translate(
-                            "EpisodeProcessor", "Sentence deduplication: removed %1 duplicate-sentence words"
-                        ),
-                        deduped,
-                    )
-                )
-
-        # Cross-episode frequency filter.
+        # Cross-episode frequency filter. Runs BEFORE sentence dedup: dedup keeps
+        # the first word per sentence, so if a below-floor word sorts ahead of a
+        # sentence-mate that would pass the floor, dedup-first would keep the loser
+        # and the floor would then drop it — the sentence yields no card even though
+        # its mate qualified (Bug F5). Filtering by episode count first removes the
+        # losers so dedup picks a survivor.
         if (
             cross_episode_counts is not None
             and self.config.min_episode_appearances > 1
@@ -879,6 +888,26 @@ class EpisodeProcessor:
                         ),
                         filtered_out,
                         self.config.min_episode_appearances,
+                    )
+                )
+
+        # Sentence deduplication. i+1 filter does its own sentence picking;
+        # dedup would be a no-op (post-i+1 sentences are unique by construction).
+        if (
+            self.config.deduplicate_sentences
+            and not self.config.use_i_plus_one_filter
+            and not self.config.bypass_optional_filters
+        ):
+            before = len(unknown_words)
+            unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
+            deduped = before - len(unknown_words)
+            if deduped > 0:
+                self.presenter.show_info(
+                    tr_format(
+                        QCoreApplication.translate(
+                            "EpisodeProcessor", "Sentence deduplication: removed %1 duplicate-sentence words"
+                        ),
+                        deduped,
                     )
                 )
 
@@ -1893,6 +1922,13 @@ class EpisodeProcessor:
                 image_stage_desc,
             )
         for i, word in enumerate(unknown_words):
+            # Honor cancel WITHIN the loop (mirrors _fetch_expression_audio): a
+            # large mokuro volume can hold hundreds of pages, and without this a
+            # cancel would only take effect after every page is materialized. Break
+            # and return the partial results — the audio fetchers below and the
+            # phase-boundary check in process_reading each re-check cancelled.
+            if self.cancelled:
+                break
             media = MediaData()
             unit = units_by_index.get(int(word.start_time))
             ref = unit.image_ref if unit is not None else None

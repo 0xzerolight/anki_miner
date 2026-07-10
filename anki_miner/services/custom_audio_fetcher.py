@@ -15,6 +15,7 @@ later), and the cache directory is per-source (``audio_cache/custom_<slug>/``).
 Never raises — the Phase-3 pipeline loop has no try/except by design.
 """
 
+import contextlib
 import hashlib
 import logging
 import re
@@ -187,7 +188,11 @@ class CustomAudioFetcher:
                 continue
             candidate = item.get("url")
             if isinstance(candidate, str) and candidate:
-                urls.append(urljoin(base, candidate))
+                # urljoin raises ValueError ("Invalid IPv6 URL") on a malformed
+                # server-supplied candidate (e.g. "http://[bad"); skip the bad
+                # source rather than break the never-raises contract.
+                with contextlib.suppress(ValueError):
+                    urls.append(urljoin(base, candidate))
         return urls
 
     def fetch_candidates(

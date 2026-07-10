@@ -42,8 +42,34 @@ def _get_icon_source() -> Path:
     return Path(__file__).resolve().parent.parent / "gui" / "resources" / "icons"
 
 
+def _format_desktop_exec(exe_path: Path) -> str:
+    """Quote and escape *exe_path* for a freedesktop ``Exec=`` value.
+
+    Per the Desktop Entry spec, a value containing reserved characters (notably
+    spaces) must be double-quoted, with backslash escaping for the literal
+    ``"``, `` ` ``, ``$`` and ``\\`` inside the quotes. A literal ``%`` is a
+    field-code introducer and must be doubled to ``%%``.
+    """
+    escaped = str(exe_path).replace("\\", "\\\\")
+    for ch in ('"', "`", "$"):
+        escaped = escaped.replace(ch, "\\" + ch)
+    escaped = escaped.replace("%", "%%")
+    return f'"{escaped}"'
+
+
 class ShortcutService:
     """Create and detect desktop shortcuts for the GUI app."""
+
+    @staticmethod
+    def _windows_desktop_dir() -> Path:
+        """Resolve where a Windows shortcut lives.
+
+        Falls back to ``Path.home()`` when ``~/Desktop`` is absent (e.g. a
+        OneDrive-redirected desktop). Shared by creation and existence checks so
+        they never diverge.
+        """
+        desktop = Path.home() / "Desktop"
+        return desktop if desktop.exists() else Path.home()
 
     @staticmethod
     def shortcut_exists() -> bool:
@@ -51,7 +77,7 @@ class ShortcutService:
         if sys.platform == "linux":
             return (Path.home() / ".local" / "share" / "applications" / f"{APP_ID}.desktop").exists()
         if sys.platform == "win32":
-            return (Path.home() / "Desktop" / f"{APP_NAME}.lnk").exists()
+            return (ShortcutService._windows_desktop_dir() / f"{APP_NAME}.lnk").exists()
         return False
 
     @staticmethod
@@ -135,7 +161,7 @@ class ShortcutService:
 Type=Application
 Name={APP_NAME}
 Comment={APP_COMMENT}
-Exec={exe_path}
+Exec={_format_desktop_exec(exe_path)}
 Icon={APP_ID}
 Categories=Education;Languages;
 Terminal=false
@@ -159,21 +185,30 @@ StartupWMClass=anki_miner
         result.messages.append(f"'{APP_NAME}' should now appear in your application menu.")
 
     @staticmethod
+    def _ps_quote(value: str) -> str:
+        """Return *value* as a single-quoted PowerShell string literal.
+
+        Single-quoted PS literals don't expand ``$`` or backtick (both legal in
+        Windows paths, e.g. ``C:\\Users\\j$on``); an embedded single quote is
+        escaped by doubling it.
+        """
+        return "'" + value.replace("'", "''") + "'"
+
+    @staticmethod
     def _create_windows_shortcut(exe_path: Path, result: ShortcutResult) -> None:
-        desktop = Path.home() / "Desktop"
-        if not desktop.exists():
-            desktop = Path.home()
+        desktop = ShortcutService._windows_desktop_dir()
+        if desktop == Path.home():
             result.messages.append(f"Desktop folder not found, using {desktop}")
 
         shortcut_path = desktop / f"{APP_NAME}.lnk"
 
         ps_script = (
             "$ws = New-Object -ComObject WScript.Shell; "
-            f'$s = $ws.CreateShortcut("{shortcut_path}"); '
-            f'$s.TargetPath = "{exe_path}"; '
-            f'$s.WorkingDirectory = "{exe_path.parent}"; '
-            f'$s.IconLocation = "{exe_path}, 0"; '
-            f'$s.Description = "{APP_COMMENT}"; '
+            f"$s = $ws.CreateShortcut({ShortcutService._ps_quote(str(shortcut_path))}); "
+            f"$s.TargetPath = {ShortcutService._ps_quote(str(exe_path))}; "
+            f"$s.WorkingDirectory = {ShortcutService._ps_quote(str(exe_path.parent))}; "
+            f"$s.IconLocation = {ShortcutService._ps_quote(f'{exe_path}, 0')}; "
+            f"$s.Description = {ShortcutService._ps_quote(APP_COMMENT)}; "
             "$s.Save()"
         )
 
@@ -203,11 +238,11 @@ StartupWMClass=anki_miner
             start_shortcut = start_menu / f"{APP_NAME}.lnk"
             ps_script_start = (
                 "$ws = New-Object -ComObject WScript.Shell; "
-                f'$s = $ws.CreateShortcut("{start_shortcut}"); '
-                f'$s.TargetPath = "{exe_path}"; '
-                f'$s.WorkingDirectory = "{exe_path.parent}"; '
-                f'$s.IconLocation = "{exe_path}, 0"; '
-                f'$s.Description = "{APP_COMMENT}"; '
+                f"$s = $ws.CreateShortcut({ShortcutService._ps_quote(str(start_shortcut))}); "
+                f"$s.TargetPath = {ShortcutService._ps_quote(str(exe_path))}; "
+                f"$s.WorkingDirectory = {ShortcutService._ps_quote(str(exe_path.parent))}; "
+                f"$s.IconLocation = {ShortcutService._ps_quote(f'{exe_path}, 0')}; "
+                f"$s.Description = {ShortcutService._ps_quote(APP_COMMENT)}; "
                 "$s.Save()"
             )
             try:

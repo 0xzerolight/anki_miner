@@ -407,14 +407,21 @@ class NoteTypePage(QWizardPage):
             return
         mapped = auto_map_fields(self._field_names)
         note_type = self.notetype_combo.currentText().strip()
+        # Merge only the keys that actually matched OVER the current mapping —
+        # mirroring AnkiSettingsPanel.populate_from_field_list's "only overwrite
+        # on match" rule. auto_map_fields only produces the _FIELD_KEYWORDS keys
+        # and sets unmatched ones to ""; replacing wholesale would drop keys it
+        # can't map and clobber any manual mapping the user already set.
+        merged = {**dict(self._wizard.working_config().anki_fields)}
+        merged.update({key: value for key, value in mapped.items() if value})
         # Stage anki_fields as a PLAIN dict; config re-wraps it in MappingProxyType.
         # Keep anki_word_field synced to anki_fields["word"] (same as panel.contribute).
         self._wizard.update_working_config(
             replace(
                 self._wizard.working_config(),
                 anki_note_type=note_type or self._wizard.working_config().anki_note_type,
-                anki_fields=dict(mapped),
-                anki_word_field=mapped.get("word", "") or "Expression",
+                anki_fields=merged,
+                anki_word_field=merged.get("word", "") or "Expression",
             )
         )
         self._show_mapping_summary(mapped)

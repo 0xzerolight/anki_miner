@@ -39,6 +39,8 @@ _FIELD_KEYWORDS: dict[str, list[str]] = {
     "sentence_reading": ["sentencereading", "contextreading"],
     "pitch_position": ["pitchposition", "pitchaccent", "pitch"],
     "pitch_category": ["pitchcategory", "accenttype", "accentcategory"],
+    "pitch_graph": ["pitchgraph", "pitchsvg"],
+    "pitch_text": ["pitchtext"],
     "frequency": ["frequency", "freq", "rank", "frequencyrank"],
     "frequency_sort": ["freqsort", "frequencysort"],
     "source": ["source", "origin"],

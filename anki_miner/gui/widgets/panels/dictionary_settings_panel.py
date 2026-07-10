@@ -461,6 +461,17 @@ class DictionarySettingsPanel(FormPanel):
             out.append(ChainEntry(kind=entry.kind, dict_id=entry.dict_id, enabled=enabled))
         return tuple(out)
 
+    def _on_row_toggled(self) -> None:
+        """Fold the live checkbox states back into ``self._chain`` before emitting.
+
+        ``_rebuild_list`` renders checkboxes from ``self._chain``, so an unguarded
+        rescan (set_dicts_root → _on_scan_done → _rebuild_list) would re-render a
+        just-disabled row from the stale chain and the next commit would re-persist
+        ``enabled=True``. Syncing here keeps ``_chain`` authoritative.
+        """
+        self._chain = list(self.get_chain())
+        self.chain_changed.emit()
+
     def move_up(self, index: int) -> None:
         if index <= 0 or index >= len(self._chain):
             return
@@ -586,6 +597,13 @@ class DictionarySettingsPanel(FormPanel):
         disk) also skip because we can't decide between yomitan and jmdict
         dispatch.
         """
+        # While an async scan is in flight the list shows a single disabled
+        # "Loading…" placeholder, not real rows. Resolving a right-click through
+        # self._chain then targets an arbitrary real dictionary the user never
+        # clicked — and Remove would rmtree it. Bail, mirroring the frequency
+        # panel's identical guard.
+        if self._scan_in_flight:
+            return
         item = self._list.itemAt(pos)
         if item is None:
             return
@@ -649,7 +667,7 @@ class DictionarySettingsPanel(FormPanel):
                     count = 0
                 stale = meta is not None and not meta.schema_ok
                 row = _ChainRow(entry, display, fmt, count, stale=stale)
-                row.toggled.connect(self.chain_changed.emit)
+                row.toggled.connect(self._on_row_toggled)
                 if stale and row.reimport_button is not None and meta is not None:
                     # JMdict per-row Re-import fires the existing global signal so
                     # users land in the same import flow regardless of where they

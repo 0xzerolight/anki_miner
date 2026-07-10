@@ -706,6 +706,36 @@ class TestPerItemSignals:
         assert item.status == YouTubeItemStatus.ERROR
         assert item.error_message == "FetchError: oops"
 
+    def test_item_finished_failed_result_marks_error(self, tab):
+        """A non-raising failed ProcessingResult (error=None) routes to ERROR."""
+        from anki_miner.models import ProcessingResult
+
+        item = _add_ready_item(tab)
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+
+        result = ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0, errors=["anki went away"])
+        tab._on_item_finished(0, result, None, 1)
+
+        assert item.status == YouTubeItemStatus.ERROR
+        assert item.error_message == "anki went away"
+        tab._presenter.show_processing_result.assert_not_called()
+
+    def test_item_finished_cancelled_result_marks_ready(self, tab):
+        """A Stop-mid-mine cancelled result leaves the item re-minable (READY)."""
+        from anki_miner.models import ProcessingResult
+        from anki_miner.models.processing import CANCELLED_ERROR
+
+        item = _add_ready_item(tab)
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+
+        result = ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0, errors=[CANCELLED_ERROR])
+        tab._on_item_finished(0, result, None, 1)
+
+        assert item.status == YouTubeItemStatus.READY
+        assert item.error_message is None
+
     def test_item_finished_presenter_error_swallowed(self, tab):
         item = _add_ready_item(tab)
         tab._on_mine_clicked()
@@ -739,6 +769,30 @@ class TestQueueFinished:
         text = tab.log_widget.text_edit.toPlainText()
         assert "1 succeeded" in text
         assert "1 failed" in text
+
+    def test_queue_finished_counts_current_run_only(self, tab):
+        """A prior run's finished rows must not inflate the next run's summary."""
+        # Prior run: two items completed, left in the queue.
+        _add_ready_item(tab, "https://youtu.be/old1")
+        _add_ready_item(tab, "https://youtu.be/old2")
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+        tab._on_item_finished(0, MagicMock(cards_created=1), None, 1)
+        tab._on_item_started(1)
+        tab._on_item_finished(1, MagicMock(cards_created=1), None, 1)
+        tab._on_queue_finished()
+        tab._on_worker_finished()
+
+        # New 1-item run.
+        _add_ready_item(tab, "https://youtu.be/new")
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+        tab._on_item_finished(0, MagicMock(cards_created=3), None, 1)
+        tab._on_queue_finished()
+
+        last_line = tab.log_widget.text_edit.toPlainText().strip().splitlines()[-1]
+        assert "1 succeeded" in last_line
+        assert "0 failed" in last_line
 
     def test_queue_finished_does_not_mutate_state(self, tab):
         """``_on_queue_finished`` only logs — state cleanup is wired to ``QThread.finished``."""
@@ -834,6 +888,48 @@ class TestWorkerFinished:
         assert tab.progress_widget.progress_bar.maximum() == 100
         assert tab.progress_widget.status_label.text() == "Cancelled"
         assert tab.progress_widget.progress_bar.value() == 0
+
+    def test_worker_finished_completion_summary_current_run_only(self, tab):
+        """The completion banner counts the current run, not accumulated rows."""
+        # Prior completed run leaves rows in the queue.
+        _add_ready_item(tab, "https://youtu.be/old1")
+        _add_ready_item(tab, "https://youtu.be/old2")
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+        tab._on_item_finished(0, MagicMock(cards_created=1), None, 1)
+        tab._on_item_started(1)
+        tab._on_item_finished(1, MagicMock(cards_created=1), None, 1)
+        tab._on_queue_finished()
+        tab._on_worker_finished()
+
+        # New 1-item run.
+        _add_ready_item(tab, "https://youtu.be/new")
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+        tab._on_item_finished(0, MagicMock(cards_created=3), None, 1)
+        tab._on_queue_finished()
+        tab._on_worker_finished()
+
+        assert tab.progress_widget.status_label.text() == "Complete — 1 succeeded"
+
+    def test_worker_finished_demotes_stranded_processing_item(self, tab):
+        """Cancel inside the fetch handler returns with no item_finished; the
+        in-flight PROCESSING row must not stay stranded — it is demoted to
+        READY (re-minable) and becomes removable."""
+        item = _add_ready_item(tab)
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+        assert item.status == YouTubeItemStatus.PROCESSING
+        tab._on_stop_all_clicked()
+        # Worker returned early inside the YouTubeFetchError handler: no
+        # item_finished, no queue_finished — only QThread.finished fires.
+
+        tab._on_worker_finished()
+
+        assert item.status == YouTubeItemStatus.READY
+        # Now removable (remove refuses only PROCESSING rows).
+        tab._on_remove_clicked(item)
+        assert item not in tab._queue.all_items()
 
 
 class TestRemoveAndClear:
@@ -1201,6 +1297,19 @@ class TestPlaylistAdd:
         assert tab._add_flow._playlist_resolve_worker is None
         assert tab.add_button.isEnabled()
 
+    def test_resolve_finished_calls_delete_later(self, tab):
+        """Y7: the finished resolve QThread is released via deleteLater() (as
+        the single-video path does), so handles don't accumulate per playlist."""
+        tab.url_edit.setText(PLAYLIST_URL)
+        tab._on_add_clicked()
+        worker = tab._add_flow._playlist_resolve_worker
+        assert worker is not None
+
+        tab._add_flow._on_playlist_resolve_finished()
+
+        assert tab._add_flow._playlist_resolve_worker is None
+        worker.deleteLater.assert_called_once()
+
 
 class TestPlaylistResolved:
     """Resolved playlists expand (optionally via the choice dialog)."""
@@ -1464,6 +1573,18 @@ class TestPlaylistEntryProbes:
 
         assert tab._add_flow._playlist_probe_worker is None
         assert tab._add_flow._playlist_probe_items == []
+
+    def test_probe_finished_calls_delete_later(self, tab):
+        """Y7: the finished playlist-probe QThread is released via deleteLater()
+        (as the single-video path does), so handles don't accumulate."""
+        self._expand(tab)
+        worker = tab._add_flow._playlist_probe_worker
+        assert worker is not None
+
+        tab._add_flow._on_playlist_probe_finished()
+
+        assert tab._add_flow._playlist_probe_worker is None
+        worker.deleteLater.assert_called_once()
 
 
 class TestPlaylistClearAndShutdown:

@@ -82,7 +82,10 @@ def _synthesize_gtts_to_cache(
         # lang="ja" is fixed; calling gtts.lang.tts_langs() would make a
         # network request, so it is deliberately avoided.
         buffer = io.BytesIO()
-        tts = gtts.gTTS(text=text, lang="ja")
+        # timeout=10 bounds the synthesis HTTP request; the default None lets
+        # write_to_fp block forever on a stalled connection, and cancelled_check
+        # is only consulted before the call (matches the 10s cap other fetchers use).
+        tts = gtts.gTTS(text=text, lang="ja", timeout=10)
         tts.write_to_fp(buffer)
         body = buffer.getvalue()
 

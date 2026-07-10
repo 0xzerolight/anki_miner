@@ -17,6 +17,7 @@ resident in memory at a time.  ``_chunk_media_actions`` is kept for the
 
 import base64
 import hashlib
+import html
 import logging
 import re
 from collections.abc import Iterable, Iterator
@@ -62,14 +63,22 @@ _MEDIA_BATCH_MAX_BYTES = 4 * 1024 * 1024
 
 
 def _extract_dict_media_srcs(definition_html: str) -> list[str]:
-    """Return every dict-media `src` referenced in a definition HTML blob."""
+    """Return every dict-media `src` referenced in a definition HTML blob.
+
+    The renderer HTML-escapes the src (``escape(img_src, quote=True)``), so a
+    basename carrying ``&``/``"``/``<`` appears here as ``&amp;`` etc. Unescape it
+    back to the on-disk / browser-requested name so downstream disk resolution
+    (``_resolve_dict_media_path``), the ``storeMediaFile`` name, and the upload
+    cache all key on the same unescaped string (else the file never matches on
+    disk and re-misses forever).
+    """
     if not definition_html:
         return []
     out: list[str] = []
     for tag in _DICT_MEDIA_IMG_RE.findall(definition_html):
         m = _IMG_SRC_RE.search(tag)
         if m:
-            out.append(m.group(1))
+            out.append(html.unescape(m.group(1)))
     return out
 
 
@@ -303,9 +312,7 @@ class AnkiMediaStore:
         # pre-hash name -> final stored name (content hash, or AnkiConnect's own
         # rename if it differs from what we sent).
         rename: dict[str, str] = {}
-        attempted: set[str] = set()
         for chunk in _stream_encode_chunks(paths_by_filename.items()):
-            attempted.update(orig for orig, _, _ in chunk)
             result_map = self._store_media_chunk([(sent, action) for _, sent, action in chunk])
             for orig, sent, _ in chunk:
                 actual = result_map.get(sent)
@@ -319,7 +326,12 @@ class AnkiMediaStore:
             for media, attr in refs.get(orig, ()):
                 setattr(media, attr, final)
 
-        self.last_store_failures = len(attempted) - len(rename) + len(vanished)
+        # Every collected file is either stored (in ``rename``) or a failure.
+        # Counting off ``paths_by_filename`` (not just the files that survived
+        # stat/encode into a chunk) means a file that fails stat()/open() inside
+        # _stream_encode_chunks is still counted, so the user is warned about the
+        # resulting empty media field instead of it being silently undercounted.
+        self.last_store_failures = len(paths_by_filename) - len(rename) + len(vanished)
         return stored_finals
 
     def upload_dict_media(self, word_data_list: list[CardPayload]) -> None:

@@ -348,6 +348,30 @@ def test_image_materialized_once_per_ref(test_config):
     assert pics == {"reading_abc.jpg"}
 
 
+def test_cancel_during_image_loop_stops_further_prep(test_config):
+    """Bug P5: cancel must be honored WITHIN the per-word image loop, not only
+    after the whole (large mokuro) volume drains. Cancelling on the first page's
+    materialization must break before the second word's page is prepared."""
+    ref0 = ImageRef(Path("/pages/page00.png"))
+    ref1 = ImageRef(Path("/pages/page01.png"))
+    units = [_unit(0, image_ref=ref0), _unit(1, image_ref=ref1)]
+    words = [_word("犬", 0), _word("猫", 1)]
+    counts = collections.Counter({"犬": 1, "猫": 1})
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+    proc = _make_processor(test_config, subtitle_parser=sp)
+
+    def _prep_then_cancel(ref, images_dir):
+        proc.cancel()
+        return Path("/tmp/reading_x.jpg")
+
+    with patch(_IMG, side_effect=_prep_then_cancel) as prep:
+        res = proc.process_reading(_document(units))
+
+    assert prep.call_count == 1  # second word's page never materialized
+    assert not res.success
+
+
 def test_cover_fanout_book(test_config):
     """5b. Book cover shared by every unit → every word carries the cover."""
     cover = ImageRef(Path("/book.epub"), "cover.jpg")

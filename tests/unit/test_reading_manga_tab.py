@@ -151,9 +151,40 @@ class TestMineSingleVolume:
         _mine(tab, [_make_ref("mokuro", "Solo Vol")], folder="/src/vol")
         assert queue_cls.call_count == 1
         items = queue_cls.call_args.kwargs["items"]
-        assert [i.title for i in items] == ["Solo Vol"]
+        # mokuro item title carries the volume (Y6): "<series> — <volume>".
+        assert [i.title for i in items] == ["Solo Vol — 1"]
         assert tab.worker_thread is not None
         tab.worker_thread.start.assert_called_once()
+
+    def test_mokuro_item_title_includes_volume(self, tab):
+        # Y6: for a mokuro ref, title is the SERIES and volume the actual
+        # volume — the queue item must name the volume so per-volume progress/
+        # log lines are distinguishable.
+        queue_cls = tab._queue_worker_cls
+        ref = ReadingSourceRef(
+            kind="mokuro",
+            path=Path("/src/MySeries/Vol.3.mokuro"),
+            image_root=None,
+            title="MySeries",
+            volume="Vol.3",
+        )
+        _mine(tab, [ref], folder="/src/MySeries")
+        items = queue_cls.call_args.kwargs["items"]
+        assert items[0].title == "MySeries — Vol.3"
+
+    def test_mokuro_item_title_bare_without_volume(self, tab):
+        # A mokuro ref lacking a volume stays labelled by its title alone.
+        queue_cls = tab._queue_worker_cls
+        ref = ReadingSourceRef(
+            kind="mokuro",
+            path=Path("/src/OneShot.mokuro"),
+            image_root=None,
+            title="OneShot",
+            volume=None,
+        )
+        _mine(tab, [ref], folder="/src/one")
+        items = queue_cls.call_args.kwargs["items"]
+        assert items[0].title == "OneShot"
 
     def test_mine_single_uses_single_bar(self, tab):
         _mine(tab, [_make_ref()])
@@ -197,7 +228,8 @@ class TestMineSeries:
         refs = _series(4)
         _mine(tab, refs)
         items = queue_cls.call_args.kwargs["items"]
-        assert [i.title for i in items] == [r.title for r in refs]
+        # Each mokuro volume's item title carries its volume (Y6).
+        assert [i.title for i in items] == [f"{r.title} — {r.volume}" for r in refs]
         assert len(items) == 4
 
     def test_mine_series_seeds_composition(self, tab):

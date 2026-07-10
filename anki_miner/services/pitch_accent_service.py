@@ -48,6 +48,19 @@ class PitchEntry:
     devoice: tuple[int, ...] = ()
 
 
+# Hiragana + katakana codepoint blocks (matches furigana_distribute's KANA_RANGES).
+_KANA_RANGES = ((0x3040, 0x309F), (0x30A0, 0x30FF))
+
+
+def _is_all_kana(text: str) -> bool:
+    """True iff ``text`` is non-empty and every character is hiragana/katakana.
+
+    Used to decide whether a missing reading may safely fall back to the surface
+    form for mora counting (a kanji surface would mis-count mora).
+    """
+    return bool(text) and all(any(lo <= ord(ch) <= hi for lo, hi in _KANA_RANGES) for ch in text)
+
+
 def count_mora(reading: str) -> int:
     """Count the number of mora in a Japanese kana reading.
 
@@ -409,7 +422,17 @@ class PitchAccentService:
         if pattern is None:
             return None, None
 
-        lookup_reading = reading or word
+        # Category derivation needs a KANA reading for an accurate mora count. When
+        # the reading is missing we can only fall back to the surface form if it is
+        # itself all-kana; a kanji surface (e.g. 学校) would mis-count mora
+        # (count_mora("学校")=2, not 4) and mislabel the category. In that case emit
+        # the pattern with no category rather than a wrong one.
+        if reading:
+            lookup_reading = reading
+        elif _is_all_kana(word):
+            lookup_reading = word
+        else:
+            return pattern, None
         category = format_categories(pattern, lookup_reading, pos, fmt)
         return pattern, category
 

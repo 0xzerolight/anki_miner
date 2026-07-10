@@ -93,6 +93,11 @@ def _fire_failed(instance, err: str) -> None:
     on_failed(err)
 
 
+def _fire_cancelled(instance) -> None:
+    on_cancelled = instance.cancelled.connect.call_args[0][0]
+    on_cancelled()
+
+
 # ---------------------------------------------------------------------------
 # add_source
 # ---------------------------------------------------------------------------
@@ -211,6 +216,39 @@ class TestAddSource:
         assert persist_calls == [], "chain must not be persisted on failure"
         # Existing chain untouched.
         assert [e.source_id for e in tab.frequency_panel.get_chain()] == ["existing"]
+
+    def test_error_containing_word_cancel_still_surfaces_warning(self, tab, monkeypatch, stub_worker, tmp_path):
+        # A genuine failure whose message merely CONTAINS "cancel" (e.g. a
+        # filename / echoed HTTP body) must still show the error dialog — the
+        # old substring probe wrongly swallowed it.
+        src = tmp_path / "cancel-list.zip"
+        src.write_bytes(b"junk")
+        monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **kw: (str(src), ""))
+        warnings = _capture_warnings(monkeypatch)
+        monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
+
+        tab._frequency_import_flow.add_source()
+        instance = stub_worker.instances[0]
+        _fire_failed(instance, "could not open 'cancel-list.zip': bad magic")
+
+        assert warnings, "a real error mentioning 'cancel' must still surface"
+
+    def test_user_cancellation_does_not_surface_warning(self, tab, monkeypatch, stub_worker, tmp_path):
+        # An actual user cancel arrives on the distinct ``cancelled`` signal and
+        # must be silent (no error dialog); the add button is re-enabled.
+        src = tmp_path / "list.zip"
+        src.write_bytes(b"junk")
+        monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **kw: (str(src), ""))
+        warnings = _capture_warnings(monkeypatch)
+        monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
+
+        tab._frequency_import_flow.add_source()
+        assert tab.frequency_panel._add_btn.isEnabled() is False
+        instance = stub_worker.instances[0]
+        _fire_cancelled(instance)
+
+        assert warnings == [], "user cancellation must not surface an error dialog"
+        assert tab.frequency_panel._add_btn.isEnabled() is True, "add button re-enabled after cancel"
 
 
 # ---------------------------------------------------------------------------

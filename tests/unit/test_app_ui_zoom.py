@@ -33,3 +33,13 @@ def test_existing_env_override_is_not_clobbered(monkeypatch):
 
     # An explicit user-set env override wins over the config value.
     assert os.environ["QT_SCALE_FACTOR"] == "1.25"
+
+
+def test_none_config_is_tolerated_and_leaves_env_unset(monkeypatch):
+    # Startup config load can fail; _early_config falls back to None. Zoom must
+    # skip silently rather than crash (NameError/AttributeError) the whole app.
+    monkeypatch.delenv("QT_SCALE_FACTOR", raising=False)
+
+    _apply_ui_zoom(None)
+
+    assert "QT_SCALE_FACTOR" not in os.environ

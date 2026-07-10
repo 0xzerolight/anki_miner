@@ -280,6 +280,40 @@ class TestAsyncPlayAndProbeError:
         fake_media_classes["player"].play.assert_called_once()
         assert widget._pending_play is False
 
+    def test_seek_queues_when_player_not_built(self, qtbot):
+        """A seek issued before the player is built is remembered, not dropped."""
+        widget = SubtitlePlayerWidget()
+        qtbot.addWidget(widget)
+        assert widget.player is None
+        widget.seek_seconds(4.0)
+        assert widget._pending_seek_ms == 4000
+        # An explicit stop clears the queued seek.
+        widget.stop()
+
+    def test_pause_queues_when_player_not_built(self, qtbot):
+        """A pause issued before the player is built is remembered, not dropped."""
+        widget = SubtitlePlayerWidget()
+        qtbot.addWidget(widget)
+        assert widget.player is None
+        widget.pause()
+        assert widget._pending_pause is True
+        # A subsequent play cancels the queued pause.
+        widget.play()
+        assert widget._pending_pause is False
+
+    def test_pending_seek_and_pause_honored_when_player_configured(self, qtbot, fake_media_classes):
+        """A seek + pause queued while the probe was in flight are applied on configure."""
+        widget = SubtitlePlayerWidget()
+        qtbot.addWidget(widget)
+        widget.seek_seconds(4.0)
+        widget.pause()
+        widget._source_generation = 7
+        widget._configure_player(7, Path("/tmp/fake.mkv"), (False, None))
+        fake_media_classes["player"].setPosition.assert_called_once_with(4000)
+        fake_media_classes["player"].pause.assert_called_once()
+        assert widget._pending_seek_ms is None
+        assert widget._pending_pause is False
+
     def test_probe_error_surfaces_message(self, qtbot):
         widget = SubtitlePlayerWidget()
         qtbot.addWidget(widget)
@@ -1303,6 +1337,38 @@ class TestAv1WatchdogFallback:
         player.setPosition.assert_not_called()
         player.pause.assert_not_called()
 
+    def test_nudge_skipped_while_playing(self, qtbot, fake_media_classes):
+        """The nudge must not seek/pause an actively-playing stream (Bug A2).
+
+        A requested play would otherwise be cancelled and the position yanked to
+        the first entry; a playing stream is already decoding so the nudge is
+        unnecessary.
+        """
+        widget = self._make_widget_av1(qtbot, fake_media_classes, show=True)
+        player = fake_media_classes["player"]
+        player.playbackState.return_value = fake_media_classes["player_cls"].PlaybackState.PlayingState
+        player.setPosition.reset_mock()
+        player.pause.reset_mock()
+
+        widget._nudge_first_frame()
+
+        player.setPosition.assert_not_called()
+        player.pause.assert_not_called()
+
+    def test_arm_while_playing_skips_nudge_but_arms_watchdog(self, qtbot, fake_media_classes):
+        """Even while playing, arming still starts the watchdog (only the nudge is skipped)."""
+        widget = self._make_widget_av1(qtbot, fake_media_classes, show=True)
+        player = fake_media_classes["player"]
+        player.playbackState.return_value = fake_media_classes["player_cls"].PlaybackState.PlayingState
+        player.setPosition.reset_mock()
+        player.pause.reset_mock()
+
+        widget._arm_av1_decode_check()
+
+        player.setPosition.assert_not_called()
+        player.pause.assert_not_called()
+        assert widget._av1_watchdog.isActive()
+
     def test_watchdog_uses_configured_timeout(self, qtbot, fake_media_classes):
         """The armed watchdog uses the cold-init-tolerant timeout constant (Issue #82)."""
         widget = self._make_widget_av1(qtbot, fake_media_classes, show=True)
@@ -1529,3 +1595,39 @@ class TestSetSourceAsyncProbe:
             # Release + join so the thread does not leak out of the test.
             release.set()
             assert worker.wait(5000), "detached probe never finished after release"
+
+
+class TestPositionSliderScrubGuard:
+    """Bug A4: playback position updates must not fight a user scrubbing the slider."""
+
+    def _make_widget(self, qtbot, fake_media_classes):
+        with (
+            patch(f"{MODULE}.find_japanese_audio_stream", return_value=None),
+            patch(f"{MODULE}.get_primary_video_codec", return_value=None),
+        ):
+            widget = SubtitlePlayerWidget()
+            qtbot.addWidget(widget)
+            _set_source_sync(qtbot, widget, Path("/tmp/fake.mkv"), [], 0.0)
+        fake_media_classes["player"].duration.return_value = 10000
+        widget.position_slider.setRange(0, 10000)
+        return widget
+
+    def test_position_change_ignored_while_slider_down(self, qtbot, fake_media_classes):
+        """While the handle is held, a playback position update must not move it."""
+        widget = self._make_widget(qtbot, fake_media_classes)
+        widget.position_slider.setValue(1000)
+        widget.position_slider.setSliderDown(True)
+
+        widget._on_position_changed(5000)
+
+        assert widget.position_slider.value() == 1000
+
+    def test_position_change_applied_when_slider_not_down(self, qtbot, fake_media_classes):
+        """With the handle released, a playback position update moves the slider normally."""
+        widget = self._make_widget(qtbot, fake_media_classes)
+        widget.position_slider.setValue(1000)
+        widget.position_slider.setSliderDown(False)
+
+        widget._on_position_changed(5000)
+
+        assert widget.position_slider.value() == 5000

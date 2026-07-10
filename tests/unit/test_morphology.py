@@ -9,7 +9,15 @@ from types import SimpleNamespace
 
 import pytest
 
-from anki_miner.services.morphology import SyntheticToken, extract_lemma, mining_base
+from anki_miner.services.morphology import (
+    SyntheticToken,
+    TokenInclusionRule,
+    extract_lemma,
+    mining_base,
+)
+
+_ALLOWED_POS = frozenset({"名詞", "動詞", "形容詞", "副詞", "形状詞", "代名詞"})
+_EXCLUDED_SUBTYPES = frozenset({"非自立", "数詞", "接尾", "助動詞", "接頭", "固有名詞"})
 
 
 def _token(surface, pos1, lemma, orth_base=None, l_form=None, kana_base=None):
@@ -156,3 +164,37 @@ class TestExtractLemmaDisambiguatorStrip:
     def test_pos_tail_must_match_pos1(self):
         token = _token("君", "名詞", "君-代名詞", "君")
         assert extract_lemma(token) == "君-代名詞"
+
+
+class TestMixedKatakanaLoanwordVerbs:
+    """Bug J2: mixed katakana+hiragana content words (サボる, ヤバい) were
+    dropped — has_kanji False and is_katakana False (hiragana okurigana breaks
+    the all-katakana test)."""
+
+    def _rule(self):
+        return TokenInclusionRule(allowed_pos=_ALLOWED_POS, excluded_subtypes=_EXCLUDED_SUBTYPES)
+
+    def test_includes_katakana_verb_with_hiragana_okurigana(self):
+        # サボる: surface サボる, orthBase/lemma サボる (る is hiragana).
+        token = _token("サボる", "動詞", "サボる", "サボる")
+        assert self._rule().should_include(token) is True
+
+    def test_includes_katakana_verb_via_orthbase_when_surface_conjugated(self):
+        # ググれ: conjugated surface, orthBase ググる carries the katakana.
+        token = _token("ググれ", "動詞", "ググる", "ググる")
+        assert self._rule().should_include(token) is True
+
+    def test_includes_katakana_adjective(self):
+        # ヤバい: pos1 形容詞, orthBase ヤバい.
+        token = _token("ヤバい", "形容詞", "やばい", "ヤバい")
+        assert self._rule().should_include(token) is True
+
+    def test_pure_hiragana_content_word_still_excluded(self):
+        # No katakana anywhere: MeCab can't tell a real kana word from a
+        # grammar fragment, so pure-hiragana tokens stay dropped by design.
+        token = _token("すべる", "動詞", "すべる", "すべる")
+        assert self._rule().should_include(token) is False
+
+    def test_normal_kanji_verb_still_included(self):
+        token = _token("食べ", "動詞", "食べる", "食べる")
+        assert self._rule().should_include(token) is True
