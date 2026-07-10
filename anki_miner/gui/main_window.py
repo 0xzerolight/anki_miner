@@ -50,12 +50,12 @@ class MainWindow(QMainWindow):
     """Main application window for Anki Miner.
 
     This window provides a tabbed interface for:
-    - Episode Mining (single video + subtitle pair)
-    - Batch Mining (folder of paired files)
+    - Video (container: Single episode / Batch folder / YouTube sub-tabs)
     - Deck Builder (corpus-driven deck assembly)
-    - YouTube (URL probe + fetch + mine)
     - Audiobook (audio + subtitle pair queue)
+    - Reading (container: Manga / Novels sub-tabs)
     - Analytics (mining statistics dashboard)
+    - Tools (container: Generate / Retime subtitle sub-tabs)
     - Settings (configuration)
 
     Signals:
@@ -226,8 +226,7 @@ class MainWindow(QMainWindow):
         # Set accessible names for main components
         self.tabs.setAccessibleName("Main Tabs")
         self.tabs.setAccessibleDescription(
-            "Navigate between Episode Mining, Batch Mining, Deck Builder, YouTube, "
-            "Audiobook, Analytics, and Settings"
+            "Navigate between Video, Deck Builder, Audio, Reading, Analytics, Tools, and Settings"
         )
 
         self.header.setAccessibleName("Application Header")
