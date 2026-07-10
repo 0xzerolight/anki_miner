@@ -14,6 +14,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
+from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
 from anki_miner.gui.widgets.reading_tab import ReadingTab
 from tests.unit.test_app_deck_builder_tab import _build_tabs
 
@@ -48,28 +49,31 @@ def test_reading_tab_before_analytics(wired_window):
     assert titles.index("Reading") < titles.index("Analytics")
 
 
-def test_reading_tab_nests_two_inner_tabs(wired_window):
-    """The container holds exactly two inner tabs, labelled Manga / Novels."""
+def test_reading_tab_nests_three_inner_tabs(wired_window):
+    """The container holds exactly three inner tabs: Manga / Novels / Subtitles."""
     _window, _titles, tabs = wired_window
     reading = tabs["Reading"]
-    assert reading._inner_tabs.count() == 2
+    assert reading._inner_tabs.count() == 3
     labels = [reading._inner_tabs.tabText(i) for i in range(reading._inner_tabs.count())]
-    assert labels == ["Manga", "Novels"]
+    assert labels == ["Manga", "Novels", "Subtitles"]
 
 
 def test_reading_tab_inner_child_types(wired_window):
-    """Inner tabs are the Manga and Novels sub-tabs, in order."""
+    """Inner tabs are the Manga, Novels, and Subtitles sub-tabs, in order."""
     _window, _titles, tabs = wired_window
     reading = tabs["Reading"]
     assert isinstance(reading._inner_tabs.widget(0), ReadingMangaTab)
     assert isinstance(reading._inner_tabs.widget(1), ReadingNovelsTab)
+    assert isinstance(reading._inner_tabs.widget(2), ReadingSubtitlesTab)
     assert reading.manga_tab is reading._inner_tabs.widget(0)
     assert reading.novels_tab is reading._inner_tabs.widget(1)
+    assert reading.subtitles_tab is reading._inner_tabs.widget(2)
 
 
 def test_reading_tab_shares_one_presenter(wired_window):
-    """One presenter is handed to both sub-tabs (the registration presenter)."""
+    """One presenter is handed to every sub-tab (the registration presenter)."""
     _window, _titles, tabs = wired_window
     reading = tabs["Reading"]
     assert reading.manga_tab._presenter is reading.novels_tab._presenter
+    assert reading.subtitles_tab._presenter is reading.manga_tab._presenter
     assert reading.manga_tab._presenter is not None

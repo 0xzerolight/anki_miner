@@ -57,10 +57,11 @@ if TYPE_CHECKING:
 # is tr()'d at call time; only the literal extension glob lives here.
 _BOOK_FILTER_GLOB = "*.epub *.txt"
 
-# Extensions this tab mines. A manga-kind drop (dirs always) earns a cross-tab
-# hint instead of being mined here.
+# Extensions this tab mines. A manga-kind (dirs always) or subtitle-kind drop
+# earns a cross-tab hint instead of being mined here.
 _NOVEL_EXTS = (".epub", ".txt")
 _MANGA_EXTS = (".mokuro", ".cbz", ".zip")
+_SUBTITLE_EXTS = (".srt", ".ass", ".ssa", ".vtt")
 
 
 class ReadingNovelsTab(_ReadingMiningTabBase):
@@ -203,25 +204,27 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
     # ------------------------------------------------------------------
 
     def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:
-        """Accept a drag holding a book or a manga-kind source.
+        """Accept a drag holding a book or another reading-kind source.
 
-        Manga-kind sources are accepted too so the drop can be delivered and
-        answered with the cross-tab hint (they never fill the selector here).
+        Manga- and subtitle-kind sources are accepted too so the drop can be
+        delivered and answered with the cross-tab hint (they never fill the
+        selector here).
         """
         if event is None:
             return
         for url in urls_from_event(event):
             local = Path(url.toLocalFile())
             suffix = local.suffix.lower()
-            if suffix in _NOVEL_EXTS or local.is_dir() or suffix in _MANGA_EXTS:
+            if suffix in _NOVEL_EXTS or local.is_dir() or suffix in _MANGA_EXTS or suffix in _SUBTITLE_EXTS:
                 event.acceptProposedAction()
                 return
 
     def dropEvent(self, event: QDropEvent | None) -> None:
-        """Fill the selector from the first dropped book; redirect manga drops."""
+        """Fill the selector from the first dropped book; redirect other kinds."""
         if event is None:
             return
         manga_seen = False
+        subtitle_seen = False
         book_set = False
         for url in urls_from_event(event):
             local = Path(url.toLocalFile())
@@ -232,8 +235,12 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
                     book_set = True
             elif local.is_dir() or suffix in _MANGA_EXTS:
                 manga_seen = True
+            elif suffix in _SUBTITLE_EXTS:
+                subtitle_seen = True
         if manga_seen:
             self.log_widget.append_info(self.tr("Manga is mined in the Manga tab."))
+        if subtitle_seen:
+            self.log_widget.append_info(self.tr("Subtitle files are mined in the Subtitles tab."))
         event.acceptProposedAction()
 
     # ------------------------------------------------------------------

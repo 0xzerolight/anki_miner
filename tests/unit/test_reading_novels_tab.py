@@ -479,12 +479,20 @@ class TestDragDrop:
         assert tab.book_selector.get_path() == ""
         assert "manga" in tab.log_widget.text_edit.toPlainText().lower()
 
+    def test_drop_subtitle_file_hints_no_path(self, tab):
+        event = MagicMock()
+        with patch(_URLS, return_value=[_url("/src/ep01.srt")]):
+            tab.dropEvent(event)
+        assert tab.book_selector.get_path() == ""
+        assert "Subtitles tab" in tab.log_widget.text_edit.toPlainText()
+        event.acceptProposedAction.assert_called_once()
+
     def test_drop_none_event_is_noop(self, tab):
         tab.dropEvent(None)  # must not raise
         assert tab.book_selector.get_path() == ""
 
-    def test_drag_enter_accepts_book_and_manga(self, tab):
-        for name in ("/src/a.epub", "/src/a.txt", "/src/a.mokuro", "/src/a.cbz"):
+    def test_drag_enter_accepts_book_manga_and_subtitle(self, tab):
+        for name in ("/src/a.epub", "/src/a.txt", "/src/a.mokuro", "/src/a.cbz", "/src/a.srt"):
             event = MagicMock()
             with patch(_URLS, return_value=[_url(name)]):
                 tab.dragEnterEvent(event)
