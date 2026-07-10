@@ -124,33 +124,52 @@ class TestRegisterMiningTabPresenterConnections:
         msgs = {r[0] for r in received}
         assert msgs == {"i", "s", "w", "e"}, f"unexpected received: {received}"
 
-    def test_word_preview_signal_connected(self, bare_window, qtbot, monkeypatch):
-        """word_preview_signal is wired to _on_word_preview.
+    def test_config_refreshed_reaches_tab_update_config(self, registered):
+        """window.config_refreshed emission calls tab.update_config."""
+        window, tab, _presenter = registered
+        cfg = window.get_config()
+        window.config_refreshed.emit(cfg)
+        tab.update_config.assert_called_once_with(cfg)
 
-        The patch must be applied BEFORE register_mining_tab so the Qt
-        connection captures the patched bound method (Qt freezes the callable
-        reference at connect time; patching the class after connect does not
-        redirect an already-registered slot).
-        """
+
+class TestRegisterMiningTabExtraPresenters:
+    """Container registration: one addTab, every child presenter wired."""
+
+    @pytest.fixture
+    def registered_container(self, bare_window, qtbot):
         from anki_miner.gui import app as app_module
-        from anki_miner.gui import main_window as mw_module
         from anki_miner.gui.presenters import GUIPresenter
-
-        calls: list = []
-        monkeypatch.setattr(mw_module.MainWindow, "_on_word_preview", lambda self, w: calls.append(w))
 
         tab = QWidget()
         tab.update_config = MagicMock()
         qtbot.addWidget(tab)
-        presenter = GUIPresenter(bare_window)
-        app_module.register_mining_tab(bare_window, tab, presenter, "WP Tab")
 
-        presenter.word_preview_signal.emit([])
-        assert calls == [[]], f"word_preview_signal not received: {calls}"
+        primary = GUIPresenter(bare_window)
+        extra_a = GUIPresenter(bare_window)
+        extra_b = GUIPresenter(bare_window)
+        app_module.register_mining_tab(bare_window, tab, primary, "Container Tab", extra_presenters=(extra_a, extra_b))
+        return bare_window, tab, (primary, extra_a, extra_b)
 
-    def test_config_refreshed_reaches_tab_update_config(self, registered):
-        """window.config_refreshed emission calls tab.update_config."""
-        window, tab, _presenter = registered
+    def test_tab_added_exactly_once(self, registered_container):
+        window, tab, _presenters = registered_container
+        assert window.tabs.count() == 1
+        assert window.tabs.widget(0) is tab
+
+    def test_every_presenter_reaches_status_bar(self, registered_container):
+        """All presenters (primary + extras) get the six-signal wiring."""
+        window, _tab, presenters = registered_container
+        calls: list[tuple] = []
+        window.status_bar.set_operation = lambda msg, kind: calls.append((msg, kind))
+
+        for i, presenter in enumerate(presenters):
+            presenter.info_signal.emit(f"msg-{i}")
+
+        msgs = {c[0] for c in calls}
+        assert msgs == {"msg-0", "msg-1", "msg-2"}, f"unexpected received: {calls}"
+
+    def test_config_refreshed_connected_once(self, registered_container):
+        """config_refreshed → update_config exactly once despite 3 presenters."""
+        window, tab, _presenters = registered_container
         cfg = window.get_config()
         window.config_refreshed.emit(cfg)
         tab.update_config.assert_called_once_with(cfg)

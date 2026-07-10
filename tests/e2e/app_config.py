@@ -41,19 +41,16 @@ In the real Phase-2 filter (``EpisodeProcessor._phase2_filter``) BOTH the
 **``bypass_known_words=True`` — card-everything / no-Anki / deterministic.** Sets
 ``include_known_words=True``, ``deduplicate_sentences=False``,
 ``allow_duplicate_cards=True``. ``include_known_words`` is the ONLY phase-2 path
-that makes NO AnkiConnect call (verified empirically: with it on, preview returns
-``total_words_found=12, success=True``; with it off — db on OR off — the run fails
-with "Cannot connect to AnkiConnect"), so this mode runs fully offscreen. It is
-also independent of whatever is in the user's real collection (determinism) and,
-with dedup off, mines every fixture word: the deterministic preview + smoke paths
-use it. ``allow_duplicate_cards=True`` lets the live smoke test re-card freely so
+that makes NO AnkiConnect call, so phase 2 stays deterministic and independent of
+whatever is in the (fake or real) collection; with dedup off it mines every
+fixture word. The deterministic single-run tests + smoke path use it. ``allow_duplicate_cards=True`` lets the live smoke test re-card freely so
 re-runs don't collide with prior E2E cards.
 
 ``deduplicate_sentences``
 -------------------------
 Left on (the default), sentence dedup collapses the 12 fixture lemmas to one
 representative per subtitle line (4). The ``bypass_known_words=True`` mode turns it
-off so the preview yields all 12 ``EXPECTED_LEMMAS``, giving the harness a strong,
+off so a single run yields all 12 ``EXPECTED_LEMMAS``, giving the harness a strong,
 exact word-set cross-check; the faithful default leaves it at the real default.
 """
 
@@ -105,8 +102,8 @@ def build_app_config(e2e: E2EConfig, test_home: Path, *, bypass_known_words: boo
             known-words subtraction, and it REQUIRES a reachable Anki. ``True`` is
             the card-everything / no-Anki / deterministic mode
             (``include_known_words=True``, ``deduplicate_sentences=False``,
-            ``allow_duplicate_cards=True``) for the offscreen preview + smoke
-            paths.
+            ``allow_duplicate_cards=True``) for the deterministic single-run +
+            smoke paths (single-session only: card creation is stateful).
 
     Returns:
         A frozen :class:`AnkiMinerConfig` ready for ``create_episode_processor``.

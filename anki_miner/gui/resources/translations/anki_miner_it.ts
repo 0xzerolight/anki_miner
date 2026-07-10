@@ -668,6 +668,30 @@ Formati supportati: AJT (index.json + media/), NHK16 (entries.json + audio/), Fo
         <translation>Ritentare le parole per cui JapanesePod101 non aveva audio alla prossima esecuzione</translation>
     </message>
     <message>
+        <source>Sentence Audio (Reading Sources)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Generate spoken sentence audio for cards mined from manga and books (these have no source audio). Sentence text is sent to the selected online services.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Generate TTS sentence audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Google Translate TTS (tried first)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Naver Papago (fallback)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select at least one service.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Google Translate (synthetic TTS)</source>
         <translation>Google Translate (TTS sintetico)</translation>
     </message>
@@ -786,14 +810,6 @@ Il pacchetto audio non è stato rimosso.</translation>
         <translation>Mostra il popup di selezione delle parole per ogni file audio prima di creare le carte.</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation>Anteprima</translation>
-    </message>
-    <message>
-        <source>Run the queue in preview mode — no cards created.</source>
-        <translation>Esegui la coda in modalità anteprima — nessuna carta creata.</translation>
-    </message>
-    <message>
         <source>Mine</source>
         <translation>Estrai</translation>
     </message>
@@ -908,14 +924,6 @@ Il pacchetto audio non è stato rimosso.</translation>
         <translation>Cartella sottotitoli:</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation>Anteprima</translation>
-    </message>
-    <message>
-        <source>Preview video/subtitle pairs before processing</source>
-        <translation>Anteprima delle coppie video/sottotitoli prima dell'elaborazione</translation>
-    </message>
-    <message>
         <source>Process Folder</source>
         <translation>Elabora cartella</translation>
     </message>
@@ -942,12 +950,6 @@ Il pacchetto audio non è stato rimosso.</translation>
     <message>
         <source>No Pairs Found</source>
         <translation>Nessuna coppia trovata</translation>
-    </message>
-    <message>
-        <source>No matching video/subtitle pairs found.
-Files pair by episode number — point each folder at a single show.</source>
-        <translation>Nessuna coppia video/sottotitoli corrispondente trovata.
-I file vengono abbinati per numero di episodio — puntare ogni cartella a una singola serie.</translation>
     </message>
     <message>
         <source>No matching video/subtitle pairs found</source>
@@ -1148,20 +1150,44 @@ Episodi non riusciti: %1</translation>
         <translation>Estrai vocaboli da un audiolibro o file audio usando la sua trascrizione.</translation>
     </message>
     <message>
-        <source>Mine from manga or novels</source>
+        <source>Mine from manga</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Mine vocabulary from manga volumes (mokuro) in the Manga sub-tab, or novels (EPUB/text) in the Novels sub-tab.</source>
+        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Generate or re-time subtitles</source>
-        <translation>Genera o ri-sincronizza sottotitoli</translation>
+        <source>Mine from novels</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Create subtitles from audio, or re-sync existing subtitles -- as a standalone tool.</source>
-        <translation>Crea sottotitoli dall'audio, o ri-sincronizza sottotitoli esistenti -- come strumento autonomo.</translation>
+        <source>Mine vocabulary from novels and other text (EPUB, Aozora, plain text).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Generate subtitles from audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create subtitles from audio with a local Whisper model -- as a standalone tool.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-time existing subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-sync existing subtitles against the video -- as a standalone tool.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Condense audio from subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Build dialogue-only condensed audio from a video or audio file and its subtitles.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>View mining history &amp; stats</source>
@@ -2386,6 +2412,18 @@ Il dizionario non è stato rimosso.</translation>
         <translation>La sorgente audio delle parole ha restituito risposte non audio (probabilmente limitazione di frequenza) — audio ignorato in questa esecuzione, verrà riprovato alla prossima</translation>
     </message>
     <message>
+        <source>Sentence-audio TTS connection/certificate failure — sentence audio skipped this run, will retry next run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence-audio TTS returned repeated server errors — sentence audio skipped this run, will retry next run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
         <translation type="unfinished" />
     </message>
@@ -2511,6 +2549,18 @@ Il dizionario non è stato rimosso.</translation>
     <message>
         <source>Expression audio: %1/%2 available</source>
         <translation>Audio dell'espressione: %1/%2 disponibili</translation>
+    </message>
+    <message>
+        <source>Generating sentence audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence audio: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence audio: %1/%2 sentences</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Step 4/5 — Fetching definitions</source>
@@ -3250,20 +3300,12 @@ La sorgente di frequenza non è stata rimossa.</translation>
 </context><context>
     <name>MainWindow</name>
     <message>
-        <source>Episode Mining</source>
-        <translation>Mining di episodi</translation>
-    </message>
-    <message>
-        <source>Batch Mining</source>
-        <translation>Mining in batch</translation>
+        <source>Video</source>
+        <translation type="unfinished">Video</translation>
     </message>
     <message>
         <source>Deck Builder</source>
         <translation>Costruttore di mazzi</translation>
-    </message>
-    <message>
-        <source>YouTube</source>
-        <translation>YouTube</translation>
     </message>
     <message>
         <source>Audio</source>
@@ -3466,6 +3508,10 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Subtitles</source>
+        <translation type="unfinished">Sottotitoli</translation>
+    </message>
+    <message>
         <source>Generate</source>
         <translation>Genera</translation>
     </message>
@@ -3477,39 +3523,17 @@ Continue?</source>
         <source>Condense</source>
         <translation type="unfinished" />
     </message>
-</context><context>
-    <name>MangaVolumesPreviewDialog</name>
     <message>
-        <source>Preview Volumes — %1 found</source>
+        <source>Single</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Volume Preview: %1 volume(s)</source>
+        <source>Batch</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Title</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volume</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Format</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Source</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Volumes mine in order. No cards are created by Preview.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Close</source>
-        <translation type="unfinished">Chiudi</translation>
+        <source>YouTube</source>
+        <translation>YouTube</translation>
     </message>
 </context><context>
     <name>MediaExtractorService</name>
@@ -3728,60 +3752,6 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Silence-removal library installed successfully.</source>
         <translation>Libreria di rimozione del silenzio installata correttamente.</translation>
-    </message>
-</context><context>
-    <name>PairPreviewDialog</name>
-    <message>
-        <source>Preview File Pairs - %1 pairs found</source>
-        <translation>Anteprima delle coppie di file - %1 coppie trovate</translation>
-    </message>
-    <message>
-        <source>File Pair Preview: %1 pairs</source>
-        <translation>Anteprima delle coppie di file: %1 coppie</translation>
-    </message>
-    <message>
-        <source>%1 video/subtitle pairs</source>
-        <translation>%1 coppie video/sottotitoli</translation>
-    </message>
-    <message>
-        <source>Total size: %1</source>
-        <translation>Dimensione totale: %1</translation>
-    </message>
-    <message>
-        <source>Video: %1 • Subtitles: %2</source>
-        <translation>Video: %1 • Sottotitoli: %2</translation>
-    </message>
-    <message>
-        <source>Paired Files</source>
-        <translation>File abbinati</translation>
-    </message>
-    <message>
-        <source>Video File</source>
-        <translation>File video</translation>
-    </message>
-    <message>
-        <source>Video Size</source>
-        <translation>Dimensione video</translation>
-    </message>
-    <message>
-        <source>Subtitle File</source>
-        <translation>File dei sottotitoli</translation>
-    </message>
-    <message>
-        <source>Subtitle Size</source>
-        <translation>Dimensione sottotitoli</translation>
-    </message>
-    <message>
-        <source>Pairs process in order.</source>
-        <translation>Le coppie vengono elaborate in ordine.</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Annulla</translation>
-    </message>
-    <message>
-        <source>Proceed with Processing</source>
-        <translation>Procedi con l'elaborazione</translation>
     </message>
 </context><context>
     <name>PlaylistAddController</name>
@@ -4028,14 +3998,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">Anteprima</translation>
-    </message>
-    <message>
-        <source>List the volume(s) this folder would mine — no cards created.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Mine</source>
         <translation type="unfinished">Estrai</translation>
     </message>
@@ -4053,6 +4015,10 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Novels are mined in the Novels tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle files are mined in the Subtitles tab.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4114,14 +4080,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">Anteprima</translation>
-    </message>
-    <message>
-        <source>Preview the selected book — no cards created.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Mine</source>
         <translation type="unfinished">Estrai</translation>
     </message>
@@ -4139,6 +4097,10 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Manga is mined in the Manga tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle files are mined in the Subtitles tab.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4166,22 +4128,124 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished">Non riuscito %1: %2.</translation>
     </message>
 </context><context>
-    <name>ReadingTab</name>
+    <name>ReadingSubtitlesTab</name>
     <message>
-        <source>Mining unavailable — services not initialized.</source>
-        <translation type="unfinished">Mining non disponibile — servizi non inizializzati.</translation>
+        <source>Review words before mining</source>
+        <translation type="unfinished">Rivedi le parole prima del mining</translation>
     </message>
     <message>
-        <source>Preview</source>
-        <translation type="unfinished">Anteprima</translation>
+        <source>Show the word-selection popup for each file before creating cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">Avanzamento</translation>
+    </message>
+    <message>
+        <source>Subtitle Files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mines subtitle files as text — no screenshots or audio extracted from video.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle files to mine, one card run per file, in list order.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Files…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add subtitle files (.srt, .ass, .ssa, .vtt) to the list.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove Selected</source>
+        <translation type="unfinished">Rimuovi selezionate</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation type="unfinished">Svuota</translation>
     </message>
     <message>
         <source>Mine</source>
         <translation type="unfinished">Estrai</translation>
     </message>
     <message>
+        <source>Mine the listed subtitle files into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">Annulla</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation type="unfinished">Annulla l'esecuzione attiva.</translation>
+    </message>
+    <message>
+        <source>Add Subtitle Files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitles</source>
+        <translation type="unfinished">Sottotitoli</translation>
+    </message>
+    <message>
+        <source>Manga is mined in the Manga tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Novels are mined in the Novels tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add at least one subtitle file first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>File not found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">Annullamento…</translation>
+    </message>
+    <message>
+        <source>File %1/%2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation type="unfinished">Estratto %1: %2 carte.</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation type="unfinished">Non riuscito %1: %2.</translation>
+    </message>
+    <message>
+        <source>Finished %1 subtitle files.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ReadingTab</name>
+    <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation type="unfinished">Mining non disponibile — servizi non inizializzati.</translation>
+    </message>
+    <message>
         <source>%1 run starting — %2 items.</source>
         <translation type="unfinished">Avvio esecuzione %1 — %2 elementi.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation type="unfinished">Estrai</translation>
     </message>
     <message>
         <source>Could not process %1: %2</source>
@@ -4193,10 +4257,6 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Preview complete — %1 new words</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4414,20 +4474,20 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>Se attivo, Anki Miner cerca nuove versioni su GitHub all'avvio.</translation>
     </message>
     <message>
-        <source>Reset to Defaults</source>
-        <translation>Ripristina predefiniti</translation>
+        <source>Export Settings…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Reset all settings to default values (Ctrl+R)</source>
-        <translation>Ripristina tutte le impostazioni ai valori predefiniti (Ctrl+R)</translation>
+        <source>Save a portable settings file (machine-specific paths and resources excluded).</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Save Settings</source>
-        <translation>Salva impostazioni</translation>
+        <source>Import Settings…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Save settings to disk (Ctrl+S)</source>
-        <translation>Salva le impostazioni su disco (Ctrl+S)</translation>
+        <source>Apply settings from an exported file; anything not in the file is kept.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Updating yt-dlp…</source>
@@ -4446,60 +4506,76 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>Impossibile aggiornare yt-dlp. Verificare la connessione e riprovare.</translation>
     </message>
     <message>
-        <source>Invalid dictionary folder</source>
-        <translation>Cartella dizionari non valida</translation>
+        <source>dictionary folder (Dictionaries)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>%1 is not a directory.
-
-Pick an existing folder or click Reset to default.</source>
-        <translation>%1 non è una directory.
-
-Selezionare una cartella esistente o fare clic su Ripristina predefinito.</translation>
+        <source>cookies file (YouTube)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Dictionary folder not writable</source>
-        <translation>Cartella dizionari non scrivibile</translation>
+        <source>subtitle regex (Filtering)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Cannot write to %1.
-
-Pick a folder you own.</source>
-        <translation>Impossibile scrivere in %1.
-
-Selezionare una cartella di cui si dispone.</translation>
-    </message>
-    <message>
-        <source>Cookies file not found</source>
-        <translation>File dei cookie non trovato</translation>
-    </message>
-    <message>
-        <source>%1 is not a file.
-
-Pick an exported cookies.txt or clear the field.</source>
-        <translation>%1 non è un file.
-
-Selezionare un file cookies.txt esportato o svuotare il campo.</translation>
-    </message>
-    <message>
-        <source>Invalid Subtitle Regex</source>
-        <translation>Espressione regolare sottotitoli non valida</translation>
-    </message>
-    <message>
-        <source>Pattern: %1
-
-Fix or disable the filter before saving.
-
-Details: %2</source>
-        <translation>Motivo: %1
-
-Correggere o disattivare il filtro prima di salvare.
-
-Dettagli: %2</translation>
+        <source>⚠ Saved — kept previous: %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>✓ Saved</source>
         <translation>✓ Salvato</translation>
+    </message>
+    <message>
+        <source>Export Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>JSON Files (*.json);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export Failed</source>
+        <translation type="unfinished">Esportazione non riuscita</translation>
+    </message>
+    <message>
+        <source>Could not write %1:
+%2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings Exported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Portable settings written to %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Settings?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Apply settings from %1?
+
+Imported values override your current settings; anything not in the file is kept.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Failed</source>
+        <translation type="unfinished">Importazione non riuscita</translation>
+    </message>
+    <message>
+        <source>Could not import %1:
+%2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>✓ Imported</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Importing pitch accent dictionary…</source>
@@ -4516,18 +4592,6 @@ Dettagli: %2</translation>
     <message>
         <source>Pitch accent dictionary imported</source>
         <translation>Dizionario di accento tonale importato</translation>
-    </message>
-    <message>
-        <source>Reset Settings</source>
-        <translation>Ripristina impostazioni</translation>
-    </message>
-    <message>
-        <source>Reset all settings to defaults?</source>
-        <translation>Ripristinare tutte le impostazioni ai valori predefiniti?</translation>
-    </message>
-    <message>
-        <source>✓ Reset to defaults</source>
-        <translation>✓ Predefiniti ripristinati</translation>
     </message>
     <message>
         <source>Retry missing expression audio</source>
@@ -4584,14 +4648,6 @@ Dettagli: %2</translation>
     <message>
         <source>Actions</source>
         <translation>Azioni</translation>
-    </message>
-    <message>
-        <source>Preview Words</source>
-        <translation>Anteprima parole</translation>
-    </message>
-    <message>
-        <source>Preview discovered words before creating cards</source>
-        <translation>Visualizza l'anteprima delle parole rilevate prima di creare le carte</translation>
     </message>
     <message>
         <source>Process Episode</source>
@@ -4732,10 +4788,6 @@ Dettagli: %2</translation>
     <message>
         <source>Cancelled</source>
         <translation type="unfinished">Annullato</translation>
-    </message>
-    <message>
-        <source>Preview complete — %1 new words</source>
-        <translation type="unfinished" />
     </message>
     <message>
         <source>Complete — %1 cards created</source>
@@ -5741,140 +5793,6 @@ Andare in Impostazioni → ASR per scaricarlo prima di generare i sottotitoli.</
         <translation>%1 di %2 parole selezionate</translation>
     </message>
 </context><context>
-    <name>WordPreviewDialog</name>
-    <message>
-        <source>Word Preview - %1 words found</source>
-        <translation>Anteprima parole - %1 parole trovate</translation>
-    </message>
-    <message>
-        <source>Word Preview: %1 words found</source>
-        <translation>Anteprima parole: %1 parole trovate</translation>
-    </message>
-    <message>
-        <source>Search:</source>
-        <translation>Cerca:</translation>
-    </message>
-    <message>
-        <source>Filter by any field...</source>
-        <translation>Filtra per qualsiasi campo...</translation>
-    </message>
-    <message>
-        <source>Group by:</source>
-        <translation>Raggruppa per:</translation>
-    </message>
-    <message>
-        <source>None (Flat List)</source>
-        <translation>Nessuno (elenco semplice)</translation>
-    </message>
-    <message>
-        <source>Time Range</source>
-        <translation>Intervallo di tempo</translation>
-    </message>
-    <message>
-        <source>Alphabetical</source>
-        <translation>Alfabetico</translation>
-    </message>
-    <message>
-        <source>Word Length</source>
-        <translation>Lunghezza parola</translation>
-    </message>
-    <message>
-        <source>Export...</source>
-        <translation>Esporta...</translation>
-    </message>
-    <message>
-        <source>Discovered Words</source>
-        <translation>Parole individuate</translation>
-    </message>
-    <message>
-        <source>Surface</source>
-        <translation>Superficie</translation>
-    </message>
-    <message>
-        <source>Lemma</source>
-        <translation>Lemma</translation>
-    </message>
-    <message>
-        <source>Reading</source>
-        <translation>Lettura</translation>
-    </message>
-    <message>
-        <source>Sentence</source>
-        <translation>Frase</translation>
-    </message>
-    <message>
-        <source>Time</source>
-        <translation>Tempo</translation>
-    </message>
-    <message>
-        <source>Video</source>
-        <translation>Video</translation>
-    </message>
-    <message>
-        <source>Close</source>
-        <translation>Chiudi</translation>
-    </message>
-    <message>
-        <source>Showing %1 of %2 words</source>
-        <translation>Visualizzate %1 di %2 parole</translation>
-    </message>
-    <message>
-        <source>Start: %1s, End: %2s, Duration: %3s</source>
-        <translation>Inizio: %1s, Fine: %2s, Durata: %3s</translation>
-    </message>
-    <message>
-        <source>%1 (%2 words)</source>
-        <translation>%1 (%2 parole)</translation>
-    </message>
-    <message>
-        <source>1-2 characters</source>
-        <translation>1-2 caratteri</translation>
-    </message>
-    <message>
-        <source>3-4 characters</source>
-        <translation>3-4 caratteri</translation>
-    </message>
-    <message>
-        <source>5-6 characters</source>
-        <translation>5-6 caratteri</translation>
-    </message>
-    <message>
-        <source>7+ characters</source>
-        <translation>7+ caratteri</translation>
-    </message>
-    <message>
-        <source>0 words</source>
-        <translation>0 parole</translation>
-    </message>
-    <message>
-        <source>0 unique</source>
-        <translation>0 uniche</translation>
-    </message>
-    <message>
-        <source>Avg: 0 chars</source>
-        <translation>Media: 0 caratteri</translation>
-    </message>
-    <message>
-        <source>Span: 00:00</source>
-        <translation>Intervallo: 00:00</translation>
-    </message>
-    <message>
-        <source>%1 words</source>
-        <translation>%1 parole</translation>
-    </message>
-    <message>
-        <source>%1 unique</source>
-        <translation>%1 uniche</translation>
-    </message>
-    <message>
-        <source>Avg: %1 chars</source>
-        <translation>Media: %1 caratteri</translation>
-    </message>
-    <message>
-        <source>Span: %1</source>
-        <translation>Intervallo: %1</translation>
-    </message>
-</context><context>
     <name>YouTubeFetcher</name>
     <message>
         <source>Downloading video</source>
@@ -5997,14 +5915,6 @@ Andare in Impostazioni → ASR per scaricarlo prima di generare i sottotitoli.</
     <message>
         <source>Show the word-selection popup for each video before creating cards.</source>
         <translation>Mostra il popup di selezione delle parole per ogni video prima di creare le carte.</translation>
-    </message>
-    <message>
-        <source>Preview</source>
-        <translation>Anteprima</translation>
-    </message>
-    <message>
-        <source>Run the queue in preview mode — no cards created.</source>
-        <translation>Esegue la coda in modalità anteprima — nessuna carta creata.</translation>
     </message>
     <message>
         <source>Mine</source>

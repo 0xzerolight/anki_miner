@@ -177,7 +177,7 @@ class TestSettingsTabRoundTrip:
         tab.youtube_panel.set_cookies_from_browser("firefox")
         tab.youtube_panel.max_duration_spinbox.setValue(60)
 
-        tab._on_save_clicked()
+        tab.commit_settings()
 
         assert len(received) == 1
         new_config = received[0]
@@ -193,7 +193,7 @@ class TestSettingsTabRoundTrip:
         tab.config_changed.connect(received.append)
 
         tab.youtube_panel.set_playlist_max(250)
-        tab._on_save_clicked()
+        tab.commit_settings()
 
         assert len(received) == 1
         assert received[0].youtube_playlist_max == 250
@@ -208,25 +208,10 @@ class TestSettingsTabRoundTrip:
         monkeypatch.setattr(QMessageBox, "information", _fail)
 
         assert tab.save_status_label.text() == ""
-        tab._on_save_clicked()
+        tab.commit_settings()
 
         assert "Saved" in tab.save_status_label.text()
         assert tab._save_status_timer.isActive()
-
-    def test_reset_flashes_inline_status(self, tab, monkeypatch):
-        """A confirmed reset shows the inline label, not the old info popup."""
-        from PyQt6.QtWidgets import QMessageBox
-
-        monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
-        monkeypatch.setattr(
-            QMessageBox,
-            "information",
-            lambda *a, **k: (_ for _ in ()).throw(AssertionError("reset must not show a modal popup")),
-        )
-
-        tab._on_reset_clicked()
-
-        assert "Reset to defaults" in tab.save_status_label.text()
 
     def test_load_config_reflects_playlist_max(self, test_config, qtbot):
         cfg = replace(test_config, youtube_playlist_max=42)
@@ -274,7 +259,7 @@ class TestSettingsTabRoundTrip:
         tab.config_changed.connect(received.append)
         tab.youtube_panel.set_cookies_file(cookies)
 
-        tab._on_save_clicked()
+        tab.commit_settings()
 
         assert len(received) == 1
         assert received[0].youtube_cookies_file == cookies
@@ -288,27 +273,32 @@ class TestSettingsTabRoundTrip:
         tab.config_changed.connect(received.append)
         tab.youtube_panel.set_cookies_file("")
 
-        tab._on_save_clicked()
+        tab.commit_settings()
 
         assert len(received) == 1
         assert received[0].youtube_cookies_file is None
 
-    def test_save_blocks_on_missing_cookies_file(self, tab, monkeypatch, tmp_path):
+    def test_missing_cookies_file_kept_back_without_modal(self, tab, test_config, monkeypatch, tmp_path):
+        """Per-field auto-save validation: a missing cookies file keeps its
+        last-good value and shows the sticky inline warning — no modal, and the
+        rest of the commit still goes through."""
         from PyQt6.QtWidgets import QMessageBox
 
-        warnings: list[tuple] = []
+        def _no_modal(*a, **k):  # pragma: no cover - failure path
+            raise AssertionError("no modal may fire during an auto-save commit")
+
+        monkeypatch.setattr(QMessageBox, "warning", _no_modal)
         monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
-        monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: warnings.append(a))
 
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
-        # A path that does not exist must block the save.
         tab.youtube_panel.set_cookies_file(tmp_path / "does-not-exist.txt")
 
-        tab._on_save_clicked()
+        tab.commit_settings()
 
-        assert warnings, "expected a warning dialog for the missing cookies file"
-        assert received == [], "config must not be emitted when validation fails"
+        assert len(received) == 1, "the commit must still go through"
+        assert received[0].youtube_cookies_file == test_config.youtube_cookies_file
+        assert "⚠" in tab.save_status_label.text()
 
 
 class TestIPlusOneFilterRoundTrip:
@@ -340,13 +330,13 @@ class TestIPlusOneFilterRoundTrip:
         tab.config_changed.connect(received.append)
 
         tab.filtering_panel.use_i_plus_one_checkbox.setChecked(True)
-        tab._on_save_clicked()
+        tab.commit_settings()
 
         assert len(received) == 1
         assert received[0].use_i_plus_one_filter is True
 
         tab.filtering_panel.use_i_plus_one_checkbox.setChecked(False)
-        tab._on_save_clicked()
+        tab.commit_settings()
 
         assert len(received) == 2
         assert received[1].use_i_plus_one_filter is False
@@ -373,7 +363,7 @@ class TestAnkiTagsRoundTrip:
         tab.config_changed.connect(received.append)
 
         tab.anki_panel.anki_tags_input.setText("new-tag another")
-        tab._on_save_clicked()
+        tab.commit_settings()
 
         assert len(received) == 1
         assert received[0].anki_tags == "new-tag another"
@@ -411,7 +401,7 @@ class TestExpressionAudioRoundTrip:
         tab.config_changed.connect(received.append)
 
         tab.anki_panel.expression_audio_field_input.setText("ExpressionAudio")
-        tab._on_save_clicked()
+        tab.commit_settings()
 
         assert len(received) == 1
         assert received[0].anki_fields["expression_audio"] == "ExpressionAudio"
@@ -433,7 +423,7 @@ class TestExpressionAudioRoundTrip:
         tab.config_changed.connect(received.append)
 
         tab.anki_panel.expression_audio_field_input.setText("")
-        tab._on_save_clicked()
+        tab.commit_settings()
 
         assert len(received) == 1
         assert received[0].anki_fields["expression_audio"] == ""
@@ -469,7 +459,7 @@ class TestSentenceLengthFilterRoundTrip:
         tab.filtering_panel.use_sentence_length_checkbox.setChecked(True)
         tab.filtering_panel.max_sentence_duration_spinbox.setValue(7.5)
         tab.filtering_panel.max_sentence_chars_spinbox.setValue(60)
-        tab._on_save_clicked()
+        tab.commit_settings()
 
         assert len(received) == 1
         assert received[0].use_sentence_length_filter is True
@@ -509,7 +499,7 @@ class TestDictsRootRoundTrip:
             new_root.mkdir()
             widget.dictionary_panel.dicts_root_selector.set_path(str(new_root))
 
-            widget._on_save_clicked()
+            widget.commit_settings()
 
             assert len(received) == 1
             assert received[0].dicts_root == new_root
@@ -517,8 +507,9 @@ class TestDictsRootRoundTrip:
             widget.deleteLater()
 
     def test_save_rejects_nonexistent_dicts_root(self, test_config: AnkiMinerConfig, tmp_path, monkeypatch, qtbot):
-        """Picking a path that vanished between selection and save must surface a
-        warning and abort — never write Path('') to the config."""
+        """Picking a path that vanished between selection and commit keeps the
+        last-good root (never writes the bad path) and shows the sticky inline
+        warning — no modal, the rest of the commit still goes through."""
         from PyQt6.QtWidgets import QMessageBox
 
         starting = tmp_path / "starting"
@@ -527,18 +518,22 @@ class TestDictsRootRoundTrip:
         widget = SettingsTab(cfg)
         qtbot.addWidget(widget)
         try:
-            warnings: list[tuple] = []
-            monkeypatch.setattr(QMessageBox, "warning", lambda *args, **kwargs: warnings.append(args) or 0)
+
+            def _no_modal(*args, **kwargs):  # pragma: no cover - failure path
+                raise AssertionError("no modal may fire during an auto-save commit")
+
+            monkeypatch.setattr(QMessageBox, "warning", _no_modal)
             monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
 
             received: list[AnkiMinerConfig] = []
             widget.config_changed.connect(received.append)
 
             widget.dictionary_panel.dicts_root_selector.set_path(str(tmp_path / "does_not_exist"))
-            widget._on_save_clicked()
+            widget.commit_settings()
 
-            assert received == [], "save must abort when dicts_root is invalid"
-            assert warnings, "user must see a warning explaining the rejection"
+            assert len(received) == 1, "the commit must still go through"
+            assert received[0].dicts_root == starting, "invalid root must keep the last-good value"
+            assert "⚠" in widget.save_status_label.text()
         finally:
             widget.deleteLater()
 
@@ -572,7 +567,7 @@ class TestDictsRootRoundTrip:
 
             monkeypatch.setattr(dsp, "DictionaryRegistry", _tracking_registry)
 
-            widget._on_save_clicked()
+            widget.commit_settings()
 
             # Panel state followed the saved root.
             assert widget.dictionary_panel._dicts_root == new_root
@@ -613,7 +608,7 @@ class TestDictsRootRoundTrip:
             monkeypatch.setattr(widget.dictionary_panel, "set_dicts_root", _spy)
 
             # Selector still shows the current root → no change.
-            widget._on_save_clicked()
+            widget.commit_settings()
 
             assert calls == [], "set_dicts_root must not run when the root is unchanged"
         finally:
@@ -632,8 +627,11 @@ class TestDictsRootRoundTrip:
         widget = SettingsTab(cfg)
         qtbot.addWidget(widget)
         try:
-            warnings: list[tuple] = []
-            monkeypatch.setattr(QMessageBox, "warning", lambda *args, **kwargs: warnings.append(args) or 0)
+
+            def _no_modal(*args, **kwargs):  # pragma: no cover - failure path
+                raise AssertionError("no modal may fire during an auto-save commit")
+
+            monkeypatch.setattr(QMessageBox, "warning", _no_modal)
             monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
             # Force os.access to claim the path is not writable so the test is
             # portable across CI runners that may ignore chmod (e.g. root in
@@ -650,10 +648,11 @@ class TestDictsRootRoundTrip:
             widget.config_changed.connect(received.append)
 
             widget.dictionary_panel.dicts_root_selector.set_path(str(readonly))
-            widget._on_save_clicked()
+            widget.commit_settings()
 
-            assert received == [], "save must abort when dicts_root is not writable"
-            assert warnings, "user must see a warning explaining the rejection"
+            assert len(received) == 1, "the commit must still go through"
+            assert received[0].dicts_root == starting, "unwritable root must keep the last-good value"
+            assert "⚠" in widget.save_status_label.text()
         finally:
             widget.deleteLater()
 
@@ -746,10 +745,16 @@ class TestDictionaryRemovedPersistsNarrowly:
 
 class TestBlacklistWhitelistSelectorClearedOnNone:
     """_load_config must CLEAR the blacklist/whitelist selectors when the config
-    path is None — otherwise Reset-to-Defaults leaves the old path visible and
-    the next Save reads it back, re-persisting the stale path (T-11)."""
+    path is None — otherwise a None-path reload leaves the old path visible and
+    the next commit reads it back, re-persisting the stale path (T-11).
 
-    def test_reset_clears_selectors_and_next_save_persists_none(self, test_config, tmp_path, monkeypatch, qtbot):
+    Historically driven through Reset-to-Defaults; the button is gone, but the
+    behavior (None-path load clears selectors + next commit persists None) is
+    load-bearing under auto-save and stays covered via update_config."""
+
+    def test_none_path_reload_clears_selectors_and_next_commit_persists_none(
+        self, test_config, tmp_path, monkeypatch, qtbot
+    ):
         from PyQt6.QtWidgets import QMessageBox
 
         bl = tmp_path / "blacklist.txt"
@@ -764,25 +769,25 @@ class TestBlacklistWhitelistSelectorClearedOnNone:
             assert widget.filtering_panel.blacklist_selector.get_path() == str(bl)
             assert widget.filtering_panel.whitelist_selector.get_path() == str(wl)
 
-            # Reset to defaults (paths become None) — confirm Yes, suppress info.
-            monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+            # External reload drops both paths (the same _load_config branch
+            # the old Reset button exercised).
             monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
-            widget._on_reset_clicked()
+            widget.update_config(replace(cfg, blacklist_path=None, whitelist_path=None))
 
             # Selectors must be cleared, not left showing the stale paths.
             assert widget.filtering_panel.blacklist_selector.get_path() == ""
             assert widget.filtering_panel.whitelist_selector.get_path() == ""
 
-            # The very next Save must persist None, not re-read the old path.
+            # The very next commit must persist None, not re-read the old path.
             received: list[AnkiMinerConfig] = []
             widget.config_changed.connect(received.append)
-            widget._on_save_clicked()
+            widget.commit_settings()
 
-            assert received, "save should emit a config"
+            assert received, "commit should emit a config"
             assert received[-1].blacklist_path is None
             assert received[-1].whitelist_path is None
         finally:
-            # _on_save_clicked reconciles styling, spawning a short-lived AnkiConnect
+            # commit_settings reconciles styling, spawning a short-lived AnkiConnect
             # worker; join it (mirroring the `tab` fixture) so a late signal cannot
             # fire into a torn-down widget and SIGABRT a later test on this worker.
             widget.shutdown()
@@ -859,7 +864,7 @@ class TestSubtitlesPanelRegistration:
         tab.config_changed.connect(received.append)
 
         tab.subtitles_panel.alass_selector.set_path(str(alass_path))
-        tab._on_save_clicked()
+        tab.commit_settings()
 
         assert len(received) == 1
         assert received[0].alass_location == alass_path
@@ -873,7 +878,7 @@ class TestSubtitlesPanelRegistration:
         tab.config_changed.connect(received.append)
 
         tab.subtitles_panel.alass_selector.set_path("")
-        tab._on_save_clicked()
+        tab.commit_settings()
 
         assert len(received) == 1
         assert received[0].alass_location is None

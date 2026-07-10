@@ -90,7 +90,7 @@ def _parse(argv: list[str]) -> E2EConfig:
 
 def test_timeout_soak_overrides_both_fields():
     """``soak --timeout 600`` sets both result_timeout_s and session_timeout_s to 600."""
-    cfg = _parse(["soak", "--timeout", "600", "--preview"])
+    cfg = _parse(["soak", "--timeout", "600", "--fake-anki"])
     assert cfg.result_timeout_s == 600
     assert cfg.session_timeout_s == 600
 
@@ -105,7 +105,7 @@ def test_timeout_smoke_overrides_both_fields():
 def test_timeout_omitted_leaves_defaults():
     """Omitting ``--timeout`` leaves both timeout fields at their dataclass defaults."""
     defaults = E2EConfig()
-    cfg = _parse(["soak", "--preview"])
+    cfg = _parse(["soak", "--fake-anki"])
     assert cfg.result_timeout_s == defaults.result_timeout_s
     assert cfg.session_timeout_s == defaults.session_timeout_s
 

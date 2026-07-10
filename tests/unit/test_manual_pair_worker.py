@@ -23,7 +23,7 @@ def test_curation_attrs_and_callback_forwarded(tmp_path, qapp):
 
     proc = MagicMock()
 
-    def fake_process(video, subtitle, preview_mode, progress_callback, curation_callback=None):
+    def fake_process(video, subtitle, progress_callback=None, curation_callback=None, **kwargs):
         captured["video"] = worker._curation_video
         captured["subtitle"] = worker._curation_subtitle
         captured["offset"] = worker._curation_offset
@@ -50,7 +50,7 @@ def test_curation_attrs_advance_per_pair(tmp_path, qapp):
     proc = MagicMock()
     proc.config = SimpleNamespace(subtitle_offset=0.0)
 
-    def fake_process(video, subtitle, preview_mode, progress_callback, curation_callback=None):
+    def fake_process(video, subtitle, progress_callback=None, curation_callback=None, **kwargs):
         seen.append((worker._curation_video, worker._curation_subtitle))
         return SimpleNamespace(cards_created=0)
 
@@ -116,7 +116,7 @@ def test_partial_results_discarded_when_cancelled_mid_batch(tmp_path, qapp):
 
     processed: list = []
 
-    def fake_process(video, subtitle, preview_mode, progress_callback, curation_callback=None):
+    def fake_process(video, subtitle, progress_callback=None, curation_callback=None, **kwargs):
         processed.append(video)
         worker.cancel()  # user hits Cancel while pair 1 is finishing
         return SimpleNamespace(cards_created=3)
@@ -144,7 +144,7 @@ def test_per_pair_error_reported_and_batch_continues(tmp_path, qapp):
     p1 = _pair(tmp_path, 1)
     p2 = _pair(tmp_path, 2)
 
-    def fake_process(video, subtitle, preview_mode, progress_callback, curation_callback=None):
+    def fake_process(video, subtitle, progress_callback=None, curation_callback=None, **kwargs):
         if video == p1.video:
             raise RuntimeError("ffmpeg blew up")
         return SimpleNamespace(cards_created=5)
@@ -198,7 +198,7 @@ def test_progress_callback_passed_through_to_process_episode(tmp_path, qapp):
     proc = MagicMock()
     proc.config = SimpleNamespace(subtitle_offset=0.0)
 
-    def fake_process(video, subtitle, preview_mode, progress_callback, curation_callback=None):
+    def fake_process(video, subtitle, progress_callback=None, curation_callback=None, **kwargs):
         seen.append(progress_callback)
         return SimpleNamespace(cards_created=0)
 
@@ -239,7 +239,7 @@ def test_pair_finished_advances_on_failure(tmp_path, qapp):
     p1 = _pair(tmp_path, 1)
     p2 = _pair(tmp_path, 2)
 
-    def fake_process(video, subtitle, preview_mode, progress_callback, curation_callback=None):
+    def fake_process(video, subtitle, progress_callback=None, curation_callback=None, **kwargs):
         if video == p1.video:
             raise RuntimeError("boom")
         return SimpleNamespace(cards_created=1)
@@ -327,7 +327,7 @@ def test_failed_pair_counted_in_batch_summary(tmp_path, qapp):
     p1 = _pair(tmp_path, 1)
     p2 = _pair(tmp_path, 2)
 
-    def fake_process(video, subtitle, preview_mode, progress_callback, curation_callback=None):
+    def fake_process(video, subtitle, progress_callback=None, curation_callback=None, **kwargs):
         if video == p1.video:
             raise RuntimeError("setup error")
         return ProcessingResult(total_words_found=5, new_words_found=3, cards_created=2)

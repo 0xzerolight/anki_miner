@@ -5,8 +5,8 @@ shared ``_ReadingMiningTabBase`` lifecycle — there is NO queue: every run hand
 the base exactly one ephemeral ``ReadingQueueItem``. Behaviour under test:
 
 * Start: a valid book is classified by ``detect`` into one ephemeral item and
-  launched via the base (1 item, preview flag, curation gated by the checkbox,
-  prebuilt-vs-factory processor path). Preview/Mine give way to Cancel while a
+  launched via the base (1 item, curation gated by the checkbox,
+  prebuilt-vs-factory processor path). Mine gives way to Cancel while a
   run is active.
 * Invalid path (empty / wrong suffix / not a file) warns and starts no worker.
 * Per-item signals are READ-ONLY on item state (the worker owns the lifecycle):
@@ -96,21 +96,17 @@ def _book_file(tmp_path: Path, name: str = "novel.epub") -> Path:
     return book
 
 
-def _run(tab, book: Path, refs, *, preview: bool = False):
-    """Select *book*, patch ``detect`` to return *refs*, click Preview/Mine."""
+def _run(tab, book: Path, refs):
+    """Select *book*, patch ``detect`` to return *refs*, click Mine."""
     tab.book_selector.set_path(str(book))
     with patch(_DETECT, return_value=list(refs)):
-        if preview:
-            tab._on_preview_clicked()
-        else:
-            tab._on_mine_clicked()
+        tab._on_mine_clicked()
 
 
 class TestInitialState:
-    """Idle tab: Preview/Mine visible, Cancel hidden, no queue widgets."""
+    """Idle tab: Mine visible, Cancel hidden, no queue widgets."""
 
     def test_buttons_idle(self, tab):
-        assert not tab.preview_button.isHidden()
         assert not tab.mine_button.isHidden()
         assert tab.cancel_button.isHidden()
         assert tab.worker_thread is None
@@ -144,16 +140,6 @@ class TestStartRun:
         assert tab.worker_thread is not None
         tab.worker_thread.start.assert_called_once()
 
-    def test_mine_preview_flag_false(self, tmp_path, tab):
-        queue_cls = tab._queue_worker_cls
-        _run(tab, _book_file(tmp_path), [_make_ref()])
-        assert queue_cls.call_args.kwargs["preview_mode"] is False
-
-    def test_preview_flag_true(self, tmp_path, tab):
-        queue_cls = tab._queue_worker_cls
-        _run(tab, _book_file(tmp_path), [_make_ref()], preview=True)
-        assert queue_cls.call_args.kwargs["preview_mode"] is True
-
     def test_passes_prebuilt_processor_no_factory(self, tmp_path, tab):
         queue_cls = tab._queue_worker_cls
         _run(tab, _book_file(tmp_path), [_make_ref()])
@@ -184,7 +170,6 @@ class TestStartRun:
 
     def test_start_resets_bar_and_swaps_buttons(self, tmp_path, tab):
         _run(tab, _book_file(tmp_path), [_make_ref()])
-        assert tab.preview_button.isHidden()
         assert tab.mine_button.isHidden()
         assert not tab.cancel_button.isHidden()
         assert "Starting" in tab.progress_widget.status_label.text()
@@ -389,8 +374,7 @@ class TestAfterRunCleanup:
         assert tab.progress_widget.status_label.text() == "Cancelled"
         assert tab.worker_thread is None
         assert tab._run_items == []
-        # Idle again: Preview/Mine restored, Cancel hidden.
-        assert not tab.preview_button.isHidden()
+        # Idle again: Mine restored, Cancel hidden.
         assert tab.cancel_button.isHidden()
 
 
@@ -495,12 +479,20 @@ class TestDragDrop:
         assert tab.book_selector.get_path() == ""
         assert "manga" in tab.log_widget.text_edit.toPlainText().lower()
 
+    def test_drop_subtitle_file_hints_no_path(self, tab):
+        event = MagicMock()
+        with patch(_URLS, return_value=[_url("/src/ep01.srt")]):
+            tab.dropEvent(event)
+        assert tab.book_selector.get_path() == ""
+        assert "Subtitles tab" in tab.log_widget.text_edit.toPlainText()
+        event.acceptProposedAction.assert_called_once()
+
     def test_drop_none_event_is_noop(self, tab):
         tab.dropEvent(None)  # must not raise
         assert tab.book_selector.get_path() == ""
 
-    def test_drag_enter_accepts_book_and_manga(self, tab):
-        for name in ("/src/a.epub", "/src/a.txt", "/src/a.mokuro", "/src/a.cbz"):
+    def test_drag_enter_accepts_book_manga_and_subtitle(self, tab):
+        for name in ("/src/a.epub", "/src/a.txt", "/src/a.mokuro", "/src/a.cbz", "/src/a.srt"):
             event = MagicMock()
             with patch(_URLS, return_value=[_url(name)]):
                 tab.dragEnterEvent(event)

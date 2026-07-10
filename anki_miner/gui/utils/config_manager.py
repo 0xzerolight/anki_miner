@@ -94,6 +94,36 @@ class GUIConfigManager:
         with path.open("r", encoding="utf-8") as f:
             config_dict = json.load(f)
 
+        return AnkiMinerConfig(**cls._migrate_dict(config_dict))
+
+    @classmethod
+    def _migrate_dict(
+        cls,
+        config_dict: dict[str, Any],
+        *,
+        allow_qsettings_theme: bool = True,
+        backfill_anki_fields: bool = True,
+    ) -> dict[str, Any]:
+        """Run the full pre-construction migration pipeline on a raw JSON dict.
+
+        Shared by the normal load path (:meth:`_parse_and_migrate`) and the
+        settings-import path, so both get identical version tolerance: string→
+        Path conversion, field renames, chain rebuilds, and the unknown-key
+        drop that keeps ``AnkiMinerConfig(**...)`` from raising on removed
+        fields.
+
+        Args:
+            allow_qsettings_theme: When False, skip injecting the legacy
+                QSettings theme for a missing ``theme`` key. The import-overlay
+                path sets this so an imported file without a theme keeps the
+                current one instead of resurrecting a stale pre-v2.5 value.
+            backfill_anki_fields: When False, skip default-filling missing
+                ``anki_fields`` sub-keys (the sub-key renames still apply).
+                The import-overlay path sets this so a partial ``anki_fields``
+                can be merged onto the current mapping — the backfilled dict
+                would otherwise clobber unlisted current sub-keys with
+                defaults.
+        """
         # Convert string paths back to Path objects
         config_dict = cls._strings_to_paths(config_dict)
 
@@ -101,7 +131,8 @@ class GUIConfigManager:
         config_dict = cls._migrate_field_names(config_dict)
 
         # Backfill any anki_fields keys that are new since the config was saved
-        config_dict = cls._backfill_anki_fields(config_dict)
+        if backfill_anki_fields:
+            config_dict = cls._backfill_anki_fields(config_dict)
 
         # Migrate stale allowed_pos defaults (pre-v2.3.2 missing 代名詞)
         config_dict = cls._migrate_allowed_pos(config_dict)
@@ -117,7 +148,8 @@ class GUIConfigManager:
 
         # Migrate theme key out of QSettings (only when the key is absent
         # from the loaded dict — i.e. first launch after v2.5 upgrade).
-        config_dict = cls._migrate_theme_from_qsettings(config_dict)
+        if allow_qsettings_theme:
+            config_dict = cls._migrate_theme_from_qsettings(config_dict)
 
         # Drop keys not in the current dataclass (e.g., removed fields from old
         # versions). Without this filter, AnkiMinerConfig(**config_dict) raises
@@ -127,9 +159,7 @@ class GUIConfigManager:
         dropped = set(config_dict) - valid_keys
         if dropped:
             logger.debug("Dropping unknown config keys: %s", sorted(dropped))
-        config_dict = {k: v for k, v in config_dict.items() if k in valid_keys}
-
-        return AnkiMinerConfig(**config_dict)
+        return {k: v for k, v in config_dict.items() if k in valid_keys}
 
     @classmethod
     def load_config(cls) -> AnkiMinerConfig:
@@ -173,6 +203,111 @@ class GUIConfigManager:
         except (json.JSONDecodeError, TypeError, ValueError, OSError) as bak_err:
             logger.warning("gui_config.json.bak also unusable (%s); using defaults", bak_err)
             return create_default_config()
+
+    # Envelope marker key for exported settings files (see export_config).
+    _EXPORT_MARKER = "anki_miner_settings"
+
+    @classmethod
+    def machine_specific_fields(cls) -> frozenset[str]:
+        """Config fields that must not travel between machines.
+
+        Everything path-typed (auto-derived, so new Path fields can't leak),
+        plus non-path state that is meaningless or harmful elsewhere:
+        first-run flags, update-checker state, the three resource-ID chains
+        (their ``dict_id``/``pack_id``/``source_id`` entries reference
+        resources installed under THIS machine's roots — imported elsewhere
+        they render as silent "(missing)" chain rows), the local browser for
+        cookie extraction, and the host GPU backend. Deliberately portable:
+        ``theme`` (built-ins always resolve) and ``max_parallel_workers``.
+        """
+        return cls._path_field_names() | {
+            "first_run_shortcut_done",
+            "first_run_setup_done",
+            "last_known_version",
+            "skipped_update_version",
+            "dictionary_chain",
+            "expression_audio_chain",
+            "frequency_chain",
+            "youtube_cookies_from_browser",
+            "asr_device",
+        }
+
+    @classmethod
+    def export_config(cls, config: AnkiMinerConfig, path: Path) -> None:
+        """Write a portable settings export to ``path``.
+
+        The payload is an envelope ``{"anki_miner_settings": 1, "app_version":
+        ..., "settings": {...}}`` whose ``settings`` dict is the normal
+        gui_config.json serialization minus :meth:`machine_specific_fields`.
+
+        Raises:
+            OSError: If the file cannot be written.
+        """
+        from anki_miner import __version__
+
+        settings = cls._paths_to_strings(cls._config_to_serializable_dict(config))
+        excluded = cls.machine_specific_fields()
+        settings = {k: v for k, v in settings.items() if k not in excluded}
+        payload = {cls._EXPORT_MARKER: 1, "app_version": __version__, "settings": settings}
+
+        tmp_path = path.with_suffix(path.suffix + ".tmp")
+        try:
+            with tmp_path.open("w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2, ensure_ascii=False)
+            os.replace(tmp_path, path)
+        except BaseException:
+            tmp_path.unlink(missing_ok=True)
+            raise
+
+    @classmethod
+    def import_config(cls, path: Path, current_config: AnkiMinerConfig) -> AnkiMinerConfig:
+        """Overlay a settings file onto ``current_config`` and return the result.
+
+        Accepts both the export envelope and a flat dict (a raw
+        gui_config.json is importable). Version tolerance comes from
+        :meth:`_migrate_dict` (renames applied, unknown keys dropped);
+        machine-specific fields are stripped from the incoming data as well,
+        so a full dump from another machine can't plant broken paths or
+        dangling resource chains. Keys absent from the file keep their
+        current values — including at the ``anki_fields`` /
+        ``card_type_marker_fields`` sub-key level, where present dicts are
+        merged onto the current mapping and non-dict values are discarded
+        (matching ``load_config``'s tolerance for corrupt values).
+
+        Raises:
+            json.JSONDecodeError: Invalid JSON.
+            ValueError: Valid JSON that is not a settings dict.
+            TypeError: Values the config constructor rejects.
+            OSError: If the file cannot be read.
+        """
+        with path.open("r", encoding="utf-8") as f:
+            raw = json.load(f)
+
+        data = raw
+        if isinstance(raw, dict) and cls._EXPORT_MARKER in raw:
+            data = raw.get("settings")
+        if not isinstance(data, dict):
+            raise ValueError("Not a settings file: expected a JSON object of config fields")
+
+        incoming = cls._migrate_dict(
+            dict(data),
+            allow_qsettings_theme=False,
+            backfill_anki_fields=False,
+        )
+        excluded = cls.machine_specific_fields()
+        incoming = {k: v for k, v in incoming.items() if k not in excluded}
+
+        # Sub-key overlay for the two mapping fields: a present dict merges
+        # onto the current mapping (file wins per sub-key, unlisted sub-keys
+        # keep current); a non-dict value is dropped so current is kept.
+        for key in ("anki_fields", "card_type_marker_fields"):
+            value = incoming.get(key)
+            if isinstance(value, dict):
+                incoming[key] = {**dict(getattr(current_config, key)), **value}
+            elif key in incoming:
+                del incoming[key]
+
+        return dataclasses.replace(current_config, **incoming)
 
     # Pre-v2.3.2 default for allowed_pos (lacked 代名詞). Used to detect untouched
     # legacy configs we can safely migrate to the current default.

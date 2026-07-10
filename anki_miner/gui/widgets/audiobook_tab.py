@@ -2,7 +2,7 @@
 
 Drives a multi-pair queue: the user picks an audio file and a matching
 subtitle file, Add validates and queues the pair, and once at least one
-item is READY the user can run *Preview* or *Mine* across the whole queue.
+item is READY the user can run *Mine* across the whole queue.
 The tab mirrors :class:`~anki_miner.gui.widgets.youtube_tab.YouTubeTab`
 minus the URL/probe/playlist add flow — local file pairs need no probe
 stage, so items enter the queue READY. Two collaborators:
@@ -212,10 +212,6 @@ class AudiobookTab(MiningTabBase):
         button_row = QHBoxLayout()
         button_row.setSpacing(SPACING.xs)
 
-        self.preview_button = ModernButton(self.tr("Preview"), variant="secondary")
-        self.preview_button.setToolTip(self.tr("Run the queue in preview mode — no cards created."))
-        self.preview_button.clicked.connect(self._on_preview_clicked)
-
         self.mine_button = ModernButton(self.tr("Mine"), variant="primary")
         self.mine_button.setToolTip(self.tr("Mine every queued item into Anki cards."))
         self.mine_button.clicked.connect(self._on_mine_clicked)
@@ -228,7 +224,6 @@ class AudiobookTab(MiningTabBase):
         self.stop_button.setToolTip(self.tr("Cancel the active run."))
         self.stop_button.clicked.connect(self._on_stop_all_clicked)
 
-        button_row.addWidget(self.preview_button)
         button_row.addWidget(self.mine_button)
         button_row.addWidget(self.clear_button)
         button_row.addWidget(self.stop_button)
@@ -317,15 +312,11 @@ class AudiobookTab(MiningTabBase):
     # Run lifecycle
     # ------------------------------------------------------------------
 
-    def _on_preview_clicked(self) -> None:
-        """Preview button — runs the queue with ``preview_mode=True``."""
-        self._start_run(preview_mode=True)
-
     def _on_mine_clicked(self) -> None:
-        """Mine button — runs the queue with ``preview_mode=False``."""
-        self._start_run(preview_mode=False)
+        """Mine button — runs the whole queue."""
+        self._start_run()
 
-    def _start_run(self, *, preview_mode: bool) -> None:
+    def _start_run(self) -> None:
         """Construct and start an :class:`AudiobookQueueWorker` over READY items."""
         if self.worker_thread is not None:
             return
@@ -373,7 +364,6 @@ class AudiobookTab(MiningTabBase):
             config=self._config,
             items=ready_items,
             curation_callback=curation_cb,
-            preview_mode=preview_mode,
             processor_factory=processor_factory,
         )
         worker.item_started.connect(self._on_item_started)
@@ -388,7 +378,7 @@ class AudiobookTab(MiningTabBase):
         worker.finished.connect(self._on_worker_finished)
         self.worker_thread = worker
 
-        mode_label = self.tr("Preview") if preview_mode else self.tr("Mine")
+        mode_label = self.tr("Mine")
         self.log_widget.append_info(tr_format(self.tr("%1 run starting — %2 items."), mode_label, len(ready_items)))
         self._recompute_buttons()
         worker.start()
@@ -588,8 +578,8 @@ class AudiobookTab(MiningTabBase):
 
         Derived from queue contents + worker handle:
 
-        * Run active → Add/Preview/Mine disabled, Stop visible, Clear allowed.
-        * Otherwise → Add enabled; Preview/Mine enabled iff a READY item
+        * Run active → Add/Mine disabled, Stop visible, Clear allowed.
+        * Otherwise → Add enabled; Mine enabled iff a READY item
           exists; Clear enabled iff the queue is non-empty; Stop hidden.
         """
         items = self._queue.all_items()
@@ -598,7 +588,6 @@ class AudiobookTab(MiningTabBase):
         run_active = self.worker_thread is not None
 
         self.add_button.setEnabled(not run_active)
-        self.preview_button.setEnabled(has_ready and not run_active)
         self.mine_button.setEnabled(has_ready and not run_active)
         # Clear still works during a run for non-PROCESSING items — it's how
         # the user trims the tail mid-run.
@@ -712,7 +701,7 @@ class AudiobookTab(MiningTabBase):
         would crash the run. Returns ``True`` after a successful release, or
         when there was nothing to release.
 
-        The processor is rebuilt lazily on the next Preview/Mine click via
+        The processor is rebuilt lazily on the next Mine click via
         ``_start_run``.
         """
         if self.worker_thread is not None and self.worker_thread.isRunning():

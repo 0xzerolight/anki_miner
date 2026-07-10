@@ -140,12 +140,14 @@ class SessionReport:
     #: Keys: ``cancelled`` / ``joined`` / ``buttons_idle`` — see ``CancelOutcome``.
     cancel_outcome: dict = field(default_factory=dict)
     #: Total known-word rows in ``known_words.db`` after this session.
-    #: ``-1`` when the DB was absent or unreadable (preview / bypass runs).
+    #: ``-1`` when the DB was absent or unreadable. Process runs write mined
+    #: rows in BOTH modes (phase 5 records ``source='mined'``), so a completed
+    #: session normally reports a positive count.
     known_words_count: int = -1
     #: ``True`` when none of THIS session's mined_forms were re-mined in the NEXT
     #: session (subtraction worked).  ``None`` when not yet checked (i.e. this is the
     #: LAST session or the run is not in faithful mode).  Only set in faithful mode;
-    #: always ``None`` in preview / bypass mode.
+    #: always ``None`` in bypass mode.
     known_words_not_remined: bool | None = None
     #: Normalized per-pixel mean absolute difference vs. session-0 baseline
     #: screenshot (0.0 = identical, 1.0 = maximum difference).  ``None`` when
@@ -185,20 +187,20 @@ def _log_tail(text: str, lines: int = _LOG_TAIL_LINES) -> str:
     return "\n".join(text.splitlines()[-lines:])
 
 
-# Log markers guaranteed to appear in both preview and process runs (emitted by
-# the presenter in phase 1 + phase 2 of EpisodeProcessor.process_episode).
-# "Step 1/5" is in the show_info call at the top of _phase1_parse; "Step 2/5"
-# at the top of _phase2_filter.  Both appear regardless of preview vs process.
+# Log markers guaranteed to appear in every run (emitted by the presenter in
+# phase 1 + phase 2 of EpisodeProcessor.process_episode). "Step 1/5" is in the
+# show_info call at the top of _phase1_parse; "Step 2/5" at the top of
+# _phase2_filter.
 _LOG_MARKERS_COMMON = ("Step 1/5", "Step 2/5")
 
-# Log marker for process mode only: phase 5 creation (preview skips phases 3-5).
+# Phase-5 creation marker: appears only when the run reached card creation
+# (an all-words-already-known session returns early after phase 2).
 _LOG_MARKER_PROCESS_ONLY = "Step 5/5"
 
 
 def _check_gui_state(
     driver: EpisodeTabDriver | AppDriver,
     *,
-    preview: bool,
     result_ok: bool,
     cards_created: int = 0,
 ) -> dict:
@@ -211,8 +213,7 @@ def _check_gui_state(
     observed widget state as data without adding new GUI-specific error noise.
 
     Only called when the run COMPLETED (result captured, no exception) — the
-    caller is responsible for guarding.  Checks are tolerant of preview vs.
-    process: phase-3..5 log markers are only required in process mode.
+    caller is responsible for guarding.
 
     ``cards_created`` gates the card-creation-phase assertions (``Step 5/5`` and
     ``progress_not_stuck``): when all words were already known (``cards_created==0``,
@@ -275,28 +276,24 @@ def _check_gui_state(
             "desc": "phase markers appear in the log in strictly increasing order",
         }
 
-    # 4. Process-only marker: Step 5/5 — only asserted when not preview.
-    # Further gated on cards_created > 0: when all words are already known the
-    # pipeline returns early (before phase 5), so Step 5/5 is legitimately absent.
-    # Record as data (ok=True) in that case so the early-return path never
-    # false-FAILs; a genuine stuck run (cards_created>0 but no Step 5/5) still
-    # fails.
-    if not preview:
-        marker = _LOG_MARKER_PROCESS_ONLY
-        key = f"log_contains:{marker}"
-        found = marker in log
-        # Assert only when cards were actually created (reached phase 5).
-        assert_step5 = result_ok and cards_created > 0
-        checks[key] = {
-            "expected": True,
-            "actual": found,
-            "ok": (found if assert_step5 else True),
-            "desc": (
-                f"log contains '{marker}' (process mode, cards_created>0 only)"
-                if cards_created == 0
-                else f"log contains '{marker}' (process mode only)"
-            ),
-        }
+    # 4. Phase-5 marker: Step 5/5, gated on cards_created > 0: when all words
+    # are already known the pipeline returns early (before phase 5), so Step 5/5
+    # is legitimately absent. Record as data (ok=True) in that case so the
+    # early-return path never false-FAILs; a genuine stuck run (cards_created>0
+    # but no Step 5/5) still fails.
+    marker = _LOG_MARKER_PROCESS_ONLY
+    key = f"log_contains:{marker}"
+    found = marker in log
+    # Assert only when cards were actually created (reached phase 5).
+    assert_step5 = result_ok and cards_created > 0
+    checks[key] = {
+        "expected": True,
+        "actual": found,
+        "ok": (found if assert_step5 else True),
+        "desc": (
+            f"log contains '{marker}' (cards_created>0 only)" if cards_created == 0 else f"log contains '{marker}'"
+        ),
+    }
 
     # 5. Progress state — always recorded as data; never skip.
     prog_value = driver.progress_value()
@@ -315,17 +312,16 @@ def _check_gui_state(
         "desc": "progress status label text after run (data only)",
     }
 
-    # 6. Process-mode stuck-UI check: fail only on clearly broken "stuck" state.
+    # 6. Stuck-UI check: fail only on clearly broken "stuck" state.
     # A healthy run advances progress > 0 OR sets a non-idle status string.
     # We deliberately do NOT assert an exact value (==100) or exact string
     # ("Complete"), since precise end-state varies and strict checks would
-    # false-FAIL on the real run.  Preview leaves progress at 0 by design
-    # (callback not invoked) — never checked for preview.
-    # Further gated on cards_created > 0: when all words are already known the
+    # false-FAIL on the real run.
+    # Gated on cards_created > 0: when all words are already known the
     # pipeline returns early and never advances the progress bar, so progress==0
     # + idle status is expected and must not be flagged.  The check only fires
     # when the run SHOULD have advanced progress (i.e. cards were created).
-    if not preview and result_ok:
+    if result_ok:
         _idle_statuses = {"", "Ready"}
         status_idle = prog_text.strip() in _idle_statuses
         stuck = prog_value == 0 and status_idle
@@ -359,25 +355,21 @@ def _run_cancel_session(
     driver: EpisodeTabDriver | AppDriver,
     *,
     report: SessionReport,
-    preview: bool,
     delay_s: float,
     timeout_s: float,
     index: int,
 ) -> None:
     """Drive a cancel-injected run and record the outcome on ``report``.
 
-    Starts the run (preview or process), schedules a Cancel ``delay_s`` seconds
-    in, and waits for the worker to FINISH (a cancelled run emits no result/error,
-    only ``finished``). Asserts the run-end invariants: the worker joined (no
+    Starts the run, schedules a Cancel ``delay_s`` seconds in, and waits for
+    the worker to FINISH (a cancelled run emits no result/error, only
+    ``finished``). Asserts the run-end invariants: the worker joined (no
     leaked thread) AND the tab returned to idle (reusable for the next session).
     Either failing sets ``report.ok = False`` with a message. The cancel is
     allowed to lose the race against a very fast run — that is recorded, not
     failed (see ``EpisodeTabDriver.cancel_and_wait``).
     """
-    if preview:
-        driver.click_preview()
-    else:
-        driver.click_process()
+    driver.click_process()
 
     outcome: CancelOutcome = driver.cancel_and_wait(delay_s=delay_s, timeout_s=timeout_s)
     report.cancel_outcome = {
@@ -402,7 +394,6 @@ def run_one_session(
     e2e: E2EConfig,
     *,
     test_home: Path,
-    preview: bool,
     bypass_known_words: bool,
     run_dir: RunDir,
     index: int,
@@ -410,14 +401,11 @@ def run_one_session(
     gateway: AnkiGateway | None = None,
     inject_cancel: float | None = None,
 ) -> SessionReport:
-    """Mine one episode and return a :class:`SessionReport`.
+    """Mine one episode (full process run) and return a :class:`SessionReport`.
 
     Args:
         e2e: Harness config (curation policy, timeouts, deck name).
         test_home: Isolated home for all on-disk state.
-        preview: ``True`` clicks Preview (parse+filter only, no Anki);
-            ``False`` clicks Process (creates cards, needs Anki unless
-            ``bypass_known_words``).
         bypass_known_words: Passed to ``build_app_config`` (see its docstring).
         run_dir: Artifact dir for screenshots/JSON.
         index: Session ordinal (0-based) for snapshots/reporting.
@@ -482,17 +470,13 @@ def run_one_session(
             _run_cancel_session(
                 driver,
                 report=report,
-                preview=preview,
                 delay_s=inject_cancel,
                 timeout_s=e2e.result_timeout_s,
                 index=index,
             )
         else:
             with responder:
-                if preview:
-                    driver.click_preview()
-                else:
-                    driver.click_process()
+                driver.click_process()
                 # A hung wait may BE the bug; arm a watchdog that dumps all thread
                 # stacks into the run dir if the wait blows well past its budget.
                 dump_fh = open(hang_dump, "w", encoding="utf-8")  # noqa: SIM115
@@ -520,7 +504,6 @@ def run_one_session(
             # verdict via _assemble_report's any-failed guard.
             gui_checks = _check_gui_state(
                 driver,
-                preview=preview,
                 result_ok=result.success,
                 cards_created=result.cards_created,
             )
@@ -623,7 +606,7 @@ def _read_known_word_count(test_home: Path) -> int:
 
     Pure read: opens the DB in read-only URI mode so it never creates a new file
     and cannot interfere with the running pipeline.  Degrades gracefully when the
-    table has not been initialised yet (preview / bypass runs never create the DB).
+    table has not been initialised yet (e.g. the session failed before phase 5).
     """
     import sqlite3
 
@@ -680,7 +663,7 @@ def _check_known_words_cross_session(
     """
     known = _read_known_words_set(test_home)
     if known is None:
-        # DB absent — likely a preview or the pipeline didn't create it.
+        # DB absent — the pipeline didn't create it (e.g. no session reached phase 5).
         return
 
     prev_mined = set(prev.mined_forms)
@@ -720,7 +703,6 @@ def _assemble_report(
     sessions: list[SessionReport],
     e2e: E2EConfig,
     test_home: Path,
-    preview: bool,
     bypass_known_words: bool,
     run_dir: RunDir,
     extra_config: dict | None = None,
@@ -756,7 +738,6 @@ def _assemble_report(
         "ankiconnect_url": e2e.ankiconnect_url,
         "curation_policy": e2e.curation_policy,
         "first_n": e2e.first_n,
-        "preview": preview,
         "bypass_known_words": bypass_known_words,
         "sessions_requested": len(sessions),
         "screenshot_diff_warn_threshold": SCREENSHOT_DIFF_WARN_THRESHOLD,
@@ -796,8 +777,11 @@ def _prepare_home(test_home: Path, *, fresh: bool) -> dict:
       ``report.json``.
 
     When ``fresh=True`` the home's contents are deleted after sampling (the dir
-    itself is recreated so the run can write into it).  The real ``~/.anki_miner``
-    is always refused via ``_assert_safe_home``.
+    itself is recreated so the run can write into it) — EXCEPT the ``runs``
+    subdirectory: run artifacts are outputs, not home state, and the CALLER's
+    already-created ``RunDir`` for THIS run lives there (wiping it would strand
+    the report/screenshot writes on a deleted directory). The real
+    ``~/.anki_miner`` is always refused via ``_assert_safe_home``.
     """
     from tests.e2e.app_config import MEDIA_TEMP_BASENAME
     from tests.e2e.instrumentation import _count_sqlite_rows, _count_temp_files
@@ -812,7 +796,13 @@ def _prepare_home(test_home: Path, *, fresh: bool) -> dict:
     if fresh and pre_existed:
         import shutil
 
-        shutil.rmtree(test_home)
+        for child in test_home.iterdir():
+            if child.name == "runs":
+                continue
+            if child.is_dir() and not child.is_symlink():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
 
     test_home.mkdir(parents=True, exist_ok=True)
 
@@ -825,31 +815,36 @@ def _prepare_home(test_home: Path, *, fresh: bool) -> dict:
     }
 
 
-def _maybe_gateway(e2e: E2EConfig, *, preview: bool) -> AnkiGateway | None:
-    """Return a ready gateway (deck ensured) for a live process run, else ``None``.
+def _build_gateway(e2e: E2EConfig, *, adopt_deck: bool = False) -> AnkiGateway:
+    """Return a ready gateway (pinged, deck + model ensured).
 
-    For preview runs Anki is not used, so no gateway is built and ``None`` is returned
-    immediately without pinging.
+    Pings Anki first.  If Anki is unreachable the :class:`AnkiUnreachableError`
+    is **re-raised** so it propagates to the runner's ``except
+    AnkiUnreachableError`` handler, which prints a clean one-line ``ERROR:``
+    message and exits with code 2.  (Swallowing the error and returning a
+    gateway-less run would crash deep inside the worker instead of exiting
+    cleanly.)
 
-    For a non-preview (live) run, pings Anki first.  If Anki is unreachable the
-    :class:`AnkiUnreachableError` is **re-raised** so it propagates to the runner's
-    ``except AnkiUnreachableError`` handler, which prints a clean one-line ``ERROR:``
-    message and exits with code 2.  (The old behaviour of swallowing the error and
-    returning ``None`` caused the run to proceed gateway-less and crash deep inside the
-    worker instead of exiting cleanly.)
+    Args:
+        adopt_deck: Forwarded as ``ensure_test_deck(allow_existing=...)``.
+            Cross-process CHILDREN pass ``True``: each child builds a fresh
+            gateway (``_deck_ensured=False``) while the deck already holds the
+            parent's / earlier children's cards — without adoption, child 2+
+            would trip :class:`ForeignDeckError` on a deck the harness itself
+            populated. The PARENT (which vets the deck first) keeps the default
+            ``False`` so a genuinely foreign deck is still refused.
 
     Raises:
-        AnkiUnreachableError: Anki is not reachable (non-preview runs only).
-            Callers (``run_inprocess_soak``, ``run_crossprocess_soak``) let this
+        AnkiUnreachableError: Anki is not reachable.  Callers
+            (``run_inprocess_soak``, ``run_crossprocess_soak``) let this
             propagate to the runner, which handles it as a clean exit-2.
-        ForeignDeckError: The test deck already exists with notes from a prior run.
-            Let this propagate so the runner can surface a clean, actionable message.
+        ForeignDeckError: The test deck already exists with notes from a prior run
+            (and ``adopt_deck`` is False). Let this propagate so the runner can
+            surface a clean, actionable message.
     """
-    if preview:
-        return None
     gateway = AnkiGateway(e2e)
     gateway.ping()  # AnkiUnreachableError propagates to the runner's clean exit-2 handler
-    gateway.ensure_test_deck()  # raises ForeignDeckError if deck has prior-run notes
+    gateway.ensure_test_deck(allow_existing=adopt_deck)  # ForeignDeckError if foreign notes
     gateway.ensure_test_model()
     return gateway
 
@@ -863,7 +858,6 @@ def run_inprocess_soak(
     e2e: E2EConfig,
     *,
     sessions: int,
-    preview: bool,
     bypass_known_words: bool,
     run_dir: RunDir,
     test_home: Path,
@@ -910,10 +904,10 @@ def run_inprocess_soak(
     any_failed = False
 
     with guard_real_home(Path.home() / ".anki_miner"):
-        gateway = _maybe_gateway(e2e, preview=preview)
+        gateway = _build_gateway(e2e)
         # ONE driver reused across every session (leak detection depends on it).
         # Full-window builds a real MainWindow (with the episode tab mounted +
-        # ResultsDialog/WordPreviewDialog/run_setup_wizard/curation patched); the
+        # ResultsDialog/run_setup_wizard/curation patched); the
         # default path drives the bare tab. AppDriver holds the dialog/responder
         # patches open for its lifetime, so the responder used per session by
         # run_one_session simply re-patches curation (a harmless re-entry).
@@ -923,9 +917,9 @@ def run_inprocess_soak(
         else:
             driver = EpisodeTabDriver(cfg, run_dir)
         # Whether cross-session known-words checks are active: faithful mode only.
-        # Preview / bypass legitimately re-mines and never writes known_words.db,
-        # so these asserts would be meaningless noise there.
-        faithful = not preview and not bypass_known_words
+        # Bypass mode legitimately re-mines (no phase-2 subtraction), so these
+        # asserts would be meaningless noise there.
+        faithful = not bypass_known_words
 
         baseline_screenshot: Path | None = None
         try:
@@ -933,15 +927,15 @@ def run_inprocess_soak(
                 report = run_one_session(
                     e2e,
                     test_home=test_home,
-                    preview=preview,
                     bypass_known_words=bypass_known_words,
                     run_dir=run_dir,
                     index=i,
                     driver=driver,
                     gateway=gateway,
                 )
-                # Record how many known words the DB holds after this session.
-                # -1 in preview/bypass (DB not created); positive count in faithful.
+                # Record how many known words the DB holds after this session
+                # (phase 5 writes mined rows in both modes; -1 only when the
+                # session never reached card creation).
                 report.known_words_count = _read_known_word_count(test_home)
 
                 # Screenshot baseline-diff: session 0 = baseline; subsequent
@@ -980,7 +974,6 @@ def run_inprocess_soak(
                 cancel_report = run_one_session(
                     e2e,
                     test_home=test_home,
-                    preview=preview,
                     bypass_known_words=bypass_known_words,
                     run_dir=run_dir,
                     index=sessions,
@@ -1016,7 +1009,6 @@ def run_inprocess_soak(
         sessions=reports,
         e2e=e2e,
         test_home=test_home,
-        preview=preview,
         bypass_known_words=bypass_known_words,
         run_dir=run_dir,
         extra_config=home_info,
@@ -1045,7 +1037,6 @@ def _child_cmd(
     test_home: Path,
     index: int,
     out: Path,
-    preview: bool,
     bypass_known_words: bool,
     run_dir: Path | None = None,
 ) -> list[str]:
@@ -1083,8 +1074,6 @@ def _child_cmd(
     ]
     if run_dir is not None:
         cmd.extend(["--run-dir", str(run_dir)])
-    if preview:
-        cmd.append("--preview")
     if bypass_known_words:
         cmd.append("--bypass-known-words")
     return cmd
@@ -1095,7 +1084,6 @@ def _run_child_session(
     *,
     test_home: Path,
     index: int,
-    preview: bool,
     bypass_known_words: bool,
     child_json: Path,
     run_dir: RunDir,
@@ -1118,7 +1106,6 @@ def _run_child_session(
         test_home=test_home,
         index=index,
         out=child_json,
-        preview=preview,
         bypass_known_words=bypass_known_words,
         run_dir=run_dir.path,
     )
@@ -1197,7 +1184,6 @@ def run_crossprocess_soak(
     e2e: E2EConfig,
     *,
     sessions: int,
-    preview: bool,
     bypass_known_words: bool,
     run_dir: RunDir,
     test_home: Path,
@@ -1229,11 +1215,11 @@ def run_crossprocess_soak(
     parent_disk_deltas: list[dict] = []
     any_failed = False
 
-    # Cross-session known-words checks: faithful mode only (not preview/bypass).
-    faithful = not preview and not bypass_known_words
+    # Cross-session known-words checks: faithful mode only (not bypass).
+    faithful = not bypass_known_words
 
     with guard_real_home(Path.home() / ".anki_miner"):
-        gateway = _maybe_gateway(e2e, preview=preview)
+        gateway = _build_gateway(e2e)
         baseline_screenshot: Path | None = None
         try:
             for i in range(sessions):
@@ -1249,7 +1235,6 @@ def run_crossprocess_soak(
                     e2e,
                     test_home=test_home,
                     index=i,
-                    preview=preview,
                     bypass_known_words=bypass_known_words,
                     child_json=child_json,
                     run_dir=run_dir,
@@ -1297,7 +1282,6 @@ def run_crossprocess_soak(
         sessions=reports,
         e2e=e2e,
         test_home=test_home,
-        preview=preview,
         bypass_known_words=bypass_known_words,
         run_dir=run_dir,
         extra_config={
@@ -1331,7 +1315,6 @@ def _main(argv: list[str] | None = None) -> int:
     parser.add_argument("--home", required=True, type=Path)
     parser.add_argument("--index", type=int, default=0)
     parser.add_argument("--out", required=True, type=Path)
-    parser.add_argument("--preview", action="store_true")
     parser.add_argument("--bypass-known-words", action="store_true")
     # Config forwarded from the parent so cross-process children honour all overrides.
     parser.add_argument("--policy", default="all", choices=["all", "first_n", "none"])
@@ -1371,12 +1354,13 @@ def _main(argv: list[str] | None = None) -> int:
         run_dir = RunDir.adopt(args.run_dir)
     else:
         run_dir = RunDir(e2e.runs_root, label=f"child-{args.index}")
-    gateway = _maybe_gateway(e2e, preview=args.preview)
+    # adopt_deck: this child's fresh gateway must not ForeignDeckError on the
+    # cards earlier sessions created — the parent already vetted the deck.
+    gateway = _build_gateway(e2e, adopt_deck=True)
 
     report = run_one_session(
         e2e,
         test_home=test_home,
-        preview=args.preview,
         bypass_known_words=args.bypass_known_words,
         run_dir=run_dir,
         index=args.index,

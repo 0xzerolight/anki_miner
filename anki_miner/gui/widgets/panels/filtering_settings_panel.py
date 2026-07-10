@@ -678,11 +678,11 @@ class FilteringSettingsPanel(FormPanel):
         """Return a new config with this panel's fields applied.
 
         Uses ``dataclasses.replace`` so the frozen-config invariant is preserved.
-        Called by :meth:`SettingsTab._on_save_clicked` as part of the contribute fold.
+        Called by :meth:`SettingsTab.commit_settings` as part of the contribute fold.
 
         Note: ``subtitle_regex_filter`` and ``use_subtitle_regex_filter`` are
         read here (behind the accessors) but the *validation* of the regex pattern
-        stays in :meth:`SettingsTab._on_save_clicked` — it runs before the fold
+        stays in :meth:`SettingsTab.commit_settings` — it runs before the fold
         so any invalid pattern aborts Save before ``contribute`` is ever called.
         """
         return replace(

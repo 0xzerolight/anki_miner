@@ -19,7 +19,7 @@ def test_curation_attrs_use_item_offset_and_callback_forwarded(tmp_path):
 
     proc = MagicMock()
 
-    def fake_process(video, subtitle, preview_mode, progress_callback, curation_callback=None):
+    def fake_process(video, subtitle, progress_callback=None, curation_callback=None, **kwargs):
         captured.append(
             {
                 "offset": worker._curation_offset,

@@ -3,16 +3,21 @@
 Three subcommands wrap the soak building blocks (``tests/e2e/soak.py``) and the
 Anki gateway for an agent / CI caller:
 
-* ``smoke`` — one real mining session + screenshots (process mode, needs Anki).
-* ``soak`` — multi-session soak (in-process or cross-process), preview or real,
-  faithful or ``--bypass-known-words``.
+* ``smoke`` — one real mining session + screenshots.
+* ``soak`` — multi-session soak (in-process or cross-process), faithful or
+  ``--bypass-known-words`` (single-session only).
 * ``cleanup`` — delete a leftover test deck after inspecting a failure.
+
+Both ``smoke`` and ``soak`` accept ``--fake-anki``: run against an in-process
+``FakeAnkiConnect`` loopback server (deterministic, no live Anki needed; implies
+``--fresh-home`` — an empty fake collection with stale on-disk state would be
+incoherent). Without it they target the real AnkiConnect endpoint.
 
 Machine-readable contract: after a run the runner PRINTS ``RUN_DIR=<abs>`` and
 ``REPORT=<abs>`` to stdout plus the divergence verdict, so the caller can locate
 artifacts. EXIT CODE is 0 on PASS/WARN, non-zero on FAIL. An expected
-"Anki down" case (smoke / non-preview soak) exits non-zero with a one-line
-``ERROR:`` message and NO traceback (caught :class:`AnkiUnreachableError`).
+"Anki down" case exits non-zero with a one-line ``ERROR:`` message and NO
+traceback (caught :class:`AnkiUnreachableError`) — or pass ``--fake-anki``.
 """
 
 from __future__ import annotations
@@ -41,7 +46,7 @@ _QAPP = None
 def _anki_down(e2e: E2EConfig) -> int:
     """Print the one-line Anki-unreachable error to stderr and return exit code 2."""
     print(
-        f"ERROR: Anki not reachable at {e2e.ankiconnect_url} — start Anki with AnkiConnect",
+        f"ERROR: Anki not reachable at {e2e.ankiconnect_url} — start Anki with AnkiConnect, or pass --fake-anki",
         file=sys.stderr,
     )
     return 2
@@ -55,6 +60,22 @@ def _foreign_deck(e2e: E2EConfig) -> int:
         file=sys.stderr,
     )
     return 2
+
+
+def _start_fake_anki(args: argparse.Namespace, e2e: E2EConfig):
+    """When ``--fake-anki``: start the fake server and point ``e2e`` at it.
+
+    Returns ``(e2e, fake_or_None)``. The caller must ``stop()`` the fake in a
+    ``finally`` and force ``fresh_home`` when a fake is returned (an empty fake
+    collection with a stale ``known_words.db`` is incoherent state — the mined
+    rows would empty ``mined_forms`` against a deck with no cards).
+    """
+    if not getattr(args, "fake_anki", False):
+        return e2e, None
+    from tests.e2e.fake_ankiconnect import FakeAnkiConnect
+
+    fake = FakeAnkiConnect().start()
+    return dataclasses.replace(e2e, ankiconnect_url=fake.url), fake
 
 
 def _build_config(args: argparse.Namespace) -> E2EConfig:
@@ -94,32 +115,35 @@ def _emit(soak: SoakReport, run_dir: RunDir) -> int:
 
 
 def _cmd_smoke(args: argparse.Namespace) -> int:
-    """One real mining session + screenshots (process mode, needs Anki)."""
+    """One real mining session + screenshots (needs Anki, or ``--fake-anki``)."""
     e2e = _build_config(args)
     # Belt-and-suspenders: re-assert ANKI_MINER_HOME + patch any home snapshot a
     # module imported transitively before the shim's pre-import env-set took hold
     # (the standalone runner never sees conftest's isolation fixtures).
     set_test_home(e2e.test_home)
+    e2e, fake = _start_fake_anki(args, e2e)
     run_dir = RunDir(e2e.runs_root, label="smoke")
     try:
         soak = run_inprocess_soak(
             e2e,
             sessions=1,
-            preview=False,
             bypass_known_words=True,
             run_dir=run_dir,
             test_home=e2e.test_home,
-            fresh_home=getattr(args, "fresh_home", False),
+            fresh_home=getattr(args, "fresh_home", False) or fake is not None,
         )
     except AnkiUnreachableError:
         return _anki_down(e2e)
     except ForeignDeckError:
         return _foreign_deck(e2e)
+    finally:
+        if fake is not None:
+            fake.stop()
     return _emit(soak, run_dir)
 
 
 def _cmd_soak(args: argparse.Namespace) -> int:
-    """Multi-session soak (in-process or cross-process; preview or real)."""
+    """Multi-session soak (in-process or cross-process; real or fake Anki)."""
     e2e = _build_config(args)
     # See _cmd_smoke: re-assert home env + patch transitively-imported snapshots.
     set_test_home(e2e.test_home)
@@ -148,27 +172,39 @@ def _cmd_soak(args: argparse.Namespace) -> int:
         print("ERROR: --full-window is only supported with --mode inprocess", file=sys.stderr)
         return 2
 
+    if args.bypass_known_words and args.sessions > 1:
+        # Card creation is stateful: session 2+ of an identical bypass run
+        # dup-skips everything (cards_created=0, mined_forms=[]) and fails the
+        # exact-set assertions. Faithful mode is the multi-session mode.
+        print(
+            "ERROR: --bypass-known-words is single-session only (card creation is "
+            "stateful: session 2+ would dup-skip everything). Use faithful mode "
+            "for multi-session soaks.",
+            file=sys.stderr,
+        )
+        return 2
+
+    e2e, fake = _start_fake_anki(args, e2e)
+    fresh_home = getattr(args, "fresh_home", False) or fake is not None
     run_dir = RunDir(e2e.runs_root, label=f"soak-{args.mode}")
     try:
         if args.mode == "crossprocess":
             soak = run_crossprocess_soak(
                 e2e,
                 sessions=args.sessions,
-                preview=args.preview,
                 bypass_known_words=args.bypass_known_words,
                 run_dir=run_dir,
                 test_home=e2e.test_home,
-                fresh_home=getattr(args, "fresh_home", False),
+                fresh_home=fresh_home,
             )
         else:
             soak = run_inprocess_soak(
                 e2e,
                 sessions=args.sessions,
-                preview=args.preview,
                 bypass_known_words=args.bypass_known_words,
                 run_dir=run_dir,
                 test_home=e2e.test_home,
-                fresh_home=getattr(args, "fresh_home", False),
+                fresh_home=fresh_home,
                 inject_cancel=inject_cancel,
                 full_window=full_window,
             )
@@ -176,6 +212,9 @@ def _cmd_soak(args: argparse.Namespace) -> int:
         return _anki_down(e2e)
     except ForeignDeckError:
         return _foreign_deck(e2e)
+    finally:
+        if fake is not None:
+            fake.stop()
     return _emit(soak, run_dir)
 
 
@@ -202,7 +241,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     sub = parser.add_subparsers(dest="command", required=True)
 
-    smoke = sub.add_parser("smoke", help="One real mining session + screenshots (needs Anki).")
+    smoke = sub.add_parser("smoke", help="One real mining session + screenshots (needs Anki or --fake-anki).")
     smoke.add_argument(
         "--timeout",
         type=int,
@@ -220,14 +259,28 @@ def _build_parser() -> argparse.ArgumentParser:
             "recorded in report.json regardless of this flag."
         ),
     )
+    smoke.add_argument(
+        "--fake-anki",
+        dest="fake_anki",
+        action="store_true",
+        help=(
+            "Run against an in-process FakeAnkiConnect loopback server — "
+            "deterministic, no live Anki needed. Implies --fresh-home."
+        ),
+    )
 
     soak = sub.add_parser("soak", help="Multi-session soak (bug-hunt).")
     soak.add_argument("--mode", choices=["inprocess", "crossprocess"], default="inprocess")
     soak.add_argument("--sessions", type=int, default=5)
     soak.add_argument(
-        "--preview",
+        "--fake-anki",
+        dest="fake_anki",
         action="store_true",
-        help="Preview only (parse+filter, no Anki). Default: real card creation.",
+        help=(
+            "Run against an in-process FakeAnkiConnect loopback server — "
+            "deterministic, no live Anki needed. Implies --fresh-home. "
+            "Works cross-process (children reach it over TCP)."
+        ),
     )
     soak.add_argument(
         "--bypass-known-words",

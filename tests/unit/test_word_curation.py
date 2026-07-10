@@ -174,28 +174,3 @@ class TestCurationCallback:
 
         assert result.cards_created == 1
         assert result.success is True
-
-    def test_curation_callback_skipped_in_preview_mode(self, processor, mock_services, tmp_path):
-        """In preview mode, curation callback should NOT be called."""
-        words = [_make_word("食べる")]
-        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
-        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
-        mock_services["word_filter"].filter_unknown.return_value = words
-
-        callback_called = False
-
-        def should_not_be_called(word_list):
-            nonlocal callback_called
-            callback_called = True
-            return word_list
-
-        result = processor.process_episode(
-            tmp_path / "v.mkv",
-            tmp_path / "s.ass",
-            preview_mode=True,
-            curation_callback=should_not_be_called,
-        )
-
-        assert callback_called is False
-        assert result.new_words_found == 1
-        assert result.cards_created == 0

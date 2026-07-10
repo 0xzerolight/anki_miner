@@ -122,6 +122,39 @@ def test_old_config_without_reading_min_occurrence_gets_default(tmp_config: Path
     assert loaded.reading_min_occurrence == 1
 
 
+def test_reading_tts_defaults():
+    """Feature ships inert: master flag OFF, both providers pre-selected."""
+    config = AnkiMinerConfig()
+    assert config.reading_tts_enabled is False
+    assert config.reading_tts_google_enabled is True
+    assert config.reading_tts_papago_enabled is True
+
+
+def test_save_then_load_preserves_reading_tts_bools(tmp_config: Path):
+    config = replace(
+        AnkiMinerConfig(),
+        reading_tts_enabled=True,
+        reading_tts_google_enabled=False,
+        reading_tts_papago_enabled=True,
+    )
+    GUIConfigManager.save_config(config)
+
+    loaded = GUIConfigManager.load_config()
+    assert loaded.reading_tts_enabled is True
+    assert loaded.reading_tts_google_enabled is False
+    assert loaded.reading_tts_papago_enabled is True
+
+
+def test_old_config_without_reading_tts_keys_gets_defaults(tmp_config: Path):
+    """A saved config predating sentence TTS must backfill the inert defaults."""
+    tmp_config.write_text(json.dumps({"anki_deck_name": "MyDeck"}))
+
+    loaded = GUIConfigManager.load_config()
+    assert loaded.reading_tts_enabled is False
+    assert loaded.reading_tts_google_enabled is True
+    assert loaded.reading_tts_papago_enabled is True
+
+
 def test_obsolete_expression_audio_enabled_key_is_dropped(tmp_config: Path):
     """A legacy config carrying the removed expression_audio_enabled flag must
     load cleanly (the unknown key is dropped, not fatal), and a non-empty

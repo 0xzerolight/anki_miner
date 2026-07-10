@@ -21,6 +21,11 @@ from anki_miner.services.expression_audio_fetcher import (
 from anki_miner.services.google_translate_audio_fetcher import (
     GoogleTranslateAudioFetcher,
 )
+from anki_miner.services.sentence_tts_fetcher import (
+    ChainedSentenceAudioFetcher,
+    GoogleSentenceTtsFetcher,
+    PapagoSentenceTtsFetcher,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers (mirror test_audio_pack_registry.py style)
@@ -494,3 +499,70 @@ class TestCreateServicesAudioChain:
         assert len(fetcher._fetchers) == 2
         assert isinstance(fetcher._fetchers[0], LocalAudioPackFetcher)
         assert isinstance(fetcher._fetchers[1], JPod101AudioFetcher)
+
+
+class TestBuildSentenceAudioFetcher:
+    """Sentence-TTS chain composition (reading sources)."""
+
+    def test_master_off_returns_empty_chain_no_session(self, monkeypatch, base_config):
+        """Disabled feature: empty chain, and no requests.Session constructed."""
+        import anki_miner.services.sentence_tts_fetcher as stf
+
+        sessions = []
+        monkeypatch.setattr(stf, "_new_browser_session", lambda: sessions.append(True) or object(), raising=True)
+        fetcher = service_factory._build_sentence_audio_fetcher(base_config)
+        assert isinstance(fetcher, ChainedSentenceAudioFetcher)
+        assert fetcher._fetchers == []
+        assert sessions == [], "no Session may be constructed for a disabled feature"
+
+    def test_enabled_default_order_google_then_papago(self, base_config):
+        cfg = dataclasses.replace(base_config, reading_tts_enabled=True)
+        fetcher = service_factory._build_sentence_audio_fetcher(cfg)
+        assert isinstance(fetcher, ChainedSentenceAudioFetcher)
+        assert len(fetcher._fetchers) == 2
+        assert isinstance(fetcher._fetchers[0], GoogleSentenceTtsFetcher)
+        assert isinstance(fetcher._fetchers[1], PapagoSentenceTtsFetcher)
+        fetcher.close()
+
+    def test_google_only(self, base_config):
+        cfg = dataclasses.replace(base_config, reading_tts_enabled=True, reading_tts_papago_enabled=False)
+        fetcher = service_factory._build_sentence_audio_fetcher(cfg)
+        assert len(fetcher._fetchers) == 1
+        assert isinstance(fetcher._fetchers[0], GoogleSentenceTtsFetcher)
+
+    def test_papago_only(self, base_config):
+        cfg = dataclasses.replace(base_config, reading_tts_enabled=True, reading_tts_google_enabled=False)
+        fetcher = service_factory._build_sentence_audio_fetcher(cfg)
+        assert len(fetcher._fetchers) == 1
+        assert isinstance(fetcher._fetchers[0], PapagoSentenceTtsFetcher)
+        fetcher.close()
+
+    def test_both_providers_off_yields_empty_chain(self, base_config):
+        cfg = dataclasses.replace(
+            base_config,
+            reading_tts_enabled=True,
+            reading_tts_google_enabled=False,
+            reading_tts_papago_enabled=False,
+        )
+        fetcher = service_factory._build_sentence_audio_fetcher(cfg)
+        assert fetcher._fetchers == []
+
+    def test_construction_no_disk_io(self, tmp_path, base_config):
+        """Enabled chain creates no cache dir at build time (lazy mkdir on fetch)."""
+        import anki_miner.gui.utils.service_factory as sf
+
+        original_home = sf.ANKI_MINER_HOME
+        try:
+            sf.ANKI_MINER_HOME = tmp_path
+            cfg = dataclasses.replace(base_config, reading_tts_enabled=True)
+            fetcher = sf._build_sentence_audio_fetcher(cfg)
+        finally:
+            sf.ANKI_MINER_HOME = original_home
+
+        assert not (tmp_path / "audio_cache" / "sentence_tts").exists()
+        fetcher.close()
+
+    def test_create_services_wires_sentence_fetcher(self, base_config):
+        services = service_factory.create_services(base_config)
+        assert isinstance(services.sentence_audio_fetcher, ChainedSentenceAudioFetcher)
+        assert services.sentence_audio_fetcher._fetchers == []  # default config: inert

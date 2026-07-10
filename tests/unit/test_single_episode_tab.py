@@ -242,7 +242,7 @@ def test_start_processing_passes_override_to_worker(tab, tmp_path):
         ) as mock_worker_cls,
         patch("anki_miner.gui.widgets.single_episode_tab.create_episode_processor", return_value=mock_processor),
     ):
-        tab._start_processing(preview_mode=False)
+        tab._start_processing()
 
     mock_worker_cls.assert_called_once()
     _, kwargs = mock_worker_cls.call_args
@@ -386,7 +386,7 @@ def test_timing_button_hidden_during_processing_and_restored(tab, tmp_path):
         patch("anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread", return_value=mock_worker),
         patch("anki_miner.gui.widgets.single_episode_tab.create_episode_processor", return_value=mock_processor),
     ):
-        tab._start_processing(preview_mode=False)
+        tab._start_processing()
 
     assert tab.timing_button.isHidden(), "timing_button should be hidden during processing"
     assert tab.tracks_button.isHidden(), "tracks_button should be hidden during processing"
@@ -736,7 +736,7 @@ def test_start_processing_does_not_call_create_episode_processor_on_gui_thread(t
         patch("anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread", return_value=mock_worker),
         patch("anki_miner.gui.widgets.single_episode_tab.create_episode_processor") as mock_build,
     ):
-        tab._start_processing(preview_mode=False)
+        tab._start_processing()
 
     # Must NOT have been called during _start_processing (GUI-thread).
     mock_build.assert_not_called()
@@ -761,7 +761,7 @@ def test_start_processing_passes_processor_factory_to_worker(tab, tmp_path):
         patch("anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread", return_value=mock_worker) as worker_cls,
         patch("anki_miner.gui.widgets.single_episode_tab.create_episode_processor"),
     ):
-        tab._start_processing(preview_mode=False)
+        tab._start_processing()
 
     worker_cls.assert_called_once()
     _, kwargs = worker_cls.call_args
@@ -802,7 +802,7 @@ def test_factory_closure_calls_create_episode_processor_when_invoked(tab, tmp_pa
             return_value=built_processor,
         ) as mock_build,
     ):
-        tab._start_processing(preview_mode=False)
+        tab._start_processing()
 
         assert len(captured_factory) == 1
         factory = captured_factory[0]
@@ -850,7 +850,7 @@ def test_mocked_mine_produces_result_and_curation_context_resolves(tab, tmp_path
             return_value=facade_processor,
         ),
     ):
-        tab._start_processing(preview_mode=True)
+        tab._start_processing()
 
         # worker_thread was set to the mock; no real QThread was spawned.
         assert tab.worker_thread is mock_worker

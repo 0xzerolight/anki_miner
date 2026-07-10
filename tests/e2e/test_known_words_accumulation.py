@@ -17,6 +17,7 @@ Three categories:
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import pytest
@@ -262,7 +263,7 @@ def test_seed_known_word_excluded_from_session_mined_set(tmp_path: Path) -> None
 
 
 # ---------------------------------------------------------------------------
-# Integration: preview soak stays green (bypass/preview leaves known_words_count=-1)
+# SessionReport field defaults + child-JSON round-trips
 # ---------------------------------------------------------------------------
 
 
@@ -342,47 +343,47 @@ def test_session_report_from_dict_defaults_missing_new_fields() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Preview soak: known_words_count stays -1 (DB not created)
+# Bypass soak: mined rows ARE written, cross-session checks stay off
 # ---------------------------------------------------------------------------
 
 
-def test_preview_soak_known_words_count_not_grown_and_no_cross_session_checks(
-    isolated_home: Path, tmp_path: Path, qtbot
+@pytest.mark.network
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg required for process-mode runs")
+def test_bypass_soak_writes_mined_rows_but_skips_cross_session_checks(
+    isolated_home: Path, tmp_path: Path, qtbot, fake_anki
 ) -> None:
-    """In a preview+bypass soak the cross-session known-words checks never fire.
+    """In a bypass process run mined rows land in known_words.db; faithful checks stay off.
 
-    ``known_words_not_remined`` stays ``None`` (the faithful-mode-only check is
-    skipped). ``known_words_count`` is recorded from the on-disk DB; in bypass/
-    preview mode the pipeline never writes mined words there, so the count stays
-    at 0 (or -1 if the DB was never even created).
+    Process mode reaches phase 5, which records every created card as
+    ``source='mined'`` regardless of bypass — so ``known_words_count`` equals
+    the full fixture lemma count after one session. ``known_words_not_remined``
+    stays ``None``: the cross-session subtraction invariant is faithful-only
+    (bypass legitimately re-mines). Single-session because bypass card creation
+    is stateful (a repeat run would dup-skip everything).
     """
     pytest.importorskip("fugashi")
 
     from tests.e2e.artifacts import RunDir
     from tests.e2e.config import E2EConfig
+    from tests.e2e.fixtures_subtitle import EXPECTED_LEMMAS
     from tests.e2e.soak import run_inprocess_soak
 
-    e2e = E2EConfig(test_home=isolated_home)
-    run_dir = RunDir(tmp_path / "runs", label="kw-preview")
+    e2e = E2EConfig(test_home=isolated_home, ankiconnect_url=fake_anki.url)
+    run_dir = RunDir(tmp_path / "runs", label="kw-bypass")
 
     soak = run_inprocess_soak(
         e2e,
-        sessions=2,
-        preview=True,
+        sessions=1,
         bypass_known_words=True,
         run_dir=run_dir,
         test_home=isolated_home,
     )
 
     assert soak.verdict == "PASS", f"soak FAIL: {[s.errors for s in soak.sessions]}"
-    for s in soak.sessions:
-        # In preview+bypass mode mined words are never written to known_words.db,
-        # so the count stays at 0 (or -1 if the DB was not created at all).
-        assert s.known_words_count <= 0, (
-            f"session {s.index}: known_words_count should be 0 or -1 in bypass/preview mode "
-            f"(no mined words written), got {s.known_words_count}"
-        )
-        # The cross-session known-words invariant checks never fire in non-faithful mode.
-        assert (
-            s.known_words_not_remined is None
-        ), f"session {s.index}: known_words_not_remined should be None in bypass/preview mode"
+    (s,) = soak.sessions
+    # Phase 5 wrote every mined card into known_words.db (source='mined').
+    assert s.known_words_count == len(
+        EXPECTED_LEMMAS
+    ), f"expected {len(EXPECTED_LEMMAS)} mined rows in known_words.db, got {s.known_words_count}"
+    # The cross-session known-words invariant checks never fire in bypass mode.
+    assert s.known_words_not_remined is None, "known_words_not_remined should be None in bypass mode"

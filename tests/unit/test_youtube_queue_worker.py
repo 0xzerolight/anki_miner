@@ -84,7 +84,6 @@ def make_worker(qapp, mock_processor, youtube_config):
     def _make(
         items: list[YouTubeQueueItem] | None = None,
         curation_callback=None,
-        preview_mode: bool = False,
     ) -> YouTubeQueueWorker:
         if items is None:
             items = [_make_item()]
@@ -93,7 +92,6 @@ def make_worker(qapp, mock_processor, youtube_config):
             config=youtube_config,
             items=items,
             curation_callback=curation_callback,
-            preview_mode=preview_mode,
         )
 
     return _make
@@ -452,7 +450,6 @@ def test_bot_detection_error_workspace_cleaned(qapp, mock_processor, youtube_con
         config=youtube_config,
         items=[item],
         curation_callback=None,
-        preview_mode=False,
     )
     worker.run()
 
@@ -463,46 +460,28 @@ def test_bot_detection_error_workspace_cleaned(qapp, mock_processor, youtube_con
 
 
 # ---------------------------------------------------------------------------
-# curation_callback forwarded unconditionally (dead-code-bug fix)
+# curation_callback forwarded (the tab gates on its review checkbox)
 # ---------------------------------------------------------------------------
 
 
-def test_non_preview_forwards_curation_callback(make_worker, mock_processor):
-    """Non-preview runs must forward curation_callback (not None).
-
-    process_episode internally gates invocation on not preview_mode, so
-    passing it unconditionally is correct and was the dead-code bug.
-    """
+def test_forwards_curation_callback(make_worker, mock_processor):
+    """A supplied curation_callback must reach process_youtube_url."""
 
     def _curation(words):
         return words
 
     items = [_make_item(video_id="a")]
-    worker = make_worker(items=items, curation_callback=_curation, preview_mode=False)
+    worker = make_worker(items=items, curation_callback=_curation)
     worker.run()
 
     kwargs = mock_processor.process_youtube_url.call_args.kwargs
     assert kwargs["curation_callback"] is _curation
-    assert kwargs["preview_mode"] is False
-
-
-def test_preview_mode_true_forwards_curation_callback(make_worker, mock_processor):
-    def _curation(words):
-        return words
-
-    items = [_make_item(video_id="a")]
-    worker = make_worker(items=items, curation_callback=_curation, preview_mode=True)
-    worker.run()
-
-    kwargs = mock_processor.process_youtube_url.call_args.kwargs
-    assert kwargs["curation_callback"] is _curation
-    assert kwargs["preview_mode"] is True
 
 
 def test_none_curation_callback_passed_through(make_worker, mock_processor):
     """When curation_callback is None it is forwarded as None (disabled)."""
     items = [_make_item(video_id="a")]
-    worker = make_worker(items=items, curation_callback=None, preview_mode=False)
+    worker = make_worker(items=items, curation_callback=None)
     worker.run()
 
     kwargs = mock_processor.process_youtube_url.call_args.kwargs
@@ -690,7 +669,6 @@ def test_curation_processor_and_offset_set_from_constructor(qapp, mock_processor
         config=youtube_config,
         items=[],
         curation_callback=None,
-        preview_mode=False,
     )
     assert worker.curation_processor is mock_processor
     assert worker._curation_offset == youtube_config.subtitle_offset
@@ -728,7 +706,6 @@ def test_capture_curation_media_populates_video_and_subtitle(qapp, mock_processo
         config=youtube_config,
         items=[],
         curation_callback=None,
-        preview_mode=False,
     )
 
     video_path = tmp_path / "video.mp4"
@@ -765,7 +742,6 @@ def test_on_fetched_invoked_populates_curation_paths(qapp, mock_processor, youtu
         config=youtube_config,
         items=[item],
         curation_callback=None,
-        preview_mode=False,
     )
     worker.run()
 
@@ -932,7 +908,6 @@ def test_factory_path_builds_processor_inside_run(qapp, youtube_config):
         config=youtube_config,
         items=[_make_item()],
         curation_callback=None,
-        preview_mode=False,
         processor_factory=factory,
     )
     assert worker.curation_processor is None
@@ -957,7 +932,6 @@ def test_factory_path_error_emits_error_and_queue_finished(qapp, youtube_config)
         config=youtube_config,
         items=[_make_item()],
         curation_callback=None,
-        preview_mode=False,
         processor_factory=bad_factory,
     )
     errors: list[str] = []
@@ -990,7 +964,6 @@ def test_both_processor_and_factory_raises(qapp, mock_processor, youtube_config)
             config=youtube_config,
             items=[_make_item()],
             curation_callback=None,
-            preview_mode=False,
             processor_factory=lambda: mock_processor,
         )
 
@@ -1003,7 +976,6 @@ def test_neither_processor_nor_factory_raises(qapp, youtube_config):
             config=youtube_config,
             items=[_make_item()],
             curation_callback=None,
-            preview_mode=False,
         )
 
 

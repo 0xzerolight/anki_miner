@@ -2,7 +2,6 @@
 
 Covers the few spots that bypass QSS-driven scaling and were previously hardcoded:
 - WordCurationDialog table row height + label fonts
-- WordPreviewDialog table row height + label fonts
 - SubtitlePlayerWidget overlay font-size
 
 All require a QApplication (QT_QPA_PLATFORM=offscreen in CI). The Theme singleton
@@ -12,12 +11,9 @@ font scale is reset to 1.0 in teardown so these tests never leak scale into othe
 from __future__ import annotations
 
 import pytest
-from PyQt6.QtGui import QFont
 
-from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
-from anki_miner.gui.widgets.dialogs.word_preview_dialog import WordPreviewDialog
 from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
 from anki_miner.models import TokenizedWord
 
@@ -87,42 +83,6 @@ class TestCurationRowHeight:
         qtbot.addWidget(dlg)
         try:
             assert dlg._make_font(16).pixelSize() == 24  # 16 * 1.5
-        finally:
-            dlg.deleteLater()
-
-
-class TestPreviewRowHeight:
-    """WordPreviewDialog row height + label fonts scale with the global font scale."""
-
-    def test_row_height_at_scale_1_0_equals_base(self, qtbot, test_config: AnkiMinerConfig):
-        _reset(1.0)
-        dlg = WordPreviewDialog(_make_words(2), test_config)
-        qtbot.addWidget(dlg)
-        try:
-            vh = dlg.table.verticalHeader()
-            assert vh is not None
-            assert vh.defaultSectionSize() == WordPreviewDialog._BASE_ROW_HEIGHT  # 32
-        finally:
-            dlg.deleteLater()
-
-    def test_row_height_doubles_at_scale_2_0(self, qtbot, test_config: AnkiMinerConfig):
-        _reset(2.0)
-        dlg = WordPreviewDialog(_make_words(2), test_config)
-        qtbot.addWidget(dlg)
-        try:
-            vh = dlg.table.verticalHeader()
-            assert vh is not None
-            assert vh.defaultSectionSize() == round(WordPreviewDialog._BASE_ROW_HEIGHT * 2.0)  # 64
-        finally:
-            dlg.deleteLater()
-
-    def test_create_font_scales_pixel_size(self, qtbot, test_config: AnkiMinerConfig):
-        _reset(1.5)
-        dlg = WordPreviewDialog(_make_words(1), test_config)
-        qtbot.addWidget(dlg)
-        try:
-            font = dlg._create_font(16, QFont.Weight.Bold)
-            assert font.pixelSize() == 24  # 16 * 1.5
         finally:
             dlg.deleteLater()
 

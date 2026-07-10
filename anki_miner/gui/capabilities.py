@@ -29,12 +29,20 @@ TRANSLATION_CONTEXT = "Capabilities"
 
 # Stable main-tab keys (resolved by MainWindow._main_tab_index, never indices).
 MAIN_TABS: frozenset[str] = frozenset(
-    {"episode", "batch", "deckbuilder", "youtube", "audiobook", "reading", "analytics", "subtitles", "settings"}
+    {"video", "deckbuilder", "audiobook", "reading", "analytics", "subtitles", "settings"}
 )
 # Stable settings sub-tab keys (resolved by SettingsTab.open_subtab).
 SETTINGS_SUBTABS: frozenset[str] = frozenset(
     {"anki", "media", "dictionaries", "audio", "frequency", "filtering", "youtube", "subtitles", "ui"}
 )
+# Valid sub-tab keys per container main tab (resolved by the container's
+# duck-typed ``open_subtab``). Main tabs absent here have no sub-tabs.
+SUBTAB_KEYS: dict[str, frozenset[str]] = {
+    "settings": SETTINGS_SUBTABS,
+    "video": frozenset({"single", "batch", "youtube"}),
+    "reading": frozenset({"manga", "novels", "subtitles"}),
+    "subtitles": frozenset({"generate", "retime", "condense"}),
+}
 
 # Display categories (deduped; translated at display time).
 _CAT_WORKFLOWS = QT_TRANSLATE_NOOP("Capabilities", "Mining workflows")
@@ -50,12 +58,15 @@ _CAT_APPEARANCE = QT_TRANSLATE_NOOP("Capabilities", "Appearance & language")
 class CapabilityTarget:
     """Where a capability lives, by stable key (never a hard-coded tab index).
 
-    ``main_tab`` is one of :data:`MAIN_TABS`. ``settings_subtab`` is set only when
-    ``main_tab == "settings"`` and names one of :data:`SETTINGS_SUBTABS`.
+    ``main_tab`` is one of :data:`MAIN_TABS`. ``subtab`` optionally names an
+    inner sub-tab of a container main tab; valid keys per container are in
+    :data:`SUBTAB_KEYS` and are resolved by the container widget's duck-typed
+    ``open_subtab``. It MUST stay the second positional field — the catalogue
+    constructs targets positionally.
     """
 
     main_tab: str
-    settings_subtab: str | None = None
+    subtab: str | None = None
 
 
 @dataclass(frozen=True)
@@ -77,7 +88,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Mine a single episode"),
         description=QT_TRANSLATE_NOOP("Capabilities", "Mine vocabulary from one video paired with its subtitle file."),
         category=_CAT_WORKFLOWS,
-        target=CapabilityTarget("episode"),
+        target=CapabilityTarget("video", "single"),
         keywords=("single", "episode", "movie", "film", "video", "one file"),
     ),
     Capability(
@@ -85,7 +96,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Batch-mine a whole folder"),
         description=QT_TRANSLATE_NOOP("Capabilities", "Queue an entire folder of episodes and mine them in one run."),
         category=_CAT_WORKFLOWS,
-        target=CapabilityTarget("batch"),
+        target=CapabilityTarget("video", "batch"),
         keywords=("batch", "folder", "bulk", "season", "multiple", "queue", "many episodes"),
     ),
     Capability(
@@ -117,7 +128,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Capabilities", "Mine straight from a YouTube URL or playlist -- no local files needed."
         ),
         category=_CAT_WORKFLOWS,
-        target=CapabilityTarget("youtube"),
+        target=CapabilityTarget("video", "youtube"),
         keywords=("youtube", "url", "playlist", "online", "stream", "web video"),
     ),
     Capability(
@@ -131,26 +142,52 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("audiobook", "audio", "mp3", "book", "listening", "ln"),
     ),
     Capability(
-        id="reading-mining",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Mine from manga or novels"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities",
-            "Mine vocabulary from manga volumes (mokuro) in the Manga sub-tab, "
-            "or novels (EPUB/text) in the Novels sub-tab.",
-        ),
+        id="manga-mining",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Mine from manga"),
+        description=QT_TRANSLATE_NOOP("Capabilities", "Mine vocabulary from manga volumes processed with mokuro."),
         category=_CAT_WORKFLOWS,
-        target=CapabilityTarget("reading"),
-        keywords=("manga", "mokuro", "novel", "epub", "text", "book", "reading", "cbz", "aozora", "ln"),
+        target=CapabilityTarget("reading", "manga"),
+        keywords=("manga", "mokuro", "reading", "cbz", "comic"),
     ),
     Capability(
-        id="subtitle-tools",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Generate or re-time subtitles"),
+        id="novels-mining",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Mine from novels"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Create subtitles from audio, or re-sync existing subtitles -- as a standalone tool."
+            "Capabilities", "Mine vocabulary from novels and other text (EPUB, Aozora, plain text)."
         ),
         category=_CAT_WORKFLOWS,
-        target=CapabilityTarget("subtitles"),
-        keywords=("generate subtitles", "retime", "resync", "re-time", "alass", "sync subtitles", "standalone"),
+        target=CapabilityTarget("reading", "novels"),
+        keywords=("novel", "epub", "text", "book", "reading", "aozora", "ln", "light novel"),
+    ),
+    Capability(
+        id="subtitle-generate",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Generate subtitles from audio"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities", "Create subtitles from audio with a local Whisper model -- as a standalone tool."
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("subtitles", "generate"),
+        keywords=("generate subtitles", "asr", "whisper", "transcribe", "standalone"),
+    ),
+    Capability(
+        id="subtitle-retime",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Re-time existing subtitles"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities", "Re-sync existing subtitles against the video -- as a standalone tool."
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("subtitles", "retime"),
+        keywords=("retime", "resync", "re-time", "alass", "sync subtitles", "offset", "standalone"),
+    ),
+    Capability(
+        id="subtitle-condense",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Condense audio from subtitles"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities", "Build dialogue-only condensed audio from a video or audio file and its subtitles."
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("subtitles", "condense"),
+        keywords=("condense", "condensed audio", "dialogue only", "immersion", "passive listening", "standalone"),
     ),
     Capability(
         id="analytics",

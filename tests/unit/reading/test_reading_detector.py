@@ -20,6 +20,7 @@ _LOADER_MODULES = {
     "mokuro": "anki_miner.services.reading.mokuro_source",
     "epub": "anki_miner.services.reading.epub_source",
     "txt": "anki_miner.services.reading.aozora_source",
+    "subtitle": "anki_miner.services.reading.subtitle_source",
 }
 
 
@@ -288,8 +289,52 @@ def test_unknown_extension_errors(tmp_path):
     movie = tmp_path / "movie.mp4"
     movie.write_bytes(b"x")
 
-    with pytest.raises(SetupError):
+    with pytest.raises(SetupError) as excinfo:
         detector.detect(movie)
+
+    # The guidance message names every supported input class.
+    assert ".srt/.ass/.ssa/.vtt" in str(excinfo.value)
+
+
+# --------------------------------------------------------------------------- #
+# Case 5: subtitle files — classify by extension, no file open, provisional fill.
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("ext", [".srt", ".ass", ".ssa", ".vtt"])
+def test_subtitle_ref_provisional_fill(tmp_path, ext):
+    sub = tmp_path / f"Ep01{ext}"
+    sub.write_text("stub", encoding="utf-8")
+
+    refs = detector.detect(sub)
+
+    assert len(refs) == 1
+    ref = refs[0]
+    assert ref.kind == "subtitle"
+    assert ref.path == sub
+    assert ref.title == "Ep01"
+    assert ref.volume is None
+    assert ref.image_root is None
+
+
+def test_subtitle_ref_uppercase_extension(tmp_path):
+    # detect() lowercases the suffix; the ref keeps the original-case path.
+    sub = tmp_path / "EP01.SRT"
+    refs = detector.detect(sub)
+    assert refs[0].kind == "subtitle"
+    assert refs[0].path == sub
+
+
+def test_subtitle_ref_does_not_open_the_file(tmp_path):
+    refs = detector.detect(tmp_path / "ghost.srt")
+    assert refs[0].kind == "subtitle"
+    assert refs[0].title == "ghost"
+
+
+def test_microdvd_sub_not_recognized(tmp_path):
+    # MicroDVD is frame-based (needs fps we don't have) — deliberately cut.
+    with pytest.raises(SetupError):
+        detector.detect(tmp_path / "movie.sub")
 
 
 # --------------------------------------------------------------------------- #
@@ -357,7 +402,7 @@ def test_mokuro_missing_file_errors(tmp_path):
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.parametrize("kind", ["mokuro", "epub", "txt"])
+@pytest.mark.parametrize("kind", ["mokuro", "epub", "txt", "subtitle"])
 def test_load_dispatches_to_source_module(kind: str, monkeypatch: pytest.MonkeyPatch) -> None:
     # ``detector.load`` does ``from . import <loader>`` then ``<loader>.load(ref)``.
     # The loaders really exist post-integration, so patch the real seam: monkeypatch

@@ -1,7 +1,7 @@
 """Tests for reading_queue module.
 
 The persistent ``ReadingQueue`` collection was removed with the manga tab's
-queue; each Preview/Mine run now builds an ephemeral ``ReadingQueueItem`` list
+queue; each Mine run now builds an ephemeral ``ReadingQueueItem`` list
 handed straight to the worker. Only the item + status models remain.
 """
 

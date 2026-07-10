@@ -67,7 +67,6 @@ class AudiobookQueueWorker(ProcessorOwningWorker):
         config: AnkiMinerConfig,
         items: list[AudiobookQueueItem],
         curation_callback: Callable[[list], list | None] | None,
-        preview_mode: bool,
         parent=None,
         *,
         processor_factory: Callable[[], EpisodeProcessor] | None = None,
@@ -79,11 +78,8 @@ class AudiobookQueueWorker(ProcessorOwningWorker):
                 ``processor_factory`` is provided (built at run() start).
             config: Frozen app config.
             items: Queue items to process, in order (frozen snapshot).
-            curation_callback: Forwarded unconditionally to
-                ``process_episode``, which internally gates invocation on
-                ``not preview_mode``, so curation fires only on Mine runs.
-                Pass ``None`` to disable entirely.
-            preview_mode: If True, mining produces previews instead of cards.
+            curation_callback: Forwarded to ``process_episode``. Pass ``None``
+                to disable entirely (the tab gates on its review checkbox).
             parent: Optional parent QObject.
             processor_factory: Zero-arg callable that returns an EpisodeProcessor.
                 Mutually exclusive with a non-None ``processor``.  When supplied,
@@ -100,7 +96,6 @@ class AudiobookQueueWorker(ProcessorOwningWorker):
         self._config = config
         self._items = items
         self._curation_callback = curation_callback
-        self._preview_mode = preview_mode
         # Published for the GUI curation bridge. Attribute names mirror
         # the other queue workers' _curation_* so the shared curation bridge
         # can read the same attribute names regardless of which worker is
@@ -204,10 +199,7 @@ class AudiobookQueueWorker(ProcessorOwningWorker):
             item.audio_file,
             item.subtitle_file,
             audio_only=True,
-            preview_mode=self._preview_mode,
             progress_callback=mining_cb,
-            # process_episode gates curation on not preview_mode, so this fires
-            # only on Mine runs; passing it unconditionally is correct.
             curation_callback=self._curation_callback,
             episode_name_override=item.audio_file.stem,
             series_name_override="Audio",

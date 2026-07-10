@@ -8,10 +8,10 @@ under test:
   clears both file pickers; rejections log an error and leave the pickers.
 * Auto-fill: picking an audio file fills the subtitle picker with the
   same-stem subtitle next to it — only when the subtitle field is empty.
-* Buttons: Preview/Mine enabled iff ≥1 READY item and no run; Clear iff the
+* Buttons: Mine enabled iff ≥1 READY item and no run; Clear iff the
   queue is non-empty; Stop visible only during a run.
-* Preview / Mine instantiate :class:`AudiobookQueueWorker` with the right
-  ``preview_mode`` over a READY-items snapshot.
+* Mine instantiates :class:`AudiobookQueueWorker` over a READY-items
+  snapshot.
 * Per-item signals update the queue model + row widgets + progress widget.
 * Mid-run removal/clear route dropped items to ``worker.skip_item``.
 * ``shutdown()`` releases any curation dialog, then cancels and joins.
@@ -82,7 +82,6 @@ class TestInitialState:
     def test_empty_queue_buttons(self, tab):
         assert tab._queue.all_items() == []
         assert tab.add_button.isEnabled()
-        assert not tab.preview_button.isEnabled()
         assert not tab.mine_button.isEnabled()
         assert not tab.clear_button.isEnabled()
         assert tab.stop_button.isHidden()
@@ -127,7 +126,6 @@ class TestAddPair:
 
     def test_add_enables_run_buttons(self, tab, tmp_path):
         _add_pair(tab, tmp_path)
-        assert tab.preview_button.isEnabled()
         assert tab.mine_button.isEnabled()
         assert tab.clear_button.isEnabled()
 
@@ -208,16 +206,15 @@ class TestAutoFill:
 
 
 class TestRunStartup:
-    """Preview / Mine buttons construct the queue worker correctly."""
+    """The Mine button constructs the queue worker correctly."""
 
-    def test_mine_constructs_queue_worker_preview_false(self, tab, tmp_path):
+    def test_mine_constructs_queue_worker(self, tab, tmp_path):
         _add_pair(tab, tmp_path)
         queue_cls = tab._queue_worker_cls
         tab._on_mine_clicked()
 
         assert queue_cls.call_count == 1
         kwargs = queue_cls.call_args.kwargs
-        assert kwargs["preview_mode"] is False
         assert kwargs["processor"] is tab._processor
         assert kwargs["config"] is tab._config
         # Curation callback gated by the (default-unchecked) review checkbox.
@@ -241,14 +238,6 @@ class TestRunStartup:
         worker.queue_finished.connect.assert_called_once_with(tab._on_queue_finished)
         worker.finished.connect.assert_called_once_with(tab._on_worker_finished)
 
-    def test_preview_constructs_queue_worker_preview_true(self, tab, tmp_path):
-        _add_pair(tab, tmp_path)
-        queue_cls = tab._queue_worker_cls
-        tab._on_preview_clicked()
-
-        kwargs = queue_cls.call_args.kwargs
-        assert kwargs["preview_mode"] is True
-
     def test_mine_passes_ready_items_only(self, tab, tmp_path):
         item_done = _add_pair(tab, tmp_path, "done")
         item_ready = _add_pair(tab, tmp_path, "ready")
@@ -271,7 +260,6 @@ class TestRunStartup:
         tab._on_mine_clicked()
 
         assert not tab.add_button.isEnabled()
-        assert not tab.preview_button.isEnabled()
         assert not tab.mine_button.isEnabled()
         assert not tab.stop_button.isHidden()
         # Clear still works mid-run (trims non-PROCESSING rows).
@@ -586,9 +574,8 @@ class TestWorkerFinished:
         tab._on_queue_finished()
         tab._on_worker_finished()
 
-        # No more READY items; Preview/Mine disabled, Add re-enabled, Stop hidden.
+        # No more READY items; Mine disabled, Add re-enabled, Stop hidden.
         assert tab.add_button.isEnabled()
-        assert not tab.preview_button.isEnabled()
         assert not tab.mine_button.isEnabled()
         assert tab.stop_button.isHidden()
         assert item.status == AudiobookItemStatus.COMPLETED
@@ -764,7 +751,7 @@ class TestUpdateConfig:
     def test_update_config_idle_drops_processor_to_none(self, tab, test_config):
         """update_config when idle drops processor to None (lazy-drop, OVH-014).
 
-        No eager rebuild — _start_run will rebuild on the next Mine/Preview.
+        No eager rebuild — _start_run will rebuild on the next Mine.
         The old processor must be fully closed (OVH-055, Issue #30).
         """
         old_processor = tab._processor

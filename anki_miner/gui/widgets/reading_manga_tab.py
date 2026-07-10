@@ -1,14 +1,12 @@
 """Manga sub-tab of the Reading tab: one auto-detecting folder, no queue.
 
-Pick a folder (or drop one), then Preview or Mine. The folder is classified by
+Pick a folder (or drop one), then Mine. The folder is classified by
 ``detector.detect``: a single-volume folder resolves to one volume, a series
 folder to many. There is no queue — **Mine** runs whatever the folder resolves
 to sequentially in one job (one ephemeral :class:`ReadingQueueItem` per volume)
 through the shared
 :class:`~anki_miner.gui.widgets._reading_mining_base._ReadingMiningTabBase`
-lifecycle. **Preview** shows a structural
-:class:`~anki_miner.gui.widgets.dialogs.manga_volumes_preview_dialog.MangaVolumesPreviewDialog`
-listing the detected volume(s) — no tokenizing, no cards. Words are inspected
+lifecycle. Words are inspected
 during Mine via the "Review words before mining" curation popup.
 
 Progress uses two bars: the overall bar (vol N of M) appears only for a series
@@ -48,7 +46,6 @@ from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.base import field_label_width
-from anki_miner.gui.widgets.dialogs.manga_volumes_preview_dialog import MangaVolumesPreviewDialog
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
@@ -62,9 +59,10 @@ if TYPE_CHECKING:
     from anki_miner.orchestration import EpisodeProcessor
 
 # Extensions accepted from a drag-drop (directories are always accepted). Manga
-# sources fill the selector; novel drops earn a cross-tab hint.
+# sources fill the selector; novel/subtitle drops earn a cross-tab hint.
 _MANGA_EXTS = (".mokuro", ".cbz", ".zip")
 _NOVEL_EXTS = (".epub", ".txt")
+_SUBTITLE_EXTS = (".srt", ".ass", ".ssa", ".vtt")
 
 
 class ReadingMangaTab(_ReadingMiningTabBase):
@@ -74,7 +72,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     :class:`~anki_miner.gui.workers.reading_queue_worker.ReadingQueueWorker`
     mining the volume(s) a folder resolves to. Button state is purely derived
     from the worker handle by :meth:`_recompute_buttons`: idle shows
-    Preview/Mine, a run swaps them for Cancel.
+    Mine, a run swaps it for Cancel.
 
     Manga curation shows page images (D8 amended): this tab overrides
     ``_build_curation_context`` to hand the dialog the in-flight volume's
@@ -169,7 +167,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         return header
 
     def _create_manga_card(self) -> QFrame:
-        """Manga card: folder selector + Preview / Mine / Cancel."""
+        """Manga card: folder selector + Mine / Cancel."""
         card = QFrame()
         card.setObjectName("card")
         card_layout = QVBoxLayout()
@@ -191,11 +189,6 @@ class ReadingMangaTab(_ReadingMiningTabBase):
 
         button_row = QHBoxLayout()
         button_row.setSpacing(SPACING.sm)
-
-        self.preview_button = ModernButton(self.tr("Preview"), variant="secondary")
-        self.preview_button.setToolTip(self.tr("List the volume(s) this folder would mine — no cards created."))
-        self.preview_button.clicked.connect(self._on_preview_clicked)
-        button_row.addWidget(self.preview_button)
 
         self.mine_button = ModernButton(self.tr("Mine"), variant="primary")
         self.mine_button.setToolTip(self.tr("Mine the selected folder's volume(s) into Anki cards."))
@@ -222,23 +215,24 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:
         """Accept a drag holding a directory or any reading file.
 
-        Novels are accepted too so the drop can be delivered and answered with
-        the cross-tab hint (they never fill the selector here).
+        Novels and subtitles are accepted too so the drop can be delivered and
+        answered with the cross-tab hint (they never fill the selector here).
         """
         if event is None:
             return
         for url in urls_from_event(event):
             local = Path(url.toLocalFile())
             suffix = local.suffix.lower()
-            if local.is_dir() or suffix in _MANGA_EXTS or suffix in _NOVEL_EXTS:
+            if local.is_dir() or suffix in _MANGA_EXTS or suffix in _NOVEL_EXTS or suffix in _SUBTITLE_EXTS:
                 event.acceptProposedAction()
                 return
 
     def dropEvent(self, event: QDropEvent | None) -> None:
-        """Fill the selector from the first dropped folder/manga file; hint novels."""
+        """Fill the selector from the first dropped folder/manga file; hint others."""
         if event is None:
             return
         novel_seen = False
+        subtitle_seen = False
         source_set = False
         for url in urls_from_event(event):
             local = Path(url.toLocalFile())
@@ -249,23 +243,17 @@ class ReadingMangaTab(_ReadingMiningTabBase):
                     source_set = True
             elif suffix in _NOVEL_EXTS:
                 novel_seen = True
+            elif suffix in _SUBTITLE_EXTS:
+                subtitle_seen = True
         if novel_seen and not source_set:
             self.log_widget.append_info(self.tr("Novels are mined in the Novels tab."))
+        if subtitle_seen and not source_set:
+            self.log_widget.append_info(self.tr("Subtitle files are mined in the Subtitles tab."))
         event.acceptProposedAction()
 
     # ------------------------------------------------------------------
     # Run lifecycle
     # ------------------------------------------------------------------
-
-    def _on_preview_clicked(self) -> None:
-        """Preview — classify the folder and list its volume(s). No cards."""
-        if self.worker_thread is not None:
-            return
-        refs = self._detected_refs()
-        if refs is None:
-            return
-        dialog = MangaVolumesPreviewDialog(refs, self)
-        dialog.exec()
 
     def _on_mine_clicked(self) -> None:
         """Mine — classify the folder and mine its volume(s) sequentially."""
@@ -276,7 +264,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             return
 
         items = [ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind) for ref in refs]
-        if self._launch_run(items, preview_mode=False):
+        if self._launch_run(items):
             self._begin_progress(len(items))
             self._recompute_buttons()
 
@@ -447,12 +435,10 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     def _recompute_buttons(self) -> None:
         """Refresh button state from the worker handle.
 
-        Pure derived state: a live run hides Preview/Mine and shows Cancel; idle
-        shows Preview/Mine and hides Cancel.
+        Pure derived state: a live run hides Mine and shows Cancel; idle
+        shows Mine and hides Cancel.
         """
         run_active = self.worker_thread is not None
-        self.preview_button.setVisible(not run_active)
         self.mine_button.setVisible(not run_active)
-        self.preview_button.setEnabled(not run_active)
         self.mine_button.setEnabled(not run_active)
         self.cancel_button.setVisible(run_active)
