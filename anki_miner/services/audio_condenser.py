@@ -455,13 +455,22 @@ class AudioCondenserService:
             # the kept duration with a floor for tiny selections.
             timeout = max(600.0, total_ms / 1000 * 4)
 
-            return self._run_streaming(
+            ok = self._run_streaming(
                 cmd,
                 total_period_ms=total_ms,
                 timeout=timeout,
                 progress_cb=progress_cb,
                 cancel_event=cancel_event,
             )
+            if not ok:
+                # Failure/cancel: ffmpeg's ``-y`` may have left a truncated
+                # ``<stem>_condensed.mp3``. Drop it so the next run's skip gate
+                # (``out_audio.exists() and not overwrite``) doesn't mistake the
+                # corrupt partial for a finished condense. Mirrors the
+                # partial-cleanup in extract_embedded_subtitle.
+                with contextlib.suppress(OSError):
+                    out_audio.unlink(missing_ok=True)
+            return ok
         finally:
             # The graph file is the ONLY temp this service owns (extracted subs
             # belong to the caller). Clean it on every path.
