@@ -77,7 +77,8 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     Manga curation shows page images (D8 amended): this tab overrides
     ``_build_curation_context`` to hand the dialog the in-flight volume's
     units (page image + mokuro block box per word) read off the parked
-    worker's ``curation_document``. Novels stay table-only.
+    worker's ``curation_document``, alongside the definition-pane lookup_fn
+    that the reading base already supplies.
     """
 
     def __init__(
@@ -314,18 +315,20 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         is parked in the curation Event wait for the whole build — and hands
         the dialog a plain ``{unit.index: ReadingUnit}`` map (the dialog
         resolves a word's unit via ``int(word.start_time)``, the same mapping
-        phase 3 uses for card images). Falls back to the table-only
-        ``(None, None)`` for novels-kind documents and image-less volumes.
-        Imageless units are still included so unmatched pages show their
-        page label in the placeholder. ``lookup_fn`` stays None — the
-        definition pane remains out of scope for reading curation.
+        phase 3 uses for card images). Falls back to a media-less context for
+        novels-kind documents and image-less volumes. Imageless units are
+        still included so unmatched pages show their page label in the
+        placeholder. Either way the definition-pane ``lookup_fn`` is wired
+        from the worker's ``curation_processor`` (same as novels/subtitles).
         """
         worker = self.worker_thread
+        proc = worker.curation_processor if worker is not None else None
+        lookup = self._lookup_fn_from_processor(proc)
         doc = worker.curation_document if worker is not None else None
         if doc is None or doc.kind != "manga" or not any(u.image_ref for u in doc.units):
-            return None, None
+            return None, lookup
         units = {u.index: u for u in doc.units}
-        return CurationMediaContext(video_file=None, subtitle_entries=[], page_units=units), None
+        return CurationMediaContext(video_file=None, subtitle_entries=[], page_units=units), lookup
 
     # ------------------------------------------------------------------
     # Per-item signal slots (READ-ONLY on item state — the worker owns it)

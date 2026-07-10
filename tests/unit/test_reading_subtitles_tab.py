@@ -12,7 +12,8 @@ Behaviour under test:
 * Per-item signals are READ-ONLY on item state (the worker owns the lifecycle):
   they compose the whole-run bar + log outcomes, never write status.
 * Cleanup restores the Cancel button and the progress bar on every exit path.
-* Curation context inherits the base ``(None, None)`` — table-only.
+* Curation context has no media (``None``) but wires the definition-pane
+  ``lookup_fn`` from the worker's ``curation_processor``.
 
 Qt threads are never started — ``ReadingQueueWorker`` is class-level patched at
 the base module so ``start()`` is a no-op and constructor kwargs can be
@@ -334,8 +335,10 @@ class TestCleanup:
 
 
 class TestCurationContext:
-    """Subtitle curation stays table-only (base (None, None) context)."""
+    """Subtitle curation has no media context but wires the definition pane."""
 
-    def test_build_curation_context_is_table_only(self, tab, tmp_path):
+    def test_build_curation_context_wires_lookup_fn(self, tab, tmp_path):
         _mine(tab, [_sub_file(tmp_path)])
-        assert tab._build_curation_context() == (None, None)
+        ctx, lookup_fn = tab._build_curation_context()
+        assert ctx is None
+        assert lookup_fn is tab.worker_thread.curation_processor.offline_lookup_fn

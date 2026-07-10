@@ -15,9 +15,9 @@ the base exactly one ephemeral ``ReadingQueueItem``. Behaviour under test:
 * Drag-drop routes through the tab: the FileSelector and its inner QLineEdit
   both have drops disabled, so a drop landing on the input field is delivered to
   the tab handler (which fills the selector for a book, hints for manga).
-* D8 (amended): ``_build_curation_context`` inherits the base ``(None, None)``
-  even with a live worker — novels curation is table-only (only the manga
-  sub-tab overrides it with a page-image context).
+* D8 (amended): ``_build_curation_context`` has no media context but wires the
+  definition-pane ``lookup_fn`` from the worker's ``curation_processor`` (only
+  the manga sub-tab overrides it further, for its page-image context).
 
 Qt threads are never started — ``ReadingQueueWorker`` is class-level patched at
 the base module so ``start()`` is a no-op and constructor kwargs can be
@@ -503,17 +503,19 @@ class TestDragDrop:
 
 
 class TestCurationContext:
-    """D8 (amended): novels curation is table-only — inherit the base (None, None)."""
+    """Novels curation has no media context but wires the definition pane."""
 
-    def test_build_curation_context_is_none_none(self, tab):
+    def test_build_curation_context_is_none_none_without_worker(self, tab):
+        # No worker → no processor → no lookup_fn either.
         assert tab._build_curation_context() == (None, None)
 
-    def test_build_curation_context_none_none_with_worker(self, tmp_path, tab):
-        # Even with a live worker (driven via Mine), no media context is sourced:
-        # the novels tab never overrides _build_curation_context (only the
-        # manga tab does, for its page-image context).
+    def test_build_curation_context_wires_lookup_fn_with_worker(self, tmp_path, tab):
+        # With a live worker, no media context is sourced (novels have none),
+        # but the definition-pane lookup_fn comes from the worker's processor.
         _run(tab, _book_file(tmp_path), [_make_ref()])
-        assert tab._build_curation_context() == (None, None)
+        ctx, lookup_fn = tab._build_curation_context()
+        assert ctx is None
+        assert lookup_fn is tab.worker_thread.curation_processor.offline_lookup_fn
 
 
 class TestShutdownRelease:
