@@ -57,12 +57,28 @@ if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.interfaces.presenter import PresenterProtocol
     from anki_miner.orchestration import EpisodeProcessor
+    from anki_miner.services.reading.models import ReadingSourceRef
 
 # Extensions accepted from a drag-drop (directories are always accepted). Manga
 # sources fill the selector; novel/subtitle drops earn a cross-tab hint.
 _MANGA_EXTS = (".mokuro", ".cbz", ".zip")
 _NOVEL_EXTS = (".epub", ".txt")
 _SUBTITLE_EXTS = (".srt", ".ass", ".ssa", ".vtt")
+
+
+def _queue_item_title(ref: ReadingSourceRef) -> str:
+    """Label a queue item for progress/log lines.
+
+    For a mokuro volume ``ref.title`` is the SERIES and ``ref.volume`` the
+    actual volume; dropping the volume made every volume's progress/log line
+    read "SeriesName" (can't tell which volume failed). Append the volume so it
+    matches the per-card source label ``process_reading`` builds
+    (``f"{series} — {episode}"``). Non-mokuro refs carry no volume and are left
+    unchanged.
+    """
+    if ref.kind == "mokuro" and ref.volume:
+        return f"{ref.title} — {ref.volume}"
+    return ref.title
 
 
 class ReadingMangaTab(_ReadingMiningTabBase):
@@ -264,7 +280,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         if refs is None:
             return
 
-        items = [ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind) for ref in refs]
+        items = [ReadingQueueItem(source=ref, title=_queue_item_title(ref), kind=ref.kind) for ref in refs]
         if self._launch_run(items):
             self._begin_progress(len(items))
             self._recompute_buttons()
