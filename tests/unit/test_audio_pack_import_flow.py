@@ -467,7 +467,7 @@ class TestSettingsTabAudioPanelWiring:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab._on_save_clicked()
+        tab.commit_settings()
 
         assert received, "save must emit config"
         assert hasattr(received[0], "expression_audio_chain")
@@ -485,7 +485,7 @@ class TestSettingsTabAudioPanelWiring:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab._on_save_clicked()
+        tab.commit_settings()
 
         assert received
         saved_chain = received[0].expression_audio_chain

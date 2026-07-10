@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFrame,
@@ -31,7 +30,6 @@ from anki_miner.gui.controllers.frequency_import_flow import FrequencyImportFlow
 from anki_miner.gui.controllers.zip_import_flow import YomitanCsvLabels, ZipImportFlow
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.run_off_thread import run_off_thread
-from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels import (
     AnkiSettingsPanel,
     AudioPackSettingsPanel,
@@ -179,7 +177,7 @@ class SettingsTab(QWidget):
             get_config=lambda: self.config,
         )
         # Ordered list of panels that participate in the Save round-trip.
-        # _load_config calls load_from_config on each; _on_save_clicked folds
+        # _load_config calls load_from_config on each; commit_settings folds
         # contribute() over them.  Dictionary/audio chain panels and the UI
         # panel are intentionally excluded — they persist via their own signals.
         self._save_panels: list[_SavePathPanel] = [
@@ -256,23 +254,17 @@ class SettingsTab(QWidget):
         )
         layout.addWidget(self.check_for_updates_checkbox)
 
-        # Action buttons at bottom
+        # Status row at bottom. The Save Settings button is gone — settings
+        # auto-save (debounced) — but its inline "✓ Saved" confirmation stays
+        # so each auto-commit is still visible. The Reset to Defaults button
+        # was removed deliberately: an accidental press destroyed the whole
+        # user config for near-zero utility; do not reintroduce it.
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.sm)
         button_layout.addStretch()
 
-        self.reset_button = ModernButton(self.tr("Reset to Defaults"), variant="secondary")
-        self.reset_button.clicked.connect(self._on_reset_clicked)
-        self.reset_button.setToolTip(self.tr("Reset all settings to default values (Ctrl+R)"))
-        button_layout.addWidget(self.reset_button)
-
-        self.save_button = ModernButton(self.tr("Save Settings"), variant="primary")
-        self.save_button.clicked.connect(self._on_save_clicked)
-        self.save_button.setToolTip(self.tr("Save settings to disk (Ctrl+S)"))
-        button_layout.addWidget(self.save_button)
-
-        # Inline, non-modal save confirmation (replaces the old "Settings Saved"
-        # popup). Flashed by _flash_save_status() and auto-cleared by a timer.
+        # Inline, non-modal save confirmation. Flashed by _flash_save_status()
+        # and auto-cleared by a timer; validation warnings park here sticky.
         self.save_status_label = QLabel("")
         self.save_status_label.setObjectName("settings-save-status")
         button_layout.addWidget(self.save_status_label)
@@ -284,9 +276,6 @@ class SettingsTab(QWidget):
         layout.addLayout(button_layout)
 
         self.setLayout(layout)
-
-        # Set up keyboard shortcuts
-        self._setup_shortcuts()
 
     def _connect_signals(self) -> None:
         """Connect panel signals to tab handlers."""
@@ -305,7 +294,7 @@ class SettingsTab(QWidget):
         self.dictionary_panel.rescan_requested.connect(self._dict_import_flow.restore_unlisted)
         # Persist chain immediately after reorder/toggle or destructive remove.
         # Use a NARROW persist of just the chain — NOT the full Save pipeline
-        # (T-08): _on_save_clicked has unrelated early-return aborts (bad
+        # (T-08): the commit pipeline has unrelated validation gates (bad
         # dicts_root, missing cookies file, invalid regex, pitch/freq import
         # failure), any of which would skip persisting a removal and leave the
         # deleted dict_id orphaned — the exact Issue #30 bug this wiring
@@ -520,16 +509,6 @@ class SettingsTab(QWidget):
                 self.tr("yt-dlp update"),
                 message or self.tr("Could not update yt-dlp. Check your connection and retry."),
             )
-
-    def _setup_shortcuts(self) -> None:
-        """Set up keyboard shortcuts."""
-        # Ctrl+S: Save settings
-        save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
-        save_shortcut.activated.connect(self._on_save_clicked)
-
-        # Ctrl+R: Reset to defaults
-        reset_shortcut = QShortcut(QKeySequence("Ctrl+R"), self)
-        reset_shortcut.activated.connect(self._on_reset_clicked)
 
     def _wrap_in_scroll_area(self, widget: QWidget) -> QScrollArea:
         """Wrap a widget in a scrollable container.
@@ -865,10 +844,6 @@ class SettingsTab(QWidget):
         else:
             self._flash_save_status(self.tr("✓ Saved"))
 
-    def _on_save_clicked(self) -> None:
-        """Handle save button click (delegates to the auto-save commit)."""
-        self.commit_settings()
-
     def _flash_save_status(self, text: str) -> None:
         """Show a transient, non-modal confirmation beside the Save button.
 
@@ -904,23 +879,6 @@ class SettingsTab(QWidget):
     def _commit_pending_csv_imports(self) -> None:
         """Promote any staged pitch CSV import (delegates to the flow)."""
         self._zip_import_flow.commit_pending_csv_imports()
-
-    def _on_reset_clicked(self) -> None:
-        """Handle reset button click."""
-        reply = QMessageBox.question(
-            self,
-            self.tr("Reset Settings"),
-            self.tr("Reset all settings to defaults?"),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-
-        if reply == QMessageBox.StandardButton.Yes:
-            from anki_miner.config import create_default_config
-
-            self.config = create_default_config()
-            self._load_config()
-            self.config_changed.emit(self.config)
-            self._flash_save_status(self.tr("✓ Reset to defaults"))
 
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Update configuration from external source.

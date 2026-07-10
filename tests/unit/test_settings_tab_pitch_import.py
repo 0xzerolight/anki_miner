@@ -286,7 +286,7 @@ class TestPitchSaveStillAbortsOnFailure:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab._on_save_clicked()
+        tab.commit_settings()
 
         # Commit went through with the LAST-GOOD pitch path; failure surfaced.
         assert len(received) == 1, "the commit must still go through on pitch failure"
