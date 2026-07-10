@@ -861,27 +861,12 @@ class EpisodeProcessor:
                     )
                 )
 
-        # Sentence deduplication. i+1 filter does its own sentence picking;
-        # dedup would be a no-op (post-i+1 sentences are unique by construction).
-        if (
-            self.config.deduplicate_sentences
-            and not self.config.use_i_plus_one_filter
-            and not self.config.bypass_optional_filters
-        ):
-            before = len(unknown_words)
-            unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
-            deduped = before - len(unknown_words)
-            if deduped > 0:
-                self.presenter.show_info(
-                    tr_format(
-                        QCoreApplication.translate(
-                            "EpisodeProcessor", "Sentence deduplication: removed %1 duplicate-sentence words"
-                        ),
-                        deduped,
-                    )
-                )
-
-        # Cross-episode frequency filter.
+        # Cross-episode frequency filter. Runs BEFORE sentence dedup: dedup keeps
+        # the first word per sentence, so if a below-floor word sorts ahead of a
+        # sentence-mate that would pass the floor, dedup-first would keep the loser
+        # and the floor would then drop it — the sentence yields no card even though
+        # its mate qualified (Bug F5). Filtering by episode count first removes the
+        # losers so dedup picks a survivor.
         if (
             cross_episode_counts is not None
             and self.config.min_episode_appearances > 1
@@ -903,6 +888,26 @@ class EpisodeProcessor:
                         ),
                         filtered_out,
                         self.config.min_episode_appearances,
+                    )
+                )
+
+        # Sentence deduplication. i+1 filter does its own sentence picking;
+        # dedup would be a no-op (post-i+1 sentences are unique by construction).
+        if (
+            self.config.deduplicate_sentences
+            and not self.config.use_i_plus_one_filter
+            and not self.config.bypass_optional_filters
+        ):
+            before = len(unknown_words)
+            unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
+            deduped = before - len(unknown_words)
+            if deduped > 0:
+                self.presenter.show_info(
+                    tr_format(
+                        QCoreApplication.translate(
+                            "EpisodeProcessor", "Sentence deduplication: removed %1 duplicate-sentence words"
+                        ),
+                        deduped,
                     )
                 )
 

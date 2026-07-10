@@ -1999,6 +1999,58 @@ class TestCrossEpisodeFiltering:
         mock_services["word_filter"].filter_by_episode_count.assert_called_once_with([word1, word2], cross_counts, 3)
         assert result.cards_created == 1
 
+    def test_episode_count_runs_before_dedup_so_mate_can_win(self, test_config, mock_services, tmp_path):
+        """Bug F5: the cross-episode floor must run BEFORE sentence dedup. Two words
+        share a sentence — A (1 episode) sorted first, B (3 episodes). Pre-fix dedup
+        kept A (first-per-sentence) then the floor dropped A → the sentence yielded no
+        card even though its mate B would have passed. Correct order: the floor drops
+        A first, then dedup keeps B. Uses a REAL WordFilterService so the ordering
+        actually executes."""
+        shared_sentence = "共有された例文"
+        word_a = TokenizedWord(
+            surface="食べた",
+            lemma="食べる",
+            reading="タベル",
+            sentence=shared_sentence,
+            start_time=1.0,
+            end_time=3.0,
+            duration=2.0,
+            pos="動詞",
+        )
+        word_b = TokenizedWord(
+            surface="走った",
+            lemma="走る",
+            reading="ハシル",
+            sentence=shared_sentence,
+            start_time=1.0,
+            end_time=3.0,
+            duration=2.0,
+            pos="動詞",
+        )
+        cross_counts = {"食べる": 1, "走る": 3}
+        config = replace(
+            test_config,
+            min_episode_appearances=2,
+            deduplicate_sentences=True,
+            use_i_plus_one_filter=False,
+        )
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word_a, word_b]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word_b, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to run"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **services)
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", cross_episode_counts=cross_counts)
+
+        # B (the 3-episode mate) survives and is carded; the sentence is not lost.
+        card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
+        assert [c.word.lemma for c in card_data] == ["走る"]
+        assert result.cards_created == 1
+
 
 class TestDefinitionSkipping:
     """Tests for skipping words without definitions."""
