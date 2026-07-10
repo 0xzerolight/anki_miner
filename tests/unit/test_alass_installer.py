@@ -237,6 +237,29 @@ def test_install_windows_missing_zip_member_raises(tmp_path, monkeypatch):
     assert not list(bin_root.glob("*.part"))
 
 
+def test_windows_spec_member_matches_real_archive_layout(tmp_path):
+    # Binds the *shipped* _WINDOWS_SPEC.zip_member to the real v2.0.0
+    # alass-windows64.zip layout (binary nested under alass-windows64/bin/).
+    # The two tests above monkeypatch their own spec, so they never catch a bad
+    # module pin; a fat-fingered re-pin must re-open the KeyError in CI, not on a
+    # user's machine.
+    member = alass_installer._WINDOWS_SPEC.zip_member
+    assert member == "alass-windows64/bin/alass-cli.exe"
+
+    # _place_zip_member resolves that exact nested member using the real,
+    # un-monkeypatched spec (sha256 is verified upstream in install_alass, not
+    # here, so no checksum override is needed at this layer).
+    part = tmp_path / "download.part"
+    part.write_bytes(_make_zip_bytes(member, _FAKE_EXE_PAYLOAD))
+    target = tmp_path / "bin" / "alass.exe"
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    alass_installer._place_zip_member(part, alass_installer._WINDOWS_SPEC, target)
+
+    assert target.is_file()
+    assert target.read_bytes() == _FAKE_EXE_PAYLOAD
+
+
 # ---------------------------------------------------------------------------
 # install_alass — cancel before download
 # ---------------------------------------------------------------------------
