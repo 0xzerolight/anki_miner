@@ -3130,6 +3130,10 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Subtitles</source>
+        <translation type="unfinished">字幕</translation>
+    </message>
+    <message>
         <source>Generate</source>
         <translation>生成</translation>
     </message>
@@ -3620,6 +3624,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Subtitle files are mined in the Subtitles tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select a manga folder first.</source>
         <translation type="unfinished" />
     </message>
@@ -3698,6 +3706,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Subtitle files are mined in the Subtitles tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select a valid .epub or .txt book first.</source>
         <translation type="unfinished" />
     </message>
@@ -3720,6 +3732,112 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Failed %1: %2.</source>
         <translation type="unfinished">%1 が失敗しました: %2。</translation>
+    </message>
+</context><context>
+    <name>ReadingSubtitlesTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation type="unfinished">マイニング前に単語を確認</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup for each file before creating cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">進捗</translation>
+    </message>
+    <message>
+        <source>Subtitle Files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mines subtitle files as text — no screenshots or audio extracted from video.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle files to mine, one card run per file, in list order.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Files…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add subtitle files (.srt, .ass, .ssa, .vtt) to the list.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove Selected</source>
+        <translation type="unfinished">選択項目を削除</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation type="unfinished">クリア</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation type="unfinished">マイニング</translation>
+    </message>
+    <message>
+        <source>Mine the listed subtitle files into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">キャンセル</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation type="unfinished">実行中の処理をキャンセルします。</translation>
+    </message>
+    <message>
+        <source>Add Subtitle Files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitles</source>
+        <translation type="unfinished">字幕</translation>
+    </message>
+    <message>
+        <source>Manga is mined in the Manga tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Novels are mined in the Novels tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add at least one subtitle file first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>File not found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">キャンセル中…</translation>
+    </message>
+    <message>
+        <source>File %1/%2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation type="unfinished">%1 をマイニングしました: %2 枚のカード。</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation type="unfinished">%1 が失敗しました: %2。</translation>
+    </message>
+    <message>
+        <source>Finished %1 subtitle files.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ReadingTab</name>
@@ -3962,20 +4080,20 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>有効にすると、Anki Miner は起動時に GitHub で新しいリリースを確認します。</translation>
     </message>
     <message>
-        <source>Reset to Defaults</source>
-        <translation>デフォルトに戻す</translation>
+        <source>Export Settings…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Reset all settings to default values (Ctrl+R)</source>
-        <translation>すべての設定をデフォルト値に戻します (Ctrl+R)</translation>
+        <source>Save a portable settings file (machine-specific paths and resources excluded).</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Save Settings</source>
-        <translation>設定を保存</translation>
+        <source>Import Settings…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Save settings to disk (Ctrl+S)</source>
-        <translation>設定をディスクに保存します (Ctrl+S)</translation>
+        <source>Apply settings from an exported file; anything not in the file is kept.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Updating yt-dlp…</source>
@@ -3994,60 +4112,76 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>yt-dlp を更新できませんでした。接続を確認して再試行してください。</translation>
     </message>
     <message>
-        <source>Invalid dictionary folder</source>
-        <translation>無効な辞書フォルダ</translation>
+        <source>dictionary folder (Dictionaries)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>%1 is not a directory.
-
-Pick an existing folder or click Reset to default.</source>
-        <translation>%1 はディレクトリではありません。
-
-既存のフォルダを選択するか、「デフォルトに戻す」をクリックしてください。</translation>
+        <source>cookies file (YouTube)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Dictionary folder not writable</source>
-        <translation>辞書フォルダに書き込めません</translation>
+        <source>subtitle regex (Filtering)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Cannot write to %1.
-
-Pick a folder you own.</source>
-        <translation>%1 に書き込めません。
-
-自分が所有するフォルダを選択してください。</translation>
-    </message>
-    <message>
-        <source>Cookies file not found</source>
-        <translation>Cookie ファイルが見つかりません</translation>
-    </message>
-    <message>
-        <source>%1 is not a file.
-
-Pick an exported cookies.txt or clear the field.</source>
-        <translation>%1 はファイルではありません。
-
-エクスポートした cookies.txt を選択するか、フィールドを空にしてください。</translation>
-    </message>
-    <message>
-        <source>Invalid Subtitle Regex</source>
-        <translation>無効な字幕正規表現</translation>
-    </message>
-    <message>
-        <source>Pattern: %1
-
-Fix or disable the filter before saving.
-
-Details: %2</source>
-        <translation>パターン: %1
-
-保存する前にフィルターを修正するか無効にしてください。
-
-詳細: %2</translation>
+        <source>⚠ Saved — kept previous: %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>✓ Saved</source>
         <translation>✓ 保存しました</translation>
+    </message>
+    <message>
+        <source>Export Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>JSON Files (*.json);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export Failed</source>
+        <translation type="unfinished">エクスポート失敗</translation>
+    </message>
+    <message>
+        <source>Could not write %1:
+%2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings Exported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Portable settings written to %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Settings?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Apply settings from %1?
+
+Imported values override your current settings; anything not in the file is kept.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Failed</source>
+        <translation type="unfinished">インポート失敗</translation>
+    </message>
+    <message>
+        <source>Could not import %1:
+%2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>✓ Imported</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Importing pitch accent dictionary…</source>
@@ -4064,18 +4198,6 @@ Details: %2</source>
     <message>
         <source>Pitch accent dictionary imported</source>
         <translation>ピッチアクセント辞書をインポートしました</translation>
-    </message>
-    <message>
-        <source>Reset Settings</source>
-        <translation>設定をリセット</translation>
-    </message>
-    <message>
-        <source>Reset all settings to defaults?</source>
-        <translation>すべての設定をデフォルトに戻しますか？</translation>
-    </message>
-    <message>
-        <source>✓ Reset to defaults</source>
-        <translation>✓ デフォルトに戻しました</translation>
     </message>
     <message>
         <source>Retry missing expression audio</source>

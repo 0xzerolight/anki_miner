@@ -3130,6 +3130,10 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Subtitles</source>
+        <translation type="unfinished">字幕</translation>
+    </message>
+    <message>
         <source>Generate</source>
         <translation>產生</translation>
     </message>
@@ -3620,6 +3624,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Subtitle files are mined in the Subtitles tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select a manga folder first.</source>
         <translation type="unfinished" />
     </message>
@@ -3698,6 +3706,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Subtitle files are mined in the Subtitles tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select a valid .epub or .txt book first.</source>
         <translation type="unfinished" />
     </message>
@@ -3720,6 +3732,112 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Failed %1: %2.</source>
         <translation type="unfinished">失敗 %1：%2。</translation>
+    </message>
+</context><context>
+    <name>ReadingSubtitlesTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation type="unfinished">採集前先審閱單字</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup for each file before creating cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">進度</translation>
+    </message>
+    <message>
+        <source>Subtitle Files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mines subtitle files as text — no screenshots or audio extracted from video.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle files to mine, one card run per file, in list order.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Files…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add subtitle files (.srt, .ass, .ssa, .vtt) to the list.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove Selected</source>
+        <translation type="unfinished">移除選取項目</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation type="unfinished">清除</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation type="unfinished">採集</translation>
+    </message>
+    <message>
+        <source>Mine the listed subtitle files into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">取消</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation type="unfinished">取消進行中的執行。</translation>
+    </message>
+    <message>
+        <source>Add Subtitle Files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitles</source>
+        <translation type="unfinished">字幕</translation>
+    </message>
+    <message>
+        <source>Manga is mined in the Manga tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Novels are mined in the Novels tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add at least one subtitle file first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>File not found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">取消中……</translation>
+    </message>
+    <message>
+        <source>File %1/%2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation type="unfinished">已採集 %1：%2 張卡片。</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation type="unfinished">失敗 %1：%2。</translation>
+    </message>
+    <message>
+        <source>Finished %1 subtitle files.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ReadingTab</name>
@@ -3962,20 +4080,20 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>啟用後，Anki Miner 會在啟動時向 GitHub 查詢是否有新版本。</translation>
     </message>
     <message>
-        <source>Reset to Defaults</source>
-        <translation>重設為預設值</translation>
+        <source>Export Settings…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Reset all settings to default values (Ctrl+R)</source>
-        <translation>將所有設定重設為預設值（Ctrl+R）</translation>
+        <source>Save a portable settings file (machine-specific paths and resources excluded).</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Save Settings</source>
-        <translation>儲存設定</translation>
+        <source>Import Settings…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Save settings to disk (Ctrl+S)</source>
-        <translation>將設定儲存至磁碟（Ctrl+S）</translation>
+        <source>Apply settings from an exported file; anything not in the file is kept.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Updating yt-dlp…</source>
@@ -3994,60 +4112,76 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>無法更新 yt-dlp。請檢查連線後重試。</translation>
     </message>
     <message>
-        <source>Invalid dictionary folder</source>
-        <translation>無效的字典資料夾</translation>
+        <source>dictionary folder (Dictionaries)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>%1 is not a directory.
-
-Pick an existing folder or click Reset to default.</source>
-        <translation>%1 不是資料夾。
-
-請選擇現有的資料夾，或按「重設為預設值」。</translation>
+        <source>cookies file (YouTube)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Dictionary folder not writable</source>
-        <translation>字典資料夾無法寫入</translation>
+        <source>subtitle regex (Filtering)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Cannot write to %1.
-
-Pick a folder you own.</source>
-        <translation>無法寫入 %1。
-
-請選擇你擁有的資料夾。</translation>
-    </message>
-    <message>
-        <source>Cookies file not found</source>
-        <translation>找不到 Cookies 檔案</translation>
-    </message>
-    <message>
-        <source>%1 is not a file.
-
-Pick an exported cookies.txt or clear the field.</source>
-        <translation>%1 不是檔案。
-
-請選擇匯出的 cookies.txt，或清除此欄位。</translation>
-    </message>
-    <message>
-        <source>Invalid Subtitle Regex</source>
-        <translation>無效的字幕正規表示式</translation>
-    </message>
-    <message>
-        <source>Pattern: %1
-
-Fix or disable the filter before saving.
-
-Details: %2</source>
-        <translation>模式：%1
-
-請在儲存前修正或停用篩選器。
-
-詳細資料：%2</translation>
+        <source>⚠ Saved — kept previous: %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>✓ Saved</source>
         <translation>✓ 已儲存</translation>
+    </message>
+    <message>
+        <source>Export Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>JSON Files (*.json);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export Failed</source>
+        <translation type="unfinished">匯出失敗</translation>
+    </message>
+    <message>
+        <source>Could not write %1:
+%2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings Exported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Portable settings written to %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Settings?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Apply settings from %1?
+
+Imported values override your current settings; anything not in the file is kept.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Failed</source>
+        <translation type="unfinished">匯入失敗</translation>
+    </message>
+    <message>
+        <source>Could not import %1:
+%2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>✓ Imported</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Importing pitch accent dictionary…</source>
@@ -4064,18 +4198,6 @@ Details: %2</source>
     <message>
         <source>Pitch accent dictionary imported</source>
         <translation>已匯入高低音調字典</translation>
-    </message>
-    <message>
-        <source>Reset Settings</source>
-        <translation>重設設定</translation>
-    </message>
-    <message>
-        <source>Reset all settings to defaults?</source>
-        <translation>要將所有設定重設為預設值嗎？</translation>
-    </message>
-    <message>
-        <source>✓ Reset to defaults</source>
-        <translation>✓ 已重設為預設值</translation>
     </message>
     <message>
         <source>Retry missing expression audio</source>

@@ -3140,6 +3140,10 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Subtitles</source>
+        <translation type="unfinished">Subtítulos</translation>
+    </message>
+    <message>
         <source>Generate</source>
         <translation>Generar</translation>
     </message>
@@ -3630,6 +3634,10 @@ Puede ajustar esto más tarde en Ajustes → Anki.</translation>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Subtitle files are mined in the Subtitles tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select a manga folder first.</source>
         <translation type="unfinished" />
     </message>
@@ -3708,6 +3716,10 @@ Puede ajustar esto más tarde en Ajustes → Anki.</translation>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Subtitle files are mined in the Subtitles tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select a valid .epub or .txt book first.</source>
         <translation type="unfinished" />
     </message>
@@ -3730,6 +3742,112 @@ Puede ajustar esto más tarde en Ajustes → Anki.</translation>
     <message>
         <source>Failed %1: %2.</source>
         <translation type="unfinished">Falló %1: %2.</translation>
+    </message>
+</context><context>
+    <name>ReadingSubtitlesTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation type="unfinished">Revisar palabras antes de minar</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup for each file before creating cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">Progreso</translation>
+    </message>
+    <message>
+        <source>Subtitle Files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mines subtitle files as text — no screenshots or audio extracted from video.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle files to mine, one card run per file, in list order.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add Files…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add subtitle files (.srt, .ass, .ssa, .vtt) to the list.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove Selected</source>
+        <translation type="unfinished">Eliminar seleccionadas</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation type="unfinished">Limpiar</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation type="unfinished">Minar</translation>
+    </message>
+    <message>
+        <source>Mine the listed subtitle files into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">Cancelar</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation type="unfinished">Cancelar la ejecución activa.</translation>
+    </message>
+    <message>
+        <source>Add Subtitle Files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitles</source>
+        <translation type="unfinished">Subtítulos</translation>
+    </message>
+    <message>
+        <source>Manga is mined in the Manga tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Novels are mined in the Novels tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add at least one subtitle file first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>File not found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">Cancelando…</translation>
+    </message>
+    <message>
+        <source>File %1/%2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation type="unfinished">Minado %1: %2 tarjetas.</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation type="unfinished">Falló %1: %2.</translation>
+    </message>
+    <message>
+        <source>Finished %1 subtitle files.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ReadingTab</name>
@@ -3972,20 +4090,20 @@ Puede ajustar esto más tarde en Ajustes → Anki.</translation>
         <translation>Cuando está activado, Anki Miner consulta GitHub en busca de nuevas versiones al iniciar.</translation>
     </message>
     <message>
-        <source>Reset to Defaults</source>
-        <translation>Restablecer valores predeterminados</translation>
+        <source>Export Settings…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Reset all settings to default values (Ctrl+R)</source>
-        <translation>Restablecer todos los ajustes a sus valores predeterminados (Ctrl+R)</translation>
+        <source>Save a portable settings file (machine-specific paths and resources excluded).</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Save Settings</source>
-        <translation>Guardar ajustes</translation>
+        <source>Import Settings…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Save settings to disk (Ctrl+S)</source>
-        <translation>Guardar los ajustes en el disco (Ctrl+S)</translation>
+        <source>Apply settings from an exported file; anything not in the file is kept.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Updating yt-dlp…</source>
@@ -4004,60 +4122,76 @@ Puede ajustar esto más tarde en Ajustes → Anki.</translation>
         <translation>No se pudo actualizar yt-dlp. Verifique su conexión e inténtelo de nuevo.</translation>
     </message>
     <message>
-        <source>Invalid dictionary folder</source>
-        <translation>Carpeta de diccionarios no válida</translation>
+        <source>dictionary folder (Dictionaries)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>%1 is not a directory.
-
-Pick an existing folder or click Reset to default.</source>
-        <translation>%1 no es un directorio.
-
-Elija una carpeta existente o haga clic en Restablecer a predeterminado.</translation>
+        <source>cookies file (YouTube)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Dictionary folder not writable</source>
-        <translation>No se puede escribir en la carpeta de diccionarios</translation>
+        <source>subtitle regex (Filtering)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Cannot write to %1.
-
-Pick a folder you own.</source>
-        <translation>No se puede escribir en %1.
-
-Elija una carpeta de la que sea propietario.</translation>
-    </message>
-    <message>
-        <source>Cookies file not found</source>
-        <translation>Archivo de cookies no encontrado</translation>
-    </message>
-    <message>
-        <source>%1 is not a file.
-
-Pick an exported cookies.txt or clear the field.</source>
-        <translation>%1 no es un archivo.
-
-Elija un cookies.txt exportado o vacíe el campo.</translation>
-    </message>
-    <message>
-        <source>Invalid Subtitle Regex</source>
-        <translation>Expresión regular de subtítulos no válida</translation>
-    </message>
-    <message>
-        <source>Pattern: %1
-
-Fix or disable the filter before saving.
-
-Details: %2</source>
-        <translation>Patrón: %1
-
-Corrija o desactive el filtro antes de guardar.
-
-Detalles: %2</translation>
+        <source>⚠ Saved — kept previous: %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>✓ Saved</source>
         <translation>✓ Guardado</translation>
+    </message>
+    <message>
+        <source>Export Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>JSON Files (*.json);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export Failed</source>
+        <translation type="unfinished">Error de exportación</translation>
+    </message>
+    <message>
+        <source>Could not write %1:
+%2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings Exported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Portable settings written to %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Settings?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Apply settings from %1?
+
+Imported values override your current settings; anything not in the file is kept.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Failed</source>
+        <translation type="unfinished">Error de importación</translation>
+    </message>
+    <message>
+        <source>Could not import %1:
+%2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>✓ Imported</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Importing pitch accent dictionary…</source>
@@ -4074,18 +4208,6 @@ Detalles: %2</translation>
     <message>
         <source>Pitch accent dictionary imported</source>
         <translation>Diccionario de acento tonal importado</translation>
-    </message>
-    <message>
-        <source>Reset Settings</source>
-        <translation>Restablecer ajustes</translation>
-    </message>
-    <message>
-        <source>Reset all settings to defaults?</source>
-        <translation>¿Restablecer todos los ajustes a sus valores predeterminados?</translation>
-    </message>
-    <message>
-        <source>✓ Reset to defaults</source>
-        <translation>✓ Restablecido a valores predeterminados</translation>
     </message>
     <message>
         <source>Retry missing expression audio</source>
