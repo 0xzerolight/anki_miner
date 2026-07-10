@@ -671,6 +671,8 @@ class MediaExtractorService:
             # raises UnicodeDecodeError. Mirrors audio_track_detector._run_ffprobe_json.
             proc = subprocess.Popen(
                 cmd,
+                stdin=subprocess.DEVNULL,  # detach from the TTY: a backgrounded ffmpeg reading
+                # the controlling terminal gets SIGTTIN-stopped and the extraction times out.
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
