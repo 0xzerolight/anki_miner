@@ -56,6 +56,16 @@ class TestShortcutExists:
         with patch("sys.platform", "win32"):
             assert ShortcutService.shortcut_exists() is True
 
+    def test_windows_exists_checks_home_fallback_when_no_desktop(self, tmp_path, monkeypatch):
+        """Creation falls back to Path.home() when ~/Desktop is absent (OneDrive
+        redirect); shortcut_exists must check the same fallback location."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        # No ~/Desktop directory; shortcut lives directly in home.
+        (tmp_path / f"{APP_NAME}.lnk").write_text("dummy")
+
+        with patch("sys.platform", "win32"):
+            assert ShortcutService.shortcut_exists() is True
+
     def test_returns_false_on_unsupported_platform(self, tmp_path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
         with patch("sys.platform", "freebsd"):

@@ -61,12 +61,23 @@ class ShortcutService:
     """Create and detect desktop shortcuts for the GUI app."""
 
     @staticmethod
+    def _windows_desktop_dir() -> Path:
+        """Resolve where a Windows shortcut lives.
+
+        Falls back to ``Path.home()`` when ``~/Desktop`` is absent (e.g. a
+        OneDrive-redirected desktop). Shared by creation and existence checks so
+        they never diverge.
+        """
+        desktop = Path.home() / "Desktop"
+        return desktop if desktop.exists() else Path.home()
+
+    @staticmethod
     def shortcut_exists() -> bool:
         """Check whether a shortcut already exists for the current platform."""
         if sys.platform == "linux":
             return (Path.home() / ".local" / "share" / "applications" / f"{APP_ID}.desktop").exists()
         if sys.platform == "win32":
-            return (Path.home() / "Desktop" / f"{APP_NAME}.lnk").exists()
+            return (ShortcutService._windows_desktop_dir() / f"{APP_NAME}.lnk").exists()
         return False
 
     @staticmethod
@@ -175,9 +186,8 @@ StartupWMClass=anki_miner
 
     @staticmethod
     def _create_windows_shortcut(exe_path: Path, result: ShortcutResult) -> None:
-        desktop = Path.home() / "Desktop"
-        if not desktop.exists():
-            desktop = Path.home()
+        desktop = ShortcutService._windows_desktop_dir()
+        if desktop == Path.home():
             result.messages.append(f"Desktop folder not found, using {desktop}")
 
         shortcut_path = desktop / f"{APP_NAME}.lnk"
