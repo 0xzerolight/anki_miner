@@ -280,6 +280,40 @@ class TestAsyncPlayAndProbeError:
         fake_media_classes["player"].play.assert_called_once()
         assert widget._pending_play is False
 
+    def test_seek_queues_when_player_not_built(self, qtbot):
+        """A seek issued before the player is built is remembered, not dropped."""
+        widget = SubtitlePlayerWidget()
+        qtbot.addWidget(widget)
+        assert widget.player is None
+        widget.seek_seconds(4.0)
+        assert widget._pending_seek_ms == 4000
+        # An explicit stop clears the queued seek.
+        widget.stop()
+
+    def test_pause_queues_when_player_not_built(self, qtbot):
+        """A pause issued before the player is built is remembered, not dropped."""
+        widget = SubtitlePlayerWidget()
+        qtbot.addWidget(widget)
+        assert widget.player is None
+        widget.pause()
+        assert widget._pending_pause is True
+        # A subsequent play cancels the queued pause.
+        widget.play()
+        assert widget._pending_pause is False
+
+    def test_pending_seek_and_pause_honored_when_player_configured(self, qtbot, fake_media_classes):
+        """A seek + pause queued while the probe was in flight are applied on configure."""
+        widget = SubtitlePlayerWidget()
+        qtbot.addWidget(widget)
+        widget.seek_seconds(4.0)
+        widget.pause()
+        widget._source_generation = 7
+        widget._configure_player(7, Path("/tmp/fake.mkv"), (False, None))
+        fake_media_classes["player"].setPosition.assert_called_once_with(4000)
+        fake_media_classes["player"].pause.assert_called_once()
+        assert widget._pending_seek_ms is None
+        assert widget._pending_pause is False
+
     def test_probe_error_surfaces_message(self, qtbot):
         widget = SubtitlePlayerWidget()
         qtbot.addWidget(widget)
