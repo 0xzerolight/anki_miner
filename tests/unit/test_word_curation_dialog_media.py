@@ -317,59 +317,72 @@ class TestDictionaryLookup:
 
 
 # ---------------------------------------------------------------------------
-# 4. Lookup uses word.lemma, not word.mined_form
+# 4. Lookup uses word.mined_form first, retrying word.lemma on a miss
 # ---------------------------------------------------------------------------
 
 
-class TestLookupUsesLemma:
-    """For a verb where lemma != mined_form, lookup_fn receives the lemma."""
+class TestLookupUsesMinedForm:
+    """The pane queries the card-front spelling (mined_form) — unidic's lemma
+    collapses kanji variants (殺る → 遣る), so a lemma-keyed pane showed the
+    wrong homograph's entry. On a miss it retries once under the lemma."""
 
-    def test_lookup_uses_lemma_not_mined_form(self, qtbot):
-        # surface=食べ, lemma=食べる, pos=動詞 → mined_form = lemma = 食べる
-        # Use a case where surface differs from lemma more clearly.
+    def _variant_word(self):
+        # 殺る: verb, orth_base keeps the source spelling, lemma is unidic's
+        # canonical 遣る → mined_form (殺る) != lemma (遣る).
         word = TokenizedWord(
-            surface="食べ",
-            lemma="食べる",
-            reading="たべる",
-            sentence="食べのテスト",
+            surface="殺る",
+            lemma="遣る",
+            reading="やる",
+            sentence="殺るのテスト",
             start_time=1.0,
             end_time=3.0,
             duration=2.0,
             pos="動詞",
+            orth_base="殺る",
         )
-        # Sanity-check the fixture: for a verb, mined_form == lemma.
-        assert word.mined_form == word.lemma  # both are 食べる for verbs
+        assert word.mined_form == "殺る"
+        assert word.lemma != word.mined_form
+        return word
 
-        # Use a non-conjugating word where surface != lemma to better isolate
-        # that lemma (not surface or mined_form) is what's passed.
-        word2 = TokenizedWord(
-            surface="食べ",  # raw surface (different from lemma)
-            lemma="食べる",  # dictionary form
-            reading="たべる",
-            sentence="テスト",
-            start_time=1.0,
-            end_time=3.0,
-            duration=2.0,
-            pos="名詞",  # noun POS → mined_form = surface = 食べ
-        )
-        # For nouns, mined_form = surface, not lemma.
-        assert word2.mined_form == word2.surface  # 食べ
-        assert word2.lemma != word2.mined_form  # 食べる != 食べ
-
+    def test_lookup_uses_mined_form_when_it_hits(self, qtbot):
         received: list[str] = []
 
-        def capturing_lookup(lemma: str) -> list[tuple[str, str]]:
-            received.append(lemma)
-            return []
+        def capturing_lookup(term: str) -> list[tuple[str, str]]:
+            received.append(term)
+            return [("JMdict", "<div>to do someone in</div>")]
 
-        dlg = WordCurationDialog([word2], lookup_fn=capturing_lookup)
+        dlg = WordCurationDialog([self._variant_word()], lookup_fn=capturing_lookup)
         qtbot.addWidget(dlg)
         _select_row(dlg, 0)
         _fire_timer(dlg)
 
-        assert len(received) == 1
-        assert received[0] == word2.lemma, f"Expected lookup on lemma '{word2.lemma}', got '{received[0]}'"
-        assert received[0] != word2.mined_form
+        assert received == ["殺る"]
+        assert "to do someone in" in dlg.definition_view.toHtml()
+
+    def test_lookup_retries_lemma_on_miss(self, qtbot):
+        received: list[str] = []
+
+        def capturing_lookup(term: str) -> list[tuple[str, str]]:
+            received.append(term)
+            return [] if term == "殺る" else [("JMdict", "<div>to do</div>")]
+
+        dlg = WordCurationDialog([self._variant_word()], lookup_fn=capturing_lookup)
+        qtbot.addWidget(dlg)
+        _select_row(dlg, 0)
+        _fire_timer(dlg)
+
+        assert received == ["殺る", "遣る"]
+        assert "to do" in dlg.definition_view.toHtml()
+
+    def test_both_miss_placeholder_names_mined_form(self, qtbot):
+        dlg = WordCurationDialog([self._variant_word()], lookup_fn=lambda term: [])
+        qtbot.addWidget(dlg)
+        _select_row(dlg, 0)
+        _fire_timer(dlg)
+
+        html = dlg.definition_view.toHtml()
+        assert "No offline dictionary entry" in html
+        assert "殺る" in html
 
 
 # ---------------------------------------------------------------------------

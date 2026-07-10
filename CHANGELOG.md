@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **The "Reset to Defaults" button and Ctrl+R are gone.** An accidental press destroyed the entire configuration for almost no benefit. The scoped "Reset to default" next to the dictionary storage folder remains.
 
 ### Fixed
+- **Kanji-variant spellings get their own definition and frequency.** A card for 殺る (やる, "to bump off") used to show 遣る's "to do" definition, and かける/掛ける/懸ける/賭ける all inherited the same frequency rank — the dictionary and frequency lookups queried UniDic's canonical headword instead of the spelling on the card. Lookups now query the card's spelling first and fall back to the canonical form only when no dictionary or frequency list knows the variant. Consequences: variant spellings now rank as themselves, so a rare spelling (賭ける) can drop below a "skip words ranked above N" cutoff it previously passed with 掛ける's rank — that's the fix working; the curation table's rank column and CSV export show the card-spelling's rank too. One narrow edge: with the Jisho online fallback enabled, a variant spelling found in no offline dictionary and known to Jisho only under its canonical form is now skipped (it appears in the "no definition" warning) instead of carded under the wrong headword.
 
 ## [2.8.0] - 2026-07-09
 
