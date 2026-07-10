@@ -276,6 +276,20 @@ class TestCustomAudioFetcherJson:
         assert result is not None
         assert f._session.get.call_args_list[2][0][0] == "http://h/b.mp3"
 
+    def test_malformed_source_url_skipped_not_fatal(self, tmp_path):
+        """A malformed audioSources URL is skipped (never raises); good URLs remain."""
+        f = self._fetcher(tmp_path)
+        payload = {
+            "type": "audioSourceList",
+            "audioSources": [
+                {"url": "http://[bad"},  # urljoin → ValueError (Invalid IPv6 URL)
+                {"url": "http://h/media/ok.mp3"},
+            ],
+        }
+        f._session.get.return_value = _json_response(payload)
+        urls = f._resolve_json_sources("http://h/list")
+        assert urls == ["http://h/media/ok.mp3"]
+
     def test_wrong_type_returns_none(self, tmp_path):
         f = self._fetcher(tmp_path)
         f._session.get.return_value = _json_response({"type": "somethingElse", "audioSources": []})
