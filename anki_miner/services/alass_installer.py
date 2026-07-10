@@ -73,7 +73,9 @@ _WINDOWS_SPEC = _AlassSpec(
     url="https://github.com/kaegi/alass/releases/download/v2.0.0/alass-windows64.zip",
     sha256="e81a72f97f592910e909a2352d6b8c0de0801c51ac1383bad4ebf3f2ecdd2fd8",
     is_zip=True,
-    zip_member="alass-cli.exe",
+    # The v2.0.0 alass-windows64.zip nests the binary two dirs deep under a
+    # top-level dir; the archive is sha256-pinned above so this path is stable.
+    zip_member="alass-windows64/bin/alass-cli.exe",
     dest_name="alass.exe",
 )
 
