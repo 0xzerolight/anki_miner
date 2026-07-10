@@ -135,7 +135,10 @@ class TestConstruction:
 
 
 class TestOpenSubtab:
-    @pytest.mark.parametrize(("key", "expected_index"), [("manga", 0), ("novels", 1)])
+    @pytest.mark.parametrize(
+        ("key", "expected_index"),
+        [("manga", 0), ("novels", 1), ("subtitles", 2)],
+    )
     def test_switches_inner_tab(self, tab, key, expected_index):
         tab._inner_tabs.setCurrentIndex(1 if expected_index == 0 else 0)
 
