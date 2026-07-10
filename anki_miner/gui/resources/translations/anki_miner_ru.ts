@@ -3720,10 +3720,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview complete — %1 new words</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Complete — %1 cards created</source>
         <translation type="unfinished" />
     </message>
@@ -4248,10 +4244,6 @@ Details: %2</source>
     <message>
         <source>Cancelled</source>
         <translation type="unfinished">Отменено</translation>
-    </message>
-    <message>
-        <source>Preview complete — %1 new words</source>
-        <translation type="unfinished" />
     </message>
     <message>
         <source>Complete — %1 cards created</source>

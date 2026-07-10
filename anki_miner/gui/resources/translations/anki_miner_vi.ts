@@ -3700,10 +3700,6 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preview complete — %1 new words</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Complete — %1 cards created</source>
         <translation type="unfinished" />
     </message>
@@ -4228,10 +4224,6 @@ Chi tiết: %2</translation>
     <message>
         <source>Cancelled</source>
         <translation type="unfinished">Đã hủy</translation>
-    </message>
-    <message>
-        <source>Preview complete — %1 new words</source>
-        <translation type="unfinished" />
     </message>
     <message>
         <source>Complete — %1 cards created</source>

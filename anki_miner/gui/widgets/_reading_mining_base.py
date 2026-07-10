@@ -170,9 +170,7 @@ class _ReadingMiningTabBase(MiningTabBase):
         # NEVER from _run_items, which the base clears before cleanup runs.
         self._cancel_requested = False
         self._run_failed = False
-        self._run_preview_mode = preview_mode
         self._run_cards_total = 0
-        self._run_new_words_total = 0
 
         # Processor may be None for two reasons: (a) Settings → Remove dictionary
         # called release_dictionary_resources to drop sqlite handles, or (b)
@@ -301,7 +299,6 @@ class _ReadingMiningTabBase(MiningTabBase):
     def _record_item_result(self, result: object) -> None:
         """Accumulate per-run summary counts from a successful item result."""
         self._run_cards_total += int(getattr(result, "cards_created", 0) or 0)
-        self._run_new_words_total += int(getattr(result, "new_words_found", 0) or 0)
 
     def _apply_terminal_bar_state(self, widget) -> None:
         """Set the run's terminal bar state: cancel -> failed -> success.
@@ -316,13 +313,6 @@ class _ReadingMiningTabBase(MiningTabBase):
         elif getattr(self, "_run_failed", False):
             widget.reset()
             widget.set_status(QCoreApplication.translate("ReadingTab", "Failed — see log"))
-        elif getattr(self, "_run_preview_mode", False):
-            widget.show_completion(
-                tr_format(
-                    QCoreApplication.translate("ReadingTab", "Preview complete — %1 new words"),
-                    self._run_new_words_total,
-                )
-            )
         else:
             widget.show_completion(
                 tr_format(
