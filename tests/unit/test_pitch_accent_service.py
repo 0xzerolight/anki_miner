@@ -328,6 +328,32 @@ class TestLookupDetailed:
         assert pos is None
         assert cat is None
 
+    def test_missing_reading_kanji_word_declines_category(self, tmp_path):
+        """Empty reading + kanji surface must NOT feed the kanji into count_mora.
+
+        count_mora("学校")==2 (not 4), so position 2 would mislabel as 尾高.
+        The pattern is still returned; the category is declined (None)."""
+        csv_file = tmp_path / "pitch.csv"
+        csv_file.write_text("がっこう,学校,2\n", encoding="utf-8")
+        service = PitchAccentService(csv_file)
+        service.load()
+
+        pos, cat = service.lookup_detailed("学校", "")
+        assert pos == "2"
+        assert cat is None
+
+    def test_missing_reading_kana_word_still_categorized(self, tmp_path):
+        """Empty reading + an all-kana surface may safely fall back to the surface
+        for mora counting (4 mora → position 2 → 中高)."""
+        csv_file = tmp_path / "pitch.csv"
+        csv_file.write_text("がっこう,学校,2\n", encoding="utf-8")
+        service = PitchAccentService(csv_file)
+        service.load()
+
+        pos, cat = service.lookup_detailed("がっこう", "")
+        assert pos == "2"
+        assert cat == "中高"
+
     def test_multi_pattern_emits_all_categories(self, tmp_path):
         # Use TSV to preserve comma in pattern (like real Kanjium file)
         tsv_file = tmp_path / "pitch.tsv"
