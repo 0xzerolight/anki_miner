@@ -237,6 +237,40 @@ def test_install_windows_missing_zip_member_raises(tmp_path, monkeypatch):
     assert not list(bin_root.glob("*.part"))
 
 
+def test_place_zip_member_write_oserror_converts_and_cleans(tmp_path, monkeypatch):
+    """A raw OSError from staging (disk full/permission) must convert to
+    SetupError and leave no orphaned mkstemp temp behind."""
+    member = "alass-cli.exe"
+    part = tmp_path / "download.part"
+    part.write_bytes(_make_zip_bytes(member, _FAKE_EXE_PAYLOAD))
+
+    target = tmp_path / "bin" / "alass.exe"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    spec = alass_installer._AlassSpec(
+        url="https://example/alass.zip",
+        sha256="unused",
+        is_zip=True,
+        zip_member=member,
+        dest_name="alass.exe",
+    )
+
+    orig_write_bytes = Path.write_bytes
+
+    def _boom(self, data):
+        if self.name.startswith(".alass.exe-"):
+            raise OSError("No space left on device")
+        return orig_write_bytes(self, data)
+
+    monkeypatch.setattr(Path, "write_bytes", _boom)
+
+    with pytest.raises(SetupError):
+        alass_installer._place_zip_member(part, spec, target)
+
+    assert not target.exists()
+    # The mkstemp staging temp must be unlinked, not stranded in bin_root.
+    assert not list(target.parent.glob(".alass.exe-*"))
+
+
 def test_windows_spec_member_matches_real_archive_layout(tmp_path):
     # Binds the *shipped* _WINDOWS_SPEC.zip_member to the real v2.0.0
     # alass-windows64.zip layout (binary nested under alass-windows64/bin/).
