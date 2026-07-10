@@ -132,18 +132,22 @@ def _resolve_flags_strict(flags_map: Mapping[str, int], condition_types: Iterabl
     return flags
 
 
-# unidic cType prefix → Yomitan dictionary-form condition name. The mined
+# unidic cType prefix → Yomitan dictionary-form condition name(s). The mined
 # token's conjugation class gates which deinflection chains may claim it
 # (e.g. った→う vs った→つ both exist; the lemma comparison disambiguates,
-# the mask rejects cross-conjugation coincidences).
-_CTYPE_PREFIX_TO_CONDITION: tuple[tuple[str, str], ...] = (
-    ("五段", "v5"),
-    ("上一段", "v1"),
-    ("下一段", "v1"),
-    ("サ行変格", "vs"),
-    ("カ行変格", "vk"),
-    ("ザ行変格", "vz"),
-    ("形容詞", "adj-i"),
+# the mask rejects cross-conjugation coincidences). A prefix may map to
+# multiple names, ORed into one mask: unidic tags じる/ずる verbs (感じる,
+# 信じる, 生じる) as サ行変格, but the transform rules that reach their 〜ずる
+# orthBase carry vz, so サ行変格 must satisfy both vs and vz or the highlight
+# stops at the stem (Bug J1).
+_CTYPE_PREFIX_TO_CONDITION: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("五段", ("v5",)),
+    ("上一段", ("v1",)),
+    ("下一段", ("v1",)),
+    ("サ行変格", ("vs", "vz")),
+    ("カ行変格", ("vk",)),
+    ("ザ行変格", ("vz",)),
+    ("形容詞", ("adj-i",)),
 )
 
 
@@ -195,9 +199,12 @@ class Deinflector:
         """
         if not isinstance(ctype, str):
             return 0
-        for prefix, condition_name in _CTYPE_PREFIX_TO_CONDITION:
+        for prefix, condition_names in _CTYPE_PREFIX_TO_CONDITION:
             if ctype.startswith(prefix):
-                return self._condition_flags.get(condition_name, 0)
+                mask = 0
+                for condition_name in condition_names:
+                    mask |= self._condition_flags.get(condition_name, 0)
+                return mask
         return 0
 
     def transform(self, source_text: str) -> list[TransformedText]:
