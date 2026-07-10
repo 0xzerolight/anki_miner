@@ -139,7 +139,13 @@ class DictionaryRegistry:
                     continue
                 meta = self._dicts.get(entry.dict_id)
                 if meta is None:
-                    logger.warning(
+                    # Debug, not warning: this chain is rebuilt on every episode,
+                    # and a missing on-disk dict (e.g. the legacy 'jmdict-english'
+                    # default slot a user never migrated, or a transiently
+                    # unreachable dicts_root) is skip-and-continue by design. A
+                    # genuinely empty chain is still surfaced at WARNING by
+                    # build_definition_service ("No offline dictionary index").
+                    logger.debug(
                         "Dictionary '%s' referenced in config but not found in %s",
                         entry.dict_id,
                         self._root,
