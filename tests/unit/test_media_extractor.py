@@ -121,7 +121,7 @@ class TestExtractMedia:
         assert result.audio_filename is not None
 
     def test_correct_filename_generation(self, service, video_file, make_tokenized_word):
-        """Should generate filenames as {safe_lemma}_{timestamp_ms}.ext."""
+        """Should generate filenames as {safe_lemma}_{timestamp_ms}_{seq}.ext."""
         word = make_tokenized_word(lemma="食べる", start_time=1.5, duration=2.0)
 
         with (
@@ -130,9 +130,10 @@ class TestExtractMedia:
         ):
             result = service.extract_media(video_file, word)
 
-        # 1.5 * 1000 = 1500
-        assert result.screenshot_filename == "食べる_1500.jpg"
-        assert result.audio_filename == "食べる_1500.mp3"
+        # 1.5 * 1000 = 1500; a per-extraction seq (0 on a fresh service) keeps
+        # parallel siblings sharing lemma+timestamp from colliding.
+        assert result.screenshot_filename == "食べる_1500_0.jpg"
+        assert result.audio_filename == "食べる_1500_0.mp3"
 
     def test_handles_unsafe_characters_in_lemma(self, service, video_file, make_tokenized_word):
         """Should sanitize filenames by replacing unsafe characters."""
@@ -145,8 +146,24 @@ class TestExtractMedia:
             result = service.extract_media(video_file, word)
 
         # safe_filename replaces <, >, :, " with underscores
-        assert result.screenshot_filename == "te_st__wo_rd_2000.jpg"
-        assert result.audio_filename == "te_st__wo_rd_2000.mp3"
+        assert result.screenshot_filename == "te_st__wo_rd_2000_0.jpg"
+        assert result.audio_filename == "te_st__wo_rd_2000_0.mp3"
+
+    def test_identical_lemma_and_start_produce_distinct_temp_paths(self, service, video_file, make_tokenized_word):
+        """Two words sharing lemma+start_time (kanji-variant collapse / dedup
+        bypass) must map to DISTINCT temp paths so parallel ``ffmpeg -y`` writes
+        never race the same file."""
+        word = make_tokenized_word(lemma="食べる", start_time=1.0, duration=2.0)
+
+        with (
+            patch.object(service, "_extract_screenshot", return_value=True),
+            patch.object(service, "_extract_audio", return_value=True),
+        ):
+            first = service.extract_media(video_file, word)
+            second = service.extract_media(video_file, word)
+
+        assert first.audio_path != second.audio_path
+        assert first.screenshot_path != second.screenshot_path
 
 
 class TestExtractScreenshot:
@@ -279,8 +296,8 @@ class TestAnimatedScreenshot:
         ):
             result = animated_avif_service.extract_media(video_file, word)
 
-        assert result.screenshot_filename == "食べる_1500.avif"
-        assert result.audio_filename == "食べる_1500.mp3"
+        assert result.screenshot_filename == "食べる_1500_0.avif"
+        assert result.audio_filename == "食べる_1500_0.mp3"
 
     def test_filename_uses_webp_when_format_webp(self, animated_webp_service, video_file, make_tokenized_word):
         """Filename extension should be .webp when animated+webp is configured."""
@@ -291,7 +308,7 @@ class TestAnimatedScreenshot:
         ):
             result = animated_webp_service.extract_media(video_file, word)
 
-        assert result.screenshot_filename == "飲む_2000.webp"
+        assert result.screenshot_filename == "飲む_2000_0.webp"
 
     def test_animated_fmt_dispatches_to_animated_path(self, animated_avif_service, video_file, tmp_path):
         """_extract_screenshot dispatches to the animated impl when given a format."""
@@ -617,7 +634,7 @@ class TestAnimatedFormatFallbackWiring:
         assert "libwebp_anim" in cmd
         assert "libsvtav1" not in cmd
         assert cmd[-1].endswith(".webp")
-        assert result.screenshot_filename == "食べる_1500.webp"
+        assert result.screenshot_filename == "食べる_1500_0.webp"
 
     def test_none_threaded_disables_screenshot_without_spawn(self, test_config, video_file, make_tokenized_word):
         """animated_format=None (animated unavailable) → no screenshot, no spawn."""
