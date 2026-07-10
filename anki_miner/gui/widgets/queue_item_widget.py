@@ -264,6 +264,7 @@ class QueueItemWidget(QFrame):
             "pending": (self.tr("Pending"), "pending"),
             "processing": (self.tr("Processing"), "processing"),
             "complete": (self.tr("Complete"), "complete"),
+            "error": (self.tr("Error"), "error"),
         }
 
         text, prop_value = status_map.get(self._status, (self.tr("Pending"), "pending"))

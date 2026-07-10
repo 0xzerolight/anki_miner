@@ -606,6 +606,11 @@ class BatchProcessingTab(MiningTabBase):
         self.presenter.show_error(error_message)
         self._advance_queue_bar()
 
+        # Render the failed row with the error badge — the worker set the model
+        # QueueItem's status but never drove the widget, so the row otherwise
+        # stuck at "Processing" during the run and fell back to "Pending" after.
+        self.queue_panel.set_item_status(item_id, "error")
+
     def _advance_queue_bar(self) -> None:
         """Advance the series-granular bar after a terminal item outcome.
 
