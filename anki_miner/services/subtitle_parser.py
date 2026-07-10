@@ -309,25 +309,34 @@ class SubtitleParserService:
         duration: float,
         sentence_furigana: str,
         sentence_reading: str,
-        seen_lemmas: set[str],
+        seen_mined_forms: set[str],
     ) -> TokenizedWord | None:
-        """Build the ``TokenizedWord`` for one included token, lemma-deduped.
+        """Build the ``TokenizedWord`` for one included token, mined_form-deduped.
 
         Shared tail of ``parse_subtitle_file`` and
-        ``parse_subtitle_file_with_index``: lemma-keyed dedup (first
-        occurrence wins, recorded in ``seen_lemmas``), reading/expression
+        ``parse_subtitle_file_with_index``: mined_form-keyed dedup (first
+        occurrence wins, recorded in ``seen_mined_forms``), reading/expression
         assembly and the optional bold-target sentence variants. Returns
-        ``None`` when the token's lemma was already emitted.
+        ``None`` when the token's mined_form was already emitted.
         """
-        # Get lemma (dictionary form) for lookups and deduplication
+        # Get lemma (dictionary form) for lookups; surface is the raw token.
         lemma = self._extract_lemma(word_token)
         surface = word_token.surface
 
-        # Dedup on lemma alone: surface variants of the same dictionary
-        # form should collapse, not block each other.
-        if lemma in seen_lemmas:
+        # mined_form is the card-front spelling: orthBase (source orthography)
+        # for verbs/adjectives, surface otherwise (see select_mined_form).
+        pos = word_token.feature.pos1
+        orth_base = self._mining_base(word_token)
+        mined = select_mined_form(pos, orth_base, lemma, surface)
+
+        # Dedup on mined_form, NOT lemma: UniDic collapses kanji-variant
+        # homographs onto one canonical lemma (賭ける/掛ける → 掛ける), but they
+        # are distinct card fronts driving distinct definition/frequency/audio/
+        # known-word lookups, so lemma-keyed dedup silently dropped the second
+        # variant. mined_form is the identity every other stage already uses.
+        if mined in seen_mined_forms:
             return None
-        seen_lemmas.add(lemma)
+        seen_mined_forms.add(mined)
 
         # Get reading if available
         reading = self._extract_reading(word_token)
@@ -342,13 +351,9 @@ class SubtitleParserService:
             # (same source as expression_reading below).
             reading = self._reading(lemma)
 
-        # ExpressionFurigana/Reading match the mined card front: orthBase
-        # (source-orthography dictionary form) for verbs/adjectives, surface
-        # for nouns (see TokenizedWord.mined_form / select_mined_form for
-        # the trade-off).
-        pos = word_token.feature.pos1
-        orth_base = self._mining_base(word_token)
-        mined = select_mined_form(pos, orth_base, lemma, surface)
+        # ExpressionFurigana/Reading match the mined card front (computed above):
+        # orthBase for verbs/adjectives, surface for nouns (see
+        # TokenizedWord.mined_form / select_mined_form for the trade-off).
         if mined == surface and getattr(word_token, "compound", False) is not True:
             # Single source of truth for the target reading (Task 1.2). When the
             # card front IS the surface token, keep the context-disambiguated
@@ -418,15 +423,17 @@ class SubtitleParserService:
     def _emit_line_words_and_index(
         self,
         line_state: tuple[str, list[Any], list[Any], float, float, float],
-        seen_lemmas: set[str],
+        seen_mined_forms: set[str],
         *,
         collect_index: bool,
     ) -> tuple[list[TokenizedWord], LineLemmas | None]:
         """Emit one line's deduped words plus its optional per-line lemma index.
 
         Returns ``(line_words, line_lemmas)``. ``line_words`` is the list of
-        ``TokenizedWord`` objects emitted from this line, lemma-deduped against
-        ``seen_lemmas`` (first occurrence across the whole file wins).
+        ``TokenizedWord`` objects emitted from this line, mined_form-deduped
+        against ``seen_mined_forms`` (first occurrence across the whole file
+        wins). The per-line ``line_lemmas`` index stays lemma-keyed (the i+1
+        filter counts distinct lemmas, not card fronts).
         ``line_lemmas`` is the line's ``LineLemmas`` index entry when
         ``collect_index`` is set — or ``None`` when ``collect_index`` is set but
         the line has zero content lemmas (skipped, so it returns ``([], None)``),
@@ -487,7 +494,7 @@ class SubtitleParserService:
                 ),
             )
 
-        # Second pass: emit deduped TokenizedWord entries (lemma-keyed).
+        # Second pass: emit deduped TokenizedWord entries (mined_form-keyed).
         line_words: list[TokenizedWord] = []
         for word_token, (tok_start, tok_end, highlight_end) in zip(included_tokens, included_spans, strict=True):
             word = self._emit_word(
@@ -502,7 +509,7 @@ class SubtitleParserService:
                 duration=duration,
                 sentence_furigana=sentence_furigana,
                 sentence_reading=sentence_reading,
-                seen_lemmas=seen_lemmas,
+                seen_mined_forms=seen_mined_forms,
             )
             if word is not None:
                 line_words.append(word)
@@ -555,7 +562,7 @@ class SubtitleParserService:
         self._reset_caches()
 
         all_words: list[TokenizedWord] = []
-        seen_lemmas: set[str] = set()  # Track unique words by dictionary form (lemma).
+        seen_mined_forms: set[str] = set()  # Track unique words by card-front mined_form.
 
         for (
             text,
@@ -592,7 +599,7 @@ class SubtitleParserService:
                     duration=duration,
                     sentence_furigana=sentence_furigana,
                     sentence_reading=sentence_reading,
-                    seen_lemmas=seen_lemmas,
+                    seen_mined_forms=seen_mined_forms,
                 )
                 if word is not None:
                     all_words.append(word)
@@ -603,7 +610,7 @@ class SubtitleParserService:
         """Parse a subtitle file and produce both the deduped mining list and a per-line lemma index.
 
         ``all_words`` is identical to ``parse_subtitle_file(subtitle_file)`` —
-        same dedup-by-lemma semantics, same first-wins ordering.
+        same dedup-by-mined_form semantics, same first-wins ordering.
 
         ``line_index`` is a parallel structure keyed by line: each entry holds
         every content lemma that appeared on that line (NO dedup against
@@ -629,10 +636,12 @@ class SubtitleParserService:
 
         all_words: list[TokenizedWord] = []
         line_index: list[LineLemmas] = []
-        seen_lemmas: set[str] = set()
+        seen_mined_forms: set[str] = set()
 
         for line_state in self._iter_parsed_lines(subtitle_file):
-            line_words, line_lemmas_entry = self._emit_line_words_and_index(line_state, seen_lemmas, collect_index=True)
+            line_words, line_lemmas_entry = self._emit_line_words_and_index(
+                line_state, seen_mined_forms, collect_index=True
+            )
             if line_lemmas_entry is not None:
                 line_index.append(line_lemmas_entry)
             all_words.extend(line_words)
@@ -671,7 +680,7 @@ class SubtitleParserService:
                 element of the returned tuple is ``None``.
 
         Returns:
-            ``(words, line_index, counts)``. ``words`` is lemma-deduped
+            ``(words, line_index, counts)``. ``words`` is mined_form-deduped
             (first-occurrence-wins across the whole call, like the subtitle
             entrypoints); ``line_index`` is the ``LineLemmas`` list when
             ``want_line_index`` else ``None``; ``counts`` maps lemma → total
@@ -684,7 +693,7 @@ class SubtitleParserService:
 
         all_words: list[TokenizedWord] = []
         line_index: list[LineLemmas] = []
-        seen_lemmas: set[str] = set()
+        seen_mined_forms: set[str] = set()
         counts: collections.Counter[str] = collections.Counter()
 
         for unit in units:
@@ -702,7 +711,7 @@ class SubtitleParserService:
                     counts[self._extract_lemma(token)] += 1
 
             line_words, line_lemmas_entry = self._emit_line_words_and_index(
-                line_state, seen_lemmas, collect_index=want_line_index
+                line_state, seen_mined_forms, collect_index=want_line_index
             )
             all_words.extend(line_words)
             if line_lemmas_entry is not None:

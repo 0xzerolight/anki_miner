@@ -235,11 +235,14 @@ class TestParseSubtitleFile:
 
         assert len(words) == 1
 
-    def test_distinct_lemmas_not_deduped_when_surface_equal(self, test_config, tmp_path):
-        """Lemma-only dedup: same surface with different lemmas stays as two entries.
+    def test_same_surface_nouns_collapse_on_mined_form(self, test_config, tmp_path):
+        """mined_form dedup: same-surface nouns with distinct lemmas collapse (Bug J3).
 
-        After the Issue #19 cleanup, dedup is keyed on lemma alone — shared
-        surface no longer collapses entries with distinct dictionary forms.
+        For nouns ``mined_form == surface``, so two 学生 tokens are one card
+        front — identical definition/frequency/audio identity — regardless of
+        their UniDic lemma; emitting both would be a duplicate card. (The inverse
+        — same lemma, distinct surface — stays distinct; see the kanji-variant
+        homograph test.)
         """
         sub_file = tmp_path / "test.ass"
         sub_file.write_text("placeholder", encoding="utf-8")
@@ -261,15 +264,11 @@ class TestParseSubtitleFile:
         token2 = _make_token("学生", "名詞", lemma="学生X", kana="ガクセイ")
 
         mock_tagger = MagicMock()
-        # Sentence-level furigana/reading reuse raw_tokens, and surface-mined
-        # nouns take their expression reading from the token itself (Task 1.2),
-        # so a line is just its tokenize call — except token2's mined form (学生)
-        # differs from its lemma (学生X), which triggers one lemma_reading
-        # lookup for the JPod101 retry. Total: 3.
+        # Both lines are a single tokenize call: line 2's token dedup-skips on
+        # mined_form (学生) before any reading lookup. Total: 2.
         mock_tagger.side_effect = [
             [token1],  # line 1: tokenize
-            [token2],  # line 2: tokenize
-            [token2],  # line 2: lemma_reading (self._reading of lemma 学生X)
+            [token2],  # line 2: tokenize (then mined_form dedup skip)
         ]
 
         with (
@@ -279,8 +278,50 @@ class TestParseSubtitleFile:
             service = SubtitleParserService(test_config)
             words = service.parse_subtitle_file(sub_file)
 
+        assert len(words) == 1
+        assert words[0].mined_form == "学生"
+
+    def test_kanji_variant_homographs_sharing_lemma_both_emit(self, test_config, tmp_path):
+        """Distinct-surface homographs that share a lemma both mine (Bug J3).
+
+        UniDic collapses kanji variants onto one canonical lemma (賭ける →
+        掛ける), so lemma-keyed dedup dropped the second variant even though it
+        is a distinct card front. Dedup now keys on ``mined_form`` (orthBase for
+        verbs), matching the card-identity used for definitions/audio/known-words.
+        """
+        sub_file = tmp_path / "test.ass"
+        sub_file.write_text("placeholder", encoding="utf-8")
+
+        line1 = MagicMock()
+        line1.text = "賭ける"
+        line1.start = 1000
+        line1.end = 3000
+
+        line2 = MagicMock()
+        line2.text = "掛ける"
+        line2.start = 4000
+        line2.end = 6000
+
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([line1, line2]))
+
+        # Same canonical lemma (掛ける), different source orthography → different
+        # mined_form (orthBase). Verbs mine as orthBase.
+        token1 = _make_token("賭ける", "動詞", lemma="掛ける", kana="カケル", orth_base="賭ける")
+        token2 = _make_token("掛ける", "動詞", lemma="掛ける", kana="カケル", orth_base="掛ける")
+
+        mapping = {"賭ける": [token1], "掛ける": [token2]}
+        mock_tagger = MagicMock(side_effect=lambda text: mapping.get(text, [token2]))
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+            words = service.parse_subtitle_file(sub_file)
+
         assert len(words) == 2
-        assert {w.lemma for w in words} == {"学生", "学生X"}
+        assert {w.mined_form for w in words} == {"賭ける", "掛ける"}
 
     def test_skips_empty_cleaned_text(self, test_config, tmp_path):
         """Lines that clean to empty should be skipped."""
