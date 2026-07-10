@@ -114,6 +114,14 @@ def _resolve_gaiji(line: str) -> str:
 # quotation, so an unconditional strip is safe on the Aozora path.
 _RUBY_RE = re.compile(r"《[^》]*》")
 
+# A ruby span *attached* to base text: the ｜ base-marker or a kanji/kana run
+# directly before 《. A bare, standalone 《…》 (a plain novel using the double-
+# angle bracket as title/quotation punctuation) has whitespace / line-start /
+# punctuation before 《 and is NOT ruby — so it must not, on its own, mark a
+# file as Aozora (Bug Y4: doing so dropped the first block as a "header" and
+# stripped every 《…》 span silently).
+_RUBY_ATTACHED_RE = re.compile(r"[｜々぀-ヿ一-鿿]《")
+
 
 def _strip_ruby(line: str) -> str:
     return _RUBY_RE.sub("", line).replace("｜", "")
@@ -201,7 +209,17 @@ def _drop_symbol_block(lines: list[str]) -> list[str]:
 
 
 def _is_aozora(text: str) -> bool:
-    if "《" in text or "［＃" in text:
+    """Detect a genuine Aozora Bunko file (vs. a plain ``.txt`` novel).
+
+    A bare standalone ``《…》`` is NOT sufficient — a plain novel may write a
+    work title / quotation with the double-angle bracket, and treating that as
+    Aozora dropped its first block as a "header" and stripped every ``《…》``
+    span (Bug Y4). Require a real Aozora signal: an accent/annotation marker
+    ``［＃``, ruby *attached* to a kanji/kana base, or a header ruler line.
+    """
+    if "［＃" in text:
+        return True
+    if _RUBY_ATTACHED_RE.search(text):
         return True
     return any(_RULE_RE.match(ln) for ln in _splitlines(text))
 
@@ -220,7 +238,7 @@ def _extract_header(lines: list[str]) -> tuple[str, list[str]]:
 # --- unit emission -------------------------------------------------------
 
 
-def _emit_units(body_lines: list[str]) -> list[ReadingUnit]:
+def _emit_units(body_lines: list[str], aozora: bool = True) -> list[ReadingUnit]:
     units: list[ReadingUnit] = []
     index = 0
     para_no = 0
@@ -231,7 +249,10 @@ def _emit_units(body_lines: list[str]) -> list[ReadingUnit]:
     for raw in body_lines:
         line = raw[1:] if raw.startswith("　") else raw  # strip one indent
         line = _resolve_gaiji(line)
-        line = _strip_ruby(line)
+        # Ruby stripping is unconditional (any 《…》), so only on the Aozora path
+        # — a plain novel's 《…》 is real punctuation, not a ruby reading (Y4).
+        if aozora:
+            line = _strip_ruby(line)
         text, inline, block_start, block_end = _strip_annotations(line)
         stripped = text.strip()
 
@@ -287,7 +308,8 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
     text = _decode(ref.path.read_bytes())
     lines = _cut_footer(_splitlines(text))
 
-    if _is_aozora(text):
+    aozora = _is_aozora(text)
+    if aozora:
         title, body_lines = _extract_header(lines)
         title = title or ref.title
     else:
@@ -299,5 +321,5 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
         kind="book",
         series="Books",
         episode=title,
-        units=_emit_units(body_lines),
+        units=_emit_units(body_lines, aozora=aozora),
     )
