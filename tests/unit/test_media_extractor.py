@@ -680,6 +680,18 @@ class TestAnimatedFormatFallbackWiring:
         assert result.screenshot_filename.endswith(".jpg")
 
 
+class TestRunFfmpeg:
+    """Tests for the shared _run_ffmpeg spawner."""
+
+    def test_detaches_stdin_from_tty(self, service):
+        """Popen must pass stdin=DEVNULL so a backgrounded ffmpeg can't read the
+        controlling TTY (SIGTTIN stop → the extraction times out)."""
+        with patch(f"{MODULE}.subprocess.Popen", return_value=_popen_mock()) as mock_popen:
+            service._run_ffmpeg(["ffmpeg", "-i", "x", "out.mp3"], "Test op", timeout=5)
+
+        assert mock_popen.call_args.kwargs["stdin"] == subprocess.DEVNULL
+
+
 class TestExtractAudio:
     """Tests for _extract_audio method."""
 
