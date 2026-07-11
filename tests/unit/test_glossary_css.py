@@ -124,6 +124,63 @@ class TestGlossaryYomitanLeak:
                         )
 
 
+class TestEnvelopeInlineAxisOwnership:
+    """Envelope rules must never spend the inline axis (Issue #93).
+
+    ``li[data-dictionary]`` is the one element the sheet shares with
+    Yomitan-aware note types: Senren's Dictionary Colorizer reserves
+    ``padding-left`` on it for a colored rail, and our former
+    ``padding: 0.1em 0`` shorthand out-specified that and zeroed it, sliding
+    the glossary under the rail. Rules whose SUBJECT (rightmost compound) is
+    the envelope may declare only block-axis box properties — with nothing
+    declared on the inline axis, no specificity can defeat the host's
+    ``padding-left``. Descendant rules (envelope as ancestor) are exempt:
+    their subjects are miner-only markup the host doesn't style.
+    """
+
+    _BANNED = re.compile(r"^(?:margin|padding)$|^(?:margin|padding)-(?:left|right|inline)")
+
+    def _envelope_rules(self, css):
+        """(selector, declarations) for rules whose rightmost compound is the
+        envelope. Compounds in this sheet never contain internal spaces, so a
+        whitespace split isolates the subject (``> i`` yields subject ``i``)."""
+        out = []
+        for selector_group, declarations in _iter_rules(css):
+            for selector in selector_group.split(","):
+                subject = selector.strip().split()[-1]
+                if "li[data-dictionary]" in subject:
+                    out.append((selector.strip(), declarations))
+        return out
+
+    def test_audit_matches_exactly_the_two_envelope_rules(self):
+        # Self-check against vacuous or over-broad matching: the sheet carries
+        # exactly two envelope-subject rules — the block-spacing rule and the
+        # gated compact-size rule. Reshaping selectors must update this pin.
+        rules = self._envelope_rules(load_glossary_css())
+        assert len(rules) == 2, f"expected exactly 2 envelope-subject rules, found {[s for s, _ in rules]}"
+
+    def test_envelope_rules_never_touch_inline_axis(self):
+        for selector, declarations in self._envelope_rules(load_glossary_css()):
+            for decl in declarations.split(";"):
+                prop = decl.split(":", 1)[0].strip()
+                if not prop:
+                    continue
+                assert not self._BANNED.match(prop), (
+                    f"envelope rule {selector!r} declares {prop!r} — the margin/"
+                    "padding shorthand and -left/-right/-inline properties are "
+                    "banned on the envelope (they clobber the host note type's "
+                    "inline-axis styling, Issue #93)"
+                )
+
+    def test_envelope_keeps_block_axis_spacing(self):
+        # The fix must not degrade into deleting the rule: the house vertical
+        # rhythm between dictionary blocks stays.
+        rules = self._envelope_rules(load_glossary_css())
+        assert any(
+            "padding-top" in decls and "padding-bottom" in decls for _, decls in rules
+        ), "envelope block-axis spacing (padding-top/bottom) lost"
+
+
 class TestGapFillerGate:
     """Every data-sc-* presentation gap-filler must be gated to unstyled dicts.
 
