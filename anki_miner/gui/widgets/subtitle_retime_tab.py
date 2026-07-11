@@ -428,8 +428,8 @@ class SubtitleRetimeTab(QWidget):
 
     def _on_tracks_clicked(self) -> None:
         """Open AudioTracksDialog to pick which audio track alass aligns against."""
-        video_path = self.video_file_selector.get_path().strip()
-        if not video_path:
+        video_path = self.video_file_selector.path_or_none()
+        if video_path is None:
             QMessageBox.warning(self, self.tr("No Video File Selected"), self.tr("Select a video file first."))
             return
         video_file = Path(video_path)
@@ -591,17 +591,17 @@ class SubtitleRetimeTab(QWidget):
         """Return the ordered list of (video, subtitle) pairs to process, or [] on failure."""
         if not self.video_file_selector.isHidden():
             # Single-file mode
-            video_str = self.video_file_selector.get_path().strip()
-            sub_str = self.subtitle_file_selector.get_path().strip()
+            video_str = self.video_file_selector.path_or_none()
+            sub_str = self.subtitle_file_selector.path_or_none()
 
-            if not video_str:
+            if video_str is None:
                 QMessageBox.warning(
                     self,
                     self.tr("No Video File Selected"),
                     self.tr("Select a video file before retiming subtitles."),
                 )
                 return []
-            if not sub_str:
+            if sub_str is None:
                 QMessageBox.warning(
                     self,
                     self.tr("No Subtitle File Selected"),
@@ -631,17 +631,17 @@ class SubtitleRetimeTab(QWidget):
 
         else:
             # Folder mode
-            video_folder_str = self.video_folder_selector.get_path().strip()
-            sub_folder_str = self.subtitle_folder_selector.get_path().strip()
+            video_folder_str = self.video_folder_selector.path_or_none()
+            sub_folder_str = self.subtitle_folder_selector.path_or_none()
 
-            if not video_folder_str:
+            if video_folder_str is None:
                 QMessageBox.warning(
                     self,
                     self.tr("No Video Folder Selected"),
                     self.tr("Select a video folder before retiming subtitles."),
                 )
                 return []
-            if not sub_folder_str:
+            if sub_folder_str is None:
                 QMessageBox.warning(
                     self,
                     self.tr("No Subtitle Folder Selected"),
