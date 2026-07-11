@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -11,6 +12,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QDoubleSpinBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -22,13 +24,13 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.constants import MIN_HEIGHT_QUEUE_SECTION
+from anki_miner.gui.constants import MIN_HEIGHT_QUEUE_SECTION, SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
-from anki_miner.gui.widgets.base import field_label_width
+from anki_miner.gui.widgets.base import field_label_width, make_label_fit_text
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
@@ -209,8 +211,8 @@ class BatchProcessingTab(MiningTabBase):
         header = SectionHeader(title=self.tr("Quick Processing"))
         layout.addWidget(header)
 
-        # Shared label-column width so both folder rows line up.
-        label_w = field_label_width("Video Folder:", "Subtitle Folder:")
+        # Shared label-column width so both folder rows and the offset row line up.
+        label_w = field_label_width("Video Folder:", "Subtitle Folder:", "Subtitle Offset:")
 
         # Video folder selector
         self.video_folder_selector = FileSelector(
@@ -223,6 +225,30 @@ class BatchProcessingTab(MiningTabBase):
             label=self.tr("Subtitle Folder:"), file_mode=False, file_filter="", label_width=label_w
         )
         layout.addWidget(self.subtitle_folder_selector)
+
+        # Constant subtitle offset applied to every episode pair in the folder
+        # (mirrors the Single Episode tab; per-session, seeded from config).
+        offset_layout = QHBoxLayout()
+        offset_layout.setSpacing(SPACING.xs)
+
+        offset_label = QLabel(self.tr("Subtitle Offset:"))
+        offset_label.setObjectName("field-label")
+        offset_label.setFixedWidth(label_w)
+        make_label_fit_text(offset_label)
+
+        self.offset_spinbox = QDoubleSpinBox()
+        self.offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
+        self.offset_spinbox.setSingleStep(0.5)
+        self.offset_spinbox.setValue(self.config.subtitle_offset)
+        self.offset_spinbox.setSuffix(self.tr(" seconds"))
+        self.offset_spinbox.setToolTip(
+            self.tr("Adjust subtitle timing for all episodes (positive = later, negative = earlier)")
+        )
+
+        offset_layout.addWidget(offset_label)
+        offset_layout.addWidget(self.offset_spinbox)
+        offset_layout.addStretch()
+        layout.addLayout(offset_layout)
 
         # Action buttons
         button_layout = QHBoxLayout()
@@ -327,11 +353,16 @@ class BatchProcessingTab(MiningTabBase):
         # Process each pair sequentially in worker thread
         from anki_miner.gui.workers.manual_pair_worker import ManualPairWorkerThread
 
+        # Read the constant offset on the GUI thread now; the factory runs on
+        # the worker thread so it must close over the precomputed config, never
+        # touch the spinbox (cross-thread QWidget access). Mirrors SingleEpisodeTab.
+        config_with_offset = replace(self.config, subtitle_offset=self.offset_spinbox.value())
+
         # Pass a factory so the processor is built on the worker thread. This
         # keeps the GUI thread free during the slow registry scan, sqlite opens,
         # and CSV parses that happen during construction.
         def _processor_factory() -> EpisodeProcessor:
-            return create_episode_processor(self.config, self.presenter, self.stats_service)
+            return create_episode_processor(config_with_offset, self.presenter, self.stats_service)
 
         curation_cb = self._curation_bridge if self.review_words_checkbox.isChecked() else None
         self.worker_thread = ManualPairWorkerThread(
@@ -812,6 +843,14 @@ class BatchProcessingTab(MiningTabBase):
         Args:
             config: New configuration
         """
+        # The Quick-path offset spinbox is a per-session value the user dials in
+        # for the current folder batch; it is never persisted back to config.
+        # Only follow config.subtitle_offset when the *persisted* value actually
+        # changed, so an unrelated settings save / theme toggle (each of which
+        # re-fires update_config) doesn't wipe the in-progress offset. Mirrors
+        # SingleEpisodeTab.update_config.
+        if config.subtitle_offset != self.config.subtitle_offset:
+            self.offset_spinbox.setValue(config.subtitle_offset)
         self.config = config
 
     def release_dictionary_resources(self) -> bool:
