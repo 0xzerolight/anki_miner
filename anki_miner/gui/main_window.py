@@ -1038,13 +1038,22 @@ class MainWindow(QMainWindow):
         background worker). No-ops once migrated; persists the updated config so
         the chain reference survives the next launch.
         """
-        from anki_miner.services.frequency.legacy_migration import migrate_legacy_frequency_csv
+        from anki_miner.services.frequency.legacy_migration import (
+            migrate_legacy_frequency_csv,
+            repair_legacy_frequency_source_name,
+        )
 
         migrated = migrate_legacy_frequency_csv(self.config)
         if migrated is not None:
             self.config = migrated
             GUIConfigManager.save_config(self.config)
             logger.info("Migrated legacy frequency.csv into freqs/legacy-frequency")
+
+        # Unconditional (NOT gated on `migrated`): users whose chain is already
+        # populated — exactly those whose reimport collapsed the label to
+        # "source" — take the no-op path above, so the repair must run
+        # independently. Idempotent and self-guarded on the stored name.
+        repair_legacy_frequency_source_name(self.config)
 
     def _maybe_migrate_jmdict(self) -> None:
         """One-time: migrate legacy JMdict XML into a SQLite index in the background."""

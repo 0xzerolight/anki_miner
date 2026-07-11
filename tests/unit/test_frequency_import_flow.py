@@ -276,6 +276,29 @@ class TestReimportSource:
         assert args[1] == freqs_root
         assert kwargs.get("source_id") == "jpdb"
 
+    def test_reimport_forwards_existing_source_name(self, tab, monkeypatch, stub_worker):
+        # Existing index carries a display name; reimport must read it from the
+        # authoritative SQLite meta and forward it so the name is preserved (else
+        # the CSV path re-derives "source" from the persisted-copy stem).
+        from anki_miner.services.frequency import storage
+
+        freqs_root = tab.config.freqs_root
+        source_dir = freqs_root / "jpdb"
+        source_dir.mkdir(parents=True)
+        (source_dir / "source.csv").write_text("word,rank\n猫,5\n", encoding="utf-8")
+        storage.build_index(
+            source_dir / "index.sqlite",
+            [("猫", None, 5, None)],
+            {"source_name": "JPDB", "format": "csv"},
+        )
+        _capture_infos(monkeypatch)
+        monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
+
+        tab._frequency_import_flow.reimport_source("jpdb")
+
+        assert stub_worker.called
+        assert stub_worker.instances[0]._kwargs.get("source_name") == "JPDB"
+
     def test_reimport_missing_copy_prompts_for_file(self, tab, monkeypatch, stub_worker, tmp_path):
         # No source.* copy on disk → flow falls back to a file dialog.
         freqs_root = tab.config.freqs_root
