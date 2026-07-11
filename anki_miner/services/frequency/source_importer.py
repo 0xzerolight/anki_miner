@@ -96,6 +96,7 @@ def import_frequency_source(
     dest_root: Path,
     *,
     source_id: str | None = None,
+    source_name: str | None = None,
     progress: ProgressFn | None = None,
     cancel_check: Callable[[], bool] | None = None,
 ) -> FreqSourceImportResult:
@@ -108,6 +109,11 @@ def import_frequency_source(
             ``~/.anki_miner/freq_sources/``).
         source_id: Explicit on-disk id. When omitted, derived from the Yomitan
             ``index.json`` title (zip) or the CSV filename stem, then slugified.
+        source_name: Explicit human display name. When omitted, a CSV derives it
+            from the filename stem. Used by reimport to preserve the existing
+            display name instead of re-deriving it from the generic ``source.csv``
+            persisted-copy stem. Ignored for zips (their title comes from
+            ``index.json``).
         progress: Optional ``(current, total, message)`` callback.
         cancel_check: Optional zero-arg predicate; if it returns True the import
             aborts (partial staging files are cleaned up by the temp dir).
@@ -129,7 +135,7 @@ def import_frequency_source(
             cancel_check=cancel_check,
         )
     if suffix in _CSV_SUFFIXES:
-        return _import_csv(input_path, dest_root, source_id=source_id)
+        return _import_csv(input_path, dest_root, source_id=source_id, source_name=source_name)
     raise SetupError(
         f"Unsupported frequency source '{input_path.name}'. " "Provide a Yomitan .zip or a .csv/.tsv/.txt rank list."
     )
@@ -264,9 +270,14 @@ def _import_csv(
     dest_root: Path,
     *,
     source_id: str | None,
+    source_name: str | None = None,
 ) -> FreqSourceImportResult:
     stem = csv_path.stem
     resolved_id = source_id or _derive_source_id(stem)
+    # Honor an explicit display name (reimport passes the existing meta name);
+    # otherwise derive from the filename stem. Preserving it here is what keeps
+    # reimport from collapsing the label to the generic "source.csv" stem.
+    resolved_name = source_name if source_name else stem
 
     # key = (term, reading) -> rank; first occurrence wins (matches the legacy
     # CSV loader's semantics, which kept the first rank per word). Plain rank
@@ -322,7 +333,7 @@ def _import_csv(
         input_path=csv_path,
         dest_root=dest_root,
         source_id=resolved_id,
-        source_name=stem,
+        source_name=resolved_name,
         source_revision="",
         fmt="csv",
         rows=rows,

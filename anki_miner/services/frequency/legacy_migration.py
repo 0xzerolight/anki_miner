@@ -17,11 +17,17 @@ import dataclasses
 import logging
 
 from anki_miner.config import AnkiMinerConfig, FreqEntry
+from anki_miner.services.frequency import storage
 from anki_miner.services.frequency.source_importer import import_frequency_source
 
 logger = logging.getLogger(__name__)
 
 _LEGACY_SOURCE_ID = "legacy-frequency"
+# Display name the legacy source collapsed to when reimported before the
+# reimport-preserves-name fix (the generic "source.csv" stem). Repaired to a
+# friendly label so cards render "Frequency: N" instead of "source: N".
+_COLLAPSED_LEGACY_NAME = "source"
+_FRIENDLY_LEGACY_NAME = "Frequency"
 
 
 def migrate_legacy_frequency_csv(config: AnkiMinerConfig) -> AnkiMinerConfig | None:
@@ -66,3 +72,27 @@ def migrate_legacy_frequency_csv(config: AnkiMinerConfig) -> AnkiMinerConfig | N
         return None
 
     return dataclasses.replace(config, frequency_chain=(FreqEntry(_LEGACY_SOURCE_ID),))
+
+
+def repair_legacy_frequency_source_name(config: AnkiMinerConfig) -> None:
+    """Rename the legacy frequency source from "source" to a friendly label.
+
+    Standalone, condition-guarded, idempotent startup step — NOT tied to
+    ``migrate_legacy_frequency_csv``'s return value (that migration no-ops for
+    users whose chain is already populated, which is exactly the affected
+    population). Rewrites the authoritative SQLite meta (``write_meta`` also
+    refreshes the sidecar) only when the ``legacy-frequency`` source's current
+    name is the collapsed ``"source"`` stem. Self-clearing (post-rewrite the
+    condition can't re-match) and self-healing (retries on a failed write); the
+    ``legacy-frequency`` id scope means it can never touch another source that a
+    user happened to name "source". Never crashes startup.
+    """
+    legacy_db = config.freqs_root / _LEGACY_SOURCE_ID / "index.sqlite"
+    if not legacy_db.exists():
+        return
+    try:
+        if storage.read_meta(legacy_db).get("source_name") == _COLLAPSED_LEGACY_NAME:
+            storage.write_meta(legacy_db, {"source_name": _FRIENDLY_LEGACY_NAME})
+            logger.info("Repaired legacy frequency source name to %r", _FRIENDLY_LEGACY_NAME)
+    except Exception:
+        logger.warning("Could not repair legacy frequency source name", exc_info=True)
