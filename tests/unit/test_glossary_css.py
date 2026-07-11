@@ -393,6 +393,65 @@ class TestGroupPlacement:
             assert group == "unstyled-chrome", f"pill rule {selector!r} in {group!r}"
 
 
+class TestScGapfillWitnessSync:
+    """The sc-gapfill witness (``_SC_GAPFILL_HOOKS`` in card_style_block) is a
+    hardcoded set of the ``data-sc-*`` hooks the sc-gapfill rules target, chosen
+    over runtime CSS parsing to keep regex risk off the production
+    false-negative path (Issue #93 follow-up). These tests are its honesty
+    guarantee: a hook present in the CSS but missing from the witness would
+    silently drop the group on a card that needs it — the forbidden false
+    negative — so drift must fail loudly in CI.
+    """
+
+    _NARROW = re.compile(r'data-sc-(content|class)(\|?=)"([\w-]+)"')
+    _BROAD = re.compile(r"data-sc-[a-z-]+")
+
+    @staticmethod
+    def _sc_gapfill_regions() -> str:
+        from anki_miner.services.dictionary.card_style_block import split_group_regions
+
+        return "".join(css for g, css in split_group_regions(load_glossary_css()) if g == "sc-gapfill")
+
+    def _derived_hooks(self, css: str) -> set[str]:
+        hooks = set()
+        for key, op, tok in self._NARROW.findall(css):
+            # `|=` matches the value OR a `value-` prefix → open-prefix literal
+            # (no closing quote); exact `=` → the full closing-quoted literal.
+            hooks.add(f'data-sc-{key}="{tok}' if op == "|=" else f'data-sc-{key}="{tok}"')
+        return hooks
+
+    def test_hook_set_equals_css_derived(self):
+        from anki_miner.services.dictionary.card_style_block import _SC_GAPFILL_HOOKS
+
+        derived = self._derived_hooks(_no_comments(self._sc_gapfill_regions()))
+        assert len(derived) >= 18, f"sc-gapfill hook set gutted? only {len(derived)} parsed"
+        assert derived == set(_SC_GAPFILL_HOOKS)
+
+    def test_every_data_sc_occurrence_is_parseable(self):
+        # Completeness net: the narrow parser must see EVERY `data-sc-` attribute
+        # in the regions. A future hook it cannot read (a different key like
+        # `data-sc-note`, a single-quoted value, a `~=`/`^=`/`*=`/`$=` operator,
+        # or a non-`[\w-]` value) would slip past the equality test above AND the
+        # runtime witness — so trip a loud count mismatch here that forces the
+        # author to broaden both the parser and the hook set.
+        css = _no_comments(self._sc_gapfill_regions())
+        assert len(self._BROAD.findall(css)) == len(self._NARROW.findall(css))
+
+    def test_every_css_hook_makes_the_witness_fire(self):
+        # Tie the CSS directly to css_witnesses (not just to the hardcoded set):
+        # every hook the sheet targets must witness the group, and every `|=`
+        # hook must also fire on a hyphen-suffixed value (the false-negative the
+        # closing-quoted form would cause).
+        from anki_miner.services.dictionary.card_style_block import css_witnesses
+
+        env = '<li data-dictionary="D">'
+        for key, op, tok in self._NARROW.findall(_no_comments(self._sc_gapfill_regions())):
+            assert "sc-gapfill" in css_witnesses([env + f'<span data-sc-{key}="{tok}"></span>']), (key, op, tok)
+            if op == "|=":
+                suffixed = env + f'<span data-sc-{key}="{tok}-x"></span>'
+                assert "sc-gapfill" in css_witnesses([suffixed]), (key, op, tok, "suffix")
+
+
 class TestThemeAgnostic:
     """Theme-agnostic palette: no ``.nightMode``; ``color-mix()`` only guarded."""
 

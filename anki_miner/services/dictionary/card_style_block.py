@@ -175,21 +175,81 @@ def base_css_variant(groups: frozenset[str]) -> str:
     return css
 
 
+# The ``data-sc-*`` hooks the ``sc-gapfill`` rules actually target, as literal
+# HTML-attribute fragments to substring-test against a card body. The sc-gapfill
+# witness keys on THESE, not on a bare ``"data-sc-"`` check: every card carries
+# ``data-sc-content="glossary"``, but that is styled by ``core`` (``.gloss-sc-ul``),
+# so a coarse check kept the ~4.6 KB group on every card for nothing — defeating
+# the Issue #93 tree-shake on the common (unstyled JMdict) case.
+#
+# The match form is load-bearing; do NOT "simplify" it to a bare value substring:
+#   * exact ``=`` selector (``[data-sc-content="forms"]``) → the literal WITH its
+#     closing quote, so ``formsTable``/``antonyms``/``gloss-tag`` cannot collide
+#     with ``forms``/``antonym``/``tag`` and fire on every card;
+#   * ``|=`` selector (``[data-sc-content|="frequency"]`` — matches the value OR a
+#     ``value-`` hyphen prefix) → the OPEN-prefix literal WITHOUT the closing
+#     quote, so ``frequency-nf01`` still fires. A closing-quoted literal there
+#     would MISS the suffixed form and strip a needed style — the one forbidden
+#     outcome; the open prefix is a safe superset. The renderer always emits
+#     ``data-sc-<key>="value"`` double-quoted (yomitan_renderer ``_render_attrs``),
+#     so these literals match its output exactly.
+# Kept honest against glossary.css by the drift test in tests/unit/test_glossary_css.py
+# (bidirectional equality + a broad-vs-narrow occurrence-count check), so a future
+# rule with an exotic hook fails CI loudly instead of silently dropping a style.
+_SC_GAPFILL_HOOKS = frozenset(
+    {
+        # ``|=`` selectors → open-prefix literal (matches ``value`` and ``value-*``).
+        'data-sc-content="attribution',
+        'data-sc-content="extra-info',
+        'data-sc-content="frequency',
+        'data-sc-content="pitch-accent',
+        # exact ``=`` selectors → full closing-quoted literal.
+        'data-sc-content="antonym"',
+        'data-sc-content="dialect-info"',
+        'data-sc-content="example-sentence"',
+        'data-sc-content="example-sentence-a"',
+        'data-sc-content="example-sentence-b"',
+        'data-sc-content="field-info"',
+        'data-sc-content="forms"',
+        'data-sc-content="info-gloss"',
+        'data-sc-content="lang-source"',
+        'data-sc-content="lang-source-wasei"',
+        'data-sc-content="misc-info"',
+        'data-sc-content="part-of-speech-info"',
+        'data-sc-content="reference-label"',
+        'data-sc-content="sense-note"',
+        'data-sc-content="xref"',
+        'data-sc-class="extra-box"',
+        'data-sc-class="extra-label"',
+        'data-sc-class="tag"',
+    }
+)
+
+
+def _has_sc_gapfill_hook(html: str) -> bool:
+    """Whether ``html`` carries a ``data-sc-*`` hook any ``sc-gapfill`` rule can
+    match. See ``_SC_GAPFILL_HOOKS`` for the load-bearing match form."""
+    return any(hook in html for hook in _SC_GAPFILL_HOOKS)
+
+
 def css_witnesses(html_texts: Iterable[str]) -> frozenset[str]:
     """The style groups whose rules could match anything in the given HTML.
 
-    Deliberately over-inclusive (substring checks): a false positive wastes a
-    few bytes, a false negative would strip a needed style — never allowed.
-    Callers must pass STAMPED card HTML (envelopes carry ``data-has-styles``
-    where their dictionary ships CSS): the unstyled-chrome/sc-gapfill witness
-    keys on the unstamped envelope, and evaluating it pre-stamp would flip the
-    variant between restyle runs and break idempotency.
+    Deliberately over-inclusive: a false positive wastes a few bytes, a false
+    negative would strip a needed style — never allowed. ``unstyled-chrome`` /
+    ``images`` / ``tables`` use bare substring probes; ``sc-gapfill`` keys on the
+    precise ``_SC_GAPFILL_HOOKS`` (a bare ``"data-sc-"`` probe matched the
+    always-present ``data-sc-content="glossary"`` and never shrank). Callers must
+    pass STAMPED card HTML (envelopes carry ``data-has-styles`` where their
+    dictionary ships CSS): the unstyled-chrome/sc-gapfill witness keys on the
+    unstamped envelope, and evaluating it pre-stamp would flip the variant
+    between restyle runs and break idempotency.
     """
     html = "".join(html_texts)
     groups = set()
     if UNSTAMPED_ENVELOPE_RE.search(html):
         groups.add("unstyled-chrome")
-        if "data-sc-" in html:
+        if _has_sc_gapfill_hook(html):
             groups.add("sc-gapfill")
     if "gloss-image" in html:
         groups.add("images")
