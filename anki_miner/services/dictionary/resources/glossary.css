@@ -24,6 +24,14 @@
  *  - Curated to the DOM our renderer actually emits (yomitan_renderer.py:
  *    .gloss-sc-{tag}, data-sc-*, .gloss-image-*). Yomitan rules keyed on browser/
  *    layout-mode/collapsible-image state we never emit are omitted.
+ *  - Tree-shaken per card (Issue #93): `@am-group: <name>` / `@am-endgroup`
+ *    marker comments partition the sheet into witness-gated regions
+ *    (unstyled-chrome / sc-gapfill / images / tables; unmarked = always-embedded
+ *    core). card_style_block embeds a group only when the card's HTML contains
+ *    markup its rules could match. Markers sit ONLY between complete rules —
+ *    immediately after a `}` and before the next selector — or the region
+ *    concat breaks (pinned by base_css_variant(ALL) == minified_base_css()).
+ *    Group placement is linted both ways in tests/unit/test_glossary_css.py.
  */
 
 .yomitan-glossary {
@@ -88,6 +96,8 @@
   padding-bottom: 0.1em;
 }
 
+/* @am-group: unstyled-chrome */
+
 /* Compact house block size — unstyled dicts only. A dict that ships styles.css
  * inherits the note type's size, so a styled (Jitendex) card is not shrunk:
  * Yomitan embeds no base sheet in the Anki card, so the note type governs size.
@@ -109,6 +119,8 @@
   color: var(--am-muted);
 }
 
+/* @am-endgroup */
+
 /* Sense list: numbered, comfortable rhythm. */
 .yomitan-glossary ol[data-count] ul.gloss-list {
   margin: 0.2em 0 0;
@@ -127,11 +139,15 @@
   margin: 0.25em 0;
 }
 
+/* @am-group: unstyled-chrome */
+
 /* Progressive enhancement: muted ordinals where ::marker color is honored —
  * unstyled dicts only, so a styled card's sense ordinals defer to the note type. */
 .yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) li.gloss-item::marker {
   color: var(--am-muted);
 }
+
+/* @am-endgroup */
 
 /* Cohabitation defense: some note types ship an unscoped list-item separator
  * (e.g. `li:not(:first-child)::before { content: " | " }`) that would otherwise
@@ -185,6 +201,8 @@
   font-size: 0.5em;
 }
 
+/* @am-group: sc-gapfill */
+
 /* Example sentences and supplementary notes — the data-sc-* hooks published
  * Jitendex/Yomitan dictionaries emit. Indent + mute so they read as secondary.
  * Gated (like every data-sc-* rule below) to entries whose dictionary shipped
@@ -211,6 +229,9 @@
   font-size: 0.82em;
   color: var(--am-muted);
 }
+
+/* @am-endgroup */
+/* @am-group: images */
 
 /* Dictionary-bundled images (e.g. pitch-accent SVGs) — cap so they never blow
  * out the card; vertical-align lives on the inline-block container, not the img
@@ -280,6 +301,9 @@
   image-rendering: crisp-edges;
 }
 
+/* @am-endgroup */
+/* @am-group: tables */
+
 /* Collapsible notes / conjugation tables. Scope the accent summary to glossary
  * content so it never clashes with the muted dictionary label above. */
 .yomitan-glossary ol[data-count] details {
@@ -316,6 +340,9 @@
 .yomitan-glossary ol[data-count] th {
   font-weight: 600;
 }
+
+/* @am-endgroup */
+/* @am-group: sc-gapfill */
 
 /* Frequency / pitch hooks, when a dictionary surfaces them inline. */
 .yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content|="frequency"],
@@ -355,6 +382,8 @@
   background: var(--am-chip);
   color: var(--am-muted);
 }
+/* @am-endgroup */
+
 /* Hover chips — unioned dictionary tags that carry a tags-table row (schema v3,
  * emitted by indexed_provider as `<span class="gloss-tag" data-category=… title=…>`).
  * LAYOUT (ungated): the markup joins chips with no separator, so the chip supplies
@@ -366,8 +395,12 @@
   vertical-align: text-bottom;
   word-break: keep-all;
 }
+/* @am-group: unstyled-chrome */
+
 /* PILL VISUALS (gated): on a dict that ships styles.css the tags defer to the
- * note type — Yomitan renders tags as plain text on the Anki card, not pills. */
+ * note type — Yomitan renders tags as plain text on the Anki card, not pills.
+ * NOTE: carries no data-sc- token, so it must live in unstyled-chrome, NOT
+ * sc-gapfill — a tag-only card has .gloss-tag chips but no data-sc- witness. */
 .yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) .gloss-tag {
   padding: 0.05em 0.4em;
   border-radius: 0.3em;
@@ -376,6 +409,10 @@
   background: var(--am-chip);
   color: var(--am-muted);
 }
+
+/* @am-endgroup */
+/* @am-group: sc-gapfill */
+
 .yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) span[data-sc-content="part-of-speech-info"] {
   background: #565656;
   color: #fff;
@@ -475,3 +512,5 @@
     background: color-mix(in srgb, #a4422f 8%, transparent);
   }
 }
+
+/* @am-endgroup */

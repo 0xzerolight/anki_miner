@@ -1416,26 +1416,33 @@ class EpisodeProcessor:
         """
         self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Step 5/5 — Creating Anki cards"))
         card_data: list[CardPayload] = []
-        # Self-contained per-card glossary styling: assemble the <style> block
-        # ONCE per episode (collect_dictionary_css does registry + per-dict SQLite
-        # I/O). Built when EITHER the glossary OR the definition field is mapped —
-        # an Anki <style> in any field is card-wide, so the block rides the
-        # glossary field when it's mapped and otherwise prepends to the definition
-        # field. That way the base sheet (dark-theme SVG recolor, tag chips,
-        # structured-content layout) reaches default-config cards too, which map
-        # definition="MainDefinition" but leave glossary unmapped. Skipping the
-        # build only when neither is mapped keeps the no-styling path I/O-free.
-        # Bound unconditionally ("") so the write-site reference is always safe.
+        # Self-contained per-card glossary styling: collect the dictionary CSS
+        # ONCE per episode (collect_dictionary_css does registry + per-dict
+        # SQLite I/O) but assemble the <style> block PER CARD inside the loop —
+        # the base sheet is tree-shaken against each card's own HTML (Issue
+        # #93; witness/variant scans are cheap cached string work; freshly
+        # rendered bodies are born stamped, so witnesses are already
+        # post-stamp). Built when EITHER the glossary OR the definition field
+        # is mapped — an Anki <style> in any field is card-wide, so the block
+        # rides the glossary field when it's mapped and otherwise prepends to
+        # the definition field. That way the base sheet (dark-theme SVG
+        # recolor, tag chips, structured-content layout) reaches default-config
+        # cards too, which map definition="MainDefinition" but leave glossary
+        # unmapped. Skipping the collect only when neither is mapped keeps the
+        # no-styling path I/O-free.
         glossary_mapped = bool(self.config.anki_fields.get("glossary"))
         definition_mapped = bool(self.config.anki_fields.get("definition"))
-        style_block = ""
-        if glossary_mapped or definition_mapped:
-            style_block = build_card_style_block(dict_css=collect_dictionary_css(self.config))
+        styling_on = glossary_mapped or definition_mapped
+        episode_dict_css = collect_dictionary_css(self.config) if styling_on else ""
         for (word, media), definition, glossary, (pitch_position, pitch_category) in zip(
             media_results, definitions, glossaries, pitch_data, strict=True
         ):
             if not definition:
                 continue
+            # Bound unconditionally ("") so the write-site references are safe.
+            style_block = ""
+            if styling_on:
+                style_block = build_card_style_block(dict_css=episode_dict_css, card_html=(glossary or "") + definition)
 
             extra_fields: dict[str, str] = {}
             if pitch_position:
