@@ -301,6 +301,98 @@ class TestGlossaryListYomitanDefault:
         assert ".gloss-sc-ul" in css, "structural glossary-list rule (disc block) must remain"
 
 
+class TestGroupPlacement:
+    """The @am-group tree-shaking partition (Issue #93) is only safe if every
+    rule sits in a group whose witness fires whenever the rule could match.
+
+    Forward lints guarantee no-under-inclusion (a group's rules can only match
+    markup its witness detects); the reverse core-exclusion lint guards the
+    size win (a forgotten marker silently leaves shed-able rules in the
+    always-embedded core, which no other automated check would catch).
+    """
+
+    _GATE = "li[data-dictionary]:not([data-has-styles])"
+
+    @staticmethod
+    def _grouped_rules():
+        """(group, selector, declarations) for every rule, via the real splitter."""
+        from anki_miner.services.dictionary.card_style_block import split_group_regions
+
+        out = []
+        for group, raw in split_group_regions(load_glossary_css()):
+            for selector_group, declarations in _iter_rules(raw):
+                for selector in selector_group.split(","):
+                    out.append((group, selector.strip(), declarations))
+        return out
+
+    @staticmethod
+    def _is_table_family(selector: str) -> bool:
+        # Word-boundary detection on the selector's rightmost compound — a bare
+        # substring check would read the "th" in `max-width` or the "table" in
+        # an attribute value.
+        subject = selector.split()[-1]
+        return bool(re.match(r"^(table|th|td|details|summary)(?:\W|$)", subject)) or bool(
+            re.search(r"(?:^|\W)details(?:\W|$)", selector)
+        )
+
+    def test_forward_unstyled_chrome_rules_all_gated(self):
+        rules = [(s, d) for g, s, d in self._grouped_rules() if g == "unstyled-chrome"]
+        assert rules, "unstyled-chrome group is empty"
+        for selector, _ in rules:
+            assert self._GATE in selector, f"ungated rule in unstyled-chrome: {selector!r}"
+
+    def test_forward_sc_gapfill_rules_gated_and_carry_data_sc(self):
+        rules = [(s, d) for g, s, d in self._grouped_rules() if g == "sc-gapfill"]
+        assert rules, "sc-gapfill group is empty"
+        for selector, _ in rules:
+            assert self._GATE in selector, f"ungated rule in sc-gapfill: {selector!r}"
+            assert "data-sc-" in selector, f"sc-gapfill rule without a data-sc- hook: {selector!r}"
+
+    def test_forward_images_rules_carry_witness_token(self):
+        rules = [(s, d) for g, s, d in self._grouped_rules() if g == "images"]
+        assert rules, "images group is empty"
+        for selector, _ in rules:
+            assert "gloss-image" in selector, f"images rule without gloss-image: {selector!r}"
+
+    def test_forward_tables_rules_are_table_family(self):
+        rules = [(s, d) for g, s, d in self._grouped_rules() if g == "tables"]
+        assert rules, "tables group is empty"
+        for selector, _ in rules:
+            assert self._is_table_family(selector), f"non-table rule in tables group: {selector!r}"
+
+    def test_reverse_core_carries_no_sheddable_rules(self):
+        # No data-sc-/gloss-image/table-family rule may sit in the always-
+        # embedded core — each must live in SOME witness-gated group. (No unique
+        # group per token: the forms-table rules legitimately carry BOTH
+        # data-sc- and table tokens and live in sc-gapfill, whose witness always
+        # fires when they could match.)
+        for group, selector, _ in self._grouped_rules():
+            if group != "core":
+                continue
+            assert "data-sc-" not in selector, f"data-sc- rule left in core: {selector!r}"
+            assert "gloss-image" not in selector, f"gloss-image rule left in core: {selector!r}"
+            assert not self._is_table_family(selector), f"table-family rule left in core: {selector!r}"
+
+    def test_core_keeps_structural_hooks(self):
+        # The always-embedded core must retain the structural rules styled cards
+        # rely on: the outer-ol layout, the gloss-tag LAYOUT split, the host
+        # ::before neutralizer, and the gloss-sc structural set.
+        core = "".join(d + s for g, s, d in self._grouped_rules() if g == "core")
+        for token in ("ol[data-count]", ".gloss-tag", "li.gloss-item::before", ".gloss-sc-ul", ".gloss-sc-ruby"):
+            assert token in core, f"structural token {token!r} left the core"
+
+    def test_gated_pill_visuals_in_unstyled_chrome_not_gapfill(self):
+        # The .gloss-tag PILL rule carries no data-sc- token: a tag-only card
+        # has chips but no data-sc- witness, so the pill must ride the
+        # unstyled-chrome group (its witness is the unstamped envelope).
+        pill = [
+            (g, s) for g, s, d in self._grouped_rules() if ".gloss-tag" in s and self._GATE in s and "data-sc-" not in s
+        ]
+        assert pill, "gated .gloss-tag pill rule missing"
+        for group, selector in pill:
+            assert group == "unstyled-chrome", f"pill rule {selector!r} in {group!r}"
+
+
 class TestThemeAgnostic:
     """Theme-agnostic palette: no ``.nightMode``; ``color-mix()`` only guarded."""
 

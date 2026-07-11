@@ -23,11 +23,13 @@ def collect_dictionary_css(config: AnkiMinerConfig) -> str:
 
     Builds the configured provider chain from disk, loads each provider, and
     joins the per-dictionary scoped CSS (``IndexedDictProvider.dictionary_css``)
-    in chain order. The result is embedded (with the base sheet) in
+    in chain order. The result is embedded (with the tree-shaken base sheet) in
     each card's self-contained per-card ``<style>`` block via
-    ``card_style_block.build_card_style_block``, assembled once per episode at the
-    ``EpisodeProcessor._phase5_create`` seam. Online providers (Jisho) and
-    dictionaries that ship no ``styles.css`` contribute nothing.
+    ``card_style_block.build_card_style_block`` at the
+    ``EpisodeProcessor._phase5_create`` seam — this collection runs once per
+    episode; the block itself is assembled per card (Issue #93). Online
+    providers (Jisho) and dictionaries that ship no ``styles.css`` contribute
+    nothing.
 
     Does light per-dictionary SQLite I/O (registry scan + ``read_meta`` +
     ``open_readonly`` via each provider's ``load()``), so it runs off the GUI
