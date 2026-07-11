@@ -208,7 +208,10 @@ class SettingsTab(QWidget):
         """Set up the user interface."""
         layout = QVBoxLayout()
         layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        # Top margin 0 so the sub-tab bar sits flush under the top-level tab bar
+        # like VideoTab/ReadingTab; keep left/right/bottom inset for the bottom
+        # chrome (update checkbox + Export/Import row) and the panel forms.
+        layout.setContentsMargins(SPACING.md, 0, SPACING.md, SPACING.md)
 
         # Category tabs
         self.tab_widget = QTabWidget()
