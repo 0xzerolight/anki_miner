@@ -195,11 +195,11 @@
     <name>AnkiService</name>
     <message>
         <source>Creating Anki cards</source>
-        <translation type="unfinished" />
+        <translation>正在创建 Anki 卡片</translation>
     </message>
     <message>
         <source>Cards created: %1/%2</source>
-        <translation type="unfinished" />
+        <translation>已创建卡片：%1/%2</translation>
     </message>
 </context><context>
     <name>AnkiSettingsPanel</name>
@@ -645,7 +645,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Add a custom audio URL source</source>
-        <translation type="unfinished" />
+        <translation>添加自定义音频 URL 源</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -669,27 +669,27 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Sentence Audio (Reading Sources)</source>
-        <translation type="unfinished" />
+        <translation>句子音频（阅读来源）</translation>
     </message>
     <message>
         <source>Generate spoken sentence audio for cards mined from manga and books (these have no source audio). Sentence text is sent to the selected online services.</source>
-        <translation type="unfinished" />
+        <translation>为从漫画和书籍挖词的卡片生成朗读句子音频（这些内容没有源音频）。句子文本会发送到所选的在线服务。</translation>
     </message>
     <message>
         <source>Generate TTS sentence audio</source>
-        <translation type="unfinished" />
+        <translation>生成 TTS 句子音频</translation>
     </message>
     <message>
         <source>Google Translate TTS (tried first)</source>
-        <translation type="unfinished" />
+        <translation>Google 翻译 TTS（优先尝试）</translation>
     </message>
     <message>
         <source>Naver Papago (fallback)</source>
-        <translation type="unfinished" />
+        <translation>Naver Papago（备用）</translation>
     </message>
     <message>
         <source>Select at least one service.</source>
-        <translation type="unfinished" />
+        <translation>请至少选择一项服务。</translation>
     </message>
     <message>
         <source>Google Translate (synthetic TTS)</source>
@@ -870,6 +870,10 @@ The audio pack was not removed.</source>
         <translation>已挖词 %1：%2 张卡片。</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>已取消 %1。</translation>
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation>失败 %1：%2。</translation>
     </message>
@@ -879,19 +883,19 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">已取消</translation>
+        <translation>已取消</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>失败——请查看日志</translation>
     </message>
     <message>
         <source>Complete — %1 succeeded, %2 failed</source>
-        <translation type="unfinished" />
+        <translation>完成——%1 成功，%2 失败</translation>
     </message>
     <message>
         <source>Complete — %1 succeeded</source>
-        <translation type="unfinished" />
+        <translation>完成——%1 成功</translation>
     </message>
 </context><context>
     <name>BatchProcessingTab</name>
@@ -989,7 +993,7 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">已取消</translation>
+        <translation>已取消</translation>
     </message>
     <message>
         <source>Cancelling...</source>
@@ -1005,7 +1009,7 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>Episode %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>剧集 %1/%2：%3</translation>
     </message>
     <message>
         <source>Processing series: %1</source>
@@ -1013,7 +1017,7 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>Series %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>系列 %1/%2：%3</translation>
     </message>
     <message>
         <source>Created %1 cards</source>
@@ -1021,11 +1025,11 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>失败——请查看日志</translation>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
-        <translation type="unfinished" />
+        <translation>完成——已创建 %1 张卡片</translation>
     </message>
     <message>
         <source>Processed %1 series
@@ -1151,43 +1155,43 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>Mine from manga</source>
-        <translation type="unfinished" />
+        <translation>从漫画挖词</translation>
     </message>
     <message>
         <source>Mine vocabulary from manga volumes processed with mokuro.</source>
-        <translation type="unfinished" />
+        <translation>从用 mokuro 处理过的漫画卷中挖取词汇。</translation>
     </message>
     <message>
         <source>Mine from novels</source>
-        <translation type="unfinished" />
+        <translation>从小说挖词</translation>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>从小说和其他文本（EPUB、青空文库、纯文本）中挖取词汇。</translation>
     </message>
     <message>
         <source>Generate subtitles from audio</source>
-        <translation type="unfinished" />
+        <translation>从音频生成字幕</translation>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool.</source>
-        <translation type="unfinished" />
+        <translation>使用本地 Whisper 模型从音频创建字幕——作为独立工具。</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
-        <translation type="unfinished" />
+        <translation>重新校准现有字幕</translation>
     </message>
     <message>
         <source>Re-sync existing subtitles against the video -- as a standalone tool.</source>
-        <translation type="unfinished" />
+        <translation>根据视频重新同步现有字幕——作为独立工具。</translation>
     </message>
     <message>
         <source>Condense audio from subtitles</source>
-        <translation type="unfinished" />
+        <translation>从字幕压缩音频</translation>
     </message>
     <message>
         <source>Build dialogue-only condensed audio from a video or audio file and its subtitles.</source>
-        <translation type="unfinished" />
+        <translation>从视频或音频文件及其字幕构建仅含对白的压缩音频。</translation>
     </message>
     <message>
         <source>View mining history &amp; stats</source>
@@ -1465,353 +1469,353 @@ Total cards created: %2</source>
     <name>CondenseTab</name>
     <message>
         <source>Input</source>
-        <translation type="unfinished">输入</translation>
+        <translation>输入</translation>
     </message>
     <message>
         <source>ffmpeg not found; install it or set its path in Settings to enable condensing.</source>
-        <translation type="unfinished" />
+        <translation>未找到 ffmpeg；请安装它或在设置中设置其路径以启用压缩。</translation>
     </message>
     <message>
         <source>Condense a video or audio file down to just its spoken dialogue.</source>
-        <translation type="unfinished" />
+        <translation>将视频或音频文件压缩为仅含口语对白。</translation>
     </message>
     <message>
         <source>Mode:</source>
-        <translation type="unfinished">模式：</translation>
+        <translation>模式：</translation>
     </message>
     <message>
         <source>Single File</source>
-        <translation type="unfinished">单个文件</translation>
+        <translation>单个文件</translation>
     </message>
     <message>
         <source>Condense one selected media file.</source>
-        <translation type="unfinished" />
+        <translation>压缩选定的一个媒体文件。</translation>
     </message>
     <message>
         <source>Folder</source>
-        <translation type="unfinished">文件夹</translation>
+        <translation>文件夹</translation>
     </message>
     <message>
         <source>Condense every media file in a selected folder.</source>
-        <translation type="unfinished" />
+        <translation>压缩选定文件夹中的每个媒体文件。</translation>
     </message>
     <message>
         <source>Media File:</source>
-        <translation type="unfinished" />
+        <translation>媒体文件：</translation>
     </message>
     <message>
         <source>Subtitle File:</source>
-        <translation type="unfinished">字幕文件：</translation>
+        <translation>字幕文件：</translation>
     </message>
     <message>
         <source>Leave empty to auto-detect (sibling file or embedded track).</source>
-        <translation type="unfinished" />
+        <translation>留空以自动检测（同名相邻文件或内嵌轨道）。</translation>
     </message>
     <message>
         <source>Audio track:</source>
-        <translation type="unfinished">音轨：</translation>
+        <translation>音轨：</translation>
     </message>
     <message>
         <source>Japanese (auto-detect)</source>
-        <translation type="unfinished">日语（自动检测）</translation>
+        <translation>日语（自动检测）</translation>
     </message>
     <message>
         <source>Choose…</source>
-        <translation type="unfinished" />
+        <translation>选择…</translation>
     </message>
     <message>
         <source>Choose which audio track to condense.</source>
-        <translation type="unfinished" />
+        <translation>选择要压缩的音轨。</translation>
     </message>
     <message>
         <source>Subtitle track:</source>
-        <translation type="unfinished" />
+        <translation>字幕轨道：</translation>
     </message>
     <message>
         <source>Auto (external → embedded Japanese)</source>
-        <translation type="unfinished" />
+        <translation>自动（外部 → 内嵌日语）</translation>
     </message>
     <message>
         <source>Choose which embedded subtitle track to condense against.</source>
-        <translation type="unfinished" />
+        <translation>选择要据以压缩的内嵌字幕轨道。</translation>
     </message>
     <message>
         <source>Media Folder:</source>
-        <translation type="unfinished" />
+        <translation>媒体文件夹：</translation>
     </message>
     <message>
         <source>Subtitle Folder:</source>
-        <translation type="unfinished">字幕文件夹：</translation>
+        <translation>字幕文件夹：</translation>
     </message>
     <message>
         <source>Optional. When set, media is paired to subtitles by episode number; otherwise each file auto-detects.</source>
-        <translation type="unfinished" />
+        <translation>可选。设置后，媒体将按剧集编号与字幕配对；否则每个文件自动检测。</translation>
     </message>
     <message>
         <source>Options</source>
-        <translation type="unfinished" />
+        <translation>选项</translation>
     </message>
     <message>
         <source>Padding:</source>
-        <translation type="unfinished" />
+        <translation>填充：</translation>
     </message>
     <message>
         <source> ms</source>
-        <translation type="unfinished" />
+        <translation> 毫秒</translation>
     </message>
     <message>
         <source>Silence kept on each side of every dialogue line before merging.</source>
-        <translation type="unfinished" />
+        <translation>合并前，在每行对白两侧保留的静音。</translation>
     </message>
     <message>
         <source>Offset:</source>
-        <translation type="unfinished">偏移：</translation>
+        <translation>偏移：</translation>
     </message>
     <message>
         <source>Shift every subtitle cue by this amount before condensing.</source>
-        <translation type="unfinished" />
+        <translation>压缩前将每条字幕提示按此量平移。</translation>
     </message>
     <message>
         <source>Format:</source>
-        <translation type="unfinished" />
+        <translation>格式：</translation>
     </message>
     <message>
         <source>Also write condensed subtitles (SRT + LRC)</source>
-        <translation type="unfinished" />
+        <translation>同时写出压缩字幕（SRT + LRC）</translation>
     </message>
     <message>
         <source>Write time-mapped .srt and .lrc files alongside the condensed audio.</source>
-        <translation type="unfinished" />
+        <translation>在压缩音频旁写出时间映射的 .srt 和 .lrc 文件。</translation>
     </message>
     <message>
         <source>Output</source>
-        <translation type="unfinished">输出</translation>
+        <translation>输出</translation>
     </message>
     <message>
         <source>Output:</source>
-        <translation type="unfinished">输出：</translation>
+        <translation>输出：</translation>
     </message>
     <message>
         <source>Next to source</source>
-        <translation type="unfinished" />
+        <translation>源文件旁</translation>
     </message>
     <message>
         <source>Choose Folder…</source>
-        <translation type="unfinished">选择文件夹…</translation>
+        <translation>选择文件夹…</translation>
     </message>
     <message>
         <source>Reset</source>
-        <translation type="unfinished">重置</translation>
+        <translation>重置</translation>
     </message>
     <message>
         <source>Overwrite existing condensed files</source>
-        <translation type="unfinished" />
+        <translation>覆盖现有的压缩文件</translation>
     </message>
     <message>
         <source>When unchecked, files whose condensed audio already exists are skipped, not overwritten.</source>
-        <translation type="unfinished" />
+        <translation>取消勾选时，已存在压缩音频的文件将被跳过，而非覆盖。</translation>
     </message>
     <message>
         <source>Actions</source>
-        <translation type="unfinished">操作</translation>
+        <translation>操作</translation>
     </message>
     <message>
         <source>Condense Audio</source>
-        <translation type="unfinished" />
+        <translation>压缩音频</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">取消</translation>
+        <translation>取消</translation>
     </message>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">进度</translation>
+        <translation>进度</translation>
     </message>
     <message>
         <source>No Media File Selected</source>
-        <translation type="unfinished" />
+        <translation>未选择媒体文件</translation>
     </message>
     <message>
         <source>Select a media file first.</source>
-        <translation type="unfinished" />
+        <translation>请先选择一个媒体文件。</translation>
     </message>
     <message>
         <source>File Not Found</source>
-        <translation type="unfinished">未找到文件</translation>
+        <translation>未找到文件</translation>
     </message>
     <message>
         <source>Media file not found: </source>
-        <translation type="unfinished" />
+        <translation>未找到媒体文件：</translation>
     </message>
     <message>
         <source>No Audio Tracks</source>
-        <translation type="unfinished">无音轨</translation>
+        <translation>无音轨</translation>
     </message>
     <message>
         <source>No audio tracks detected. Check that ffprobe is installed and the file has audio.</source>
-        <translation type="unfinished">未检测到音轨。请检查是否已安装 ffprobe 且文件包含音频。</translation>
+        <translation>未检测到音轨。请检查是否已安装 ffprobe 且文件包含音频。</translation>
     </message>
     <message>
         <source>Track %1</source>
-        <translation type="unfinished">音轨 %1</translation>
+        <translation>音轨 %1</translation>
     </message>
     <message>
         <source>Probe Failed</source>
-        <translation type="unfinished">探测失败</translation>
+        <translation>探测失败</translation>
     </message>
     <message>
         <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
-        <translation type="unfinished">检测音轨失败。请检查是否已安装 ffprobe。</translation>
+        <translation>检测音轨失败。请检查是否已安装 ffprobe。</translation>
     </message>
     <message>
         <source>No Subtitle Tracks</source>
-        <translation type="unfinished" />
+        <translation>无字幕轨道</translation>
     </message>
     <message>
         <source>No embedded subtitle tracks detected in this file.</source>
-        <translation type="unfinished" />
+        <translation>此文件中未检测到内嵌字幕轨道。</translation>
     </message>
     <message>
         <source>Failed to detect subtitle tracks. Check that ffprobe is installed.</source>
-        <translation type="unfinished" />
+        <translation>检测字幕轨道失败。请检查是否已安装 ffprobe。</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
-        <translation type="unfinished">选择输出文件夹</translation>
+        <translation>选择输出文件夹</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
-        <translation type="unfinished">输出目录不可写：</translation>
+        <translation>输出目录不可写：</translation>
     </message>
     <message>
         <source>Select a media file before condensing.</source>
-        <translation type="unfinished" />
+        <translation>压缩前请先选择一个媒体文件。</translation>
     </message>
     <message>
         <source>Subtitle file not found: </source>
-        <translation type="unfinished">未找到字幕文件：</translation>
+        <translation>未找到字幕文件：</translation>
     </message>
     <message>
         <source>No Media Folder Selected</source>
-        <translation type="unfinished" />
+        <translation>未选择媒体文件夹</translation>
     </message>
     <message>
         <source>Select a media folder before condensing.</source>
-        <translation type="unfinished" />
+        <translation>压缩前请先选择一个媒体文件夹。</translation>
     </message>
     <message>
         <source>Folder Not Found</source>
-        <translation type="unfinished">未找到文件夹</translation>
+        <translation>未找到文件夹</translation>
     </message>
     <message>
         <source>Media folder not found: </source>
-        <translation type="unfinished" />
+        <translation>未找到媒体文件夹：</translation>
     </message>
     <message>
         <source>Subtitle folder not found: </source>
-        <translation type="unfinished">未找到字幕文件夹：</translation>
+        <translation>未找到字幕文件夹：</translation>
     </message>
     <message>
         <source>No Media Files</source>
-        <translation type="unfinished" />
+        <translation>无媒体文件</translation>
     </message>
     <message>
         <source>No media files found in the selected folder.</source>
-        <translation type="unfinished" />
+        <translation>在所选文件夹中未找到媒体文件。</translation>
     </message>
     <message>
         <source>Matched %1 of %2 media files.</source>
-        <translation type="unfinished" />
+        <translation>已匹配 %2 个媒体文件中的 %1 个。</translation>
     </message>
     <message>
         <source>Warning: %1 media file(s) could not be matched.</source>
-        <translation type="unfinished" />
+        <translation>警告：%1 个媒体文件无法匹配。</translation>
     </message>
     <message>
         <source>No Pairs Matched</source>
-        <translation type="unfinished">未匹配到配对</translation>
+        <translation>未匹配到配对</translation>
     </message>
     <message>
         <source>No subtitle files could be matched to the media files in the selected folders.</source>
-        <translation type="unfinished" />
+        <translation>在所选文件夹中未能将任何字幕文件与媒体文件匹配。</translation>
     </message>
     <message>
         <source>Condensing file %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>正在压缩第 %1 个文件，共 %2 个</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">完成：</translation>
+        <translation>完成：</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">完成</translation>
+        <translation>完成</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">已跳过：</translation>
+        <translation>已跳过：</translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">已跳过</translation>
+        <translation>已跳过</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">已取消</translation>
+        <translation>已取消</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
-        <translation type="unfinished" />
+        <translation>完成——已处理 %1 个文件</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">正在取消…</translation>
+        <translation>正在取消…</translation>
     </message>
 </context><context>
     <name>CondenseWorker</name>
     <message>
         <source>Skipped, exists</source>
-        <translation type="unfinished">已跳过，已存在</translation>
+        <translation>已跳过，已存在</translation>
     </message>
     <message>
         <source>No dialogue lines found in %1</source>
-        <translation type="unfinished" />
+        <translation>在 %1 中未找到对白行</translation>
     </message>
     <message>
         <source>Condensing: %1%</source>
-        <translation type="unfinished" />
+        <translation>正在压缩：%1%</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">已取消</translation>
+        <translation>已取消</translation>
     </message>
     <message>
         <source>Condensing failed for %1</source>
-        <translation type="unfinished" />
+        <translation>%1 压缩失败</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">完成</translation>
+        <translation>完成</translation>
     </message>
     <message>
         <source>No subtitle source found for %1</source>
-        <translation type="unfinished" />
+        <translation>未找到 %1 的字幕源</translation>
     </message>
     <message>
         <source>Subtitle track %1 not found in %2</source>
-        <translation type="unfinished" />
+        <translation>在 %2 中未找到字幕轨道 %1</translation>
     </message>
     <message>
         <source>Only image-based subtitles (%1) in %2, which can't be condensed</source>
-        <translation type="unfinished" />
+        <translation>%2 中只有基于图像的字幕（%1），无法压缩</translation>
     </message>
     <message>
         <source>Failed to extract embedded subtitle from %1</source>
-        <translation type="unfinished" />
+        <translation>从 %1 提取内嵌字幕失败</translation>
     </message>
     <message>
         <source>Audio done; subtitle write failed: %1</source>
-        <translation type="unfinished" />
+        <translation>音频已完成；字幕写入失败：%1</translation>
     </message>
 </context><context>
     <name>CudaPackDownloadWorker</name>
@@ -1987,7 +1991,7 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>Episode %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>剧集 %1/%2：%3</translation>
     </message>
     <message>
         <source>Processing: %1</source>
@@ -2003,7 +2007,7 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
-        <translation type="unfinished" />
+        <translation>完成——已创建 %1 张卡片</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -2011,7 +2015,7 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>Cancelling...</source>
-        <translation type="unfinished">正在取消...</translation>
+        <translation>正在取消...</translation>
     </message>
     <message>
         <source>Error: %1</source>
@@ -2019,11 +2023,11 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>失败——请查看日志</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">已取消</translation>
+        <translation>已取消</translation>
     </message>
 </context><context>
     <name>DeckPage</name>
@@ -2051,27 +2055,27 @@ Total cards created: %2</source>
     <name>DefinitionService</name>
     <message>
         <source>Fetching definitions</source>
-        <translation type="unfinished" />
+        <translation>正在获取释义</translation>
     </message>
     <message>
         <source>Definition found: %1</source>
-        <translation type="unfinished" />
+        <translation>已找到释义：%1</translation>
     </message>
     <message>
         <source>No definition: %1</source>
-        <translation type="unfinished" />
+        <translation>无释义：%1</translation>
     </message>
     <message>
         <source>Fetching glossary entries</source>
-        <translation type="unfinished" />
+        <translation>正在获取词汇表条目</translation>
     </message>
     <message>
         <source>Glossary found: %1</source>
-        <translation type="unfinished" />
+        <translation>已找到词汇表：%1</translation>
     </message>
     <message>
         <source>No glossary: %1</source>
-        <translation type="unfinished" />
+        <translation>无词汇表：%1</translation>
     </message>
 </context><context>
     <name>DictionaryImportFlow</name>
@@ -2389,7 +2393,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Resources configured: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation type="unfinished" />
+        <translation>已配置资源：&lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -2413,19 +2417,19 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Sentence-audio TTS connection/certificate failure — sentence audio skipped this run, will retry next run</source>
-        <translation type="unfinished" />
+        <translation>句子音频 TTS 连接/证书失败——本次运行跳过句子音频，下次运行将重试</translation>
     </message>
     <message>
         <source>Sentence-audio TTS returned repeated server errors — sentence audio skipped this run, will retry next run</source>
-        <translation type="unfinished" />
+        <translation>句子音频 TTS 反复返回服务器错误——本次运行跳过句子音频，下次运行将重试</translation>
     </message>
     <message>
         <source>Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run</source>
-        <translation type="unfinished" />
+        <translation>句子音频 TTS 返回非音频响应（可能被限速）——本次运行跳过句子音频，下次运行将重试</translation>
     </message>
     <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
-        <translation type="unfinished" />
+        <translation>全部 %1 个新单词已被启用的过滤器移除——未创建卡片</translation>
     </message>
     <message>
         <source>All words already in Anki!</source>
@@ -2479,7 +2483,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Frequency cutoff set but no frequency source is loaded — cutoff ignored (add a frequency source in Settings).</source>
-        <translation type="unfinished" />
+        <translation>已设置词频截断但未加载词频源——截断被忽略（请在设置中添加词频源）。</translation>
     </message>
     <message>
         <source>Word list filter: removed %1 words</source>
@@ -2494,12 +2498,12 @@ The dictionary was not removed.</source>
         <translation>人名词集过滤器：移除了 %1 个单词</translation>
     </message>
     <message>
-        <source>Sentence deduplication: removed %1 duplicate-sentence words</source>
-        <translation>句子去重：移除了 %1 个重复句子的单词</translation>
-    </message>
-    <message>
         <source>Cross-episode filter: removed %1 words appearing in fewer than %2 episodes</source>
         <translation>跨剧集过滤器：移除了 %1 个出现在少于 %2 个剧集中的单词</translation>
+    </message>
+    <message>
+        <source>Sentence deduplication: removed %1 duplicate-sentence words</source>
+        <translation>句子去重：移除了 %1 个重复句子的单词</translation>
     </message>
     <message>
         <source>i+1 filter: kept %1/%2 words (%3%)</source>
@@ -2511,8 +2515,8 @@ The dictionary was not removed.</source>
     </message>
     <message numerus="yes">
         <source>Whitelist: force-included %n word(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>白名单：强制包含 %n 个单词</numerusform>
         </translation>
     </message>
     <message>
@@ -2549,15 +2553,15 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Generating sentence audio</source>
-        <translation type="unfinished" />
+        <translation>正在生成句子音频</translation>
     </message>
     <message>
         <source>Sentence audio: %1</source>
-        <translation type="unfinished" />
+        <translation>句子音频：%1</translation>
     </message>
     <message>
         <source>Sentence audio: %1/%2 sentences</source>
-        <translation type="unfinished" />
+        <translation>句子音频：%1/%2 个句子</translation>
     </message>
     <message>
         <source>Step 4/5 — Fetching definitions</source>
@@ -2635,43 +2639,43 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Step 3/5 — Preparing card images</source>
-        <translation type="unfinished" />
+        <translation>第 3/5 步——正在准备卡片图像</translation>
     </message>
     <message>
         <source>Step 3/5 — Preparing page images</source>
-        <translation type="unfinished" />
+        <translation>第 3/5 步——正在准备页面图像</translation>
     </message>
     <message>
         <source>Preparing card images</source>
-        <translation type="unfinished" />
+        <translation>正在准备卡片图像</translation>
     </message>
     <message>
         <source>Preparing page images</source>
-        <translation type="unfinished" />
+        <translation>正在准备页面图像</translation>
     </message>
     <message>
         <source>Card image: %1</source>
-        <translation type="unfinished" />
+        <translation>卡片图像：%1</translation>
     </message>
     <message>
         <source>Page image: %1</source>
-        <translation type="unfinished" />
+        <translation>页面图像：%1</translation>
     </message>
     <message>
         <source>Skipped unsafe image archive %1 — its cards have no page image</source>
-        <translation type="unfinished" />
+        <translation>已跳过不安全的图像归档 %1——其卡片没有页面图像</translation>
     </message>
     <message>
         <source>Skipped corrupt image archive %1 — its cards have no page image</source>
-        <translation type="unfinished" />
+        <translation>已跳过损坏的图像归档 %1——其卡片没有页面图像</translation>
     </message>
     <message>
         <source>Skipped unreadable page image %1 — its card has no picture</source>
-        <translation type="unfinished" />
+        <translation>已跳过无法读取的页面图像 %1——其卡片没有图片</translation>
     </message>
     <message>
         <source>Step 1/5 — Parsing text: %1</source>
-        <translation type="unfinished" />
+        <translation>第 1/5 步——正在解析文本：%1</translation>
     </message>
 </context><context>
     <name>ExportDialog</name>
@@ -2805,7 +2809,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>No frequency source is loaded — this cutoff is ignored. Add a frequency source in the Dictionaries tab.</source>
-        <translation type="unfinished" />
+        <translation>未加载词频源——此截断被忽略。请在“词典”标签页中添加词频源。</translation>
     </message>
     <message>
         <source>Known Words Database</source>
@@ -2877,7 +2881,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Text file with one word per line to force-include, bypassing frequency, script, length and other filters. A word must still have a dictionary entry and not already be in Anki or your known-words list.</source>
-        <translation type="unfinished" />
+        <translation>每行一个单词的文本文件，用于强制包含，绕过词频、字符、长度和其他过滤器。单词仍必须有词典条目，且尚未在 Anki 或你的已知单词列表中。</translation>
     </message>
     <message>
         <source>Enable Whitelist</source>
@@ -3029,19 +3033,19 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Reading</source>
-        <translation type="unfinished">读音</translation>
+        <translation>读音</translation>
     </message>
     <message>
         <source>Off</source>
-        <translation type="unfinished" />
+        <translation>关闭</translation>
     </message>
     <message>
         <source>Minimum Word Occurrences</source>
-        <translation type="unfinished" />
+        <translation>最少单词出现次数</translation>
     </message>
     <message>
         <source>Minimum number of times a word must appear in a book or volume to be mined. 1 = no minimum (filter off).</source>
-        <translation type="unfinished" />
+        <translation>一个单词在一本书或一卷中必须出现的最少次数才会被挖取。1 = 无最小值（过滤器关闭）。</translation>
     </message>
     <message>
         <source>Card Formatting</source>
@@ -3067,7 +3071,7 @@ The dictionary was not removed.</source>
     <name>FrequencyImportFlow</name>
     <message>
         <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
-        <translation type="unfinished" />
+        <translation> 这是基于单词的来源；其级别标签会显示在卡片上，但不影响词频排名过滤。</translation>
     </message>
     <message>
         <source>Choose frequency source</source>
@@ -3291,7 +3295,7 @@ The frequency source was not removed.</source>
     <name>MainWindow</name>
     <message>
         <source>Video</source>
-        <translation type="unfinished">视频</translation>
+        <translation>视频</translation>
     </message>
     <message>
         <source>Deck Builder</source>
@@ -3303,7 +3307,7 @@ The frequency source was not removed.</source>
     </message>
     <message>
         <source>Reading</source>
-        <translation type="unfinished">读音</translation>
+        <translation>阅读</translation>
     </message>
     <message>
         <source>Analytics</source>
@@ -3311,7 +3315,7 @@ The frequency source was not removed.</source>
     </message>
     <message>
         <source>Tools</source>
-        <translation type="unfinished" />
+        <translation>工具</translation>
     </message>
     <message>
         <source>Settings</source>
@@ -3415,7 +3419,15 @@ The frequency source was not removed.</source>
 Close Anki's card browser and any open note editor first — editing an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation type="unfinished" />
+        <translation>重新对你挖取的卡片应用最新的内置样式，使其与新卡片一致。可安全地重新运行；它绝不会移除卡片内容。
+
+请先关闭 Anki 的卡片浏览器和任何打开的笔记编辑器——编辑打开的笔记可能丢失未保存的修改。
+
+是否继续？</translation>
+    </message>
+    <message>
+        <source>Cannot start restyle — Anki fields are misconfigured: %1</source>
+        <translation>无法开始重新设置样式——Anki 字段配置有误：%1</translation>
     </message>
     <message>
         <source>Restyling mined cards…</source>
@@ -3431,7 +3443,7 @@ Continue?</source>
     </message>
     <message>
         <source>Restyled %1 card(s). (%2 scanned; %3 already up to date.)</source>
-        <translation type="unfinished" />
+        <translation>已重新设置 %1 张卡片的样式。（已扫描 %2 张；%3 张已是最新。）</translation>
     </message>
     <message>
         <source>Restyle failed</source>
@@ -3466,6 +3478,10 @@ Continue?</source>
 %1</translation>
     </message>
     <message>
+        <source>Anki note-type fields are misconfigured; check Settings.</source>
+        <translation>Anki 笔记类型字段配置有误；请检查设置。</translation>
+    </message>
+    <message>
         <source>Validation already running</source>
         <translation>校验已在运行</translation>
     </message>
@@ -3491,15 +3507,15 @@ Continue?</source>
     </message>
     <message>
         <source>Manga</source>
-        <translation type="unfinished" />
+        <translation>漫画</translation>
     </message>
     <message>
         <source>Novels</source>
-        <translation type="unfinished" />
+        <translation>小说</translation>
     </message>
     <message>
         <source>Subtitles</source>
-        <translation type="unfinished">字幕</translation>
+        <translation>字幕</translation>
     </message>
     <message>
         <source>Generate</source>
@@ -3511,15 +3527,15 @@ Continue?</source>
     </message>
     <message>
         <source>Condense</source>
-        <translation type="unfinished" />
+        <translation>压缩</translation>
     </message>
     <message>
         <source>Single</source>
-        <translation type="unfinished" />
+        <translation>单个</translation>
     </message>
     <message>
         <source>Batch</source>
-        <translation type="unfinished" />
+        <translation>批量</translation>
     </message>
     <message>
         <source>YouTube</source>
@@ -3529,27 +3545,27 @@ Continue?</source>
     <name>MediaExtractorService</name>
     <message>
         <source>Extracting media</source>
-        <translation type="unfinished" />
+        <translation>正在提取媒体</translation>
     </message>
     <message>
         <source>Extracting media: %1</source>
-        <translation type="unfinished" />
+        <translation>正在提取媒体：%1</translation>
     </message>
     <message>
         <source>audio extraction failed</source>
-        <translation type="unfinished" />
+        <translation>音频提取失败</translation>
     </message>
     <message>
         <source>No audio: %1</source>
-        <translation type="unfinished" />
+        <translation>无音频：%1</translation>
     </message>
     <message>
         <source>No screenshot: %1</source>
-        <translation type="unfinished" />
+        <translation>无截图：%1</translation>
     </message>
     <message>
         <source>media extraction failed — see log</source>
-        <translation type="unfinished" />
+        <translation>媒体提取失败——请查看日志</translation>
     </message>
 </context><context>
     <name>MediaSettingsPanel</name>
@@ -3846,6 +3862,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>完成</translation>
     </message>
     <message>
+        <source>Error</source>
+        <translation>错误</translation>
+    </message>
+    <message>
         <source>No video folder selected</source>
         <translation>未选择视频文件夹</translation>
     </message>
@@ -3873,7 +3893,7 @@ You can fine-tune these later in Settings → Anki.</source>
     <name>QueueMiningProgressAdapter</name>
     <message>
         <source>Complete</source>
-        <translation type="unfinished">完成</translation>
+        <translation>完成</translation>
     </message>
 </context><context>
     <name>QueuePanel</name>
@@ -3965,303 +3985,303 @@ You can fine-tune these later in Settings → Anki.</source>
     <name>ReadingMangaTab</name>
     <message>
         <source>Review words before mining</source>
-        <translation type="unfinished">挖词前先审阅单词</translation>
+        <translation>挖词前先审阅单词</translation>
     </message>
     <message>
         <source>Show the word-selection popup for each volume before creating cards.</source>
-        <translation type="unfinished" />
+        <translation>在创建卡片前，为每卷显示单词选择弹窗。</translation>
     </message>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">进度</translation>
+        <translation>进度</translation>
     </message>
     <message>
         <source>Manga</source>
-        <translation type="unfinished" />
+        <translation>漫画</translation>
     </message>
     <message>
         <source>Folder:</source>
-        <translation type="unfinished" />
+        <translation>文件夹：</translation>
     </message>
     <message>
         <source>A folder with one manga volume, or a series folder of many volumes.</source>
-        <translation type="unfinished" />
+        <translation>包含单卷漫画的文件夹，或包含多卷的系列文件夹。</translation>
     </message>
     <message>
         <source>Mine</source>
-        <translation type="unfinished">挖词</translation>
+        <translation>挖词</translation>
     </message>
     <message>
         <source>Mine the selected folder's volume(s) into Anki cards.</source>
-        <translation type="unfinished" />
+        <translation>将所选文件夹的卷挖取为 Anki 卡片。</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">取消</translation>
+        <translation>取消</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
-        <translation type="unfinished">取消正在进行的运行。</translation>
+        <translation>取消正在进行的运行。</translation>
     </message>
     <message>
         <source>Novels are mined in the Novels tab.</source>
-        <translation type="unfinished" />
+        <translation>小说在“小说”标签页中挖取。</translation>
     </message>
     <message>
         <source>Subtitle files are mined in the Subtitles tab.</source>
-        <translation type="unfinished" />
+        <translation>字幕文件在“字幕”标签页中挖取。</translation>
     </message>
     <message>
         <source>Select a manga folder first.</source>
-        <translation type="unfinished" />
+        <translation>请先选择一个漫画文件夹。</translation>
     </message>
     <message>
         <source>Starting…</source>
-        <translation type="unfinished" />
+        <translation>正在启动…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">正在取消…</translation>
+        <translation>正在取消…</translation>
     </message>
     <message>
         <source>Volume %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>第 %1/%2 卷：%3</translation>
     </message>
     <message>
         <source>Mined %1: %2 cards.</source>
-        <translation type="unfinished">已挖词 %1：%2 张卡片。</translation>
+        <translation>已挖词 %1：%2 张卡片。</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
-        <translation type="unfinished">失败 %1：%2。</translation>
+        <translation>失败 %1：%2。</translation>
     </message>
     <message>
         <source>Done: %1 succeeded, %2 failed.</source>
-        <translation type="unfinished" />
+        <translation>完成：%1 成功，%2 失败。</translation>
     </message>
 </context><context>
     <name>ReadingNovelsTab</name>
     <message>
         <source>Review words before mining</source>
-        <translation type="unfinished">挖词前先审阅单词</translation>
+        <translation>挖词前先审阅单词</translation>
     </message>
     <message>
         <source>Show the word-selection popup before creating cards.</source>
-        <translation type="unfinished" />
+        <translation>在创建卡片前显示单词选择弹窗。</translation>
     </message>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">进度</translation>
+        <translation>进度</translation>
     </message>
     <message>
         <source>Novel</source>
-        <translation type="unfinished" />
+        <translation>小说</translation>
     </message>
     <message>
         <source>Book File:</source>
-        <translation type="unfinished" />
+        <translation>书籍文件：</translation>
     </message>
     <message>
         <source>Books</source>
-        <translation type="unfinished" />
+        <translation>书籍</translation>
     </message>
     <message>
         <source>Select an .epub or .txt book to mine.</source>
-        <translation type="unfinished" />
+        <translation>选择要挖取的 .epub 或 .txt 书籍。</translation>
     </message>
     <message>
         <source>Mine</source>
-        <translation type="unfinished">挖词</translation>
+        <translation>挖词</translation>
     </message>
     <message>
         <source>Mine the selected book into Anki cards.</source>
-        <translation type="unfinished" />
+        <translation>将所选书籍挖取为 Anki 卡片。</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">取消</translation>
+        <translation>取消</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
-        <translation type="unfinished">取消正在进行的运行。</translation>
+        <translation>取消正在进行的运行。</translation>
     </message>
     <message>
         <source>Manga is mined in the Manga tab.</source>
-        <translation type="unfinished" />
+        <translation>漫画在“漫画”标签页中挖取。</translation>
     </message>
     <message>
         <source>Subtitle files are mined in the Subtitles tab.</source>
-        <translation type="unfinished" />
+        <translation>字幕文件在“字幕”标签页中挖取。</translation>
     </message>
     <message>
         <source>Select a valid .epub or .txt book first.</source>
-        <translation type="unfinished" />
+        <translation>请先选择一个有效的 .epub 或 .txt 书籍。</translation>
     </message>
     <message>
         <source>Starting…</source>
-        <translation type="unfinished" />
+        <translation>正在启动…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">正在取消…</translation>
+        <translation>正在取消…</translation>
     </message>
     <message>
         <source>Mining: %1</source>
-        <translation type="unfinished" />
+        <translation>正在挖词：%1</translation>
     </message>
     <message>
         <source>Mined %1: %2 cards.</source>
-        <translation type="unfinished">已挖词 %1：%2 张卡片。</translation>
+        <translation>已挖词 %1：%2 张卡片。</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
-        <translation type="unfinished">失败 %1：%2。</translation>
+        <translation>失败 %1：%2。</translation>
     </message>
 </context><context>
     <name>ReadingSubtitlesTab</name>
     <message>
         <source>Review words before mining</source>
-        <translation type="unfinished">挖词前先审阅单词</translation>
+        <translation>挖词前先审阅单词</translation>
     </message>
     <message>
         <source>Show the word-selection popup for each file before creating cards.</source>
-        <translation type="unfinished" />
+        <translation>在创建卡片前，为每个文件显示单词选择弹窗。</translation>
     </message>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">进度</translation>
+        <translation>进度</translation>
     </message>
     <message>
         <source>Subtitle Files</source>
-        <translation type="unfinished" />
+        <translation>字幕文件</translation>
     </message>
     <message>
         <source>Mines subtitle files as text — no screenshots or audio extracted from video.</source>
-        <translation type="unfinished" />
+        <translation>将字幕文件作为文本挖取——不从视频提取截图或音频。</translation>
     </message>
     <message>
         <source>Subtitle files to mine, one card run per file, in list order.</source>
-        <translation type="unfinished" />
+        <translation>要挖取的字幕文件，按列表顺序每个文件运行一次挖词。</translation>
     </message>
     <message>
         <source>Add Files…</source>
-        <translation type="unfinished" />
+        <translation>添加文件…</translation>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt) to the list.</source>
-        <translation type="unfinished" />
+        <translation>将字幕文件（.srt、.ass、.ssa、.vtt）添加到列表。</translation>
     </message>
     <message>
         <source>Remove Selected</source>
-        <translation type="unfinished">移除所选</translation>
+        <translation>移除所选</translation>
     </message>
     <message>
         <source>Clear</source>
-        <translation type="unfinished">清空</translation>
+        <translation>清空</translation>
     </message>
     <message>
         <source>Mine</source>
-        <translation type="unfinished">挖词</translation>
+        <translation>挖词</translation>
     </message>
     <message>
         <source>Mine the listed subtitle files into Anki cards.</source>
-        <translation type="unfinished" />
+        <translation>将列出的字幕文件挖取为 Anki 卡片。</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">取消</translation>
+        <translation>取消</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
-        <translation type="unfinished">取消正在进行的运行。</translation>
+        <translation>取消正在进行的运行。</translation>
     </message>
     <message>
         <source>Add Subtitle Files</source>
-        <translation type="unfinished" />
+        <translation>添加字幕文件</translation>
     </message>
     <message>
         <source>Subtitles</source>
-        <translation type="unfinished">字幕</translation>
+        <translation>字幕</translation>
     </message>
     <message>
         <source>Manga is mined in the Manga tab.</source>
-        <translation type="unfinished" />
+        <translation>漫画在“漫画”标签页中挖取。</translation>
     </message>
     <message>
         <source>Novels are mined in the Novels tab.</source>
-        <translation type="unfinished" />
+        <translation>小说在“小说”标签页中挖取。</translation>
     </message>
     <message>
         <source>Add at least one subtitle file first.</source>
-        <translation type="unfinished" />
+        <translation>请先至少添加一个字幕文件。</translation>
     </message>
     <message>
         <source>File not found: %1</source>
-        <translation type="unfinished" />
+        <translation>未找到文件：%1</translation>
     </message>
     <message>
         <source>Starting…</source>
-        <translation type="unfinished" />
+        <translation>正在启动…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">正在取消…</translation>
+        <translation>正在取消…</translation>
     </message>
     <message>
         <source>File %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>文件 %1/%2：%3</translation>
     </message>
     <message>
         <source>Mined %1: %2 cards.</source>
-        <translation type="unfinished">已挖词 %1：%2 张卡片。</translation>
+        <translation>已挖词 %1：%2 张卡片。</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
-        <translation type="unfinished">失败 %1：%2。</translation>
+        <translation>失败 %1：%2。</translation>
     </message>
     <message>
         <source>Finished %1 subtitle files.</source>
-        <translation type="unfinished" />
+        <translation>已完成 %1 个字幕文件。</translation>
     </message>
 </context><context>
     <name>ReadingTab</name>
     <message>
         <source>Mining unavailable — services not initialized.</source>
-        <translation type="unfinished">无法挖词——服务未初始化。</translation>
+        <translation>无法挖词——服务未初始化。</translation>
     </message>
     <message>
         <source>%1 run starting — %2 items.</source>
-        <translation type="unfinished">%1 运行开始——%2 个项。</translation>
+        <translation>%1 运行开始——%2 个项。</translation>
     </message>
     <message>
         <source>Mine</source>
-        <translation type="unfinished">挖词</translation>
+        <translation>挖词</translation>
     </message>
     <message>
         <source>Could not process %1: %2</source>
-        <translation type="unfinished" />
+        <translation>无法处理 %1：%2</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">已取消</translation>
+        <translation>已取消</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>失败——请查看日志</translation>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
-        <translation type="unfinished" />
+        <translation>完成——已创建 %1 张卡片</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>
     <message>
         <source>Download Blocked</source>
-        <translation type="unfinished" />
+        <translation>下载被阻止</translation>
     </message>
     <message>
         <source>A mining run is in progress. Stop it before downloading resources.</source>
-        <translation type="unfinished" />
+        <translation>挖词运行正在进行中。请先停止它再下载资源。</translation>
     </message>
     <message>
         <source>Preparing download…</source>
@@ -4293,11 +4313,11 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>   Replaced older copy: %1</source>
-        <translation type="unfinished" />
+        <translation>   已替换旧副本：%1</translation>
     </message>
     <message>
         <source>   Could not remove older copy: %1 — remove it via Settings → Dictionaries</source>
-        <translation type="unfinished" />
+        <translation>   无法移除旧副本：%1——请通过“设置 → 词典”移除它</translation>
     </message>
     <message>
         <source>✗ %1 — %2
@@ -4406,6 +4426,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>从 Anki 中删除 %1 张卡片？此操作无法撤销。</translation>
     </message>
     <message>
+        <source>Undoing…</source>
+        <translation>正在撤销…</translation>
+    </message>
+    <message>
         <source>Undone (%1 cards deleted)</source>
         <translation>已撤销（删除了 %1 张卡片）</translation>
     </message>
@@ -4453,7 +4477,7 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>UI</source>
-        <translation type="unfinished" />
+        <translation>界面</translation>
     </message>
     <message>
         <source>Check for updates on startup</source>
@@ -4465,19 +4489,19 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Export Settings…</source>
-        <translation type="unfinished" />
+        <translation>导出设置…</translation>
     </message>
     <message>
         <source>Save a portable settings file (machine-specific paths and resources excluded).</source>
-        <translation type="unfinished" />
+        <translation>保存可移植的设置文件（不含特定于机器的路径和资源）。</translation>
     </message>
     <message>
         <source>Import Settings…</source>
-        <translation type="unfinished" />
+        <translation>导入设置…</translation>
     </message>
     <message>
         <source>Apply settings from an exported file; anything not in the file is kept.</source>
-        <translation type="unfinished" />
+        <translation>从导出的文件应用设置；文件中没有的内容保持不变。</translation>
     </message>
     <message>
         <source>Updating yt-dlp…</source>
@@ -4497,19 +4521,19 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>dictionary folder (Dictionaries)</source>
-        <translation type="unfinished" />
+        <translation>词典文件夹（词典）</translation>
     </message>
     <message>
         <source>cookies file (YouTube)</source>
-        <translation type="unfinished" />
+        <translation>cookies 文件（YouTube）</translation>
     </message>
     <message>
         <source>subtitle regex (Filtering)</source>
-        <translation type="unfinished" />
+        <translation>字幕正则表达式（过滤）</translation>
     </message>
     <message>
         <source>⚠ Saved — kept previous: %1</source>
-        <translation type="unfinished" />
+        <translation>⚠ 已保存——保留了先前的：%1</translation>
     </message>
     <message>
         <source>✓ Saved</source>
@@ -4517,55 +4541,69 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Export Settings</source>
-        <translation type="unfinished" />
+        <translation>导出设置</translation>
     </message>
     <message>
         <source>JSON Files (*.json);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>JSON 文件 (*.json);;所有文件 (*)</translation>
     </message>
     <message>
         <source>Export Failed</source>
-        <translation type="unfinished">导出失败</translation>
+        <translation>导出失败</translation>
     </message>
     <message>
         <source>Could not write %1:
 %2</source>
-        <translation type="unfinished" />
+        <translation>无法写入 %1：
+%2</translation>
     </message>
     <message>
         <source>Settings Exported</source>
-        <translation type="unfinished" />
+        <translation>设置已导出</translation>
     </message>
     <message>
         <source>Portable settings written to %1.</source>
-        <translation type="unfinished" />
+        <translation>可移植设置已写入 %1。</translation>
     </message>
     <message>
         <source>Import Settings</source>
-        <translation type="unfinished" />
+        <translation>导入设置</translation>
     </message>
     <message>
         <source>Import Settings?</source>
-        <translation type="unfinished" />
+        <translation>导入设置？</translation>
     </message>
     <message>
         <source>Apply settings from %1?
 
 Imported values override your current settings; anything not in the file is kept.</source>
-        <translation type="unfinished" />
+        <translation>从 %1 应用设置？
+
+导入的值会覆盖你当前的设置；文件中没有的内容保持不变。</translation>
     </message>
     <message>
         <source>Import Failed</source>
-        <translation type="unfinished">导入失败</translation>
+        <translation>导入失败</translation>
     </message>
     <message>
         <source>Could not import %1:
 %2</source>
-        <translation type="unfinished" />
+        <translation>无法导入 %1：
+%2</translation>
+    </message>
+    <message>
+        <source>Invalid Subtitle Regex</source>
+        <translation>无效的字幕正则表达式</translation>
+    </message>
+    <message>
+        <source>The imported subtitle regex filter is invalid and has been disabled:
+%1</source>
+        <translation>导入的字幕正则表达式过滤器无效，已被禁用：
+%1</translation>
     </message>
     <message>
         <source>✓ Imported</source>
-        <translation type="unfinished" />
+        <translation>✓ 已导入</translation>
     </message>
     <message>
         <source>Importing pitch accent dictionary…</source>
@@ -4777,15 +4815,15 @@ Imported values override your current settings; anything not in the file is kept
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">已取消</translation>
+        <translation>已取消</translation>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
-        <translation type="unfinished" />
+        <translation>完成——已创建 %1 张卡片</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>失败——请查看日志</translation>
     </message>
 </context><context>
     <name>StatusBarWidget</name>
@@ -4997,7 +5035,7 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
-        <translation type="unfinished" />
+        <translation>完成——已处理 %1 个文件</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -5319,7 +5357,7 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
-        <translation type="unfinished" />
+        <translation>完成——已处理 %1 个文件</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -5327,6 +5365,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
 </context><context>
     <name>SubtitleRetimeWorker</name>
+    <message>
+        <source>Output equals input; enable Overwrite to retime in place</source>
+        <translation>输出与输入相同；启用“覆盖”以就地重新校准</translation>
+    </message>
     <message>
         <source>Skipped, exists</source>
         <translation>已跳过，已存在</translation>
@@ -5347,27 +5389,27 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <name>SubtitleTracksDialog</name>
     <message>
         <source>Subtitle Track</source>
-        <translation type="unfinished" />
+        <translation>字幕轨道</translation>
     </message>
     <message>
         <source>No subtitle tracks found in this file.</source>
-        <translation type="unfinished" />
+        <translation>此文件中未找到字幕轨道。</translation>
     </message>
     <message>
         <source>This file has only one subtitle track.</source>
-        <translation type="unfinished" />
+        <translation>此文件只有一个字幕轨道。</translation>
     </message>
     <message>
         <source>Auto-detect (currently: Track %1 — %2)</source>
-        <translation type="unfinished">自动检测（当前：音轨 %1 — %2）</translation>
+        <translation>自动检测（当前：字幕轨道 %1 — %2）</translation>
     </message>
     <message>
         <source>Auto-detect (no Japanese subtitle track found — will use first text track)</source>
-        <translation type="unfinished" />
+        <translation>自动检测（未找到日语字幕轨道——将使用第一个文本轨道）</translation>
     </message>
     <message>
         <source>Apply</source>
-        <translation type="unfinished">应用</translation>
+        <translation>应用</translation>
     </message>
 </context><context>
     <name>SubtitleViewer</name>
@@ -5763,11 +5805,11 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>No page image for this word</source>
-        <translation type="unfinished" />
+        <translation>此单词没有页面图像</translation>
     </message>
     <message>
         <source>Could not load page image</source>
-        <translation type="unfinished" />
+        <translation>无法加载页面图像</translation>
     </message>
     <message>
         <source>Copy lemma</source>
@@ -5785,11 +5827,11 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <name>YouTubeFetcher</name>
     <message>
         <source>Downloading video</source>
-        <translation type="unfinished" />
+        <translation>正在下载视频</translation>
     </message>
     <message>
         <source>Merging audio and video</source>
-        <translation type="unfinished" />
+        <translation>正在合并音频和视频</translation>
     </message>
 </context><context>
     <name>YouTubeQueueItemWidget</name>
@@ -5954,6 +5996,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>已挖词 %1：%2 张卡片（尝试次数=%3）。</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>已取消 %1。</translation>
+    </message>
+    <message>
         <source>Failed %1: %2 (attempts=%3).</source>
         <translation>失败 %1：%2（尝试次数=%3）。</translation>
     </message>
@@ -5963,19 +6009,19 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">已取消</translation>
+        <translation>已取消</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>失败——请查看日志</translation>
     </message>
     <message>
         <source>Complete — %1 succeeded, %2 failed</source>
-        <translation type="unfinished" />
+        <translation>完成——%1 成功，%2 失败</translation>
     </message>
     <message>
         <source>Complete — %1 succeeded</source>
-        <translation type="unfinished" />
+        <translation>完成——%1 成功</translation>
     </message>
 </context><context>
     <name>ZipImportFlow</name>
@@ -6035,11 +6081,11 @@ Continue with import?</source>
     <name>_FreqRow</name>
     <message>
         <source>word-based</source>
-        <translation type="unfinished" />
+        <translation>基于单词</translation>
     </message>
     <message>
         <source>Level labels are shown on the card but not used for frequency filtering.</source>
-        <translation type="unfinished" />
+        <translation>级别标签显示在卡片上，但不用于词频过滤。</translation>
     </message>
     <message>
         <source>%1 entries</source>

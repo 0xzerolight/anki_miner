@@ -195,11 +195,11 @@
     <name>AnkiService</name>
     <message>
         <source>Creating Anki cards</source>
-        <translation type="unfinished" />
+        <translation>Đang tạo thẻ Anki</translation>
     </message>
     <message>
         <source>Cards created: %1/%2</source>
-        <translation type="unfinished" />
+        <translation>Thẻ đã tạo: %1/%2</translation>
     </message>
 </context><context>
     <name>AnkiSettingsPanel</name>
@@ -645,7 +645,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Add a custom audio URL source</source>
-        <translation type="unfinished" />
+        <translation>Thêm nguồn URL âm thanh tùy chỉnh</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -669,27 +669,27 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Sentence Audio (Reading Sources)</source>
-        <translation type="unfinished" />
+        <translation>Âm thanh câu (nguồn đọc)</translation>
     </message>
     <message>
         <source>Generate spoken sentence audio for cards mined from manga and books (these have no source audio). Sentence text is sent to the selected online services.</source>
-        <translation type="unfinished" />
+        <translation>Tạo âm thanh câu được đọc cho thẻ khai thác từ manga và sách (những nguồn này không có âm thanh gốc). Nội dung câu được gửi đến các dịch vụ trực tuyến đã chọn.</translation>
     </message>
     <message>
         <source>Generate TTS sentence audio</source>
-        <translation type="unfinished" />
+        <translation>Tạo âm thanh câu TTS</translation>
     </message>
     <message>
         <source>Google Translate TTS (tried first)</source>
-        <translation type="unfinished" />
+        <translation>Google Translate TTS (thử trước)</translation>
     </message>
     <message>
         <source>Naver Papago (fallback)</source>
-        <translation type="unfinished" />
+        <translation>Naver Papago (dự phòng)</translation>
     </message>
     <message>
         <source>Select at least one service.</source>
-        <translation type="unfinished" />
+        <translation>Chọn ít nhất một dịch vụ.</translation>
     </message>
     <message>
         <source>Google Translate (synthetic TTS)</source>
@@ -870,6 +870,10 @@ Gói âm thanh chưa được xóa.</translation>
         <translation>Đã khai thác %1: %2 thẻ.</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>Đã hủy %1.</translation>
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation>Thất bại %1: %2.</translation>
     </message>
@@ -879,19 +883,19 @@ Gói âm thanh chưa được xóa.</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Đã hủy</translation>
+        <translation>Đã hủy</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>Thất bại — xem nhật ký</translation>
     </message>
     <message>
         <source>Complete — %1 succeeded, %2 failed</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — %1 thành công, %2 thất bại</translation>
     </message>
     <message>
         <source>Complete — %1 succeeded</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — %1 thành công</translation>
     </message>
 </context><context>
     <name>BatchProcessingTab</name>
@@ -989,7 +993,7 @@ Gói âm thanh chưa được xóa.</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Đã hủy</translation>
+        <translation>Đã hủy</translation>
     </message>
     <message>
         <source>Cancelling...</source>
@@ -1005,7 +1009,7 @@ Gói âm thanh chưa được xóa.</translation>
     </message>
     <message>
         <source>Episode %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>Tập %1/%2: %3</translation>
     </message>
     <message>
         <source>Processing series: %1</source>
@@ -1013,7 +1017,7 @@ Gói âm thanh chưa được xóa.</translation>
     </message>
     <message>
         <source>Series %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>Bộ %1/%2: %3</translation>
     </message>
     <message>
         <source>Created %1 cards</source>
@@ -1021,11 +1025,11 @@ Gói âm thanh chưa được xóa.</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>Thất bại — xem nhật ký</translation>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — đã tạo %1 thẻ</translation>
     </message>
     <message>
         <source>Processed %1 series
@@ -1151,43 +1155,43 @@ Tổng số thẻ đã tạo: %2</translation>
     </message>
     <message>
         <source>Mine from manga</source>
-        <translation type="unfinished" />
+        <translation>Khai thác từ manga</translation>
     </message>
     <message>
         <source>Mine vocabulary from manga volumes processed with mokuro.</source>
-        <translation type="unfinished" />
+        <translation>Khai thác từ vựng từ các tập manga đã xử lý bằng mokuro.</translation>
     </message>
     <message>
         <source>Mine from novels</source>
-        <translation type="unfinished" />
+        <translation>Khai thác từ tiểu thuyết</translation>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>Khai thác từ vựng từ tiểu thuyết và văn bản khác (EPUB, Aozora, văn bản thuần túy).</translation>
     </message>
     <message>
         <source>Generate subtitles from audio</source>
-        <translation type="unfinished" />
+        <translation>Tạo phụ đề từ âm thanh</translation>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool.</source>
-        <translation type="unfinished" />
+        <translation>Tạo phụ đề từ âm thanh bằng mô hình Whisper cục bộ — như một công cụ độc lập.</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
-        <translation type="unfinished" />
+        <translation>Định thời lại phụ đề hiện có</translation>
     </message>
     <message>
         <source>Re-sync existing subtitles against the video -- as a standalone tool.</source>
-        <translation type="unfinished" />
+        <translation>Đồng bộ lại phụ đề hiện có với video — như một công cụ độc lập.</translation>
     </message>
     <message>
         <source>Condense audio from subtitles</source>
-        <translation type="unfinished" />
+        <translation>Cô đọng âm thanh từ phụ đề</translation>
     </message>
     <message>
         <source>Build dialogue-only condensed audio from a video or audio file and its subtitles.</source>
-        <translation type="unfinished" />
+        <translation>Tạo âm thanh cô đọng chỉ gồm lời thoại từ tệp video hoặc âm thanh và phụ đề của nó.</translation>
     </message>
     <message>
         <source>View mining history &amp; stats</source>
@@ -1465,353 +1469,353 @@ Tổng số thẻ đã tạo: %2</translation>
     <name>CondenseTab</name>
     <message>
         <source>Input</source>
-        <translation type="unfinished">Đầu vào</translation>
+        <translation>Đầu vào</translation>
     </message>
     <message>
         <source>ffmpeg not found; install it or set its path in Settings to enable condensing.</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy ffmpeg; cài đặt nó hoặc đặt đường dẫn trong Cài đặt để bật tính năng cô đọng.</translation>
     </message>
     <message>
         <source>Condense a video or audio file down to just its spoken dialogue.</source>
-        <translation type="unfinished" />
+        <translation>Cô đọng tệp video hoặc âm thanh xuống chỉ còn lời thoại.</translation>
     </message>
     <message>
         <source>Mode:</source>
-        <translation type="unfinished">Chế độ:</translation>
+        <translation>Chế độ:</translation>
     </message>
     <message>
         <source>Single File</source>
-        <translation type="unfinished">Một tệp</translation>
+        <translation>Một tệp</translation>
     </message>
     <message>
         <source>Condense one selected media file.</source>
-        <translation type="unfinished" />
+        <translation>Cô đọng một tệp phương tiện đã chọn.</translation>
     </message>
     <message>
         <source>Folder</source>
-        <translation type="unfinished">Thư mục</translation>
+        <translation>Thư mục</translation>
     </message>
     <message>
         <source>Condense every media file in a selected folder.</source>
-        <translation type="unfinished" />
+        <translation>Cô đọng mọi tệp phương tiện trong thư mục đã chọn.</translation>
     </message>
     <message>
         <source>Media File:</source>
-        <translation type="unfinished" />
+        <translation>Tệp phương tiện:</translation>
     </message>
     <message>
         <source>Subtitle File:</source>
-        <translation type="unfinished">Tệp phụ đề:</translation>
+        <translation>Tệp phụ đề:</translation>
     </message>
     <message>
         <source>Leave empty to auto-detect (sibling file or embedded track).</source>
-        <translation type="unfinished" />
+        <translation>Để trống để tự động phát hiện (tệp cùng cấp hoặc rãnh nhúng).</translation>
     </message>
     <message>
         <source>Audio track:</source>
-        <translation type="unfinished">Rãnh âm thanh:</translation>
+        <translation>Rãnh âm thanh:</translation>
     </message>
     <message>
         <source>Japanese (auto-detect)</source>
-        <translation type="unfinished">Tiếng Nhật (tự động phát hiện)</translation>
+        <translation>Tiếng Nhật (tự động phát hiện)</translation>
     </message>
     <message>
         <source>Choose…</source>
-        <translation type="unfinished" />
+        <translation>Chọn…</translation>
     </message>
     <message>
         <source>Choose which audio track to condense.</source>
-        <translation type="unfinished" />
+        <translation>Chọn rãnh âm thanh nào để cô đọng.</translation>
     </message>
     <message>
         <source>Subtitle track:</source>
-        <translation type="unfinished" />
+        <translation>Rãnh phụ đề:</translation>
     </message>
     <message>
         <source>Auto (external → embedded Japanese)</source>
-        <translation type="unfinished" />
+        <translation>Tự động (bên ngoài → tiếng Nhật nhúng)</translation>
     </message>
     <message>
         <source>Choose which embedded subtitle track to condense against.</source>
-        <translation type="unfinished" />
+        <translation>Chọn rãnh phụ đề nhúng nào để cô đọng theo.</translation>
     </message>
     <message>
         <source>Media Folder:</source>
-        <translation type="unfinished" />
+        <translation>Thư mục phương tiện:</translation>
     </message>
     <message>
         <source>Subtitle Folder:</source>
-        <translation type="unfinished">Thư mục phụ đề:</translation>
+        <translation>Thư mục phụ đề:</translation>
     </message>
     <message>
         <source>Optional. When set, media is paired to subtitles by episode number; otherwise each file auto-detects.</source>
-        <translation type="unfinished" />
+        <translation>Tùy chọn. Khi được đặt, phương tiện được ghép với phụ đề theo số tập; nếu không, mỗi tệp tự động phát hiện.</translation>
     </message>
     <message>
         <source>Options</source>
-        <translation type="unfinished" />
+        <translation>Tùy chọn</translation>
     </message>
     <message>
         <source>Padding:</source>
-        <translation type="unfinished" />
+        <translation>Đệm:</translation>
     </message>
     <message>
         <source> ms</source>
-        <translation type="unfinished" />
+        <translation> ms</translation>
     </message>
     <message>
         <source>Silence kept on each side of every dialogue line before merging.</source>
-        <translation type="unfinished" />
+        <translation>Khoảng lặng giữ lại ở mỗi bên của từng dòng thoại trước khi hợp nhất.</translation>
     </message>
     <message>
         <source>Offset:</source>
-        <translation type="unfinished">Độ lệch:</translation>
+        <translation>Độ lệch:</translation>
     </message>
     <message>
         <source>Shift every subtitle cue by this amount before condensing.</source>
-        <translation type="unfinished" />
+        <translation>Dịch chuyển mọi mốc phụ đề theo lượng này trước khi cô đọng.</translation>
     </message>
     <message>
         <source>Format:</source>
-        <translation type="unfinished" />
+        <translation>Định dạng:</translation>
     </message>
     <message>
         <source>Also write condensed subtitles (SRT + LRC)</source>
-        <translation type="unfinished" />
+        <translation>Cũng ghi phụ đề cô đọng (SRT + LRC)</translation>
     </message>
     <message>
         <source>Write time-mapped .srt and .lrc files alongside the condensed audio.</source>
-        <translation type="unfinished" />
+        <translation>Ghi tệp .srt và .lrc ánh xạ thời gian cùng với âm thanh cô đọng.</translation>
     </message>
     <message>
         <source>Output</source>
-        <translation type="unfinished">Đầu ra</translation>
+        <translation>Đầu ra</translation>
     </message>
     <message>
         <source>Output:</source>
-        <translation type="unfinished">Đầu ra:</translation>
+        <translation>Đầu ra:</translation>
     </message>
     <message>
         <source>Next to source</source>
-        <translation type="unfinished" />
+        <translation>Bên cạnh nguồn</translation>
     </message>
     <message>
         <source>Choose Folder…</source>
-        <translation type="unfinished">Chọn thư mục…</translation>
+        <translation>Chọn thư mục…</translation>
     </message>
     <message>
         <source>Reset</source>
-        <translation type="unfinished">Đặt lại</translation>
+        <translation>Đặt lại</translation>
     </message>
     <message>
         <source>Overwrite existing condensed files</source>
-        <translation type="unfinished" />
+        <translation>Ghi đè các tệp cô đọng hiện có</translation>
     </message>
     <message>
         <source>When unchecked, files whose condensed audio already exists are skipped, not overwritten.</source>
-        <translation type="unfinished" />
+        <translation>Khi bỏ chọn, các tệp đã có âm thanh cô đọng sẽ bị bỏ qua, không ghi đè.</translation>
     </message>
     <message>
         <source>Actions</source>
-        <translation type="unfinished">Hành động</translation>
+        <translation>Hành động</translation>
     </message>
     <message>
         <source>Condense Audio</source>
-        <translation type="unfinished" />
+        <translation>Cô đọng âm thanh</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Hủy</translation>
+        <translation>Hủy</translation>
     </message>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Tiến độ</translation>
+        <translation>Tiến độ</translation>
     </message>
     <message>
         <source>No Media File Selected</source>
-        <translation type="unfinished" />
+        <translation>Chưa chọn tệp phương tiện</translation>
     </message>
     <message>
         <source>Select a media file first.</source>
-        <translation type="unfinished" />
+        <translation>Chọn một tệp phương tiện trước.</translation>
     </message>
     <message>
         <source>File Not Found</source>
-        <translation type="unfinished">Không tìm thấy tệp</translation>
+        <translation>Không tìm thấy tệp</translation>
     </message>
     <message>
         <source>Media file not found: </source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy tệp phương tiện: </translation>
     </message>
     <message>
         <source>No Audio Tracks</source>
-        <translation type="unfinished">Không có rãnh âm thanh</translation>
+        <translation>Không có rãnh âm thanh</translation>
     </message>
     <message>
         <source>No audio tracks detected. Check that ffprobe is installed and the file has audio.</source>
-        <translation type="unfinished">Không phát hiện rãnh âm thanh nào. Kiểm tra rằng ffprobe đã được cài đặt và tệp có âm thanh.</translation>
+        <translation>Không phát hiện rãnh âm thanh nào. Kiểm tra rằng ffprobe đã được cài đặt và tệp có âm thanh.</translation>
     </message>
     <message>
         <source>Track %1</source>
-        <translation type="unfinished">Rãnh %1</translation>
+        <translation>Rãnh %1</translation>
     </message>
     <message>
         <source>Probe Failed</source>
-        <translation type="unfinished">Thăm dò thất bại</translation>
+        <translation>Thăm dò thất bại</translation>
     </message>
     <message>
         <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
-        <translation type="unfinished">Không phát hiện được rãnh âm thanh. Kiểm tra rằng ffprobe đã được cài đặt.</translation>
+        <translation>Không phát hiện được rãnh âm thanh. Kiểm tra rằng ffprobe đã được cài đặt.</translation>
     </message>
     <message>
         <source>No Subtitle Tracks</source>
-        <translation type="unfinished" />
+        <translation>Không có rãnh phụ đề</translation>
     </message>
     <message>
         <source>No embedded subtitle tracks detected in this file.</source>
-        <translation type="unfinished" />
+        <translation>Không phát hiện rãnh phụ đề nhúng nào trong tệp này.</translation>
     </message>
     <message>
         <source>Failed to detect subtitle tracks. Check that ffprobe is installed.</source>
-        <translation type="unfinished" />
+        <translation>Không phát hiện được rãnh phụ đề. Kiểm tra rằng ffprobe đã được cài đặt.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
-        <translation type="unfinished">Chọn thư mục đầu ra</translation>
+        <translation>Chọn thư mục đầu ra</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
-        <translation type="unfinished">Thư mục đầu ra không ghi được: </translation>
+        <translation>Thư mục đầu ra không ghi được: </translation>
     </message>
     <message>
         <source>Select a media file before condensing.</source>
-        <translation type="unfinished" />
+        <translation>Chọn một tệp phương tiện trước khi cô đọng.</translation>
     </message>
     <message>
         <source>Subtitle file not found: </source>
-        <translation type="unfinished">Không tìm thấy tệp phụ đề: </translation>
+        <translation>Không tìm thấy tệp phụ đề: </translation>
     </message>
     <message>
         <source>No Media Folder Selected</source>
-        <translation type="unfinished" />
+        <translation>Chưa chọn thư mục phương tiện</translation>
     </message>
     <message>
         <source>Select a media folder before condensing.</source>
-        <translation type="unfinished" />
+        <translation>Chọn một thư mục phương tiện trước khi cô đọng.</translation>
     </message>
     <message>
         <source>Folder Not Found</source>
-        <translation type="unfinished">Không tìm thấy thư mục</translation>
+        <translation>Không tìm thấy thư mục</translation>
     </message>
     <message>
         <source>Media folder not found: </source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy thư mục phương tiện: </translation>
     </message>
     <message>
         <source>Subtitle folder not found: </source>
-        <translation type="unfinished">Không tìm thấy thư mục phụ đề: </translation>
+        <translation>Không tìm thấy thư mục phụ đề: </translation>
     </message>
     <message>
         <source>No Media Files</source>
-        <translation type="unfinished" />
+        <translation>Không có tệp phương tiện</translation>
     </message>
     <message>
         <source>No media files found in the selected folder.</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy tệp phương tiện nào trong thư mục đã chọn.</translation>
     </message>
     <message>
         <source>Matched %1 of %2 media files.</source>
-        <translation type="unfinished" />
+        <translation>Đã khớp %1 trên %2 tệp phương tiện.</translation>
     </message>
     <message>
         <source>Warning: %1 media file(s) could not be matched.</source>
-        <translation type="unfinished" />
+        <translation>Cảnh báo: %1 tệp phương tiện không thể khớp.</translation>
     </message>
     <message>
         <source>No Pairs Matched</source>
-        <translation type="unfinished">Không có cặp nào khớp</translation>
+        <translation>Không có cặp nào khớp</translation>
     </message>
     <message>
         <source>No subtitle files could be matched to the media files in the selected folders.</source>
-        <translation type="unfinished" />
+        <translation>Không thể khớp tệp phụ đề nào với các tệp phương tiện trong thư mục đã chọn.</translation>
     </message>
     <message>
         <source>Condensing file %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Đang cô đọng tệp %1 trên %2</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Xong: </translation>
+        <translation>Xong: </translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Xong</translation>
+        <translation>Xong</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Đã bỏ qua: </translation>
+        <translation>Đã bỏ qua: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Đã bỏ qua</translation>
+        <translation>Đã bỏ qua</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Đã hủy</translation>
+        <translation>Đã hủy</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — đã xử lý %1 tệp</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Đang hủy…</translation>
+        <translation>Đang hủy…</translation>
     </message>
 </context><context>
     <name>CondenseWorker</name>
     <message>
         <source>Skipped, exists</source>
-        <translation type="unfinished">Đã bỏ qua, đã tồn tại</translation>
+        <translation>Đã bỏ qua, đã tồn tại</translation>
     </message>
     <message>
         <source>No dialogue lines found in %1</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy dòng thoại nào trong %1</translation>
     </message>
     <message>
         <source>Condensing: %1%</source>
-        <translation type="unfinished" />
+        <translation>Đang cô đọng: %1%</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Đã hủy</translation>
+        <translation>Đã hủy</translation>
     </message>
     <message>
         <source>Condensing failed for %1</source>
-        <translation type="unfinished" />
+        <translation>Cô đọng thất bại cho %1</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Xong</translation>
+        <translation>Xong</translation>
     </message>
     <message>
         <source>No subtitle source found for %1</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy nguồn phụ đề cho %1</translation>
     </message>
     <message>
         <source>Subtitle track %1 not found in %2</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy rãnh phụ đề %1 trong %2</translation>
     </message>
     <message>
         <source>Only image-based subtitles (%1) in %2, which can't be condensed</source>
-        <translation type="unfinished" />
+        <translation>Chỉ có phụ đề dạng ảnh (%1) trong %2, không thể cô đọng</translation>
     </message>
     <message>
         <source>Failed to extract embedded subtitle from %1</source>
-        <translation type="unfinished" />
+        <translation>Không trích xuất được phụ đề nhúng từ %1</translation>
     </message>
     <message>
         <source>Audio done; subtitle write failed: %1</source>
-        <translation type="unfinished" />
+        <translation>Âm thanh xong; ghi phụ đề thất bại: %1</translation>
     </message>
 </context><context>
     <name>CudaPackDownloadWorker</name>
@@ -1987,7 +1991,7 @@ Tổng số thẻ đã tạo: %2</translation>
     </message>
     <message>
         <source>Episode %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>Tập %1/%2: %3</translation>
     </message>
     <message>
         <source>Processing: %1</source>
@@ -2003,7 +2007,7 @@ Tổng số thẻ đã tạo: %2</translation>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — đã tạo %1 thẻ</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -2011,7 +2015,7 @@ Tổng số thẻ đã tạo: %2</translation>
     </message>
     <message>
         <source>Cancelling...</source>
-        <translation type="unfinished">Đang hủy...</translation>
+        <translation>Đang hủy...</translation>
     </message>
     <message>
         <source>Error: %1</source>
@@ -2019,11 +2023,11 @@ Tổng số thẻ đã tạo: %2</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>Thất bại — xem nhật ký</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Đã hủy</translation>
+        <translation>Đã hủy</translation>
     </message>
 </context><context>
     <name>DeckPage</name>
@@ -2051,27 +2055,27 @@ Tổng số thẻ đã tạo: %2</translation>
     <name>DefinitionService</name>
     <message>
         <source>Fetching definitions</source>
-        <translation type="unfinished" />
+        <translation>Đang lấy định nghĩa</translation>
     </message>
     <message>
         <source>Definition found: %1</source>
-        <translation type="unfinished" />
+        <translation>Đã tìm thấy định nghĩa: %1</translation>
     </message>
     <message>
         <source>No definition: %1</source>
-        <translation type="unfinished" />
+        <translation>Không có định nghĩa: %1</translation>
     </message>
     <message>
         <source>Fetching glossary entries</source>
-        <translation type="unfinished" />
+        <translation>Đang lấy mục từ điển thuật ngữ</translation>
     </message>
     <message>
         <source>Glossary found: %1</source>
-        <translation type="unfinished" />
+        <translation>Đã tìm thấy từ điển thuật ngữ: %1</translation>
     </message>
     <message>
         <source>No glossary: %1</source>
-        <translation type="unfinished" />
+        <translation>Không có từ điển thuật ngữ: %1</translation>
     </message>
 </context><context>
     <name>DictionaryImportFlow</name>
@@ -2389,7 +2393,7 @@ Từ điển chưa được xóa.</translation>
     </message>
     <message>
         <source>Resources configured: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation type="unfinished" />
+        <translation>Tài nguyên đã cấu hình: &lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -2413,19 +2417,19 @@ Từ điển chưa được xóa.</translation>
     </message>
     <message>
         <source>Sentence-audio TTS connection/certificate failure — sentence audio skipped this run, will retry next run</source>
-        <translation type="unfinished" />
+        <translation>TTS âm thanh câu lỗi kết nối/chứng chỉ — bỏ qua âm thanh câu lần chạy này, sẽ thử lại lần chạy sau</translation>
     </message>
     <message>
         <source>Sentence-audio TTS returned repeated server errors — sentence audio skipped this run, will retry next run</source>
-        <translation type="unfinished" />
+        <translation>TTS âm thanh câu trả về lỗi máy chủ lặp lại — bỏ qua âm thanh câu lần chạy này, sẽ thử lại lần chạy sau</translation>
     </message>
     <message>
         <source>Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run</source>
-        <translation type="unfinished" />
+        <translation>TTS âm thanh câu trả về phản hồi không phải âm thanh (có thể bị giới hạn tần suất) — bỏ qua âm thanh câu lần chạy này, sẽ thử lại lần chạy sau</translation>
     </message>
     <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
-        <translation type="unfinished" />
+        <translation>Tất cả %1 từ mới đã bị loại bỏ bởi các bộ lọc đang hoạt động — không tạo thẻ nào</translation>
     </message>
     <message>
         <source>All words already in Anki!</source>
@@ -2479,7 +2483,7 @@ Từ điển chưa được xóa.</translation>
     </message>
     <message>
         <source>Frequency cutoff set but no frequency source is loaded — cutoff ignored (add a frequency source in Settings).</source>
-        <translation type="unfinished" />
+        <translation>Đã đặt ngưỡng tần suất nhưng không có nguồn tần suất nào được tải — ngưỡng bị bỏ qua (thêm nguồn tần suất trong Cài đặt).</translation>
     </message>
     <message>
         <source>Word list filter: removed %1 words</source>
@@ -2494,12 +2498,12 @@ Từ điển chưa được xóa.</translation>
         <translation>Bộ lọc tập tên riêng: đã loại bỏ %1 từ</translation>
     </message>
     <message>
-        <source>Sentence deduplication: removed %1 duplicate-sentence words</source>
-        <translation>Loại trùng câu: đã loại bỏ %1 từ có câu trùng lặp</translation>
-    </message>
-    <message>
         <source>Cross-episode filter: removed %1 words appearing in fewer than %2 episodes</source>
         <translation>Bộ lọc liên tập: đã loại bỏ %1 từ xuất hiện trong ít hơn %2 tập</translation>
+    </message>
+    <message>
+        <source>Sentence deduplication: removed %1 duplicate-sentence words</source>
+        <translation>Loại trùng câu: đã loại bỏ %1 từ có câu trùng lặp</translation>
     </message>
     <message>
         <source>i+1 filter: kept %1/%2 words (%3%)</source>
@@ -2511,8 +2515,8 @@ Từ điển chưa được xóa.</translation>
     </message>
     <message numerus="yes">
         <source>Whitelist: force-included %n word(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Danh sách trắng: đã buộc bao gồm %n từ</numerusform>
         </translation>
     </message>
     <message>
@@ -2549,15 +2553,15 @@ Từ điển chưa được xóa.</translation>
     </message>
     <message>
         <source>Generating sentence audio</source>
-        <translation type="unfinished" />
+        <translation>Đang tạo âm thanh câu</translation>
     </message>
     <message>
         <source>Sentence audio: %1</source>
-        <translation type="unfinished" />
+        <translation>Âm thanh câu: %1</translation>
     </message>
     <message>
         <source>Sentence audio: %1/%2 sentences</source>
-        <translation type="unfinished" />
+        <translation>Âm thanh câu: %1/%2 câu</translation>
     </message>
     <message>
         <source>Step 4/5 — Fetching definitions</source>
@@ -2635,43 +2639,43 @@ Từ điển chưa được xóa.</translation>
     </message>
     <message>
         <source>Step 3/5 — Preparing card images</source>
-        <translation type="unfinished" />
+        <translation>Bước 3/5 — Đang chuẩn bị ảnh thẻ</translation>
     </message>
     <message>
         <source>Step 3/5 — Preparing page images</source>
-        <translation type="unfinished" />
+        <translation>Bước 3/5 — Đang chuẩn bị ảnh trang</translation>
     </message>
     <message>
         <source>Preparing card images</source>
-        <translation type="unfinished" />
+        <translation>Đang chuẩn bị ảnh thẻ</translation>
     </message>
     <message>
         <source>Preparing page images</source>
-        <translation type="unfinished" />
+        <translation>Đang chuẩn bị ảnh trang</translation>
     </message>
     <message>
         <source>Card image: %1</source>
-        <translation type="unfinished" />
+        <translation>Ảnh thẻ: %1</translation>
     </message>
     <message>
         <source>Page image: %1</source>
-        <translation type="unfinished" />
+        <translation>Ảnh trang: %1</translation>
     </message>
     <message>
         <source>Skipped unsafe image archive %1 — its cards have no page image</source>
-        <translation type="unfinished" />
+        <translation>Đã bỏ qua kho ảnh không an toàn %1 — các thẻ của nó không có ảnh trang</translation>
     </message>
     <message>
         <source>Skipped corrupt image archive %1 — its cards have no page image</source>
-        <translation type="unfinished" />
+        <translation>Đã bỏ qua kho ảnh bị hỏng %1 — các thẻ của nó không có ảnh trang</translation>
     </message>
     <message>
         <source>Skipped unreadable page image %1 — its card has no picture</source>
-        <translation type="unfinished" />
+        <translation>Đã bỏ qua ảnh trang không đọc được %1 — thẻ của nó không có hình</translation>
     </message>
     <message>
         <source>Step 1/5 — Parsing text: %1</source>
-        <translation type="unfinished" />
+        <translation>Bước 1/5 — Đang phân tích văn bản: %1</translation>
     </message>
 </context><context>
     <name>ExportDialog</name>
@@ -2805,7 +2809,7 @@ Từ điển chưa được xóa.</translation>
     </message>
     <message>
         <source>No frequency source is loaded — this cutoff is ignored. Add a frequency source in the Dictionaries tab.</source>
-        <translation type="unfinished" />
+        <translation>Không có nguồn tần suất nào được tải — ngưỡng này bị bỏ qua. Thêm nguồn tần suất trong tab Từ điển.</translation>
     </message>
     <message>
         <source>Known Words Database</source>
@@ -2877,7 +2881,7 @@ Từ điển chưa được xóa.</translation>
     </message>
     <message>
         <source>Text file with one word per line to force-include, bypassing frequency, script, length and other filters. A word must still have a dictionary entry and not already be in Anki or your known-words list.</source>
-        <translation type="unfinished" />
+        <translation>Tệp văn bản với mỗi dòng một từ để buộc bao gồm, bỏ qua các bộ lọc tần suất, chữ viết, độ dài và các bộ lọc khác. Một từ vẫn phải có mục từ điển và chưa có trong Anki hoặc danh sách từ đã biết của bạn.</translation>
     </message>
     <message>
         <source>Enable Whitelist</source>
@@ -3029,19 +3033,19 @@ Từ điển chưa được xóa.</translation>
     </message>
     <message>
         <source>Reading</source>
-        <translation type="unfinished">Cách đọc</translation>
+        <translation>Cách đọc</translation>
     </message>
     <message>
         <source>Off</source>
-        <translation type="unfinished" />
+        <translation>Tắt</translation>
     </message>
     <message>
         <source>Minimum Word Occurrences</source>
-        <translation type="unfinished" />
+        <translation>Số lần xuất hiện tối thiểu của từ</translation>
     </message>
     <message>
         <source>Minimum number of times a word must appear in a book or volume to be mined. 1 = no minimum (filter off).</source>
-        <translation type="unfinished" />
+        <translation>Số lần tối thiểu một từ phải xuất hiện trong một cuốn sách hoặc tập để được khai thác. 1 = không có tối thiểu (tắt bộ lọc).</translation>
     </message>
     <message>
         <source>Card Formatting</source>
@@ -3067,7 +3071,7 @@ Từ điển chưa được xóa.</translation>
     <name>FrequencyImportFlow</name>
     <message>
         <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
-        <translation type="unfinished" />
+        <translation> Đây là nguồn dựa trên từ; nhãn cấp độ của nó hiển thị trên thẻ nhưng không ảnh hưởng đến việc lọc theo hạng tần suất.</translation>
     </message>
     <message>
         <source>Choose frequency source</source>
@@ -3291,7 +3295,7 @@ Nguồn tần suất chưa được gỡ bỏ.</translation>
     <name>MainWindow</name>
     <message>
         <source>Video</source>
-        <translation type="unfinished">Video</translation>
+        <translation>Video</translation>
     </message>
     <message>
         <source>Deck Builder</source>
@@ -3303,7 +3307,7 @@ Nguồn tần suất chưa được gỡ bỏ.</translation>
     </message>
     <message>
         <source>Reading</source>
-        <translation type="unfinished">Cách đọc</translation>
+        <translation>Cách đọc</translation>
     </message>
     <message>
         <source>Analytics</source>
@@ -3311,7 +3315,7 @@ Nguồn tần suất chưa được gỡ bỏ.</translation>
     </message>
     <message>
         <source>Tools</source>
-        <translation type="unfinished" />
+        <translation>Công cụ</translation>
     </message>
     <message>
         <source>Settings</source>
@@ -3415,7 +3419,15 @@ Nguồn tần suất chưa được gỡ bỏ.</translation>
 Close Anki's card browser and any open note editor first — editing an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation type="unfinished" />
+        <translation>Áp dụng lại kiểu định dạng tích hợp mới nhất cho các thẻ đã khai thác để chúng khớp với thẻ mới. An toàn để chạy lại; nó không bao giờ xóa nội dung thẻ.
+
+Đóng trình duyệt thẻ của Anki và mọi trình chỉnh sửa ghi chú đang mở trước — chỉnh sửa một ghi chú đang mở có thể làm mất các chỉnh sửa chưa lưu.
+
+Tiếp tục?</translation>
+    </message>
+    <message>
+        <source>Cannot start restyle — Anki fields are misconfigured: %1</source>
+        <translation>Không thể bắt đầu định dạng lại — các trường Anki bị cấu hình sai: %1</translation>
     </message>
     <message>
         <source>Restyling mined cards…</source>
@@ -3431,7 +3443,7 @@ Continue?</source>
     </message>
     <message>
         <source>Restyled %1 card(s). (%2 scanned; %3 already up to date.)</source>
-        <translation type="unfinished" />
+        <translation>Đã định dạng lại %1 thẻ. (%2 đã quét; %3 đã cập nhật.)</translation>
     </message>
     <message>
         <source>Restyle failed</source>
@@ -3466,6 +3478,10 @@ Continue?</source>
 %1</translation>
     </message>
     <message>
+        <source>Anki note-type fields are misconfigured; check Settings.</source>
+        <translation>Các trường loại ghi chú Anki bị cấu hình sai; kiểm tra Cài đặt.</translation>
+    </message>
+    <message>
         <source>Validation already running</source>
         <translation>Kiểm tra đã đang chạy</translation>
     </message>
@@ -3491,15 +3507,15 @@ Continue?</source>
     </message>
     <message>
         <source>Manga</source>
-        <translation type="unfinished" />
+        <translation>Manga</translation>
     </message>
     <message>
         <source>Novels</source>
-        <translation type="unfinished" />
+        <translation>Tiểu thuyết</translation>
     </message>
     <message>
         <source>Subtitles</source>
-        <translation type="unfinished">Phụ đề</translation>
+        <translation>Phụ đề</translation>
     </message>
     <message>
         <source>Generate</source>
@@ -3511,15 +3527,15 @@ Continue?</source>
     </message>
     <message>
         <source>Condense</source>
-        <translation type="unfinished" />
+        <translation>Cô đọng</translation>
     </message>
     <message>
         <source>Single</source>
-        <translation type="unfinished" />
+        <translation>Đơn lẻ</translation>
     </message>
     <message>
         <source>Batch</source>
-        <translation type="unfinished" />
+        <translation>Hàng loạt</translation>
     </message>
     <message>
         <source>YouTube</source>
@@ -3529,27 +3545,27 @@ Continue?</source>
     <name>MediaExtractorService</name>
     <message>
         <source>Extracting media</source>
-        <translation type="unfinished" />
+        <translation>Đang trích xuất phương tiện</translation>
     </message>
     <message>
         <source>Extracting media: %1</source>
-        <translation type="unfinished" />
+        <translation>Đang trích xuất phương tiện: %1</translation>
     </message>
     <message>
         <source>audio extraction failed</source>
-        <translation type="unfinished" />
+        <translation>trích xuất âm thanh thất bại</translation>
     </message>
     <message>
         <source>No audio: %1</source>
-        <translation type="unfinished" />
+        <translation>Không có âm thanh: %1</translation>
     </message>
     <message>
         <source>No screenshot: %1</source>
-        <translation type="unfinished" />
+        <translation>Không có ảnh chụp màn hình: %1</translation>
     </message>
     <message>
         <source>media extraction failed — see log</source>
-        <translation type="unfinished" />
+        <translation>trích xuất phương tiện thất bại — xem nhật ký</translation>
     </message>
 </context><context>
     <name>MediaSettingsPanel</name>
@@ -3846,6 +3862,10 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation>Hoàn tất</translation>
     </message>
     <message>
+        <source>Error</source>
+        <translation>Lỗi</translation>
+    </message>
+    <message>
         <source>No video folder selected</source>
         <translation>Chưa chọn thư mục video</translation>
     </message>
@@ -3873,7 +3893,7 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     <name>QueueMiningProgressAdapter</name>
     <message>
         <source>Complete</source>
-        <translation type="unfinished">Hoàn tất</translation>
+        <translation>Hoàn tất</translation>
     </message>
 </context><context>
     <name>QueuePanel</name>
@@ -3965,303 +3985,303 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     <name>ReadingMangaTab</name>
     <message>
         <source>Review words before mining</source>
-        <translation type="unfinished">Xem lại từ trước khi khai thác</translation>
+        <translation>Xem lại từ trước khi khai thác</translation>
     </message>
     <message>
         <source>Show the word-selection popup for each volume before creating cards.</source>
-        <translation type="unfinished" />
+        <translation>Hiển thị cửa sổ chọn từ cho mỗi tập trước khi tạo thẻ.</translation>
     </message>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Tiến độ</translation>
+        <translation>Tiến độ</translation>
     </message>
     <message>
         <source>Manga</source>
-        <translation type="unfinished" />
+        <translation>Manga</translation>
     </message>
     <message>
         <source>Folder:</source>
-        <translation type="unfinished" />
+        <translation>Thư mục:</translation>
     </message>
     <message>
         <source>A folder with one manga volume, or a series folder of many volumes.</source>
-        <translation type="unfinished" />
+        <translation>Một thư mục có một tập manga, hoặc một thư mục bộ gồm nhiều tập.</translation>
     </message>
     <message>
         <source>Mine</source>
-        <translation type="unfinished">Khai thác</translation>
+        <translation>Khai thác</translation>
     </message>
     <message>
         <source>Mine the selected folder's volume(s) into Anki cards.</source>
-        <translation type="unfinished" />
+        <translation>Khai thác các tập trong thư mục đã chọn thành thẻ Anki.</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Hủy</translation>
+        <translation>Hủy</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
-        <translation type="unfinished">Hủy lần chạy đang hoạt động.</translation>
+        <translation>Hủy lần chạy đang hoạt động.</translation>
     </message>
     <message>
         <source>Novels are mined in the Novels tab.</source>
-        <translation type="unfinished" />
+        <translation>Tiểu thuyết được khai thác trong tab Tiểu thuyết.</translation>
     </message>
     <message>
         <source>Subtitle files are mined in the Subtitles tab.</source>
-        <translation type="unfinished" />
+        <translation>Tệp phụ đề được khai thác trong tab Phụ đề.</translation>
     </message>
     <message>
         <source>Select a manga folder first.</source>
-        <translation type="unfinished" />
+        <translation>Chọn một thư mục manga trước.</translation>
     </message>
     <message>
         <source>Starting…</source>
-        <translation type="unfinished" />
+        <translation>Đang bắt đầu…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Đang hủy…</translation>
+        <translation>Đang hủy…</translation>
     </message>
     <message>
         <source>Volume %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>Tập %1/%2: %3</translation>
     </message>
     <message>
         <source>Mined %1: %2 cards.</source>
-        <translation type="unfinished">Đã khai thác %1: %2 thẻ.</translation>
+        <translation>Đã khai thác %1: %2 thẻ.</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
-        <translation type="unfinished">Thất bại %1: %2.</translation>
+        <translation>Thất bại %1: %2.</translation>
     </message>
     <message>
         <source>Done: %1 succeeded, %2 failed.</source>
-        <translation type="unfinished" />
+        <translation>Xong: %1 thành công, %2 thất bại.</translation>
     </message>
 </context><context>
     <name>ReadingNovelsTab</name>
     <message>
         <source>Review words before mining</source>
-        <translation type="unfinished">Xem lại từ trước khi khai thác</translation>
+        <translation>Xem lại từ trước khi khai thác</translation>
     </message>
     <message>
         <source>Show the word-selection popup before creating cards.</source>
-        <translation type="unfinished" />
+        <translation>Hiển thị cửa sổ chọn từ trước khi tạo thẻ.</translation>
     </message>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Tiến độ</translation>
+        <translation>Tiến độ</translation>
     </message>
     <message>
         <source>Novel</source>
-        <translation type="unfinished" />
+        <translation>Tiểu thuyết</translation>
     </message>
     <message>
         <source>Book File:</source>
-        <translation type="unfinished" />
+        <translation>Tệp sách:</translation>
     </message>
     <message>
         <source>Books</source>
-        <translation type="unfinished" />
+        <translation>Sách</translation>
     </message>
     <message>
         <source>Select an .epub or .txt book to mine.</source>
-        <translation type="unfinished" />
+        <translation>Chọn một cuốn sách .epub hoặc .txt để khai thác.</translation>
     </message>
     <message>
         <source>Mine</source>
-        <translation type="unfinished">Khai thác</translation>
+        <translation>Khai thác</translation>
     </message>
     <message>
         <source>Mine the selected book into Anki cards.</source>
-        <translation type="unfinished" />
+        <translation>Khai thác cuốn sách đã chọn thành thẻ Anki.</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Hủy</translation>
+        <translation>Hủy</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
-        <translation type="unfinished">Hủy lần chạy đang hoạt động.</translation>
+        <translation>Hủy lần chạy đang hoạt động.</translation>
     </message>
     <message>
         <source>Manga is mined in the Manga tab.</source>
-        <translation type="unfinished" />
+        <translation>Manga được khai thác trong tab Manga.</translation>
     </message>
     <message>
         <source>Subtitle files are mined in the Subtitles tab.</source>
-        <translation type="unfinished" />
+        <translation>Tệp phụ đề được khai thác trong tab Phụ đề.</translation>
     </message>
     <message>
         <source>Select a valid .epub or .txt book first.</source>
-        <translation type="unfinished" />
+        <translation>Chọn một cuốn sách .epub hoặc .txt hợp lệ trước.</translation>
     </message>
     <message>
         <source>Starting…</source>
-        <translation type="unfinished" />
+        <translation>Đang bắt đầu…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Đang hủy…</translation>
+        <translation>Đang hủy…</translation>
     </message>
     <message>
         <source>Mining: %1</source>
-        <translation type="unfinished" />
+        <translation>Đang khai thác: %1</translation>
     </message>
     <message>
         <source>Mined %1: %2 cards.</source>
-        <translation type="unfinished">Đã khai thác %1: %2 thẻ.</translation>
+        <translation>Đã khai thác %1: %2 thẻ.</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
-        <translation type="unfinished">Thất bại %1: %2.</translation>
+        <translation>Thất bại %1: %2.</translation>
     </message>
 </context><context>
     <name>ReadingSubtitlesTab</name>
     <message>
         <source>Review words before mining</source>
-        <translation type="unfinished">Xem lại từ trước khi khai thác</translation>
+        <translation>Xem lại từ trước khi khai thác</translation>
     </message>
     <message>
         <source>Show the word-selection popup for each file before creating cards.</source>
-        <translation type="unfinished" />
+        <translation>Hiển thị cửa sổ chọn từ cho mỗi tệp trước khi tạo thẻ.</translation>
     </message>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Tiến độ</translation>
+        <translation>Tiến độ</translation>
     </message>
     <message>
         <source>Subtitle Files</source>
-        <translation type="unfinished" />
+        <translation>Tệp phụ đề</translation>
     </message>
     <message>
         <source>Mines subtitle files as text — no screenshots or audio extracted from video.</source>
-        <translation type="unfinished" />
+        <translation>Khai thác tệp phụ đề dưới dạng văn bản — không trích xuất ảnh chụp màn hình hoặc âm thanh từ video.</translation>
     </message>
     <message>
         <source>Subtitle files to mine, one card run per file, in list order.</source>
-        <translation type="unfinished" />
+        <translation>Tệp phụ đề để khai thác, mỗi tệp một lần chạy tạo thẻ, theo thứ tự danh sách.</translation>
     </message>
     <message>
         <source>Add Files…</source>
-        <translation type="unfinished" />
+        <translation>Thêm tệp…</translation>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt) to the list.</source>
-        <translation type="unfinished" />
+        <translation>Thêm tệp phụ đề (.srt, .ass, .ssa, .vtt) vào danh sách.</translation>
     </message>
     <message>
         <source>Remove Selected</source>
-        <translation type="unfinished">Gỡ bỏ mục đã chọn</translation>
+        <translation>Gỡ bỏ mục đã chọn</translation>
     </message>
     <message>
         <source>Clear</source>
-        <translation type="unfinished">Xóa</translation>
+        <translation>Xóa</translation>
     </message>
     <message>
         <source>Mine</source>
-        <translation type="unfinished">Khai thác</translation>
+        <translation>Khai thác</translation>
     </message>
     <message>
         <source>Mine the listed subtitle files into Anki cards.</source>
-        <translation type="unfinished" />
+        <translation>Khai thác các tệp phụ đề trong danh sách thành thẻ Anki.</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Hủy</translation>
+        <translation>Hủy</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
-        <translation type="unfinished">Hủy lần chạy đang hoạt động.</translation>
+        <translation>Hủy lần chạy đang hoạt động.</translation>
     </message>
     <message>
         <source>Add Subtitle Files</source>
-        <translation type="unfinished" />
+        <translation>Thêm tệp phụ đề</translation>
     </message>
     <message>
         <source>Subtitles</source>
-        <translation type="unfinished">Phụ đề</translation>
+        <translation>Phụ đề</translation>
     </message>
     <message>
         <source>Manga is mined in the Manga tab.</source>
-        <translation type="unfinished" />
+        <translation>Manga được khai thác trong tab Manga.</translation>
     </message>
     <message>
         <source>Novels are mined in the Novels tab.</source>
-        <translation type="unfinished" />
+        <translation>Tiểu thuyết được khai thác trong tab Tiểu thuyết.</translation>
     </message>
     <message>
         <source>Add at least one subtitle file first.</source>
-        <translation type="unfinished" />
+        <translation>Thêm ít nhất một tệp phụ đề trước.</translation>
     </message>
     <message>
         <source>File not found: %1</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy tệp: %1</translation>
     </message>
     <message>
         <source>Starting…</source>
-        <translation type="unfinished" />
+        <translation>Đang bắt đầu…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Đang hủy…</translation>
+        <translation>Đang hủy…</translation>
     </message>
     <message>
         <source>File %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>Tệp %1/%2: %3</translation>
     </message>
     <message>
         <source>Mined %1: %2 cards.</source>
-        <translation type="unfinished">Đã khai thác %1: %2 thẻ.</translation>
+        <translation>Đã khai thác %1: %2 thẻ.</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
-        <translation type="unfinished">Thất bại %1: %2.</translation>
+        <translation>Thất bại %1: %2.</translation>
     </message>
     <message>
         <source>Finished %1 subtitle files.</source>
-        <translation type="unfinished" />
+        <translation>Đã hoàn thành %1 tệp phụ đề.</translation>
     </message>
 </context><context>
     <name>ReadingTab</name>
     <message>
         <source>Mining unavailable — services not initialized.</source>
-        <translation type="unfinished">Không thể khai thác — dịch vụ chưa được khởi tạo.</translation>
+        <translation>Không thể khai thác — dịch vụ chưa được khởi tạo.</translation>
     </message>
     <message>
         <source>%1 run starting — %2 items.</source>
-        <translation type="unfinished">Lần chạy %1 bắt đầu — %2 mục.</translation>
+        <translation>Lần chạy %1 bắt đầu — %2 mục.</translation>
     </message>
     <message>
         <source>Mine</source>
-        <translation type="unfinished">Khai thác</translation>
+        <translation>Khai thác</translation>
     </message>
     <message>
         <source>Could not process %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Không thể xử lý %1: %2</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Đã hủy</translation>
+        <translation>Đã hủy</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>Thất bại — xem nhật ký</translation>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — đã tạo %1 thẻ</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>
     <message>
         <source>Download Blocked</source>
-        <translation type="unfinished" />
+        <translation>Đã chặn tải xuống</translation>
     </message>
     <message>
         <source>A mining run is in progress. Stop it before downloading resources.</source>
-        <translation type="unfinished" />
+        <translation>Một lần chạy khai thác đang diễn ra. Dừng nó trước khi tải xuống tài nguyên.</translation>
     </message>
     <message>
         <source>Preparing download…</source>
@@ -4293,11 +4313,11 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     </message>
     <message>
         <source>   Replaced older copy: %1</source>
-        <translation type="unfinished" />
+        <translation>   Đã thay thế bản cũ hơn: %1</translation>
     </message>
     <message>
         <source>   Could not remove older copy: %1 — remove it via Settings → Dictionaries</source>
-        <translation type="unfinished" />
+        <translation>   Không thể gỡ bỏ bản cũ hơn: %1 — gỡ bỏ nó qua Cài đặt → Từ điển</translation>
     </message>
     <message>
         <source>✗ %1 — %2
@@ -4406,6 +4426,10 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation>Xóa %1 thẻ khỏi Anki? Không thể hoàn tác việc này.</translation>
     </message>
     <message>
+        <source>Undoing…</source>
+        <translation>Đang hoàn tác…</translation>
+    </message>
+    <message>
         <source>Undone (%1 cards deleted)</source>
         <translation>Đã hoàn tác (đã xóa %1 thẻ)</translation>
     </message>
@@ -4453,7 +4477,7 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     </message>
     <message>
         <source>UI</source>
-        <translation type="unfinished" />
+        <translation>Giao diện</translation>
     </message>
     <message>
         <source>Check for updates on startup</source>
@@ -4465,19 +4489,19 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     </message>
     <message>
         <source>Export Settings…</source>
-        <translation type="unfinished" />
+        <translation>Xuất cài đặt…</translation>
     </message>
     <message>
         <source>Save a portable settings file (machine-specific paths and resources excluded).</source>
-        <translation type="unfinished" />
+        <translation>Lưu tệp cài đặt di động (loại trừ đường dẫn và tài nguyên riêng của máy).</translation>
     </message>
     <message>
         <source>Import Settings…</source>
-        <translation type="unfinished" />
+        <translation>Nhập cài đặt…</translation>
     </message>
     <message>
         <source>Apply settings from an exported file; anything not in the file is kept.</source>
-        <translation type="unfinished" />
+        <translation>Áp dụng cài đặt từ tệp đã xuất; bất kỳ thứ gì không có trong tệp đều được giữ lại.</translation>
     </message>
     <message>
         <source>Updating yt-dlp…</source>
@@ -4497,19 +4521,19 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     </message>
     <message>
         <source>dictionary folder (Dictionaries)</source>
-        <translation type="unfinished" />
+        <translation>thư mục từ điển (Từ điển)</translation>
     </message>
     <message>
         <source>cookies file (YouTube)</source>
-        <translation type="unfinished" />
+        <translation>tệp cookie (YouTube)</translation>
     </message>
     <message>
         <source>subtitle regex (Filtering)</source>
-        <translation type="unfinished" />
+        <translation>biểu thức chính quy phụ đề (Lọc)</translation>
     </message>
     <message>
         <source>⚠ Saved — kept previous: %1</source>
-        <translation type="unfinished" />
+        <translation>⚠ Đã lưu — giữ bản trước: %1</translation>
     </message>
     <message>
         <source>✓ Saved</source>
@@ -4517,55 +4541,69 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     </message>
     <message>
         <source>Export Settings</source>
-        <translation type="unfinished" />
+        <translation>Xuất cài đặt</translation>
     </message>
     <message>
         <source>JSON Files (*.json);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Tệp JSON (*.json);;Tất cả tệp (*)</translation>
     </message>
     <message>
         <source>Export Failed</source>
-        <translation type="unfinished">Xuất thất bại</translation>
+        <translation>Xuất thất bại</translation>
     </message>
     <message>
         <source>Could not write %1:
 %2</source>
-        <translation type="unfinished" />
+        <translation>Không thể ghi %1:
+%2</translation>
     </message>
     <message>
         <source>Settings Exported</source>
-        <translation type="unfinished" />
+        <translation>Đã xuất cài đặt</translation>
     </message>
     <message>
         <source>Portable settings written to %1.</source>
-        <translation type="unfinished" />
+        <translation>Cài đặt di động đã được ghi vào %1.</translation>
     </message>
     <message>
         <source>Import Settings</source>
-        <translation type="unfinished" />
+        <translation>Nhập cài đặt</translation>
     </message>
     <message>
         <source>Import Settings?</source>
-        <translation type="unfinished" />
+        <translation>Nhập cài đặt?</translation>
     </message>
     <message>
         <source>Apply settings from %1?
 
 Imported values override your current settings; anything not in the file is kept.</source>
-        <translation type="unfinished" />
+        <translation>Áp dụng cài đặt từ %1?
+
+Giá trị nhập vào ghi đè cài đặt hiện tại của bạn; bất kỳ thứ gì không có trong tệp đều được giữ lại.</translation>
     </message>
     <message>
         <source>Import Failed</source>
-        <translation type="unfinished">Nhập thất bại</translation>
+        <translation>Nhập thất bại</translation>
     </message>
     <message>
         <source>Could not import %1:
 %2</source>
-        <translation type="unfinished" />
+        <translation>Không thể nhập %1:
+%2</translation>
+    </message>
+    <message>
+        <source>Invalid Subtitle Regex</source>
+        <translation>Biểu thức chính quy phụ đề không hợp lệ</translation>
+    </message>
+    <message>
+        <source>The imported subtitle regex filter is invalid and has been disabled:
+%1</source>
+        <translation>Bộ lọc biểu thức chính quy phụ đề đã nhập không hợp lệ và đã bị vô hiệu hóa:
+%1</translation>
     </message>
     <message>
         <source>✓ Imported</source>
-        <translation type="unfinished" />
+        <translation>✓ Đã nhập</translation>
     </message>
     <message>
         <source>Importing pitch accent dictionary…</source>
@@ -4777,15 +4815,15 @@ Imported values override your current settings; anything not in the file is kept
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Đã hủy</translation>
+        <translation>Đã hủy</translation>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — đã tạo %1 thẻ</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>Thất bại — xem nhật ký</translation>
     </message>
 </context><context>
     <name>StatusBarWidget</name>
@@ -4997,7 +5035,7 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     </message>
     <message>
         <source>Complete — %1 files processed</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — đã xử lý %1 tệp</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -5319,7 +5357,7 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     </message>
     <message>
         <source>Complete — %1 files processed</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — đã xử lý %1 tệp</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -5327,6 +5365,10 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     </message>
 </context><context>
     <name>SubtitleRetimeWorker</name>
+    <message>
+        <source>Output equals input; enable Overwrite to retime in place</source>
+        <translation>Đầu ra trùng với đầu vào; bật Ghi đè để định thời lại tại chỗ</translation>
+    </message>
     <message>
         <source>Skipped, exists</source>
         <translation>Đã bỏ qua, đã tồn tại</translation>
@@ -5347,27 +5389,27 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     <name>SubtitleTracksDialog</name>
     <message>
         <source>Subtitle Track</source>
-        <translation type="unfinished" />
+        <translation>Rãnh phụ đề</translation>
     </message>
     <message>
         <source>No subtitle tracks found in this file.</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy rãnh phụ đề nào trong tệp này.</translation>
     </message>
     <message>
         <source>This file has only one subtitle track.</source>
-        <translation type="unfinished" />
+        <translation>Tệp này chỉ có một rãnh phụ đề.</translation>
     </message>
     <message>
         <source>Auto-detect (currently: Track %1 — %2)</source>
-        <translation type="unfinished">Tự động phát hiện (hiện tại: Bản %1 — %2)</translation>
+        <translation>Tự động phát hiện (hiện tại: Rãnh %1 — %2)</translation>
     </message>
     <message>
         <source>Auto-detect (no Japanese subtitle track found — will use first text track)</source>
-        <translation type="unfinished" />
+        <translation>Tự động phát hiện (không tìm thấy rãnh phụ đề tiếng Nhật — sẽ dùng rãnh văn bản đầu tiên)</translation>
     </message>
     <message>
         <source>Apply</source>
-        <translation type="unfinished">Áp dụng</translation>
+        <translation>Áp dụng</translation>
     </message>
 </context><context>
     <name>SubtitleViewer</name>
@@ -5763,11 +5805,11 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     </message>
     <message>
         <source>No page image for this word</source>
-        <translation type="unfinished" />
+        <translation>Không có ảnh trang cho từ này</translation>
     </message>
     <message>
         <source>Could not load page image</source>
-        <translation type="unfinished" />
+        <translation>Không thể tải ảnh trang</translation>
     </message>
     <message>
         <source>Copy lemma</source>
@@ -5785,11 +5827,11 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     <name>YouTubeFetcher</name>
     <message>
         <source>Downloading video</source>
-        <translation type="unfinished" />
+        <translation>Đang tải xuống video</translation>
     </message>
     <message>
         <source>Merging audio and video</source>
-        <translation type="unfinished" />
+        <translation>Đang hợp nhất âm thanh và video</translation>
     </message>
 </context><context>
     <name>YouTubeQueueItemWidget</name>
@@ -5954,6 +5996,10 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>Đã khai thác %1: %2 thẻ (số lần thử=%3).</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>Đã hủy %1.</translation>
+    </message>
+    <message>
         <source>Failed %1: %2 (attempts=%3).</source>
         <translation>Thất bại %1: %2 (số lần thử=%3).</translation>
     </message>
@@ -5963,19 +6009,19 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Đã hủy</translation>
+        <translation>Đã hủy</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>Thất bại — xem nhật ký</translation>
     </message>
     <message>
         <source>Complete — %1 succeeded, %2 failed</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — %1 thành công, %2 thất bại</translation>
     </message>
     <message>
         <source>Complete — %1 succeeded</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — %1 thành công</translation>
     </message>
 </context><context>
     <name>ZipImportFlow</name>
@@ -6035,11 +6081,11 @@ Tiếp tục nhập?</translation>
     <name>_FreqRow</name>
     <message>
         <source>word-based</source>
-        <translation type="unfinished" />
+        <translation>dựa trên từ</translation>
     </message>
     <message>
         <source>Level labels are shown on the card but not used for frequency filtering.</source>
-        <translation type="unfinished" />
+        <translation>Nhãn cấp độ được hiển thị trên thẻ nhưng không dùng để lọc theo tần suất.</translation>
     </message>
     <message>
         <source>%1 entries</source>
