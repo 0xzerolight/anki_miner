@@ -71,10 +71,21 @@
   border-top: 1px solid var(--am-faint);
 }
 
-/* Per-dictionary block. Restrained: comfortable spacing, no decorative rail. */
+/* Per-dictionary block. Restrained: comfortable spacing, no decorative rail.
+ * Block-axis LONGHANDS only — never the margin/padding shorthand, and no
+ * -left/-right/-inline properties. The li[data-dictionary] envelope is
+ * Yomitan-conventional markup that host note types deliberately style: Senren
+ * pads it left for a colored ::before rail, and this rule's former
+ * higher-specificity `padding: 0.1em 0` shorthand zeroed that padding-left,
+ * sliding the glossary under the rail (Issue #93). The inline axis belongs to
+ * the note type (Yomitan parity: Yomitan embeds no base sheet in Anki cards).
+ * Physical longhands, not margin-block/padding-block — old-WebView discipline
+ * (see header). Enforced by TestEnvelopeInlineAxisOwnership. */
 .yomitan-glossary ol[data-count] li[data-dictionary] {
-  margin: 0;
-  padding: 0.1em 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-top: 0.1em;
+  padding-bottom: 0.1em;
 }
 
 /* Compact house block size — unstyled dicts only. A dict that ships styles.css
