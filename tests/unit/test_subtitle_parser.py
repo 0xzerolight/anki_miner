@@ -3748,3 +3748,77 @@ class TestCompoundMatchingRealFugashi:
         with_lookup = SubtitleParserService(config, term_lookup=_lookup_for(set()))
         without = SubtitleParserService(config)
         assert with_lookup.parse_subtitle_file(srt_file) == without.parse_subtitle_file(srt_file)
+
+
+class TestKinshipHonorificReadings:
+    """Honorific-kinship compounds read にい/ねえ/とう/かあ, not the isolated
+    head reading (お兄ちゃん → にいちゃん, not あにちゃん). Real tagger E2E.
+
+    Covers all three layers: Expression (merge-pass override), Sentence
+    furigana/reading on BOTH parse entrypoints, and the bold variant.
+    """
+
+    @pytest.mark.parametrize(
+        "line,mined,reading,furigana",
+        [
+            ("お兄ちゃん まだ寝てたの", "兄ちゃん", "にいちゃん", "兄[にい]ちゃん"),
+            ("お兄様はハンターになる", "兄様", "にいさま", None),
+            ("お姉ちゃん おはよう", "姉ちゃん", "ねえちゃん", "姉[ねえ]ちゃん"),
+            ("姉さんが来た", "姉さん", "ねえさん", None),
+            ("お父さんが帰る", "父さん", "とうさん", None),
+            ("お母さんに聞く", "母さん", "かあさん", None),
+        ],
+    )
+    def test_expression_reading_and_furigana(self, tmp_path, line, mined, reading, furigana):
+        cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        srt = _write_srt(tmp_path, "kin.srt", line)
+        words = SubtitleParserService(cfg).parse_subtitle_file(srt)
+        word = next(w for w in words if w.mined_form == mined)
+        assert word.expression_reading == reading
+        if furigana is not None:
+            assert word.expression_furigana == furigana
+
+    def test_sentence_furigana_both_entrypoints(self, tmp_path):
+        """Sentence furigana uses the corrected head on both parse paths — pins
+        the 1c wiring independently of the Expression merge-pass fix."""
+        cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        srt = _write_srt(tmp_path, "kin.srt", "お兄ちゃん まだ寝てたの")
+        svc = SubtitleParserService(cfg)
+        plain = svc.parse_subtitle_file(srt)
+        indexed, _idx = svc.parse_subtitle_file_with_index(srt)
+        for words in (plain, indexed):
+            sf = words[0].sentence_furigana
+            assert "兄[にい]" in sf
+            assert "兄[あに]" not in sf
+
+    def test_bold_sentence_furigana_uses_corrected_head(self, tmp_path):
+        """The bold variant (config.bold_target_in_sentence, off by default) also
+        reads にい — pins the wrap_target_furigana_from_tokens call site."""
+        import dataclasses
+
+        cfg = dataclasses.replace(
+            AnkiMinerConfig(media_temp_folder=tmp_path / "media"),
+            bold_target_in_sentence=True,
+        )
+        srt = _write_srt(tmp_path, "kin.srt", "お兄ちゃん まだ寝てたの")
+        words = SubtitleParserService(cfg).parse_subtitle_file(srt)
+        word = next(w for w in words if w.mined_form == "兄ちゃん")
+        assert "兄[にい]" in word.sentence_furigana_bolded
+        assert "<b>" in word.sentence_furigana_bolded
+
+    def test_standalone_kinship_head_not_overridden(self, tmp_path):
+        """兄 alone (no honorific suffix) keeps あに."""
+        cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        srt = _write_srt(tmp_path, "kin.srt", "兄が来た")
+        words = SubtitleParserService(cfg).parse_subtitle_file(srt)
+        word = next(w for w in words if w.surface == "兄")
+        assert word.expression_reading == "あに"
+
+    def test_ichinichi_ambiguous_left_alone(self, tmp_path):
+        """一日 in a date frame stays ついたち — the resolver never touches it."""
+        cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        srt = _write_srt(tmp_path, "kin.srt", "月の一日に会う")
+        words = SubtitleParserService(cfg).parse_subtitle_file(srt)
+        word = next((w for w in words if w.surface == "一日"), None)
+        if word is not None:
+            assert word.expression_reading == "ついたち"
