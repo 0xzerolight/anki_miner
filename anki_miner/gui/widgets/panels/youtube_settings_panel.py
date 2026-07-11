@@ -145,8 +145,12 @@ class YouTubeSettingsPanel(FormPanel):
         self.cookies_file_selector.set_path(str(value) if value else "")
 
     def get_cookies_file(self) -> str:
-        """Return the cookies-file path text (empty string when unset)."""
-        return self.cookies_file_selector.get_path().strip()
+        """Return the cookies-file path text (empty string when unset).
+
+        Uses ``path_or_none()`` so a cookies file inside a folder whose name
+        ends in a space is preserved verbatim rather than corrupted by strip.
+        """
+        return self.cookies_file_selector.path_or_none() or ""
 
     def set_max_duration_seconds(self, seconds: int) -> None:
         """Set the spinbox from a seconds value, rounding up to the next minute."""

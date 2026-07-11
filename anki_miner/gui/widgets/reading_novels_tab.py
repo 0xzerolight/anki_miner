@@ -262,9 +262,12 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         """
         if self.worker_thread is not None:
             return
-        raw = self.book_selector.get_path().strip()
+        raw = self.book_selector.path_or_none()
+        if raw is None:
+            self.log_widget.append_warning(self.tr("Select a valid .epub or .txt book first."))
+            return
         path = Path(raw)
-        if not raw or path.suffix.lower() not in _NOVEL_EXTS or not path.is_file():
+        if path.suffix.lower() not in _NOVEL_EXTS or not path.is_file():
             self.log_widget.append_warning(self.tr("Select a valid .epub or .txt book first."))
             return
 

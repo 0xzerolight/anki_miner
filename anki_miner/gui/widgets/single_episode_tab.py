@@ -331,8 +331,8 @@ class SingleEpisodeTab(MiningTabBase):
 
     def _on_tracks_clicked(self) -> None:
         """Open the AudioTracksDialog for manual audio track override selection."""
-        video_path = self.video_selector.get_path().strip()
-        if not video_path:
+        video_path = self.video_selector.path_or_none()
+        if video_path is None:
             QMessageBox.warning(self, self.tr("Missing Video File"), self.tr("Select a video file first."))
             return
         if not self.video_selector.is_valid():
@@ -396,10 +396,10 @@ class SingleEpisodeTab(MiningTabBase):
 
     def _on_timing_clicked(self) -> None:
         """Handle test timing button click. Opens the subtitle viewer dialog."""
-        video_path = self.video_selector.get_path().strip()
-        subtitle_path = self.subtitle_selector.get_path().strip()
+        video_path = self.video_selector.path_or_none()
+        subtitle_path = self.subtitle_selector.path_or_none()
 
-        if not video_path or not subtitle_path:
+        if video_path is None or subtitle_path is None:
             QMessageBox.warning(self, self.tr("Missing Files"), self.tr("Select both video and subtitle files."))
             return
 
@@ -467,10 +467,10 @@ class SingleEpisodeTab(MiningTabBase):
             return
 
         # Validate inputs using FileSelector validation
-        video_path = self.video_selector.get_path().strip()
-        subtitle_path = self.subtitle_selector.get_path().strip()
+        video_path = self.video_selector.path_or_none()
+        subtitle_path = self.subtitle_selector.path_or_none()
 
-        if not video_path or not subtitle_path:
+        if video_path is None or subtitle_path is None:
             QMessageBox.warning(self, self.tr("Missing Files"), self.tr("Select both video and subtitle files."))
             return
 
@@ -623,9 +623,9 @@ class SingleEpisodeTab(MiningTabBase):
 
         if result.success:
             # Add to recent files
-            video_path = self.video_selector.get_path().strip()
-            subtitle_path = self.subtitle_selector.get_path().strip()
-            if video_path and subtitle_path:
+            video_path = self.video_selector.path_or_none()
+            subtitle_path = self.subtitle_selector.path_or_none()
+            if video_path is not None and subtitle_path is not None:
                 offset = self.offset_spinbox.value()
                 self.recent_manager.add_entry(Path(video_path), Path(subtitle_path), offset)
                 self._refresh_recent_combo()

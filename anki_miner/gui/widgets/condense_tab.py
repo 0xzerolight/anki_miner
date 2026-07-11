@@ -586,8 +586,8 @@ class CondenseTab(QWidget):
 
     def _on_audio_tracks_clicked(self) -> None:
         """Open AudioTracksDialog to pick which audio track to condense."""
-        media_path = self.media_file_selector.get_path().strip()
-        if not media_path:
+        media_path = self.media_file_selector.path_or_none()
+        if media_path is None:
             QMessageBox.warning(self, self.tr("No Media File Selected"), self.tr("Select a media file first."))
             return
         media_file = Path(media_path)
@@ -650,8 +650,8 @@ class CondenseTab(QWidget):
 
     def _on_subtitle_tracks_clicked(self) -> None:
         """Open SubtitleTracksDialog to pick which embedded subtitle track to use."""
-        media_path = self.media_file_selector.get_path().strip()
-        if not media_path:
+        media_path = self.media_file_selector.path_or_none()
+        if media_path is None:
             QMessageBox.warning(self, self.tr("No Media File Selected"), self.tr("Select a media file first."))
             return
         media_file = Path(media_path)
@@ -814,10 +814,10 @@ class CondenseTab(QWidget):
         return self._collect_folder_items()
 
     def _collect_single_item(self) -> list[CondenseItem]:
-        media_str = self.media_file_selector.get_path().strip()
-        sub_str = self.subtitle_file_selector.get_path().strip()
+        media_str = self.media_file_selector.path_or_none()
+        sub_str = self.subtitle_file_selector.path_or_none()
 
-        if not media_str:
+        if media_str is None:
             QMessageBox.warning(
                 self,
                 self.tr("No Media File Selected"),
@@ -835,7 +835,7 @@ class CondenseTab(QWidget):
             return []
 
         external_sub: Path | None = None
-        if sub_str:
+        if sub_str is not None:
             sub = Path(sub_str)
             if not sub.is_file():
                 QMessageBox.warning(
@@ -849,10 +849,10 @@ class CondenseTab(QWidget):
         return [CondenseItem(media, external_sub)]
 
     def _collect_folder_items(self) -> list[CondenseItem]:
-        media_folder_str = self.media_folder_selector.get_path().strip()
-        sub_folder_str = self.subtitle_folder_selector.get_path().strip()
+        media_folder_str = self.media_folder_selector.path_or_none()
+        sub_folder_str = self.subtitle_folder_selector.path_or_none()
 
-        if not media_folder_str:
+        if media_folder_str is None:
             QMessageBox.warning(
                 self,
                 self.tr("No Media Folder Selected"),
@@ -871,7 +871,7 @@ class CondenseTab(QWidget):
 
         # Optional subtitle folder → episode-number pairing (condenser extension
         # sets, incl. audio inputs and .vtt).
-        if sub_folder_str:
+        if sub_folder_str is not None:
             sub_folder = Path(sub_folder_str)
             if not sub_folder.is_dir():
                 QMessageBox.warning(

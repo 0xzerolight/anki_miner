@@ -150,10 +150,16 @@ class FilePairMatcher:
         video_exts = FilePairMatcher.VIDEO_EXTENSIONS if video_extensions is None else video_extensions
         subtitle_exts = FilePairMatcher.SUBTITLE_EXTENSIONS if subtitle_extensions is None else subtitle_extensions
 
-        # Get all videos and subtitles
-        videos = [f for f in video_folder.iterdir() if f.is_file() and f.suffix.lower() in video_exts]
-
-        subtitles = [f for f in subtitle_folder.iterdir() if f.is_file() and f.suffix.lower() in subtitle_exts]
+        # Get all videos and subtitles. A folder that vanished, was never
+        # created, or is actually a file (all OSError subclasses on iterdir)
+        # yields no pairs rather than escaping — an unhandled FileNotFoundError
+        # here reaches a Qt slot and aborts the whole process. Matches the
+        # module's except-OSError idiom (resolve_output_path, find_sibling_subtitle).
+        try:
+            videos = [f for f in video_folder.iterdir() if f.is_file() and f.suffix.lower() in video_exts]
+            subtitles = [f for f in subtitle_folder.iterdir() if f.is_file() and f.suffix.lower() in subtitle_exts]
+        except OSError:
+            return []
 
         # Match by episode number
         matched_pairs = EpisodeMatcher.match_by_episode_number(videos, subtitles)
