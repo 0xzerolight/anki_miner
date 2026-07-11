@@ -339,10 +339,10 @@ class DeckBuilderTab(MiningTabBase):
 
     def _on_preview_clicked(self) -> None:
         """Validate inputs, build a request, and start Phase 1."""
-        video_folder = self.video_folder_selector.get_path().strip()
-        subtitle_folder = self.subtitle_folder_selector.get_path().strip()
+        video_folder = self.video_folder_selector.path_or_none()
+        subtitle_folder = self.subtitle_folder_selector.path_or_none()
 
-        if not video_folder or not subtitle_folder:
+        if video_folder is None or subtitle_folder is None:
             self.log_widget.append_warning(self.tr("Select both the video folder and subtitle folder first."))
             return
 

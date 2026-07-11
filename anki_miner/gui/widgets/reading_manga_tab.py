@@ -292,8 +292,8 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         delegates to the shared :meth:`_detect_or_report`, which surfaces any
         detector error verbatim in the log.
         """
-        raw = self.volume_folder_selector.get_path().strip()
-        if not raw:
+        raw = self.volume_folder_selector.path_or_none()
+        if raw is None:
             self.log_widget.append_warning(self.tr("Select a manga folder first."))
             return None
         return self._detect_or_report(Path(raw))

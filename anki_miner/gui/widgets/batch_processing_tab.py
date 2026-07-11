@@ -256,10 +256,10 @@ class BatchProcessingTab(MiningTabBase):
         Returns:
             Tuple of (video_folder, subtitle_folder) or None if invalid
         """
-        video_path = self.video_folder_selector.get_path().strip()
-        subtitle_path = self.subtitle_folder_selector.get_path().strip()
+        video_path = self.video_folder_selector.path_or_none()
+        subtitle_path = self.subtitle_folder_selector.path_or_none()
 
-        if not video_path or not subtitle_path:
+        if video_path is None or subtitle_path is None:
             return None
 
         if not self.video_folder_selector.is_valid() or not self.subtitle_folder_selector.is_valid():

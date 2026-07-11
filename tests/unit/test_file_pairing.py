@@ -244,3 +244,37 @@ def test_find_sibling_subtitle_matches_nfd_stem(tmp_path):
     sub = tmp_path / _NFD_NAME
     sub.touch()
     assert find_sibling_subtitle(video) == sub
+
+
+class TestFindPairsMissingFolder:
+    """A nonexistent or non-directory folder yields [] instead of aborting.
+
+    Regression guard: an unhandled FileNotFoundError from iterdir() reaches a Qt
+    slot and core-dumps the app (the trailing-space batch bug). The guard also
+    covers a folder deleted between selection and processing (TOCTOU).
+    """
+
+    def test_nonexistent_video_folder_returns_empty(self, tmp_path):
+        missing = tmp_path / "nope"  # never created
+        subs = tmp_path / "subs"
+        subs.mkdir()
+        (subs / "ep01.srt").touch()
+        assert FilePairMatcher.find_pairs_by_episode_number(missing, subs) == []
+
+    def test_nonexistent_subtitle_folder_returns_empty(self, tmp_path):
+        videos = tmp_path / "videos"
+        videos.mkdir()
+        (videos / "ep01.mkv").touch()
+        missing = tmp_path / "nope"
+        assert FilePairMatcher.find_pairs_by_episode_number(videos, missing) == []
+
+    def test_both_missing_return_empty(self, tmp_path):
+        assert FilePairMatcher.find_pairs_by_episode_number(tmp_path / "a", tmp_path / "b") == []
+
+    def test_file_passed_as_folder_returns_empty(self, tmp_path):
+        """A file path where a folder is expected (NotADirectoryError) also yields []."""
+        a_file = tmp_path / "notafolder.txt"
+        a_file.write_text("x")
+        subs = tmp_path / "subs"
+        subs.mkdir()
+        assert FilePairMatcher.find_pairs_by_episode_number(a_file, subs) == []
