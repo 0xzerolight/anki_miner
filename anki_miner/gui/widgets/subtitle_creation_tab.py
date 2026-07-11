@@ -408,8 +408,8 @@ class SubtitleCreationTab(QWidget):
     def _collect_video_files(self) -> list[Path]:
         """Return the ordered list of video files to process, or [] on validation failure."""
         if not self.file_selector.isHidden():
-            path_str = self.file_selector.get_path().strip()
-            if not path_str:
+            path_str = self.file_selector.path_or_none()
+            if path_str is None:
                 QMessageBox.warning(
                     self,
                     self.tr("No File Selected"),
@@ -426,8 +426,8 @@ class SubtitleCreationTab(QWidget):
                 return []
             return [p]
         else:
-            path_str = self.folder_selector.get_path().strip()
-            if not path_str:
+            path_str = self.folder_selector.path_or_none()
+            if path_str is None:
                 QMessageBox.warning(
                     self,
                     self.tr("No Folder Selected"),

@@ -250,6 +250,23 @@ class FileSelector(QWidget):
         """
         return self.input.text()
 
+    def path_or_none(self) -> str | None:
+        """Return the RAW path text, or ``None`` when the field is effectively empty.
+
+        Emptiness is judged on the *stripped* text (whitespace-only counts as
+        empty), but the returned string is the un-stripped text that
+        :meth:`_validate_path` already validated — so a real path whose name
+        legitimately ends (or begins) with a space is preserved verbatim.
+
+        Callers must not ``.strip()`` this before handing it to ``Path``/the
+        filesystem: stripping desyncs the path from what ``is_valid()`` checked
+        and, for a directory whose name ends in a space, produces a
+        nonexistent path (the batch-mining core-dump, Issue: trailing-space
+        media folder).
+        """
+        raw = self.get_path()
+        return raw if raw.strip() else None
+
     def set_path(self, path: str) -> None:
         """Set the path.
 

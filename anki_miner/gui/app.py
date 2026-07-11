@@ -8,9 +8,9 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
-from PyQt6.QtCore import QCoreApplication, Qt, QTimer
+from PyQt6.QtCore import QCoreApplication, Qt, QThread, QTimer
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QApplication, QWidget
+from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
 
 from anki_miner.config import AnkiMinerConfig, create_default_config
 from anki_miner.config.paths import ANKI_MINER_HOME
@@ -447,6 +447,54 @@ def _connect_vulkan_download(window: MainWindow, settings_tab: SettingsTab) -> N
     settings_tab.vulkan_model_download_requested.connect(_on_vulkan_download_requested)
 
 
+_in_excepthook = False
+
+
+def _install_excepthook(app: QApplication) -> None:
+    """Route unhandled GUI-thread exceptions to the log + a dialog instead of abort().
+
+    Since PyQt 5.5 an exception that escapes a Qt slot calls ``qFatal``/``abort``
+    (the "Aborted (core dumped)" the trailing-space batch bug produced). Installing
+    our own ``sys.excepthook`` intercepts it, logs to ``anki_miner.log``, shows a
+    dialog, and keeps the event loop alive. This trades a hard crash for
+    log-and-continue — the widget tree may be in an inconsistent state afterward,
+    an acceptable tradeoff for a desktop GUI that would otherwise vanish silently.
+
+    The CRITICAL log is unconditional; the dialog is guarded three ways because an
+    unreliable safety net is worse than none:
+
+    * reentrancy — ``QMessageBox.exec`` spins a nested event loop; an exception it
+      dispatches would re-enter the hook and stack dialogs forever;
+    * thread affinity — a ``QMessageBox`` built off the GUI thread is undefined
+      behavior; worker ``QThread.run`` bodies already wrap themselves, so any
+      exception reaching here off-thread is logged only;
+    * live app — after ``QApplication`` teardown, constructing a dialog faults.
+    """
+
+    def _hook(exc_type, exc_value, exc_tb):
+        global _in_excepthook
+        if issubclass(exc_type, (KeyboardInterrupt, SystemExit)):
+            sys.__excepthook__(exc_type, exc_value, exc_tb)
+            return
+        logger.critical("Unhandled exception", exc_info=(exc_type, exc_value, exc_tb))
+        instance = QApplication.instance()
+        if _in_excepthook or instance is None or QThread.currentThread() != instance.thread():
+            return
+        _in_excepthook = True
+        try:
+            QMessageBox.critical(
+                app.activeWindow(),
+                QCoreApplication.translate("app", "Anki Miner — Unexpected Error"),
+                f"{exc_type.__name__}: {exc_value}",
+            )
+        except Exception:
+            logger.exception("Failed to display error dialog for unhandled exception")
+        finally:
+            _in_excepthook = False
+
+    sys.excepthook = _hook
+
+
 def main():
     """Launch the Anki Miner GUI application."""
     _scrub_pyinstaller_env()
@@ -506,6 +554,11 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Anki Miner")
     app.setOrganizationName("AnkiMiner")
+
+    # Install the crash net before any widget is built so exceptions escaping a
+    # slot during tab construction are caught too (a bad path in a startup slot
+    # would otherwise abort the whole process — the trailing-space batch bug).
+    _install_excepthook(app)
 
     # Set application icon
     icon_path = get_resource_dir() / "icons" / "anki_miner.svg"

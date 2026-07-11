@@ -1071,10 +1071,10 @@ class SubtitlesSettingsPanel(FormPanel):
         preserved. Called by :meth:`SettingsTab.commit_settings` as part of
         the contribute fold.
         """
-        path = self.alass_selector.get_path().strip()
+        path = self.alass_selector.path_or_none()
         return replace(
             config,
             asr_model=self.get_model(),
             asr_device=self.get_device(),
-            alass_location=Path(path) if path else None,
+            alass_location=Path(path) if path is not None else None,
         )

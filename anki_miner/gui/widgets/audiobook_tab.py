@@ -272,7 +272,7 @@ class AudiobookTab(MiningTabBase):
         """
         if self.subtitle_selector.get_path().strip():
             return
-        audio = Path(text.strip()) if text.strip() else None
+        audio = Path(text) if text.strip() else None
         if audio is None or not audio.is_file():
             return
         for ext in _SUBTITLE_EXTS:
@@ -285,16 +285,16 @@ class AudiobookTab(MiningTabBase):
         """Validate the picked pair and append it to the queue as a READY item."""
         if not self.add_button.isEnabled():
             return  # Defensive: out-of-band trigger while a run is active.
-        audio_text = self.audio_selector.get_path().strip()
-        sub_text = self.subtitle_selector.get_path().strip()
-        if not audio_text and not sub_text:
+        audio_text = self.audio_selector.path_or_none()
+        sub_text = self.subtitle_selector.path_or_none()
+        if audio_text is None and sub_text is None:
             return
-        if not audio_text or not Path(audio_text).is_file():
+        if audio_text is None or not Path(audio_text).is_file():
             self.log_widget.append_error(
                 tr_format(self.tr("Audio file not found: %1"), audio_text or self.tr("(none selected)"))
             )
             return
-        if not sub_text or not Path(sub_text).is_file():
+        if sub_text is None or not Path(sub_text).is_file():
             self.log_widget.append_error(
                 tr_format(self.tr("Subtitle file not found: %1"), sub_text or self.tr("(none selected)"))
             )
