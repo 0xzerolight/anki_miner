@@ -195,11 +195,11 @@
     <name>AnkiService</name>
     <message>
         <source>Creating Anki cards</source>
-        <translation type="unfinished" />
+        <translation>Создание карточек Anki</translation>
     </message>
     <message>
         <source>Cards created: %1/%2</source>
-        <translation type="unfinished" />
+        <translation>Создано карточек: %1/%2</translation>
     </message>
 </context><context>
     <name>AnkiSettingsPanel</name>
@@ -645,7 +645,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Add a custom audio URL source</source>
-        <translation type="unfinished" />
+        <translation>Добавить пользовательский источник аудио по URL</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -669,27 +669,27 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Sentence Audio (Reading Sources)</source>
-        <translation type="unfinished" />
+        <translation>Аудио предложений (источники для чтения)</translation>
     </message>
     <message>
         <source>Generate spoken sentence audio for cards mined from manga and books (these have no source audio). Sentence text is sent to the selected online services.</source>
-        <translation type="unfinished" />
+        <translation>Генерировать озвучку предложений для карточек, добытых из манги и книг (у них нет исходного аудио). Текст предложения отправляется на выбранные онлайн-сервисы.</translation>
     </message>
     <message>
         <source>Generate TTS sentence audio</source>
-        <translation type="unfinished" />
+        <translation>Генерировать TTS-аудио предложений</translation>
     </message>
     <message>
         <source>Google Translate TTS (tried first)</source>
-        <translation type="unfinished" />
+        <translation>Google Translate TTS (пробуется первым)</translation>
     </message>
     <message>
         <source>Naver Papago (fallback)</source>
-        <translation type="unfinished" />
+        <translation>Naver Papago (резервный)</translation>
     </message>
     <message>
         <source>Select at least one service.</source>
-        <translation type="unfinished" />
+        <translation>Выберите хотя бы один сервис.</translation>
     </message>
     <message>
         <source>Google Translate (synthetic TTS)</source>
@@ -870,6 +870,10 @@ The audio pack was not removed.</source>
         <translation>%1: создано карточек — %2.</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>Отменено: %1.</translation>
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation>Ошибка %1: %2.</translation>
     </message>
@@ -879,19 +883,19 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Отменено</translation>
+        <translation>Отменено</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>Ошибка — см. журнал</translation>
     </message>
     <message>
         <source>Complete — %1 succeeded, %2 failed</source>
-        <translation type="unfinished" />
+        <translation>Завершено — успешно: %1, с ошибкой: %2</translation>
     </message>
     <message>
         <source>Complete — %1 succeeded</source>
-        <translation type="unfinished" />
+        <translation>Завершено — успешно: %1</translation>
     </message>
 </context><context>
     <name>BatchProcessingTab</name>
@@ -989,7 +993,7 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Отменено</translation>
+        <translation>Отменено</translation>
     </message>
     <message>
         <source>Cancelling...</source>
@@ -1005,7 +1009,7 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>Episode %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>Эпизод %1/%2: %3</translation>
     </message>
     <message>
         <source>Processing series: %1</source>
@@ -1013,7 +1017,7 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>Series %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>Серия %1/%2: %3</translation>
     </message>
     <message>
         <source>Created %1 cards</source>
@@ -1021,11 +1025,11 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>Ошибка — см. журнал</translation>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
-        <translation type="unfinished" />
+        <translation>Завершено — создано карточек: %1</translation>
     </message>
     <message>
         <source>Processed %1 series
@@ -1151,43 +1155,43 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>Mine from manga</source>
-        <translation type="unfinished" />
+        <translation>Майнить из манги</translation>
     </message>
     <message>
         <source>Mine vocabulary from manga volumes processed with mokuro.</source>
-        <translation type="unfinished" />
+        <translation>Майнить лексику из томов манги, обработанных через mokuro.</translation>
     </message>
     <message>
         <source>Mine from novels</source>
-        <translation type="unfinished" />
+        <translation>Майнить из романов</translation>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>Майнить лексику из романов и другого текста (EPUB, Aozora, обычный текст).</translation>
     </message>
     <message>
         <source>Generate subtitles from audio</source>
-        <translation type="unfinished" />
+        <translation>Генерировать субтитры из аудио</translation>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool.</source>
-        <translation type="unfinished" />
+        <translation>Создавать субтитры из аудио с помощью локальной модели Whisper — как отдельный инструмент.</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
-        <translation type="unfinished" />
+        <translation>Пересинхронизировать существующие субтитры</translation>
     </message>
     <message>
         <source>Re-sync existing subtitles against the video -- as a standalone tool.</source>
-        <translation type="unfinished" />
+        <translation>Пересинхронизировать существующие субтитры с видео — как отдельный инструмент.</translation>
     </message>
     <message>
         <source>Condense audio from subtitles</source>
-        <translation type="unfinished" />
+        <translation>Сжать аудио по субтитрам</translation>
     </message>
     <message>
         <source>Build dialogue-only condensed audio from a video or audio file and its subtitles.</source>
-        <translation type="unfinished" />
+        <translation>Собрать сжатое аудио только с диалогами из видео- или аудиофайла и его субтитров.</translation>
     </message>
     <message>
         <source>View mining history &amp; stats</source>
@@ -1465,353 +1469,353 @@ Total cards created: %2</source>
     <name>CondenseTab</name>
     <message>
         <source>Input</source>
-        <translation type="unfinished">Ввод</translation>
+        <translation>Ввод</translation>
     </message>
     <message>
         <source>ffmpeg not found; install it or set its path in Settings to enable condensing.</source>
-        <translation type="unfinished" />
+        <translation>ffmpeg не найден; установите его или укажите путь в настройках, чтобы включить сжатие.</translation>
     </message>
     <message>
         <source>Condense a video or audio file down to just its spoken dialogue.</source>
-        <translation type="unfinished" />
+        <translation>Сжать видео- или аудиофайл до одной только произносимой речи.</translation>
     </message>
     <message>
         <source>Mode:</source>
-        <translation type="unfinished">Режим:</translation>
+        <translation>Режим:</translation>
     </message>
     <message>
         <source>Single File</source>
-        <translation type="unfinished">Один файл</translation>
+        <translation>Один файл</translation>
     </message>
     <message>
         <source>Condense one selected media file.</source>
-        <translation type="unfinished" />
+        <translation>Сжать один выбранный медиафайл.</translation>
     </message>
     <message>
         <source>Folder</source>
-        <translation type="unfinished">Папка</translation>
+        <translation>Папка</translation>
     </message>
     <message>
         <source>Condense every media file in a selected folder.</source>
-        <translation type="unfinished" />
+        <translation>Сжать каждый медиафайл в выбранной папке.</translation>
     </message>
     <message>
         <source>Media File:</source>
-        <translation type="unfinished" />
+        <translation>Медиафайл:</translation>
     </message>
     <message>
         <source>Subtitle File:</source>
-        <translation type="unfinished">Файл субтитров:</translation>
+        <translation>Файл субтитров:</translation>
     </message>
     <message>
         <source>Leave empty to auto-detect (sibling file or embedded track).</source>
-        <translation type="unfinished" />
+        <translation>Оставьте пустым для автоопределения (соседний файл или встроенная дорожка).</translation>
     </message>
     <message>
         <source>Audio track:</source>
-        <translation type="unfinished">Аудиодорожка:</translation>
+        <translation>Аудиодорожка:</translation>
     </message>
     <message>
         <source>Japanese (auto-detect)</source>
-        <translation type="unfinished">Японский (автоопределение)</translation>
+        <translation>Японский (автоопределение)</translation>
     </message>
     <message>
         <source>Choose…</source>
-        <translation type="unfinished" />
+        <translation>Выбрать…</translation>
     </message>
     <message>
         <source>Choose which audio track to condense.</source>
-        <translation type="unfinished" />
+        <translation>Выберите, какую аудиодорожку сжать.</translation>
     </message>
     <message>
         <source>Subtitle track:</source>
-        <translation type="unfinished" />
+        <translation>Дорожка субтитров:</translation>
     </message>
     <message>
         <source>Auto (external → embedded Japanese)</source>
-        <translation type="unfinished" />
+        <translation>Авто (внешние → встроенные японские)</translation>
     </message>
     <message>
         <source>Choose which embedded subtitle track to condense against.</source>
-        <translation type="unfinished" />
+        <translation>Выберите, по какой встроенной дорожке субтитров выполнять сжатие.</translation>
     </message>
     <message>
         <source>Media Folder:</source>
-        <translation type="unfinished" />
+        <translation>Папка с медиа:</translation>
     </message>
     <message>
         <source>Subtitle Folder:</source>
-        <translation type="unfinished">Папка с субтитрами:</translation>
+        <translation>Папка с субтитрами:</translation>
     </message>
     <message>
         <source>Optional. When set, media is paired to subtitles by episode number; otherwise each file auto-detects.</source>
-        <translation type="unfinished" />
+        <translation>Необязательно. Если задано, медиа сопоставляется с субтитрами по номеру эпизода; иначе каждый файл определяется автоматически.</translation>
     </message>
     <message>
         <source>Options</source>
-        <translation type="unfinished" />
+        <translation>Параметры</translation>
     </message>
     <message>
         <source>Padding:</source>
-        <translation type="unfinished" />
+        <translation>Отступ:</translation>
     </message>
     <message>
         <source> ms</source>
-        <translation type="unfinished" />
+        <translation> мс</translation>
     </message>
     <message>
         <source>Silence kept on each side of every dialogue line before merging.</source>
-        <translation type="unfinished" />
+        <translation>Тишина, сохраняемая с каждой стороны каждой строки диалога перед объединением.</translation>
     </message>
     <message>
         <source>Offset:</source>
-        <translation type="unfinished">Смещение:</translation>
+        <translation>Смещение:</translation>
     </message>
     <message>
         <source>Shift every subtitle cue by this amount before condensing.</source>
-        <translation type="unfinished" />
+        <translation>Сдвинуть каждый субтитр на это значение перед сжатием.</translation>
     </message>
     <message>
         <source>Format:</source>
-        <translation type="unfinished" />
+        <translation>Формат:</translation>
     </message>
     <message>
         <source>Also write condensed subtitles (SRT + LRC)</source>
-        <translation type="unfinished" />
+        <translation>Также записать сжатые субтитры (SRT + LRC)</translation>
     </message>
     <message>
         <source>Write time-mapped .srt and .lrc files alongside the condensed audio.</source>
-        <translation type="unfinished" />
+        <translation>Записать файлы .srt и .lrc с пересчитанным временем рядом со сжатым аудио.</translation>
     </message>
     <message>
         <source>Output</source>
-        <translation type="unfinished">Вывод</translation>
+        <translation>Вывод</translation>
     </message>
     <message>
         <source>Output:</source>
-        <translation type="unfinished">Вывод:</translation>
+        <translation>Вывод:</translation>
     </message>
     <message>
         <source>Next to source</source>
-        <translation type="unfinished" />
+        <translation>Рядом с исходником</translation>
     </message>
     <message>
         <source>Choose Folder…</source>
-        <translation type="unfinished">Выбрать папку…</translation>
+        <translation>Выбрать папку…</translation>
     </message>
     <message>
         <source>Reset</source>
-        <translation type="unfinished">Сбросить</translation>
+        <translation>Сбросить</translation>
     </message>
     <message>
         <source>Overwrite existing condensed files</source>
-        <translation type="unfinished" />
+        <translation>Перезаписывать существующие сжатые файлы</translation>
     </message>
     <message>
         <source>When unchecked, files whose condensed audio already exists are skipped, not overwritten.</source>
-        <translation type="unfinished" />
+        <translation>Если флажок снят, файлы, у которых сжатое аудио уже существует, пропускаются, а не перезаписываются.</translation>
     </message>
     <message>
         <source>Actions</source>
-        <translation type="unfinished">Действия</translation>
+        <translation>Действия</translation>
     </message>
     <message>
         <source>Condense Audio</source>
-        <translation type="unfinished" />
+        <translation>Сжать аудио</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Отмена</translation>
+        <translation>Отмена</translation>
     </message>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Прогресс</translation>
+        <translation>Прогресс</translation>
     </message>
     <message>
         <source>No Media File Selected</source>
-        <translation type="unfinished" />
+        <translation>Медиафайл не выбран</translation>
     </message>
     <message>
         <source>Select a media file first.</source>
-        <translation type="unfinished" />
+        <translation>Сначала выберите медиафайл.</translation>
     </message>
     <message>
         <source>File Not Found</source>
-        <translation type="unfinished">Файл не найден</translation>
+        <translation>Файл не найден</translation>
     </message>
     <message>
         <source>Media file not found: </source>
-        <translation type="unfinished" />
+        <translation>Медиафайл не найден: </translation>
     </message>
     <message>
         <source>No Audio Tracks</source>
-        <translation type="unfinished">Нет звуковых дорожек</translation>
+        <translation>Нет звуковых дорожек</translation>
     </message>
     <message>
         <source>No audio tracks detected. Check that ffprobe is installed and the file has audio.</source>
-        <translation type="unfinished">Звуковые дорожки не обнаружены. Убедитесь, что ffprobe установлен и файл содержит звук.</translation>
+        <translation>Звуковые дорожки не обнаружены. Убедитесь, что ffprobe установлен и файл содержит звук.</translation>
     </message>
     <message>
         <source>Track %1</source>
-        <translation type="unfinished">Дорожка %1</translation>
+        <translation>Дорожка %1</translation>
     </message>
     <message>
         <source>Probe Failed</source>
-        <translation type="unfinished">Сбой проверки</translation>
+        <translation>Сбой проверки</translation>
     </message>
     <message>
         <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
-        <translation type="unfinished">Не удалось обнаружить аудиодорожки. Убедитесь, что ffprobe установлен.</translation>
+        <translation>Не удалось обнаружить аудиодорожки. Убедитесь, что ffprobe установлен.</translation>
     </message>
     <message>
         <source>No Subtitle Tracks</source>
-        <translation type="unfinished" />
+        <translation>Нет дорожек субтитров</translation>
     </message>
     <message>
         <source>No embedded subtitle tracks detected in this file.</source>
-        <translation type="unfinished" />
+        <translation>В этом файле не обнаружено встроенных дорожек субтитров.</translation>
     </message>
     <message>
         <source>Failed to detect subtitle tracks. Check that ffprobe is installed.</source>
-        <translation type="unfinished" />
+        <translation>Не удалось обнаружить дорожки субтитров. Убедитесь, что ffprobe установлен.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
-        <translation type="unfinished">Выбрать папку для вывода</translation>
+        <translation>Выбрать папку для вывода</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
-        <translation type="unfinished">Папка вывода недоступна для записи: </translation>
+        <translation>Папка вывода недоступна для записи: </translation>
     </message>
     <message>
         <source>Select a media file before condensing.</source>
-        <translation type="unfinished" />
+        <translation>Выберите медиафайл перед сжатием.</translation>
     </message>
     <message>
         <source>Subtitle file not found: </source>
-        <translation type="unfinished">Файл субтитров не найден: </translation>
+        <translation>Файл субтитров не найден: </translation>
     </message>
     <message>
         <source>No Media Folder Selected</source>
-        <translation type="unfinished" />
+        <translation>Папка с медиа не выбрана</translation>
     </message>
     <message>
         <source>Select a media folder before condensing.</source>
-        <translation type="unfinished" />
+        <translation>Выберите папку с медиа перед сжатием.</translation>
     </message>
     <message>
         <source>Folder Not Found</source>
-        <translation type="unfinished">Папка не найдена</translation>
+        <translation>Папка не найдена</translation>
     </message>
     <message>
         <source>Media folder not found: </source>
-        <translation type="unfinished" />
+        <translation>Папка с медиа не найдена: </translation>
     </message>
     <message>
         <source>Subtitle folder not found: </source>
-        <translation type="unfinished">Папка с субтитрами не найдена: </translation>
+        <translation>Папка с субтитрами не найдена: </translation>
     </message>
     <message>
         <source>No Media Files</source>
-        <translation type="unfinished" />
+        <translation>Нет медиафайлов</translation>
     </message>
     <message>
         <source>No media files found in the selected folder.</source>
-        <translation type="unfinished" />
+        <translation>В выбранной папке не найдено медиафайлов.</translation>
     </message>
     <message>
         <source>Matched %1 of %2 media files.</source>
-        <translation type="unfinished" />
+        <translation>Сопоставлено %1 из %2 медиафайлов.</translation>
     </message>
     <message>
         <source>Warning: %1 media file(s) could not be matched.</source>
-        <translation type="unfinished" />
+        <translation>Предупреждение: не удалось сопоставить медиафайлов: %1.</translation>
     </message>
     <message>
         <source>No Pairs Matched</source>
-        <translation type="unfinished">Пары не найдены</translation>
+        <translation>Пары не найдены</translation>
     </message>
     <message>
         <source>No subtitle files could be matched to the media files in the selected folders.</source>
-        <translation type="unfinished" />
+        <translation>Не удалось сопоставить ни один файл субтитров с медиафайлами в выбранных папках.</translation>
     </message>
     <message>
         <source>Condensing file %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Сжатие файла %1 из %2</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Готово: </translation>
+        <translation>Готово: </translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Готово</translation>
+        <translation>Готово</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Пропущено: </translation>
+        <translation>Пропущено: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Пропущено</translation>
+        <translation>Пропущено</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Отменено</translation>
+        <translation>Отменено</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
-        <translation type="unfinished" />
+        <translation>Завершено — обработано файлов: %1</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Отмена…</translation>
+        <translation>Отмена…</translation>
     </message>
 </context><context>
     <name>CondenseWorker</name>
     <message>
         <source>Skipped, exists</source>
-        <translation type="unfinished">Пропущено, уже существует</translation>
+        <translation>Пропущено, уже существует</translation>
     </message>
     <message>
         <source>No dialogue lines found in %1</source>
-        <translation type="unfinished" />
+        <translation>Не найдено строк диалога в %1</translation>
     </message>
     <message>
         <source>Condensing: %1%</source>
-        <translation type="unfinished" />
+        <translation>Сжатие: %1%</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Отменено</translation>
+        <translation>Отменено</translation>
     </message>
     <message>
         <source>Condensing failed for %1</source>
-        <translation type="unfinished" />
+        <translation>Не удалось выполнить сжатие для %1</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Готово</translation>
+        <translation>Готово</translation>
     </message>
     <message>
         <source>No subtitle source found for %1</source>
-        <translation type="unfinished" />
+        <translation>Не найден источник субтитров для %1</translation>
     </message>
     <message>
         <source>Subtitle track %1 not found in %2</source>
-        <translation type="unfinished" />
+        <translation>Дорожка субтитров %1 не найдена в %2</translation>
     </message>
     <message>
         <source>Only image-based subtitles (%1) in %2, which can't be condensed</source>
-        <translation type="unfinished" />
+        <translation>Только субтитры на основе изображений (%1) в %2, которые нельзя сжать</translation>
     </message>
     <message>
         <source>Failed to extract embedded subtitle from %1</source>
-        <translation type="unfinished" />
+        <translation>Не удалось извлечь встроенные субтитры из %1</translation>
     </message>
     <message>
         <source>Audio done; subtitle write failed: %1</source>
-        <translation type="unfinished" />
+        <translation>Аудио готово; не удалось записать субтитры: %1</translation>
     </message>
 </context><context>
     <name>CudaPackDownloadWorker</name>
@@ -1987,7 +1991,7 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>Episode %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>Эпизод %1/%2: %3</translation>
     </message>
     <message>
         <source>Processing: %1</source>
@@ -2003,7 +2007,7 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
-        <translation type="unfinished" />
+        <translation>Завершено — создано карточек: %1</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -2011,7 +2015,7 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>Cancelling...</source>
-        <translation type="unfinished">Отмена...</translation>
+        <translation>Отмена...</translation>
     </message>
     <message>
         <source>Error: %1</source>
@@ -2019,11 +2023,11 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>Ошибка — см. журнал</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Отменено</translation>
+        <translation>Отменено</translation>
     </message>
 </context><context>
     <name>DeckPage</name>
@@ -2051,27 +2055,27 @@ Total cards created: %2</source>
     <name>DefinitionService</name>
     <message>
         <source>Fetching definitions</source>
-        <translation type="unfinished" />
+        <translation>Получение определений</translation>
     </message>
     <message>
         <source>Definition found: %1</source>
-        <translation type="unfinished" />
+        <translation>Определение найдено: %1</translation>
     </message>
     <message>
         <source>No definition: %1</source>
-        <translation type="unfinished" />
+        <translation>Нет определения: %1</translation>
     </message>
     <message>
         <source>Fetching glossary entries</source>
-        <translation type="unfinished" />
+        <translation>Получение записей глоссария</translation>
     </message>
     <message>
         <source>Glossary found: %1</source>
-        <translation type="unfinished" />
+        <translation>Глоссарий найден: %1</translation>
     </message>
     <message>
         <source>No glossary: %1</source>
-        <translation type="unfinished" />
+        <translation>Нет глоссария: %1</translation>
     </message>
 </context><context>
     <name>DictionaryImportFlow</name>
@@ -2389,7 +2393,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Resources configured: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation type="unfinished" />
+        <translation>Настроено ресурсов: &lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -2413,19 +2417,19 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Sentence-audio TTS connection/certificate failure — sentence audio skipped this run, will retry next run</source>
-        <translation type="unfinished" />
+        <translation>Сбой подключения/сертификата TTS для аудио предложений — аудио предложений пропущено в этом запуске, будет повторено в следующем</translation>
     </message>
     <message>
         <source>Sentence-audio TTS returned repeated server errors — sentence audio skipped this run, will retry next run</source>
-        <translation type="unfinished" />
+        <translation>TTS для аудио предложений вернул повторяющиеся ошибки сервера — аудио предложений пропущено в этом запуске, будет повторено в следующем</translation>
     </message>
     <message>
         <source>Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run</source>
-        <translation type="unfinished" />
+        <translation>TTS для аудио предложений вернул неаудиоответы (вероятно, из-за ограничения частоты) — аудио предложений пропущено в этом запуске, будет повторено в следующем</translation>
     </message>
     <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
-        <translation type="unfinished" />
+        <translation>Все новые слова (%1) были удалены активными фильтрами — карточки не созданы</translation>
     </message>
     <message>
         <source>All words already in Anki!</source>
@@ -2485,7 +2489,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Frequency cutoff set but no frequency source is loaded — cutoff ignored (add a frequency source in Settings).</source>
-        <translation type="unfinished" />
+        <translation>Задан порог частотности, но источник частотности не загружен — порог проигнорирован (добавьте источник частотности в настройках).</translation>
     </message>
     <message>
         <source>Word list filter: removed %1 words</source>
@@ -2500,12 +2504,12 @@ The dictionary was not removed.</source>
         <translation>Фильтр по набору имён: удалено %1 слов</translation>
     </message>
     <message>
-        <source>Sentence deduplication: removed %1 duplicate-sentence words</source>
-        <translation>Дедупликация предложений: удалено %1 слов с повторяющимися предложениями</translation>
-    </message>
-    <message>
         <source>Cross-episode filter: removed %1 words appearing in fewer than %2 episodes</source>
         <translation>Межэпизодный фильтр: удалено %1 слов, встречающихся менее чем в %2 эпизодах</translation>
+    </message>
+    <message>
+        <source>Sentence deduplication: removed %1 duplicate-sentence words</source>
+        <translation>Дедупликация предложений: удалено %1 слов с повторяющимися предложениями</translation>
     </message>
     <message>
         <source>i+1 filter: kept %1/%2 words (%3%)</source>
@@ -2517,8 +2521,10 @@ The dictionary was not removed.</source>
     </message>
     <message numerus="yes">
         <source>Whitelist: force-included %n word(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Белый список: принудительно включено %n слово</numerusform>
+            <numerusform>Белый список: принудительно включено %n слова</numerusform>
+            <numerusform>Белый список: принудительно включено %n слов</numerusform>
         </translation>
     </message>
     <message>
@@ -2555,15 +2561,15 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Generating sentence audio</source>
-        <translation type="unfinished" />
+        <translation>Генерация аудио предложений</translation>
     </message>
     <message>
         <source>Sentence audio: %1</source>
-        <translation type="unfinished" />
+        <translation>Аудио предложений: %1</translation>
     </message>
     <message>
         <source>Sentence audio: %1/%2 sentences</source>
-        <translation type="unfinished" />
+        <translation>Аудио предложений: %1/%2 предложений</translation>
     </message>
     <message>
         <source>Step 4/5 — Fetching definitions</source>
@@ -2655,43 +2661,43 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Step 3/5 — Preparing card images</source>
-        <translation type="unfinished" />
+        <translation>Шаг 3/5 — Подготовка изображений карточек</translation>
     </message>
     <message>
         <source>Step 3/5 — Preparing page images</source>
-        <translation type="unfinished" />
+        <translation>Шаг 3/5 — Подготовка изображений страниц</translation>
     </message>
     <message>
         <source>Preparing card images</source>
-        <translation type="unfinished" />
+        <translation>Подготовка изображений карточек</translation>
     </message>
     <message>
         <source>Preparing page images</source>
-        <translation type="unfinished" />
+        <translation>Подготовка изображений страниц</translation>
     </message>
     <message>
         <source>Card image: %1</source>
-        <translation type="unfinished" />
+        <translation>Изображение карточки: %1</translation>
     </message>
     <message>
         <source>Page image: %1</source>
-        <translation type="unfinished" />
+        <translation>Изображение страницы: %1</translation>
     </message>
     <message>
         <source>Skipped unsafe image archive %1 — its cards have no page image</source>
-        <translation type="unfinished" />
+        <translation>Пропущен небезопасный архив изображений %1 — у его карточек нет изображения страницы</translation>
     </message>
     <message>
         <source>Skipped corrupt image archive %1 — its cards have no page image</source>
-        <translation type="unfinished" />
+        <translation>Пропущен повреждённый архив изображений %1 — у его карточек нет изображения страницы</translation>
     </message>
     <message>
         <source>Skipped unreadable page image %1 — its card has no picture</source>
-        <translation type="unfinished" />
+        <translation>Пропущено нечитаемое изображение страницы %1 — у его карточки нет изображения</translation>
     </message>
     <message>
         <source>Step 1/5 — Parsing text: %1</source>
-        <translation type="unfinished" />
+        <translation>Шаг 1/5 — Разбор текста: %1</translation>
     </message>
 </context><context>
     <name>ExportDialog</name>
@@ -2825,7 +2831,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>No frequency source is loaded — this cutoff is ignored. Add a frequency source in the Dictionaries tab.</source>
-        <translation type="unfinished" />
+        <translation>Источник частотности не загружен — этот порог игнорируется. Добавьте источник частотности на вкладке «Словари».</translation>
     </message>
     <message>
         <source>Known Words Database</source>
@@ -2897,7 +2903,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Text file with one word per line to force-include, bypassing frequency, script, length and other filters. A word must still have a dictionary entry and not already be in Anki or your known-words list.</source>
-        <translation type="unfinished" />
+        <translation>Текстовый файл с одним словом на строку для принудительного включения в обход фильтров частотности, письменности, длины и других. Слово всё равно должно иметь запись в словаре и ещё не находиться в Anki или в вашем списке известных слов.</translation>
     </message>
     <message>
         <source>Enable Whitelist</source>
@@ -3049,19 +3055,19 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Reading</source>
-        <translation type="unfinished">Чтение</translation>
+        <translation>Чтение</translation>
     </message>
     <message>
         <source>Off</source>
-        <translation type="unfinished" />
+        <translation>Выкл.</translation>
     </message>
     <message>
         <source>Minimum Word Occurrences</source>
-        <translation type="unfinished" />
+        <translation>Минимальное число вхождений слова</translation>
     </message>
     <message>
         <source>Minimum number of times a word must appear in a book or volume to be mined. 1 = no minimum (filter off).</source>
-        <translation type="unfinished" />
+        <translation>Минимальное число раз, которое слово должно встретиться в книге или томе, чтобы быть добытым. 1 = без минимума (фильтр выключен).</translation>
     </message>
     <message>
         <source>Card Formatting</source>
@@ -3087,7 +3093,7 @@ The dictionary was not removed.</source>
     <name>FrequencyImportFlow</name>
     <message>
         <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
-        <translation type="unfinished" />
+        <translation> Это источник на основе слов; его метки уровней показываются на карточке, но не влияют на фильтрацию по рангу частотности.</translation>
     </message>
     <message>
         <source>Choose frequency source</source>
@@ -3311,7 +3317,7 @@ The frequency source was not removed.</source>
     <name>MainWindow</name>
     <message>
         <source>Video</source>
-        <translation type="unfinished">Видео</translation>
+        <translation>Видео</translation>
     </message>
     <message>
         <source>Deck Builder</source>
@@ -3323,7 +3329,7 @@ The frequency source was not removed.</source>
     </message>
     <message>
         <source>Reading</source>
-        <translation type="unfinished">Чтение</translation>
+        <translation>Чтение</translation>
     </message>
     <message>
         <source>Analytics</source>
@@ -3331,7 +3337,7 @@ The frequency source was not removed.</source>
     </message>
     <message>
         <source>Tools</source>
-        <translation type="unfinished" />
+        <translation>Инструменты</translation>
     </message>
     <message>
         <source>Settings</source>
@@ -3435,7 +3441,15 @@ The frequency source was not removed.</source>
 Close Anki's card browser and any open note editor first — editing an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation type="unfinished" />
+        <translation>Повторно применить последнее встроенное оформление к вашим добытым карточкам, чтобы они соответствовали новым. Безопасно запускать повторно; содержимое карточек не удаляется.
+
+Сначала закройте обозреватель карточек Anki и любой открытый редактор заметок — редактирование открытой заметки может привести к потере несохранённых правок.
+
+Продолжить?</translation>
+    </message>
+    <message>
+        <source>Cannot start restyle — Anki fields are misconfigured: %1</source>
+        <translation>Не удаётся начать переоформление — поля Anki настроены неверно: %1</translation>
     </message>
     <message>
         <source>Restyling mined cards…</source>
@@ -3451,7 +3465,7 @@ Continue?</source>
     </message>
     <message>
         <source>Restyled %1 card(s). (%2 scanned; %3 already up to date.)</source>
-        <translation type="unfinished" />
+        <translation>Переоформлено карточек: %1. (Просканировано: %2; уже актуальны: %3.)</translation>
     </message>
     <message>
         <source>Restyle failed</source>
@@ -3486,6 +3500,10 @@ Continue?</source>
 %1</translation>
     </message>
     <message>
+        <source>Anki note-type fields are misconfigured; check Settings.</source>
+        <translation>Поля типа заметки Anki настроены неверно; проверьте настройки.</translation>
+    </message>
+    <message>
         <source>Validation already running</source>
         <translation>Проверка уже выполняется</translation>
     </message>
@@ -3511,15 +3529,15 @@ Continue?</source>
     </message>
     <message>
         <source>Manga</source>
-        <translation type="unfinished" />
+        <translation>Манга</translation>
     </message>
     <message>
         <source>Novels</source>
-        <translation type="unfinished" />
+        <translation>Романы</translation>
     </message>
     <message>
         <source>Subtitles</source>
-        <translation type="unfinished">Субтитры</translation>
+        <translation>Субтитры</translation>
     </message>
     <message>
         <source>Generate</source>
@@ -3531,15 +3549,15 @@ Continue?</source>
     </message>
     <message>
         <source>Condense</source>
-        <translation type="unfinished" />
+        <translation>Сжать</translation>
     </message>
     <message>
         <source>Single</source>
-        <translation type="unfinished" />
+        <translation>Один</translation>
     </message>
     <message>
         <source>Batch</source>
-        <translation type="unfinished" />
+        <translation>Пакет</translation>
     </message>
     <message>
         <source>YouTube</source>
@@ -3549,27 +3567,27 @@ Continue?</source>
     <name>MediaExtractorService</name>
     <message>
         <source>Extracting media</source>
-        <translation type="unfinished" />
+        <translation>Извлечение медиа</translation>
     </message>
     <message>
         <source>Extracting media: %1</source>
-        <translation type="unfinished" />
+        <translation>Извлечение медиа: %1</translation>
     </message>
     <message>
         <source>audio extraction failed</source>
-        <translation type="unfinished" />
+        <translation>не удалось извлечь аудио</translation>
     </message>
     <message>
         <source>No audio: %1</source>
-        <translation type="unfinished" />
+        <translation>Нет аудио: %1</translation>
     </message>
     <message>
         <source>No screenshot: %1</source>
-        <translation type="unfinished" />
+        <translation>Нет скриншота: %1</translation>
     </message>
     <message>
         <source>media extraction failed — see log</source>
-        <translation type="unfinished" />
+        <translation>не удалось извлечь медиа — см. журнал</translation>
     </message>
 </context><context>
     <name>MediaSettingsPanel</name>
@@ -3866,6 +3884,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>Завершено</translation>
     </message>
     <message>
+        <source>Error</source>
+        <translation>Ошибка</translation>
+    </message>
+    <message>
         <source>No video folder selected</source>
         <translation>Папка видео не выбрана</translation>
     </message>
@@ -3893,7 +3915,7 @@ You can fine-tune these later in Settings → Anki.</source>
     <name>QueueMiningProgressAdapter</name>
     <message>
         <source>Complete</source>
-        <translation type="unfinished">Завершено</translation>
+        <translation>Завершено</translation>
     </message>
 </context><context>
     <name>QueuePanel</name>
@@ -3985,303 +4007,303 @@ You can fine-tune these later in Settings → Anki.</source>
     <name>ReadingMangaTab</name>
     <message>
         <source>Review words before mining</source>
-        <translation type="unfinished">Просмотреть слова перед майнингом</translation>
+        <translation>Просмотреть слова перед майнингом</translation>
     </message>
     <message>
         <source>Show the word-selection popup for each volume before creating cards.</source>
-        <translation type="unfinished" />
+        <translation>Показывать всплывающее окно выбора слов для каждого тома перед созданием карточек.</translation>
     </message>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Прогресс</translation>
+        <translation>Прогресс</translation>
     </message>
     <message>
         <source>Manga</source>
-        <translation type="unfinished" />
+        <translation>Манга</translation>
     </message>
     <message>
         <source>Folder:</source>
-        <translation type="unfinished" />
+        <translation>Папка:</translation>
     </message>
     <message>
         <source>A folder with one manga volume, or a series folder of many volumes.</source>
-        <translation type="unfinished" />
+        <translation>Папка с одним томом манги или папка серии со множеством томов.</translation>
     </message>
     <message>
         <source>Mine</source>
-        <translation type="unfinished">Майнить</translation>
+        <translation>Майнить</translation>
     </message>
     <message>
         <source>Mine the selected folder's volume(s) into Anki cards.</source>
-        <translation type="unfinished" />
+        <translation>Майнить том(а) из выбранной папки в карточки Anki.</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Отмена</translation>
+        <translation>Отмена</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
-        <translation type="unfinished">Отменить активный запуск.</translation>
+        <translation>Отменить активный запуск.</translation>
     </message>
     <message>
         <source>Novels are mined in the Novels tab.</source>
-        <translation type="unfinished" />
+        <translation>Романы майнятся на вкладке «Романы».</translation>
     </message>
     <message>
         <source>Subtitle files are mined in the Subtitles tab.</source>
-        <translation type="unfinished" />
+        <translation>Файлы субтитров майнятся на вкладке «Субтитры».</translation>
     </message>
     <message>
         <source>Select a manga folder first.</source>
-        <translation type="unfinished" />
+        <translation>Сначала выберите папку с мангой.</translation>
     </message>
     <message>
         <source>Starting…</source>
-        <translation type="unfinished" />
+        <translation>Запуск…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Отмена…</translation>
+        <translation>Отмена…</translation>
     </message>
     <message>
         <source>Volume %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>Том %1/%2: %3</translation>
     </message>
     <message>
         <source>Mined %1: %2 cards.</source>
-        <translation type="unfinished">%1: создано карточек — %2.</translation>
+        <translation>%1: создано карточек — %2.</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
-        <translation type="unfinished">Ошибка %1: %2.</translation>
+        <translation>Ошибка %1: %2.</translation>
     </message>
     <message>
         <source>Done: %1 succeeded, %2 failed.</source>
-        <translation type="unfinished" />
+        <translation>Готово: успешно — %1, с ошибкой — %2.</translation>
     </message>
 </context><context>
     <name>ReadingNovelsTab</name>
     <message>
         <source>Review words before mining</source>
-        <translation type="unfinished">Просмотреть слова перед майнингом</translation>
+        <translation>Просмотреть слова перед майнингом</translation>
     </message>
     <message>
         <source>Show the word-selection popup before creating cards.</source>
-        <translation type="unfinished" />
+        <translation>Показывать всплывающее окно выбора слов перед созданием карточек.</translation>
     </message>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Прогресс</translation>
+        <translation>Прогресс</translation>
     </message>
     <message>
         <source>Novel</source>
-        <translation type="unfinished" />
+        <translation>Роман</translation>
     </message>
     <message>
         <source>Book File:</source>
-        <translation type="unfinished" />
+        <translation>Файл книги:</translation>
     </message>
     <message>
         <source>Books</source>
-        <translation type="unfinished" />
+        <translation>Книги</translation>
     </message>
     <message>
         <source>Select an .epub or .txt book to mine.</source>
-        <translation type="unfinished" />
+        <translation>Выберите книгу .epub или .txt для майнинга.</translation>
     </message>
     <message>
         <source>Mine</source>
-        <translation type="unfinished">Майнить</translation>
+        <translation>Майнить</translation>
     </message>
     <message>
         <source>Mine the selected book into Anki cards.</source>
-        <translation type="unfinished" />
+        <translation>Майнить выбранную книгу в карточки Anki.</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Отмена</translation>
+        <translation>Отмена</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
-        <translation type="unfinished">Отменить активный запуск.</translation>
+        <translation>Отменить активный запуск.</translation>
     </message>
     <message>
         <source>Manga is mined in the Manga tab.</source>
-        <translation type="unfinished" />
+        <translation>Манга майнится на вкладке «Манга».</translation>
     </message>
     <message>
         <source>Subtitle files are mined in the Subtitles tab.</source>
-        <translation type="unfinished" />
+        <translation>Файлы субтитров майнятся на вкладке «Субтитры».</translation>
     </message>
     <message>
         <source>Select a valid .epub or .txt book first.</source>
-        <translation type="unfinished" />
+        <translation>Сначала выберите корректную книгу .epub или .txt.</translation>
     </message>
     <message>
         <source>Starting…</source>
-        <translation type="unfinished" />
+        <translation>Запуск…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Отмена…</translation>
+        <translation>Отмена…</translation>
     </message>
     <message>
         <source>Mining: %1</source>
-        <translation type="unfinished" />
+        <translation>Майнинг: %1</translation>
     </message>
     <message>
         <source>Mined %1: %2 cards.</source>
-        <translation type="unfinished">%1: создано карточек — %2.</translation>
+        <translation>%1: создано карточек — %2.</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
-        <translation type="unfinished">Ошибка %1: %2.</translation>
+        <translation>Ошибка %1: %2.</translation>
     </message>
 </context><context>
     <name>ReadingSubtitlesTab</name>
     <message>
         <source>Review words before mining</source>
-        <translation type="unfinished">Просмотреть слова перед майнингом</translation>
+        <translation>Просмотреть слова перед майнингом</translation>
     </message>
     <message>
         <source>Show the word-selection popup for each file before creating cards.</source>
-        <translation type="unfinished" />
+        <translation>Показывать всплывающее окно выбора слов для каждого файла перед созданием карточек.</translation>
     </message>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Прогресс</translation>
+        <translation>Прогресс</translation>
     </message>
     <message>
         <source>Subtitle Files</source>
-        <translation type="unfinished" />
+        <translation>Файлы субтитров</translation>
     </message>
     <message>
         <source>Mines subtitle files as text — no screenshots or audio extracted from video.</source>
-        <translation type="unfinished" />
+        <translation>Майнит файлы субтитров как текст — из видео не извлекаются ни скриншоты, ни аудио.</translation>
     </message>
     <message>
         <source>Subtitle files to mine, one card run per file, in list order.</source>
-        <translation type="unfinished" />
+        <translation>Файлы субтитров для майнинга, по одному запуску карточек на файл, в порядке списка.</translation>
     </message>
     <message>
         <source>Add Files…</source>
-        <translation type="unfinished" />
+        <translation>Добавить файлы…</translation>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt) to the list.</source>
-        <translation type="unfinished" />
+        <translation>Добавить файлы субтитров (.srt, .ass, .ssa, .vtt) в список.</translation>
     </message>
     <message>
         <source>Remove Selected</source>
-        <translation type="unfinished">Удалить выбранные</translation>
+        <translation>Удалить выбранные</translation>
     </message>
     <message>
         <source>Clear</source>
-        <translation type="unfinished">Очистить</translation>
+        <translation>Очистить</translation>
     </message>
     <message>
         <source>Mine</source>
-        <translation type="unfinished">Майнить</translation>
+        <translation>Майнить</translation>
     </message>
     <message>
         <source>Mine the listed subtitle files into Anki cards.</source>
-        <translation type="unfinished" />
+        <translation>Майнить перечисленные файлы субтитров в карточки Anki.</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Отмена</translation>
+        <translation>Отмена</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
-        <translation type="unfinished">Отменить активный запуск.</translation>
+        <translation>Отменить активный запуск.</translation>
     </message>
     <message>
         <source>Add Subtitle Files</source>
-        <translation type="unfinished" />
+        <translation>Добавить файлы субтитров</translation>
     </message>
     <message>
         <source>Subtitles</source>
-        <translation type="unfinished">Субтитры</translation>
+        <translation>Субтитры</translation>
     </message>
     <message>
         <source>Manga is mined in the Manga tab.</source>
-        <translation type="unfinished" />
+        <translation>Манга майнится на вкладке «Манга».</translation>
     </message>
     <message>
         <source>Novels are mined in the Novels tab.</source>
-        <translation type="unfinished" />
+        <translation>Романы майнятся на вкладке «Романы».</translation>
     </message>
     <message>
         <source>Add at least one subtitle file first.</source>
-        <translation type="unfinished" />
+        <translation>Сначала добавьте хотя бы один файл субтитров.</translation>
     </message>
     <message>
         <source>File not found: %1</source>
-        <translation type="unfinished" />
+        <translation>Файл не найден: %1</translation>
     </message>
     <message>
         <source>Starting…</source>
-        <translation type="unfinished" />
+        <translation>Запуск…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Отмена…</translation>
+        <translation>Отмена…</translation>
     </message>
     <message>
         <source>File %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>Файл %1/%2: %3</translation>
     </message>
     <message>
         <source>Mined %1: %2 cards.</source>
-        <translation type="unfinished">%1: создано карточек — %2.</translation>
+        <translation>%1: создано карточек — %2.</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
-        <translation type="unfinished">Ошибка %1: %2.</translation>
+        <translation>Ошибка %1: %2.</translation>
     </message>
     <message>
         <source>Finished %1 subtitle files.</source>
-        <translation type="unfinished" />
+        <translation>Обработано файлов субтитров: %1.</translation>
     </message>
 </context><context>
     <name>ReadingTab</name>
     <message>
         <source>Mining unavailable — services not initialized.</source>
-        <translation type="unfinished">Майнинг недоступен — службы не инициализированы.</translation>
+        <translation>Майнинг недоступен — службы не инициализированы.</translation>
     </message>
     <message>
         <source>%1 run starting — %2 items.</source>
-        <translation type="unfinished">Запуск %1 начинается — элементов: %2.</translation>
+        <translation>Запуск %1 начинается — элементов: %2.</translation>
     </message>
     <message>
         <source>Mine</source>
-        <translation type="unfinished">Майнить</translation>
+        <translation>Майнить</translation>
     </message>
     <message>
         <source>Could not process %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Не удалось обработать %1: %2</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Отменено</translation>
+        <translation>Отменено</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>Ошибка — см. журнал</translation>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
-        <translation type="unfinished" />
+        <translation>Завершено — создано карточек: %1</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>
     <message>
         <source>Download Blocked</source>
-        <translation type="unfinished" />
+        <translation>Загрузка заблокирована</translation>
     </message>
     <message>
         <source>A mining run is in progress. Stop it before downloading resources.</source>
-        <translation type="unfinished" />
+        <translation>Выполняется запуск майнинга. Остановите его перед загрузкой ресурсов.</translation>
     </message>
     <message>
         <source>Preparing download…</source>
@@ -4313,11 +4335,11 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>   Replaced older copy: %1</source>
-        <translation type="unfinished" />
+        <translation>   Заменена более старая копия: %1</translation>
     </message>
     <message>
         <source>   Could not remove older copy: %1 — remove it via Settings → Dictionaries</source>
-        <translation type="unfinished" />
+        <translation>   Не удалось удалить более старую копию: %1 — удалите её через Настройки → Словари</translation>
     </message>
     <message>
         <source>✗ %1 — %2
@@ -4426,6 +4448,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>Удалить %1 карточек из Anki? Это нельзя отменить.</translation>
     </message>
     <message>
+        <source>Undoing…</source>
+        <translation>Отмена…</translation>
+    </message>
+    <message>
         <source>Undone (%1 cards deleted)</source>
         <translation>Отменено (удалено карточек: %1)</translation>
     </message>
@@ -4473,7 +4499,7 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>UI</source>
-        <translation type="unfinished" />
+        <translation>Интерфейс</translation>
     </message>
     <message>
         <source>Check for updates on startup</source>
@@ -4485,19 +4511,19 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Export Settings…</source>
-        <translation type="unfinished" />
+        <translation>Экспорт настроек…</translation>
     </message>
     <message>
         <source>Save a portable settings file (machine-specific paths and resources excluded).</source>
-        <translation type="unfinished" />
+        <translation>Сохранить переносимый файл настроек (пути и ресурсы, специфичные для машины, исключаются).</translation>
     </message>
     <message>
         <source>Import Settings…</source>
-        <translation type="unfinished" />
+        <translation>Импорт настроек…</translation>
     </message>
     <message>
         <source>Apply settings from an exported file; anything not in the file is kept.</source>
-        <translation type="unfinished" />
+        <translation>Применить настройки из экспортированного файла; всё, чего нет в файле, сохраняется.</translation>
     </message>
     <message>
         <source>Updating yt-dlp…</source>
@@ -4517,19 +4543,19 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>dictionary folder (Dictionaries)</source>
-        <translation type="unfinished" />
+        <translation>папка словарей (Словари)</translation>
     </message>
     <message>
         <source>cookies file (YouTube)</source>
-        <translation type="unfinished" />
+        <translation>файл cookie (YouTube)</translation>
     </message>
     <message>
         <source>subtitle regex (Filtering)</source>
-        <translation type="unfinished" />
+        <translation>регулярное выражение субтитров (Фильтрация)</translation>
     </message>
     <message>
         <source>⚠ Saved — kept previous: %1</source>
-        <translation type="unfinished" />
+        <translation>⚠ Сохранено — прежнее сохранено: %1</translation>
     </message>
     <message>
         <source>✓ Saved</source>
@@ -4537,55 +4563,69 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Export Settings</source>
-        <translation type="unfinished" />
+        <translation>Экспорт настроек</translation>
     </message>
     <message>
         <source>JSON Files (*.json);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Файлы JSON (*.json);;Все файлы (*)</translation>
     </message>
     <message>
         <source>Export Failed</source>
-        <translation type="unfinished">Не удалось выполнить экспорт</translation>
+        <translation>Не удалось выполнить экспорт</translation>
     </message>
     <message>
         <source>Could not write %1:
 %2</source>
-        <translation type="unfinished" />
+        <translation>Не удалось записать %1:
+%2</translation>
     </message>
     <message>
         <source>Settings Exported</source>
-        <translation type="unfinished" />
+        <translation>Настройки экспортированы</translation>
     </message>
     <message>
         <source>Portable settings written to %1.</source>
-        <translation type="unfinished" />
+        <translation>Переносимые настройки записаны в %1.</translation>
     </message>
     <message>
         <source>Import Settings</source>
-        <translation type="unfinished" />
+        <translation>Импорт настроек</translation>
     </message>
     <message>
         <source>Import Settings?</source>
-        <translation type="unfinished" />
+        <translation>Импортировать настройки?</translation>
     </message>
     <message>
         <source>Apply settings from %1?
 
 Imported values override your current settings; anything not in the file is kept.</source>
-        <translation type="unfinished" />
+        <translation>Применить настройки из %1?
+
+Импортированные значения переопределяют ваши текущие настройки; всё, чего нет в файле, сохраняется.</translation>
     </message>
     <message>
         <source>Import Failed</source>
-        <translation type="unfinished">Сбой импорта</translation>
+        <translation>Сбой импорта</translation>
     </message>
     <message>
         <source>Could not import %1:
 %2</source>
-        <translation type="unfinished" />
+        <translation>Не удалось импортировать %1:
+%2</translation>
+    </message>
+    <message>
+        <source>Invalid Subtitle Regex</source>
+        <translation>Недопустимое регулярное выражение субтитров</translation>
+    </message>
+    <message>
+        <source>The imported subtitle regex filter is invalid and has been disabled:
+%1</source>
+        <translation>Импортированный фильтр субтитров на основе регулярного выражения недопустим и был отключён:
+%1</translation>
     </message>
     <message>
         <source>✓ Imported</source>
-        <translation type="unfinished" />
+        <translation>✓ Импортировано</translation>
     </message>
     <message>
         <source>Importing pitch accent dictionary…</source>
@@ -4797,15 +4837,15 @@ Imported values override your current settings; anything not in the file is kept
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Отменено</translation>
+        <translation>Отменено</translation>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
-        <translation type="unfinished" />
+        <translation>Завершено — создано карточек: %1</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>Ошибка — см. журнал</translation>
     </message>
 </context><context>
     <name>StatusBarWidget</name>
@@ -5019,7 +5059,7 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
-        <translation type="unfinished" />
+        <translation>Завершено — обработано файлов: %1</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -5341,7 +5381,7 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
-        <translation type="unfinished" />
+        <translation>Завершено — обработано файлов: %1</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -5349,6 +5389,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
 </context><context>
     <name>SubtitleRetimeWorker</name>
+    <message>
+        <source>Output equals input; enable Overwrite to retime in place</source>
+        <translation>Вывод совпадает с вводом; включите «Перезаписывать», чтобы пересинхронизировать на месте</translation>
+    </message>
     <message>
         <source>Skipped, exists</source>
         <translation>Пропущено, уже существует</translation>
@@ -5369,27 +5413,27 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <name>SubtitleTracksDialog</name>
     <message>
         <source>Subtitle Track</source>
-        <translation type="unfinished" />
+        <translation>Дорожка субтитров</translation>
     </message>
     <message>
         <source>No subtitle tracks found in this file.</source>
-        <translation type="unfinished" />
+        <translation>В этом файле не найдено дорожек субтитров.</translation>
     </message>
     <message>
         <source>This file has only one subtitle track.</source>
-        <translation type="unfinished" />
+        <translation>В этом файле только одна дорожка субтитров.</translation>
     </message>
     <message>
         <source>Auto-detect (currently: Track %1 — %2)</source>
-        <translation type="unfinished">Автоопределение (сейчас: дорожка %1 — %2)</translation>
+        <translation>Автоопределение (сейчас: дорожка %1 — %2)</translation>
     </message>
     <message>
         <source>Auto-detect (no Japanese subtitle track found — will use first text track)</source>
-        <translation type="unfinished" />
+        <translation>Автоопределение (японская дорожка субтитров не найдена — будет использована первая текстовая дорожка)</translation>
     </message>
     <message>
         <source>Apply</source>
-        <translation type="unfinished">Применить</translation>
+        <translation>Применить</translation>
     </message>
 </context><context>
     <name>SubtitleViewer</name>
@@ -5785,11 +5829,11 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>No page image for this word</source>
-        <translation type="unfinished" />
+        <translation>Нет изображения страницы для этого слова</translation>
     </message>
     <message>
         <source>Could not load page image</source>
-        <translation type="unfinished" />
+        <translation>Не удалось загрузить изображение страницы</translation>
     </message>
     <message>
         <source>Copy lemma</source>
@@ -5807,11 +5851,11 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <name>YouTubeFetcher</name>
     <message>
         <source>Downloading video</source>
-        <translation type="unfinished" />
+        <translation>Загрузка видео</translation>
     </message>
     <message>
         <source>Merging audio and video</source>
-        <translation type="unfinished" />
+        <translation>Объединение аудио и видео</translation>
     </message>
 </context><context>
     <name>YouTubeQueueItemWidget</name>
@@ -5976,6 +6020,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Намайнено %1: %2 карточек (попыток=%3).</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>Отменено: %1.</translation>
+    </message>
+    <message>
         <source>Failed %1: %2 (attempts=%3).</source>
         <translation>Не удалось %1: %2 (попыток=%3).</translation>
     </message>
@@ -5985,19 +6033,19 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Отменено</translation>
+        <translation>Отменено</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>Ошибка — см. журнал</translation>
     </message>
     <message>
         <source>Complete — %1 succeeded, %2 failed</source>
-        <translation type="unfinished" />
+        <translation>Завершено — успешно: %1, с ошибкой: %2</translation>
     </message>
     <message>
         <source>Complete — %1 succeeded</source>
-        <translation type="unfinished" />
+        <translation>Завершено — успешно: %1</translation>
     </message>
 </context><context>
     <name>ZipImportFlow</name>
@@ -6057,11 +6105,11 @@ Continue with import?</source>
     <name>_FreqRow</name>
     <message>
         <source>word-based</source>
-        <translation type="unfinished" />
+        <translation>на основе слов</translation>
     </message>
     <message>
         <source>Level labels are shown on the card but not used for frequency filtering.</source>
-        <translation type="unfinished" />
+        <translation>Метки уровней показываются на карточке, но не используются для фильтрации по частотности.</translation>
     </message>
     <message>
         <source>%1 entries</source>

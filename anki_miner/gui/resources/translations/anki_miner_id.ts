@@ -195,11 +195,11 @@
     <name>AnkiService</name>
     <message>
         <source>Creating Anki cards</source>
-        <translation type="unfinished" />
+        <translation>Membuat kartu Anki</translation>
     </message>
     <message>
         <source>Cards created: %1/%2</source>
-        <translation type="unfinished" />
+        <translation>Kartu dibuat: %1/%2</translation>
     </message>
 </context><context>
     <name>AnkiSettingsPanel</name>
@@ -645,7 +645,7 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
     </message>
     <message>
         <source>Add a custom audio URL source</source>
-        <translation type="unfinished" />
+        <translation>Tambah sumber URL audio kustom</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -669,27 +669,27 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
     </message>
     <message>
         <source>Sentence Audio (Reading Sources)</source>
-        <translation type="unfinished" />
+        <translation>Audio Kalimat (Sumber Bacaan)</translation>
     </message>
     <message>
         <source>Generate spoken sentence audio for cards mined from manga and books (these have no source audio). Sentence text is sent to the selected online services.</source>
-        <translation type="unfinished" />
+        <translation>Buat audio kalimat lisan untuk kartu yang di-mining dari manga dan buku (yang tidak memiliki audio sumber). Teks kalimat dikirim ke layanan daring yang dipilih.</translation>
     </message>
     <message>
         <source>Generate TTS sentence audio</source>
-        <translation type="unfinished" />
+        <translation>Buat audio kalimat TTS</translation>
     </message>
     <message>
         <source>Google Translate TTS (tried first)</source>
-        <translation type="unfinished" />
+        <translation>Google Translate TTS (dicoba pertama)</translation>
     </message>
     <message>
         <source>Naver Papago (fallback)</source>
-        <translation type="unfinished" />
+        <translation>Naver Papago (cadangan)</translation>
     </message>
     <message>
         <source>Select at least one service.</source>
-        <translation type="unfinished" />
+        <translation>Pilih setidaknya satu layanan.</translation>
     </message>
     <message>
         <source>Google Translate (synthetic TTS)</source>
@@ -870,6 +870,10 @@ Paket audio tidak dihapus.</translation>
         <translation>Selesai mining %1: %2 kartu.</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>Dibatalkan %1.</translation>
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation>Gagal %1: %2.</translation>
     </message>
@@ -879,19 +883,19 @@ Paket audio tidak dihapus.</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Dibatalkan</translation>
+        <translation>Dibatalkan</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>Gagal — lihat log</translation>
     </message>
     <message>
         <source>Complete — %1 succeeded, %2 failed</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 berhasil, %2 gagal</translation>
     </message>
     <message>
         <source>Complete — %1 succeeded</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 berhasil</translation>
     </message>
 </context><context>
     <name>BatchProcessingTab</name>
@@ -989,7 +993,7 @@ Paket audio tidak dihapus.</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Dibatalkan</translation>
+        <translation>Dibatalkan</translation>
     </message>
     <message>
         <source>Cancelling...</source>
@@ -1005,7 +1009,7 @@ Paket audio tidak dihapus.</translation>
     </message>
     <message>
         <source>Episode %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>Episode %1/%2: %3</translation>
     </message>
     <message>
         <source>Processing series: %1</source>
@@ -1013,7 +1017,7 @@ Paket audio tidak dihapus.</translation>
     </message>
     <message>
         <source>Series %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>Seri %1/%2: %3</translation>
     </message>
     <message>
         <source>Created %1 cards</source>
@@ -1021,11 +1025,11 @@ Paket audio tidak dihapus.</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>Gagal — lihat log</translation>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 kartu dibuat</translation>
     </message>
     <message>
         <source>Processed %1 series
@@ -1151,43 +1155,43 @@ Total kartu dibuat: %2</translation>
     </message>
     <message>
         <source>Mine from manga</source>
-        <translation type="unfinished" />
+        <translation>Mining dari manga</translation>
     </message>
     <message>
         <source>Mine vocabulary from manga volumes processed with mokuro.</source>
-        <translation type="unfinished" />
+        <translation>Mining kosakata dari volume manga yang diproses dengan mokuro.</translation>
     </message>
     <message>
         <source>Mine from novels</source>
-        <translation type="unfinished" />
+        <translation>Mining dari novel</translation>
     </message>
     <message>
         <source>Mine vocabulary from novels and other text (EPUB, Aozora, plain text).</source>
-        <translation type="unfinished" />
+        <translation>Mining kosakata dari novel dan teks lain (EPUB, Aozora, teks biasa).</translation>
     </message>
     <message>
         <source>Generate subtitles from audio</source>
-        <translation type="unfinished" />
+        <translation>Buat subtitel dari audio</translation>
     </message>
     <message>
         <source>Create subtitles from audio with a local Whisper model -- as a standalone tool.</source>
-        <translation type="unfinished" />
+        <translation>Buat subtitel dari audio dengan model Whisper lokal -- sebagai alat mandiri.</translation>
     </message>
     <message>
         <source>Re-time existing subtitles</source>
-        <translation type="unfinished" />
+        <translation>Atur ulang waktu subtitel yang ada</translation>
     </message>
     <message>
         <source>Re-sync existing subtitles against the video -- as a standalone tool.</source>
-        <translation type="unfinished" />
+        <translation>Sinkronkan ulang subtitel yang ada terhadap video -- sebagai alat mandiri.</translation>
     </message>
     <message>
         <source>Condense audio from subtitles</source>
-        <translation type="unfinished" />
+        <translation>Padatkan audio dari subtitel</translation>
     </message>
     <message>
         <source>Build dialogue-only condensed audio from a video or audio file and its subtitles.</source>
-        <translation type="unfinished" />
+        <translation>Bangun audio padat berisi dialog saja dari berkas video atau audio dan subtitelnya.</translation>
     </message>
     <message>
         <source>View mining history &amp; stats</source>
@@ -1465,353 +1469,353 @@ Total kartu dibuat: %2</translation>
     <name>CondenseTab</name>
     <message>
         <source>Input</source>
-        <translation type="unfinished">Masukan</translation>
+        <translation>Masukan</translation>
     </message>
     <message>
         <source>ffmpeg not found; install it or set its path in Settings to enable condensing.</source>
-        <translation type="unfinished" />
+        <translation>ffmpeg tidak ditemukan; pasang atau atur jalurnya di Pengaturan untuk mengaktifkan pemadatan.</translation>
     </message>
     <message>
         <source>Condense a video or audio file down to just its spoken dialogue.</source>
-        <translation type="unfinished" />
+        <translation>Padatkan berkas video atau audio menjadi hanya dialog lisannya.</translation>
     </message>
     <message>
         <source>Mode:</source>
-        <translation type="unfinished">Mode:</translation>
+        <translation>Mode:</translation>
     </message>
     <message>
         <source>Single File</source>
-        <translation type="unfinished">Berkas Tunggal</translation>
+        <translation>Berkas Tunggal</translation>
     </message>
     <message>
         <source>Condense one selected media file.</source>
-        <translation type="unfinished" />
+        <translation>Padatkan satu berkas media yang dipilih.</translation>
     </message>
     <message>
         <source>Folder</source>
-        <translation type="unfinished">Folder</translation>
+        <translation>Folder</translation>
     </message>
     <message>
         <source>Condense every media file in a selected folder.</source>
-        <translation type="unfinished" />
+        <translation>Padatkan setiap berkas media dalam folder yang dipilih.</translation>
     </message>
     <message>
         <source>Media File:</source>
-        <translation type="unfinished" />
+        <translation>Berkas Media:</translation>
     </message>
     <message>
         <source>Subtitle File:</source>
-        <translation type="unfinished">Berkas Subtitel:</translation>
+        <translation>Berkas Subtitel:</translation>
     </message>
     <message>
         <source>Leave empty to auto-detect (sibling file or embedded track).</source>
-        <translation type="unfinished" />
+        <translation>Kosongkan untuk deteksi otomatis (berkas sejajar atau trek tertanam).</translation>
     </message>
     <message>
         <source>Audio track:</source>
-        <translation type="unfinished">Trek audio:</translation>
+        <translation>Trek audio:</translation>
     </message>
     <message>
         <source>Japanese (auto-detect)</source>
-        <translation type="unfinished">Jepang (deteksi otomatis)</translation>
+        <translation>Jepang (deteksi otomatis)</translation>
     </message>
     <message>
         <source>Choose…</source>
-        <translation type="unfinished" />
+        <translation>Pilih…</translation>
     </message>
     <message>
         <source>Choose which audio track to condense.</source>
-        <translation type="unfinished" />
+        <translation>Pilih trek audio mana yang akan dipadatkan.</translation>
     </message>
     <message>
         <source>Subtitle track:</source>
-        <translation type="unfinished" />
+        <translation>Trek subtitel:</translation>
     </message>
     <message>
         <source>Auto (external → embedded Japanese)</source>
-        <translation type="unfinished" />
+        <translation>Otomatis (eksternal → Jepang tertanam)</translation>
     </message>
     <message>
         <source>Choose which embedded subtitle track to condense against.</source>
-        <translation type="unfinished" />
+        <translation>Pilih trek subtitel tertanam mana yang akan digunakan untuk pemadatan.</translation>
     </message>
     <message>
         <source>Media Folder:</source>
-        <translation type="unfinished" />
+        <translation>Folder Media:</translation>
     </message>
     <message>
         <source>Subtitle Folder:</source>
-        <translation type="unfinished">Folder Subtitel:</translation>
+        <translation>Folder Subtitel:</translation>
     </message>
     <message>
         <source>Optional. When set, media is paired to subtitles by episode number; otherwise each file auto-detects.</source>
-        <translation type="unfinished" />
+        <translation>Opsional. Jika diatur, media dipasangkan ke subtitel berdasarkan nomor episode; jika tidak, setiap berkas mendeteksi otomatis.</translation>
     </message>
     <message>
         <source>Options</source>
-        <translation type="unfinished" />
+        <translation>Opsi</translation>
     </message>
     <message>
         <source>Padding:</source>
-        <translation type="unfinished" />
+        <translation>Bantalan:</translation>
     </message>
     <message>
         <source> ms</source>
-        <translation type="unfinished" />
+        <translation> ms</translation>
     </message>
     <message>
         <source>Silence kept on each side of every dialogue line before merging.</source>
-        <translation type="unfinished" />
+        <translation>Keheningan yang dipertahankan di setiap sisi tiap baris dialog sebelum digabungkan.</translation>
     </message>
     <message>
         <source>Offset:</source>
-        <translation type="unfinished">Offset:</translation>
+        <translation>Offset:</translation>
     </message>
     <message>
         <source>Shift every subtitle cue by this amount before condensing.</source>
-        <translation type="unfinished" />
+        <translation>Geser setiap isyarat subtitel sebesar jumlah ini sebelum memadatkan.</translation>
     </message>
     <message>
         <source>Format:</source>
-        <translation type="unfinished" />
+        <translation>Format:</translation>
     </message>
     <message>
         <source>Also write condensed subtitles (SRT + LRC)</source>
-        <translation type="unfinished" />
+        <translation>Tulis juga subtitel yang dipadatkan (SRT + LRC)</translation>
     </message>
     <message>
         <source>Write time-mapped .srt and .lrc files alongside the condensed audio.</source>
-        <translation type="unfinished" />
+        <translation>Tulis berkas .srt dan .lrc yang dipetakan waktu bersama audio yang dipadatkan.</translation>
     </message>
     <message>
         <source>Output</source>
-        <translation type="unfinished">Keluaran</translation>
+        <translation>Keluaran</translation>
     </message>
     <message>
         <source>Output:</source>
-        <translation type="unfinished">Keluaran:</translation>
+        <translation>Keluaran:</translation>
     </message>
     <message>
         <source>Next to source</source>
-        <translation type="unfinished" />
+        <translation>Di samping sumber</translation>
     </message>
     <message>
         <source>Choose Folder…</source>
-        <translation type="unfinished">Pilih Folder…</translation>
+        <translation>Pilih Folder…</translation>
     </message>
     <message>
         <source>Reset</source>
-        <translation type="unfinished">Setel Ulang</translation>
+        <translation>Setel Ulang</translation>
     </message>
     <message>
         <source>Overwrite existing condensed files</source>
-        <translation type="unfinished" />
+        <translation>Timpa berkas padat yang ada</translation>
     </message>
     <message>
         <source>When unchecked, files whose condensed audio already exists are skipped, not overwritten.</source>
-        <translation type="unfinished" />
+        <translation>Jika tidak dicentang, berkas yang audio padatnya sudah ada akan dilewati, bukan ditimpa.</translation>
     </message>
     <message>
         <source>Actions</source>
-        <translation type="unfinished">Tindakan</translation>
+        <translation>Tindakan</translation>
     </message>
     <message>
         <source>Condense Audio</source>
-        <translation type="unfinished" />
+        <translation>Padatkan Audio</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Batal</translation>
+        <translation>Batal</translation>
     </message>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Progres</translation>
+        <translation>Progres</translation>
     </message>
     <message>
         <source>No Media File Selected</source>
-        <translation type="unfinished" />
+        <translation>Tidak Ada Berkas Media yang Dipilih</translation>
     </message>
     <message>
         <source>Select a media file first.</source>
-        <translation type="unfinished" />
+        <translation>Pilih berkas media terlebih dahulu.</translation>
     </message>
     <message>
         <source>File Not Found</source>
-        <translation type="unfinished">Berkas Tidak Ditemukan</translation>
+        <translation>Berkas Tidak Ditemukan</translation>
     </message>
     <message>
         <source>Media file not found: </source>
-        <translation type="unfinished" />
+        <translation>Berkas media tidak ditemukan: </translation>
     </message>
     <message>
         <source>No Audio Tracks</source>
-        <translation type="unfinished">Tidak Ada Trek Audio</translation>
+        <translation>Tidak Ada Trek Audio</translation>
     </message>
     <message>
         <source>No audio tracks detected. Check that ffprobe is installed and the file has audio.</source>
-        <translation type="unfinished">Tidak ada trek audio yang terdeteksi. Periksa bahwa ffprobe terpasang dan berkas memiliki audio.</translation>
+        <translation>Tidak ada trek audio yang terdeteksi. Periksa bahwa ffprobe terpasang dan berkas memiliki audio.</translation>
     </message>
     <message>
         <source>Track %1</source>
-        <translation type="unfinished">Trek %1</translation>
+        <translation>Trek %1</translation>
     </message>
     <message>
         <source>Probe Failed</source>
-        <translation type="unfinished">Pemeriksaan Gagal</translation>
+        <translation>Pemeriksaan Gagal</translation>
     </message>
     <message>
         <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
-        <translation type="unfinished">Gagal mendeteksi trek audio. Periksa bahwa ffprobe terpasang.</translation>
+        <translation>Gagal mendeteksi trek audio. Periksa bahwa ffprobe terpasang.</translation>
     </message>
     <message>
         <source>No Subtitle Tracks</source>
-        <translation type="unfinished" />
+        <translation>Tidak Ada Trek Subtitel</translation>
     </message>
     <message>
         <source>No embedded subtitle tracks detected in this file.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada trek subtitel tertanam yang terdeteksi dalam berkas ini.</translation>
     </message>
     <message>
         <source>Failed to detect subtitle tracks. Check that ffprobe is installed.</source>
-        <translation type="unfinished" />
+        <translation>Gagal mendeteksi trek subtitel. Periksa bahwa ffprobe terpasang.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
-        <translation type="unfinished">Pilih Folder Keluaran</translation>
+        <translation>Pilih Folder Keluaran</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
-        <translation type="unfinished">Direktori keluaran tidak dapat ditulis: </translation>
+        <translation>Direktori keluaran tidak dapat ditulis: </translation>
     </message>
     <message>
         <source>Select a media file before condensing.</source>
-        <translation type="unfinished" />
+        <translation>Pilih berkas media sebelum memadatkan.</translation>
     </message>
     <message>
         <source>Subtitle file not found: </source>
-        <translation type="unfinished">Berkas subtitel tidak ditemukan: </translation>
+        <translation>Berkas subtitel tidak ditemukan: </translation>
     </message>
     <message>
         <source>No Media Folder Selected</source>
-        <translation type="unfinished" />
+        <translation>Tidak Ada Folder Media yang Dipilih</translation>
     </message>
     <message>
         <source>Select a media folder before condensing.</source>
-        <translation type="unfinished" />
+        <translation>Pilih folder media sebelum memadatkan.</translation>
     </message>
     <message>
         <source>Folder Not Found</source>
-        <translation type="unfinished">Folder Tidak Ditemukan</translation>
+        <translation>Folder Tidak Ditemukan</translation>
     </message>
     <message>
         <source>Media folder not found: </source>
-        <translation type="unfinished" />
+        <translation>Folder media tidak ditemukan: </translation>
     </message>
     <message>
         <source>Subtitle folder not found: </source>
-        <translation type="unfinished">Folder subtitel tidak ditemukan: </translation>
+        <translation>Folder subtitel tidak ditemukan: </translation>
     </message>
     <message>
         <source>No Media Files</source>
-        <translation type="unfinished" />
+        <translation>Tidak Ada Berkas Media</translation>
     </message>
     <message>
         <source>No media files found in the selected folder.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada berkas media yang ditemukan dalam folder yang dipilih.</translation>
     </message>
     <message>
         <source>Matched %1 of %2 media files.</source>
-        <translation type="unfinished" />
+        <translation>Mencocokkan %1 dari %2 berkas media.</translation>
     </message>
     <message>
         <source>Warning: %1 media file(s) could not be matched.</source>
-        <translation type="unfinished" />
+        <translation>Peringatan: %1 berkas media tidak dapat dicocokkan.</translation>
     </message>
     <message>
         <source>No Pairs Matched</source>
-        <translation type="unfinished">Tidak Ada Pasangan yang Cocok</translation>
+        <translation>Tidak Ada Pasangan yang Cocok</translation>
     </message>
     <message>
         <source>No subtitle files could be matched to the media files in the selected folders.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada berkas subtitel yang dapat dicocokkan dengan berkas media dalam folder yang dipilih.</translation>
     </message>
     <message>
         <source>Condensing file %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Memadatkan berkas %1 dari %2</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Selesai: </translation>
+        <translation>Selesai: </translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Selesai</translation>
+        <translation>Selesai</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Dilewati: </translation>
+        <translation>Dilewati: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Dilewati</translation>
+        <translation>Dilewati</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Dibatalkan</translation>
+        <translation>Dibatalkan</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 berkas diproses</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Membatalkan…</translation>
+        <translation>Membatalkan…</translation>
     </message>
 </context><context>
     <name>CondenseWorker</name>
     <message>
         <source>Skipped, exists</source>
-        <translation type="unfinished">Dilewati, sudah ada</translation>
+        <translation>Dilewati, sudah ada</translation>
     </message>
     <message>
         <source>No dialogue lines found in %1</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada baris dialog yang ditemukan dalam %1</translation>
     </message>
     <message>
         <source>Condensing: %1%</source>
-        <translation type="unfinished" />
+        <translation>Memadatkan: %1%</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Dibatalkan</translation>
+        <translation>Dibatalkan</translation>
     </message>
     <message>
         <source>Condensing failed for %1</source>
-        <translation type="unfinished" />
+        <translation>Pemadatan gagal untuk %1</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Selesai</translation>
+        <translation>Selesai</translation>
     </message>
     <message>
         <source>No subtitle source found for %1</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada sumber subtitel yang ditemukan untuk %1</translation>
     </message>
     <message>
         <source>Subtitle track %1 not found in %2</source>
-        <translation type="unfinished" />
+        <translation>Trek subtitel %1 tidak ditemukan dalam %2</translation>
     </message>
     <message>
         <source>Only image-based subtitles (%1) in %2, which can't be condensed</source>
-        <translation type="unfinished" />
+        <translation>Hanya subtitel berbasis gambar (%1) dalam %2, yang tidak dapat dipadatkan</translation>
     </message>
     <message>
         <source>Failed to extract embedded subtitle from %1</source>
-        <translation type="unfinished" />
+        <translation>Gagal mengekstrak subtitel tertanam dari %1</translation>
     </message>
     <message>
         <source>Audio done; subtitle write failed: %1</source>
-        <translation type="unfinished" />
+        <translation>Audio selesai; penulisan subtitel gagal: %1</translation>
     </message>
 </context><context>
     <name>CudaPackDownloadWorker</name>
@@ -1987,7 +1991,7 @@ Total kartu dibuat: %2</translation>
     </message>
     <message>
         <source>Episode %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>Episode %1/%2: %3</translation>
     </message>
     <message>
         <source>Processing: %1</source>
@@ -2003,7 +2007,7 @@ Total kartu dibuat: %2</translation>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 kartu dibuat</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -2011,7 +2015,7 @@ Total kartu dibuat: %2</translation>
     </message>
     <message>
         <source>Cancelling...</source>
-        <translation type="unfinished">Membatalkan...</translation>
+        <translation>Membatalkan...</translation>
     </message>
     <message>
         <source>Error: %1</source>
@@ -2019,11 +2023,11 @@ Total kartu dibuat: %2</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>Gagal — lihat log</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Dibatalkan</translation>
+        <translation>Dibatalkan</translation>
     </message>
 </context><context>
     <name>DeckPage</name>
@@ -2051,27 +2055,27 @@ Total kartu dibuat: %2</translation>
     <name>DefinitionService</name>
     <message>
         <source>Fetching definitions</source>
-        <translation type="unfinished" />
+        <translation>Mengambil definisi</translation>
     </message>
     <message>
         <source>Definition found: %1</source>
-        <translation type="unfinished" />
+        <translation>Definisi ditemukan: %1</translation>
     </message>
     <message>
         <source>No definition: %1</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada definisi: %1</translation>
     </message>
     <message>
         <source>Fetching glossary entries</source>
-        <translation type="unfinished" />
+        <translation>Mengambil entri glosarium</translation>
     </message>
     <message>
         <source>Glossary found: %1</source>
-        <translation type="unfinished" />
+        <translation>Glosarium ditemukan: %1</translation>
     </message>
     <message>
         <source>No glossary: %1</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada glosarium: %1</translation>
     </message>
 </context><context>
     <name>DictionaryImportFlow</name>
@@ -2389,7 +2393,7 @@ Kamus tidak dihapus.</translation>
     </message>
     <message>
         <source>Resources configured: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation type="unfinished" />
+        <translation>Sumber daya dikonfigurasi: &lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -2413,19 +2417,19 @@ Kamus tidak dihapus.</translation>
     </message>
     <message>
         <source>Sentence-audio TTS connection/certificate failure — sentence audio skipped this run, will retry next run</source>
-        <translation type="unfinished" />
+        <translation>Kegagalan koneksi/sertifikat TTS audio-kalimat — audio kalimat dilewati pada proses ini, akan dicoba lagi pada proses berikutnya</translation>
     </message>
     <message>
         <source>Sentence-audio TTS returned repeated server errors — sentence audio skipped this run, will retry next run</source>
-        <translation type="unfinished" />
+        <translation>TTS audio-kalimat mengembalikan kesalahan server berulang — audio kalimat dilewati pada proses ini, akan dicoba lagi pada proses berikutnya</translation>
     </message>
     <message>
         <source>Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run</source>
-        <translation type="unfinished" />
+        <translation>TTS audio-kalimat mengembalikan respons non-audio (kemungkinan dibatasi laju) — audio kalimat dilewati pada proses ini, akan dicoba lagi pada proses berikutnya</translation>
     </message>
     <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
-        <translation type="unfinished" />
+        <translation>Semua %1 kata baru dihapus oleh filter aktif — tidak ada kartu yang dibuat</translation>
     </message>
     <message>
         <source>All words already in Anki!</source>
@@ -2479,7 +2483,7 @@ Kamus tidak dihapus.</translation>
     </message>
     <message>
         <source>Frequency cutoff set but no frequency source is loaded — cutoff ignored (add a frequency source in Settings).</source>
-        <translation type="unfinished" />
+        <translation>Batas frekuensi diatur tetapi tidak ada sumber frekuensi yang dimuat — batas diabaikan (tambahkan sumber frekuensi di Pengaturan).</translation>
     </message>
     <message>
         <source>Word list filter: removed %1 words</source>
@@ -2494,12 +2498,12 @@ Kamus tidak dihapus.</translation>
         <translation>Filter kumpulan nama: menghapus %1 kata</translation>
     </message>
     <message>
-        <source>Sentence deduplication: removed %1 duplicate-sentence words</source>
-        <translation>Deduplikasi kalimat: menghapus %1 kata dengan kalimat duplikat</translation>
-    </message>
-    <message>
         <source>Cross-episode filter: removed %1 words appearing in fewer than %2 episodes</source>
         <translation>Filter lintas episode: menghapus %1 kata yang muncul di kurang dari %2 episode</translation>
+    </message>
+    <message>
+        <source>Sentence deduplication: removed %1 duplicate-sentence words</source>
+        <translation>Deduplikasi kalimat: menghapus %1 kata dengan kalimat duplikat</translation>
     </message>
     <message>
         <source>i+1 filter: kept %1/%2 words (%3%)</source>
@@ -2511,8 +2515,8 @@ Kamus tidak dihapus.</translation>
     </message>
     <message numerus="yes">
         <source>Whitelist: force-included %n word(s)</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Daftar putih: %n kata dipaksa disertakan</numerusform>
         </translation>
     </message>
     <message>
@@ -2549,15 +2553,15 @@ Kamus tidak dihapus.</translation>
     </message>
     <message>
         <source>Generating sentence audio</source>
-        <translation type="unfinished" />
+        <translation>Membuat audio kalimat</translation>
     </message>
     <message>
         <source>Sentence audio: %1</source>
-        <translation type="unfinished" />
+        <translation>Audio kalimat: %1</translation>
     </message>
     <message>
         <source>Sentence audio: %1/%2 sentences</source>
-        <translation type="unfinished" />
+        <translation>Audio kalimat: %1/%2 kalimat</translation>
     </message>
     <message>
         <source>Step 4/5 — Fetching definitions</source>
@@ -2635,43 +2639,43 @@ Kamus tidak dihapus.</translation>
     </message>
     <message>
         <source>Step 3/5 — Preparing card images</source>
-        <translation type="unfinished" />
+        <translation>Langkah 3/5 — Menyiapkan gambar kartu</translation>
     </message>
     <message>
         <source>Step 3/5 — Preparing page images</source>
-        <translation type="unfinished" />
+        <translation>Langkah 3/5 — Menyiapkan gambar halaman</translation>
     </message>
     <message>
         <source>Preparing card images</source>
-        <translation type="unfinished" />
+        <translation>Menyiapkan gambar kartu</translation>
     </message>
     <message>
         <source>Preparing page images</source>
-        <translation type="unfinished" />
+        <translation>Menyiapkan gambar halaman</translation>
     </message>
     <message>
         <source>Card image: %1</source>
-        <translation type="unfinished" />
+        <translation>Gambar kartu: %1</translation>
     </message>
     <message>
         <source>Page image: %1</source>
-        <translation type="unfinished" />
+        <translation>Gambar halaman: %1</translation>
     </message>
     <message>
         <source>Skipped unsafe image archive %1 — its cards have no page image</source>
-        <translation type="unfinished" />
+        <translation>Melewati arsip gambar tidak aman %1 — kartunya tidak memiliki gambar halaman</translation>
     </message>
     <message>
         <source>Skipped corrupt image archive %1 — its cards have no page image</source>
-        <translation type="unfinished" />
+        <translation>Melewati arsip gambar rusak %1 — kartunya tidak memiliki gambar halaman</translation>
     </message>
     <message>
         <source>Skipped unreadable page image %1 — its card has no picture</source>
-        <translation type="unfinished" />
+        <translation>Melewati gambar halaman tidak terbaca %1 — kartunya tidak memiliki gambar</translation>
     </message>
     <message>
         <source>Step 1/5 — Parsing text: %1</source>
-        <translation type="unfinished" />
+        <translation>Langkah 1/5 — Mengurai teks: %1</translation>
     </message>
 </context><context>
     <name>ExportDialog</name>
@@ -2805,7 +2809,7 @@ Kamus tidak dihapus.</translation>
     </message>
     <message>
         <source>No frequency source is loaded — this cutoff is ignored. Add a frequency source in the Dictionaries tab.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada sumber frekuensi yang dimuat — batas ini diabaikan. Tambahkan sumber frekuensi di tab Kamus.</translation>
     </message>
     <message>
         <source>Known Words Database</source>
@@ -2877,7 +2881,7 @@ Kamus tidak dihapus.</translation>
     </message>
     <message>
         <source>Text file with one word per line to force-include, bypassing frequency, script, length and other filters. A word must still have a dictionary entry and not already be in Anki or your known-words list.</source>
-        <translation type="unfinished" />
+        <translation>Berkas teks dengan satu kata per baris untuk dipaksa disertakan, melewati filter frekuensi, aksara, panjang, dan lainnya. Kata tetap harus memiliki entri kamus dan belum ada di Anki atau daftar kata yang dikenal Anda.</translation>
     </message>
     <message>
         <source>Enable Whitelist</source>
@@ -3029,19 +3033,19 @@ Kamus tidak dihapus.</translation>
     </message>
     <message>
         <source>Reading</source>
-        <translation type="unfinished">Cara Baca</translation>
+        <translation>Cara Baca</translation>
     </message>
     <message>
         <source>Off</source>
-        <translation type="unfinished" />
+        <translation>Mati</translation>
     </message>
     <message>
         <source>Minimum Word Occurrences</source>
-        <translation type="unfinished" />
+        <translation>Kemunculan Kata Minimum</translation>
     </message>
     <message>
         <source>Minimum number of times a word must appear in a book or volume to be mined. 1 = no minimum (filter off).</source>
-        <translation type="unfinished" />
+        <translation>Jumlah minimum kemunculan kata dalam buku atau volume agar bisa di-mining. 1 = tanpa minimum (filter mati).</translation>
     </message>
     <message>
         <source>Card Formatting</source>
@@ -3067,7 +3071,7 @@ Kamus tidak dihapus.</translation>
     <name>FrequencyImportFlow</name>
     <message>
         <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
-        <translation type="unfinished" />
+        <translation> Ini adalah sumber berbasis kata; label tingkatnya tampil di kartu tetapi tidak memengaruhi pemfilteran peringkat frekuensi.</translation>
     </message>
     <message>
         <source>Choose frequency source</source>
@@ -3291,7 +3295,7 @@ Sumber frekuensi tidak dihapus.</translation>
     <name>MainWindow</name>
     <message>
         <source>Video</source>
-        <translation type="unfinished">Video</translation>
+        <translation>Video</translation>
     </message>
     <message>
         <source>Deck Builder</source>
@@ -3303,7 +3307,7 @@ Sumber frekuensi tidak dihapus.</translation>
     </message>
     <message>
         <source>Reading</source>
-        <translation type="unfinished">Cara Baca</translation>
+        <translation>Bacaan</translation>
     </message>
     <message>
         <source>Analytics</source>
@@ -3311,7 +3315,7 @@ Sumber frekuensi tidak dihapus.</translation>
     </message>
     <message>
         <source>Tools</source>
-        <translation type="unfinished" />
+        <translation>Alat</translation>
     </message>
     <message>
         <source>Settings</source>
@@ -3415,7 +3419,15 @@ Sumber frekuensi tidak dihapus.</translation>
 Close Anki's card browser and any open note editor first — editing an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation type="unfinished" />
+        <translation>Terapkan kembali gaya bawaan terbaru ke kartu hasil mining Anda agar cocok dengan yang baru. Aman untuk dijalankan ulang; ini tidak pernah menghapus konten kartu.
+
+Tutup peramban kartu Anki dan editor catatan yang terbuka terlebih dahulu — menyunting catatan yang terbuka dapat kehilangan suntingan yang belum disimpan.
+
+Lanjutkan?</translation>
+    </message>
+    <message>
+        <source>Cannot start restyle — Anki fields are misconfigured: %1</source>
+        <translation>Tidak dapat memulai penataan ulang — bidang Anki salah konfigurasi: %1</translation>
     </message>
     <message>
         <source>Restyling mined cards…</source>
@@ -3431,7 +3443,7 @@ Continue?</source>
     </message>
     <message>
         <source>Restyled %1 card(s). (%2 scanned; %3 already up to date.)</source>
-        <translation type="unfinished" />
+        <translation>Menata ulang %1 kartu. (%2 dipindai; %3 sudah terkini.)</translation>
     </message>
     <message>
         <source>Restyle failed</source>
@@ -3466,6 +3478,10 @@ Continue?</source>
 %1</translation>
     </message>
     <message>
+        <source>Anki note-type fields are misconfigured; check Settings.</source>
+        <translation>Bidang tipe catatan Anki salah konfigurasi; periksa Pengaturan.</translation>
+    </message>
+    <message>
         <source>Validation already running</source>
         <translation>Validasi sudah berjalan</translation>
     </message>
@@ -3491,15 +3507,15 @@ Continue?</source>
     </message>
     <message>
         <source>Manga</source>
-        <translation type="unfinished" />
+        <translation>Manga</translation>
     </message>
     <message>
         <source>Novels</source>
-        <translation type="unfinished" />
+        <translation>Novel</translation>
     </message>
     <message>
         <source>Subtitles</source>
-        <translation type="unfinished">Subtitel</translation>
+        <translation>Subtitel</translation>
     </message>
     <message>
         <source>Generate</source>
@@ -3511,15 +3527,15 @@ Continue?</source>
     </message>
     <message>
         <source>Condense</source>
-        <translation type="unfinished" />
+        <translation>Padatkan</translation>
     </message>
     <message>
         <source>Single</source>
-        <translation type="unfinished" />
+        <translation>Tunggal</translation>
     </message>
     <message>
         <source>Batch</source>
-        <translation type="unfinished" />
+        <translation>Batch</translation>
     </message>
     <message>
         <source>YouTube</source>
@@ -3529,27 +3545,27 @@ Continue?</source>
     <name>MediaExtractorService</name>
     <message>
         <source>Extracting media</source>
-        <translation type="unfinished" />
+        <translation>Mengekstrak media</translation>
     </message>
     <message>
         <source>Extracting media: %1</source>
-        <translation type="unfinished" />
+        <translation>Mengekstrak media: %1</translation>
     </message>
     <message>
         <source>audio extraction failed</source>
-        <translation type="unfinished" />
+        <translation>ekstraksi audio gagal</translation>
     </message>
     <message>
         <source>No audio: %1</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada audio: %1</translation>
     </message>
     <message>
         <source>No screenshot: %1</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada tangkapan layar: %1</translation>
     </message>
     <message>
         <source>media extraction failed — see log</source>
-        <translation type="unfinished" />
+        <translation>ekstraksi media gagal — lihat log</translation>
     </message>
 </context><context>
     <name>MediaSettingsPanel</name>
@@ -3846,6 +3862,10 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation>Selesai</translation>
     </message>
     <message>
+        <source>Error</source>
+        <translation>Kesalahan</translation>
+    </message>
+    <message>
         <source>No video folder selected</source>
         <translation>Tidak ada folder video yang dipilih</translation>
     </message>
@@ -3873,7 +3893,7 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     <name>QueueMiningProgressAdapter</name>
     <message>
         <source>Complete</source>
-        <translation type="unfinished">Selesai</translation>
+        <translation>Selesai</translation>
     </message>
 </context><context>
     <name>QueuePanel</name>
@@ -3965,303 +3985,303 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     <name>ReadingMangaTab</name>
     <message>
         <source>Review words before mining</source>
-        <translation type="unfinished">Tinjau kata sebelum mining</translation>
+        <translation>Tinjau kata sebelum mining</translation>
     </message>
     <message>
         <source>Show the word-selection popup for each volume before creating cards.</source>
-        <translation type="unfinished" />
+        <translation>Tampilkan popup pemilihan kata untuk setiap volume sebelum membuat kartu.</translation>
     </message>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Progres</translation>
+        <translation>Progres</translation>
     </message>
     <message>
         <source>Manga</source>
-        <translation type="unfinished" />
+        <translation>Manga</translation>
     </message>
     <message>
         <source>Folder:</source>
-        <translation type="unfinished" />
+        <translation>Folder:</translation>
     </message>
     <message>
         <source>A folder with one manga volume, or a series folder of many volumes.</source>
-        <translation type="unfinished" />
+        <translation>Folder berisi satu volume manga, atau folder seri berisi banyak volume.</translation>
     </message>
     <message>
         <source>Mine</source>
-        <translation type="unfinished">Mining</translation>
+        <translation>Mining</translation>
     </message>
     <message>
         <source>Mine the selected folder's volume(s) into Anki cards.</source>
-        <translation type="unfinished" />
+        <translation>Mining volume folder yang dipilih menjadi kartu Anki.</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Batal</translation>
+        <translation>Batal</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
-        <translation type="unfinished">Batalkan proses yang aktif.</translation>
+        <translation>Batalkan proses yang aktif.</translation>
     </message>
     <message>
         <source>Novels are mined in the Novels tab.</source>
-        <translation type="unfinished" />
+        <translation>Novel di-mining di tab Novel.</translation>
     </message>
     <message>
         <source>Subtitle files are mined in the Subtitles tab.</source>
-        <translation type="unfinished" />
+        <translation>Berkas subtitel di-mining di tab Subtitel.</translation>
     </message>
     <message>
         <source>Select a manga folder first.</source>
-        <translation type="unfinished" />
+        <translation>Pilih folder manga terlebih dahulu.</translation>
     </message>
     <message>
         <source>Starting…</source>
-        <translation type="unfinished" />
+        <translation>Memulai…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Membatalkan…</translation>
+        <translation>Membatalkan…</translation>
     </message>
     <message>
         <source>Volume %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>Volume %1/%2: %3</translation>
     </message>
     <message>
         <source>Mined %1: %2 cards.</source>
-        <translation type="unfinished">Selesai mining %1: %2 kartu.</translation>
+        <translation>Selesai mining %1: %2 kartu.</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
-        <translation type="unfinished">Gagal %1: %2.</translation>
+        <translation>Gagal %1: %2.</translation>
     </message>
     <message>
         <source>Done: %1 succeeded, %2 failed.</source>
-        <translation type="unfinished" />
+        <translation>Selesai: %1 berhasil, %2 gagal.</translation>
     </message>
 </context><context>
     <name>ReadingNovelsTab</name>
     <message>
         <source>Review words before mining</source>
-        <translation type="unfinished">Tinjau kata sebelum mining</translation>
+        <translation>Tinjau kata sebelum mining</translation>
     </message>
     <message>
         <source>Show the word-selection popup before creating cards.</source>
-        <translation type="unfinished" />
+        <translation>Tampilkan popup pemilihan kata sebelum membuat kartu.</translation>
     </message>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Progres</translation>
+        <translation>Progres</translation>
     </message>
     <message>
         <source>Novel</source>
-        <translation type="unfinished" />
+        <translation>Novel</translation>
     </message>
     <message>
         <source>Book File:</source>
-        <translation type="unfinished" />
+        <translation>Berkas Buku:</translation>
     </message>
     <message>
         <source>Books</source>
-        <translation type="unfinished" />
+        <translation>Buku</translation>
     </message>
     <message>
         <source>Select an .epub or .txt book to mine.</source>
-        <translation type="unfinished" />
+        <translation>Pilih buku .epub atau .txt untuk di-mining.</translation>
     </message>
     <message>
         <source>Mine</source>
-        <translation type="unfinished">Mining</translation>
+        <translation>Mining</translation>
     </message>
     <message>
         <source>Mine the selected book into Anki cards.</source>
-        <translation type="unfinished" />
+        <translation>Mining buku yang dipilih menjadi kartu Anki.</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Batal</translation>
+        <translation>Batal</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
-        <translation type="unfinished">Batalkan proses yang aktif.</translation>
+        <translation>Batalkan proses yang aktif.</translation>
     </message>
     <message>
         <source>Manga is mined in the Manga tab.</source>
-        <translation type="unfinished" />
+        <translation>Manga di-mining di tab Manga.</translation>
     </message>
     <message>
         <source>Subtitle files are mined in the Subtitles tab.</source>
-        <translation type="unfinished" />
+        <translation>Berkas subtitel di-mining di tab Subtitel.</translation>
     </message>
     <message>
         <source>Select a valid .epub or .txt book first.</source>
-        <translation type="unfinished" />
+        <translation>Pilih buku .epub atau .txt yang valid terlebih dahulu.</translation>
     </message>
     <message>
         <source>Starting…</source>
-        <translation type="unfinished" />
+        <translation>Memulai…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Membatalkan…</translation>
+        <translation>Membatalkan…</translation>
     </message>
     <message>
         <source>Mining: %1</source>
-        <translation type="unfinished" />
+        <translation>Mining: %1</translation>
     </message>
     <message>
         <source>Mined %1: %2 cards.</source>
-        <translation type="unfinished">Selesai mining %1: %2 kartu.</translation>
+        <translation>Selesai mining %1: %2 kartu.</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
-        <translation type="unfinished">Gagal %1: %2.</translation>
+        <translation>Gagal %1: %2.</translation>
     </message>
 </context><context>
     <name>ReadingSubtitlesTab</name>
     <message>
         <source>Review words before mining</source>
-        <translation type="unfinished">Tinjau kata sebelum mining</translation>
+        <translation>Tinjau kata sebelum mining</translation>
     </message>
     <message>
         <source>Show the word-selection popup for each file before creating cards.</source>
-        <translation type="unfinished" />
+        <translation>Tampilkan popup pemilihan kata untuk setiap berkas sebelum membuat kartu.</translation>
     </message>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Progres</translation>
+        <translation>Progres</translation>
     </message>
     <message>
         <source>Subtitle Files</source>
-        <translation type="unfinished" />
+        <translation>Berkas Subtitel</translation>
     </message>
     <message>
         <source>Mines subtitle files as text — no screenshots or audio extracted from video.</source>
-        <translation type="unfinished" />
+        <translation>Mining berkas subtitel sebagai teks — tidak ada tangkapan layar atau audio yang diekstrak dari video.</translation>
     </message>
     <message>
         <source>Subtitle files to mine, one card run per file, in list order.</source>
-        <translation type="unfinished" />
+        <translation>Berkas subtitel untuk di-mining, satu proses kartu per berkas, sesuai urutan daftar.</translation>
     </message>
     <message>
         <source>Add Files…</source>
-        <translation type="unfinished" />
+        <translation>Tambah Berkas…</translation>
     </message>
     <message>
         <source>Add subtitle files (.srt, .ass, .ssa, .vtt) to the list.</source>
-        <translation type="unfinished" />
+        <translation>Tambahkan berkas subtitel (.srt, .ass, .ssa, .vtt) ke daftar.</translation>
     </message>
     <message>
         <source>Remove Selected</source>
-        <translation type="unfinished">Hapus yang Dipilih</translation>
+        <translation>Hapus yang Dipilih</translation>
     </message>
     <message>
         <source>Clear</source>
-        <translation type="unfinished">Bersihkan</translation>
+        <translation>Bersihkan</translation>
     </message>
     <message>
         <source>Mine</source>
-        <translation type="unfinished">Mining</translation>
+        <translation>Mining</translation>
     </message>
     <message>
         <source>Mine the listed subtitle files into Anki cards.</source>
-        <translation type="unfinished" />
+        <translation>Mining berkas subtitel yang terdaftar menjadi kartu Anki.</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Batal</translation>
+        <translation>Batal</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
-        <translation type="unfinished">Batalkan proses yang aktif.</translation>
+        <translation>Batalkan proses yang aktif.</translation>
     </message>
     <message>
         <source>Add Subtitle Files</source>
-        <translation type="unfinished" />
+        <translation>Tambah Berkas Subtitel</translation>
     </message>
     <message>
         <source>Subtitles</source>
-        <translation type="unfinished">Subtitel</translation>
+        <translation>Subtitel</translation>
     </message>
     <message>
         <source>Manga is mined in the Manga tab.</source>
-        <translation type="unfinished" />
+        <translation>Manga di-mining di tab Manga.</translation>
     </message>
     <message>
         <source>Novels are mined in the Novels tab.</source>
-        <translation type="unfinished" />
+        <translation>Novel di-mining di tab Novel.</translation>
     </message>
     <message>
         <source>Add at least one subtitle file first.</source>
-        <translation type="unfinished" />
+        <translation>Tambahkan setidaknya satu berkas subtitel terlebih dahulu.</translation>
     </message>
     <message>
         <source>File not found: %1</source>
-        <translation type="unfinished" />
+        <translation>Berkas tidak ditemukan: %1</translation>
     </message>
     <message>
         <source>Starting…</source>
-        <translation type="unfinished" />
+        <translation>Memulai…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Membatalkan…</translation>
+        <translation>Membatalkan…</translation>
     </message>
     <message>
         <source>File %1/%2: %3</source>
-        <translation type="unfinished" />
+        <translation>Berkas %1/%2: %3</translation>
     </message>
     <message>
         <source>Mined %1: %2 cards.</source>
-        <translation type="unfinished">Selesai mining %1: %2 kartu.</translation>
+        <translation>Selesai mining %1: %2 kartu.</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
-        <translation type="unfinished">Gagal %1: %2.</translation>
+        <translation>Gagal %1: %2.</translation>
     </message>
     <message>
         <source>Finished %1 subtitle files.</source>
-        <translation type="unfinished" />
+        <translation>Menyelesaikan %1 berkas subtitel.</translation>
     </message>
 </context><context>
     <name>ReadingTab</name>
     <message>
         <source>Mining unavailable — services not initialized.</source>
-        <translation type="unfinished">Mining tidak tersedia — layanan belum diinisialisasi.</translation>
+        <translation>Mining tidak tersedia — layanan belum diinisialisasi.</translation>
     </message>
     <message>
         <source>%1 run starting — %2 items.</source>
-        <translation type="unfinished">Proses %1 dimulai — %2 item.</translation>
+        <translation>Proses %1 dimulai — %2 item.</translation>
     </message>
     <message>
         <source>Mine</source>
-        <translation type="unfinished">Mining</translation>
+        <translation>Mining</translation>
     </message>
     <message>
         <source>Could not process %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Tidak dapat memproses %1: %2</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Dibatalkan</translation>
+        <translation>Dibatalkan</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>Gagal — lihat log</translation>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 kartu dibuat</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>
     <message>
         <source>Download Blocked</source>
-        <translation type="unfinished" />
+        <translation>Unduhan Diblokir</translation>
     </message>
     <message>
         <source>A mining run is in progress. Stop it before downloading resources.</source>
-        <translation type="unfinished" />
+        <translation>Proses mining sedang berjalan. Hentikan sebelum mengunduh sumber daya.</translation>
     </message>
     <message>
         <source>Preparing download…</source>
@@ -4293,11 +4313,11 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     </message>
     <message>
         <source>   Replaced older copy: %1</source>
-        <translation type="unfinished" />
+        <translation>   Mengganti salinan lama: %1</translation>
     </message>
     <message>
         <source>   Could not remove older copy: %1 — remove it via Settings → Dictionaries</source>
-        <translation type="unfinished" />
+        <translation>   Tidak dapat menghapus salinan lama: %1 — hapus melalui Pengaturan → Kamus</translation>
     </message>
     <message>
         <source>✗ %1 — %2
@@ -4406,6 +4426,10 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation>Hapus %1 kartu dari Anki? Tindakan ini tidak dapat diurungkan.</translation>
     </message>
     <message>
+        <source>Undoing…</source>
+        <translation>Mengurungkan…</translation>
+    </message>
+    <message>
         <source>Undone (%1 cards deleted)</source>
         <translation>Diurungkan (%1 kartu dihapus)</translation>
     </message>
@@ -4453,7 +4477,7 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     </message>
     <message>
         <source>UI</source>
-        <translation type="unfinished" />
+        <translation>UI</translation>
     </message>
     <message>
         <source>Check for updates on startup</source>
@@ -4465,19 +4489,19 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     </message>
     <message>
         <source>Export Settings…</source>
-        <translation type="unfinished" />
+        <translation>Ekspor Pengaturan…</translation>
     </message>
     <message>
         <source>Save a portable settings file (machine-specific paths and resources excluded).</source>
-        <translation type="unfinished" />
+        <translation>Simpan berkas pengaturan portabel (jalur dan sumber daya spesifik mesin dikecualikan).</translation>
     </message>
     <message>
         <source>Import Settings…</source>
-        <translation type="unfinished" />
+        <translation>Impor Pengaturan…</translation>
     </message>
     <message>
         <source>Apply settings from an exported file; anything not in the file is kept.</source>
-        <translation type="unfinished" />
+        <translation>Terapkan pengaturan dari berkas yang diekspor; apa pun yang tidak ada di berkas tetap dipertahankan.</translation>
     </message>
     <message>
         <source>Updating yt-dlp…</source>
@@ -4497,19 +4521,19 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     </message>
     <message>
         <source>dictionary folder (Dictionaries)</source>
-        <translation type="unfinished" />
+        <translation>folder kamus (Kamus)</translation>
     </message>
     <message>
         <source>cookies file (YouTube)</source>
-        <translation type="unfinished" />
+        <translation>berkas cookies (YouTube)</translation>
     </message>
     <message>
         <source>subtitle regex (Filtering)</source>
-        <translation type="unfinished" />
+        <translation>regex subtitel (Pemfilteran)</translation>
     </message>
     <message>
         <source>⚠ Saved — kept previous: %1</source>
-        <translation type="unfinished" />
+        <translation>⚠ Disimpan — mempertahankan sebelumnya: %1</translation>
     </message>
     <message>
         <source>✓ Saved</source>
@@ -4517,55 +4541,69 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     </message>
     <message>
         <source>Export Settings</source>
-        <translation type="unfinished" />
+        <translation>Ekspor Pengaturan</translation>
     </message>
     <message>
         <source>JSON Files (*.json);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Berkas JSON (*.json);;Semua Berkas (*)</translation>
     </message>
     <message>
         <source>Export Failed</source>
-        <translation type="unfinished">Ekspor Gagal</translation>
+        <translation>Ekspor Gagal</translation>
     </message>
     <message>
         <source>Could not write %1:
 %2</source>
-        <translation type="unfinished" />
+        <translation>Tidak dapat menulis %1:
+%2</translation>
     </message>
     <message>
         <source>Settings Exported</source>
-        <translation type="unfinished" />
+        <translation>Pengaturan Diekspor</translation>
     </message>
     <message>
         <source>Portable settings written to %1.</source>
-        <translation type="unfinished" />
+        <translation>Pengaturan portabel ditulis ke %1.</translation>
     </message>
     <message>
         <source>Import Settings</source>
-        <translation type="unfinished" />
+        <translation>Impor Pengaturan</translation>
     </message>
     <message>
         <source>Import Settings?</source>
-        <translation type="unfinished" />
+        <translation>Impor Pengaturan?</translation>
     </message>
     <message>
         <source>Apply settings from %1?
 
 Imported values override your current settings; anything not in the file is kept.</source>
-        <translation type="unfinished" />
+        <translation>Terapkan pengaturan dari %1?
+
+Nilai yang diimpor menggantikan pengaturan Anda saat ini; apa pun yang tidak ada di berkas tetap dipertahankan.</translation>
     </message>
     <message>
         <source>Import Failed</source>
-        <translation type="unfinished">Impor Gagal</translation>
+        <translation>Impor Gagal</translation>
     </message>
     <message>
         <source>Could not import %1:
 %2</source>
-        <translation type="unfinished" />
+        <translation>Tidak dapat mengimpor %1:
+%2</translation>
+    </message>
+    <message>
+        <source>Invalid Subtitle Regex</source>
+        <translation>Regex Subtitel Tidak Valid</translation>
+    </message>
+    <message>
+        <source>The imported subtitle regex filter is invalid and has been disabled:
+%1</source>
+        <translation>Filter regex subtitel yang diimpor tidak valid dan telah dinonaktifkan:
+%1</translation>
     </message>
     <message>
         <source>✓ Imported</source>
-        <translation type="unfinished" />
+        <translation>✓ Diimpor</translation>
     </message>
     <message>
         <source>Importing pitch accent dictionary…</source>
@@ -4777,15 +4815,15 @@ Imported values override your current settings; anything not in the file is kept
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Dibatalkan</translation>
+        <translation>Dibatalkan</translation>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 kartu dibuat</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>Gagal — lihat log</translation>
     </message>
 </context><context>
     <name>StatusBarWidget</name>
@@ -4997,7 +5035,7 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
     </message>
     <message>
         <source>Complete — %1 files processed</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 berkas diproses</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -5319,7 +5357,7 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
     </message>
     <message>
         <source>Complete — %1 files processed</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 berkas diproses</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -5327,6 +5365,10 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
     </message>
 </context><context>
     <name>SubtitleRetimeWorker</name>
+    <message>
+        <source>Output equals input; enable Overwrite to retime in place</source>
+        <translation>Keluaran sama dengan masukan; aktifkan Timpa untuk mengatur ulang waktu di tempat</translation>
+    </message>
     <message>
         <source>Skipped, exists</source>
         <translation>Dilewati, sudah ada</translation>
@@ -5347,27 +5389,27 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
     <name>SubtitleTracksDialog</name>
     <message>
         <source>Subtitle Track</source>
-        <translation type="unfinished" />
+        <translation>Trek Subtitel</translation>
     </message>
     <message>
         <source>No subtitle tracks found in this file.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada trek subtitel yang ditemukan dalam berkas ini.</translation>
     </message>
     <message>
         <source>This file has only one subtitle track.</source>
-        <translation type="unfinished" />
+        <translation>Berkas ini hanya memiliki satu trek subtitel.</translation>
     </message>
     <message>
         <source>Auto-detect (currently: Track %1 — %2)</source>
-        <translation type="unfinished">Deteksi otomatis (saat ini: Trek %1 — %2)</translation>
+        <translation>Deteksi otomatis (saat ini: Trek %1 — %2)</translation>
     </message>
     <message>
         <source>Auto-detect (no Japanese subtitle track found — will use first text track)</source>
-        <translation type="unfinished" />
+        <translation>Deteksi otomatis (tidak ada trek subtitel Jepang yang ditemukan — akan menggunakan trek teks pertama)</translation>
     </message>
     <message>
         <source>Apply</source>
-        <translation type="unfinished">Terapkan</translation>
+        <translation>Terapkan</translation>
     </message>
 </context><context>
     <name>SubtitleViewer</name>
@@ -5763,11 +5805,11 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
     </message>
     <message>
         <source>No page image for this word</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada gambar halaman untuk kata ini</translation>
     </message>
     <message>
         <source>Could not load page image</source>
-        <translation type="unfinished" />
+        <translation>Tidak dapat memuat gambar halaman</translation>
     </message>
     <message>
         <source>Copy lemma</source>
@@ -5785,11 +5827,11 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
     <name>YouTubeFetcher</name>
     <message>
         <source>Downloading video</source>
-        <translation type="unfinished" />
+        <translation>Mengunduh video</translation>
     </message>
     <message>
         <source>Merging audio and video</source>
-        <translation type="unfinished" />
+        <translation>Menggabungkan audio dan video</translation>
     </message>
 </context><context>
     <name>YouTubeQueueItemWidget</name>
@@ -5954,6 +5996,10 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>Di-mining %1: %2 kartu (percobaan=%3).</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>Dibatalkan %1.</translation>
+    </message>
+    <message>
         <source>Failed %1: %2 (attempts=%3).</source>
         <translation>Gagal %1: %2 (percobaan=%3).</translation>
     </message>
@@ -5963,19 +6009,19 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Dibatalkan</translation>
+        <translation>Dibatalkan</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished" />
+        <translation>Gagal — lihat log</translation>
     </message>
     <message>
         <source>Complete — %1 succeeded, %2 failed</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 berhasil, %2 gagal</translation>
     </message>
     <message>
         <source>Complete — %1 succeeded</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 berhasil</translation>
     </message>
 </context><context>
     <name>ZipImportFlow</name>
@@ -6035,11 +6081,11 @@ Lanjutkan impor?</translation>
     <name>_FreqRow</name>
     <message>
         <source>word-based</source>
-        <translation type="unfinished" />
+        <translation>berbasis kata</translation>
     </message>
     <message>
         <source>Level labels are shown on the card but not used for frequency filtering.</source>
-        <translation type="unfinished" />
+        <translation>Label tingkat ditampilkan di kartu tetapi tidak digunakan untuk pemfilteran frekuensi.</translation>
     </message>
     <message>
         <source>%1 entries</source>
