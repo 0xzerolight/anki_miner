@@ -21,6 +21,7 @@ from anki_miner.services.ja_normalize import (
 )
 from anki_miner.services.morphology import (
     TokenInclusionRule,
+    apply_special_readings,
     extract_lemma,
     extract_reading,
     iter_token_spans,
@@ -307,7 +308,7 @@ class SubtitleParserService:
         *,
         highlight_end: int,
         text: str,
-        raw_tokens: list,
+        display_tokens: list,
         start_time: float,
         end_time: float,
         duration: float,
@@ -397,7 +398,7 @@ class SubtitleParserService:
             # Bold the full inflected form (verb/adjective + auxiliary
             # chain), not just the stem morpheme: 蒔いた, not 蒔い.
             sentence_bolded = wrap_target_plain(text, tok_start, highlight_end)
-            sentence_furigana_bolded = wrap_target_furigana_from_tokens(text, raw_tokens, tok_start, highlight_end)
+            sentence_furigana_bolded = wrap_target_furigana_from_tokens(text, display_tokens, tok_start, highlight_end)
         else:
             sentence_bolded = ""
             sentence_furigana_bolded = ""
@@ -476,11 +477,14 @@ class SubtitleParserService:
         if collect_index and not line_lemmas:
             return [], None
 
-        # Compute sentence-level furigana/reading ONCE for this line using the
-        # already-parsed raw_tokens; shared by the LineLemmas entry and every
-        # word emitted from this line.
-        sentence_furigana = generate_furigana_from_tokens(raw_tokens)
-        sentence_reading = generate_reading_from_tokens(raw_tokens)
+        # Compute sentence-level furigana/reading ONCE for this line. Apply the
+        # honorific-kinship reading override (お兄ちゃん → にい) to the raw token
+        # stream first so the sentence furigana/reading and the bold variant all
+        # agree with the Expression field (which is corrected upstream in the
+        # merge pass). Surfaces are unchanged, so span/offset math is unaffected.
+        display_tokens = apply_special_readings(raw_tokens)
+        sentence_furigana = generate_furigana_from_tokens(display_tokens)
+        sentence_reading = generate_reading_from_tokens(display_tokens)
 
         line_lemmas_entry: LineLemmas | None = None
         if collect_index:
@@ -507,7 +511,7 @@ class SubtitleParserService:
                 tok_end,
                 highlight_end=highlight_end,
                 text=text,
-                raw_tokens=raw_tokens,
+                display_tokens=display_tokens,
                 start_time=start_time,
                 end_time=end_time,
                 duration=duration,
@@ -579,10 +583,12 @@ class SubtitleParserService:
             # Sentence-level furigana/reading depend only on ``text`` — compute
             # once per line and share across every word emitted from this line.
             # Use raw_tokens (pre-merge tagger output) so the sentence is
-            # tokenized only once per line. raw_tokens == tagger(text) so
-            # output is byte-identical to generate_furigana(text, self.tagger).
-            sentence_furigana = generate_furigana_from_tokens(raw_tokens)
-            sentence_reading = generate_reading_from_tokens(raw_tokens)
+            # tokenized only once per line, with the honorific-kinship reading
+            # override applied (お兄ちゃん → にい); surfaces unchanged so span math
+            # is unaffected. Matches the Expression field's upstream merge fix.
+            display_tokens = apply_special_readings(raw_tokens)
+            sentence_furigana = generate_furigana_from_tokens(display_tokens)
+            sentence_reading = generate_reading_from_tokens(display_tokens)
 
             # Spans come from the shared locator (Issue #20 / T-38 — see
             # _iter_token_spans for the cursor+find and drop-rule rationale).
@@ -597,7 +603,7 @@ class SubtitleParserService:
                     tok_end,
                     highlight_end=highlight_end,
                     text=text,
-                    raw_tokens=raw_tokens,
+                    display_tokens=display_tokens,
                     start_time=start_time,
                     end_time=end_time,
                     duration=duration,

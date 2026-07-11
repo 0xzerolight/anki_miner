@@ -31,6 +31,85 @@ _PREFIX_WHITELIST = frozenset({"無", "不", "非", "反", "超", "未", "新", 
 _VERB_NOMINALIZER_SUFFIXES = frozenset({"方", "手", "様"})
 
 
+# Honorific-kinship special readings. UniDic tokenizes お兄ちゃん as
+# お(接頭辞) + 兄(名詞, kana=アニ) + ちゃん(接尾辞・名詞的), so the noun-suffix
+# merge concatenates the *isolated* head kana (アニ) with the suffix — yielding
+# あにちゃん instead of the contextual にいちゃん. The head only takes the special
+# reading when immediately followed by one of the licensing kinship honorifics;
+# standalone 兄 keeps アニ. Katakana to match feature.kana. Licensing set
+# deliberately EXCLUDES 上/君/貴/親 (兄上=あにうえ, 兄貴=あにき, 父親=ちちおや keep the
+# plain reading — those suffixes are not honorific address forms).
+_HONORIFIC_SUFFIXES = frozenset({"ちゃん", "さん", "さま", "様"})
+_KINSHIP_HEAD_READINGS: dict[str, tuple[str, frozenset[str]]] = {
+    "兄": ("ニイ", _HONORIFIC_SUFFIXES),  # お兄ちゃん にい (probe: 兄+ちゃん → アニチャン)
+    "姉": ("ネエ", _HONORIFIC_SUFFIXES),  # お姉ちゃん ねえ (probe: 姉+ちゃん → アネチャン)
+    "父": ("トウ", _HONORIFIC_SUFFIXES),  # お父さん とう (probe: 父+さん → チチサン)
+    "母": ("カア", _HONORIFIC_SUFFIXES),  # お母さん かあ (probe: 母+さん → ハハサン)
+}
+# Probe-confirmed NON-members (already correct, must NOT be added): 娘さん=むすめさん,
+# 息子さん=むすこさん, おじさん=おじさん, じいちゃん=じいちゃん, 婆ちゃん=ばあちゃん.
+
+
+def resolve_special_reading(head_surface: str, next_surface: str | None) -> str | None:
+    """Corrected katakana head reading for a kinship head licensed by its suffix.
+
+    Returns the special katakana reading of ``head_surface`` (兄/姉/父/母) when it
+    is immediately followed by a licensing honorific suffix (``next_surface`` in
+    ちゃん/さん/さま/様); otherwise ``None`` (the caller keeps the UniDic reading).
+    Pure and data-driven — the single choke point shared by the compound-merge
+    pass (Expression/audio/frequency) and ``apply_special_readings`` (sentence
+    furigana/reading), so every layer agrees on にい/ねえ/とう/かあ.
+    """
+    entry = _KINSHIP_HEAD_READINGS.get(head_surface)
+    if entry is None or next_surface is None:
+        return None
+    special_kana, licensing = entry
+    return special_kana if next_surface in licensing else None
+
+
+def apply_special_readings(tokens: list) -> list:
+    """Return ``tokens`` with kinship-head kana overridden per the special table.
+
+    Scans adjacent RAW tokens (never merged): where a head is licensed by the
+    next token's surface, the head is replaced by a ``SyntheticToken`` carrying
+    the special katakana reading. Surfaces are left unchanged, so downstream
+    ``str.find`` cursoring and bold-offset math (wrap_target_furigana_from_tokens)
+    stay byte-identical. All other tokens pass through by identity. Used for the
+    Sentence furigana/reading/bold path, where 兄 is still an isolated token
+    (the Expression path is corrected upstream in ``_merge_noun_suffixes``).
+    """
+    if not tokens:
+        return tokens
+    out: list = []
+    n = len(tokens)
+    for i, tok in enumerate(tokens):
+        next_surface = tokens[i + 1].surface if i + 1 < n else None
+        try:
+            special = resolve_special_reading(tok.surface, next_surface)
+        except AttributeError:
+            special = None
+        if special is None:
+            out.append(tok)
+            continue
+        try:
+            pos1 = tok.feature.pos1
+            pos2 = tok.feature.pos2
+            lemma = extract_lemma(tok)
+        except AttributeError:
+            out.append(tok)
+            continue
+        out.append(
+            SyntheticToken(
+                surface=tok.surface,
+                pos1=pos1,
+                pos2=pos2,
+                lemma=lemma,
+                kana=special,
+            )
+        )
+    return out
+
+
 class SyntheticToken:
     """Duck-typed token replacement for merged compounds.
 
@@ -292,7 +371,12 @@ def _merge_noun_suffixes(tokens: list) -> list:
                         suffix_kanas.append(t.feature.kana or t.surface)
                     except AttributeError:
                         suffix_kanas.append(t.surface)
-                kana = head_kana + "".join(suffix_kanas)
+                # Honorific-kinship override: 兄+ちゃん must read ニイチャン, not the
+                # concatenated isolated-head アニチャン (see _KINSHIP_HEAD_READINGS).
+                # Licensed by the first suffix in the chain (the adjacent honorific).
+                special_head = resolve_special_reading(head.surface, chain[0].surface)
+                head_kana_final = special_head if special_head is not None else head_kana
+                kana = head_kana_final + "".join(suffix_kanas)
                 try:
                     head_pos2 = head.feature.pos2 or "普通名詞"
                 except AttributeError:

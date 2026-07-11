@@ -12,9 +12,29 @@ import pytest
 from anki_miner.services.morphology import (
     SyntheticToken,
     TokenInclusionRule,
+    apply_special_readings,
     extract_lemma,
+    merge_compound_suffixes,
     mining_base,
+    resolve_special_reading,
 )
+
+
+def _suffix_token(surface, kana):
+    """Kinship honorific suffix token (接尾辞・名詞的), like real UniDic output."""
+    return SimpleNamespace(
+        surface=surface,
+        feature=SimpleNamespace(pos1="接尾辞", pos2="名詞的", lemma=surface, kana=kana),
+    )
+
+
+def _noun_token(surface, kana):
+    """Plain 名詞 head token."""
+    return SimpleNamespace(
+        surface=surface,
+        feature=SimpleNamespace(pos1="名詞", pos2="普通名詞", lemma=surface, kana=kana),
+    )
+
 
 _ALLOWED_POS = frozenset({"名詞", "動詞", "形容詞", "副詞", "形状詞", "代名詞"})
 _EXCLUDED_SUBTYPES = frozenset({"非自立", "数詞", "接尾", "助動詞", "接頭", "固有名詞"})
@@ -198,3 +218,92 @@ class TestMixedKatakanaLoanwordVerbs:
     def test_normal_kanji_verb_still_included(self):
         token = _token("食べ", "動詞", "食べる", "食べる")
         assert self._rule().should_include(token) is True
+
+
+class TestResolveSpecialReading:
+    """Honorific-kinship head reading override (兄/姉/父/母 + ちゃん/さん/さま/様)."""
+
+    @pytest.mark.parametrize(
+        "head,suffix,expected",
+        [
+            ("兄", "ちゃん", "ニイ"),
+            ("兄", "さん", "ニイ"),
+            ("兄", "さま", "ニイ"),
+            ("兄", "様", "ニイ"),
+            ("姉", "ちゃん", "ネエ"),
+            ("姉", "様", "ネエ"),
+            ("父", "さん", "トウ"),
+            ("父", "ちゃん", "トウ"),
+            ("母", "さん", "カア"),
+            ("母", "様", "カア"),
+        ],
+    )
+    def test_licensed_heads_get_special_reading(self, head, suffix, expected):
+        assert resolve_special_reading(head, suffix) == expected
+
+    @pytest.mark.parametrize(
+        "head,suffix",
+        [
+            ("兄", "君"),  # 兄君=あにぎみ — not an honorific address form
+            ("兄", "上"),  # 兄上=あにうえ
+            ("兄", "貴"),  # 兄貴=あにき
+            ("父", "親"),  # 父親=ちちおや
+            ("兄", None),  # no following token
+            ("弟", "ちゃん"),  # not a table head (弟ちゃん not special)
+            ("娘", "さん"),  # 娘さん=むすめさん already correct
+            ("一", "日"),  # not kinship at all
+        ],
+    )
+    def test_unlicensed_pairs_return_none(self, head, suffix):
+        assert resolve_special_reading(head, suffix) is None
+
+
+class TestMergeNounSuffixesSpecialReading:
+    """_merge_noun_suffixes applies the kinship override to the synthetic kana."""
+
+    @pytest.mark.parametrize(
+        "head,head_kana,suffix,suffix_kana,expected",
+        [
+            ("兄", "アニ", "ちゃん", "チャン", "ニイチャン"),
+            ("兄", "アニ", "様", "サマ", "ニイサマ"),
+            ("姉", "アネ", "ちゃん", "チャン", "ネエチャン"),
+            ("父", "チチ", "さん", "サン", "トウサン"),
+            ("母", "ハハ", "さん", "サン", "カアサン"),
+        ],
+    )
+    def test_merged_compound_uses_special_head_kana(self, head, head_kana, suffix, suffix_kana, expected):
+        merged = merge_compound_suffixes([_noun_token(head, head_kana), _suffix_token(suffix, suffix_kana)])
+        assert len(merged) == 1
+        assert merged[0].surface == head + suffix
+        assert merged[0].feature.kana == expected
+
+    def test_non_member_head_keeps_concatenated_kana(self):
+        # 娘さん stays ムスメサン (already correct — 娘 not in the table).
+        merged = merge_compound_suffixes([_noun_token("娘", "ムスメ"), _suffix_token("さん", "サン")])
+        assert merged[0].feature.kana == "ムスメサン"
+
+    def test_standalone_head_untouched(self):
+        # No suffix chain → 兄 keeps its isolated アニ reading.
+        merged = merge_compound_suffixes([_noun_token("兄", "アニ")])
+        assert merged[0].feature.kana == "アニ"
+
+
+class TestApplySpecialReadings:
+    """apply_special_readings overrides only the head kana on the raw stream."""
+
+    def test_overrides_head_kana_surfaces_unchanged(self):
+        prefix = SimpleNamespace(surface="お", feature=SimpleNamespace(pos1="接頭辞", pos2="*", lemma="お", kana="オ"))
+        tokens = [prefix, _noun_token("兄", "アニ"), _suffix_token("ちゃん", "チャン")]
+        out = apply_special_readings(tokens)
+        assert [t.surface for t in out] == ["お", "兄", "ちゃん"]  # surfaces byte-identical
+        assert out[0].feature.kana == "オ"  # prefix untouched
+        assert out[1].feature.kana == "ニイ"  # head overridden
+        assert out[2].feature.kana == "チャン"  # suffix untouched
+
+    def test_no_licensed_head_passes_through_by_identity(self):
+        tokens = [_noun_token("兄", "アニ")]  # standalone, no following suffix
+        out = apply_special_readings(tokens)
+        assert out[0] is tokens[0]
+
+    def test_empty_list(self):
+        assert apply_special_readings([]) == []
