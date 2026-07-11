@@ -66,8 +66,13 @@ class FrequencyImportWorker(CancellableWorker):
         dest_root: Path,
         *,
         source_id: str | None = None,
+        source_name: str | None = None,
     ) -> FrequencyImportWorker:
-        """Build a worker that imports a frequency source file."""
+        """Build a worker that imports a frequency source file.
+
+        ``source_name`` is forwarded so reimport can preserve the existing
+        display name (see ``import_frequency_source``).
+        """
 
         def runner(
             progress_fn: Callable[[int, int, str], None],
@@ -77,6 +82,7 @@ class FrequencyImportWorker(CancellableWorker):
                 input_path,
                 dest_root,
                 source_id=source_id,
+                source_name=source_name,
                 progress=progress_fn,
                 cancel_check=cancel_fn,
             )

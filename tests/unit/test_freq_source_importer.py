@@ -604,3 +604,40 @@ class TestDeriveSourceIdFromZip:
             zf.writestr("Sub/index.json", json.dumps({"title": "T", "revision": "r", "format": 3}))
         with pytest.raises(SetupError, match="re-zip the folder CONTENTS"):
             derive_source_id_from_zip(zip_path)
+
+
+class TestCsvSourceNamePreserved:
+    """CSV imports derive the display name from the filename stem, but an
+    explicit source_name (passed by reimport) overrides it — the fix that keeps
+    reimport from collapsing the label to the generic "source.csv" stem."""
+
+    def _write_csv(self, path: Path) -> Path:
+        path.write_text("猫,5\n犬,12\n", encoding="utf-8")
+        return path
+
+    def test_stem_used_when_no_explicit_name(self, tmp_path: Path) -> None:
+        csv = self._write_csv(tmp_path / "my_ranks.csv")
+        dest = tmp_path / "sources"
+        result = import_frequency_source(csv, dest, source_id="s1")
+        assert result.source_name == "my_ranks"
+        # Authoritative SQLite meta (fresh read, not the sidecar).
+        assert storage.read_meta(dest / "s1" / "index.sqlite")["source_name"] == "my_ranks"
+
+    def test_explicit_source_name_overrides_stem(self, tmp_path: Path) -> None:
+        # Simulate reimport: the persisted copy is the generic "source.csv",
+        # but the caller threads the existing display name through.
+        csv = self._write_csv(tmp_path / "source.csv")
+        dest = tmp_path / "sources"
+        result = import_frequency_source(csv, dest, source_id="legacy-frequency", source_name="Frequency")
+        assert result.source_name == "Frequency"
+        assert storage.read_meta(dest / "legacy-frequency" / "index.sqlite")["source_name"] == "Frequency"
+
+    def test_reimport_roundtrip_preserves_name(self, tmp_path: Path) -> None:
+        # First import from a nicely-named file, then reimport from the generic
+        # persisted copy threading the read-back name — the label survives.
+        dest = tmp_path / "sources"
+        import_frequency_source(self._write_csv(tmp_path / "JPDB.csv"), dest, source_id="s1")
+        existing = storage.read_meta(dest / "s1" / "index.sqlite")["source_name"]
+        assert existing == "JPDB"
+        import_frequency_source(self._write_csv(tmp_path / "source.csv"), dest, source_id="s1", source_name=existing)
+        assert storage.read_meta(dest / "s1" / "index.sqlite")["source_name"] == "JPDB"

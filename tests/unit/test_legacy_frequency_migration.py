@@ -96,3 +96,61 @@ def test_bad_csv_returns_none_and_does_not_crash(base_config: AnkiMinerConfig):
     # No partial source folder was left behind in a state that fakes success.
     legacy_db = base_config.freqs_root / "legacy-frequency" / "index.sqlite"
     assert not legacy_db.exists()
+
+
+class TestRepairLegacyFrequencySourceName:
+    """The startup repair renames the collapsed "source" label to "Frequency"."""
+
+    def _make_legacy_index(self, config: AnkiMinerConfig, name: str, source_id: str = "legacy-frequency"):
+        from anki_miner.services.frequency import storage
+
+        db = config.freqs_root / source_id / "index.sqlite"
+        db.parent.mkdir(parents=True, exist_ok=True)
+        storage.build_index(db, [("猫", None, 5, None)], {"source_name": name, "format": "csv"})
+        return db
+
+    def test_rewrites_collapsed_source_name(self, base_config: AnkiMinerConfig):
+        from anki_miner.services.frequency import storage
+        from anki_miner.services.frequency.legacy_migration import repair_legacy_frequency_source_name
+
+        db = self._make_legacy_index(base_config, "source")
+        repair_legacy_frequency_source_name(base_config)
+        # Authoritative SQLite read (not the sidecar) — repair must be durable.
+        assert storage.read_meta(db)["source_name"] == "Frequency"
+
+    def test_noop_when_name_not_collapsed(self, base_config: AnkiMinerConfig):
+        from anki_miner.services.frequency import storage
+        from anki_miner.services.frequency.legacy_migration import repair_legacy_frequency_source_name
+
+        db = self._make_legacy_index(base_config, "JPDB")
+        repair_legacy_frequency_source_name(base_config)
+        assert storage.read_meta(db)["source_name"] == "JPDB"
+
+    def test_idempotent_across_two_runs(self, base_config: AnkiMinerConfig):
+        from anki_miner.services.frequency import storage
+        from anki_miner.services.frequency.legacy_migration import repair_legacy_frequency_source_name
+
+        db = self._make_legacy_index(base_config, "source")
+        repair_legacy_frequency_source_name(base_config)
+        repair_legacy_frequency_source_name(base_config)
+        assert storage.read_meta(db)["source_name"] == "Frequency"
+
+    def test_missing_index_is_safe(self, base_config: AnkiMinerConfig):
+        from anki_miner.services.frequency.legacy_migration import repair_legacy_frequency_source_name
+
+        # No index on disk — must not raise.
+        repair_legacy_frequency_source_name(base_config)
+
+    def test_runs_even_when_chain_already_populated(self, base_config: AnkiMinerConfig):
+        """The affected population's chain IS populated (migration no-ops), so the
+        repair must fire independently of migrate_legacy_frequency_csv."""
+        from dataclasses import replace
+
+        from anki_miner.config import FreqEntry
+        from anki_miner.services.frequency import storage
+        from anki_miner.services.frequency.legacy_migration import repair_legacy_frequency_source_name
+
+        config = replace(base_config, frequency_chain=(FreqEntry("legacy-frequency"),))
+        db = self._make_legacy_index(config, "source")
+        repair_legacy_frequency_source_name(config)
+        assert storage.read_meta(db)["source_name"] == "Frequency"
