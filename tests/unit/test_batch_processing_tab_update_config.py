@@ -52,3 +52,26 @@ def test_update_config_does_not_touch_in_flight_worker(tab, test_config):
     assert tab.config is new_config
     # ...but the in-flight worker's config is untouched.
     assert worker.config is old_config
+
+
+def test_update_config_reseeds_spinbox_on_persisted_offset_change(tab, test_config):
+    """A persisted subtitle_offset change re-seeds the offset spinbox."""
+    new_config = dataclasses.replace(test_config, subtitle_offset=4.5)
+
+    tab.update_config(new_config)
+
+    assert tab.offset_spinbox.value() == pytest.approx(4.5)
+
+
+def test_update_config_preserves_dialed_offset_when_persisted_unchanged(tab, test_config):
+    """A dialed-in per-session offset survives an unrelated settings save.
+
+    An unrelated config change (theme, deck name) re-fires update_config with an
+    unchanged subtitle_offset; the guard must not wipe the user's live value.
+    """
+    tab.offset_spinbox.setValue(6.0)  # user dials a per-session value
+
+    new_config = dataclasses.replace(test_config, anki_deck_name="unrelated_change")
+    tab.update_config(new_config)
+
+    assert tab.offset_spinbox.value() == pytest.approx(6.0)
