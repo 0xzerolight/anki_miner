@@ -3327,6 +3327,44 @@ class TestGlossaryFetch:
         # style-free (the card-wide <style> only needs to appear once).
         assert not payload.definition.startswith("<style>")
 
+    def test_style_block_tree_shaken_per_card(self, test_config, mock_services, tmp_path, monkeypatch):
+        # Issue #93: the <style> head is witness-selected PER CARD — a card whose
+        # glossary carries an image embeds the images group, a plain stamped-dict
+        # card gets a smaller block — while dictionary CSS is collected once.
+        cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
+        processor = self._build_processor(cfg, mock_services)
+        video, sub = self._seed_happy_path(mock_services, tmp_path)
+
+        words = [_make_word("食べる"), _make_word("飲む")]
+        media = _make_media("taberu")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], media), (words[1], media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat", "1. to drink"]
+        plain = (
+            '<div class="yomitan-glossary"><ol data-count="1">'
+            '<li data-dictionary="X" data-has-styles="">plain</li></ol></div>'
+        )
+        with_image = (
+            '<div class="yomitan-glossary"><ol data-count="1">'
+            '<li data-dictionary="X" data-has-styles=""><img class="gloss-image" src="p.svg"></li></ol></div>'
+        )
+        mock_services["definition_service"].get_glossaries_batch.return_value = [plain, with_image]
+
+        collect = MagicMock(return_value="")
+        monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css", collect)
+
+        processor.process_episode(video, sub)
+
+        collect.assert_called_once()  # dict CSS still collected once per episode
+        card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
+        assert len(card_data) == 2
+        head_plain = card_data[0].extra_fields["glossary"].split("</style>")[0]
+        head_image = card_data[1].extra_fields["glossary"].split("</style>")[0]
+        assert "gloss-image" not in head_plain  # images group shaken off
+        assert "gloss-image" in head_image  # …but embedded where witnessed
+        assert len(head_plain) < len(head_image)
+
     def test_glossary_miss_retries_variant_under_lemma(self, test_config, mock_services, tmp_path, monkeypatch):
         """A variant spelling (殺る) whose glossary misses retries ONCE under the
         canonical lemma (遣る), merged by index; get_glossaries_batch has no
