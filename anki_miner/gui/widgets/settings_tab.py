@@ -212,7 +212,6 @@ class SettingsTab(QWidget):
 
         # Category tabs
         self.tab_widget = QTabWidget()
-        self.tab_widget.setObjectName("settings-tabs")
 
         # Create panels using extracted components
         self.anki_panel = AnkiSettingsPanel()
