@@ -135,6 +135,44 @@ class TestCssWitnesses:
         # The <style> is card-wide: a witness in EITHER miner field counts.
         assert css_witnesses([STAMPED, '<img class="gloss-image">']) == frozenset({"images"})
 
+    def test_plain_glossary_body_drops_gapfill(self):
+        # Issue #93 follow-up: a real unstyled JMdict card carries only
+        # ``data-sc-content="glossary"`` (core-styled) plus content types no
+        # sc-gapfill rule targets (``formsTable``/``antonyms``/``references``) and
+        # ``.gloss-tag`` chips. The OLD coarse ``"data-sc-" in html`` witness kept
+        # the ~4.6 KB group here for nothing; the precise witness must drop it.
+        html = (
+            UNSTAMPED
+            + '<span class="gloss-tag">n</span>'
+            + '<ul class="gloss-sc-ul" data-sc-content="glossary"><li>x</li></ul>'
+            + '<div data-sc-content="antonyms"></div>'
+            + '<table class="gloss-sc-table" data-sc-content="formsTable"></table>'
+        )
+        # ``<table`` still witnesses the generic ``tables`` group (independent) —
+        # the point is that ``sc-gapfill`` is absent.
+        assert "sc-gapfill" not in css_witnesses([html])
+
+    def test_exact_hook_does_not_collide_with_longer_value(self):
+        # The exact-``=`` hooks carry their closing quote, so ``formsTable`` /
+        # ``antonyms`` / a ``gloss-tag`` class must NOT fire ``forms`` / ``antonym``
+        # / ``tag`` (the bug that made a bare-substring witness fire everywhere).
+        html = UNSTAMPED + '<div data-sc-content="formsTable"></div><div data-sc-content="antonyms"></div>'
+        assert css_witnesses([html]) == frozenset({"unstyled-chrome"})
+
+    def test_gapfill_prefix_hook_matches_hyphenated_value(self):
+        # The ``|=`` selectors (``[data-sc-content|="frequency"]`` etc.) match the
+        # value OR a ``value-`` hyphen prefix. Dropping sc-gapfill on
+        # ``frequency-nf01`` would strip a needed style — the forbidden false
+        # negative — so the open-prefix hook must still fire.
+        for value in ("frequency", "frequency-nf01", "pitch-accent-2", "extra-info-note", "attribution-x"):
+            html = UNSTAMPED + f'<span data-sc-content="{value}"></span>'
+            assert "sc-gapfill" in css_witnesses([html]), value
+
+    def test_example_sentence_witnesses_gapfill(self):
+        # A Jitendex-style card keeps the group.
+        html = UNSTAMPED + '<div data-sc-content="example-sentence">…</div>'
+        assert css_witnesses([html]) == frozenset({"unstyled-chrome", "sc-gapfill"})
+
 
 class TestBuildCardStyleBlock:
     def test_wraps_in_single_style_element(self):
@@ -172,7 +210,10 @@ class TestBuildCardStyleBlock:
         stamped_only = build_card_style_block(dict_css="", card_html=STAMPED)
         everything = build_card_style_block(
             dict_css="",
-            card_html=UNSTAMPED + '<i data-sc-content="x">' + '<img class="gloss-image">' + "<table>",
+            # ``info-gloss`` is a REAL sc-gapfill hook — a synthetic value (e.g.
+            # ``data-sc-content="x"``) no longer witnesses the group, so it would
+            # not reach ALL_GROUPS and this equality would silently weaken.
+            card_html=UNSTAMPED + '<i data-sc-content="info-gloss">' + '<img class="gloss-image">' + "<table>",
         )
         assert stamped_only == f"<style>{base_css_variant(frozenset())}</style>"
         assert everything == f"<style>{minified_base_css()}</style>"
