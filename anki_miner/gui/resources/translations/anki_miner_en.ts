@@ -861,6 +861,10 @@ The audio pack was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation type="unfinished" />
     </message>
@@ -2471,11 +2475,11 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Sentence deduplication: removed %1 duplicate-sentence words</source>
+        <source>Cross-episode filter: removed %1 words appearing in fewer than %2 episodes</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Cross-episode filter: removed %1 words appearing in fewer than %2 episodes</source>
+        <source>Sentence deduplication: removed %1 duplicate-sentence words</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3386,6 +3390,10 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Cannot start restyle — Anki fields are misconfigured: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Restyling mined cards…</source>
         <translation type="unfinished" />
     </message>
@@ -3429,6 +3437,10 @@ Continue?</source>
         <source>System validation found issues:
 
 %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki note-type fields are misconfigured; check Settings.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3808,6 +3820,10 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Complete</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Error</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4370,6 +4386,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Undoing…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Undone (%1 cards deleted)</source>
         <translation type="unfinished" />
     </message>
@@ -4525,6 +4545,15 @@ Imported values override your current settings; anything not in the file is kept
     <message>
         <source>Could not import %1:
 %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Invalid Subtitle Regex</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The imported subtitle regex filter is invalid and has been disabled:
+%1</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5291,6 +5320,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
 </context><context>
     <name>SubtitleRetimeWorker</name>
     <message>
+        <source>Output equals input; enable Overwrite to retime in place</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Skipped, exists</source>
         <translation type="unfinished" />
     </message>
@@ -5912,6 +5945,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Mined %1: %2 cards (attempts=%3).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
         <translation type="unfinished" />
     </message>
     <message>
