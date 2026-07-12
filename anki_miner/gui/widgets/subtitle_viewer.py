@@ -34,7 +34,6 @@ class SubtitleViewer(QDialog):
         parent=None,
         *,
         audio_track_override: int | None = None,
-        ffprobe_cmd: str = "ffprobe",
     ):
         """Initialize the subtitle viewer.
 
@@ -44,13 +43,10 @@ class SubtitleViewer(QDialog):
             initial_offset: Initial subtitle offset in seconds
             parent: Optional parent widget
             audio_track_override: Optional 0-indexed audio track to force instead of
-                auto-detecting Japanese. None preserves auto-detect.
-            ffprobe_cmd: ffprobe executable path/literal forwarded to the player for
-                audio-track auto-detection. Defaults to the bare ``"ffprobe"`` literal.
+                auto-detecting Japanese. None preserves auto-detect (mpv track metadata).
         """
         super().__init__(parent)
         self._offset = initial_offset
-        self._ffprobe_cmd = ffprobe_cmd
 
         self.setWindowTitle(self.tr("Subtitle Timing Viewer"))
         self.setMinimumSize(720, 540)
@@ -63,7 +59,6 @@ class SubtitleViewer(QDialog):
             subtitle_entries,
             initial_offset,
             audio_track_override=audio_track_override,
-            ffprobe_cmd=self._ffprobe_cmd,
         )
 
     def _setup_ui(self, initial_offset: float) -> None:

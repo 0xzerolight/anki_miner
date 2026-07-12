@@ -7,7 +7,8 @@
     "skip_asr_smoke": "",
     "skip_whispercpp_smoke": "",
     "ffmpeg_encoders": "",
-    "build_vulkan": "1"
+    "build_vulkan": "1",
+    "skip_mpv_smoke": ""
   },
   {
     "platform": "windows",
@@ -17,7 +18,8 @@
     "skip_asr_smoke": "",
     "skip_whispercpp_smoke": "",
     "ffmpeg_encoders": "",
-    "build_vulkan": "1"
+    "build_vulkan": "1",
+    "skip_mpv_smoke": ""
   },
   {
     "platform": "macos-arm64",
@@ -27,7 +29,8 @@
     "skip_asr_smoke": "",
     "skip_whispercpp_smoke": "1",
     "ffmpeg_encoders": "",
-    "build_vulkan": ""
+    "build_vulkan": "",
+    "skip_mpv_smoke": ""
   },
   {
     "platform": "macos-intel",
@@ -37,6 +40,7 @@
     "skip_asr_smoke": "1",
     "skip_whispercpp_smoke": "1",
     "ffmpeg_encoders": "libmp3lame libopus libwebp libwebp_anim",
-    "build_vulkan": ""
+    "build_vulkan": "",
+    "skip_mpv_smoke": ""
   }
 ]

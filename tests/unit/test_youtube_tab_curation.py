@@ -114,8 +114,7 @@ def test_build_curation_context_reads_worker_attrs(tab, facade_processor, tmp_pa
         _curation_offset=4.0,
     )
 
-    with patch("anki_miner.gui.widgets._mining_tab_base.resolve_ffprobe", return_value="ffprobe"):
-        media_context, lookup_fn = tab._build_curation_context()
+    media_context, lookup_fn = tab._build_curation_context()
 
     assert lookup_fn is lookup
     assert media_context is not None

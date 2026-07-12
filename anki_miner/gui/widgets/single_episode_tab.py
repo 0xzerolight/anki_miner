@@ -447,7 +447,6 @@ class SingleEpisodeTab(MiningTabBase):
                 initial_offset=offset,
                 parent=self,
                 audio_track_override=self._audio_track_override,
-                ffprobe_cmd=resolve_ffprobe(self.config),
             )
             if viewer.exec() == SubtitleViewer.DialogCode.Accepted:
                 self.offset_spinbox.setValue(viewer.get_offset())

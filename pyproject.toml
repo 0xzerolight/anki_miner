@@ -49,6 +49,13 @@ dependencies = [
     # charset-normalizer detector fallback (external non-UTF-8 subtitle files).
     # Previously only a transitive requests dep; declared explicitly now.
     "charset-normalizer>=3.4.0",
+    # Runtime: video preview backend (python-mpv, one pure-Python ctypes file).
+    # `import mpv` dlopens libmpv at IMPORT time, so every import must go
+    # through anki_miner/utils/mpv_loader.py — never import mpv directly.
+    # libmpv itself is a soft runtime dep: bundled releases ship it, pip
+    # installs use the system copy, and the preview widget degrades to a
+    # notice when it is absent.
+    "mpv>=1.0.8",
 ]
 
 [project.optional-dependencies]
@@ -196,7 +203,7 @@ module = ["fugashi.*", "pysubs2.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["faster_whisper.*", "ctranslate2.*", "pywhispercpp.*"]
+module = ["faster_whisper.*", "ctranslate2.*", "pywhispercpp.*", "mpv.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
