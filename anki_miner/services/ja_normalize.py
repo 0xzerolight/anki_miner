@@ -38,10 +38,19 @@ Owned deviations from Yomitan (see the pinned plan item 1.3):
   recomposes that output so MeCab receives precomposed kana — the whole point of
   the chain. NFC is idempotent and non-destructive, so its position only affects
   whether decompositions introduced by *later* steps get recomposed.
+
+* :func:`strip_decoration_glyphs` is not a Yomitan step at all — an owned
+  addition run *first* in the chain. TV-caption sources (broadcast 字幕)
+  decorate lines with continuation arrows (➡), device/speaker glyphs (📱) and
+  renderer private-use codepoints; a 2026-07 audit of 729 mined cards found ➡
+  on 42% of sentences. Yomitan never sees such text (its input is user-selected
+  words); mined card sentences do, so the strip is owned here. Length-changing,
+  hence pre-tokenization only — offsets are always computed after this chain.
 """
 
 from __future__ import annotations
 
+import re
 import unicodedata
 
 # Halfwidth katakana → fullwidth mapping table. Each value is exactly three
@@ -257,16 +266,55 @@ def standardize_kanji_variants(text: str) -> str:
     return text.translate(_KANJI_VARIANT_TRANSLATION)
 
 
+# TV-caption decoration glyphs stripped from mined text (owned, non-Yomitan —
+# see module docstring). Arrows: line-continuation marks (➡ dominant in the
+# audited broadcast subs, plus the double-arrow/curved variants seen in other
+# stations' captions). Emoji: device/speaker markers (📱 phone-call lines).
+# U+FFFD replacement char and the whole BMP private-use area are renderer
+# garbage by definition in caption text. Deliberately NOT stripped: ♪♫ music
+# marks (the opt-in subtitle regex-filter presets own that choice) and
+# 《》〈〉 narration brackets (linguistic content).
+_DECORATION_GLYPHS = (
+    "\u27a1"  # ➡
+    "\u2b05-\u2b07"  # ⬅⬆⬇
+    "\u21d0\u21d2"  # ⇐⇒
+    "\u2934\u2935"  # ⤴⤵
+    "\U0001f4f1\U0001f4de\U0001f50a\U0001f4ac"  # 📱📞🔊💬
+    "\ufffd"  # replacement character
+    "\ue000-\uf8ff"  # BMP private-use area
+)
+_DECORATION_RUN_RE = re.compile(f"[ \t]*[{_DECORATION_GLYPHS}]+(?:[ \t]+[{_DECORATION_GLYPHS}]+)*[ \t]*")
+
+
+def strip_decoration_glyphs(text: str) -> str:
+    """Remove TV-caption decoration glyph runs, tidying surrounding spaces.
+
+    A run (with any horizontal whitespace it is embedded in) collapses to a
+    single space when it sits strictly between two non-space characters, and to
+    nothing at a string edge — so ``あ ➡ い`` → ``あ い``, ``📱うん`` → ``うん``,
+    and no doubled interior spaces are introduced. Only spaces the glyph run
+    itself absorbs are touched; other interior whitespace is preserved (the
+    reading/OCR path stores this text verbatim and does not pre-collapse).
+    """
+
+    def _repl(m: re.Match[str]) -> str:
+        return " " if m.start() > 0 and m.end() < len(m.string) else ""
+
+    return _DECORATION_RUN_RE.sub(_repl, text)
+
+
 def normalize_for_tokenization(text: str) -> str:
     """Ordered pre-tokenization normalization chain (Yomitan ja preprocessor order).
 
-    Applies, in order: halfwidth-katakana folding, CJK-compatibility NFKD,
-    radical NFKD, then a final NFC pass. NFC both composes input NFD kana
-    (か + U+3099 → が) and recomposes the katakana the NFKD steps decomposed, so
-    MeCab always receives precomposed text. See the module docstring for the two
-    owned deviations from Yomitan (stdlib NFC in place of the guarded combining
-    fold, and NFC as the final rather than an intermediate step).
+    Applies, in order: decoration-glyph strip (owned, non-Yomitan), halfwidth-
+    katakana folding, CJK-compatibility NFKD, radical NFKD, then a final NFC
+    pass. NFC both composes input NFD kana (か + U+3099 → が) and recomposes the
+    katakana the NFKD steps decomposed, so MeCab always receives precomposed
+    text. See the module docstring for the owned deviations from Yomitan
+    (stdlib NFC in place of the guarded combining fold, NFC as the final rather
+    than an intermediate step, and the decoration strip).
     """
+    text = strip_decoration_glyphs(text)
     text = convert_halfwidth_katakana(text)
     text = normalize_cjk_compat(text)
     text = normalize_radicals(text)
