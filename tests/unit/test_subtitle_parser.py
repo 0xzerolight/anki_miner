@@ -2926,6 +2926,13 @@ class TestT2TokenizeOnce:
     """
 
     def _write_multi_line_srt(self, path: Path) -> Path:
+        # GUARD: the token-path == raw-re-tokenize byte-identity these fixtures
+        # assert only holds for lines WITHOUT a kana_overridden compound (the
+        # reading-attestation pass deliberately diverges the display stream for
+        # those — see TestCompoundReadingAttestation). 刑務所/爆発的 are
+        # correct-concat compounds (kept, never overridden), so they stay
+        # equivalent; do not add a known-wrong-reading compound (バカ力,
+        # 体じゅう…) to these lines.
         path.write_text(
             "1\n00:00:01,000 --> 00:00:05,000\n"
             "彼は刑務所で爆発的な事件を起こした\n"
@@ -3838,3 +3845,149 @@ class TestDecorationGlyphStripE2E:
             assert "\U0001f4f1" not in w.sentence
             assert "➡" not in w.sentence_furigana
             assert w.sentence == "われわれの通常兵器では"
+
+
+class TestCompoundReadingAttestation:
+    """Dictionary-attested readings for merged compounds (2026-07 audit F2).
+
+    Real-tagger E2E with a fake reading_lookup: the attestation must reach
+    Expression reading/furigana, the curation reading, sentence furigana on
+    BOTH parse entrypoints, and the bold variant — while a missing/empty
+    lookup keeps parsing byte-identical.
+
+    NOTE for fixture authors: byte-identity between the token path and a raw
+    re-tokenize (test_output_equivalence_*) only holds for lines WITHOUT a
+    kana_overridden compound — an attested override deliberately diverges the
+    display stream from raw tokenization.
+    """
+
+    _FAKE = {
+        "バカ力": ["ばかぢから"],
+        "体じゅう": ["からだじゅう"],
+        "Ｓ級": ["えすきゅう"],
+        "兄ちゃん": ["にいちゃん", "あんちゃん"],
+        "兄様": ["にいさま", "あにさま"],  # real Jitendex score tie
+        "姉さん": ["ねえさん", "あねさん"],
+        "副作用": ["ふくさよう"],
+        "現実的": ["げんじつてき"],
+    }
+
+    def _parse(self, tmp_path, line, reading_lookup=None, **cfg_kwargs):
+        cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media", bold_target_in_sentence=True, **cfg_kwargs)
+        srt = _write_srt(tmp_path, "attest.srt", line)
+        return SubtitleParserService(cfg, reading_lookup=reading_lookup).parse_subtitle_file(srt)
+
+    def _lookup(self, terms):
+        return {t: self._FAKE[t] for t in terms if t in self._FAKE}
+
+    @pytest.mark.parametrize(
+        ("line", "mined", "reading", "furigana"),
+        [
+            ("フ バカ力だな", "バカ力", "ばかぢから", "バカ 力[ぢから]"),
+            ("体じゅうが痛い", "体じゅう", "からだじゅう", "体[からだ]じゅう"),
+            ("Ｓ級ハンターが来た", "Ｓ級", "えすきゅう", "Ｓ級[えすきゅう]"),
+        ],
+    )
+    def test_expression_fields_use_attested_reading(self, tmp_path, line, mined, reading, furigana):
+        words = self._parse(tmp_path, line, reading_lookup=self._lookup)
+        word = next(w for w in words if w.mined_form == mined)
+        assert word.expression_reading == reading
+        assert word.expression_furigana == furigana
+
+    def test_sentence_furigana_and_bold_use_attested_reading(self, tmp_path):
+        words = self._parse(tmp_path, "フ バカ力だな", reading_lookup=self._lookup)
+        word = next(w for w in words if w.mined_form == "バカ力")
+        assert "力[ぢから]" in word.sentence_furigana
+        assert "力[りょく]" not in word.sentence_furigana
+        assert "<b>バカ 力[ぢから]</b>" in word.sentence_furigana_bolded
+
+    def test_both_entrypoints_agree(self, tmp_path):
+        cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        srt = _write_srt(tmp_path, "attest2.srt", "体じゅうが痛い")
+        plain = SubtitleParserService(cfg, reading_lookup=self._lookup).parse_subtitle_file(srt)
+        indexed, _ = SubtitleParserService(cfg, reading_lookup=self._lookup).parse_subtitle_file_with_index(srt)
+        by_form = {w.mined_form: w for w in indexed}
+        for w in plain:
+            assert by_form[w.mined_form].sentence_furigana == w.sentence_furigana
+            assert by_form[w.mined_form].expression_reading == w.expression_reading
+
+    def test_kinship_survives_attestation_with_multi_readings(self, tmp_path):
+        # Production-like: dictionary attests both にいちゃん and あんちゃん;
+        # the curated kinship reading must win (keep-before-select ordering).
+        for line, mined, reading in [
+            ("お兄ちゃん まだ寝てたの", "兄ちゃん", "にいちゃん"),
+            ("お兄様はハンターになる", "兄様", "にいさま"),
+            ("姉さんが来た", "姉さん", "ねえさん"),
+        ]:
+            words = self._parse(tmp_path, line, reading_lookup=self._lookup)
+            word = next(w for w in words if w.mined_form == mined)
+            assert word.expression_reading == reading
+
+    def test_kinship_survives_dictionary_offering_only_variant(self, tmp_path):
+        # Even if the dictionary attested ONLY the non-special variant, the
+        # curated table outranks it (kana_special guard).
+        words = self._parse(
+            tmp_path,
+            "お兄ちゃん まだ寝てたの",
+            reading_lookup=lambda ts: {"兄ちゃん": ["あんちゃん"]},
+        )
+        word = next(w for w in words if w.mined_form == "兄ちゃん")
+        assert word.expression_reading == "にいちゃん"
+        assert "兄[にい]" in word.sentence_furigana
+
+    def test_correct_concat_compounds_keep_per_morpheme_sentence_rendering(self, tmp_path):
+        # 副作用/現実的: concat readings are attested → kept (no override), so
+        # the sentence keeps today's per-morpheme furigana (judge r2 guard).
+        words = self._parse(tmp_path, "副作用が現実的だ", reading_lookup=self._lookup)
+        word = words[0]
+        assert "副[ふく] 作用[さよう]" in word.sentence_furigana
+        assert "副作用[ふくさよう]" not in word.sentence_furigana
+
+    def test_empty_live_lookup_is_byte_identical_to_none(self, tmp_path):
+        cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        srt = _write_srt(tmp_path, "attest3.srt", "体じゅうが痛いだろう")
+        base = SubtitleParserService(cfg).parse_subtitle_file(srt)
+        live = SubtitleParserService(cfg, reading_lookup=lambda ts: {}).parse_subtitle_file(srt)
+        assert live == base
+
+
+class TestCompoundMatcherReadingAttestation:
+    """Matcher-path attestation (mock tagger): the attested reading replaces the
+    span-concat kana and the headword-re-tokenize regen for matcher merges."""
+
+    def _tokens(self):
+        return [
+            _make_token("トカゲ", "名詞", "普通名詞", lemma="トカゲ", kana="トカゲ"),
+            _make_token("の", "助詞", "格助詞", lemma="の", kana="ノ"),
+            _make_token("しっぽ切り", "名詞", "普通名詞", lemma="しっぽ切り", kana="シッポキリ"),
+        ]
+
+    def _parse(self, tmp_path, test_config, reading_lookup):
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("stub", encoding="utf-8")
+        mock_line = MagicMock()
+        mock_line.text = "トカゲのしっぽ切り"
+        mock_line.start = 1000
+        mock_line.end = 3000
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = self._tokens()
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(
+                test_config,
+                term_lookup=_lookup_for({"トカゲのしっぽ切り"}),
+                reading_lookup=reading_lookup,
+            )
+            return service.parse_subtitle_file(sub_file)
+
+    def test_attested_reading_reaches_reading_and_expression(self, tmp_path, test_config):
+        words = self._parse(tmp_path, test_config, lambda ts: {"トカゲのしっぽ切り": ["とかげのしっぽぎり"]})
+        word = next(w for w in words if w.mined_form == "トカゲのしっぽ切り")
+        assert word.reading == "とかげのしっぽぎり"
+        assert word.expression_reading == "とかげのしっぽぎり"
+        assert "切[ぎ]り" in word.expression_furigana
+        assert "切[ぎ]り" in word.sentence_furigana

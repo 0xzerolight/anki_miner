@@ -28,6 +28,9 @@ from anki_miner.services.dictionary.storage import (
 from anki_miner.services.dictionary.storage import (
     terms_exist as storage_terms_exist,
 )
+from anki_miner.services.dictionary.storage import (
+    terms_readings as storage_terms_readings,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -220,6 +223,27 @@ class IndexedDictProvider:
                 e,
             )
             return set()
+
+    def terms_readings(self, terms: list[str]) -> dict[str, list[str]]:
+        """Batch attested-readings probe (merged-compound reading attestation).
+
+        Maps each of ``terms`` that exists as a headword with a non-empty
+        reading to its readings, best entry first (``entries.score`` DESC,
+        hiragana-folded as stored). Mirrors :meth:`has_terms`: never raises;
+        unavailable or corrupt index degrades to an empty map (all-miss).
+        """
+        if self._conn is None:
+            return {}
+        try:
+            return storage_terms_readings(self._conn, terms)
+        except sqlite3.DatabaseError as e:
+            logger.warning(
+                "Dictionary '%s' (%s) raised DatabaseError during terms_readings; treating as all-miss: %s",
+                self.dict_id,
+                self._db_path,
+                e,
+            )
+            return {}
 
     def _tag_meta(self) -> dict[str, TagMeta]:
         """Lazily load and cache this dictionary's ``tags`` table.
