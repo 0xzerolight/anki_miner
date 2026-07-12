@@ -2,6 +2,8 @@
 
 from unittest.mock import MagicMock, PropertyMock
 
+import pytest
+
 from anki_miner.utils.text_utils import (
     _format_furigana,
     _is_kanji,
@@ -331,10 +333,34 @@ class TestFormatFurigana:
         separator space precedes 預 (あず binds to 預 alone in Anki)."""
         assert _format_furigana("お預け", "おあずけ") == "お 預[あず]け"
 
-    def test_mismatched_script_okurigana_segments(self):
-        """見ル/みる: mismatched-script kana still segments, with the hiragana
-        reading distributed onto the katakana surface (見[み] ル[る])."""
-        assert _format_furigana("見ル", "みる") == "見[み] ル[る]"
+    def test_mismatched_script_okurigana_collapses_to_plain(self):
+        """見ル/みる: the katakana okurigana's reading is just its own fold, so
+        the render layer drops the redundant bracket (見[み]ル). Deliberate
+        reversal of the earlier 見[み] ル[る] design (2026-07 audit F6): a
+        fold-equal reading over kana carries no information on the card."""
+        assert _format_furigana("見ル", "みる") == "見[み]ル"
+
+    def test_katakana_word_reading_collapses_to_plain(self):
+        """バカ力/ばかりょく: distribute brackets the katakana run against the
+        hiragana reading (raw-codepoint compare, faithful port); the render
+        layer collapses it, keeping furigana only over the kanji."""
+        assert _format_furigana("バカ力", "ばかりょく") == "バカ 力[りょく]"
+
+    def test_prolonged_mark_stays_inside_katakana_run(self):
+        """エネルギー源/えねるぎーげん: the ー no longer orphans outside the
+        bracket (was エネルギ[えねるぎ]ー 源[げん])."""
+        assert _format_furigana("エネルギー源", "えねるぎーげん") == "エネルギー 源[げん]"
+
+    @pytest.mark.parametrize(
+        ("surface", "reading", "expected"),
+        [
+            ("カ月", "かげつ", "カ 月[げつ]"),
+            ("ページ違反", "ぺーじいはん", "ページ 違反[いはん]"),
+            ("スズメの涙", "すずめのなみだ", "スズメの 涙[なみだ]"),
+        ],
+    )
+    def test_phonetic_katakana_segments_render_plain(self, surface, reading, expected):
+        assert _format_furigana(surface, reading) == expected
 
     def test_rendaku_tail_segments_per_kanji(self):
         """入り口/いりぐち: rendaku no longer forces whole-word bracketing — it
@@ -580,3 +606,26 @@ class TestGenerateReadingFromTokensEquivalence:
             tagger.return_value = tokens
             actual = generate_reading_from_tokens(iter(tokens))
             assert actual == expected, f"Mismatch for {text!r}: {actual!r} != {expected!r}"
+
+
+class TestTokenSeparatorSpaceRule:
+    """Token-join spaces appear only before bracket-leading renders (audit F6):
+    a space before a plain-leading render shows literally on the card."""
+
+    def test_no_space_before_plain_leading_render(self):
+        # トカゲの + しっぽ切り: the second token renders "しっぽ 切[き]り"
+        # (plain-leading) — joining must NOT add a visible space before しっぽ.
+        tokens = [
+            _make_mock_token("トカゲの", kana="トカゲノ"),
+            _make_mock_token("しっぽ切り", kana="シッポキリ"),
+        ]
+        assert generate_furigana_from_tokens(tokens) == "トカゲのしっぽ 切[き]り"
+
+    def test_space_kept_before_bracket_leading_render(self):
+        # Existing behavior stays: …は + 王国です needs the separator so
+        # おうこく binds to 王国 alone (pinned also at the 王国 test above).
+        tokens = [
+            _make_mock_token("は", kana="ハ"),
+            _make_mock_token("王国", kana="オウコク"),
+        ]
+        assert generate_furigana_from_tokens(tokens) == "は 王国[おうこく]"

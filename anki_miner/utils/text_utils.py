@@ -138,6 +138,11 @@ def _is_kanji(char: str) -> bool:
     return is_cjk_ideograph(char) or char == "々"
 
 
+def _is_kana_only(text: str) -> bool:
+    """True iff every char is kana or a kana mark (ー・, iteration marks)."""
+    return bool(text) and all("ぁ" <= ch <= "ゖ" or "ァ" <= ch <= "ヺ" or ch in "ー・ゝゞヽヾ" for ch in text)
+
+
 def _format_furigana(surface: str, reading: str) -> str:
     """Anki furigana for one morpheme, distributed per kanji group.
 
@@ -151,21 +156,56 @@ def _format_furigana(surface: str, reading: str) -> str:
     ``入[い]り口[ぐち]`` (which would put ぐち over り口). This matches Yomitan's
     ``anki-template-renderer.js`` ``_furiganaPlain`` helper.
 
+    Render-layer deviation from the port (2026-07 card audit F6): a kana-only
+    segment whose reading is just its own fold carries no information — Yomitan's
+    raw-codepoint compare brackets katakana against hiragana readings
+    (``バカ[ばか]``, and ``エネルギ[えねるぎ]ー`` with an orphaned ー). Such
+    segments are collapsed to plain text here, with adjacent plain segments
+    merged, so ``バカ力``/``ばかりょく`` renders ``バカ 力[りょく]`` and
+    ``エネルギー源``/``えねるぎーげん`` renders ``エネルギー 源[げん]``. The
+    ``distribute_furigana`` port itself stays byte-faithful.
+
     ``reading`` is expected to already be hiragana (the callers apply
     :func:`katakana_to_hiragana`). Interior kana and rendaku now segment
     (取り引き/とりひき → ``取[と]り 引[ひ]き``); genuinely ambiguous splits (e.g.
     飼い犬/かいいぬ) fall back to whole-word bracketing inside
     :func:`distribute_furigana`. 々 stays inside its kanji group's bracket.
     """
-    result = ""
+    normalized: list[tuple[str, str]] = []
     for segment in distribute_furigana(surface, reading):
-        if segment.reading:
+        text, seg_reading = segment.text, segment.reading
+        if seg_reading and _is_kana_only(text) and katakana_to_hiragana(text) == katakana_to_hiragana(seg_reading):
+            seg_reading = ""
+        if normalized and not seg_reading and not normalized[-1][1]:
+            normalized[-1] = (normalized[-1][0] + text, "")
+        else:
+            normalized.append((text, seg_reading))
+
+    result = ""
+    for text, seg_reading in normalized:
+        if seg_reading:
             if result:
                 result += " "
-            result += f"{segment.text}[{segment.reading}]"
+            result += f"{text}[{seg_reading}]"
         else:
-            result += segment.text
+            result += text
     return result
+
+
+def _leads_with_bracket(rendered: str) -> bool:
+    """True iff a ``_format_furigana`` render starts with a bracketed segment.
+
+    Only then does a token-separator space serve its purpose (binding the
+    leading ``[...]`` to this token's kanji instead of the previous run). A
+    plain-leading render (``しっぽ 切[き]り``) must NOT get one — Anki's furigana
+    filter only consumes a space directly before a ``X[...]`` group, so a space
+    before plain kana renders literally on the card (audit F6: トカゲの しっぽ).
+    """
+    bracket = rendered.find("[")
+    if bracket == -1:
+        return False
+    space = rendered.find(" ")
+    return space == -1 or bracket < space
 
 
 def generate_furigana_from_tokens(tokens: Iterable[Any]) -> str:
@@ -201,9 +241,11 @@ def generate_furigana_from_tokens(tokens: Iterable[Any]) -> str:
         if hiragana == surface:
             result.append(surface)
         else:
-            # Add space separator before furigana only if preceded by another token
-            prefix = " " if result else ""
-            result.append(f"{prefix}{_format_furigana(surface, hiragana)}")
+            formatted = _format_furigana(surface, hiragana)
+            # Separator space only when the render leads with a bracket group —
+            # a space before a plain-leading render shows literally in Anki.
+            prefix = " " if result and _leads_with_bracket(formatted) else ""
+            result.append(f"{prefix}{formatted}")
     return "".join(result)
 
 
@@ -378,8 +420,9 @@ def wrap_target_furigana_from_tokens(text: str, tokens: Iterable[Any], start: in
             if kana:
                 hiragana = katakana_to_hiragana(kana)
                 if hiragana != surface:
-                    prefix = " " if out_has_content else ""
-                    annotated = f"{prefix}{html.escape(_format_furigana(surface, hiragana))}"
+                    formatted = _format_furigana(surface, hiragana)
+                    prefix = " " if out_has_content and _leads_with_bracket(formatted) else ""
+                    annotated = f"{prefix}{html.escape(formatted)}"
         bucket.append(annotated)
         if annotated:
             out_has_content = True
