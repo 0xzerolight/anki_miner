@@ -32,14 +32,17 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            autoconf automake libtool pkg-config nasm yasm meson ninja-build \
-            python3-setuptools libtool-bin \
+            autoconf automake libtool pkg-config nasm yasm ninja-build \
+            python3-pip python3-setuptools libtool-bin \
             libx11-dev libxext-dev libxrandr-dev libxinerama-dev libxss-dev \
             libxv-dev libva-dev libvdpau-dev libegl-dev libgl-dev \
             libwayland-dev wayland-protocols libxkbcommon-dev libdrm-dev \
             libasound2-dev libpulse-dev libpipewire-0.3-dev \
             libfreetype-dev libfontconfig-dev libfribidi-dev libharfbuzz-dev \
             libbrotli-dev zlib1g-dev libbz2-dev liblzma-dev
+          # mpv master needs meson >= 1.3; ubuntu-22.04 apt ships 0.61.
+          sudo pip3 install "meson>=1.4"
+          meson --version
 
       - name: Build libmpv via mpv-build (static ffmpeg/libass/libplacebo)
         run: |
@@ -179,6 +182,19 @@ jobs:
             -d out -p @loader_path/ -i /usr/lib
           install_name_tool -id @loader_path/libmpv.2.dylib work/libmpv.2.dylib
           cp work/libmpv.2.dylib out/libmpv.2.dylib
+          # dylibbundler adds an LC_RPATH '@loader_path/' that can duplicate one
+          # already present in brew dylibs — a DUPLICATE LC_RPATH is a hard dyld
+          # load error. Install names are absolute @loader_path/… so no rpath is
+          # needed at all: strip every rpath from every dylib.
+          for f in out/*.dylib; do
+            otool -l "$f" | awk '/LC_RPATH/{f=1} f&&/path /{print $2; f=0}' | while read -r rp; do
+              install_name_tool -delete_rpath "$rp" "$f" 2>/dev/null || true
+              # delete_rpath removes one occurrence per call; loop duplicates.
+              while otool -l "$f" | grep -q " path $rp "; do
+                install_name_tool -delete_rpath "$rp" "$f" 2>/dev/null || break
+              done
+            done
+          done
           # install_name_tool invalidates signatures; ad-hoc re-sign everything
           # (mandatory on arm64 — unsigned dylibs refuse to load).
           for f in out/*.dylib; do codesign --force -s - "$f"; done
