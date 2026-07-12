@@ -3822,3 +3822,19 @@ class TestKinshipHonorificReadings:
         word = next((w for w in words if w.surface == "一日"), None)
         if word is not None:
             assert word.expression_reading == "ついたち"
+
+
+class TestDecorationGlyphStripE2E:
+    """TV-caption decoration glyphs (➡/📱, 2026-07 audit F4) never reach mined
+    sentences or their furigana. Real tagger E2E over the subtitle path."""
+
+    def test_arrow_and_device_glyphs_absent_from_sentence_fields(self, tmp_path):
+        cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        srt = _write_srt(tmp_path, "deco.srt", "📱われわれの通常兵器では➡")
+        words = SubtitleParserService(cfg).parse_subtitle_file(srt)
+        assert words, "line should still mine normally"
+        for w in words:
+            assert "➡" not in w.sentence
+            assert "\U0001f4f1" not in w.sentence
+            assert "➡" not in w.sentence_furigana
+            assert w.sentence == "われわれの通常兵器では"
