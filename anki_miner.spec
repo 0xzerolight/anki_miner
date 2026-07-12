@@ -57,6 +57,20 @@ if os.path.isdir(vendor_alass):
         if os.path.isfile(_full):
             alass_binaries.append((_full, "bin"))
 
+# Bundle the vendored libmpv shared library. CI populates vendor/libmpv/ from the
+# repo-owned vendor-libmpv-* release before invoking PyInstaller; local dev builds
+# leave it absent (empty list → unchanged behavior). Dest is "." (the _MEIPASS
+# root), NOT "bin": python-mpv's Windows fallback searches dirname(mpv.__file__),
+# the macOS closure resolves @loader_path siblings, and the Linux onedir loader
+# path covers _internal/ — mpv_loader.bundled_libmpv_path() globs the root.
+libmpv_binaries = []
+vendor_libmpv = os.path.join(project_root, "vendor", "libmpv")
+if os.path.isdir(vendor_libmpv):
+    for _fn in sorted(os.listdir(vendor_libmpv)):
+        _full = os.path.join(vendor_libmpv, _fn)
+        if os.path.isfile(_full):
+            libmpv_binaries.append((_full, "."))
+
 # Bundle the ffmpeg GPL license text if present (populated by a sibling CI task).
 # Conditional so local builds don't hard-fail before the license dir exists. Lands at
 # sys._MEIPASS/licenses/ffmpeg/ in the bundle.
@@ -72,6 +86,14 @@ alass_license_dir = os.path.join(project_root, "licenses", "alass")
 alass_license_datas = []
 if os.path.isdir(alass_license_dir):
     alass_license_datas.append((alass_license_dir, os.path.join("licenses", "alass")))
+
+# Bundle the libmpv license/source-offer files (committed README/COPYING plus the
+# per-artifact Copyright/SOURCES.txt the CI fetch step drops in). Lands at
+# sys._MEIPASS/licenses/libmpv/ in the bundle.
+libmpv_license_dir = os.path.join(project_root, "licenses", "libmpv")
+libmpv_license_datas = []
+if os.path.isdir(libmpv_license_dir):
+    libmpv_license_datas.append((libmpv_license_dir, os.path.join("licenses", "libmpv")))
 
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
@@ -143,7 +165,7 @@ if platform.system() == "Windows":
 a = Analysis(
     [os.path.join(project_root, "anki_miner", "gui", "app.py")],
     pathex=[project_root],
-    binaries=ffmpeg_binaries + alass_binaries,
+    binaries=ffmpeg_binaries + alass_binaries + libmpv_binaries,
     datas=[
         # GUI resources (stylesheets and icons)
         (
@@ -166,11 +188,17 @@ a = Analysis(
         (unidic_data, "unidic_lite"),
     ]
     + ffmpeg_license_datas
-    + alass_license_datas,
+    + alass_license_datas
+    + libmpv_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",
         "PyQt6.sip",
+        # python-mpv: imported only inside utils/mpv_loader.py functions.
+        # Bytecode analysis should find the literal `import mpv` there, but the
+        # module is a single file (no package dir) and the import sits behind a
+        # find_library monkeypatch — belt-and-braces it into the graph.
+        "mpv",
     ],
     # PyInstaller-Hooks/ holds hook-faster_whisper.py (faster_whisper + ctranslate2
     # + av) and hook-pywhispercpp.py (the whisper.cpp/ggml Vulkan ASR backend).
@@ -209,6 +237,30 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
+
+# Drop host-audio client libraries bindepend may pull in through the vendored
+# libmpv (Linux). These must come from the host at runtime: a bundled libasound/
+# libpulse resolves its config/plugin paths relative to itself and breaks audio
+# on foreign distros (same convention as the AppImage excludelist). PyInstaller's
+# own exclude list already refuses GL/EGL/wayland/xcb/drm/nvidia. A NEEDED lib we
+# drop that is absent on a host degrades to "libmpv fails to dlopen → preview
+# notice", never a crash. Scope deliberately narrow (audio clients only) — widen
+# only from real dist-tree observation, since Qt's own closure legitimately
+# bundles fontconfig/freetype-class libs.
+_HOST_ONLY_LIB_PREFIXES = (
+    "libasound.",
+    "libasound-",
+    "libpulse.",
+    "libpulse-",
+    "libpulsecommon",
+    "libjack.",
+    "libpipewire-",
+)
+a.binaries = [
+    entry
+    for entry in a.binaries
+    if not any(os.path.basename(entry[0]).startswith(p) for p in _HOST_ONLY_LIB_PREFIXES)
+]
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
