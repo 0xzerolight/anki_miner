@@ -16,6 +16,7 @@ import subprocess
 import sys
 import types
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -91,6 +92,18 @@ class TestSearchOrder:
         monkeypatch.setattr(mpv_loader, "_import_mpv_with_path", fake_import)
         mpv_loader.load_mpv()
         assert seen["path"] == tmp_path / "libmpv.so.2"
+
+    def test_bundled_load_failure_falls_back_to_system(self, monkeypatch, tmp_path):
+        """An unloadable bundled copy (e.g. macOS min-OS too new) must fall
+        through to the system libmpv, not dead-end — `brew install mpv`
+        restores the preview."""
+        (tmp_path / "libmpv.so.2").write_bytes(b"")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(mpv_loader, "_import_mpv_with_path", MagicMock(side_effect=OSError("incompatible")))
+        fake = _fake_mpv_module()
+        monkeypatch.setitem(sys.modules, "mpv", fake)
+        assert mpv_loader.load_mpv() is fake
 
     def test_system_fallback_plain_import(self, monkeypatch):
         fake = _fake_mpv_module()
