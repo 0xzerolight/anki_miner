@@ -760,6 +760,9 @@ jobs:
           BUNDLE_SMOKE_SKIP_ASR: ${{ matrix.skip_asr_smoke }}
           BUNDLE_SMOKE_FFMPEG_ENCODERS: ${{ matrix.ffmpeg_encoders }}
           BUNDLE_SMOKE_SKIP_WHISPERCPP: ${{ matrix.skip_whispercpp_smoke }}
+          # mpv: all four legs bundle libmpv; the flag exists as the house-style
+          # escape hatch only. Smoke = presence + frozen dlopen probe (MPV_PROBE_OK).
+          BUNDLE_SMOKE_SKIP_MPV: ${{ matrix.skip_mpv_smoke }}
           # ggml-tiny.bin path from the fetch step (Vulkan jobs only) — enables the
           # whispercpp construct+decode smoke (DEFECT 1/2 coverage). Empty on macOS
           # and when the HF download fell open, so the smoke stays import-only there.
@@ -828,13 +831,19 @@ jobs:
           find dist/deb-stage -name '_pywhispercpp*.so' -delete
           find dist/deb-stage -name 'libggml*.so*' -delete
           find dist/deb-stage -name 'libwhisper*.so*' -delete
+          # libmpv — same system-managed philosophy as ffmpeg: the .deb declares
+          # Recommends: libmpv2 | libmpv1 (packaging/nfpm.yaml) and must not ship
+          # the bundled copy (licenses/libmpv/README.md documents the split).
+          find dist/deb-stage -name 'libmpv*.so*' -delete
           # Fail closed: verify no bundled ffmpeg, ffprobe, ctranslate2/
-          # faster_whisper, or pywhispercpp/ggml/whisper libs remain in the stage tree.
+          # faster_whisper, pywhispercpp/ggml/whisper, or libmpv libs remain in
+          # the stage tree.
           BAD=$(find dist/deb-stage -type f \( \
             -name 'ffmpeg' -o -name 'ffprobe' -o \
             -name 'libctranslate2*.so*' -o \
             -name '_pywhispercpp*.so' -o \
-            -name 'libggml*.so*' -o -name 'libwhisper*.so*' \) ; \
+            -name 'libggml*.so*' -o -name 'libwhisper*.so*' -o \
+            -name 'libmpv*.so*' \) ; \
             find dist/deb-stage -type d \( \
             -name 'ctranslate2' -o -name 'faster_whisper' -o \
             -name 'pywhispercpp' \))

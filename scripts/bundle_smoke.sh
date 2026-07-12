@@ -10,6 +10,7 @@
 # Smokes (all headless via QT_QPA_PLATFORM=offscreen; none touch the network):
 #   1. youtube   ANKI_MINER_SMOKE=youtube                  -> BUNDLED_SMOKE_PASS
 #   2. asr       ANKI_MINER_SMOKE=asr  HF_HUB_OFFLINE=1     -> BUNDLED_SMOKE_PASS
+#   2c. mpv      ANKI_MINER_MPV_PROBE=1                     -> MPV_PROBE_OK
 #   3. ffmpeg    bundled ffmpeg has the required encoders   -> encoders present
 set -euo pipefail
 
@@ -201,6 +202,41 @@ else
   else
     echo "FAIL whispercpp-vulkan"
     FAILED+=("whispercpp-vulkan")
+  fi
+fi
+echo
+
+# --- 2c. libmpv smoke: bundled shared library present AND loadable -------------
+# (a) file presence catches a vendor-fetch/spec-glob silent miss; (b) the frozen
+# probe (ANKI_MINER_MPV_PROBE=1, routed in app.main before Qt init) dlopens the
+# bundled libmpv through mpv_loader's resolution order and constructs a
+# display-free core (vo=null/ao=null) — proving the library AND its dependency
+# closure resolve inside the frozen tree (Linux loader path, macOS @loader_path,
+# Windows add_dll_directory). Skippable per-leg via BUNDLE_SMOKE_SKIP_MPV=1.
+echo "=== smoke: mpv (libmpv presence + frozen dlopen probe) ==="
+if [ "${BUNDLE_SMOKE_SKIP_MPV:-}" = "1" ]; then
+  echo "SKIP mpv (BUNDLE_SMOKE_SKIP_MPV=1)"
+else
+  LIBMPV=""
+  for pat in 'libmpv-2.dll' 'mpv-2.dll' 'libmpv.so.2*' 'libmpv.2.dylib'; do
+    LIBMPV=$(find "$DIST" -type f -name "$pat" | head -1)
+    [ -n "$LIBMPV" ] && break
+  done
+  if [ -z "$LIBMPV" ]; then
+    echo "::error::Bundled libmpv not found under $DIST — vendor fetch or spec glob missed"
+    find "$DIST" -maxdepth 3 -name '*mpv*' || true
+    FAILED+=("mpv")
+  elif ANKI_MINER_MPV_PROBE=1 QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee smoke_mpv.log \
+    && grep -q "MPV_PROBE_OK" smoke_mpv.log; then
+    echo "Found bundled libmpv: $LIBMPV"
+    # Informational: surface any host-only lib creep next to the bundled libmpv
+    # (closure changes show up here in the log before they bite users).
+    find "$DIST" -maxdepth 2 -name '*.so*' 2>/dev/null | grep -E 'asound|pulse|jack|pipewire|libGL|wayland' || true
+    echo "BUNDLED_MPV_PASS"
+    echo "PASS mpv"
+  else
+    echo "FAIL mpv"
+    FAILED+=("mpv")
   fi
 fi
 echo
