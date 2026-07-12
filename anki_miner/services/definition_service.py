@@ -447,6 +447,46 @@ class DefinitionService:
 
         return found
 
+    def offline_term_readings(self, terms: list[str]) -> dict[str, list[str]]:
+        """Attested readings per headword across available OFFLINE providers.
+
+        Reading-attestation probe for merged compounds
+        (``morphology.attest_merged_readings``): "which readings does an
+        enabled offline dictionary attest for this exact headword". Walks the
+        chain exactly like :meth:`offline_terms_exist` — offline-only,
+        ``ensure_loaded`` first, per-provider try/except so a provider failure
+        can never raise (or reach the network) from inside subtitle parsing —
+        with first-provider-wins semantics per term: once a chain member
+        attests a term's readings, later providers are not consulted for it
+        (chain order is the user's priority order).
+        """
+        self.ensure_loaded()
+
+        remaining = list(dict.fromkeys(terms))
+        found: dict[str, list[str]] = {}
+
+        for provider in self._providers:
+            if not remaining:
+                break
+            if provider.is_online or not provider.is_available():
+                continue
+            terms_readings_fn = getattr(provider, "terms_readings", None)
+            if not callable(terms_readings_fn):
+                continue
+            try:
+                hits = terms_readings_fn(remaining)
+            except Exception as e:
+                logger.warning(
+                    "Provider '%s' raised during terms_readings; skipping: %s",
+                    provider.name,
+                    e,
+                )
+                continue
+            found.update(hits)
+            remaining = [t for t in remaining if t not in hits]
+
+        return found
+
     def get_glossary(self, word: str) -> str | None:
         """Collect hits from all enabled providers and concatenate as one HTML blob.
 

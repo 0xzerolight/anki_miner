@@ -1181,3 +1181,50 @@ class TestLookupAllOfflineFallback:
         p = _seed_rows(tmp_path, "d", "D", [DictRow(term="食べる", reading="たべる", content=_gloss("eat"))])
         service = DefinitionService(test_config, providers=[p])
         assert service.lookup_all_offline("走らせた") == []
+
+
+def make_terms_readings_provider(name="TR", table=None, available=True, online=False):
+    """Mock offline provider exposing ``terms_readings`` (reading attestation)."""
+    table = table or {}
+    p = MagicMock(spec=["name", "is_online", "is_available", "lookup", "load", "close", "terms_readings"])
+    p.name = name
+    p.is_online = online
+    p.is_available.return_value = available
+    p.load.return_value = True
+    p.terms_readings.side_effect = lambda terms: {t: table[t] for t in terms if t in table}
+    return p
+
+
+class TestOfflineTermReadings:
+    """offline_term_readings — first-provider-wins readings across the offline chain."""
+
+    def test_first_provider_wins_per_term(self, test_config):
+        p1 = make_terms_readings_provider("A", {"バカ力": ["ばかぢから"]})
+        p2 = make_terms_readings_provider("B", {"バカ力": ["ばかりき"], "体じゅう": ["からだじゅう"]})
+        service = DefinitionService(test_config, providers=[p1, p2])
+
+        found = service.offline_term_readings(["バカ力", "体じゅう", "無い語"])
+
+        assert found == {"バカ力": ["ばかぢから"], "体じゅう": ["からだじゅう"]}
+        # p2 must only be asked about terms p1 did not attest.
+        assert "バカ力" not in p2.terms_readings.call_args[0][0]
+
+    def test_online_and_unavailable_providers_skipped(self, test_config):
+        online = make_terms_readings_provider("Jisho", {"バカ力": ["ばかぢから"]}, online=True)
+        down = make_terms_readings_provider("Down", {"バカ力": ["ばかぢから"]}, available=False)
+        service = DefinitionService(test_config, providers=[online, down])
+        assert service.offline_term_readings(["バカ力"]) == {}
+        online.terms_readings.assert_not_called()
+        down.terms_readings.assert_not_called()
+
+    def test_provider_without_terms_readings_attests_nothing(self, test_config):
+        legacy = make_provider("Legacy", return_value="<div>hit</div>")
+        service = DefinitionService(test_config, providers=[legacy])
+        assert service.offline_term_readings(["バカ力"]) == {}
+
+    def test_raising_provider_skipped_others_consulted(self, test_config):
+        bad = make_terms_readings_provider("Bad")
+        bad.terms_readings.side_effect = RuntimeError("boom")
+        good = make_terms_readings_provider("Good", {"体じゅう": ["からだじゅう"]})
+        service = DefinitionService(test_config, providers=[bad, good])
+        assert service.offline_term_readings(["体じゅう"]) == {"体じゅう": ["からだじゅう"]}

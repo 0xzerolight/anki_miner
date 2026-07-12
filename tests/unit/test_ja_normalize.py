@@ -275,3 +275,42 @@ def test_is_cjk_ideograph_rejects_non_kanji():
 def test_cjk_ideograph_ranges_are_well_formed():
     for low, high in CJK_IDEOGRAPH_RANGES:
         assert low <= high
+
+
+# --- TV-caption decoration glyphs (owned strip, 2026-07 card audit) -----------
+
+from anki_miner.services.ja_normalize import strip_decoration_glyphs  # noqa: E402
+
+
+class TestStripDecorationGlyphs:
+    """Caption decoration runs vanish; flanked runs collapse to one space."""
+
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            ("われわれの通常兵器では➡", "われわれの通常兵器では"),  # line-final arrow
+            ("📱うん 今月の振り込みが", "うん 今月の振り込みが"),  # line-initial device glyph
+            ("📱 それに伴い 規制も", "それに伴い 規制も"),  # glyph + space at start
+            ("あ ➡ い", "あ い"),  # interior, absorbs its spaces
+            ("あ➡い", "あ い"),  # interior, no spaces -> single separator
+            ("えっ⬅ ⇒次", "えっ 次"),  # mixed arrows in one run
+            (" そう考えると", "そう考えると"),  # BMP private-use (audited U+F4FA)
+            ("変換�エラー", "変換 エラー"),  # replacement character
+            ("➡", ""),  # glyph-only line
+        ],
+    )
+    def test_strips_decoration_runs(self, raw, expected):
+        assert strip_decoration_glyphs(raw) == expected
+
+    @pytest.mark.parametrize("kept", ["♪〜ラララ♪", "《今から十数年前》", "〈回想〉", "普通の文。"])
+    def test_keeps_music_marks_brackets_and_plain_text(self, kept):
+        assert strip_decoration_glyphs(kept) == kept
+
+    def test_preserves_unrelated_interior_whitespace(self):
+        # Reading/OCR path stores this text verbatim and does not pre-collapse;
+        # only whitespace absorbed into a glyph run may change.
+        assert strip_decoration_glyphs("ことば　ことば") == "ことば　ことば"
+        assert strip_decoration_glyphs("a  b") == "a  b"
+
+    def test_runs_first_in_normalize_for_tokenization(self):
+        assert normalize_for_tokenization("ﾊﾟｿｺﾝ📱を使う➡") == "パソコン を使う"

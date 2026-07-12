@@ -22,6 +22,7 @@ from anki_miner.services.dictionary.storage import (
     read_meta_cached,
     read_tags,
     terms_exist,
+    terms_readings,
     write_meta,
     write_tags,
 )
@@ -1109,5 +1110,52 @@ class TestLookupWithRules:
             # Reading stored folded to ねこ; a katakana query folds too and matches.
             rows = lookup_with_rules(conn, "ネコ")
             assert rows == [("<li>cat</li>", "", 1, "")]
+        finally:
+            conn.close()
+
+
+class TestTermsReadings:
+    def _seed(self, tmp_path: Path) -> Path:
+        db_path = tmp_path / "readings.sqlite"
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                DictRow(term="バカ力", reading="ばかぢから", content="<div>a</div>", sequence=1),
+                DictRow(term="兄ちゃん", reading="にいちゃん", content="<div>b</div>", score=200, sequence=2),
+                DictRow(term="兄ちゃん", reading="あんちゃん", content="<div>c</div>", score=99, sequence=3),
+                DictRow(term="兄ちゃん", reading="にいちゃん", content="<div>d</div>", score=150, sequence=4),
+                DictRow(term="せん越", reading=None, content="<div>e</div>", sequence=5),
+                DictRow(term="ケガ人", reading="", content="<div>f</div>", sequence=6),
+            ],
+        )
+        return db_path
+
+    def test_readings_best_first_and_deduped(self, tmp_path: Path):
+        conn = open_readonly(self._seed(tmp_path))
+        try:
+            found = terms_readings(conn, ["バカ力", "兄ちゃん", "存在しない語"])
+            assert found["バカ力"] == ["ばかぢから"]
+            # score DESC: にいちゃん(200) first, あんちゃん(99) after; the
+            # duplicate にいちゃん(150) row deduped.
+            assert found["兄ちゃん"] == ["にいちゃん", "あんちゃん"]
+            assert "存在しない語" not in found
+        finally:
+            conn.close()
+
+    def test_null_and_empty_readings_attest_nothing(self, tmp_path: Path):
+        # JMdict variant-form rows (mazegaki せん越, katakana ケガ人) ship no
+        # reading — the term must be absent from the result, not mapped to [].
+        conn = open_readonly(self._seed(tmp_path))
+        try:
+            found = terms_readings(conn, ["せん越", "ケガ人"])
+            assert found == {}
+        finally:
+            conn.close()
+
+    def test_empty_input(self, tmp_path: Path):
+        conn = open_readonly(self._seed(tmp_path))
+        try:
+            assert terms_readings(conn, []) == {}
         finally:
             conn.close()

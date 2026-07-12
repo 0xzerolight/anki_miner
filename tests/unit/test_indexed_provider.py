@@ -999,3 +999,24 @@ class TestTagChips:
         assert provider._tag_cache is None  # not read until first render
         provider.lookup("x")
         assert provider._tag_cache is not None and "uk" in provider._tag_cache
+
+
+class TestTermsReadings:
+    """terms_readings mirrors has_terms: batch probe, never raises."""
+
+    def test_readings_for_existing_terms(self, tmp_path):
+        db = tmp_path / "tr.sqlite"
+        _seed_db(
+            db,
+            [
+                DictRow(term="バカ力", reading="ばかぢから", content="<div>a</div>", sequence=1),
+                DictRow(term="せん越", reading=None, content="<div>b</div>", sequence=2),
+            ],
+        )
+        p = IndexedDictProvider("d", db)
+        assert p.load()
+        assert p.terms_readings(["バカ力", "せん越", "無い語"]) == {"バカ力": ["ばかぢから"]}
+
+    def test_unloaded_provider_returns_empty(self, tmp_path):
+        p = IndexedDictProvider("d", tmp_path / "missing.sqlite")
+        assert p.terms_readings(["バカ力"]) == {}
