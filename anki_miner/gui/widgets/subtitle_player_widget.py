@@ -1,50 +1,69 @@
-"""Reusable video player widget with subtitle overlay."""
+"""Reusable video player widget with subtitle overlay (embedded libmpv backend).
+
+Replaced QMediaPlayer/QtMultimedia in the mpv migration: the Qt FFmpeg backend
+carried a whole bug family (Windows D3D-sink teardown freeze, no software AV1
+decode → the deleted Issue #82 watchdog/nudge apparatus). libmpv decodes AV1 in
+software (dav1d, ``hwdec=no``) and tears down deterministically via
+``terminate()``, so none of that machinery exists anymore.
+
+Ownership: this controller owns the ``mpv.MPV`` handle (``self.player``, None
+until the first ``set_source``); :class:`MpvVideoWidget` owns only the render
+context. One MPV instance per widget lifetime — re-sourcing goes through
+``loadfile`` on the same instance, and ``terminate()`` runs exactly once in
+``_teardown_player`` (the fewer detach→terminate transitions, the smaller the
+window for the libmpv render-context/terminate ordering abort).
+
+Threading: python-mpv property observers and event callbacks fire on its event
+thread. Every observer/callback here does exactly one thing — emit an
+``object``-typed Qt signal (queued to the GUI thread). mpv properties are
+nullable and ``observe_property`` fires an immediate initial callback with the
+current value (None before a file loads), so every slot None-guards: a None
+duration/time-pos/eof is the NORMAL first event, not an edge case.
+"""
+
+from __future__ import annotations
 
 import logging
-import time
 from pathlib import Path
+from typing import Any
 
-from PyQt6.QtCore import QCoreApplication, QEvent, QLocale, Qt, QTimer, QUrl
-from PyQt6.QtMultimedia import QAudioOutput, QMediaMetaData, QMediaPlayer
-from PyQt6.QtMultimediaWidgets import QVideoWidget
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles.theme import Theme
-from anki_miner.gui.utils.run_off_thread import join_tracked_workers, run_off_thread
-from anki_miner.utils import find_japanese_audio_stream, get_primary_video_codec
+from anki_miner.gui.widgets.mpv_video_widget import MpvVideoWidget
+from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.mpv_loader import create_mpv_player, mpv_available
 
 logger = logging.getLogger(__name__)
 
 # Base subtitle-overlay font size (px) at scale 1.0.
 _BASE_OVERLAY_FONT_PX = 18
 
-# AV1 decode-watchdog timeout (ms). The first hardware-AV1 decode in the process
-# can stall on GPU pipeline cold-init (D3D11VA device + decoder session), which
-# can exceed several seconds even when steady-state decode is fast, so the deadline
-# must clear cold-init rather than just decode time. Generous so a real (but slow)
-# cold decode isn't cut off and mistaken for "can't decode" (Issue #82).
-_AV1_WATCHDOG_MS = 10000
-
-# Fallback position (ms) the AV1 decode nudge seeks to when no subtitle timestamp is
-# available. A few hundred ms (not ~0) so the seek lands on a different keyframe than
-# frame 0 and the backend issues a genuine demux+decode rather than a no-op; a 1 ms
-# seek coalesces to frame 0 and decodes nothing (Issue #82). When subtitle entries
-# exist the nudge seeks to the first one instead.
-_AV1_NUDGE_FALLBACK_MS = 500
-
-# Resolved at import time so they remain correct even when QMediaPlayer is
-# patched in unit tests (which replaces the module-level name with a MagicMock).
-_LOADED_MEDIA = QMediaPlayer.MediaStatus.LoadedMedia
-_BUFFERED_MEDIA = QMediaPlayer.MediaStatus.BufferedMedia
+# mpv end-file reason code for "stopped due to playback error" (render.h /
+# client.h: MPV_END_FILE_REASON_ERROR). Kept as a literal so this module never
+# needs the mpv module itself at import time.
+_END_FILE_REASON_ERROR = 4
 
 
 class SubtitlePlayerWidget(QWidget):
-    """Reusable video player with subtitle overlay, extracted from SubtitleViewer.
+    """Reusable video player with subtitle overlay.
 
-    Owns QVideoWidget, overlay QLabel, position QSlider, time label, play/pause button,
-    QMediaPlayer, and QAudioOutput. No player is created until set_source is called.
+    Owns MpvVideoWidget, overlay QLabel, position QSlider, time label,
+    play/pause button, and the mpv.MPV handle. No player exists until
+    set_source is called.
     """
+
+    # Marshalling signals: emitted from python-mpv's event thread, delivered
+    # queued on the GUI thread. object-typed on purpose — mpv properties are
+    # nullable (see module docstring).
+    _mpv_time_pos = pyqtSignal(object)
+    _mpv_duration = pyqtSignal(object)
+    _mpv_pause = pyqtSignal(object)
+    _mpv_eof = pyqtSignal(object)
+    _mpv_file_loaded = pyqtSignal()
+    _mpv_playback_error = pyqtSignal(str)
 
     def __init__(self, parent=None):
         """Initialize the player widget (no media until set_source is called).
@@ -57,49 +76,31 @@ class SubtitlePlayerWidget(QWidget):
         # Will be populated by set_source
         self.subtitle_entries: list[tuple[float, float, str]] = []
         self._offset: float = 0.0
-        self._jp_audio_index: int | None = None
         self._audio_track_override: int | None = None
 
-        # Player is None until set_source is called
-        self.player: QMediaPlayer | None = None
-        self.audio_output: QAudioOutput | None = None
+        # Player is None until the first set_source call; one instance per
+        # widget lifetime afterwards (loadfile per source).
+        self.player: Any = None
 
-        # Re-entrancy guard for the async ffprobe in set_source. The counter only
-        # ever increases: every set_source and every teardown bumps it, so any
-        # generation captured by an outstanding probe no longer matches once a
-        # newer set_source or a teardown has run. The probe's GUI-thread callback
-        # no-ops whenever its captured generation differs from the current one,
-        # which is exactly how a superseded or post-teardown probe is dropped.
-        self._source_generation: int = 0
-        self._probe_worker: object | None = None
-        # set_source is now async (the player is built only after the off-thread
-        # ffprobe returns), so a play() that arrives before the probe lands is
-        # remembered here and honoured once the player exists. pause()/stop()
-        # clear it; a new set_source resets it.
-        self._pending_play: bool = False
-        # seek_seconds()/pause() are async-symmetric with play(): a seek or pause
-        # issued while the probe is still in flight (player is None) is remembered
-        # here and applied in _configure_player once the player exists — otherwise
-        # WordCurationDialog's seek-then-pause preview (issued during construction,
-        # before the probe lands) silently no-ops and the player rests at frame 0.
+        self._mpv_available: bool = mpv_available()
+        # Set on mpv's file-loaded event; gates seeks (mpv errors on a seek
+        # before the file is loaded) and audio-track selection.
+        self._file_loaded: bool = False
+        # A seek issued before file-loaded is remembered here and applied in
+        # _on_file_loaded — WordCurationDialog's seek-then-pause preview is
+        # issued immediately after set_source, before mpv finishes loading.
         self._pending_seek_ms: int | None = None
-        self._pending_pause: bool = False
+        self._duration_ms: int = 0
+        # True while mpv sits at end-of-file (keep-open=yes auto-pauses there;
+        # unpausing at EOF is a no-op, so play() must seek to 0 first).
+        self._at_eof: bool = False
 
-        # AV1 watchdog state — populated by set_source
-        self._is_av1: bool = False
-        self._got_video_frame: bool = False
-        # Set when the media loads while the widget is still hidden; the decode
-        # nudge + watchdog are then armed from showEvent instead. The nudge seeks
-        # the video sink, which only presents a frame once it is on screen, so
-        # nudging/arming while hidden would seek into the void and fire a false
-        # fallback (Issue #82).
-        self._av1_watchdog_pending: bool = False
-
-        # Single-shot watchdog: fires _AV1_WATCHDOG_MS after LoadedMedia/BufferedMedia
-        # if no frame decoded.
-        self._av1_watchdog = QTimer(self)
-        self._av1_watchdog.setSingleShot(True)
-        self._av1_watchdog.timeout.connect(self._on_av1_watchdog_timeout)
+        self._mpv_time_pos.connect(self._on_time_pos)
+        self._mpv_duration.connect(self._on_duration)
+        self._mpv_pause.connect(self._on_pause_changed)
+        self._mpv_eof.connect(self._on_eof)
+        self._mpv_file_loaded.connect(self._on_file_loaded)
+        self._mpv_playback_error.connect(self._on_playback_error)
 
         self._setup_ui()
 
@@ -109,31 +110,20 @@ class SubtitlePlayerWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
 
-        # Video widget
-        self.video_widget = QVideoWidget()
+        # Video widget (render-API view; owns only the mpv render context)
+        self.video_widget = MpvVideoWidget()
+        self.video_widget.render_failed.connect(self._on_render_failed)
         layout.addWidget(self.video_widget, 1)
 
-        # AV1 fallback UI — hidden by default; shown when the watchdog fires on an
-        # undecodable AV1 source (GPU can't hardware-decode AV1 on this machine).
-        # The player is left running, so audio + subtitle overlay keep playing for
-        # sync checking; only the video frame is unavailable.
-        self._av1_notice_label = QLabel(
-            self.tr(
-                "This video uses AV1, which your system can't decode for in-app preview. "
-                "Audio and subtitles still play."
-            )
-        )
-        self._av1_notice_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._av1_notice_label.setWordWrap(True)
-        self._av1_notice_label.setVisible(False)
-        layout.addWidget(self._av1_notice_label)
-
-        # Connect the video-sink signal once; the sink belongs to the QVideoWidget
-        # and persists across player instances, so we wire it here rather than per-source.
-        # videoSink() is typed Optional but a constructed QVideoWidget always has one.
-        video_sink = self.video_widget.videoSink()
-        if video_sink is not None:
-            video_sink.videoFrameChanged.connect(self._on_video_frame_changed)
+        # Backend-degradation notice — hidden by default. Two texts share it:
+        # libmpv absent entirely (set_source shows it and no player is built),
+        # or rendering impossible on this display (render_failed; audio still
+        # plays). Never both video and notice at once.
+        self._backend_notice_label = QLabel()
+        self._backend_notice_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._backend_notice_label.setWordWrap(True)
+        self._backend_notice_label.setVisible(False)
+        layout.addWidget(self._backend_notice_label)
 
         # Subtitle overlay label
         self.subtitle_label = QLabel()
@@ -181,277 +171,118 @@ class SubtitlePlayerWidget(QWidget):
         offset: float = 0.0,
         *,
         audio_track_override: int | None = None,
-        ffprobe_cmd: str = "ffprobe",
     ) -> None:
         """Load a video source and configure subtitle playback.
 
-        If called again on an already-loaded source, the previous player is stopped first.
+        Creates the mpv player on first call; later calls reuse it via
+        ``loadfile`` (paused, from position 0). Audio-track selection happens
+        on mpv's ``file-loaded`` event from its ``track-list`` property — the
+        old off-thread ffprobe probe (and its ``ffprobe_cmd`` parameter) is
+        gone.
 
         Args:
             video_path: Path to the video file.
             subtitle_entries: List of (start_seconds, end_seconds, text) tuples.
             offset: Initial subtitle timing offset in seconds.
-            audio_track_override: Optional 0-indexed audio track to force instead of
-                auto-detecting Japanese. None preserves auto-detect.
-            ffprobe_cmd: ffprobe executable path/literal used for audio-track auto-detection.
-                Defaults to the bare ``"ffprobe"`` literal (PATH lookup).
-
-        The two ffprobe subprocesses (codec detection + Japanese-audio detection)
-        run on a worker thread so the GUI stays responsive while probing; the
-        QMediaPlayer is built in a GUI-thread callback once the probe returns
-        (a fraction of a second later). The public signature is unchanged.
+            audio_track_override: Optional 0-indexed audio track (position
+                within the audio-only track list, as produced by
+                ``list_audio_streams``) to force instead of auto-detecting
+                Japanese. None preserves auto-detect via mpv track metadata.
         """
-        # Stop and fully tear down any existing player before re-initialising.
-        self._teardown_player()
-
-        # Reset per-source watchdog state and restore normal video widget visibility.
-        self._got_video_frame = False
-        self._av1_watchdog_pending = False
-        self._av1_watchdog.stop()
-        self._av1_notice_label.setVisible(False)
-        self.video_widget.setVisible(True)
-
         self.subtitle_entries = subtitle_entries
         self._offset = offset
         self._audio_track_override = audio_track_override
 
-        # A new source cancels any auto-play / queued seek / pause against the previous one.
-        self._pending_play = False
+        # New source: nothing loaded yet, previous pendings are void.
+        self._file_loaded = False
         self._pending_seek_ms = None
-        self._pending_pause = False
+        self._at_eof = False
+        self.subtitle_label.setVisible(False)
 
-        # Bump the generation and capture it for the closure: a later set_source
-        # supersedes this probe, so its callback must no-op when it finally lands.
-        self._source_generation += 1
-        generation = self._source_generation
-
-        def _probe() -> tuple[bool, int | None]:
-            """Run the blocking ffprobe calls on the worker thread."""
-            is_av1 = get_primary_video_codec(video_path, ffprobe_cmd=ffprobe_cmd) == "av1"
-            if audio_track_override is None:
-                jp_stream = find_japanese_audio_stream(video_path, ffprobe_cmd=ffprobe_cmd)
-                jp_audio_index = jp_stream.audio_index if jp_stream is not None else None
-            else:
-                jp_audio_index = audio_track_override
-            return is_av1, jp_audio_index
-
-        def _configure(result: object) -> None:
-            """Build the player on the GUI thread once the probe returns."""
-            self._configure_player(generation, video_path, result)  # type: ignore[arg-type]
-
-        def _on_probe_error(msg: str) -> None:
-            """Surface a probe failure instead of leaving a silently blank player."""
-            if generation != self._source_generation:
-                return
-            logger.warning("Subtitle player ffprobe failed: %s", msg)
-            self.subtitle_label.setText(tr_format(self.tr("Could not load video: %1"), msg))
-            self.subtitle_label.setVisible(True)
-
-        self._probe_worker = run_off_thread(
-            self,
-            _probe,
-            _configure,
-            _on_probe_error,
-            error_prefix="ffprobe failed: ",
-        )
-
-    def _configure_player(
-        self,
-        generation: int,
-        video_path: Path,
-        result: tuple[bool, int | None],
-    ) -> None:
-        """Build the QMediaPlayer from probe results (GUI thread).
-
-        A no-op if a newer ``set_source`` superseded this one (generation guard)
-        or the widget is being torn down, so a probe finishing after the video
-        widget's C++ object is gone can't touch it.
-        """
-        if generation != self._source_generation:
+        if not self._mpv_available:
+            # pip install without a system libmpv: degrade to a notice; the
+            # rest of the dialog (sentence picker, offset controls) still works.
+            self._backend_notice_label.setText(
+                self.tr(
+                    "Video preview requires mpv (libmpv). Bundled builds include it; "
+                    "on Linux install it from your package manager (e.g. libmpv2), "
+                    "on macOS via Homebrew (brew install mpv)."
+                )
+            )
+            self._backend_notice_label.setVisible(True)
+            self.video_widget.setVisible(False)
             return
 
-        is_av1, jp_audio_index = result
-        self._is_av1 = is_av1
-        self._jp_audio_index = jp_audio_index
-
-        self.audio_output = QAudioOutput(self)
-        self.player = QMediaPlayer(self)
-        self.player.setAudioOutput(self.audio_output)
-        self.player.setVideoOutput(self.video_widget)
-
-        self.player.positionChanged.connect(self._on_position_changed)
-        self.player.durationChanged.connect(self._on_duration_changed)
-        self.player.playbackStateChanged.connect(self._on_playback_state_changed)
-        self.player.errorOccurred.connect(self._on_media_error)
-        self.player.tracksChanged.connect(self._on_tracks_changed)
-        self.player.mediaStatusChanged.connect(self._on_media_status_changed)
-
-        self.player.setSource(QUrl.fromLocalFile(str(video_path)))
-
-        # Honour a seek/pause/play that arrived while the probe was still in
-        # flight. Seek first so playback (or the paused first-frame preview)
-        # lands at the requested position rather than frame 0.
-        if self._pending_seek_ms is not None:
-            self.player.setPosition(self._pending_seek_ms)
-            self._pending_seek_ms = None
-        if self._pending_pause:
-            self._pending_pause = False
-            self.player.pause()
-        if self._pending_play:
-            self._pending_play = False
-            self.player.play()
-
-    def _teardown_player(self) -> None:
-        """Stop playback and detach both outputs from the current player.
-
-        Factored out of ``set_source`` so it can be called from both re-source
-        (reuse path) and ``closeEvent`` (widget discard path).  With both
-        ``QAudioOutput`` and ``QMediaPlayer`` parented to ``self``, Qt will free
-        the C++ objects when the widget is destroyed — but detaching the outputs
-        first is still best practice to avoid a use-after-free window during
-        the Qt object-tree teardown.  ``set_source`` builds a fresh player AND a
-        fresh ``QAudioOutput`` on every re-source, so the old output is scheduled
-        for deletion here too — otherwise one ``QAudioOutput`` accumulates under
-        the widget per re-source until the widget itself is destroyed (F9).
-
-        Windows GUI-freeze fix (Test Timing → Apply Offset / Cancel "Not
-        Responding"): we now detach the VIDEO sink with ``setVideoOutput(None)``
-        — right after ``stop()`` — before the player is destroyed. The Qt6 FFmpeg
-        backend (the Windows default) hangs the GUI thread destroying a
-        ``QMediaPlayer`` whose D3D video sink is still attached; detaching it
-        first clears that. It is sequenced AFTER ``stop()`` (not before) so the
-        sink is never detached mid-``PlayingState`` — the Test Timing flow leaves
-        the player playing at teardown; detaching from a stopped player is safe in
-        every state (Playing/Paused/Stopped), which is all the curation/AV1 paths
-        need too. Qt documents no blocking/ordering contract here, so WHICH call
-        blocks on Windows is a hypothesis: the per-step DEBUG timing below, plus a
-        forced (drained) destruction, exist to localize it in a single Windows run.
-
-        Also cancels/short-joins any in-flight ffprobe worker first — its callback
-        would otherwise build a player into a half-torn-down widget. A probe stuck
-        past the join is detached from the widget (see ``_join_probe_worker``) so
-        a QThread is never destroyed while running. The join must precede the
-        ``self.player is None`` early-out, since that None is exactly the
-        in-flight-probe state (the player is not built until the callback).
-        """
-        self._join_probe_worker()
+        self._backend_notice_label.setVisible(False)
+        self.video_widget.setVisible(True)
 
         if self.player is None:
-            return
-        # Bind a non-Optional local so the deferred ``_timed`` callables and the
-        # drain don't re-widen ``self.player`` back to Optional; same object, so
-        # mock assertions in tests are unaffected.
-        player = self.player
+            self.player = create_mpv_player(log_handler=self._on_mpv_log)
+            self._register_mpv_callbacks(self.player)
+            self.video_widget.attach(self.player)
 
-        # Diagnostics are DEBUG-gated so default runtime AND default test runs are
-        # byte-for-byte unaffected (the forced DeferredDelete drain below would
-        # raise TypeError against a mocked player otherwise). Only setVideoOutput
-        # (None) is an always-on behavior change — the actual fix.
-        debug = logger.isEnabledFor(logging.DEBUG)
+        # Re-source parity with the old backend: a new source always starts
+        # paused at 0 (the factory sets pause=True only at construction).
+        self.player.pause = True
+        self.player.loadfile(str(video_path))
 
-        def _timed(label: str, call):
-            """Run ``call`` and, under DEBUG, log how long it took.
+    def _register_mpv_callbacks(self, player: Any) -> None:
+        """Wire mpv observers/events to the queued marshalling signals.
 
-            No ``try``/``except``: a backend throw must stay visible, and a hang
-            leaves a 'start' line with no 'done' — which still localizes the
-            blocking step on Windows.
-            """
-            if not debug:
-                return call()
-            logger.debug("teardown: %s start", label)
-            t0 = time.monotonic()
-            result = call()
-            logger.debug("teardown: %s done in %.3fs", label, time.monotonic() - t0)
-            return result
-
-        _timed("stop()", player.stop)
-        _timed("setVideoOutput(None)", lambda: player.setVideoOutput(None))
-        player.positionChanged.disconnect(self._on_position_changed)
-        player.durationChanged.disconnect(self._on_duration_changed)
-        player.playbackStateChanged.disconnect(self._on_playback_state_changed)
-        player.errorOccurred.disconnect(self._on_media_error)
-        player.tracksChanged.disconnect(self._on_tracks_changed)
-        player.mediaStatusChanged.disconnect(self._on_media_status_changed)
-        player.setAudioOutput(None)
-        _timed("deleteLater()", player.deleteLater)
-        if debug:
-            # ``deleteLater`` only QUEUES the C++ dtor; the queued delete is serviced
-            # by the OUTER QApplication loop after exec() exits, so a destruction-time
-            # hang otherwise surfaces as a post-dialog freeze the timing above can't
-            # see. Force just this player's dtor to run synchronously here (targeted
-            # receiver, not the None form conftest._drain_qt_deletes uses, so no
-            # unrelated objects are destroyed). Safe: the player's signals are already
-            # disconnected and it is not the object handling the current click event.
-            logger.debug("teardown: drain DeferredDelete start")
-            t0 = time.monotonic()
-            QCoreApplication.sendPostedEvents(player, QEvent.Type.DeferredDelete.value)
-            logger.debug("teardown: drain DeferredDelete done in %.3fs", time.monotonic() - t0)
-        if self.audio_output is not None:
-            self.audio_output.deleteLater()
-        self.player = None
-        self.audio_output = None
-        # The armed single-shot AV1 watchdog is intentionally left running (only
-        # set_source stops it): _on_av1_watchdog_timeout touches child widgets only,
-        # never self.player, so a late fire after teardown is a no-op, and the timer
-        # dies with the widget. Don't add _av1_watchdog.stop() here assuming oversight.
-        self._av1_watchdog_pending = False
-
-    def _join_probe_worker(self) -> None:
-        """Cancel and short-bounded-join any in-flight ffprobe worker.
-
-        Bumps the source generation first so the captured generation of any
-        outstanding probe no longer matches: a result that was already emitted
-        and queued before ``cancel()`` took effect is then dropped by the guard
-        in :meth:`_configure_player` rather than building a player into a
-        half-torn-down widget. ``set_source`` bumps again afterwards, so its own
-        fresh probe still matches — the counter only ever increases, never
-        colliding across calls.
-
-        ``SingleCallWorker.cancel()`` only sets an Event checked before/after the
-        ffprobe subprocess, so it cannot interrupt a probe blocked mid-call. A
-        genuinely stuck probe therefore stays running past the join and is
-        returned as a laggard. We DETACH each laggard from this (dying) widget
-        with ``setParent(None)`` so Qt does not destroy a running QThread when the
-        widget's C++ object is freed — destroying a running QThread aborts the
-        process, the exact failure this hardening guards against. The detached
-        worker stays in ``parent._off_thread_workers`` (keeping its Python wrapper
-        alive); it finishes its ffprobe eventually, emits ``finished``, and
-        self-cleans via the ``run_off_thread`` handler (registry discard +
-        deleteLater), which does not touch the widget's C++ object. The generation
-        guard already neutralised its late ``_configure``, so a short join is
-        enough — no long GUI-thread stall is needed.
+        Runs once per player (= once per widget lifetime). Every handler body
+        is a bare signal emit — they run on python-mpv's event thread where
+        touching widgets or calling back into libmpv is undefined behavior.
+        python-mpv keeps references to registered handlers, and terminate()
+        joins the event thread, so no emit can outlive the widget.
         """
-        self._source_generation += 1
-        laggards = join_tracked_workers(self, timeout_ms=200)
-        for worker in laggards:
-            worker.setParent(None)  # detach from the dying widget; self-cleans on finished
-        self._probe_worker = None
+        player.observe_property("time-pos", lambda _name, value: self._mpv_time_pos.emit(value))
+        player.observe_property("duration", lambda _name, value: self._mpv_duration.emit(value))
+        player.observe_property("pause", lambda _name, value: self._mpv_pause.emit(value))
+        player.observe_property("eof-reached", lambda _name, value: self._mpv_eof.emit(value))
+
+        @player.event_callback("file-loaded")
+        def _on_file_loaded_event(_event: Any) -> None:
+            self._mpv_file_loaded.emit()
+
+        @player.event_callback("end-file")
+        def _on_end_file_event(event: Any) -> None:
+            data = getattr(event, "data", None)
+            if data is not None and getattr(data, "reason", None) == _END_FILE_REASON_ERROR:
+                self._mpv_playback_error.emit(self.tr("playback failed"))
+
+    def _teardown_player(self) -> None:
+        """Terminate the mpv core deterministically. Idempotent.
+
+        Exact order matters (this replaces the old QMediaPlayer D3D teardown
+        dance wholesale):
+
+        1. Swap ``self.player`` to None while holding a local strong ref —
+           slots guard on ``self.player is None`` from this point on.
+        2. ``video_widget.detach()`` frees the render context while the core
+           is still alive. Freeing against a dead core — or terminating a core
+           with a live render context — is a hard process abort in libmpv.
+        3. ``player.terminate()`` destroys the handle and joins python-mpv's
+           event thread, so no observer emit can arrive afterwards.
+        """
+        if self.player is None:
+            return
+        player, self.player = self.player, None
+        self._file_loaded = False
+        self._pending_seek_ms = None
+        self.video_widget.detach()
+        player.terminate()
 
     def closeEvent(self, event) -> None:
-        """Tear down the multimedia backend deterministically on widget close.
-
-        Without this, ``QMediaPlayer`` and ``QAudioOutput`` — even though now
-        parented to ``self`` — might be freed after the ``QVideoWidget`` C++
-        object has already been destroyed, causing a use-after-free in the
-        multimedia pipeline (OVH-057 / Issue #55).
-
-        ``_teardown_player`` also cancels/joins any in-flight ffprobe worker so a
-        probe finishing after the widget is gone neither builds a player into a
-        dead C++ object nor leaves a running QThread parented to the widget to be
-        destroyed (and abort the process); a stuck probe is detached instead.
-        """
+        """Tear down the mpv core deterministically on widget close."""
         self._teardown_player()
         super().closeEvent(event)
 
     def release(self) -> None:
-        """Fully tear down the player and join any in-flight probe.
+        """Fully tear down the player.
 
-        Dialogs embedding this widget call this on their exit path (``finished``
-        / ``accept`` / ``reject`` / ``closeEvent``) instead of plain ``stop()``,
-        because Qt does not propagate a parent dialog's close to child widgets —
-        without this, a probe still running when the dialog closes outlives the
-        widget; ``_teardown_player`` detaches a stuck probe so its QThread is not
-        destroyed while running (which would abort the process at C++ teardown).
+        Dialogs embedding this widget call this on their exit path
+        (``finished`` / ``accept`` / ``reject`` / ``closeEvent``) because Qt
+        does not propagate a parent dialog's close to child widgets.
         """
         self._teardown_player()
 
@@ -462,17 +293,23 @@ class SubtitlePlayerWidget(QWidget):
     def seek_seconds(self, seconds: float) -> None:
         """Seek to an absolute position.
 
-        If the source's ffprobe is still in flight (player not built yet), the
-        seek is queued and applied when the player is configured.
+        mpv errors on a seek before the file is loaded, so a seek issued
+        between set_source and the file-loaded event is queued and applied in
+        _on_file_loaded (WordCurationDialog seeks immediately after
+        set_source).
 
         Args:
             seconds: Target position in seconds (clamped to >= 0).
         """
         target_ms = max(0, int(seconds * 1000))
-        if self.player is not None:
-            self.player.setPosition(target_ms)
-        else:
+        if self.player is None or not self._file_loaded:
             self._pending_seek_ms = target_ms
+            return
+        self._seek_ms(target_ms)
+
+    def _seek_ms(self, target_ms: int) -> None:
+        """Issue an exact absolute seek (parity with QMediaPlayer.setPosition)."""
+        self.player.command("seek", target_ms / 1000.0, "absolute+exact")
 
     def set_offset(self, offset: float) -> None:
         """Update the subtitle timing offset (overlay sync only).
@@ -483,272 +320,150 @@ class SubtitlePlayerWidget(QWidget):
         self._offset = offset
 
     def play(self) -> None:
-        """Start playback.
+        """Start playback (no-op if no source has been loaded).
 
-        If the source's ffprobe is still in flight (player not built yet), the
-        request is queued and honoured when the player is configured.
+        At end-of-file, keep-open=yes leaves mpv paused on the last frame and
+        a bare unpause is a no-op — seek to 0 first so Play replays from the
+        start (QMediaPlayer end-of-media parity).
         """
-        self._pending_pause = False
-        if self.player is not None:
-            self.player.play()
-        else:
-            self._pending_play = True
+        if self.player is None:
+            return
+        if self._at_eof and self._file_loaded:
+            self._seek_ms(0)
+        self.player.pause = False
 
     def pause(self) -> None:
-        """Pause playback.
-
-        If the source's ffprobe is still in flight (player not built yet), the
-        pause is queued and applied when the player is configured.
-        """
-        self._pending_play = False
-        if self.player is not None:
-            self.player.pause()
-        else:
-            self._pending_pause = True
+        """Pause playback (no-op if no source has been loaded)."""
+        if self.player is None:
+            return
+        self.player.pause = True
 
     def stop(self) -> None:
-        """Stop playback (no-op if no source has been loaded)."""
-        self._pending_play = False
-        self._pending_pause = False
-        if self.player is not None:
-            self.player.stop()
+        """Stop playback: paused at position 0, media kept loaded.
+
+        NOT mpv's ``stop`` command (which unloads the file) — QMediaPlayer's
+        stop kept the media, and callers re-play after stopping.
+        """
+        if self.player is None:
+            return
+        self.player.pause = True
+        self.seek_seconds(0.0)
 
     def toggle_play_pause(self) -> None:
         """Toggle play/pause (no-op if no source has been loaded)."""
         if self.player is None:
             return
-        if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
-            self.player.pause()
+        if self.player.pause:
+            self.play()
         else:
-            self.player.play()
+            self.pause()
 
     # ------------------------------------------------------------------
-    # Internal signal handlers
+    # GUI-thread slots (fed by the queued marshalling signals)
     # ------------------------------------------------------------------
 
-    def _on_tracks_changed(self) -> None:
-        """Select the Japanese audio track once QMediaPlayer enumerates tracks."""
-        if self.player is None:  # safety: signal only fires after set_source
+    def _on_file_loaded(self) -> None:
+        """Select the audio track and apply a queued seek once mpv loaded the file."""
+        if self.player is None:
             return
-        if self._jp_audio_index is not None:
-            # ffprobe found JP, or user gave an override — honor it
-            track_count = len(self.player.audioTracks())
-            if self._jp_audio_index >= track_count:
+        self._file_loaded = True
+        self._at_eof = False
+        self._select_audio_track()
+        if self._pending_seek_ms is not None:
+            pending, self._pending_seek_ms = self._pending_seek_ms, None
+            self._seek_ms(pending)
+
+    def _select_audio_track(self) -> None:
+        """Pick the audio track from mpv's track-list.
+
+        Override (0-based index within the audio-only track list, demuxer
+        order — the same order ffprobe reports) maps to mpv's 1-based ``aid``.
+        Without an override, scan track metadata for a Japanese language tag.
+        Otherwise leave mpv's own default selection.
+        """
+        track_list = self.player.track_list or []
+        audio_tracks = [t for t in track_list if t.get("type") == "audio"]
+
+        if self._audio_track_override is not None:
+            if self._audio_track_override >= len(audio_tracks):
                 logger.warning(
-                    f"Audio track index {self._jp_audio_index} out of range "
-                    f"(player reports {track_count} audio tracks)"
+                    f"Audio track index {self._audio_track_override} out of range "
+                    f"(player reports {len(audio_tracks)} audio tracks)"
                 )
                 return
-            self.player.setActiveAudioTrack(self._jp_audio_index)
-            logger.info(f"Selected audio track {self._jp_audio_index} in mini-player")
+            self.player.aid = self._audio_track_override + 1
+            logger.info(f"Selected audio track {self._audio_track_override} in mini-player")
             return
 
-        # Both override and ffprobe returned nothing — try Qt-side language metadata.
-        for i, track in enumerate(self.player.audioTracks()):
-            lang = track.value(QMediaMetaData.Key.Language)
-            if lang == QLocale.Language.Japanese:
-                self.player.setActiveAudioTrack(i)
-                logger.info(f"Selected Japanese audio track {i} via Qt metadata fallback")
+        for position, track in enumerate(audio_tracks):
+            lang = (track.get("lang") or "").lower()
+            if lang in JAPANESE_LANGUAGE_CODES:
+                self.player.aid = track.get("id", position + 1)
+                logger.info(f"Selected Japanese audio track {position} via mpv track metadata")
                 return
-        # Qt also can't identify — leave QMediaPlayer's default (no action)
+        # No JP tag anywhere — leave mpv's default selection.
 
-    def _on_playback_state_changed(self, state: QMediaPlayer.PlaybackState) -> None:
-        """Update play button text based on playback state.
+    def _on_time_pos(self, value: object) -> None:
+        """Playback position observer (seconds float; None while idle)."""
+        if value is None or self.player is None:
+            return
+        position_ms = int(float(value) * 1000)  # type: ignore[arg-type]
+        # Don't fight the user mid-drag: while the handle is held down, a
+        # playback-driven setValue yanks it back and the scrub tugs-of-war.
+        # The user's own drag drives position via _on_slider_moved.
+        if not self.position_slider.isSliderDown():
+            self.position_slider.setValue(position_ms)
+        self.time_label.setText(f"{self._format_time(position_ms)} / {self._format_time(self._duration_ms)}")
+        self._update_subtitle(float(value))  # type: ignore[arg-type]
 
-        Args:
-            state: Current playback state.
+    def _on_duration(self, value: object) -> None:
+        """Duration observer (seconds float; None fires before a file loads)."""
+        if value is None:
+            return
+        self._duration_ms = int(float(value) * 1000)  # type: ignore[arg-type]
+        self.position_slider.setRange(0, self._duration_ms)
+
+    def _on_pause_changed(self, value: object) -> None:
+        """Pause observer — drives the play button label.
+
+        keep-open=yes flips pause to True at EOF automatically, which resets
+        the label to "Play" exactly like the old EndOfMedia handling.
         """
-        if state == QMediaPlayer.PlaybackState.PlayingState:
-            self.play_button.setText(self.tr("Pause"))
-        else:
-            self.play_button.setText(self.tr("Play"))
+        paused = bool(value) if value is not None else True
+        self.play_button.setText(self.tr("Play") if paused else self.tr("Pause"))
 
-    def _on_media_error(self, error: QMediaPlayer.Error, error_string: str) -> None:
-        """Handle media player errors by showing message in subtitle label.
+    def _on_eof(self, value: object) -> None:
+        """eof-reached observer (bool; None while idle)."""
+        self._at_eof = bool(value)
 
-        Args:
-            error: QMediaPlayer.Error enum value.
-            error_string: Human-readable error description.
-        """
-        self.subtitle_label.setText(tr_format(self.tr("Video error: %1"), error_string))
+    def _on_playback_error(self, message: str) -> None:
+        """Surface a playback error in the subtitle label (old-backend parity)."""
+        self.subtitle_label.setText(tr_format(self.tr("Video error: %1"), message))
         self.subtitle_label.setVisible(True)
 
-    def _on_video_frame_changed(self) -> None:
-        """Record that at least one decoded video frame has arrived from the sink.
+    def _on_render_failed(self, reason: str) -> None:
+        """mpv loaded but rendering is impossible on this display (broken GL).
 
-        Connected once in _setup_ui to ``QVideoWidget.videoSink().videoFrameChanged``.
-        Setting this flag prevents the AV1 watchdog from triggering the fallback UI
-        when a frame is successfully decoded.
-
-        Recovery: if the fallback notice is already showing (slow decode that
-        produced its first frame only after the watchdog fired), undo the
-        fallback — hide the notice, restore the video widget, and resume playback so
-        the preview shows video rather than staying on the audio-only notice.
-        ``play()`` is a no-op if audio is already playing and resumes it if paused.
+        Audio and the subtitle overlay keep working — say so instead of
+        leaving a silent black box.
         """
-        self._got_video_frame = True
-        self._av1_watchdog.stop()
-        # isHidden(), not isVisible(): the explicit visibility flag set by the
-        # watchdog, independent of whether the widget tree is shown on screen.
-        if not self._av1_notice_label.isHidden():
-            logger.info("AV1 frame decoded after the watchdog fired; restoring video preview")
-            self._av1_notice_label.setVisible(False)
-            self.video_widget.setVisible(True)
-            if self.player is not None:
-                self.player.play()
+        logger.warning("Video render unavailable: %s", reason)
+        self._backend_notice_label.setText(
+            self.tr("Video preview is unavailable on this display. Audio and subtitles still play.")
+        )
+        self._backend_notice_label.setVisible(True)
+        self.video_widget.setVisible(False)
 
-    def _nudge_first_frame(self) -> None:
-        """Force the AV1 decoder to present its first frame.
+    def _on_mpv_log(self, level: str, component: str, message: str) -> None:
+        """Forward mpv warn/error log lines to the app logger.
 
-        ``set_source`` only calls ``setSource``, which leaves the player in
-        StoppedState at position 0. Qt's FFmpeg backend does not present a frame on
-        the hardware-AV1 path until a decode is *requested*, so on a fresh open
-        nothing decodes until the user interacts — and the watchdog then fires on a
-        frame nobody asked for, a false 'can't decode' notice (Issue #82).
-
-        This mirrors the proven word-click path (``WordCurationDialog._preview_scene``
-        = ``seek_seconds`` then ``pause``), which decodes-and-presents reliably on the
-        same machines that false-fire on open:
-
-        - ``setPosition`` to a *real* timestamp (the first subtitle entry, else a
-          few-hundred-ms fallback) — a 1 ms seek coalesces to frame 0 and decodes
-          nothing.
-        - ``pause()`` transitions StoppedState → PausedState, which drives the decode
-          pipeline to present the frame. A bare seek on a never-played stopped player
-          may not.
-
-        The watchdog then measures a real decode attempt: a decodable source produces
-        a frame and disarms it; an undecodable one never does and the watchdog
-        correctly reveals the fallback.
-
-        No audio: ``pause()`` only enters PausedState (audio flows in PlayingState),
-        so the player stays silent until the user presses Play.
-
-        Skipped entirely while the user is actively playing: the nudge's
-        ``setPosition`` + ``pause`` would cancel a requested play and jump to the
-        first entry (Bug A2). A playing stream is already decoding frames, so the
-        nudge is unnecessary; the watchdog is still armed by the caller and a
-        decoded frame disarms it as usual.
+        Runs on python-mpv's log thread — logging is thread-safe, widgets are
+        not; never touch UI here.
         """
-        if self.player is not None and self._is_av1 and not self._got_video_frame:
-            if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
-                return
-            self.player.setPosition(self._nudge_position_ms())
-            self.player.pause()
-
-    def _nudge_position_ms(self) -> int:
-        """Position (ms) for the AV1 first-frame nudge.
-
-        Seeks to the first subtitle entry's start so the seek lands on a real
-        keyframe (a genuine demux+decode), not the coalesced no-op a near-zero seek
-        produces. Falls back to ``_AV1_NUDGE_FALLBACK_MS`` when there are no entries.
-        """
-        if self.subtitle_entries:
-            return max(_AV1_NUDGE_FALLBACK_MS, int(self.subtitle_entries[0][0] * 1000))
-        return _AV1_NUDGE_FALLBACK_MS
-
-    def _arm_av1_decode_check(self) -> None:
-        """Nudge a first-frame decode and start the watchdog deadline.
-
-        Caller guarantees the widget is on screen, the source is AV1, and no frame
-        has decoded yet. Nudge first so a frame is actually requested, then start
-        the clock that reveals the fallback if none arrives.
-        """
-        self._nudge_first_frame()
-        self._av1_watchdog.start(_AV1_WATCHDOG_MS)
-
-    def _on_media_status_changed(self, status: QMediaPlayer.MediaStatus) -> None:
-        """Nudge a decode and arm the AV1 watchdog once media is loaded.
-
-        For an AV1 source, force the first frame to decode (``_nudge_first_frame``)
-        and start the watchdog: if the machine can hardware-decode AV1 the frame
-        arrives and disarms the watchdog; if it genuinely cannot, no frame arrives
-        and the watchdog reveals the fallback UI after the timeout.
-
-        The nudge seeks the video sink, which only presents a frame once it is on
-        screen. Both callers ``set_source`` during dialog construction, before
-        ``.exec()`` shows the window, so LoadedMedia routinely fires while hidden.
-        Nudging/arming then would seek into a hidden sink and expire before the
-        window is composited — a false fallback (Issue #82). When hidden, defer to
-        ``showEvent``.
-
-        The watchdog is only armed when ``_is_av1`` is True; non-AV1 sources skip
-        this path entirely.
-
-        Args:
-            status: The new QMediaPlayer media status.
-        """
-        if status in (_LOADED_MEDIA, _BUFFERED_MEDIA) and self._is_av1 and not self._got_video_frame:
-            if self.isVisible():
-                # Idempotent: LoadedMedia is typically followed by BufferedMedia,
-                # so guard on isActive() to nudge + arm once per source rather than
-                # re-seeking and restarting the clock on the second status change.
-                if not self._av1_watchdog.isActive():
-                    self._arm_av1_decode_check()
-            else:
-                self._av1_watchdog_pending = True
-
-    def showEvent(self, event) -> None:
-        """Nudge + arm a decode check deferred while the widget was hidden.
-
-        The nudge seeks the video sink, which can only present a frame once it is
-        on screen; see ``_on_media_status_changed`` (Issue #82).
-        """
-        super().showEvent(event)
-        if (
-            self._av1_watchdog_pending
-            and self._is_av1
-            and not self._got_video_frame
-            and not self._av1_watchdog.isActive()
-        ):
-            self._av1_watchdog_pending = False
-            self._arm_av1_decode_check()
-
-    def _on_av1_watchdog_timeout(self) -> None:
-        """Handle the AV1 watchdog firing after no decoded frame arrived.
-
-        If ``_got_video_frame`` is still False when this fires, the AV1 video
-        could not be decoded (no hardware decoder available on this machine).
-        The video widget is hidden and the fallback notice shown in its place, but
-        the player is left running so audio stays playable (callers such as the
-        curation dialog keep it paused after seeking, so playback is on-demand, not
-        automatic) and the subtitle overlay keeps updating from ``positionChanged``
-        — letting the user verify audio/subtitle sync even without a video preview.
-        """
-        if self._is_av1 and not self._got_video_frame:
-            logger.info(
-                "AV1 watchdog fired — no decoded frame within the deadline; " "hiding video, keeping audio/subtitles"
-            )
-            self.video_widget.setVisible(False)
-            self._av1_notice_label.setVisible(True)
-
-    def _on_position_changed(self, position: int) -> None:
-        """Handle media position change.
-
-        Args:
-            position: Current position in milliseconds.
-        """
-        if self.player is None:  # safety: signal only fires after set_source
-            return
-        # Don't fight the user mid-drag: while the handle is held down, a
-        # playback-driven setValue yanks it back and the scrub tugs-of-war
-        # (Bug A4). The user's own drag drives position via _on_slider_moved.
-        if not self.position_slider.isSliderDown():
-            self.position_slider.setValue(position)
-
-        duration = self.player.duration()
-        self.time_label.setText(f"{self._format_time(position)} / {self._format_time(duration)}")
-
-        current_seconds = position / 1000.0
-        self._update_subtitle(current_seconds)
-
-    def _on_duration_changed(self, duration: int) -> None:
-        """Handle media duration change.
-
-        Args:
-            duration: Total duration in milliseconds.
-        """
-        self.position_slider.setRange(0, duration)
+        if level in ("fatal", "error"):
+            logger.warning("mpv [%s] %s: %s", level, component, message.strip())
+        else:
+            logger.debug("mpv [%s] %s: %s", level, component, message.strip())
 
     def _on_slider_moved(self, position: int) -> None:
         """Handle slider manual move.
@@ -756,8 +471,7 @@ class SubtitlePlayerWidget(QWidget):
         Args:
             position: New position in milliseconds.
         """
-        if self.player is not None:
-            self.player.setPosition(position)
+        self.seek_seconds(position / 1000.0)
 
     def _update_subtitle(self, current_seconds: float) -> None:
         """Update the subtitle label based on current playback position.
