@@ -22,6 +22,7 @@ from anki_miner.services.ja_normalize import (
 from anki_miner.services.morphology import (
     ReadingLookup,
     TokenInclusionRule,
+    _edit_distance,
     apply_special_readings,
     attest_merged_readings,
     extract_lemma,
@@ -163,6 +164,7 @@ class SubtitleParserService:
         """
         self._fg_cache = {}
         self._rd_cache = {}
+        self._hw_reading_cache: dict[str, str | None] = {}
 
     def _furigana(self, s: str) -> str:
         """Return generate_furigana(s, tagger), memoized within the current parse pass."""
@@ -175,6 +177,37 @@ class SubtitleParserService:
         if s not in self._rd_cache:
             self._rd_cache[s] = generate_reading(s, self.tagger)
         return self._rd_cache[s]
+
+    def _attested_headword_reading(self, headword: str) -> str | None:
+        """Best attested reading for a compound HEADWORD, memoized; None on miss.
+
+        Expression-fields fallback for inflected kind-A spans (audit F2): the
+        span surface (手っ取り早く) is not a headword, so the token-level
+        attestation pass skipped it — but the mined card front IS the headword
+        (手っ取り早い), which the dictionary attests (てっとりばやい). Same
+        selection policy as ``attest_merged_readings``, anchored on the
+        headword re-tokenize concat: keep it when attested, else the single or
+        edit-distance-closest attested reading. Returns hiragana. ``None``
+        when no reading_lookup is wired or the dictionary attests nothing —
+        callers fall back to the re-tokenize reading. Only ever called for
+        compound synthetics, so plain tokens add zero lookups.
+        """
+        if self._reading_lookup is None:
+            return None
+        if headword not in self._hw_reading_cache:
+            attested = self._reading_lookup([headword]).get(headword) or []
+            result: str | None = None
+            if attested:
+                folded = [katakana_to_hiragana(r) for r in attested]
+                concat = self._reading(headword)
+                if concat in folded:
+                    result = concat
+                elif len(folded) == 1:
+                    result = folded[0]
+                else:
+                    result = min(folded, key=lambda r: (_edit_distance(r, concat), folded.index(r)))
+            self._hw_reading_cache[headword] = result
+        return self._hw_reading_cache[headword]
 
     def _apply_text_filter(self, text: str) -> str:
         """Apply the configured regex filter to a subtitle line.
@@ -386,15 +419,19 @@ class SubtitleParserService:
         # Strict ``is True`` (like the is_comment guard above): a MagicMock
         # token auto-creates a truthy ``compound`` attribute in tests.
         if getattr(word_token, "compound", False) is True:
-            # Attested (audit F2): the attestation pass corrected this token's
-            # kana against the dictionary — trust it, folded to hiragana (the
-            # compound-reading convention: curation Reading column / TSV export
-            # show hiragana for compounds). Unattested: compound-matcher
-            # synthetics carry concatenated component kana, which is visibly
-            # wrong for cross-particle merges (気がする → キガシ: particle kana
-            # + non-base verb stem) — regenerate from the headword via the
-            # memoized tagger path (same source as expression_reading below).
-            reading = katakana_to_hiragana(reading) if kana_attested else self._reading(lemma)
+            # Attested span (audit F2): the attestation pass corrected this
+            # token's kana against the dictionary — trust it, folded to
+            # hiragana (the compound-reading convention: curation Reading
+            # column / TSV export show hiragana for compounds). Unattested
+            # span (inflected kind-A: 手っ取り早く is not a headword): try the
+            # HEADWORD's attested reading — the dictionary form the card
+            # front shows — before falling back to the headword re-tokenize
+            # (which re-concatenates per-token kana: 気がする → キガシ,
+            # 手っ取り早い → てっとりはやい instead of てっとりばやい).
+            if kana_attested:
+                reading = katakana_to_hiragana(reading)
+            else:
+                reading = self._attested_headword_reading(lemma) or self._reading(lemma)
 
         # ExpressionFurigana/Reading match the mined card front (computed above):
         # orthBase for verbs/adjectives, surface for nouns (see
@@ -427,6 +464,16 @@ class SubtitleParserService:
             # kana and resurrect the rendaku bug (audit F2). ``reading`` was
             # folded to hiragana in the compound branch above.
             expression_reading = reading
+            expression_furigana = _format_furigana(mined, expression_reading)
+        elif (
+            getattr(word_token, "compound", False) is True
+            and (attested_headword := self._attested_headword_reading(mined)) is not None
+        ):
+            # Inflected kind-A compound (span surface unattested): the mined
+            # card front IS the headword, so its attested reading applies to
+            # the expression fields even though the sentence span keeps its
+            # concat kana (declared residual for sentence ruby only).
+            expression_reading = attested_headword
             expression_furigana = _format_furigana(mined, expression_reading)
         else:
             # Verbs/adjectives mine as orthBase, whose reading is genuinely not
