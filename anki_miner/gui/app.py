@@ -521,6 +521,15 @@ def main():
 
         raise SystemExit(_vulkan_probe.main())
 
+    # Env-var-gated libmpv bundle probe (bundle_smoke.sh). Loads the bundled
+    # libmpv through mpv_loader's resolution order and constructs a display-free
+    # core (vo=null/ao=null) — proves the shared library + its dependency
+    # closure actually dlopen inside the frozen bundle. Must run before Qt init.
+    if os.environ.get("ANKI_MINER_MPV_PROBE"):
+        from anki_miner.utils import mpv_loader
+
+        raise SystemExit(mpv_loader.mpv_probe_main())
+
     # Attach the rotating file handler to the DEFAULT path before loading config
     # so config-load diagnostics — including the OVH-001 .bak-recovery warnings
     # emitted inside load_config — are captured: those warnings fire as soon as a
