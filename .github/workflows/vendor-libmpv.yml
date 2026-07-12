@@ -255,8 +255,13 @@ jobs:
           set -euo pipefail
           TAG="vendor-libmpv-$(date -u +%Y%m%d)"
           sha256sum libmpv-*.tar.gz libmpv-*.zip | tee SHA256SUMS.txt
+          # --prerelease is LOAD-BEARING: GitHub's releases/latest returns the
+          # newest non-prerelease, and both the in-app update banner and the
+          # README "latest release" link read it — a plain vendor release
+          # displaces the real app release there.
           gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
+            --prerelease \
             --title "$TAG" \
             --notes "Per-OS libmpv shared libraries for release bundling (see licenses/libmpv/README.md; each artifact carries LICENSE + SOURCES.txt with exact upstream versions). Consumed by release.yml via pinned URL + SHA256." \
             libmpv-linux-x86_64.tar.gz \
