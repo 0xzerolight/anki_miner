@@ -32,7 +32,29 @@ def _make_fake_player() -> MagicMock:
 
 @pytest.fixture
 def fake_mpv(monkeypatch):
-    """Patch the widget module's mpv seam; yields the fake player instance."""
+    """Patch the widget module's mpv seam; yields the fake player instance.
+
+    ``has_render_context`` is forced True so set_source's loadfile runs
+    immediately (offscreen unshown widgets never create a real render
+    context; the deferred-load path has dedicated tests in
+    ``TestDeferredLoad``).
+    """
+    from anki_miner.gui.widgets.mpv_video_widget import MpvVideoWidget
+
+    player = _make_fake_player()
+    monkeypatch.setattr(MpvVideoWidget, "has_render_context", property(lambda self: True))
+    with (
+        patch(f"{MODULE}.mpv_available", return_value=True),
+        patch(f"{MODULE}.create_mpv_player", return_value=player) as factory,
+    ):
+        yield {"player": player, "factory": factory}
+
+
+@pytest.fixture
+def fake_mpv_no_ctx():
+    """Same seam WITHOUT a render context — the real first-load state:
+    consumers call set_source in dialog __init__, before the widget is shown
+    and any GL context exists."""
     player = _make_fake_player()
     with (
         patch(f"{MODULE}.mpv_available", return_value=True),
@@ -417,3 +439,55 @@ class TestFormatTime:
     )
     def test_format(self, ms, expected):
         assert SubtitlePlayerWidget._format_time(ms) == expected
+
+
+class TestDeferredLoad:
+    """loadfile must wait for the render context (the black-video regression:
+    loading first makes mpv's VO init fail permanently — audio-only pane)."""
+
+    def test_set_source_defers_loadfile_until_render_ready(self, qtbot, fake_mpv_no_ctx):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        fake_mpv_no_ctx["player"].loadfile.assert_not_called()
+        assert widget._pending_load == str(VIDEO)
+        widget.video_widget.render_ready.emit()
+        fake_mpv_no_ctx["player"].loadfile.assert_called_once_with(str(VIDEO))
+        assert widget._pending_load is None
+
+    def test_render_ready_flushes_only_once(self, qtbot, fake_mpv_no_ctx):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        widget.video_widget.render_ready.emit()
+        widget.video_widget.render_ready.emit()
+        fake_mpv_no_ctx["player"].loadfile.assert_called_once()
+
+    def test_resource_before_ready_keeps_latest_source(self, qtbot, fake_mpv_no_ctx):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        other = Path("/tmp/other.mkv")
+        widget.set_source(other, [])
+        widget.video_widget.render_ready.emit()
+        fake_mpv_no_ctx["player"].loadfile.assert_called_once_with(str(other))
+
+    def test_render_failed_still_loads_for_audio(self, qtbot, fake_mpv_no_ctx):
+        """The 'audio still plays' notice must be true: a failed render
+        context still flushes the queued source."""
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        widget.video_widget.render_failed.emit("no GL")
+        fake_mpv_no_ctx["player"].loadfile.assert_called_once_with(str(VIDEO))
+        assert widget._backend_notice_label.isVisibleTo(widget)
+
+    def test_teardown_clears_pending_load(self, qtbot, fake_mpv_no_ctx):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        widget.release()
+        widget.video_widget.render_ready.emit()  # must not resurrect the load
+        fake_mpv_no_ctx["player"].loadfile.assert_not_called()
+        assert widget._pending_load is None
+
+    def test_immediate_load_when_context_already_live(self, qtbot, fake_mpv):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)  # fixture forces has_render_context
+        fake_mpv["player"].loadfile.assert_called_once_with(str(VIDEO))
+        assert widget._pending_load is None

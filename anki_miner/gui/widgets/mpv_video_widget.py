@@ -50,6 +50,14 @@ class MpvVideoWidget(QOpenGLWidget):
       of a silent black box.
     """
 
+    #: Emitted on the GUI thread once the render context exists. LOAD-BEARING
+    #: for the controller: issuing ``loadfile`` before this fires makes mpv's
+    #: video-out init fail permanently for that file ("vo/libmpv: No render
+    #: context set." -> audio-only black pane) — both consumer dialogs call
+    #: set_source in __init__, before the widget is shown/GL exists, so the
+    #: controller MUST defer loading until this signal.
+    render_ready = pyqtSignal()
+
     #: Emitted on the GUI thread when render-context creation failed although
     #: mpv itself is available. Payload: human-readable reason.
     render_failed = pyqtSignal(str)
@@ -67,6 +75,11 @@ class MpvVideoWidget(QOpenGLWidget):
         # calls into freed memory and the process segfaults.
         self._get_proc_cb: Any = None
         self._mpv_frame_update.connect(self.update)
+
+    @property
+    def has_render_context(self) -> bool:
+        """True once the mpv render context exists (loadfile is safe)."""
+        return self._render_ctx is not None
 
     # ------------------------------------------------------------------ API
 
@@ -151,6 +164,8 @@ class MpvVideoWidget(QOpenGLWidget):
             self._get_proc_cb = None
             logger.warning("mpv render context creation failed: %s", exc)
             self.render_failed.emit(str(exc))
+            return
+        self.render_ready.emit()
 
     def _free_render_context(self) -> None:
         """Free the render context with the GL context current. Idempotent."""
