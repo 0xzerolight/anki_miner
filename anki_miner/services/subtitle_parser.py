@@ -20,13 +20,17 @@ from anki_miner.services.ja_normalize import (
     standardize_kanji_variants,
 )
 from anki_miner.services.morphology import (
+    ReadingLookup,
     TokenInclusionRule,
+    _edit_distance,
     apply_special_readings,
+    attest_merged_readings,
     extract_lemma,
     extract_reading,
     iter_token_spans,
     merge_compound_suffixes,
     mining_base,
+    replace_overridden_spans,
 )
 from anki_miner.services.reading.models import ReadingUnit
 from anki_miner.services.tagger import get_shared_tagger
@@ -39,6 +43,7 @@ from anki_miner.utils import (
 )
 from anki_miner.utils.subtitle_encoding import load_with_fallback_encoding
 from anki_miner.utils.text_utils import (
+    _format_furigana,
     generate_furigana_from_tokens,
     generate_reading_from_tokens,
     wrap_target_furigana_from_tokens,
@@ -56,7 +61,12 @@ _LINE_CACHE_MAX_FILES: int = 256
 class SubtitleParserService:
     """Parse subtitles and extract Japanese vocabulary words (stateless service)."""
 
-    def __init__(self, config: AnkiMinerConfig, term_lookup: TermLookup | None = None):
+    def __init__(
+        self,
+        config: AnkiMinerConfig,
+        term_lookup: TermLookup | None = None,
+        reading_lookup: ReadingLookup | None = None,
+    ):
         """Initialize the subtitle parser.
 
         Args:
@@ -68,8 +78,17 @@ class SubtitleParserService:
                 longest-match). ``None`` (no offline dictionary, toggle off,
                 or raw-entry-only callers) keeps parsing byte-identical to
                 the pre-compound-matching behavior.
+            reading_lookup: Optional batch attested-readings probe
+                (``DefinitionService.offline_term_readings``). When provided,
+                merged-compound kana is corrected to the dictionary's attested
+                reading (``morphology.attest_merged_readings`` — the rendaku /
+                on-kun junction fix, 2026-07 audit F2). Deliberately NOT gated
+                on ``config.compound_matching``: the morphology merges it
+                serves (noun-suffix/prefix/nominalizer) run regardless.
+                ``None`` keeps parsing byte-identical.
         """
         self.config = config
+        self._reading_lookup = reading_lookup
         # Shared process-wide tagger (see services/tagger.py for the single-flight
         # invariant). __init__ may block ~2-3s on the lazy build if a user triggers
         # the first SubtitleParserService before the background prewarm worker
@@ -145,6 +164,7 @@ class SubtitleParserService:
         """
         self._fg_cache = {}
         self._rd_cache = {}
+        self._hw_reading_cache: dict[str, str | None] = {}
 
     def _furigana(self, s: str) -> str:
         """Return generate_furigana(s, tagger), memoized within the current parse pass."""
@@ -157,6 +177,37 @@ class SubtitleParserService:
         if s not in self._rd_cache:
             self._rd_cache[s] = generate_reading(s, self.tagger)
         return self._rd_cache[s]
+
+    def _attested_headword_reading(self, headword: str) -> str | None:
+        """Best attested reading for a compound HEADWORD, memoized; None on miss.
+
+        Expression-fields fallback for inflected kind-A spans (audit F2): the
+        span surface (手っ取り早く) is not a headword, so the token-level
+        attestation pass skipped it — but the mined card front IS the headword
+        (手っ取り早い), which the dictionary attests (てっとりばやい). Same
+        selection policy as ``attest_merged_readings``, anchored on the
+        headword re-tokenize concat: keep it when attested, else the single or
+        edit-distance-closest attested reading. Returns hiragana. ``None``
+        when no reading_lookup is wired or the dictionary attests nothing —
+        callers fall back to the re-tokenize reading. Only ever called for
+        compound synthetics, so plain tokens add zero lookups.
+        """
+        if self._reading_lookup is None:
+            return None
+        if headword not in self._hw_reading_cache:
+            attested = self._reading_lookup([headword]).get(headword) or []
+            result: str | None = None
+            if attested:
+                folded = [katakana_to_hiragana(r) for r in attested]
+                concat = self._reading(headword)
+                if concat in folded:
+                    result = concat
+                elif len(folded) == 1:
+                    result = folded[0]
+                else:
+                    result = min(folded, key=lambda r: (_edit_distance(r, concat), folded.index(r)))
+            self._hw_reading_cache[headword] = result
+        return self._hw_reading_cache[headword]
 
     def _apply_text_filter(self, text: str) -> str:
         """Apply the configured regex filter to a subtitle line.
@@ -284,12 +335,31 @@ class SubtitleParserService:
         merged_tokens = self._merge_compound_suffixes(raw_tokens)
         if self._compound_matcher is not None:
             merged_tokens = self._compound_matcher.merge_line(text, merged_tokens)
+        # Dictionary reading attestation for merged compounds (audit F2): fixes
+        # rendaku/junction kana on the synthetics; no-op (and no lookup) when
+        # no reading_lookup is wired or the line produced no merges.
+        merged_tokens = attest_merged_readings(merged_tokens, self._reading_lookup)
         return (text, raw_tokens, merged_tokens, start, end, end - start)
 
     @staticmethod
     def _iter_token_spans(text: str, tokens: list) -> Iterator[tuple[Any, int, int]]:
         """Single-source token-span locator (see morphology.iter_token_spans)."""
         return iter_token_spans(text, tokens)
+
+    @staticmethod
+    def _build_display_tokens(text: str, raw_tokens: list, merged_tokens: list) -> list:
+        """Sentence display stream, shared by BOTH mining entrypoints.
+
+        Order matters: attested-overridden compound spans are carried into the
+        raw stream first (``replace_overridden_spans`` — spans whose merged
+        kana the dictionary corrected, audit F2), then the honorific-kinship
+        override (``apply_special_readings``) handles adjacent raw pairs the
+        merges didn't consume. Both passes keep the concatenated surface text
+        byte-identical, so span/offset math downstream is unaffected. Extracted
+        as the single seam so ``parse_subtitle_file`` and
+        ``_emit_line_words_and_index`` can never diverge again.
+        """
+        return apply_special_readings(replace_overridden_spans(text, raw_tokens, merged_tokens))
 
     def _find_highlight_end(self, text: str, raw_tokens: list, tok_start: int, tok_end: int, word_token: Any) -> int:
         """Full-inflected-form end offset.
@@ -345,16 +415,23 @@ class SubtitleParserService:
 
         # Get reading if available
         reading = self._extract_reading(word_token)
+        kana_attested = getattr(word_token.feature, "kana_attested", False) is True
         # Strict ``is True`` (like the is_comment guard above): a MagicMock
         # token auto-creates a truthy ``compound`` attribute in tests.
         if getattr(word_token, "compound", False) is True:
-            # Compound-matcher synthetics carry concatenated component kana,
-            # which is visibly wrong for cross-particle merges (気がする →
-            # キガシ: particle kana + non-base verb stem). ``reading`` reaches
-            # the curation dialog's Reading column and TSV export, so
-            # regenerate it from the headword via the memoized tagger path
-            # (same source as expression_reading below).
-            reading = self._reading(lemma)
+            # Attested span (audit F2): the attestation pass corrected this
+            # token's kana against the dictionary — trust it, folded to
+            # hiragana (the compound-reading convention: curation Reading
+            # column / TSV export show hiragana for compounds). Unattested
+            # span (inflected kind-A: 手っ取り早く is not a headword): try the
+            # HEADWORD's attested reading — the dictionary form the card
+            # front shows — before falling back to the headword re-tokenize
+            # (which re-concatenates per-token kana: 気がする → キガシ,
+            # 手っ取り早い → てっとりはやい instead of てっとりばやい).
+            if kana_attested:
+                reading = katakana_to_hiragana(reading)
+            else:
+                reading = self._attested_headword_reading(lemma) or self._reading(lemma)
 
         # ExpressionFurigana/Reading match the mined card front (computed above):
         # orthBase for verbs/adjectives, surface for nouns (see
@@ -380,6 +457,24 @@ class SubtitleParserService:
             # the headword-regenerated reading.
             expression_reading = katakana_to_hiragana(reading)
             expression_furigana = generate_furigana_from_tokens([word_token])
+        elif getattr(word_token, "compound", False) is True and kana_attested:
+            # Attested compound (mined == lemma == the attested headword for
+            # kind-B spans): the dictionary-corrected kana IS the expression
+            # reading — re-tokenizing ``mined`` would re-concatenate per-token
+            # kana and resurrect the rendaku bug (audit F2). ``reading`` was
+            # folded to hiragana in the compound branch above.
+            expression_reading = reading
+            expression_furigana = _format_furigana(mined, expression_reading)
+        elif (
+            getattr(word_token, "compound", False) is True
+            and (attested_headword := self._attested_headword_reading(mined)) is not None
+        ):
+            # Inflected kind-A compound (span surface unattested): the mined
+            # card front IS the headword, so its attested reading applies to
+            # the expression fields even though the sentence span keeps its
+            # concat kana (declared residual for sentence ruby only).
+            expression_reading = attested_headword
+            expression_furigana = _format_furigana(mined, expression_reading)
         else:
             # Verbs/adjectives mine as orthBase, whose reading is genuinely not
             # the surface token's kana (蒔い→蒔く); compound synthetics
@@ -477,12 +572,11 @@ class SubtitleParserService:
         if collect_index and not line_lemmas:
             return [], None
 
-        # Compute sentence-level furigana/reading ONCE for this line. Apply the
-        # honorific-kinship reading override (お兄ちゃん → にい) to the raw token
-        # stream first so the sentence furigana/reading and the bold variant all
-        # agree with the Expression field (which is corrected upstream in the
-        # merge pass). Surfaces are unchanged, so span/offset math is unaffected.
-        display_tokens = apply_special_readings(raw_tokens)
+        # Compute sentence-level furigana/reading ONCE for this line, from the
+        # shared display stream (attested-compound override + honorific-kinship
+        # pass; see _build_display_tokens). Surfaces are unchanged, so
+        # span/offset math is unaffected.
+        display_tokens = self._build_display_tokens(text, raw_tokens, merged_tokens)
         sentence_furigana = generate_furigana_from_tokens(display_tokens)
         sentence_reading = generate_reading_from_tokens(display_tokens)
 
@@ -581,12 +675,11 @@ class SubtitleParserService:
             duration,
         ) in self._iter_parsed_lines(subtitle_file):
             # Sentence-level furigana/reading depend only on ``text`` — compute
-            # once per line and share across every word emitted from this line.
-            # Use raw_tokens (pre-merge tagger output) so the sentence is
-            # tokenized only once per line, with the honorific-kinship reading
-            # override applied (お兄ちゃん → にい); surfaces unchanged so span math
-            # is unaffected. Matches the Expression field's upstream merge fix.
-            display_tokens = apply_special_readings(raw_tokens)
+            # once per line and share across every word emitted from this line,
+            # via the shared display stream (attested-compound override +
+            # honorific-kinship pass; see _build_display_tokens). Surfaces are
+            # unchanged so span math is unaffected.
+            display_tokens = self._build_display_tokens(text, raw_tokens, merged_tokens)
             sentence_furigana = generate_furigana_from_tokens(display_tokens)
             sentence_reading = generate_reading_from_tokens(display_tokens)
 

@@ -197,3 +197,20 @@ class TestParseTextUnits:
         assert words == []
         assert index is None
         assert counter == Counter()
+
+
+class TestReadingPathDecorationStrip:
+    """Reading/OCR units share the decoration strip via normalize_for_tokenization
+    (F4, 2026-07 audit); other interior whitespace is stored verbatim."""
+
+    def test_strips_glyphs_but_preserves_other_whitespace(self, tmp_path):
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        units = [ReadingUnit(text="📱通常兵器では➡", index=0, location_label="p.0")]
+        words, _index, _counts = service.parse_text_units(units, want_line_index=False)
+        assert words
+        assert all(w.sentence == "通常兵器では" for w in words)
+        # Unrelated interior whitespace stays (no blanket collapse on this path).
+        units2 = [ReadingUnit(text="通常兵器　その他", index=0, location_label="p.0")]
+        words2, _i, _c = service.parse_text_units(units2, want_line_index=False)
+        assert any("　" in w.sentence for w in words2)

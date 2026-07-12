@@ -344,10 +344,16 @@ def create_services(
         # preview (count_lemmas) and build share the same probe via the parser's
         # line cache. If a future change pre-builds that parser elsewhere, it
         # must wire term_lookup the same way or preview and build diverge.
+        has_indexed_dict = any(e.kind == "indexed" and e.enabled for e in config.dictionary_chain)
         term_lookup = None
-        if config.compound_matching and any(e.kind == "indexed" and e.enabled for e in config.dictionary_chain):
+        if config.compound_matching and has_indexed_dict:
             term_lookup = definition_service.offline_terms_exist
-        subtitle_parser = SubtitleParserService(config, term_lookup=term_lookup)
+        # Attested-readings probe (merged-compound reading fix, audit F2):
+        # gated ONLY on an indexed dict being present — deliberately NOT on
+        # config.compound_matching, because the morphology merges it corrects
+        # (noun-suffix/prefix/nominalizer) run regardless of that toggle.
+        reading_lookup = definition_service.offline_term_readings if has_indexed_dict else None
+        subtitle_parser = SubtitleParserService(config, term_lookup=term_lookup, reading_lookup=reading_lookup)
     # Share the parser's tagger with the word filter so i+1 swap can
     # rebuild bolded sentence fields without spinning up a second tagger
     # (fugashi.Tagger initialization is non-trivial).

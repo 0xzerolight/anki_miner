@@ -10,11 +10,17 @@ Import direction is one-way: ``subtitle_parser`` imports from this module;
 this module must never import ``subtitle_parser``.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any, Iterator
 
 from anki_miner.services.ja_normalize import is_cjk_ideograph
+from anki_miner.utils.text_utils import hiragana_to_katakana, katakana_to_hiragana
+
+# Batch attested-readings probe (DefinitionService.offline_term_readings):
+# term -> readings, best-first, hiragana-folded. See attest_merged_readings.
+ReadingLookup = Callable[[list[str]], dict[str, list[str]]]
 
 _NOMINAL_SUFFIX_POS2 = {"名詞的", "形状詞的", "副詞的"}
 
@@ -324,6 +330,130 @@ def merge_compound_suffixes(tokens: list) -> list:
     return tokens
 
 
+def _edit_distance(a: str, b: str) -> int:
+    """Plain Levenshtein distance (readings are short; O(len*len) is fine)."""
+    if a == b:
+        return 0
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, start=1):
+        cur = [i]
+        for j, cb in enumerate(b, start=1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
+
+
+def attest_merged_readings(tokens: list, reading_lookup: ReadingLookup | None) -> list:
+    """Override merged-compound kana with the dictionary's attested reading.
+
+    Every merge pass builds a compound's kana by concatenating per-token UniDic
+    kana, which loses rendaku and on/kun junction effects (バカ+力 → バカリョク
+    where the dictionary attests ばかぢから; 体+じゅう → タイジュウ vs
+    からだじゅう — 2026-07 card audit F2: 20/729 cards shipped such readings).
+    This pass runs after the merges and asks the enabled offline dictionaries
+    for each SYNTHETIC token's surface (surface-keyed on purpose: an inflected
+    matcher span like 手っ取り早く is not a headword and is correctly skipped;
+    lemma-keyed lookup would poison such spans with citation-form readings):
+
+    1. concatenated kana already attested → keep it (contextual MeCab signal
+       wins; only ``kana_attested`` is stamped);
+    2. exactly one attested reading → take it;
+    3. several → take the one closest to the concatenation by edit distance
+       (ties: dictionary score order), so context still steers 四人 to よにん
+       rather than the top entry しにん.
+
+    Tokens whose kana came from the curated kinship table
+    (``feature.kana_special``, d848257) are skipped — the table outranks the
+    dictionary. Real UniDic tokens are never touched (polyphonic 方/中 keep
+    their contextual reading). Flags land on ``token.feature`` (a
+    ``SimpleNamespace`` — ``SyntheticToken`` declares ``__slots__``):
+    ``kana_attested`` on cases 1-3 (``_emit_word`` trusts the token kana), and
+    ``kana_overridden`` on cases 2-3 only (the sentence display path merges
+    only spans whose rendering was actually wrong; see
+    ``replace_overridden_spans``). Mutates the synthetic tokens in place —
+    they are per-line objects created by the merge passes above. Returns
+    ``tokens`` unchanged (and issues NO lookup) when ``reading_lookup`` is
+    ``None`` or the line produced no synthetics.
+    """
+    if reading_lookup is None:
+        return tokens
+    synthetics = [t for t in tokens if isinstance(t, SyntheticToken) and not getattr(t.feature, "kana_special", False)]
+    if not synthetics:
+        return tokens
+    attested_map = reading_lookup(sorted({t.surface for t in synthetics}))
+    for tok in synthetics:
+        attested = attested_map.get(tok.surface)
+        if not attested:
+            continue
+        concat = katakana_to_hiragana(tok.feature.kana or "")
+        folded = [katakana_to_hiragana(r) for r in attested]
+        if concat in folded:
+            tok.feature.kana_attested = True
+            continue
+        if len(attested) == 1:
+            chosen = folded[0]
+        else:
+            chosen = min(folded, key=lambda r: (_edit_distance(r, concat), folded.index(r)))
+        tok.feature.kana = hiragana_to_katakana(chosen)
+        tok.feature.kana_attested = True
+        tok.feature.kana_overridden = True
+    return tokens
+
+
+def replace_overridden_spans(text: str, raw_tokens: list, merged_tokens: list) -> list:
+    """Carry attested-overridden compound readings into the sentence stream.
+
+    Sentence furigana/reading/bold are generated from the RAW token stream, so
+    a corrected kana on a merged token never reaches them on its own. This pass
+    aligns each merged token back to its consecutive raw-token run (the merged
+    stream is a grouping of the raw stream — walk both, matching surface
+    concatenation) and, ONLY for spans whose reading attestation actually
+    overrode the kana (``feature.kana_overridden``), replaces the run with one
+    ``SyntheticToken`` carrying the attested kana. Kept-as-attested compounds
+    (何人, 副作用) keep today's per-morpheme rendering. The concatenated stream
+    text is byte-identical, so downstream ``str.find`` cursoring and
+    bold-offset math stay valid — with one guard: a replacement is skipped when
+    the merged surface was stitched across source whitespace (MeCab drops it),
+    because the single-token surface would then not be locatable in the line
+    text; the raw run is kept instead (bail-keep). Any alignment mismatch
+    returns ``raw_tokens`` untouched.
+    """
+    if not any(isinstance(m, SyntheticToken) and getattr(m.feature, "kana_overridden", False) for m in merged_tokens):
+        return raw_tokens
+    out: list = []
+    ri, rn = 0, len(raw_tokens)
+    for m in merged_tokens:
+        if ri < rn and raw_tokens[ri] is m:
+            out.append(m)
+            ri += 1
+            continue
+        acc, j = "", ri
+        while j < rn and len(acc) < len(m.surface):
+            acc += raw_tokens[j].surface
+            j += 1
+        if acc != m.surface:
+            return raw_tokens
+        run = raw_tokens[ri:j]
+        ri = j
+        if getattr(m.feature, "kana_overridden", False) and m.surface in text:
+            # ``m.surface in text`` = the whitespace-stitch guard: a merge
+            # across a source space is not locatable as one token in the line.
+            out.append(
+                SyntheticToken(
+                    surface=m.surface,
+                    pos1=m.feature.pos1,
+                    pos2=m.feature.pos2,
+                    lemma=m.feature.lemma,
+                    kana=m.feature.kana,
+                )
+            )
+        else:
+            out.extend(run)
+    if ri != rn:
+        return raw_tokens
+    return out
+
+
 def _merge_noun_suffixes(tokens: list) -> list:
     """Merge 名詞 + 接尾辞(名詞的/形状詞的/副詞的) chains into a single token.
 
@@ -377,6 +507,7 @@ def _merge_noun_suffixes(tokens: list) -> list:
                 special_head = resolve_special_reading(head.surface, chain[0].surface)
                 head_kana_final = special_head if special_head is not None else head_kana
                 kana = head_kana_final + "".join(suffix_kanas)
+                kana_special = special_head is not None
                 try:
                     head_pos2 = head.feature.pos2 or "普通名詞"
                 except AttributeError:
@@ -391,15 +522,20 @@ def _merge_noun_suffixes(tokens: list) -> list:
                         suffix_lemmas.append(extract_lemma(t))
                     except AttributeError:
                         suffix_lemmas.append(t.surface)
-                merged.append(
-                    SyntheticToken(
-                        surface=surf,
-                        pos1="名詞",
-                        pos2=head_pos2,
-                        lemma=head_lemma + "".join(suffix_lemmas),
-                        kana=kana,
-                    )
+                synthetic = SyntheticToken(
+                    surface=surf,
+                    pos1="名詞",
+                    pos2=head_pos2,
+                    lemma=head_lemma + "".join(suffix_lemmas),
+                    kana=kana,
                 )
+                if kana_special:
+                    # Curated kinship reading outranks dictionary attestation:
+                    # attest_merged_readings must not replace にいちゃん with a
+                    # dictionary variant (あんちゃん). Flag lives on the feature
+                    # namespace (SyntheticToken declares __slots__).
+                    synthetic.feature.kana_special = True
+                merged.append(synthetic)
                 i = j
                 continue
         merged.append(head)

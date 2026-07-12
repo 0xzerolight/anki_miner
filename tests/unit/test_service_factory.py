@@ -410,3 +410,27 @@ class TestCompoundMatchingInjection:
         services = service_factory.create_services(cfg, subtitle_parser=prebuilt)
         assert services.subtitle_parser is prebuilt
         assert services.subtitle_parser._compound_matcher is None
+
+
+class TestReadingAttestationInjection:
+    """reading_lookup wiring: gated ONLY on an enabled indexed dict — deliberately
+    NOT on compound_matching (the morphology merges it serves run regardless)."""
+
+    def test_injected_even_with_compound_matching_off(self, base_config):
+        cfg = dataclasses.replace(
+            base_config,
+            compound_matching=False,
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),),
+        )
+        services = service_factory.create_services(cfg)
+        parser = services.subtitle_parser
+        assert parser._compound_matcher is None  # matcher stays gated
+        assert parser._reading_lookup == services.definition_service.offline_term_readings
+
+    def test_not_injected_without_indexed_entry(self, base_config):
+        cfg = dataclasses.replace(
+            base_config,
+            dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
+        )
+        services = service_factory.create_services(cfg)
+        assert services.subtitle_parser._reading_lookup is None
