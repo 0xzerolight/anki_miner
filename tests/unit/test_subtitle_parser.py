@@ -3991,3 +3991,23 @@ class TestCompoundMatcherReadingAttestation:
         assert word.expression_reading == "とかげのしっぽぎり"
         assert "切[ぎ]り" in word.expression_furigana
         assert "切[ぎ]り" in word.sentence_furigana
+
+
+class TestInflectedCompoundHeadwordReading:
+    """Inflected kind-A spans (surface ≠ headword): expression fields take the
+    HEADWORD's attested reading; the sentence span keeps concat kana (declared
+    residual for sentence ruby only)."""
+
+    def test_expression_uses_headword_attestation(self, tmp_path):
+        cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        srt = _write_srt(tmp_path, "kindA.srt", "手っ取り早く済ませよう")
+        parser = SubtitleParserService(
+            cfg,
+            term_lookup=lambda ts: {"手っ取り早い"} & set(ts),
+            reading_lookup=lambda ts: {"手っ取り早い": ["てっとりばやい"]} if "手っ取り早い" in ts else {},
+        )
+        words = parser.parse_subtitle_file(srt)
+        word = next(w for w in words if w.mined_form == "手っ取り早い")
+        assert word.expression_reading == "てっとりばやい"
+        assert word.reading == "てっとりばやい"
+        assert "早[ばや]" in word.expression_furigana
