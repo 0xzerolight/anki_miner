@@ -37,6 +37,7 @@ Please leave a ⭐ star if Anki Miner helped you - it helps others find it :).
 ### Requirements
 
 - **ffmpeg** **only if installing from pip/pipx, .deb, or from source.**
+- **libmpv** (video preview) **only if installing from pip/pipx, .deb, or from source.** Release bundles include it. Linux: `sudo apt install libmpv2` (or your distro's libmpv package). macOS: `brew install mpv`. Windows pip users: place `libmpv-2.dll` on PATH or set `ANKI_MINER_LIBMPV` to its full path. Without it the app runs fine; only the in-app video preview shows a notice instead.
 - **alass** (optional) for automatic subtitle retiming. Linux and Windows release builds bundle it. macOS users: `brew install alass` or place it on PATH.
 - **Anki** with the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on. In Anki: **Tools -> Add-ons -> Get Add-ons**, paste code `2055492159`, restart.
 
