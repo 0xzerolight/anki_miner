@@ -19,6 +19,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import math
+from fractions import Fraction
 
 from anki_miner.services.frequency.providers.indexed_freq_provider import (
     IndexedFreqProvider,
@@ -55,11 +56,17 @@ def harmonic_rank(sources: FreqSources) -> int | None:
     sort field can be computed from a single fetch — see :func:`min_rank`.
     Categorical sources (``CATEGORICAL_RANK`` sentinel) are excluded so they do
     not inflate the harmonic count ``n``.
+
+    Computed with exact rational arithmetic — a deliberate deviation from
+    Yomitan's JS float math, whose ``1/(1/f)`` round-trip truncates to ``f-1``
+    for ~8% of single-source ranks (e.g. 29814 → 29813) and made the card's
+    sort field disagree with the displayed rank. The algorithm (floor of the
+    harmonic mean) is unchanged; only the float noise is gone.
     """
     ranks = [rank for _name, rank, _display in sources if 0 < rank < CATEGORICAL_RANK]
     if not ranks:
         return None
-    total = sum(1.0 / rank for rank in ranks)
+    total = sum(Fraction(1, rank) for rank in ranks)
     return math.floor(len(ranks) / total)
 
 

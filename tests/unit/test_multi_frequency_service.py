@@ -222,6 +222,20 @@ class TestPureRankHelpers:
     def test_harmonic_rank_ignores_nonpositive(self):
         assert harmonic_rank([("Bad", 0, None), ("Novel", 50, None)]) == 50
 
+    def test_harmonic_rank_single_source_exact(self):
+        # Regression (2026-07 card audit): float 1/(1/f) truncated to f-1 for
+        # ~8% of ranks — 29814 rendered "Frequency: 29814" but sorted as 29813.
+        # Exact rational arithmetic must return the rank itself for one source.
+        for rank in (29814, 16312, 7918, 27838, 23346, 14932, 42, 1):
+            assert harmonic_rank([("A", rank, None)]) == rank
+
+    def test_harmonic_rank_multi_source_exact_floor(self):
+        # Equal ranks: harmonic mean of (N, N) is exactly N — the float path
+        # could floor this to N-1 as well. An inexact case still floors.
+        assert harmonic_rank([("A", 29814, None), ("B", 29814, None)]) == 29814
+        # floor(2 / (1/3 + 1/7)) = floor(4.2) = 4
+        assert harmonic_rank([("A", 3, None), ("B", 7, None)]) == 4
+
     def test_helpers_agree_with_service_methods(self):
         # The wrappers must return exactly what the pure helpers do on the same
         # fetched list — the EpisodeProcessor single-fetch path relies on it.
