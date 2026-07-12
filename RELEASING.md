@@ -104,6 +104,12 @@ and fix until green before tagging.
 
 9. **Announce.** Wherever you announce releases (Discussions, social, etc.). The in-app update banner picks the new release up automatically on every user's next launch.
 
+## Vendored libmpv (video preview)
+
+Release bundles ship libmpv from the repo-owned `vendor-libmpv-*` GitHub release, fetched by pinned URL + SHA256 in `release.yml`. The assets are produced by manually dispatching the **Vendor libmpv** workflow (`.github/workflows/vendor-libmpv.yml`): Linux builds a static-ffmpeg `libmpv.so.2` via mpv-build, Windows mirrors zhongfly/mpv-winbuild's `libmpv-2.dll` (upstream retention is ~30 days — that's why we mirror), macOS bundles the Homebrew closure via dylibbundler + ad-hoc re-sign. Each artifact carries LICENSE + `SOURCES.txt` (exact upstream versions, GPL source-offer bookkeeping; see `licenses/libmpv/README.md`).
+
+Cadence: re-run ~2-3x/yr when a new mpv stable ships, or immediately on an mpv/ffmpeg security advisory. After publishing a new `vendor-libmpv-*` release, update the pinned URLs + SHA256s in `release.yml` (the fetch steps fail closed on mismatch) and run the release dry-run.
+
 ## Antivirus false positives (Windows)
 
 The Windows build is an unsigned PyInstaller bundle shipping `yt-dlp` and `ffmpeg`, so Microsoft Defender (and other engines) periodically flag it as malware. It is always a false positive. When a flag is reported after a release:

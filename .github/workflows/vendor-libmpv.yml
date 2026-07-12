@@ -1,0 +1,247 @@
+# Builds/mirrors per-OS libmpv shared libraries and publishes them as an
+# immutable `vendor-libmpv-<date>` GitHub release. release.yml then fetches
+# these assets by pinned URL + SHA256 (the BtbN/alass idiom).
+#
+# Why a repo-owned mirror instead of pinning upstream URLs directly:
+# - Windows: zhongfly/mpv-winbuild retains releases ~30 days — a URL pinned in
+#   release.yml would 404 within a month.
+# - Linux: no official binary exists; we build once via mpv-player/mpv-build
+#   with ffmpeg/libass/libplacebo linked statically into a single libmpv.so.2.
+# - macOS: Homebrew bottles + dylibbundler produce a self-contained closure
+#   that must be re-signed; not something to redo on every release build.
+#
+# Run cadence: manual, ~2-3x/yr (new mpv stable) or on a security advisory.
+# Each artifact packs the lib(s) + upstream LICENSE/Copyright + SOURCES.txt
+# recording exact upstream versions/SHAs (GPL source-offer bookkeeping;
+# licenses/libmpv/README.md points here).
+
+name: Vendor libmpv
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04  # glibc 2.35 floor — same as the release bundle legs
+    steps:
+      - name: Install build dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            autoconf automake libtool pkg-config nasm yasm meson ninja-build \
+            python3-setuptools libtool-bin \
+            libx11-dev libxext-dev libxrandr-dev libxinerama-dev libxss-dev \
+            libxv-dev libva-dev libvdpau-dev libegl-dev libgl-dev \
+            libwayland-dev wayland-protocols libxkbcommon-dev libdrm-dev \
+            libasound2-dev libpulse-dev libpipewire-0.3-dev \
+            libfreetype-dev libfontconfig-dev libfribidi-dev libharfbuzz-dev \
+            libbrotli-dev zlib1g-dev libbz2-dev liblzma-dev
+
+      - name: Build libmpv via mpv-build (static ffmpeg/libass/libplacebo)
+        run: |
+          set -euo pipefail
+          git clone --depth=1 https://github.com/mpv-player/mpv-build.git
+          cd mpv-build
+          MPV_BUILD_SHA="$(git rev-parse HEAD)"
+          # Pin to upstream release tags (recorded below), not git master.
+          ./use-mpv-release
+          ./use-ffmpeg-release
+          echo "-Dlibmpv=true"  >> mpv_options
+          echo "-Dcplayer=false" >> mpv_options
+          ./rebuild -j"$(nproc)"
+          MPV_TAG="$(git -C mpv describe --tags)"
+          FFMPEG_TAG="$(git -C ffmpeg describe --tags)"
+          LIBASS_SHA="$(git -C libass rev-parse HEAD)"
+          LIBPLACEBO_SHA="$(git -C libplacebo rev-parse HEAD 2>/dev/null || echo bundled)"
+          SO_PATH="$(find mpv/build -maxdepth 1 -name 'libmpv.so.*' -type f | head -1)"
+          test -n "$SO_PATH"
+          mkdir -p ../out
+          cp "$SO_PATH" ../out/libmpv.so.2
+          cp mpv/Copyright ../out/Copyright
+          cp mpv/LICENSE.GPL ../out/LICENSE.GPL
+          {
+            echo "artifact: libmpv-linux-x86_64.tar.gz"
+            echo "built: $(date -u +%Y-%m-%dT%H:%M:%SZ) on ubuntu-22.04 (glibc 2.35)"
+            echo "mpv-build: ${MPV_BUILD_SHA}"
+            echo "mpv: ${MPV_TAG}"
+            echo "ffmpeg: ${FFMPEG_TAG} (linked statically)"
+            echo "libass: ${LIBASS_SHA} (linked statically)"
+            echo "libplacebo: ${LIBPLACEBO_SHA} (linked statically)"
+            echo "source offer: https://mpv.io + the repos/tags above"
+          } > ../out/SOURCES.txt
+
+      - name: Audit NEEDED against system-lib allowlist (fail-closed)
+        run: |
+          set -euo pipefail
+          # Everything libmpv.so.2 links dynamically must be either universally
+          # present on desktop Linux or collectable/excludable by PyInstaller.
+          # An unexpected NEEDED entry means the dependency closure changed —
+          # fail so a human re-evaluates instead of shipping a silent break.
+          ALLOW='^(linux-vdso|ld-linux|libc|libm|libdl|libpthread|librt|libgcc_s|libstdc\+\+|libz|libbz2|liblzma|libbrotli(common|dec)|libX11|libXext|libXrandr|libXinerama|libXss|libXv|libxcb|libGL|libEGL|libOpenGL|libGLdispatch|libGLX|libdrm|libgbm|libwayland-(client|cursor|egl)|libxkbcommon|libasound|libpulse(-simple)?|libpipewire-0\.3|libva(-drm|-x11|-wayland)?|libvdpau|libfreetype|libfontconfig|libfribidi|libharfbuzz|libexpat|libpng16|libffi|libuuid|libmd|libbsd|libdbus-1|libsystemd|libcap|libapparmor|libblkid|libmount|libselinux|libpcre2?-?8?)\.so'
+          BAD=0
+          while read -r lib; do
+            if ! echo "$lib" | grep -qE "$ALLOW"; then
+              echo "DISALLOWED NEEDED: $lib"
+              BAD=1
+            fi
+          done < <(readelf -d out/libmpv.so.2 | awk '/NEEDED/{gsub(/[\[\]]/,"",$5); print $5}')
+          readelf -d out/libmpv.so.2 | grep NEEDED || true
+          exit "$BAD"
+
+      - name: Pack artifact
+        run: |
+          set -euo pipefail
+          tar -C out -czf libmpv-linux-x86_64.tar.gz .
+          sha256sum libmpv-linux-x86_64.tar.gz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libmpv-linux-x86_64
+          path: libmpv-linux-x86_64.tar.gz
+          if-no-files-found: error
+
+  windows:
+    # Mirror job — runs on Linux; only downloads, verifies, and repacks.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mirror zhongfly mpv-winbuild libmpv-2.dll
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends p7zip-full
+          # Latest zhongfly release; plain x86_64 (NOT -v3: v3 needs AVX2-class
+          # CPUs; portability first).
+          REL_JSON="$(gh api repos/zhongfly/mpv-winbuild/releases/latest)"
+          TAG="$(echo "$REL_JSON" | jq -r .tag_name)"
+          ASSET="$(echo "$REL_JSON" | jq -r '.assets[].name' | grep -E '^mpv-dev-x86_64-[0-9]{8}-git-[0-9a-f]+\.7z$' | head -1)"
+          test -n "$ASSET"
+          gh release download "$TAG" -R zhongfly/mpv-winbuild -p "$ASSET" -p "sha256.txt" 2>/dev/null \
+            || { gh release download "$TAG" -R zhongfly/mpv-winbuild -p "$ASSET"; gh release download "$TAG" -R zhongfly/mpv-winbuild -p "*sha256*" || true; }
+          # Verify against zhongfly's published checksums when present.
+          if ls *sha256* >/dev/null 2>&1; then
+            grep "$ASSET" *sha256* | sha256sum -c -
+          else
+            echo "WARNING: no upstream sha256 asset found; recording our own hash only"
+          fi
+          7z x "$ASSET" -oextracted
+          DLL="$(find extracted -name 'libmpv-2.dll' | head -1)"
+          test -n "$DLL"
+          GIT_SHA="$(echo "$ASSET" | sed -E 's/^.*-git-([0-9a-f]+)\.7z$/\1/')"
+          mkdir -p out
+          cp "$DLL" out/libmpv-2.dll
+          curl -fL "https://raw.githubusercontent.com/mpv-player/mpv/${GIT_SHA}/Copyright" -o out/Copyright
+          curl -fL "https://raw.githubusercontent.com/mpv-player/mpv/${GIT_SHA}/LICENSE.GPL" -o out/LICENSE.GPL
+          {
+            echo "artifact: libmpv-windows-x86_64.zip"
+            echo "mirrored: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "upstream: zhongfly/mpv-winbuild release ${TAG}, asset ${ASSET}"
+            echo "mpv git: ${GIT_SHA}"
+            echo "build scripts: https://github.com/zhongfly/mpv-winbuild"
+            echo "source offer: https://mpv.io + the mpv git SHA above"
+          } > out/SOURCES.txt
+          (cd out && zip -9 ../libmpv-windows-x86_64.zip ./*)
+          sha256sum libmpv-windows-x86_64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libmpv-windows-x86_64
+          path: libmpv-windows-x86_64.zip
+          if-no-files-found: error
+
+  macos:
+    strategy:
+      matrix:
+        include:
+          - runner: macos-latest
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Bundle libmpv + dylib closure from Homebrew
+        run: |
+          set -euo pipefail
+          brew install mpv dylibbundler
+          MPV_PREFIX="$(brew --prefix mpv)"
+          MPV_VERSION="$(brew list --versions mpv | awk '{print $2}')"
+          mkdir -p work out
+          cp "${MPV_PREFIX}/lib/libmpv.2.dylib" work/libmpv.2.dylib
+          chmod u+w work/libmpv.2.dylib
+          # Rewrite the whole non-system dependency closure to @loader_path
+          # siblings in one flat dir (everything lands at _MEIPASS root).
+          dylibbundler -od -b \
+            -x work/libmpv.2.dylib \
+            -d out -p @loader_path/ -i /usr/lib
+          install_name_tool -id @loader_path/libmpv.2.dylib work/libmpv.2.dylib
+          cp work/libmpv.2.dylib out/libmpv.2.dylib
+          # install_name_tool invalidates signatures; ad-hoc re-sign everything
+          # (mandatory on arm64 — unsigned dylibs refuse to load).
+          for f in out/*.dylib; do codesign --force -s - "$f"; done
+          # Record the min-OS floor — compared against the current bundle's
+          # floor before merge (older-macOS preview regression check).
+          MINOS="$(otool -l out/libmpv.2.dylib | awk '/LC_BUILD_VERSION/{f=1} f&&/minos/{print $2; exit}')"
+          cp "$(brew --prefix mpv)/share/doc/mpv/Copyright" out/Copyright 2>/dev/null \
+            || curl -fL "https://raw.githubusercontent.com/mpv-player/mpv/master/Copyright" -o out/Copyright
+          curl -fL "https://raw.githubusercontent.com/mpv-player/mpv/master/LICENSE.GPL" -o out/LICENSE.GPL
+          {
+            echo "artifact: libmpv-macos-${{ matrix.arch }}.tar.gz"
+            echo "built: $(date -u +%Y-%m-%dT%H:%M:%SZ) on ${{ matrix.runner }}"
+            echo "homebrew mpv: ${MPV_VERSION}"
+            echo "min-OS (LC_BUILD_VERSION minos): ${MINOS:-unknown}"
+            echo "dylib closure ($(ls out/*.dylib | wc -l | tr -d ' ') files) via dylibbundler, ad-hoc re-signed"
+            echo "source offer: https://mpv.io + Homebrew formula mpv ${MPV_VERSION}"
+          } > out/SOURCES.txt
+          cat out/SOURCES.txt
+          tar -C out -czf "libmpv-macos-${{ matrix.arch }}.tar.gz" .
+          shasum -a 256 "libmpv-macos-${{ matrix.arch }}.tar.gz"
+
+      - name: Smoke-load the bundled dylib
+        run: |
+          set -euo pipefail
+          mkdir -p smoke && tar -xzf "libmpv-macos-${{ matrix.arch }}.tar.gz" -C smoke
+          python3 - <<'EOF'
+          import ctypes, glob
+          lib = ctypes.CDLL(glob.glob("smoke/libmpv.2.dylib")[0])
+          lib.mpv_client_api_version.restype = ctypes.c_ulong
+          v = lib.mpv_client_api_version()
+          print(f"client API {v >> 16}.{v & 0xFFFF}")
+          assert (v >> 16) >= 2
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libmpv-macos-${{ matrix.arch }}
+          path: libmpv-macos-${{ matrix.arch }}.tar.gz
+          if-no-files-found: error
+
+  publish:
+    needs: [linux, windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Create vendor release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="vendor-libmpv-$(date -u +%Y%m%d)"
+          sha256sum libmpv-*.tar.gz libmpv-*.zip | tee SHA256SUMS.txt
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$TAG" \
+            --notes "Per-OS libmpv shared libraries for release bundling (see licenses/libmpv/README.md; each artifact carries LICENSE + SOURCES.txt with exact upstream versions). Consumed by release.yml via pinned URL + SHA256." \
+            libmpv-linux-x86_64.tar.gz \
+            libmpv-windows-x86_64.zip \
+            libmpv-macos-arm64.tar.gz \
+            libmpv-macos-x86_64.tar.gz \
+            SHA256SUMS.txt
+          echo "Published $TAG — pin these hashes in release.yml:"
+          cat SHA256SUMS.txt
