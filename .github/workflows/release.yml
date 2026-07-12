@@ -432,6 +432,21 @@ jobs:
           echo "Bundled libmpv landed in vendor/libmpv/:"
           ls -la vendor/libmpv/
 
+      # libmpv's NEEDED closure references desktop runtime libs the headless
+      # runner lacks. Installing them serves two builds at once: PyInstaller's
+      # bindepend can collect the collectable ones (libva/libvdpau/liblcms2/
+      # libjpeg) into the bundle at build time, and the bundled smoke's dlopen
+      # can resolve the deliberately-host-only ones (libasound/libpulse — the
+      # spec filters those out of the bundle; every real desktop has them).
+      - name: Install libmpv runtime libraries (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libasound2 libpulse0 libva2 libva-drm2 libva-x11-2 libvdpau1 \
+            libxv1 libegl1 liblcms2-2 libjpeg-turbo8
+
       - name: Fetch libmpv (macOS)
         if: runner.os == 'macOS'
         shell: bash
