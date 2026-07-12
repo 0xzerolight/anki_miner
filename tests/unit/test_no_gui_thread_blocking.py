@@ -191,14 +191,6 @@ ALLOWLIST: dict[str, set[str]] = {
         # run_off_thread. Off-thread.
         "widgets/condense_tab.py",
     },
-    # get_primary_video_codec / find_japanese_audio_stream — both inside
-    # subtitle_player_widget._probe (run_off_thread). Off-thread.
-    r"get_primary_video_codec\(": {
-        "widgets/subtitle_player_widget.py",
-    },
-    r"find_japanese_audio_stream\(": {
-        "widgets/subtitle_player_widget.py",
-    },
     # cuda_device_count / is_downloaded — inside subtitles_settings_panel._probe
     # (run_off_thread). is_downloaded also appears in subtitle_creation_tab; see
     # below.
