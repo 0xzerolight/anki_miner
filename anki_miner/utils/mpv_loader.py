@@ -183,9 +183,15 @@ def _load_mpv_uncached() -> Any:
         try:
             module = _import_mpv_with_path(bundled)
         except (ImportError, OSError) as exc:
-            raise MpvUnavailableError(f"failed to load bundled libmpv at {bundled}: {exc}") from exc
-        _RESOLVED_SOURCE = f"bundled:{bundled}"
-        return module
+            # Fall THROUGH to the system search instead of failing: a bundled
+            # copy can be unloadable on this host (e.g. macOS bundles built
+            # against a newer min-OS than the machine runs) while a
+            # user-installed system libmpv works fine — `brew install mpv`
+            # must be able to restore the preview.
+            logger.warning("Bundled libmpv at %s failed to load (%s); trying system libmpv", bundled, exc)
+        else:
+            _RESOLVED_SOURCE = f"bundled:{bundled}"
+            return module
 
     try:
         import mpv as mpv_module
