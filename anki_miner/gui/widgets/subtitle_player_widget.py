@@ -94,6 +94,13 @@ class SubtitlePlayerWidget(QWidget):
         # True while mpv sits at end-of-file (keep-open=yes auto-pauses there;
         # unpausing at EOF is a no-op, so play() must seek to 0 first).
         self._at_eof: bool = False
+        # loadfile issued before the render context exists is remembered here
+        # and flushed on render_ready/render_failed. LOAD-BEARING: loading
+        # earlier makes mpv's video-out init fail permanently for that file
+        # ("vo/libmpv: No render context set." -> audio-only black pane), and
+        # both consumer dialogs call set_source in __init__, before the widget
+        # is shown and GL exists.
+        self._pending_load: str | None = None
 
         self._mpv_time_pos.connect(self._on_time_pos)
         self._mpv_duration.connect(self._on_duration)
@@ -112,6 +119,7 @@ class SubtitlePlayerWidget(QWidget):
 
         # Video widget (render-API view; owns only the mpv render context)
         self.video_widget = MpvVideoWidget()
+        self.video_widget.render_ready.connect(self._on_render_ready)
         self.video_widget.render_failed.connect(self._on_render_failed)
         layout.addWidget(self.video_widget, 1)
 
@@ -224,7 +232,32 @@ class SubtitlePlayerWidget(QWidget):
         # Re-source parity with the old backend: a new source always starts
         # paused at 0 (the factory sets pause=True only at construction).
         self.player.pause = True
-        self.player.loadfile(str(video_path))
+        self._load_or_defer(str(video_path))
+
+    def _load_or_defer(self, path: str) -> None:
+        """Issue loadfile now, or queue it until the render context exists.
+
+        Loading before the render context exists makes mpv's video-out init
+        fail permanently for that file ("vo/libmpv: No render context set."):
+        mpv then plays audio-only into a black pane. Consumers call set_source
+        during dialog __init__ — before the widget is shown and GL exists — so
+        the normal first-load path is the deferred one; render_ready (or
+        render_failed, where audio-only is the promised degradation) flushes it.
+        """
+        if self.video_widget.has_render_context:
+            self.player.loadfile(path)
+        else:
+            self._pending_load = path
+
+    def _flush_pending_load(self) -> None:
+        if self.player is None or self._pending_load is None:
+            return
+        pending, self._pending_load = self._pending_load, None
+        self.player.loadfile(pending)
+
+    def _on_render_ready(self) -> None:
+        """Render context is live — safe to load the queued source."""
+        self._flush_pending_load()
 
     def _register_mpv_callbacks(self, player: Any) -> None:
         """Wire mpv observers/events to the queued marshalling signals.
@@ -269,6 +302,7 @@ class SubtitlePlayerWidget(QWidget):
         player, self.player = self.player, None
         self._file_loaded = False
         self._pending_seek_ms = None
+        self._pending_load = None
         self.video_widget.detach()
         player.terminate()
 
@@ -453,6 +487,9 @@ class SubtitlePlayerWidget(QWidget):
         )
         self._backend_notice_label.setVisible(True)
         self.video_widget.setVisible(False)
+        # Honour the "audio still plays" promise: a source queued behind the
+        # (failed) render context still loads — audio + overlay work without it.
+        self._flush_pending_load()
 
     def _on_mpv_log(self, level: str, component: str, message: str) -> None:
         """Forward mpv warn/error log lines to the app logger.
