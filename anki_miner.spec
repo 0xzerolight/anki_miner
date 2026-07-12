@@ -244,23 +244,15 @@ a = Analysis(
 # on foreign distros (same convention as the AppImage excludelist). PyInstaller's
 # own exclude list already refuses GL/EGL/wayland/xcb/drm/nvidia. A NEEDED lib we
 # drop that is absent on a host degrades to "libmpv fails to dlopen → preview
-# notice", never a crash. Scope deliberately narrow (audio clients only) — widen
-# only from real dist-tree observation, since Qt's own closure legitimately
-# bundles fontconfig/freetype-class libs.
-_HOST_ONLY_LIB_PREFIXES = (
-    "libasound.",
-    "libasound-",
-    "libpulse.",
-    "libpulse-",
-    "libpulsecommon",
-    "libjack.",
-    "libpipewire-",
-)
-a.binaries = [
-    entry
-    for entry in a.binaries
-    if not any(os.path.basename(entry[0]).startswith(p) for p in _HOST_ONLY_LIB_PREFIXES)
-]
+# notice", never a crash.
+#
+# PLAIN SONAMES ONLY: auditwheel-mangled wheel-vendored copies (e.g. PyAV's
+# libasound-c7818c60.so.2.0.0) are a hard NEEDED of their wheel's extension and
+# MUST stay bundled — filtering one broke the asr smoke (ImportError on av).
+# The mangled names have a -<hash> before ".so", so anchoring "lib<name>.so"
+# matches only the plain system sonames bindepend picked up via libmpv.
+_HOST_ONLY_LIB_RE = re.compile(r"^lib(asound|pulse(-simple)?|pulsecommon-[0-9.]+|jack|pipewire-0\.3)\.so(\.|$)")
+a.binaries = [entry for entry in a.binaries if not _HOST_ONLY_LIB_RE.match(os.path.basename(entry[0]))]
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
