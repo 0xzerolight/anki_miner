@@ -541,6 +541,34 @@ def terms_exist(conn: sqlite3.Connection, terms: list[str]) -> set[str]:
     return found
 
 
+def terms_readings(conn: sqlite3.Connection, terms: list[str]) -> dict[str, list[str]]:
+    """Attested readings per exact headword, best-first (entry ``score`` DESC).
+
+    Companion to :func:`terms_exist` for the merged-compound reading
+    attestation pass (``morphology.attest_merged_readings``): "which readings
+    does the dictionary attest for this exact headword". Rows with a NULL or
+    empty reading are skipped — some JMdict variant-form rows (mazegaki せん越,
+    katakana ケガ人) ship no reading and can attest nothing. Readings come back
+    as stored (hiragana-folded at import via ``_fold_reading``), deduped,
+    score-ordered so index 0 is the dictionary's best entry for the term.
+    """
+    unique = list(dict.fromkeys(terms))
+    found: dict[str, list[str]] = {}
+    for start in range(0, len(unique), _EXIST_CHUNK):
+        chunk = unique[start : start + _EXIST_CHUNK]
+        placeholders = ", ".join("?" for _ in chunk)
+        rows = conn.execute(
+            f"SELECT term, reading FROM entries WHERE term IN ({placeholders}) "
+            "AND reading IS NOT NULL AND reading != '' ORDER BY score DESC",
+            chunk,
+        ).fetchall()
+        for term, reading in rows:
+            readings = found.setdefault(term, [])
+            if reading not in readings:
+                readings.append(reading)
+    return found
+
+
 # Sort key mirroring SQLite "ORDER BY (reading = ?) DESC" for the reading boost.
 # With no boost bound (folded_boost is None), the SQL predicate is NULL for every
 # row so all rows tie — return a constant. With a boost: a row whose folded
