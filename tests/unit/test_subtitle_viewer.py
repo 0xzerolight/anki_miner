@@ -15,12 +15,19 @@ PLAYER_MODULE = "anki_miner.gui.widgets.subtitle_player_widget"
 
 
 @pytest.fixture
-def fake_mpv():
-    """Patch the player widget's mpv seam; yields the fake player instance."""
+def fake_mpv(monkeypatch):
+    """Patch the player widget's mpv seam; yields the fake player instance.
+
+    ``has_render_context`` is forced True so loadfile runs at set_source
+    (offscreen unshown widgets never create a real render context; the
+    deferred-load behavior is covered in test_subtitle_player_widget.py)."""
+    from anki_miner.gui.widgets.mpv_video_widget import MpvVideoWidget
+
     player = MagicMock(name="mpv.MPV")
     player.pause = True
     player.track_list = []
     player.event_callback.return_value = lambda fn: fn
+    monkeypatch.setattr(MpvVideoWidget, "has_render_context", property(lambda self: True))
     with (
         patch(f"{PLAYER_MODULE}.mpv_available", return_value=True),
         patch(f"{PLAYER_MODULE}.create_mpv_player", return_value=player) as factory,

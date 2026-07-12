@@ -131,3 +131,29 @@ class TestPaintAndFree:
         widget._mpv_frame_update.connect(lambda: received.append(True))
         widget._on_mpv_update()
         assert received == [True]
+
+
+class TestRenderReady:
+    def test_successful_creation_emits_render_ready(self, qtbot):
+        widget = MpvVideoWidget()
+        qtbot.addWidget(widget)
+        widget._player = MagicMock()
+        ready = []
+        widget.render_ready.connect(lambda: ready.append(True))
+        with patch(f"{MODULE}.load_mpv", return_value=MagicMock()):
+            widget._create_render_context()
+        assert ready == [True]
+        assert widget.has_render_context is True
+
+    def test_failure_does_not_emit_render_ready(self, qtbot):
+        widget = MpvVideoWidget()
+        qtbot.addWidget(widget)
+        widget._player = MagicMock()
+        ready = []
+        widget.render_ready.connect(lambda: ready.append(True))
+        fake_mpv = MagicMock()
+        fake_mpv.MpvRenderContext.side_effect = RuntimeError("GL init failed")
+        with patch(f"{MODULE}.load_mpv", return_value=fake_mpv):
+            widget._create_render_context()
+        assert ready == []
+        assert widget.has_render_context is False
