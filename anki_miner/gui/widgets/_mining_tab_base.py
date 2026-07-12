@@ -25,7 +25,6 @@ from anki_miner.gui.presenters import GUIProgressCallback
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
 from anki_miner.services.subtitle_parser import SubtitleParserService
-from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -448,7 +447,6 @@ class MiningTabBase(QWidget):
                 subtitle_entries=entries,
                 offset=offset,
                 audio_track_override=audio_track_override,
-                ffprobe_cmd=resolve_ffprobe(config),
             )
         except Exception:
             logger.exception("Failed to build media context for curation; proceeding without player")
@@ -571,7 +569,7 @@ class MiningTabBase(QWidget):
             self._active_curation_dialog = None
             self._curation_event.set()
             # Schedule the dialog for deletion so its Qt widget tree (table,
-            # QTextBrowser, embedded SubtitlePlayerWidget + QMediaPlayer) is
+            # QTextBrowser, embedded SubtitlePlayerWidget + mpv core) is
             # freed deterministically rather than accumulating per mining session
             # until GC — OVH-016 / Issue #55 multimedia teardown.
             # Guard for the case where dialog construction raised before the

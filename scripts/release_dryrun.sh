@@ -185,8 +185,43 @@ assert_vulkan_ran() { # $1 = os label present in the leg's job name, e.g. ubuntu
 assert_vulkan_ran "ubuntu-22.04"
 assert_vulkan_ran "windows-latest"
 
+# Same executed-not-skipped defense for the libmpv smoke, on every leg in the
+# selection (all four bundle libmpv; skip_mpv_smoke is an escape hatch that
+# must never be silently active). bundle_smoke.sh prints BUNDLED_MPV_PASS only
+# on the ran-and-passed path and "SKIP mpv" only on skip.
+assert_mpv_ran() { # $1 = os label present in the leg's job name
+  local os="$1"
+  local job_id
+  job_id="$(echo "$JOBS_JSON" | jq -r --arg os "$os" \
+    'first(.jobs[] | select((.name | startswith("build")) and (.name | contains($os))) | .databaseId) // empty')"
+  if [ -z "$job_id" ]; then
+    return 0 # leg not in this selection; nothing to assert
+  fi
+  local jlog="$LOG_DIR/job-$job_id.log"
+  for _ in $(seq 1 30); do
+    gh run view "$RUN_ID" --job "$job_id" --log >"$jlog" 2>/dev/null || true
+    if grep -qE "BUNDLED_MPV_PASS|SKIP mpv" "$jlog" 2>/dev/null; then
+      break
+    fi
+    sleep 6
+  done
+  if grep -q "SKIP mpv" "$jlog" 2>/dev/null; then
+    echo "ERROR: mpv smoke was SKIPPED on the '$os' leg (expected to execute)." >&2
+    exit 1
+  fi
+  if ! grep -q "BUNDLED_MPV_PASS" "$jlog" 2>/dev/null; then
+    echo "ERROR: mpv smoke pass-marker absent for the '$os' leg (smoke may not have executed)." >&2
+    exit 1
+  fi
+  echo "    mpv smoke executed+passed on '$os'."
+}
+assert_mpv_ran "ubuntu-22.04"
+assert_mpv_ran "windows-latest"
+assert_mpv_ran "macos-latest"
+assert_mpv_ran "macos-15-intel"
+
 echo "############################################"
 echo "RELEASE DRY-RUN GREEN (run $RUN_ID, platforms=$PLATFORMS)"
 echo "  build matrix + bundle smokes passed; release + ci-gate jobs skipped;"
-echo "  no GitHub Release created; Vulkan smoke verified executed."
+echo "  no GitHub Release created; Vulkan + mpv smokes verified executed."
 echo "############################################"

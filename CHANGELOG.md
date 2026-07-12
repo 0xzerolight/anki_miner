@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- **The in-app video preview now runs on embedded mpv (libmpv)** instead of Qt Multimedia. This retires a whole family of preview bugs: the Windows "Not Responding" freeze when closing a preview, and the AV1 "your system can't decode" notice — AV1 now just plays (software-decoded) on every machine, so that notice UI is gone. Two small behavior changes: Stop now holds the last frame paused at the start instead of going black, and video decoding uses the CPU (previews are small; the cost is negligible). Release bundles ship libmpv; pip/.deb/source installs use the system libmpv and show a notice in the preview pane when it's missing (see README Requirements).
+
 ## [2.8.1] - 2026-07-12
 
 ### Added

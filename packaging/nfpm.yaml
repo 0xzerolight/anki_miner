@@ -18,6 +18,15 @@ overrides:
     # deb-stage tree referenced below before packaging.
     depends:
       - ffmpeg
+    # libmpv is a SOFT dep by design (unlike ffmpeg): without it the app runs
+    # fully, only the in-app video preview degrades to a notice. Recommends is
+    # installed by apt by default, so UX is unchanged; newer-first alternative
+    # covers Debian 12/Ubuntu 24.04+ (libmpv2) and Ubuntu 22.04 (libmpv1) —
+    # python-mpv's find_library('mpv') resolves either soname. The release
+    # workflow strips the bundled libmpv from the deb-stage tree (fail-closed
+    # verifier), same as ffmpeg; see licenses/libmpv/README.md.
+    recommends:
+      - libmpv2 | libmpv1
 
 contents:
   # Install the PyInstaller bundle to /opt/anki-miner/. Source is dist/deb-stage/

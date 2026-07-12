@@ -22,8 +22,8 @@ class AudioStream:
     """Full metadata for a single audio stream from ffprobe.
 
     `global_index` is the ffprobe stream index, suitable for ffmpeg `-map 0:N`.
-    `audio_index` is the position within the audio-only track list (0-indexed),
-    suitable for `QMediaPlayer.setActiveAudioTrack(N)`.
+    `audio_index` is the position within the audio-only track list (0-indexed,
+    demuxer order); the mpv preview maps it to `aid = N + 1`.
     """
 
     global_index: int
@@ -40,8 +40,8 @@ class JapaneseAudioStream:
     """Located Japanese audio stream within a video file.
 
     `global_index` is the ffprobe stream index, suitable for ffmpeg `-map 0:N`.
-    `audio_index` is the position within the audio-only track list, suitable
-    for `QMediaPlayer.setActiveAudioTrack(N)`.
+    `audio_index` is the position within the audio-only track list (0-indexed,
+    demuxer order); the mpv preview maps it to `aid = N + 1`.
     """
 
     global_index: int

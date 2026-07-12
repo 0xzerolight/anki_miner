@@ -69,7 +69,6 @@ class CurationMediaContext:
     subtitle_entries: list[tuple[float, float, str]]  # parsed, offset-zeroed
     offset: float = 0.0
     audio_track_override: int | None = None
-    ffprobe_cmd: str = "ffprobe"  # resolved ffprobe path/literal for audio-track auto-detection
     page_units: Mapping[int, ReadingUnit] | None = None  # manga: unit.index -> ReadingUnit
 
 
@@ -398,7 +397,7 @@ class WordCurationDialog(QDialog):
     def _create_player_widget(self) -> SubtitlePlayerWidget:
         """Instantiate and configure the SubtitlePlayerWidget."""
         # Import here to keep the module importable in headless test environments
-        # where Qt multimedia may not be available or needs patching.
+        # where the player backend may need patching.
         from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
 
         widget = SubtitlePlayerWidget(self)
@@ -411,7 +410,6 @@ class WordCurationDialog(QDialog):
             ctx.subtitle_entries,
             ctx.offset,
             audio_track_override=ctx.audio_track_override,
-            ffprobe_cmd=ctx.ffprobe_cmd,
         )
         return widget
 

@@ -136,14 +136,14 @@ def _no_logger_level_leak():
     ``_configure_logging`` (gui/app.py) pins the ``anki_miner`` namespace logger
     to DEBUG. A test that triggers it and forgets to restore the level pollutes
     every later test sharing the same xdist worker. Leaked DEBUG silently flips
-    DEBUG-gated production paths on -- e.g. the subtitle player teardown drain
-    (gui/widgets/subtitle_player_widget.py) calls
-    ``QCoreApplication.sendPostedEvents`` against a mocked player ONLY under
-    DEBUG, which raises ``TypeError`` and crashes the worker. Because
-    ``--dist loadfile`` sharding is worker-count dependent, the leak passes
-    locally and fails in CI. This guard restores the levels unconditionally (so a
-    leak can never cascade) and pins the blame to the offending test instead of a
-    random downstream Qt crash three files away.
+    DEBUG-gated production paths on. (The original victim — the QMediaPlayer
+    teardown drain in subtitle_player_widget.py, which raised ``TypeError``
+    against a mocked player only under DEBUG — died in the mpv migration, but
+    the hazard class it demonstrated is generic.) Because ``--dist loadfile``
+    sharding is worker-count dependent, such a leak passes locally and fails in
+    CI. This guard restores the levels unconditionally (so a leak can never
+    cascade) and pins the blame to the offending test instead of a random
+    downstream Qt crash three files away.
     """
     root = logging.getLogger()
     am = logging.getLogger("anki_miner")
