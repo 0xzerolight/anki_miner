@@ -84,7 +84,12 @@ jobs:
           # present on desktop Linux or collectable/excludable by PyInstaller.
           # An unexpected NEEDED entry means the dependency closure changed —
           # fail so a human re-evaluates instead of shipping a silent break.
-          ALLOW='^(linux-vdso|ld-linux|libc|libm|libdl|libpthread|librt|libgcc_s|libstdc\+\+|libz|libbz2|liblzma|libbrotli(common|dec)|libX11|libXext|libXrandr|libXinerama|libXss|libXv|libxcb|libGL|libEGL|libOpenGL|libGLdispatch|libGLX|libdrm|libgbm|libwayland-(client|cursor|egl)|libxkbcommon|libasound|libpulse(-simple)?|libpipewire-0\.3|libva(-drm|-x11|-wayland)?|libvdpau|libfreetype|libfontconfig|libfribidi|libharfbuzz|libexpat|libpng16|libffi|libuuid|libmd|libbsd|libdbus-1|libsystemd|libcap|libapparmor|libblkid|libmount|libselinux|libpcre2?-?8?)\.so'
+          # Notable allowances: libssl/libcrypto (ffmpeg TLS — PyInstaller
+          # already bundles both for Python's _ssl, bindepend dedupes),
+          # liblcms2 (libplacebo ICC) and libjpeg (mpv screenshot writer) —
+          # both bindepend-collected into the bundle; libxcb-* are on
+          # PyInstaller's own exclude list and resolve from the host.
+          ALLOW='^(linux-vdso|ld-linux|libc|libm|libdl|libpthread|librt|libgcc_s|libstdc\+\+|libz|libbz2|liblzma|libbrotli(common|dec)|libssl|libcrypto|liblcms2|libjpeg|libX11|libXext|libXrandr|libXinerama|libXss|libXv|libxcb(-[a-z0-9-]+)?|libGL|libEGL|libOpenGL|libGLdispatch|libGLX|libdrm|libgbm|libwayland-(client|cursor|egl)|libxkbcommon|libasound|libpulse(-simple)?|libpipewire-0\.3|libva(-drm|-x11|-wayland)?|libvdpau|libfreetype|libfontconfig|libfribidi|libharfbuzz|libexpat|libpng16|libffi|libuuid|libmd|libbsd|libdbus-1|libsystemd|libcap|libapparmor|libblkid|libmount|libselinux|libpcre2?-?8?)\.so'
           BAD=0
           while read -r lib; do
             if ! echo "$lib" | grep -qE "$ALLOW"; then
