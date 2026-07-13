@@ -13,17 +13,16 @@ block directory deletion).
 
 from __future__ import annotations
 
-import json
-import logging
 import re
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+import anki_miner.services._sqlite_index as _sqlite_index
+from anki_miner.services._sqlite_index import open_readonly as open_readonly
+from anki_miner.services._sqlite_index import read_meta as read_meta
 from anki_miner.utils.text_utils import katakana_to_hiragana
-
-logger = logging.getLogger(__name__)
 
 # v4: no table change — bumped to force a one-time reimport that re-runs the
 # fixed Yomitan tag split (multi-word nbsp tag names were shattered on import).
@@ -53,11 +52,6 @@ def _scrub_surrogates(value: str | None) -> str | None:
     except UnicodeEncodeError:
         return _SURROGATE_RE.sub("�", value)
 
-
-# Sidecar filename living next to each ``index.sqlite``. Holds the dictionary's
-# ``meta`` rows as JSON so ``DictionaryRegistry.load()`` can skip the SQLite
-# open on every app startup. Refreshed whenever ``write_meta`` runs.
-_META_SIDECAR = "meta.json"
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS entries (
@@ -285,87 +279,21 @@ def read_tags(conn: sqlite3.Connection) -> dict[str, TagMeta]:
 
 
 def write_meta(db_path: Path, items: dict[str, str]) -> None:
-    """Upsert meta rows. Refreshes the ``meta.json`` sidecar so the next
-    ``read_meta_cached`` call avoids re-opening SQLite."""
-    conn = sqlite3.connect(db_path)
-    try:
-        for key, value in items.items():
-            conn.execute(
-                "INSERT INTO meta (key, value) VALUES (?, ?) " "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-                (key, _scrub_surrogates(value)),
-            )
-        conn.commit()
-        full_meta = {row[0]: row[1] for row in conn.execute("SELECT key, value FROM meta")}
-    finally:
-        conn.close()
-    _write_meta_sidecar(db_path, full_meta)
-
-
-def read_meta(db_path: Path) -> dict[str, str]:
-    """Read all meta rows. Returns empty dict if file missing."""
-    if not db_path.exists():
-        return {}
-    conn = sqlite3.connect(db_path)
-    try:
-        return {row[0]: row[1] for row in conn.execute("SELECT key, value FROM meta")}
-    finally:
-        conn.close()
+    """Upsert meta rows, surrogate-scrubbing each value (Issue #67), and refresh
+    the ``meta.json`` sidecar so the next ``read_meta_cached`` avoids re-opening
+    SQLite. Thin wrapper over the shared meta writer."""
+    _sqlite_index.write_meta(db_path, items, value_transform=_scrub_surrogates)
 
 
 def read_meta_cached(db_path: Path) -> dict[str, str]:
-    """Read meta rows via the ``meta.json`` sidecar when fresh.
+    """Read meta rows via the ``meta.json`` sidecar when fresh, falling back to
+    :func:`read_meta` when the sidecar is missing/stale/corrupt.
 
-    Falls through to ``read_meta`` and rewrites the sidecar when:
-    * the sidecar is missing,
-    * ``index.sqlite`` is newer than the sidecar,
-    * the sidecar is unreadable / not valid JSON.
-
-    Used by ``DictionaryRegistry.load()`` to skip the SQLite open on startup
-    when nothing changed since the last run.
+    Used by ``DictionaryRegistry.load()`` to skip the SQLite open on startup when
+    nothing changed since the last run. Passes the module-level ``read_meta`` so
+    tests patching ``...dictionary.storage.read_meta`` observe the fall-through.
     """
-    if not db_path.exists():
-        return {}
-    sidecar = db_path.parent / _META_SIDECAR
-    try:
-        if sidecar.is_file() and sidecar.stat().st_mtime >= db_path.stat().st_mtime:
-            data = json.loads(sidecar.read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                return {str(k): str(v) for k, v in data.items()}
-    except (OSError, json.JSONDecodeError) as e:
-        logger.debug("meta sidecar miss for %s: %s", db_path, e)
-
-    meta = read_meta(db_path)
-    _write_meta_sidecar(db_path, meta)
-    return meta
-
-
-def _write_meta_sidecar(db_path: Path, meta: dict[str, str]) -> None:
-    """Best-effort sidecar write. Cache misses are logged, not raised — the
-    next ``read_meta_cached`` call will simply fall back to ``read_meta``."""
-    sidecar = db_path.parent / _META_SIDECAR
-    try:
-        sidecar.write_text(json.dumps(meta), encoding="utf-8")
-    except OSError as e:  # pragma: no cover - defensive
-        logger.debug("Failed to write meta sidecar %s: %s", sidecar, e)
-
-
-def open_readonly(db_path: Path) -> sqlite3.Connection:
-    """Open a read-only connection. Safe to share across threads.
-
-    `check_same_thread=False` is required because providers are constructed
-    on the GUI thread (by service_factory) but consumed by worker threads.
-    The connection is read-only (`PRAGMA query_only=ON`) so concurrent reads
-    are safe under sqlite3's serialized access mode.
-    """
-    # Build the file: URI via Path.as_uri() so URI-significant characters in the
-    # path (``#`` fragment, ``?`` query, ``%`` escape) are percent-encoded. A
-    # raw f-string would let a dicts_root containing any of these truncate the
-    # path and point sqlite at the wrong (or nonexistent) file. as_uri() needs
-    # an absolute path, so resolve first.
-    uri = db_path.resolve().as_uri() + "?mode=ro"
-    conn = sqlite3.connect(uri, uri=True, check_same_thread=False)
-    conn.execute("PRAGMA query_only=ON")
-    return conn
+    return _sqlite_index.read_meta_cached(db_path, read_meta)
 
 
 def lookup(conn: sqlite3.Connection, word: str, reading: str | None = None) -> list[tuple[str, str, int | None]]:
