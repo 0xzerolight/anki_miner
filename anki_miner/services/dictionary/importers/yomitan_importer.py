@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services._staging import promote_staged_dir
 from anki_miner.services.dictionary.schema_validation import (
     ensure_bank_array,
     is_valid_term_bank_entry,
@@ -266,26 +267,10 @@ def import_yomitan_zip(
         # backstop (dir may have appeared since staging began).
         dest_root.mkdir(parents=True, exist_ok=True)
 
-        if final_path.exists():
-            if not overwrite:
-                raise SetupError(f"Dictionary '{dict_id}' already exists")
-            backup = final_path.with_name(final_path.name + ".bak-" + datetime.now(UTC).strftime("%Y%m%d%H%M%S%f"))
-            final_path.rename(backup)
-            try:
-                shutil.move(str(staging), str(final_path))
-            except Exception:
-                # Restore the backup so the user is not left with an empty slot.
-                # If shutil.move partially populated final_path (cross-fs copy
-                # interrupted), wipe the partial dir before restoring so the
-                # rename is unambiguous.
-                if final_path.exists():
-                    shutil.rmtree(final_path, ignore_errors=True)
-                if not final_path.exists():
-                    backup.rename(final_path)
-                raise
-            shutil.rmtree(backup, ignore_errors=True)
-        else:
-            shutil.move(str(staging), str(final_path))
+        # Pre-check stays here (the helper owns only the promote skeleton).
+        if final_path.exists() and not overwrite:
+            raise SetupError(f"Dictionary '{dict_id}' already exists")
+        promote_staged_dir(staging, final_path, mover=shutil.move, overwrite=overwrite)
 
         if progress:
             progress(len(term_files), len(term_files), "Done")

@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Callable, Iterator
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services._staging import promote_staged_dir
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
     DictRow,
@@ -178,23 +179,8 @@ def import_jmdict_xml(
         dest_root.mkdir(parents=True, exist_ok=True)
         final = dest_root / JMDICT_DICT_ID
 
-        if final.exists():
-            backup = final.with_name(final.name + ".bak-" + datetime.now(UTC).strftime("%Y%m%d%H%M%S%f"))
-            final.rename(backup)
-            try:
-                shutil.move(str(staging), str(final))
-            except Exception:
-                # If shutil.move partially populated final (cross-fs copy
-                # interrupted), wipe the partial dir before restoring the
-                # backup so the rename is unambiguous.
-                if final.exists():
-                    shutil.rmtree(final, ignore_errors=True)
-                if not final.exists():
-                    backup.rename(final)
-                raise
-            shutil.rmtree(backup, ignore_errors=True)
-        else:
-            shutil.move(str(staging), str(final))
+        # JMdict has one canonical dict_id, so always overwrite.
+        promote_staged_dir(staging, final, mover=shutil.move, overwrite=True)
 
         if progress:
             progress(total_entries, total_entries, "Done")

@@ -37,6 +37,7 @@ from pathlib import Path
 from typing import Callable
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services._staging import promote_staged_dir
 from anki_miner.services.dictionary.zip_safety import raise_if_index_nested
 from anki_miner.services.frequency import mode_probe, storage
 from anki_miner.services.frequency.csv_parse import (
@@ -438,20 +439,7 @@ def _finalize(
         shutil.copy2(input_path, staging / source_copy_name)
 
         # Atomic-ish promote: replace any existing same-id source.
-        if final_path.exists():
-            backup = final_path.with_name(final_path.name + ".bak-" + datetime.now(UTC).strftime("%Y%m%d%H%M%S%f"))
-            final_path.rename(backup)
-            try:
-                shutil.move(str(staging), str(final_path))
-            except Exception:
-                if final_path.exists():
-                    shutil.rmtree(final_path, ignore_errors=True)
-                if not final_path.exists():
-                    backup.rename(final_path)
-                raise
-            shutil.rmtree(backup, ignore_errors=True)
-        else:
-            shutil.move(str(staging), str(final_path))
+        promote_staged_dir(staging, final_path, mover=shutil.move, overwrite=True)
     finally:
         # On success the staging dir was moved away; clean up on any failure
         # so a partial import does not orphan a .staging-* dir in dest_root.
