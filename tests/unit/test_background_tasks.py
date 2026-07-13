@@ -378,26 +378,24 @@ class TestStartYtdlpUpdate:
 
 
 # ---------------------------------------------------------------------------
-# Fake ASR model download worker
+# Fake install/download worker (ARC-010: five per-resource workers collapsed
+# into one InstallWorker(task, parent) — construction args now live inside the
+# per-tool task closure, so these controller tests exercise the shared guard /
+# status-result routing / handle-release contract, not arg passthrough, which
+# is covered by the per-tool worker tests).
 # ---------------------------------------------------------------------------
 
 
-class _FakeAsrDownloadWorker(QObject):
-    """Fake AsrModelDownloadWorker.
-
-    Mirrors the real worker's split: ``result_ready(bool, str)`` carries the
-    outcome payload, while the native 0-arg ``finished`` fires on thread exit
-    and drives handle release.
-    """
+class _FakeInstallWorker(QObject):
+    """Fake InstallWorker: status(str) + result_ready(bool, str) + native finished()."""
 
     status = pyqtSignal(str)
     result_ready = pyqtSignal(bool, str)
     finished = pyqtSignal()
 
-    def __init__(self, name: str, models_root, parent=None) -> None:
+    def __init__(self, task=None, parent=None) -> None:
         super().__init__(parent)
-        self._name = name
-        self._models_root = models_root
+        self._task = task
         self._running = False
         self.deleteLater = MagicMock()  # type: ignore[method-assign]
 
@@ -416,64 +414,32 @@ class _FakeAsrDownloadWorker(QObject):
         self.finished.emit()
 
 
-class _FakeAlassInstallWorker(QObject):
-    """Fake AlassInstallWorker — same status/result_ready/finished split as ASR."""
-
-    status = pyqtSignal(str)
-    result_ready = pyqtSignal(bool, str)
-    finished = pyqtSignal()
-
-    def __init__(self, bin_root, parent=None) -> None:
-        super().__init__(parent)
-        self._bin_root = bin_root
-        self._running = False
-        self.deleteLater = MagicMock()  # type: ignore[method-assign]
-
-    def isRunning(self) -> bool:  # noqa: N802
-        return self._running
-
-    def start(self) -> None:
-        self._running = True
-
-    def emit_result(self, ok: bool = True, message: str = "Done") -> None:
-        self.result_ready.emit(ok, message)
-
-    def emit_finished(self) -> None:
-        self._running = False
-        self.finished.emit()
+def _patch_install_worker(monkeypatch, worker: _FakeInstallWorker) -> None:
+    """Route every InstallWorker(task, parent) construction to ``worker``."""
+    monkeypatch.setattr(
+        "anki_miner.gui.workers.install_worker.InstallWorker",
+        lambda task, parent=None: worker,
+    )
 
 
 class TestStartAlassDownload:
-    """start_alass_download: guard, construction, status/finished routing, handle release."""
-
-    def _patch(self, monkeypatch, worker: _FakeAlassInstallWorker, captured: dict | None = None) -> None:
-        def _make_worker(bin_root, parent=None):
-            if captured is not None:
-                captured["bin_root"] = bin_root
-            return worker
-
-        monkeypatch.setattr(
-            "anki_miner.gui.workers.alass_install_worker.AlassInstallWorker",
-            _make_worker,
-        )
+    """start_alass_download: guard, status/finished routing, handle release."""
 
     def test_starts_and_routes_status(self, controller, qtbot, monkeypatch, tmp_path):
-        worker = _FakeAlassInstallWorker(tmp_path)
-        captured: dict = {}
-        self._patch(monkeypatch, worker, captured)
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
 
         status_received: list[str] = []
         controller.start_alass_download(tmp_path, status_received.append, lambda ok, msg: None)
 
-        assert captured["bin_root"] == tmp_path
         assert controller.alass_install_worker is worker
 
         worker.status.emit("Downloading alass…")
         assert status_received == ["Downloading alass…"]
 
     def test_routes_result(self, controller, qtbot, monkeypatch, tmp_path):
-        worker = _FakeAlassInstallWorker(tmp_path)
-        self._patch(monkeypatch, worker)
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
 
         finished_calls: list[tuple] = []
         controller.start_alass_download(tmp_path, lambda msg: None, lambda ok, msg: finished_calls.append((ok, msg)))
@@ -482,19 +448,19 @@ class TestStartAlassDownload:
         assert finished_calls == [(True, "alass installed successfully.")]
 
     def test_refused_while_running(self, controller, qtbot, monkeypatch, tmp_path):
-        worker_a = _FakeAlassInstallWorker(tmp_path)
-        self._patch(monkeypatch, worker_a)
+        worker_a = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker_a)
         controller.start_alass_download(tmp_path, lambda m: None, lambda ok, m: None)
         assert controller.alass_install_worker is worker_a
 
-        worker_b = _FakeAlassInstallWorker(tmp_path)
-        self._patch(monkeypatch, worker_b)
+        worker_b = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker_b)
         controller.start_alass_download(tmp_path, lambda m: None, lambda ok, m: None)
         assert controller.alass_install_worker is worker_a
 
     def test_handle_released_on_finished(self, controller, qtbot, monkeypatch, tmp_path):
-        worker = _FakeAlassInstallWorker(tmp_path)
-        self._patch(monkeypatch, worker)
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
         controller.start_alass_download(tmp_path, lambda m: None, lambda ok, m: None)
 
         worker.emit_finished()
@@ -504,30 +470,16 @@ class TestStartAlassDownload:
 
 
 class TestStartAsrModelDownload:
-    """start_asr_model_download: guard, construction, status/finished routing, handle release."""
-
-    def _patch(self, monkeypatch, worker: _FakeAsrDownloadWorker, captured: dict | None = None) -> None:
-        def _make_worker(name, models_root, parent=None):
-            if captured is not None:
-                captured["name"] = name
-                captured["models_root"] = models_root
-            return worker
-
-        monkeypatch.setattr(
-            "anki_miner.gui.workers.asr_model_download_worker.AsrModelDownloadWorker",
-            _make_worker,
-        )
+    """start_asr_model_download: guard, status/finished routing, handle release."""
 
     def test_starts_and_routes_status(self, controller, qtbot, monkeypatch, tmp_path):
         """Calling start_asr_model_download constructs the worker and routes status."""
-        worker = _FakeAsrDownloadWorker("large-v3", tmp_path)
-        captured: dict = {}
-        self._patch(monkeypatch, worker, captured)
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
 
         status_received: list[str] = []
         controller.start_asr_model_download("large-v3", tmp_path, status_received.append, lambda ok, msg: None)
 
-        assert captured["name"] == "large-v3"
         assert controller.asr_model_download_worker is worker
 
         worker.status.emit("Downloading large-v3…")
@@ -535,8 +487,8 @@ class TestStartAsrModelDownload:
 
     def test_routes_result(self, controller, qtbot, monkeypatch, tmp_path):
         """result_ready(ok, msg) is forwarded to the on_finished callback."""
-        worker = _FakeAsrDownloadWorker("small", tmp_path)
-        self._patch(monkeypatch, worker)
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
 
         finished_calls: list[tuple] = []
         controller.start_asr_model_download(
@@ -548,21 +500,21 @@ class TestStartAsrModelDownload:
 
     def test_refused_while_running(self, controller, qtbot, monkeypatch, tmp_path):
         """A second start while one is running must not replace the handle."""
-        worker_a = _FakeAsrDownloadWorker("large-v3", tmp_path)
-        self._patch(monkeypatch, worker_a)
+        worker_a = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker_a)
         controller.start_asr_model_download("large-v3", tmp_path, lambda m: None, lambda ok, m: None)
         assert controller.asr_model_download_worker is worker_a
 
-        worker_b = _FakeAsrDownloadWorker("small", tmp_path)
-        self._patch(monkeypatch, worker_b)
+        worker_b = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker_b)
         controller.start_asr_model_download("small", tmp_path, lambda m: None, lambda ok, m: None)
         # Handle must still point at worker_a; worker_b must not have been started.
         assert controller.asr_model_download_worker is worker_a
 
     def test_handle_nulled_after_finished(self, controller, qtbot, monkeypatch, tmp_path):
         """Native thread-exit must null the handle and schedule deleteLater."""
-        worker = _FakeAsrDownloadWorker("large-v3", tmp_path)
-        self._patch(monkeypatch, worker)
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
         controller.start_asr_model_download("large-v3", tmp_path, lambda m: None, lambda ok, m: None)
 
         worker.emit_finished()
@@ -572,8 +524,8 @@ class TestStartAsrModelDownload:
 
     def test_handle_released_on_cancel_without_result(self, controller, qtbot, monkeypatch, tmp_path):
         """Cancel path: thread exits without result_ready, yet the handle is freed (H1)."""
-        worker = _FakeAsrDownloadWorker("large-v3", tmp_path)
-        self._patch(monkeypatch, worker)
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
         controller.start_asr_model_download("large-v3", tmp_path, lambda m: None, lambda ok, m: None)
 
         # No emit_result() — simulates a cancelled download that never reports a payload.
@@ -583,64 +535,24 @@ class TestStartAsrModelDownload:
         worker.deleteLater.assert_called_once()
 
 
-class _FakeCudaPackDownloadWorker(QObject):
-    """Fake CudaPackDownloadWorker — same status/result_ready/finished split."""
-
-    status = pyqtSignal(str)
-    result_ready = pyqtSignal(bool, str)
-    finished = pyqtSignal()
-
-    def __init__(self, cuda_libs_root, parent=None) -> None:
-        super().__init__(parent)
-        self._cuda_libs_root = cuda_libs_root
-        self._running = False
-        self.deleteLater = MagicMock()  # type: ignore[method-assign]
-
-    def isRunning(self) -> bool:  # noqa: N802
-        return self._running
-
-    def start(self) -> None:
-        self._running = True
-
-    def emit_result(self, ok: bool = True, message: str = "Done") -> None:
-        self.result_ready.emit(ok, message)
-
-    def emit_finished(self) -> None:
-        self._running = False
-        self.finished.emit()
-
-
 class TestStartCudaPackDownload:
-    """start_cuda_pack_download: guard, construction, status/finished routing, handle release."""
-
-    def _patch(self, monkeypatch, worker: _FakeCudaPackDownloadWorker, captured: dict | None = None) -> None:
-        def _make_worker(cuda_libs_root, parent=None):
-            if captured is not None:
-                captured["cuda_libs_root"] = cuda_libs_root
-            return worker
-
-        monkeypatch.setattr(
-            "anki_miner.gui.workers.cuda_pack_download_worker.CudaPackDownloadWorker",
-            _make_worker,
-        )
+    """start_cuda_pack_download: guard, status/finished routing, handle release."""
 
     def test_starts_and_routes_status(self, controller, qtbot, monkeypatch, tmp_path):
-        worker = _FakeCudaPackDownloadWorker(tmp_path)
-        captured: dict = {}
-        self._patch(monkeypatch, worker, captured)
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
 
         status_received: list[str] = []
         controller.start_cuda_pack_download(tmp_path, status_received.append, lambda ok, msg: None)
 
-        assert captured["cuda_libs_root"] == tmp_path
         assert controller.cuda_pack_download_worker is worker
 
         worker.status.emit("Downloading GPU libraries…")
         assert status_received == ["Downloading GPU libraries…"]
 
     def test_routes_result(self, controller, qtbot, monkeypatch, tmp_path):
-        worker = _FakeCudaPackDownloadWorker(tmp_path)
-        self._patch(monkeypatch, worker)
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
 
         finished_calls: list[tuple] = []
         controller.start_cuda_pack_download(
@@ -651,19 +563,19 @@ class TestStartCudaPackDownload:
         assert finished_calls == [(True, "GPU libraries installed successfully.")]
 
     def test_refused_while_running(self, controller, qtbot, monkeypatch, tmp_path):
-        worker_a = _FakeCudaPackDownloadWorker(tmp_path)
-        self._patch(monkeypatch, worker_a)
+        worker_a = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker_a)
         controller.start_cuda_pack_download(tmp_path, lambda m: None, lambda ok, m: None)
         assert controller.cuda_pack_download_worker is worker_a
 
-        worker_b = _FakeCudaPackDownloadWorker(tmp_path)
-        self._patch(monkeypatch, worker_b)
+        worker_b = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker_b)
         controller.start_cuda_pack_download(tmp_path, lambda m: None, lambda ok, m: None)
         assert controller.cuda_pack_download_worker is worker_a
 
     def test_handle_released_on_finished(self, controller, qtbot, monkeypatch, tmp_path):
-        worker = _FakeCudaPackDownloadWorker(tmp_path)
-        self._patch(monkeypatch, worker)
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
         controller.start_cuda_pack_download(tmp_path, lambda m: None, lambda ok, m: None)
 
         worker.emit_finished()
@@ -672,67 +584,24 @@ class TestStartCudaPackDownload:
         worker.deleteLater.assert_called_once()
 
 
-class _FakeVulkanModelDownloadWorker(QObject):
-    """Fake VulkanModelDownloadWorker — same status/result_ready/finished split."""
-
-    status = pyqtSignal(str)
-    result_ready = pyqtSignal(bool, str)
-    finished = pyqtSignal()
-
-    def __init__(self, asr_model, asr_models_root, parent=None) -> None:
-        super().__init__(parent)
-        self._asr_model = asr_model
-        self._asr_models_root = asr_models_root
-        self._running = False
-        self.deleteLater = MagicMock()  # type: ignore[method-assign]
-
-    def isRunning(self) -> bool:  # noqa: N802
-        return self._running
-
-    def start(self) -> None:
-        self._running = True
-
-    def emit_result(self, ok: bool = True, message: str = "Done") -> None:
-        self.result_ready.emit(ok, message)
-
-    def emit_finished(self) -> None:
-        self._running = False
-        self.finished.emit()
-
-
 class TestStartVulkanDownload:
-    """start_vulkan_download: guard, construction, status/finished routing, handle release."""
-
-    def _patch(self, monkeypatch, worker: _FakeVulkanModelDownloadWorker, captured: dict | None = None) -> None:
-        def _make_worker(asr_model, asr_models_root, parent=None):
-            if captured is not None:
-                captured["asr_model"] = asr_model
-                captured["asr_models_root"] = asr_models_root
-            return worker
-
-        monkeypatch.setattr(
-            "anki_miner.gui.workers.vulkan_model_download_worker.VulkanModelDownloadWorker",
-            _make_worker,
-        )
+    """start_vulkan_download: guard, status/finished routing, handle release."""
 
     def test_starts_and_routes_status(self, controller, qtbot, monkeypatch, tmp_path):
-        worker = _FakeVulkanModelDownloadWorker("large-v3", tmp_path)
-        captured: dict = {}
-        self._patch(monkeypatch, worker, captured)
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
 
         status_received: list[str] = []
         controller.start_vulkan_download("large-v3", tmp_path, status_received.append, lambda ok, msg: None)
 
-        assert captured["asr_model"] == "large-v3"
-        assert captured["asr_models_root"] == tmp_path
         assert controller.vulkan_model_download_worker is worker
 
         worker.status.emit("Downloading Vulkan model…")
         assert status_received == ["Downloading Vulkan model…"]
 
     def test_routes_result(self, controller, qtbot, monkeypatch, tmp_path):
-        worker = _FakeVulkanModelDownloadWorker("small", tmp_path)
-        self._patch(monkeypatch, worker)
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
 
         finished_calls: list[tuple] = []
         controller.start_vulkan_download(
@@ -743,19 +612,19 @@ class TestStartVulkanDownload:
         assert finished_calls == [(True, "Vulkan model installed successfully.")]
 
     def test_refused_while_running(self, controller, qtbot, monkeypatch, tmp_path):
-        worker_a = _FakeVulkanModelDownloadWorker("large-v3", tmp_path)
-        self._patch(monkeypatch, worker_a)
+        worker_a = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker_a)
         controller.start_vulkan_download("large-v3", tmp_path, lambda m: None, lambda ok, m: None)
         assert controller.vulkan_model_download_worker is worker_a
 
-        worker_b = _FakeVulkanModelDownloadWorker("large-v3", tmp_path)
-        self._patch(monkeypatch, worker_b)
+        worker_b = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker_b)
         controller.start_vulkan_download("large-v3", tmp_path, lambda m: None, lambda ok, m: None)
         assert controller.vulkan_model_download_worker is worker_a
 
     def test_handle_released_on_finished(self, controller, qtbot, monkeypatch, tmp_path):
-        worker = _FakeVulkanModelDownloadWorker("large-v3", tmp_path)
-        self._patch(monkeypatch, worker)
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
         controller.start_vulkan_download("large-v3", tmp_path, lambda m: None, lambda ok, m: None)
 
         worker.emit_finished()
