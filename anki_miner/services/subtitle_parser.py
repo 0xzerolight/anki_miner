@@ -60,11 +60,19 @@ PARSE_RELEVANT_CONFIG_FIELDS = (
     "bold_target_in_sentence",
     "allowed_pos",
     "excluded_subtypes",
-    "compound_matching",
     "use_subtitle_regex_filter",
     "subtitle_regex_filter",
     "subtitle_regex_replacement",
 )
+
+# Dictionary-attested compound matching (Yomitan longest-match principle):
+# multi-token spans whose joined form is an offline-dictionary headword are
+# mined as ONE word (走り出した → 走り出す, 応急処置 stays whole); longest match
+# wins and consumed components are not separately mined from that occurrence.
+# Requires an injected term_lookup (an enabled indexed offline dictionary);
+# without one, mining behavior is unchanged. Always on — previously the hidden
+# `config.compound_matching` knob (ARC-004: inlined, never surfaced in any panel).
+COMPOUND_MATCHING = True
 
 # Maximum number of files held simultaneously in the per-instance per-file
 # tokenization cache.  When the cap is hit the oldest entry (insertion order)
@@ -87,19 +95,18 @@ class SubtitleParserService:
         Args:
             config: Configuration for parsing
             term_lookup: Optional batch headword-existence probe
-                (``DefinitionService.offline_terms_exist``). When provided AND
-                ``config.compound_matching`` is on, dictionary-attested
-                multi-token spans are merged into single words (Yomitan
-                longest-match). ``None`` (no offline dictionary, toggle off,
+                (``DefinitionService.offline_terms_exist``). When provided,
+                dictionary-attested multi-token spans are merged into single
+                words (Yomitan longest-match). ``None`` (no offline dictionary
                 or raw-entry-only callers) keeps parsing byte-identical to
                 the pre-compound-matching behavior.
             reading_lookup: Optional batch attested-readings probe
                 (``DefinitionService.offline_term_readings``). When provided,
                 merged-compound kana is corrected to the dictionary's attested
                 reading (``morphology.attest_merged_readings`` — the rendaku /
-                on-kun junction fix, 2026-07 audit F2). Deliberately NOT gated
-                on ``config.compound_matching``: the morphology merges it
-                serves (noun-suffix/prefix/nominalizer) run regardless.
+                on-kun junction fix, 2026-07 audit F2). Independent of the
+                compound matcher: the morphology merges it serves
+                (noun-suffix/prefix/nominalizer) run regardless.
                 ``None`` keeps parsing byte-identical.
         """
         self.config = config
@@ -118,10 +125,11 @@ class SubtitleParserService:
             excluded_subtypes=frozenset(config.excluded_subtypes),
         )
         # Dictionary-attested compound matching (see services/compound_matcher.py).
-        # Built only when a term lookup is injected AND the toggle is on; the
-        # matcher reuses the inclusion rule so spans start only at mineable tokens.
+        # Built only when a term lookup is injected (COMPOUND_MATCHING is always
+        # on); the matcher reuses the inclusion rule so spans start only at
+        # mineable tokens.
         self._compound_matcher: CompoundDictionaryMatcher | None = None
-        if term_lookup is not None and config.compound_matching:
+        if term_lookup is not None and COMPOUND_MATCHING:
             self._compound_matcher = CompoundDictionaryMatcher(term_lookup, self._inclusion_rule)
         self._filter_pattern: re.Pattern[str] | None = None
         if config.use_subtitle_regex_filter and config.subtitle_regex_filter:

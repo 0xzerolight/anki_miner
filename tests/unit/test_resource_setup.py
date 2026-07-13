@@ -10,6 +10,7 @@ from anki_miner.gui.workers.resource_download_worker import (
     ResourceDownloadResult,
     ResourceDownloadSummary,
 )
+from anki_miner.services.frequency.multi_frequency_service import min_rank
 
 
 def _dict_result(dict_id: str = "jitendex", ok: bool = True) -> ResourceDownloadResult:
@@ -228,7 +229,7 @@ class TestFreqDownloadYieldsLiveServiceInSession:
 
         services = create_services(applied)
         assert services.frequency_service is not None
-        assert services.frequency_service.lookup_min("猫") == 5
+        assert min_rank(services.frequency_service.lookup_all("猫")) == 5
 
 
 class TestFirstRunSetupDoneRoundTrip:

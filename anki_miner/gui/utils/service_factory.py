@@ -335,8 +335,8 @@ def create_services(
 
     if subtitle_parser is None:
         # Headword-existence probe: injected iff an indexed offline dict is
-        # enabled AND compound matching (services/compound_matcher.py) is on —
-        # it borrows the DefinitionService's offline_terms_exist seam, so a
+        # enabled (compound matching, services/compound_matcher.py, is always on)
+        # — it borrows the DefinitionService's offline_terms_exist seam, so a
         # Jisho-only config stays I/O-free and behaves exactly as before.
         #
         # Deck Builder parity note: the Deck Builder's base processor flows
@@ -345,13 +345,10 @@ def create_services(
         # line cache. If a future change pre-builds that parser elsewhere, it
         # must wire term_lookup the same way or preview and build diverge.
         has_indexed_dict = any(e.kind == "indexed" and e.enabled for e in config.dictionary_chain)
-        term_lookup = None
-        if config.compound_matching and has_indexed_dict:
-            term_lookup = definition_service.offline_terms_exist
+        term_lookup = definition_service.offline_terms_exist if has_indexed_dict else None
         # Attested-readings probe (merged-compound reading fix, audit F2):
-        # gated ONLY on an indexed dict being present — deliberately NOT on
-        # config.compound_matching, because the morphology merges it corrects
-        # (noun-suffix/prefix/nominalizer) run regardless of that toggle.
+        # gated ONLY on an indexed dict being present — the morphology merges it
+        # corrects (noun-suffix/prefix/nominalizer) run regardless.
         reading_lookup = definition_service.offline_term_readings if has_indexed_dict else None
         subtitle_parser = SubtitleParserService(config, term_lookup=term_lookup, reading_lookup=reading_lookup)
     # Share the parser's tagger with the word filter so i+1 swap can

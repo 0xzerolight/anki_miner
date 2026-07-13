@@ -11,7 +11,10 @@ import pytest
 from anki_miner.exceptions import AnkiConnectionError, SetupError, SubtitleParseError
 from anki_miner.models import CardPayload, LineLemmas, MediaData, TokenizedWord
 from anki_miner.models.youtube import FetchedMedia
-from anki_miner.orchestration.episode_processor import _sanitize_source_label
+from anki_miner.orchestration.episode_processor import (
+    MIN_EPISODE_APPEARANCES,
+    _sanitize_source_label,
+)
 from anki_miner.presenters import NullPresenter
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.pitch_accent_service import PitchEntry
@@ -625,11 +628,9 @@ class TestOptionalServices:
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         # A single per-source fetch, reading-scoped (word.reading "タベル" →
-        # hiragana-normalized "たべる"); min + harmonic are derived locally, so the
-        # service's lookup_min/lookup_harmonic are never re-queried.
+        # hiragana-normalized "たべる"); min + harmonic are derived locally from
+        # that one lookup_all via the pure min_rank/harmonic_rank helpers.
         mock_frequency.lookup_all.assert_called_once_with(word.lemma, "たべる")
-        mock_frequency.lookup_min.assert_not_called()
-        mock_frequency.lookup_harmonic.assert_not_called()
         # Derived from the fetched breakdown: min = 200 (drives filtering),
         # harmonic = floor(2 / (1/400 + 1/200)) = 266 (drives the sort field).
         assert word.frequency_rank == 200
@@ -1932,9 +1933,7 @@ class TestCrossEpisodeFiltering:
         }
 
     def test_cross_episode_counts_filters_words(self, test_config, mock_services, tmp_path):
-        """Words below min_episode_appearances should be filtered out."""
-        config = replace(test_config, min_episode_appearances=3)
-
+        """Words below MIN_EPISODE_APPEARANCES should be filtered out."""
         word1 = _make_word("食べる")
         word2 = _make_word("走る", start_time=5.0)
         media = _make_media()
@@ -1951,14 +1950,16 @@ class TestCrossEpisodeFiltering:
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
         processor = build_processor(
-            config=config,
+            config=test_config,
             presenter=NullPresenter(),
             **mock_services,
         )
 
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", cross_episode_counts=cross_counts)
 
-        mock_services["word_filter"].filter_by_episode_count.assert_called_once_with([word1, word2], cross_counts, 3)
+        mock_services["word_filter"].filter_by_episode_count.assert_called_once_with(
+            [word1, word2], cross_counts, MIN_EPISODE_APPEARANCES
+        )
         assert result.cards_created == 1
 
     def test_episode_count_runs_before_dedup_so_mate_can_win(self, test_config, mock_services, tmp_path):
@@ -1992,7 +1993,6 @@ class TestCrossEpisodeFiltering:
         cross_counts = {"食べる": 1, "走る": 3}
         config = replace(
             test_config,
-            min_episode_appearances=2,
             deduplicate_sentences=True,
             use_i_plus_one_filter=False,
         )

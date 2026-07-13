@@ -63,6 +63,11 @@ _CANCEL_POLL_INTERVAL_S = 0.5
 # by preference for the failing case (node is the common Windows setup). Issue #64.
 _JS_RUNTIMES = ("node", "bun", "quickjs")
 
+# Max video height (px) fetched from YouTube; the format selector caps both the
+# video and best-fallback streams. Was the hidden `config.youtube_max_height`
+# knob (ARC-004: inlined, never surfaced in any panel).
+YOUTUBE_MAX_HEIGHT = 720
+
 
 # Keyed on the resolved yt-dlp path (unbounded cache), NOT a 1-entry cache: the
 # resolved path changes after a self-update download, and a 1-entry cache keyed
@@ -594,7 +599,7 @@ class YouTubeFetcherService:
             )
 
     def _build_fetch_cmd(self, url: str, workspace: Path, sub_mode: SubMode) -> list[str]:
-        max_height = self._config.youtube_max_height
+        max_height = YOUTUBE_MAX_HEIGHT
         # Route the workspace directory through --paths (a literal path) and keep
         # -o a bare, relative template. Embedding the (user-configurable) temp
         # folder in the -o template treated any '%' in the path as a template

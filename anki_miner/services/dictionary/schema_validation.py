@@ -17,8 +17,6 @@ not an array is *wholly unreadable* (no entries can be extracted) and raises.
 
 from __future__ import annotations
 
-from urllib.parse import urlparse
-
 from anki_miner.exceptions import SetupError
 
 # Positional arity the importers assume. Term banks index up to position 7
@@ -60,44 +58,3 @@ def is_valid_meta_bank_entry(entry: object) -> bool:
     :data:`META_BANK_MIN_ARITY` positions whose term (position 0) is present and
     non-blank. Mode/data validity is the importer's concern, not this check's."""
     return isinstance(entry, list) and len(entry) >= META_BANK_MIN_ARITY and _has_valid_term(entry)
-
-
-def validate_http_url(value: object) -> bool:
-    """Return True only for an ``http:``/``https:`` URL string.
-
-    Ported from Yomitan ``DictionaryImporter._validateUrl``
-    (ext/js/dictionary/dictionary-importer.js, upstream e2ed450): the update
-    ``indexUrl``/``downloadUrl`` fields are dictionary-supplied and are only
-    trusted when they parse to an ``http``/``https`` URL — a ``file:``,
-    ``ftp:``, or ``javascript:`` scheme is rejected so neither the import
-    metadata nor a remote-index override can point the app at a non-web
-    resource. Used by the importer (recording update meta) and the updater
-    (accepting a remote-declared download URL).
-    """
-    if not isinstance(value, str):
-        return False
-    try:
-        scheme = urlparse(value).scheme.lower()
-    except ValueError:
-        return False
-    return scheme in ("http", "https")
-
-
-def is_valid_dictionary_index(index: object) -> bool:
-    """Structural check for a Yomitan ``index.json`` object.
-
-    Structural subset of Yomitan's ajv ``dictionaryIndex`` schema
-    (``ext/js/dictionary/dictionary-importer.js`` ``_readAndValidateIndex`` /
-    ``_getSchemas``, upstream e2ed450): a *remote* index fetched during an
-    update check is distrusted and re-validated before its ``revision`` is
-    compared. We do not vendor the ajv schema (Appendix B); the invariants the
-    update comparison actually depends on are that the payload is a JSON object
-    carrying a non-blank string ``title`` and a non-blank string ``revision``.
-    """
-    if not isinstance(index, dict):
-        return False
-    title = index.get("title")
-    revision = index.get("revision")
-    if not isinstance(title, str) or not title.strip():
-        return False
-    return isinstance(revision, str) and bool(revision.strip())

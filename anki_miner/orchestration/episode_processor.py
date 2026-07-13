@@ -88,6 +88,13 @@ def _format_timestamp(seconds: float) -> str:
 # never touched.
 _ARR_METADATA_RE = re.compile(r"\s*(?:\[[^\]]*\]\s*)+(?:-\S+)?\s*$")
 
+# Cross-episode frequency floor: a word must appear in at least this many
+# episodes to be mined (only active when cross-episode counts are supplied to
+# process_episode). Was the hidden `config.min_episode_appearances` knob
+# (ARC-004: inlined, never surfaced in any panel). > 1 keeps the filter live;
+# Bug-F5 ordering (filter before dedup) is unchanged.
+MIN_EPISODE_APPEARANCES = 2
+
 
 def _sanitize_source_label(label: str) -> str:
     """Remove *arr release metadata (e.g. ``[WEBRip-1080p][JA]-Trix``) from a
@@ -485,11 +492,10 @@ class EpisodeProcessor:
                 # inheriting each other's ranks; hiragana-normalize so a katakana
                 # subtitle reading matches a hiragana-stored frequency reading.
                 reading = katakana_to_hiragana(word.expression_reading or word.lemma_reading or word.reading)
-                # One per-source fetch, then derive min + harmonic locally: the
-                # service's lookup_min/lookup_harmonic each re-run lookup_all
-                # internally, so calling all three would run the per-source SQL
-                # three times per word. min_rank/harmonic_rank are the same pure
-                # derivations lookup_min/lookup_harmonic wrap.
+                # One per-source fetch, then derive min + harmonic locally via
+                # the pure min_rank/harmonic_rank helpers. A single lookup_all
+                # feeds both scalars, so the per-source SQL runs once per word
+                # instead of once for each derived rank.
                 sources = self.frequency_service.lookup_all(word.mined_form, reading)
                 # Whole-result miss-only lemma fallback (mirrors the JPod101
                 # audio retry ladder): fires only when NO source attests the
@@ -747,16 +753,12 @@ class EpisodeProcessor:
         # and the floor would then drop it — the sentence yields no card even though
         # its mate qualified (Bug F5). Filtering by episode count first removes the
         # losers so dedup picks a survivor.
-        if (
-            cross_episode_counts is not None
-            and self.config.min_episode_appearances > 1
-            and not self.config.bypass_optional_filters
-        ):
+        if cross_episode_counts is not None and MIN_EPISODE_APPEARANCES > 1 and not self.config.bypass_optional_filters:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_episode_count(
                 unknown_words,
                 cross_episode_counts,
-                self.config.min_episode_appearances,
+                MIN_EPISODE_APPEARANCES,
             )
             filtered_out = before - len(unknown_words)
             if filtered_out > 0:
@@ -767,7 +769,7 @@ class EpisodeProcessor:
                             "Cross-episode filter: removed %1 words appearing in fewer than %2 episodes",
                         ),
                         filtered_out,
-                        self.config.min_episode_appearances,
+                        MIN_EPISODE_APPEARANCES,
                     )
                 )
 

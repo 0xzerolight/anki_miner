@@ -12,29 +12,30 @@ from anki_miner.services.dictionary.card_style_block import (
     base_css_variant,
     build_card_style_block,
     css_witnesses,
-    minified_base_css,
     split_group_regions,
 )
+from anki_miner.services.dictionary.card_style_presets import load_glossary_css
 
 # The card-body shapes the tree-shaking witnesses key on.
 UNSTAMPED = '<li data-dictionary="D">'
 STAMPED = '<li data-dictionary="D" data-has-styles="">'
 
 
-class TestMinifiedBaseCss:
+class TestFullBaseSheet:
     """Invariants the restyle refresh (``card_restyler._refresh_base_sheet``) relies
-    on to swap a stale embedded base head in place without corrupting the card."""
+    on to swap a stale embedded base head in place without corrupting the card. The
+    whole sheet is now the all-groups variant ``base_css_variant(ALL_GROUPS)``."""
 
-    def test_minified_base_is_newline_free(self):
+    def test_full_sheet_is_newline_free(self):
         # The refresh splits the embedded head on the FIRST "\n" to separate base
         # from dict_css; a newline in the base would break that boundary.
-        assert "\n" not in minified_base_css()
+        assert "\n" not in base_css_variant(ALL_GROUPS)
 
-    def test_minified_base_has_no_data_dictionary_literals(self):
+    def test_full_sheet_has_no_data_dictionary_literals(self):
         # Refresh gates envelope stamping on the card's carried CSS; the base
         # must carry neither a `[data-dictionary="…"]` selector (would
         # over-stamp) nor a `<li data-dictionary=` literal (would witness).
-        base = minified_base_css()
+        base = base_css_variant(ALL_GROUPS)
         assert '[data-dictionary="' not in base
         assert "<li data-dictionary=" not in base
 
@@ -46,8 +47,9 @@ class TestBaseCssVariants:
     def test_all_groups_reproduce_full_sheet_byte_for_byte(self):
         # THE marker-boundary tripwire: region split + per-region minify +
         # empty-string join must equal the whole-sheet minify exactly. A marker
-        # placed mid-rule (or a join separator) breaks this first.
-        assert base_css_variant(ALL_GROUPS) == minified_base_css()
+        # placed mid-rule (or a join separator) breaks this first. RHS is the
+        # naive whole-sheet minify (the internal seam), so this is not a tautology.
+        assert base_css_variant(ALL_GROUPS) == _minify_css(load_glossary_css())
 
     def test_every_variant_newline_free_and_carries_detection_token(self):
         # Both properties are load-bearing for card_restyler: the first-"\n"
@@ -216,7 +218,7 @@ class TestBuildCardStyleBlock:
             card_html=UNSTAMPED + '<i data-sc-content="info-gloss">' + '<img class="gloss-image">' + "<table>",
         )
         assert stamped_only == f"<style>{base_css_variant(frozenset())}</style>"
-        assert everything == f"<style>{minified_base_css()}</style>"
+        assert everything == f"<style>{base_css_variant(ALL_GROUPS)}</style>"
         assert len(stamped_only) < len(everything)
 
 

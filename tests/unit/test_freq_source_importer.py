@@ -15,7 +15,6 @@ from anki_miner.services.frequency import storage
 from anki_miner.services.frequency.mode_probe import LESS_COMMON_TERMS, MORE_COMMON_TERMS
 from anki_miner.services.frequency.source_importer import (
     FreqSourceImportResult,
-    derive_source_id_from_zip,
     import_frequency_source,
 )
 
@@ -583,27 +582,6 @@ class TestDispatchErrors:
     def test_missing_input_raises(self, tmp_path: Path) -> None:
         with pytest.raises(SetupError, match="not found"):
             import_frequency_source(tmp_path / "nope.csv", tmp_path / "sources")
-
-
-class TestDeriveSourceIdFromZip:
-    def test_derives_from_title(self, tmp_path: Path) -> None:
-        zip_path = _write_zip(tmp_path / "f.zip", title="My Freq Dict")
-        assert derive_source_id_from_zip(zip_path) == "my-freq-dict"
-
-    def test_missing_title_raises(self, tmp_path: Path) -> None:
-        zip_path = tmp_path / "notitle.zip"
-        with zipfile.ZipFile(zip_path, "w") as zf:
-            zf.writestr("index.json", json.dumps({"format": 3}))
-            zf.writestr("term_meta_bank_1.json", json.dumps([["猫", "freq", 5]]))
-        with pytest.raises(SetupError, match="missing required 'title'"):
-            derive_source_id_from_zip(zip_path)
-
-    def test_nested_index_raises_rezip_diagnostic(self, tmp_path: Path) -> None:
-        zip_path = tmp_path / "nested.zip"
-        with zipfile.ZipFile(zip_path, "w") as zf:
-            zf.writestr("Sub/index.json", json.dumps({"title": "T", "revision": "r", "format": 3}))
-        with pytest.raises(SetupError, match="re-zip the folder CONTENTS"):
-            derive_source_id_from_zip(zip_path)
 
 
 class TestCsvSourceNamePreserved:

@@ -124,16 +124,6 @@ class ValidationResult:
             ]
         )
 
-    @property
-    def has_errors(self) -> bool:
-        """Check if there are any error-level issues."""
-        return any(issue.severity == "ERROR" for issue in self.issues)
-
-    @property
-    def has_warnings(self) -> bool:
-        """Check if there are any warning-level issues."""
-        return any(issue.severity == "WARNING" for issue in self.issues)
-
     def get_errors(self) -> list[ValidationIssue]:
         """Get all error-level issues."""
         return [issue for issue in self.issues if issue.severity == "ERROR"]
