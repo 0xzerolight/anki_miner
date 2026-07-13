@@ -937,7 +937,7 @@ Dies kann nicht rückgängig gemacht werden. Um dieses Paket erneut zu verwenden
     </message>
     <message>
         <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
-        <translation type="unfinished" />
+        <translation>Untertitel-Timing für alle Folgen anpassen (positiv = später, negativ = früher)</translation>
     </message>
     <message>
         <source>Process Folder</source>
@@ -5098,24 +5098,16 @@ Gehen Sie zu Einstellungen → ASR, um es vor dem Erstellen von Untertiteln heru
 </context><context>
     <name>SubtitlePlayerWidget</name>
     <message>
-        <source>Could not load video: %1</source>
-        <translation>Video konnte nicht geladen werden: %1</translation>
-    </message>
-    <message>
-        <source>This video uses AV1, which your system can't decode for in-app preview. Audio and subtitles still play.</source>
-        <translation>Dieses Video verwendet AV1, das Ihr System für die In-App-Vorschau nicht dekodieren kann. Audio und Untertitel werden weiterhin abgespielt.</translation>
-    </message>
-    <message>
         <source>Play</source>
         <translation>Wiedergabe</translation>
     </message>
     <message>
         <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
-        <translation type="unfinished" />
+        <translation>Die Videovorschau benötigt mpv (libmpv). Gebündelte Builds enthalten es; unter Linux installieren Sie es über Ihren Paketmanager (z. B. libmpv2), unter macOS über Homebrew (brew install mpv).</translation>
     </message>
     <message>
         <source>playback failed</source>
-        <translation type="unfinished" />
+        <translation>Wiedergabe fehlgeschlagen</translation>
     </message>
     <message>
         <source>Pause</source>
@@ -5127,7 +5119,7 @@ Gehen Sie zu Einstellungen → ASR, um es vor dem Erstellen von Untertiteln heru
     </message>
     <message>
         <source>Video preview is unavailable on this display. Audio and subtitles still play.</source>
-        <translation type="unfinished" />
+        <translation>Die Videovorschau ist auf diesem Bildschirm nicht verfügbar. Audio und Untertitel werden weiterhin abgespielt.</translation>
     </message>
 </context><context>
     <name>SubtitleRetimeTab</name>
@@ -6145,6 +6137,6 @@ Mit Import fortfahren?</translation>
     <name>app</name>
     <message>
         <source>Anki Miner — Unexpected Error</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner — Unerwarteter Fehler</translation>
     </message>
 </context></TS>
