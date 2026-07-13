@@ -13,7 +13,7 @@ import threading
 import time
 import uuid
 import zipfile
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -25,6 +25,7 @@ from anki_miner.exceptions import AnkiMinerException, SetupError
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
 from anki_miner.models import CANCELLED_ERROR, CardPayload, MediaData, ProcessingResult, TokenizedWord
 from anki_miner.models.youtube import FetchedMedia, SubMode
+from anki_miner.orchestration.audio_stage import AudioStage
 from anki_miner.orchestration.stage_weighted_progress import StageWeightedProgress
 from anki_miner.services import (
     AnkiService,
@@ -42,7 +43,7 @@ from anki_miner.services.pitch_accent.render import (
     render_pitch_text_field,
 )
 from anki_miner.services.reading.images import prepare_card_image
-from anki_miner.utils import ensure_directory, has_katakana, hiragana_to_katakana, katakana_to_hiragana
+from anki_miner.utils import ensure_directory, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -70,126 +71,6 @@ def _resolve_identity(override: str | None, default: str) -> str:
     string is honored as-is.
     """
     return override if override is not None else default
-
-
-def _expression_audio_candidates(word: TokenizedWord) -> list[tuple[str, str]]:
-    """Ordered ``(kanji, kana)`` query pairs for the JPod101 audio retry ladder.
-
-    Two failure modes the single-shot query missed:
-
-    * **Katakana loanwords.** JPod101 indexes loanword audio under the katakana
-      reading, but ``expression_reading`` is folded to hiragana for card
-      display (チップ→ちっぷ → miss).  Each query whose kanji form contains
-      katakana gets a katakana-reading variant (チップ→チップ → hit).
-    * **Surface-mined fallback.** Subtitle surface forms use variant kanji
-      (噓/頰/今さら) that JPod101 lacks; the unidic lemma is the canonical
-      orthography (嘘/頬/今更).  Surface-mined words fall back to the lemma with
-      the lemma's OWN reading (探す/さがす, not the surface 探す/さがし).
-
-    hiragana↔katakana is lossless and loanwords are unambiguous, so the katakana
-    variant carries no homograph risk (Issue #73).  Empty readings are dropped
-    (homograph guard) and duplicates are collapsed, so a verb whose
-    ``mined_form == lemma`` issues no redundant request.
-    """
-    pairs: list[tuple[str, str]] = [(word.mined_form, word.expression_reading)]
-    if word.lemma and word.lemma != word.mined_form:
-        pairs.append((word.lemma, word.lemma_reading))
-
-    candidates: list[tuple[str, str]] = []
-    seen: set[tuple[str, str]] = set()
-
-    def _add(kanji: str, kana: str) -> None:
-        if not kanji or not kana:
-            return
-        pair = (kanji, kana)
-        if pair not in seen:
-            seen.add(pair)
-            candidates.append(pair)
-
-    for kanji, kana in pairs:
-        _add(kanji, kana)
-        if has_katakana(kanji):
-            _add(kanji, hiragana_to_katakana(kana))
-    return candidates
-
-
-def _dominant_transient_failure(counts: dict[str, int], attempts: int) -> str | None:
-    """Return the dominant failure bucket when transient failures dominate.
-
-    Shared threshold logic for the expression- and sentence-audio diagnoses.
-    Only reports when failures cover at least half the attempted items — a
-    genuine "not in any source" miss is never counted, so a high total means
-    something systemic (expired certificate, outage, rate-limit) rather than
-    items simply being absent. Scattered failures among mostly-successful
-    fetches stay quiet (None).
-
-    Ties resolve to the earliest bucket (ssl first) via ``max`` over a stable
-    key order, matching Yomitan's priority on the most actionable cause.
-    """
-    total = sum(counts.values())
-    if attempts <= 0 or total == 0:
-        return None
-    # Require failures to cover at least half the attempts before raising
-    # the alarm; below that they are noise beside real hits and misses.
-    if total * 2 < attempts:
-        return None
-    return max(counts, key=lambda key: counts[key])
-
-
-def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | None:
-    """Name the dominant expression-audio failure cause, or None.
-
-    ``counts`` is a ChainedExpressionAudioFetcher ``stats()`` tally keyed by
-    failure bucket (ssl/connection/timeout/http_status/non_audio), aggregated
-    across every enabled word-audio source (packs, JPod101, custom URL/JSON,
-    gTTS). Threshold/tie-break semantics live in
-    :func:`_dominant_transient_failure`.
-    """
-    dominant = _dominant_transient_failure(counts, attempts)
-    if dominant is None:
-        return None
-    if dominant in ("ssl", "connection", "timeout"):
-        return QCoreApplication.translate(
-            "EpisodeProcessor",
-            "Word-audio source connection/certificate failure — audio skipped this run, will retry next run",
-        )
-    if dominant == "http_status":
-        return QCoreApplication.translate(
-            "EpisodeProcessor",
-            "Word-audio source returned repeated server errors — audio skipped this run, will retry next run",
-        )
-    return QCoreApplication.translate(
-        "EpisodeProcessor",
-        "Word-audio source returned non-audio responses (likely rate-limited) — audio skipped this run, will retry next run",
-    )
-
-
-def _sentence_audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | None:
-    """Name the dominant sentence-TTS failure cause, or None.
-
-    Sentence analogue of :func:`_audio_failure_diagnosis`. ``attempts`` must
-    be the UNIQUE-sentence count (the per-run memo dedups fetch calls, so the
-    stats tally is per unique sentence) — a word-count denominator would
-    dilute the ratio and silence the warning exactly when many words share a
-    few failing sentences.
-    """
-    dominant = _dominant_transient_failure(counts, attempts)
-    if dominant is None:
-        return None
-    if dominant in ("ssl", "connection", "timeout"):
-        return QCoreApplication.translate(
-            "EpisodeProcessor",
-            "Sentence-audio TTS connection/certificate failure — sentence audio skipped this run, will retry next run",
-        )
-    if dominant == "http_status":
-        return QCoreApplication.translate(
-            "EpisodeProcessor",
-            "Sentence-audio TTS returned repeated server errors — sentence audio skipped this run, will retry next run",
-        )
-    return QCoreApplication.translate(
-        "EpisodeProcessor",
-        "Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run",
-    )
 
 
 def _format_timestamp(seconds: float) -> str:
@@ -360,6 +241,18 @@ class EpisodeProcessor:
         # run N+1. Dropping the reference in a ``finally`` makes the bridge
         # per-run by construction.
         self._external_cancel: Callable[[], bool] | None = None
+        # Expression/sentence-audio stage (the one seam the god-module keep
+        # verdict sanctions). The processor still constructs and closes the
+        # fetchers; AudioStage only orchestrates the fetch loops. It reads a
+        # LIVE cancelled callable (``lambda: self.cancelled``) so it always
+        # honors the current run's external-cancel bridge, never a snapshot.
+        self._audio_stage = AudioStage(
+            config=config,
+            presenter=presenter,
+            cancelled=lambda: self.cancelled,
+            expression_audio_fetcher=expression_audio_fetcher,
+            sentence_audio_fetcher=sentence_audio_fetcher,
+        )
 
     def cancel(self) -> None:
         """Request cancellation of processing."""
@@ -381,36 +274,23 @@ class EpisodeProcessor:
 
     @property
     def _expression_audio_active(self) -> bool:
-        """True when the expression-audio stage should run and occupy a progress band.
+        """Delegating alias for :attr:`AudioStage.expression_audio_active`.
 
-        The two-part gate (Issue #73, simplified): fetcher injected AND the
-        expression_audio Anki field mapped (non-empty). The field name is the
-        sole on/off switch, matching the frequency/pitch optional fields — no
-        dedicated enable flag. Checked in two places — ``process_episode``
-        (band registration) and ``_phase3_extract`` (band consumption) — via
-        this property so the conditions can't drift apart.
+        The gate logic (the two-part Issue #73 gate) lives on the audio stage;
+        this property stays here because ``process_episode`` (band
+        registration) and the tests reach it on the processor.
         """
-        return self.expression_audio_fetcher is not None and bool(self.config.anki_fields.get("expression_audio"))
+        return self._audio_stage.expression_audio_active
 
     @property
     def _reading_tts_active(self) -> bool:
-        """True when the sentence-TTS stage should run and occupy a progress band.
+        """Delegating alias for :attr:`AudioStage.reading_tts_active`.
 
-        Four-part gate: fetcher injected AND the master flag on AND the
-        sentence-audio Anki field (key ``audio``) mapped AND at least one
-        provider selected. The dedicated ``reading_tts_enabled`` flag exists
-        because — unlike expression_audio — the ``audio`` field is mapped by
-        default, so field-presence cannot express consent. Checked in two
-        places — ``process_reading`` (band registration) and
-        ``_fetch_sentence_audio`` (band consumption) — via this property so
-        the conditions can't drift apart.
+        The gate logic (the four-part reading-TTS gate) lives on the audio
+        stage; this property stays here because ``process_reading`` (band
+        registration) and the tests reach it on the processor.
         """
-        return (
-            self.sentence_audio_fetcher is not None
-            and self.config.reading_tts_enabled
-            and bool(self.config.anki_fields.get("audio"))
-            and (self.config.reading_tts_google_enabled or self.config.reading_tts_papago_enabled)
-        )
+        return self._audio_stage.reading_tts_active
 
     # ------------------------------------------------------------------
     # Dictionary-resource facade
@@ -1136,165 +1016,9 @@ class EpisodeProcessor:
             **extra_kwargs,
         )
 
-        self._fetch_expression_audio(media_results, progress_callback)
+        self._audio_stage.fetch_expression_audio(media_results, progress_callback)
 
         return media_results
-
-    def _fetch_expression_audio(
-        self,
-        media_results: list[tuple[TokenizedWord, MediaData]],
-        progress_callback: ProgressCallback | None,
-    ) -> None:
-        # Expression (pronunciation) audio, Issue #73. Sequential on purpose:
-        # the fetcher rate-limits and caches internally and never raises, so
-        # the loop needs no try/except, no sleep, and no parallelism. Gated on
-        # the toggle AND a mapped field — fetching audio no card would use is
-        # wasted network. Cancellation: a cancelled_check lambda is passed into
-        # each fetch() call (mirrors the extractor's cancelled_check convention)
-        # so a slow/timing-out response does not stall the worker beyond the
-        # request timeout; the between-words self.cancelled check exits the loop
-        # early. The caller's post-phase checkpoint owns the cancel result.
-        #
-        # Progress note: on_start/on_complete MUST be called unconditionally
-        # when _expression_audio_active (even when media_results is empty) to
-        # consume the dedicated band that process_episode registered for this
-        # stage. Skipping them would cause StageWeightedProgress.on_start to
-        # advance into the wrong band on the next phase (definitions), silently
-        # stealing its weight. The gate must NOT include `media_results` here.
-        if self._expression_audio_active:
-            fetched_count = 0
-            if progress_callback is not None:
-                progress_callback.on_start(
-                    len(media_results),
-                    QCoreApplication.translate("EpisodeProcessor", "Fetching expression audio"),
-                )
-            for i, (word, media) in enumerate(media_results):
-                if self.cancelled:
-                    if progress_callback is not None:
-                        progress_callback.on_complete()
-                    return
-                # Source-priority outer / candidate-ladder inner: each source
-                # tries ALL candidate forms before the chain falls through to a
-                # lower-priority source, so a synthetic fallback can't satisfy
-                # the surface form before JPod101 sees the lemma it actually has.
-                path = self.expression_audio_fetcher.fetch_candidates(  # type: ignore[union-attr]
-                    _expression_audio_candidates(word),
-                    cancelled_check=lambda: self.cancelled,
-                )
-                if path is not None:
-                    media.expression_audio_path = path
-                    media.expression_audio_filename = path.name
-                    fetched_count += 1
-                if progress_callback is not None:
-                    progress_callback.on_progress(
-                        i + 1,
-                        tr_format(
-                            QCoreApplication.translate("EpisodeProcessor", "Expression audio: %1"),
-                            word.mined_form,
-                        ),
-                    )
-            if progress_callback is not None:
-                progress_callback.on_complete()
-            self.presenter.show_info(
-                tr_format(
-                    QCoreApplication.translate("EpisodeProcessor", "Expression audio: %1/%2 available"),
-                    fetched_count,
-                    len(media_results),
-                )
-            )
-            # Diagnose *why* audio failed when transient failures dominate the
-            # run, so an expired JPod101 certificate reads as an actionable
-            # warning rather than an indistinguishable low "X/Y available".
-            # stats() is duck-typed (like close()); the local-pack fetcher omits
-            # it, so a chain without a network source simply has nothing to
-            # report.
-            stats_fn = getattr(self.expression_audio_fetcher, "stats", None)
-            if callable(stats_fn):
-                counts = stats_fn()
-                # isinstance guard: a duck-typed fetcher (or a test MagicMock)
-                # that does not return a real counts dict is ignored, never
-                # crashing the run over a diagnostic.
-                if isinstance(counts, dict):
-                    diagnosis = _audio_failure_diagnosis(counts, len(media_results))
-                    if diagnosis is not None:
-                        self.presenter.show_warning(diagnosis)
-
-    def _fetch_sentence_audio(
-        self,
-        media_results: list[tuple[TokenizedWord, MediaData]],
-        progress_callback: ProgressCallback | None,
-    ) -> None:
-        # Sentence TTS for reading sources. Structural clone of
-        # _fetch_expression_audio: sequential on purpose (the fetcher
-        # rate-limits, caches, and never raises — no try/except, no sleep, no
-        # parallelism here). Reads word.sentence AFTER curation/i+1 swap
-        # (phase order guarantees it), so audio always matches the card's
-        # final sentence.
-        #
-        # Progress note: on_start/on_complete MUST be called unconditionally
-        # when _reading_tts_active (even when media_results is empty) to
-        # consume the band process_reading registered — same discipline as
-        # the expression-audio stage.
-        if not self._reading_tts_active:
-            return
-        # Words share sentences (novel sentence-units, manga bubbles):
-        # synthesize once per unique sentence and share the Path. Failures
-        # are memoized too, so a failing shared bubble is not re-hammered.
-        memo: dict[str, Path | None] = {}
-        fetched_words = 0
-        if progress_callback is not None:
-            progress_callback.on_start(
-                len(media_results),
-                QCoreApplication.translate("EpisodeProcessor", "Generating sentence audio"),
-            )
-        for i, (word, media) in enumerate(media_results):
-            if self.cancelled:
-                if progress_callback is not None:
-                    progress_callback.on_complete()
-                return
-            sentence = word.sentence
-            if sentence.strip():
-                if sentence in memo:
-                    path = memo[sentence]
-                else:
-                    path = self.sentence_audio_fetcher.fetch(  # type: ignore[union-attr]
-                        sentence,
-                        cancelled_check=lambda: self.cancelled,
-                    )
-                    memo[sentence] = path
-                if path is not None:
-                    media.audio_path = path
-                    media.audio_filename = path.name
-                    fetched_words += 1
-            if progress_callback is not None:
-                progress_callback.on_progress(
-                    i + 1,
-                    tr_format(
-                        QCoreApplication.translate("EpisodeProcessor", "Sentence audio: %1"),
-                        word.mined_form,
-                    ),
-                )
-        if progress_callback is not None:
-            progress_callback.on_complete()
-        hits = sum(1 for p in memo.values() if p is not None)
-        self.presenter.show_info(
-            tr_format(
-                QCoreApplication.translate("EpisodeProcessor", "Sentence audio: %1/%2 sentences"),
-                hits,
-                len(memo),
-            )
-        )
-        # Diagnose *why* TTS failed when transient failures dominate. The
-        # attempts denominator is the UNIQUE-sentence count (len(memo)): the
-        # memo dedups fetch calls, so stats() failures are per unique
-        # sentence — a word-count denominator would dilute the ratio.
-        stats_fn = getattr(self.sentence_audio_fetcher, "stats", None)
-        if callable(stats_fn):
-            counts = stats_fn()
-            if isinstance(counts, dict):
-                diagnosis = _sentence_audio_failure_diagnosis(counts, len(memo))
-                if diagnosis is not None:
-                    self.presenter.show_warning(diagnosis)
 
     def _phase4_lookup(
         self,
@@ -1594,6 +1318,119 @@ class EpisodeProcessor:
 
         return cards_created, created_note_ids, mined_forms_for_undo
 
+    def _run_pipeline(
+        self,
+        ctx: _EpisodeContext,
+        cancel_event: threading.Event | None,
+        body: Callable[[Path], ProcessingResult],
+    ) -> ProcessingResult:
+        """Shared run skeleton for :meth:`process_episode` / :meth:`process_reading`.
+
+        Owns ONLY the machinery both entry points share verbatim: the pre-flight
+        gates (staleness backstop then card-target verify, both *outside* the
+        try so a ``SetupError`` propagates instead of collapsing into a
+        "completed" result and *before* temp allocation so no dir leaks on
+        failure), the per-run temp folder, the partial-IDs reset, the per-run
+        ``_external_cancel`` bridge, and the try/except/finally tail (partial-card
+        harvest on failure; bridge drop + temp cleanup in ``finally``). ``body``
+        receives the allocated ``run_temp_folder`` and returns this run's
+        ``ProcessingResult``; it may early-return at phase boundaries and may
+        raise (caught here). Everything path-specific — identity/ctx construction,
+        the video-only audio-stream-cache invalidation, the reading occurrence
+        floor — lives in the caller's ``body`` closure.
+        """
+        self.check_dictionary_staleness()
+        self._preflight_card_target()
+        run_temp_folder = self._allocate_run_temp_folder()
+        keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
+
+        # Reset the partial-IDs accumulator before this run so that if it fails
+        # mid-batch the except handlers harvest ONLY IDs created during THIS run,
+        # not stale IDs left over from a prior run on the same processor instance
+        # (OVH-008). create_cards_batch resets it again at its own start — this
+        # guard is belt-and-suspenders for a failure before phase 5 even runs.
+        self.anki_service.last_created_note_ids = []
+
+        # Bridge the caller's cancel_event into this run's cancellation
+        # checkpoints for the duration of this call only: the phase checkpoints
+        # and the media extractor's cancelled_check consult self.cancelled, which
+        # folds this source in. See __init__ for why the sticky self._cancelled
+        # flag must NOT be used here (shared processor reuse across runs); the
+        # finally below drops the reference so the bridge is per-run by construction.
+        if cancel_event is not None:
+            self._external_cancel = cancel_event.is_set
+        try:
+            return body(run_temp_folder)
+        except AnkiMinerException as e:
+            ctx.errors.append(str(e))
+            partial_ids = list(self.anki_service.last_created_note_ids)
+            self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
+            return self._partial_failure_result(ctx, partial_ids)
+        except Exception as e:
+            logger.exception("EpisodeProcessor unhandled exception")
+            ctx.errors.append(f"Unexpected error: {e}")
+            partial_ids = list(self.anki_service.last_created_note_ids)
+            self.presenter.show_error(
+                tr_format(QCoreApplication.translate("EpisodeProcessor", "Unexpected error: %1"), str(e))
+            )
+            return self._partial_failure_result(ctx, partial_ids)
+        finally:
+            if cancel_event is not None:
+                self._external_cancel = None
+            if keep_temp:
+                logger.info(
+                    "ANKI_MINER_KEEP_TEMP set; leaving run temp folder at %s",
+                    run_temp_folder,
+                )
+            else:
+                shutil.rmtree(run_temp_folder, ignore_errors=True)
+
+    def _run_curation(
+        self,
+        ctx: _EpisodeContext,
+        unknown_words: list[TokenizedWord],
+        line_index: list[LineLemmas] | None,
+        occurrence_counts: Mapping[str, int],
+        curation_callback: Callable[[list], list | None],
+    ) -> list[TokenizedWord] | ProcessingResult:
+        """Shared interactive-curation step for both mining paths.
+
+        Attaches the per-word sentence candidates (when a line index exists) and
+        occurrence counts the curator dialog needs, then invokes the callback.
+        Preserves the trichotomy of the inline blocks it replaces:
+
+        * cancelled/rejected (callback returns ``None``) → returns a cancelled
+          ``ProcessingResult`` (caller returns it);
+        * confirmed with nothing selected (empty list) → returns a completed
+          zero-card ``ProcessingResult`` (caller returns it) — an intentional
+          "card nothing this run", NOT a cancellation, so stats/batch status stay
+          accurate;
+        * a non-empty selection → returns the curated word list (caller continues).
+
+        The caller distinguishes the two outcomes with ``isinstance(..., ProcessingResult)``.
+        """
+        if line_index is not None:
+            # Attach alternative example sentences so the curator can offer a
+            # per-word sentence picker (no-op for words on a single line).
+            self.word_filter.attach_sentence_candidates(unknown_words, line_index)
+        # Attach per-run occurrence counts for the curator's "Occurrences"
+        # column/sort (Issue #88).
+        self.word_filter.attach_occurrence_counts(unknown_words, occurrence_counts)
+        curated = curation_callback(unknown_words)
+        if curated is None:
+            # The user cancelled/rejected the curation dialog.
+            return self._cancelled_result_from_ctx(ctx)
+        ctx.new_words_found = len(curated)
+        if not curated:
+            self.presenter.show_info(
+                QCoreApplication.translate("EpisodeProcessor", "No words selected for card creation")
+            )
+            return ctx.build_result(new_words_found=0)
+        self.presenter.show_info(
+            QCoreApplication.translate("EpisodeProcessor", "Mining %n selected word(s)", "", len(curated))
+        )
+        return curated
+
     def process_episode(
         self,
         video_file: Path,
@@ -1612,8 +1449,10 @@ class EpisodeProcessor:
 
         Orchestrates the five phase helpers: parse → filter → extract media →
         lookup definitions/pitch → create cards. Each phase is a small method
-        on this class; this entrypoint owns only cancellation checkpoints,
-        early-return paths, and temp folder cleanup.
+        on this class; this entrypoint owns only the phase body (cancellation
+        checkpoints and early-return paths), while the shared run skeleton
+        (pre-flight, temp allocation, cancel bridge, cleanup) lives in
+        :meth:`_run_pipeline`.
 
         Args:
             video_file: Path to video file.
@@ -1667,46 +1506,19 @@ class EpisodeProcessor:
             series_name=series_name,
             source_label=source_label_override or _sanitize_source_label(f"{series_name} — {episode_name}"),
         )
-        # Outside the try/except so SetupError propagates to callers instead of
-        # being absorbed into a "completed" ProcessingResult.  Before temp-folder
-        # allocation so no dir is leaked on failure. The staleness backstop (4.0)
-        # runs first: a stale-index run would otherwise drop every word for lack
-        # of a definition and report a silent zero-card success.
-        self.check_dictionary_staleness()
-        self._preflight_card_target()
-        run_temp_folder = self._allocate_run_temp_folder()
-        keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
 
-        # Invalidate the per-file audio stream cache before extraction so that
-        # cross-run file replacement (re-encode, swap, restore) cannot strand
-        # the resolver on stale ffprobe output. Within this run the cache will
-        # repopulate on the first probe and protect against double-probes
-        # (the 2e0cc13 perf win).
-        self.media_extractor.invalidate_audio_stream_cache(video_file)
+        def _body(run_temp_folder: Path) -> ProcessingResult:
+            # Invalidate the per-file audio stream cache before extraction so that
+            # cross-run file replacement (re-encode, swap, restore) cannot strand
+            # the resolver on stale ffprobe output. Within this run the cache will
+            # repopulate on the first probe and protect against double-probes
+            # (the 2e0cc13 perf win). Video-only — omitted on the reading path.
+            self.media_extractor.invalidate_audio_stream_cache(video_file)
 
-        # Reset the partial-IDs accumulator before this episode's run so that
-        # if the episode fails mid-batch the except handlers harvest ONLY IDs
-        # created during THIS run, not any stale IDs left over from a prior
-        # episode on the same processor instance (OVH-008). create_cards_batch
-        # resets it again at its own start — this guard is belt-and-suspenders
-        # for the case where the failure happens before phase 5 even runs.
-        self.anki_service.last_created_note_ids = []
-
-        # Bridge the caller's cancel_event into this run's cancellation
-        # checkpoints for the duration of this call only: the phase
-        # checkpoints below and the media extractor's cancelled_check consult
-        # self.cancelled, which folds this source in. See the __init__
-        # comment for why the sticky self._cancelled flag must NOT be used
-        # here (shared processor reuse across runs); the finally below drops
-        # the reference so the bridge is per-run by construction.
-        if cancel_event is not None:
-            self._external_cancel = cancel_event.is_set
-
-        # Interactive curation offers a per-word sentence picker, which needs
-        # the line index (all lines each lemma appears on). Build it for that
-        # path too — not just the i+1 filter.
-        want_line_index = curation_callback is not None
-        try:
+            # Interactive curation offers a per-word sentence picker, which needs
+            # the line index (all lines each lemma appears on). Build it for that
+            # path too — not just the i+1 filter.
+            want_line_index = curation_callback is not None
             all_words, line_index = self._phase1_parse(ctx, subtitle_file, want_line_index=want_line_index)
             if not all_words:
                 self.presenter.show_warning(
@@ -1724,35 +1536,17 @@ class EpisodeProcessor:
                 return self._cancelled_result_from_ctx(ctx)
 
             if curation_callback is not None:
-                if line_index is not None:
-                    # Attach alternative example sentences so the curator can
-                    # offer a per-word sentence picker (no-op for words that
-                    # appear on a single line).
-                    self.word_filter.attach_sentence_candidates(unknown_words, line_index)
-                # Attach per-episode occurrence counts for the curator's
-                # "Occurrences" column/sort (Issue #88). count_lemmas reuses the
-                # phase-1 parse cache, so no second MeCab pass.
-                self.word_filter.attach_occurrence_counts(
-                    unknown_words, self.subtitle_parser.count_lemmas(subtitle_file)
+                # count_lemmas reuses the phase-1 parse cache, so no second MeCab pass.
+                outcome = self._run_curation(
+                    ctx,
+                    unknown_words,
+                    line_index,
+                    self.subtitle_parser.count_lemmas(subtitle_file),
+                    curation_callback,
                 )
-                curated = curation_callback(unknown_words)
-                if curated is None:
-                    # The user cancelled/rejected the curation dialog.
-                    return self._cancelled_result_from_ctx(ctx)
-                unknown_words = curated
-                ctx.new_words_found = len(unknown_words)
-                if not unknown_words:
-                    # The user confirmed with everything deselected: this is an
-                    # intentional "card nothing this episode", a completed run
-                    # with zero new cards — NOT a cancellation (keeps stats and
-                    # batch status accurate).
-                    self.presenter.show_info(
-                        QCoreApplication.translate("EpisodeProcessor", "No words selected for card creation")
-                    )
-                    return ctx.build_result(new_words_found=0)
-                self.presenter.show_info(
-                    QCoreApplication.translate("EpisodeProcessor", "Mining %n selected word(s)", "", len(unknown_words))
-                )
+                if isinstance(outcome, ProcessingResult):
+                    return outcome
+                unknown_words = outcome
 
             # Wrap the raw callback so the bar reflects whole-episode progress
             # instead of resetting 0->100 per stage. One weight per stage that
@@ -1809,29 +1603,7 @@ class EpisodeProcessor:
             self._record_session(ctx, result)
             return result
 
-        except AnkiMinerException as e:
-            ctx.errors.append(str(e))
-            partial_ids = list(self.anki_service.last_created_note_ids)
-            self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
-            return self._partial_failure_result(ctx, partial_ids)
-        except Exception as e:
-            logger.exception("EpisodeProcessor unhandled exception")
-            ctx.errors.append(f"Unexpected error: {e}")
-            partial_ids = list(self.anki_service.last_created_note_ids)
-            self.presenter.show_error(
-                tr_format(QCoreApplication.translate("EpisodeProcessor", "Unexpected error: %1"), str(e))
-            )
-            return self._partial_failure_result(ctx, partial_ids)
-        finally:
-            if cancel_event is not None:
-                self._external_cancel = None
-            if keep_temp:
-                logger.info(
-                    "ANKI_MINER_KEEP_TEMP set; leaving run temp folder at %s",
-                    run_temp_folder,
-                )
-            else:
-                shutil.rmtree(run_temp_folder, ignore_errors=True)
+        return self._run_pipeline(ctx, cancel_event, _body)
 
     def _partial_failure_result(self, ctx: _EpisodeContext, partial_ids: list[int]) -> ProcessingResult:
         """Shared except-handler tail: note any partial cards and build the failure result."""
@@ -1929,7 +1701,7 @@ class EpisodeProcessor:
                 image_stage_desc,
             )
         for i, word in enumerate(unknown_words):
-            # Honor cancel WITHIN the loop (mirrors _fetch_expression_audio): a
+            # Honor cancel WITHIN the loop (mirrors AudioStage._run_stage): a
             # large mokuro volume can hold hundreds of pages, and without this a
             # cancel would only take effect after every page is materialized. Break
             # and return the partial results — the audio fetchers below and the
@@ -2005,9 +1777,9 @@ class EpisodeProcessor:
         if progress_callback is not None:
             progress_callback.on_complete()
 
-        self._fetch_expression_audio(media_results, progress_callback)
+        self._audio_stage.fetch_expression_audio(media_results, progress_callback)
 
-        self._fetch_sentence_audio(media_results, progress_callback)
+        self._audio_stage.fetch_sentence_audio(media_results, progress_callback)
 
         return media_results
 
@@ -2067,28 +1839,13 @@ class EpisodeProcessor:
         for warning in document.warnings:
             self.presenter.show_warning(warning)
 
-        # Outside the try so SetupError propagates to callers (staleness backstop
-        # first, for the same silent-zero-card reason as process_episode).
-        self.check_dictionary_staleness()
-        self._preflight_card_target()
-        run_temp_folder = self._allocate_run_temp_folder()
-        keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
-
-        # Reset the partial-IDs accumulator so a mid-run failure harvests only
-        # THIS run's IDs, never stale IDs from a prior run on this shared
-        # processor (see process_episode).
-        self.anki_service.last_created_note_ids = []
-
-        if cancel_event is not None:
-            self._external_cancel = cancel_event.is_set
-
-        # D4: fuse the two triggers for building the line index. The episode path
-        # splits this across caller (curation) and callee (i+1); here we call
-        # parse_text_units directly, so an i+1-enabled Mine run must set
-        # want_line_index itself — otherwise the filter gets an empty index and
-        # silently drops every word.
-        want_line_index = self.config.use_i_plus_one_filter or curation_callback is not None
-        try:
+        def _body(run_temp_folder: Path) -> ProcessingResult:
+            # D4: fuse the two triggers for building the line index. The episode
+            # path splits this across caller (curation) and callee (i+1); here we
+            # call parse_text_units directly, so an i+1-enabled Mine run must set
+            # want_line_index itself — otherwise the filter gets an empty index
+            # and silently drops every word.
+            want_line_index = self.config.use_i_plus_one_filter or curation_callback is not None
             self.presenter.show_info(
                 tr_format(
                     QCoreApplication.translate("EpisodeProcessor", "Step 1/5 — Parsing text: %1"),
@@ -2128,22 +1885,10 @@ class EpisodeProcessor:
                 return self._cancelled_result_from_ctx(ctx)
 
             if curation_callback is not None:
-                if line_index is not None:
-                    self.word_filter.attach_sentence_candidates(unknown_words, line_index)
-                self.word_filter.attach_occurrence_counts(unknown_words, counts)
-                curated = curation_callback(unknown_words)
-                if curated is None:
-                    return self._cancelled_result_from_ctx(ctx)
-                unknown_words = curated
-                ctx.new_words_found = len(unknown_words)
-                if not unknown_words:
-                    self.presenter.show_info(
-                        QCoreApplication.translate("EpisodeProcessor", "No words selected for card creation")
-                    )
-                    return ctx.build_result(new_words_found=0)
-                self.presenter.show_info(
-                    QCoreApplication.translate("EpisodeProcessor", "Mining %n selected word(s)", "", len(unknown_words))
-                )
+                outcome = self._run_curation(ctx, unknown_words, line_index, counts, curation_callback)
+                if isinstance(outcome, ProcessingResult):
+                    return outcome
+                unknown_words = outcome
 
             # Wrap only phases 3'/4/5 in one weighted sweep (no parse/filter
             # bands). Bands, in firing order: image prep, [expression audio],
@@ -2183,29 +1928,7 @@ class EpisodeProcessor:
             self._record_session(ctx, result)
             return result
 
-        except AnkiMinerException as e:
-            ctx.errors.append(str(e))
-            partial_ids = list(self.anki_service.last_created_note_ids)
-            self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
-            return self._partial_failure_result(ctx, partial_ids)
-        except Exception as e:
-            logger.exception("EpisodeProcessor unhandled exception")
-            ctx.errors.append(f"Unexpected error: {e}")
-            partial_ids = list(self.anki_service.last_created_note_ids)
-            self.presenter.show_error(
-                tr_format(QCoreApplication.translate("EpisodeProcessor", "Unexpected error: %1"), str(e))
-            )
-            return self._partial_failure_result(ctx, partial_ids)
-        finally:
-            if cancel_event is not None:
-                self._external_cancel = None
-            if keep_temp:
-                logger.info(
-                    "ANKI_MINER_KEEP_TEMP set; leaving run temp folder at %s",
-                    run_temp_folder,
-                )
-            else:
-                shutil.rmtree(run_temp_folder, ignore_errors=True)
+        return self._run_pipeline(ctx, cancel_event, _body)
 
     def _record_session(self, ctx: _EpisodeContext, result: ProcessingResult) -> None:
         """Record a mining session in the stats service if one is configured."""

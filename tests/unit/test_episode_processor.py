@@ -11,31 +11,13 @@ import pytest
 from anki_miner.exceptions import AnkiConnectionError, SetupError, SubtitleParseError
 from anki_miner.models import CardPayload, LineLemmas, MediaData, TokenizedWord
 from anki_miner.models.youtube import FetchedMedia
-from anki_miner.orchestration.episode_processor import (
-    EpisodeProcessor,
-    _audio_failure_diagnosis,
-    _EpisodeContext,
-    _sanitize_source_label,
-)
+from anki_miner.orchestration.episode_processor import _sanitize_source_label
 from anki_miner.presenters import NullPresenter
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.pitch_accent_service import PitchEntry
 from anki_miner.services.word_filter import WordFilterService
 from anki_miner.services.word_list_service import WordListService
-
-
-def _make_episode_context(tmp_path):
-    """Create a minimal _EpisodeContext for direct phase helper tests."""
-    import time
-
-    return _EpisodeContext(
-        start_time=time.time(),
-        video_file_str=str(tmp_path / "v.mkv"),
-        subtitle_file_str=str(tmp_path / "s.ass"),
-        episode_name="ep01",
-        series_name="TestSeries",
-        source_label="TestSeries — ep01",
-    )
+from tests.conftest import build_processor
 
 
 def _make_word(lemma="食べる", surface=None, start_time=1.0, pos="動詞"):
@@ -119,13 +101,9 @@ class TestProcessEpisode:
 
     @pytest.fixture
     def processor(self, test_config, mock_services):
-        return EpisodeProcessor(
+        return build_processor(
             config=test_config,
-            subtitle_parser=mock_services["subtitle_parser"],
-            word_filter=mock_services["word_filter"],
-            media_extractor=mock_services["media_extractor"],
-            definition_service=mock_services["definition_service"],
-            anki_service=mock_services["anki_service"],
+            **mock_services,
             presenter=NullPresenter(),
         )
 
@@ -165,13 +143,9 @@ class TestProcessEpisode:
 
         cfg = dc_replace(test_config, reading_tts_enabled=True)
         sentence_fetcher = MagicMock(name="SentenceFetcher")
-        proc = EpisodeProcessor(
+        proc = build_processor(
             config=cfg,
-            subtitle_parser=mock_services["subtitle_parser"],
-            word_filter=mock_services["word_filter"],
-            media_extractor=mock_services["media_extractor"],
-            definition_service=mock_services["definition_service"],
-            anki_service=mock_services["anki_service"],
+            **mock_services,
             presenter=NullPresenter(),
             sentence_audio_fetcher=sentence_fetcher,
         )
@@ -193,13 +167,9 @@ class TestProcessEpisode:
     def test_skipped_duplicates_surfaced_as_warning(self, test_config, mock_services, tmp_path):
         """A non-zero last_skipped_duplicates from card creation is reported."""
         presenter = MagicMock()
-        proc = EpisodeProcessor(
+        proc = build_processor(
             config=test_config,
-            subtitle_parser=mock_services["subtitle_parser"],
-            word_filter=mock_services["word_filter"],
-            media_extractor=mock_services["media_extractor"],
-            definition_service=mock_services["definition_service"],
-            anki_service=mock_services["anki_service"],
+            **mock_services,
             presenter=presenter,
         )
 
@@ -223,13 +193,9 @@ class TestProcessEpisode:
     def test_media_store_failures_surfaced_as_warning(self, test_config, mock_services, tmp_path):
         """A non-zero last_media_store_failures from card creation is reported."""
         presenter = MagicMock()
-        proc = EpisodeProcessor(
+        proc = build_processor(
             config=test_config,
-            subtitle_parser=mock_services["subtitle_parser"],
-            word_filter=mock_services["word_filter"],
-            media_extractor=mock_services["media_extractor"],
-            definition_service=mock_services["definition_service"],
-            anki_service=mock_services["anki_service"],
+            **mock_services,
             presenter=presenter,
         )
 
@@ -421,13 +387,9 @@ class TestProcessEpisode:
         """
         cfg = replace(test_config, screenshot_animated=True, screenshot_animated_format=fmt)
         presenter = MagicMock()
-        proc = EpisodeProcessor(
+        proc = build_processor(
             config=cfg,
-            subtitle_parser=mock_services["subtitle_parser"],
-            word_filter=mock_services["word_filter"],
-            media_extractor=mock_services["media_extractor"],
-            definition_service=mock_services["definition_service"],
-            anki_service=mock_services["anki_service"],
+            **mock_services,
             presenter=presenter,
         )
         word = _make_word()
@@ -570,7 +532,7 @@ class TestProcessEpisode:
 
         mock_services["anki_service"].create_cards_batch.side_effect = _raise_mid_batch
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             **mock_services,
@@ -596,7 +558,7 @@ class TestProcessEpisode:
         process_episode is the ONLY thing that can clear them, so removing
         that line makes this test fail.
         """
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             **mock_services,
@@ -653,7 +615,7 @@ class TestOptionalServices:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             frequency_service=mock_frequency,
@@ -693,7 +655,7 @@ class TestOptionalServices:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to bet"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             frequency_service=mock_frequency,
@@ -725,7 +687,7 @@ class TestOptionalServices:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to bet"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             frequency_service=mock_frequency,
@@ -754,7 +716,7 @@ class TestOptionalServices:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             frequency_service=mock_frequency,
@@ -789,7 +751,7 @@ class TestOptionalServices:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             frequency_service=mock_frequency,
@@ -823,7 +785,7 @@ class TestOptionalServices:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             frequency_service=mock_frequency,
@@ -851,7 +813,7 @@ class TestOptionalServices:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             frequency_service=mock_frequency,
@@ -882,7 +844,7 @@ class TestOptionalServices:
 
         presenter = MagicMock(spec=NullPresenter())
         services = {**mock_services, "word_filter": WordFilterService(config)}
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=presenter,
             frequency_service=None,  # no source loaded — the trigger condition
@@ -918,7 +880,7 @@ class TestOptionalServices:
 
         presenter = MagicMock(spec=NullPresenter())
         services = {**mock_services, "word_filter": WordFilterService(config)}
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=presenter,
             frequency_service=mock_frequency,
@@ -952,7 +914,7 @@ class TestOptionalServices:
 
         presenter = MagicMock(spec=NullPresenter())
         services = {**mock_services, "word_filter": WordFilterService(config)}
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=presenter,
             frequency_service=mock_frequency,
@@ -981,7 +943,7 @@ class TestOptionalServices:
 
         presenter = MagicMock(spec=NullPresenter())
         services = {**mock_services, "word_filter": WordFilterService(config)}
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=presenter,
             frequency_service=mock_frequency,
@@ -1014,7 +976,7 @@ class TestOptionalServices:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             pitch_accent_service=mock_pitch,
@@ -1047,7 +1009,7 @@ class TestOptionalServices:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             pitch_accent_service=mock_pitch,
@@ -1082,7 +1044,7 @@ class TestOptionalServices:
             test_config,
             anki_fields={**test_config.anki_fields, "pitch_graph": "PitchGraph", "pitch_text": "PitchText"},
         )
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             pitch_accent_service=mock_pitch,
@@ -1121,7 +1083,7 @@ class TestOptionalServices:
 
         # Map the optional frequency_sort field so the sort column is emitted.
         config = replace(test_config, anki_fields={**test_config.anki_fields, "frequency_sort": "FrequencySort"})
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             pitch_accent_service=mock_pitch,
@@ -1163,7 +1125,7 @@ class TestOptionalServices:
 
         # test_config leaves frequency_sort unmapped, so the sentinel is suppressed
         # and the default-config wire stays byte-identical to pre-harmonic behavior.
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             frequency_service=mock_frequency,
@@ -1202,7 +1164,7 @@ class TestOptionalServices:
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
         config = replace(test_config, anki_fields={**test_config.anki_fields, "frequency_sort": "FrequencySort"})
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             frequency_service=mock_frequency,
@@ -1270,7 +1232,7 @@ class TestPitchLemmaReading:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             pitch_accent_service=mock_pitch,
@@ -1314,7 +1276,7 @@ class TestPitchLemmaReading:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             pitch_accent_service=mock_pitch,
@@ -1373,7 +1335,7 @@ class TestKnownWordDBIntegration:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=replace(test_config, use_known_words_db=True),
             presenter=NullPresenter(),
             known_word_db=mock_known_db,
@@ -1411,7 +1373,7 @@ class TestKnownWordDBIntegration:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=replace(test_config, use_known_words_db=True),
             presenter=NullPresenter(),
             known_word_db=mock_known_db,
@@ -1456,7 +1418,7 @@ class TestKnownWordDBIntegration:
 
         mock_services["anki_service"].create_cards_batch.side_effect = _create_batch
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=replace(test_config, use_known_words_db=True),
             presenter=NullPresenter(),
             known_word_db=mock_known_db,
@@ -1502,7 +1464,7 @@ class TestKnownWordDBIntegration:
 
         mock_services["anki_service"].create_cards_batch.side_effect = _create_batch
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=replace(test_config, use_known_words_db=True),
             presenter=NullPresenter(),
             known_word_db=mock_known_db,
@@ -1535,7 +1497,7 @@ class TestKnownWordDBIntegration:
         mock_services["media_extractor"].extract_media_batch.return_value = []
         mock_services["anki_service"].create_cards_batch.return_value = 0
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=replace(test_config, use_known_words_db=False),
             presenter=NullPresenter(),
             known_word_db=mock_known_db,
@@ -1588,7 +1550,7 @@ class TestIncludeKnownWordsFlag:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat", "1. to run"]
         mock_services["anki_service"].create_cards_batch.return_value = 2
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             **mock_services,
@@ -1625,7 +1587,7 @@ class TestIncludeKnownWordsFlag:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat", "1. to run"]
         mock_services["anki_service"].create_cards_batch.return_value = 2
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             known_word_db=mock_known_db,
@@ -1658,7 +1620,7 @@ class TestIncludeKnownWordsFlag:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             **mock_services,
@@ -1712,7 +1674,7 @@ class TestWordListServiceIntegration:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             word_list_service=mock_wls,
@@ -1762,7 +1724,7 @@ class TestWordsetServiceIntegration:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             wordset_service=mock_ws,
@@ -1790,7 +1752,7 @@ class TestWordsetServiceIntegration:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             wordset_service=mock_ws,
@@ -1847,7 +1809,7 @@ class TestWhitelistForceInclude:
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
         services = {**mock_services, "word_filter": WordFilterService(config)}
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             word_list_service=self._wls(tmp_path, "コーヒー"),
@@ -1870,7 +1832,7 @@ class TestWhitelistForceInclude:
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
         services = {**mock_services, "word_filter": WordFilterService(config)}
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             word_list_service=self._wls(tmp_path, "食べる"),
@@ -1894,7 +1856,7 @@ class TestWhitelistForceInclude:
         mock_services["anki_service"].create_cards_batch.return_value = 0
 
         services = {**mock_services, "word_filter": WordFilterService(config)}
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             word_list_service=self._wls(tmp_path, "食べる"),
@@ -1916,7 +1878,7 @@ class TestWhitelistForceInclude:
         mock_services["anki_service"].create_cards_batch.return_value = 0
 
         services = {**mock_services, "word_filter": WordFilterService(config)}
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             word_list_service=self._wls(tmp_path, "食べる"),
@@ -1938,7 +1900,7 @@ class TestWhitelistForceInclude:
         mock_services["anki_service"].create_cards_batch.return_value = 0
 
         services = {**mock_services, "word_filter": WordFilterService(config)}
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             word_list_service=self._wls(tmp_path, "コーヒー"),
@@ -1988,7 +1950,7 @@ class TestCrossEpisodeFiltering:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             **mock_services,
@@ -2042,7 +2004,7 @@ class TestCrossEpisodeFiltering:
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
         services = {**mock_services, "word_filter": WordFilterService(config)}
-        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **services)
+        processor = build_processor(config=config, presenter=NullPresenter(), **services)
 
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", cross_episode_counts=cross_counts)
 
@@ -2091,7 +2053,7 @@ class TestDefinitionSkipping:
         ]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             **mock_services,
@@ -2139,7 +2101,7 @@ class TestStatsServiceIntegration:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             stats_service=mock_stats,
@@ -2164,7 +2126,7 @@ class TestStatsServiceIntegration:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             stats_service=mock_stats,
@@ -2212,7 +2174,7 @@ class TestStatsServiceIntegration:
         mock_frequency.is_available.return_value = True
         mock_frequency.lookup_all.return_value = [("Src", 1, None)]
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             stats_service=mock_stats,
@@ -2233,7 +2195,7 @@ class TestStatsServiceIntegration:
         """Processing should work fine without stats_service."""
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = []
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             **mock_services,
@@ -2249,7 +2211,7 @@ class TestStatsServiceIntegration:
 
         mock_services["subtitle_parser"].parse_subtitle_file.side_effect = RuntimeError("fail")
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             stats_service=mock_stats,
@@ -2294,7 +2256,7 @@ class TestStatsServiceIntegration:
 
         mock_services["anki_service"].create_cards_batch.side_effect = _create_batch
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             stats_service=mock_stats,
@@ -2332,7 +2294,7 @@ class TestStatsServiceIntegration:
 
         mock_services["anki_service"].create_cards_batch.side_effect = _create_batch
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             stats_service=mock_stats,
@@ -2374,7 +2336,7 @@ class TestPerRunTempFolder:
         mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], _make_media("a"))]
         mock_services["definition_service"].get_definitions_batch.return_value = ["def"]
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             **mock_services,
@@ -2405,7 +2367,7 @@ class TestPerRunTempFolder:
         mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], _make_media("a"))]
         mock_services["definition_service"].get_definitions_batch.return_value = ["def"]
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             **mock_services,
@@ -2452,7 +2414,7 @@ class TestProcessYoutubeUrl:
 
     def test_missing_fetcher_raises_runtime_error(self, test_config, mock_services, tmp_path):
         """process_youtube_url on a processor without a fetcher raises RuntimeError."""
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             **mock_services,
@@ -2485,7 +2447,7 @@ class TestProcessYoutubeUrl:
             sub_source="manual",
         )
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             youtube_fetcher=mock_fetcher,
@@ -2519,7 +2481,7 @@ class TestProcessYoutubeUrl:
         """Cancellation set before entry should short-circuit without calling fetch_video."""
         mock_fetcher = MagicMock()
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             youtube_fetcher=mock_fetcher,
@@ -2546,7 +2508,7 @@ class TestProcessYoutubeUrl:
         mock_fetcher = MagicMock()
         mock_fetcher.fetch_video.side_effect = RuntimeError("boom")
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             youtube_fetcher=mock_fetcher,
@@ -2586,7 +2548,7 @@ class TestProcessYoutubeUrl:
         mock_stats = MagicMock()
         mock_stats.is_available.return_value = True
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             youtube_fetcher=mock_fetcher,
@@ -2622,7 +2584,7 @@ class TestProcessYoutubeUrl:
         media = _make_media()
         self._happy_pipeline(mock_services, word, media)
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             stats_service=mock_stats,
@@ -2658,7 +2620,7 @@ class TestProcessYoutubeUrl:
             sub_source="manual",
         )
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             youtube_fetcher=mock_fetcher,
@@ -2780,7 +2742,7 @@ class TestProcessYoutubeUrl:
         mock_fetcher = MagicMock()
         mock_fetcher.fetch_video.return_value = fetched_media
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             youtube_fetcher=mock_fetcher,
@@ -2879,7 +2841,7 @@ class TestProcessYoutubeUrlCancelPropagation:
             sub_source="manual",
         )
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             youtube_fetcher=mock_fetcher,
@@ -3078,7 +3040,7 @@ class TestIPlusOneFilter:
         )
         self._wire_happy_pipeline(mock_services, word, _make_media())
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             **mock_services,
@@ -3097,7 +3059,7 @@ class TestIPlusOneFilter:
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         self._wire_happy_pipeline(mock_services, word, _make_media())
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             **mock_services,
@@ -3120,7 +3082,7 @@ class TestIPlusOneFilter:
         )
         self._wire_happy_pipeline(mock_services, word, _make_media())
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             **mock_services,
@@ -3164,7 +3126,7 @@ class TestIPlusOneFilter:
         mock_frequency.is_available.return_value = True
         mock_frequency.lookup_all.return_value = [("Src", 1, None)]
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             frequency_service=mock_frequency,
@@ -3185,7 +3147,7 @@ class TestIPlusOneFilter:
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         self._wire_happy_pipeline(mock_services, word, _make_media())
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=NullPresenter(),
             **mock_services,
@@ -3218,7 +3180,7 @@ class TestIPlusOneFilter:
 
         spy_presenter = MagicMock(spec=NullPresenter())
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=config,
             presenter=spy_presenter,
             **mock_services,
@@ -3248,7 +3210,7 @@ class TestIPlusOneFilter:
         mock_services["subtitle_parser"].parse_subtitle_file_with_index.return_value = ([word], [line])
         self._wire_happy_pipeline(mock_services, word, _make_media())
 
-        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **mock_services)
+        processor = build_processor(config=config, presenter=NullPresenter(), **mock_services)
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         mock_services["word_filter"].filter_i_plus_one.assert_not_called()
@@ -3256,17 +3218,6 @@ class TestIPlusOneFilter:
 
 class TestGlossaryFetch:
     """Tests for optional multi-dict glossary fetch in process_episode."""
-
-    def _build_processor(self, cfg, mock_services):
-        return EpisodeProcessor(
-            config=cfg,
-            subtitle_parser=mock_services["subtitle_parser"],
-            word_filter=mock_services["word_filter"],
-            media_extractor=mock_services["media_extractor"],
-            definition_service=mock_services["definition_service"],
-            anki_service=mock_services["anki_service"],
-            presenter=NullPresenter(),
-        )
 
     def _seed_happy_path(self, mock_services, tmp_path):
         words = [_make_word("食べる")]
@@ -3297,7 +3248,7 @@ class TestGlossaryFetch:
 
     def test_glossary_fetched_when_field_mapped(self, test_config, mock_services, tmp_path, monkeypatch):
         cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
-        processor = self._build_processor(cfg, mock_services)
+        processor = build_processor(config=cfg, **mock_services)
         video, sub = self._seed_happy_path(mock_services, tmp_path)
 
         glossary_html = '<div class="yomitan-glossary"><ol><li data-dictionary="X">X def</li></ol></div>'
@@ -3332,7 +3283,7 @@ class TestGlossaryFetch:
         # glossary carries an image embeds the images group, a plain stamped-dict
         # card gets a smaller block — while dictionary CSS is collected once.
         cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
-        processor = self._build_processor(cfg, mock_services)
+        processor = build_processor(config=cfg, **mock_services)
         video, sub = self._seed_happy_path(mock_services, tmp_path)
 
         words = [_make_word("食べる"), _make_word("飲む")]
@@ -3370,7 +3321,7 @@ class TestGlossaryFetch:
         canonical lemma (遣る), merged by index; get_glossaries_batch has no
         fallback mechanism of its own."""
         cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
-        processor = self._build_processor(cfg, mock_services)
+        processor = build_processor(config=cfg, **mock_services)
 
         word = _make_word(lemma="遣る")
         word.orth_base = "殺る"
@@ -3403,7 +3354,7 @@ class TestGlossaryFetch:
         """A miss on a word whose mined_form == lemma retries nothing — there is
         no second spelling to try."""
         cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
-        processor = self._build_processor(cfg, mock_services)
+        processor = build_processor(config=cfg, **mock_services)
         video, sub = self._seed_happy_path(mock_services, tmp_path)
         mock_services["definition_service"].get_glossaries_batch.return_value = [None]
         monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css", lambda cfg: "")
@@ -3416,7 +3367,7 @@ class TestGlossaryFetch:
         # Default test_config has anki_fields["glossary"] == "" but definition
         # mapped, so the style block is still built (it rides the definition
         # field). Mock the CSS collection to avoid real registry / SQLite I/O.
-        processor = self._build_processor(test_config, mock_services)
+        processor = build_processor(config=test_config, **mock_services)
         video, sub = self._seed_happy_path(mock_services, tmp_path)
 
         collect = MagicMock(return_value="")
@@ -3439,7 +3390,7 @@ class TestGlossaryFetch:
         # block (base glossary.css + scoped dict CSS) must ride the DEFINITION
         # field so default-config cards still carry the base sheet — and it must
         # appear exactly once, with the original definition preserved.
-        processor = self._build_processor(test_config, mock_services)
+        processor = build_processor(config=test_config, **mock_services)
         video, sub = self._seed_happy_path(mock_services, tmp_path)
 
         collect = MagicMock(return_value='.yomitan-glossary [data-dictionary="X"]{color:red}')
@@ -3479,13 +3430,9 @@ class TestAudioTrackOverrideForwarding:
 
     @pytest.fixture
     def processor(self, test_config, mock_services):
-        return EpisodeProcessor(
+        return build_processor(
             config=test_config,
-            subtitle_parser=mock_services["subtitle_parser"],
-            word_filter=mock_services["word_filter"],
-            media_extractor=mock_services["media_extractor"],
-            definition_service=mock_services["definition_service"],
-            anki_service=mock_services["anki_service"],
+            **mock_services,
             presenter=NullPresenter(),
         )
 
@@ -3594,7 +3541,7 @@ class TestSourceField:
 
     @pytest.fixture
     def processor(self, test_config, mock_services):
-        return EpisodeProcessor(
+        return build_processor(
             config=test_config,
             presenter=NullPresenter(),
             **mock_services,
@@ -3661,7 +3608,7 @@ class TestPreflightCardTarget:
 
     @pytest.fixture
     def processor(self, test_config, mock_services):
-        return EpisodeProcessor(
+        return build_processor(
             config=test_config,
             presenter=NullPresenter(),
             **mock_services,
@@ -3705,7 +3652,7 @@ class TestPreflightCardTarget:
         parent.attach_mock(mock_services["anki_service"], "anki_service")
         parent.attach_mock(mock_services["subtitle_parser"], "subtitle_parser")
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             **mock_services,
@@ -3725,7 +3672,7 @@ class TestPreflightCardTarget:
     # --- process_youtube_url pre-flight tests ---
 
     def _make_youtube_processor(self, test_config, mock_services, mock_fetcher):
-        return EpisodeProcessor(
+        return build_processor(
             config=test_config,
             presenter=NullPresenter(),
             youtube_fetcher=mock_fetcher,
@@ -3818,13 +3765,8 @@ class TestDictionaryResourceFacade:
 
     @pytest.fixture
     def processor(self, test_config):
-        return EpisodeProcessor(
+        return build_processor(
             config=test_config,
-            subtitle_parser=MagicMock(),
-            word_filter=MagicMock(),
-            media_extractor=MagicMock(),
-            definition_service=MagicMock(),
-            anki_service=MagicMock(),
             presenter=NullPresenter(),
         )
 
@@ -3839,13 +3781,8 @@ class TestDictionaryResourceFacade:
 
     def test_release_dictionary_resources_closes_frequency_service(self, test_config):
         freq = MagicMock()
-        proc = EpisodeProcessor(
+        proc = build_processor(
             config=test_config,
-            subtitle_parser=MagicMock(),
-            word_filter=MagicMock(),
-            media_extractor=MagicMock(),
-            definition_service=MagicMock(),
-            anki_service=MagicMock(),
             presenter=NullPresenter(),
             frequency_service=freq,
         )
@@ -3865,13 +3802,8 @@ class TestProcessorClose:
     """close() releases all per-run resources (Windows back-to-back-mining freeze)."""
 
     def _make(self, test_config, audio_fetcher=None, frequency_service=None):
-        return EpisodeProcessor(
+        return build_processor(
             config=test_config,
-            subtitle_parser=MagicMock(),
-            word_filter=MagicMock(),
-            media_extractor=MagicMock(),
-            definition_service=MagicMock(),
-            anki_service=MagicMock(),
             presenter=NullPresenter(),
             expression_audio_fetcher=audio_fetcher,
             frequency_service=frequency_service,
@@ -3984,7 +3916,7 @@ class TestPhase2FilterOrdering:
         parent = MagicMock()
         parent.attach_mock(mock_services["word_filter"], "word_filter")
 
-        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **mock_services)
+        processor = build_processor(config=config, presenter=NullPresenter(), **mock_services)
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         call_names = [c[0] for c in parent.mock_calls]
@@ -4007,7 +3939,7 @@ class TestPhase2FilterOrdering:
         parent = MagicMock()
         parent.attach_mock(mock_services["word_filter"], "word_filter")
 
-        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **mock_services)
+        processor = build_processor(config=config, presenter=NullPresenter(), **mock_services)
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         call_names = [c[0] for c in parent.mock_calls]
@@ -4038,7 +3970,7 @@ class TestPhase2FilterOrdering:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **mock_services)
+        processor = build_processor(config=config, presenter=NullPresenter(), **mock_services)
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         mock_services["word_filter"].filter_by_script_type.assert_called_once_with(
@@ -4064,7 +3996,7 @@ class TestPhase2FilterOrdering:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **mock_services)
+        processor = build_processor(config=config, presenter=NullPresenter(), **mock_services)
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         mock_services["word_filter"].filter_by_script_type.assert_not_called()
@@ -4085,612 +4017,10 @@ class TestPhase2FilterOrdering:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(config=config, presenter=NullPresenter(), **mock_services)
+        processor = build_processor(config=config, presenter=NullPresenter(), **mock_services)
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         mock_services["word_filter"].filter_by_sentence_length.assert_not_called()
-
-
-class TestExpressionAudio:
-    """Phase-3 expression (pronunciation) audio fetching (Issue #73)."""
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
-    @staticmethod
-    def _enabled_config(test_config):
-        """test_config with the expression_audio field mapped (the on switch)."""
-        return replace(
-            test_config,
-            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
-        )
-
-    @staticmethod
-    def _word(lemma, reading, start_time=1.0):
-        word = _make_word(lemma, start_time=start_time)
-        word.expression_reading = reading
-        return word
-
-    @staticmethod
-    def _wire_pipeline(mock_services, pairs):
-        words = [word for word, _ in pairs]
-        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
-        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
-        mock_services["word_filter"].filter_unknown.return_value = words
-        mock_services["media_extractor"].extract_media_batch.return_value = pairs
-        mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"] * len(words)
-        mock_services["anki_service"].create_cards_batch.return_value = len(words)
-
-    def test_enabled_fetches_per_word_and_fills_media(self, test_config, mock_services, tmp_path):
-        """Fetcher called with each word's candidate ladder; hits fill MediaData, misses stay None."""
-        config = self._enabled_config(test_config)
-        pairs = [
-            (self._word("食べる", "たべる"), _make_media("taberu")),
-            (self._word("走る", "はしる", 5.0), _make_media("hashiru")),
-        ]
-        self._wire_pipeline(mock_services, pairs)
-
-        audio_path = tmp_path / "jpod101_食べる_たべる.mp3"
-        fetcher = MagicMock()
-        fetcher.fetch_candidates.side_effect = [audio_path, None]
-
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        assert result.cards_created == 2
-        assert fetcher.fetch_candidates.call_count == 2
-        # The processor hands each word's full candidate ladder to the fetcher;
-        # source/candidate nesting (and first-hit selection) is the fetcher's job.
-        candidate_lists = [c.args[0] for c in fetcher.fetch_candidates.call_args_list]
-        assert [("食べる", "たべる")] in candidate_lists
-        assert [("走る", "はしる")] in candidate_lists
-        hit_media = pairs[0][1]
-        assert hit_media.expression_audio_path == audio_path
-        assert hit_media.expression_audio_filename == audio_path.name
-        miss_media = pairs[1][1]
-        assert miss_media.expression_audio_path is None
-        assert miss_media.expression_audio_filename is None
-
-    def test_miss_retries_with_lemma_for_variant_kanji_noun(self, test_config, mock_services, tmp_path):
-        """Surface-form miss ⇒ retry with the unidic lemma (canonical orthography).
-
-        Subtitle surface 噓 (variant kanji) is what JPod101 misses; the lemma
-        嘘 is what it indexes. mined_form == surface for nouns, so the retry
-        swaps the kanji while keeping the (unchanged) reading.
-        """
-        config = self._enabled_config(test_config)
-        word = _make_word(lemma="嘘", surface="噓", pos="名詞")
-        word.expression_reading = "うそ"
-        word.lemma_reading = "うそ"
-        media = _make_media("uso")
-        pairs = [(word, media)]
-        self._wire_pipeline(mock_services, pairs)
-
-        # Surface 噓 misses, lemma 嘘 hits — that selection is now internal to
-        # the fetcher; the processor only owns building the ladder.
-        audio_path = tmp_path / "jpod101_嘘_うそ.mp3"
-        fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = audio_path
-
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        assert result.cards_created == 1
-        assert fetcher.fetch_candidates.call_count == 1
-        candidates = fetcher.fetch_candidates.call_args.args[0]
-        assert candidates == [("噓", "うそ"), ("嘘", "うそ")]  # surface then lemma
-        assert media.expression_audio_path == audio_path
-        assert media.expression_audio_filename == audio_path.name
-
-    def test_katakana_loanword_retries_with_katakana_reading(self, test_config, mock_services, tmp_path):
-        """Loanword hiragana-reading miss ⇒ retry with the katakana reading.
-
-        ``expression_reading`` is folded to hiragana for card display (ちっぷ),
-        but JPod101 indexes loanword audio under the katakana reading (チップ).
-        """
-        config = self._enabled_config(test_config)
-        word = _make_word(lemma="チップ", surface="チップ", pos="名詞")
-        word.expression_reading = "ちっぷ"
-        word.lemma_reading = "ちっぷ"
-        media = _make_media("chip")
-        pairs = [(word, media)]
-        self._wire_pipeline(mock_services, pairs)
-
-        audio_path = tmp_path / "jpod101_チップ_チップ.mp3"
-        fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = audio_path
-
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        assert result.cards_created == 1
-        assert fetcher.fetch_candidates.call_count == 1
-        candidates = fetcher.fetch_candidates.call_args.args[0]
-        assert candidates == [("チップ", "ちっぷ"), ("チップ", "チップ")]  # hiragana then katakana
-        assert media.expression_audio_path == audio_path
-
-    def test_surface_mined_noun_retries_with_lemma_reading(self, test_config, mock_services, tmp_path):
-        """Surface miss ⇒ lemma retry uses the lemma's OWN reading, not the surface reading.
-
-        Surface 探し/さがし misses; the canonical lemma is 探す/さがす. The retry
-        must swap BOTH kanji and reading — keeping さがし would still miss.
-        """
-        config = self._enabled_config(test_config)
-        word = _make_word(lemma="探す", surface="探し", pos="名詞")
-        word.expression_reading = "さがし"
-        word.lemma_reading = "さがす"
-        media = _make_media("sagasu")
-        pairs = [(word, media)]
-        self._wire_pipeline(mock_services, pairs)
-
-        audio_path = tmp_path / "jpod101_探す_さがす.mp3"
-        fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = audio_path
-
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        assert result.cards_created == 1
-        assert fetcher.fetch_candidates.call_count == 1
-        candidates = fetcher.fetch_candidates.call_args.args[0]
-        # Lemma retry swaps BOTH kanji and reading (探す/さがす, not 探す/さがし).
-        assert candidates == [("探し", "さがし"), ("探す", "さがす")]
-        assert media.expression_audio_path == audio_path
-
-    def test_empty_reading_yields_empty_candidate_ladder(self, test_config, mock_services, tmp_path):
-        """A word with no usable reading yields an empty candidate ladder.
-
-        ``fetch_candidates([])`` is a cheap no-op that returns None without
-        touching the network (the leaf's homograph guard handles the actual
-        skip — see test_expression_audio_fetcher)."""
-        config = self._enabled_config(test_config)
-        word = _make_word(lemma="々", surface="々", pos="記号")
-        word.expression_reading = ""
-        word.lemma_reading = ""
-        media = _make_media("sym")
-        pairs = [(word, media)]
-        self._wire_pipeline(mock_services, pairs)
-        fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = None
-
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        fetcher.fetch_candidates.assert_called_once()
-        assert fetcher.fetch_candidates.call_args.args[0] == []
-        assert media.expression_audio_path is None
-
-    def test_miss_no_lemma_retry_when_mined_form_equals_lemma(self, test_config, mock_services, tmp_path):
-        """Verbs mine as lemma (mined_form == lemma) ⇒ single-form candidate ladder."""
-        config = self._enabled_config(test_config)
-        # Default pos=動詞 ⇒ mined_form == lemma == 食べる.
-        pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
-        self._wire_pipeline(mock_services, pairs)
-
-        fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = None
-
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        assert fetcher.fetch_candidates.call_count == 1
-        # No redundant lemma duplicate when mined_form == lemma.
-        assert fetcher.fetch_candidates.call_args.args[0] == [("食べる", "たべる")]
-        assert pairs[0][1].expression_audio_path is None
-
-    def test_blank_field_mapping_does_not_fetch(self, test_config, mock_services, tmp_path):
-        """Blank anki_fields['expression_audio'] ⇒ fetcher never called (the
-        field name is the sole on/off switch)."""
-        config = replace(
-            test_config,
-            anki_fields={**test_config.anki_fields, "expression_audio": ""},
-        )
-        pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
-        self._wire_pipeline(mock_services, pairs)
-        fetcher = MagicMock()
-
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        fetcher.fetch_candidates.assert_not_called()
-
-    def test_no_fetcher_injected_no_crash(self, test_config, mock_services, tmp_path):
-        """Enabled + field mapped but fetcher=None ⇒ pipeline completes, no fetch."""
-        config = self._enabled_config(test_config)
-        pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
-        self._wire_pipeline(mock_services, pairs)
-
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            **mock_services,
-        )
-        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        assert result.cards_created == 1
-        assert pairs[0][1].expression_audio_path is None
-
-    def test_cancel_mid_loop_stops_fetching(self, test_config, mock_services, tmp_path):
-        """Cancellation between fetches stops the loop and yields a cancelled result."""
-        config = self._enabled_config(test_config)
-        pairs = [
-            (self._word("食べる", "たべる"), _make_media("taberu")),
-            (self._word("走る", "はしる", 5.0), _make_media("hashiru")),
-        ]
-        self._wire_pipeline(mock_services, pairs)
-
-        fetcher = MagicMock()
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-
-        def _fetch_then_cancel(candidates, cancelled_check=None):
-            processor.cancel()
-            return tmp_path / "a.mp3"
-
-        fetcher.fetch_candidates.side_effect = _fetch_then_cancel
-
-        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        assert fetcher.fetch_candidates.call_count == 1
-        assert "Processing cancelled by user" in result.errors
-        mock_services["anki_service"].create_cards_batch.assert_not_called()
-
-    def test_presenter_receives_summary_line(self, test_config, mock_services, tmp_path):
-        """Presenter gets the 'Expression audio: X/Y available' info line."""
-        config = self._enabled_config(test_config)
-        pairs = [
-            (self._word("食べる", "たべる"), _make_media("taberu")),
-            (self._word("走る", "はしる", 5.0), _make_media("hashiru")),
-        ]
-        self._wire_pipeline(mock_services, pairs)
-
-        fetcher = MagicMock()
-        fetcher.fetch_candidates.side_effect = [tmp_path / "a.mp3", None]
-        presenter = MagicMock()
-
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=presenter,
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        presenter.show_info.assert_any_call("Expression audio: 1/2 available")
-
-    def test_fetcher_receives_cancelled_check_kwarg(self, test_config, mock_services, tmp_path):
-        """fetch() is called with cancelled_check= that reflects processor.cancelled."""
-        config = self._enabled_config(test_config)
-        pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
-        self._wire_pipeline(mock_services, pairs)
-
-        fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = None
-
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        assert fetcher.fetch_candidates.call_count == 1
-        call_kwargs = fetcher.fetch_candidates.call_args.kwargs
-        assert "cancelled_check" in call_kwargs
-        # The callable should return False (processor not cancelled) and be callable.
-        check_fn = call_kwargs["cancelled_check"]
-        assert callable(check_fn)
-        assert check_fn() is False
-
-    def test_progress_emitted_per_word(self, test_config, mock_services, tmp_path):
-        """progress_callback.on_progress is called once per word during the expression audio loop."""
-        config = self._enabled_config(test_config)
-        pairs = [
-            (self._word("食べる", "たべる"), _make_media("taberu")),
-            (self._word("走る", "はしる", 5.0), _make_media("hashiru")),
-            (self._word("飲む", "のむ", 9.0), _make_media("nomu")),
-        ]
-        self._wire_pipeline(mock_services, pairs)
-
-        fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = None
-
-        progress_callback = MagicMock()
-
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", progress_callback=progress_callback)
-
-        # The raw callback is wrapped by StageWeightedProgress, which forwards
-        # on_progress for every word in the expression-audio loop with the
-        # item_description "Expression audio: <mined_form>".  Filter to only
-        # those calls and assert exactly 3 (one per word) — other on_progress
-        # calls (e.g. the finish() snap to 100 with "") belong to different
-        # stages.
-        expr_audio_calls = [
-            c for c in progress_callback.on_progress.call_args_list if c.args[1].startswith("Expression audio:")
-        ]
-        assert len(expr_audio_calls) == 3
-
-
-class TestExpressionAudioProgressBand:
-    """Progress-accounting tests for the expression-audio stage (Issue #73 fix).
-
-    Verifies that _phase3_extract correctly consumes the dedicated progress band
-    registered by process_episode — no band theft from definitions or later stages.
-    """
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
-    @staticmethod
-    def _enabled_config(test_config):
-        return replace(
-            test_config,
-            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
-        )
-
-    @staticmethod
-    def _wire_pipeline(mock_services, pairs):
-        words = [word for word, _ in pairs]
-        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
-        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
-        mock_services["word_filter"].filter_unknown.return_value = words
-        mock_services["media_extractor"].extract_media_batch.return_value = pairs
-        mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"] * len(words)
-        mock_services["anki_service"].create_cards_batch.return_value = len(words)
-
-    @staticmethod
-    def _word(lemma, reading="よみ", start_time=1.0):
-        word = _make_word(lemma, start_time=start_time)
-        word.expression_reading = reading
-        return word
-
-    def test_feature_on_stage_count_matches_bands(self, test_config, mock_services, tmp_path):
-        """Feature ON: on_start call count equals number of registered bands.
-
-        With expression_audio active the bands are: extract, expression_audio,
-        definitions, cards = 4.  StageWeightedProgress forwards on_start only
-        once to the inner callback (the global on_start), so we check on_start
-        descriptions to count stage entries instead.
-        """
-        config = self._enabled_config(test_config)
-        pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
-        self._wire_pipeline(mock_services, pairs)
-
-        fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = None
-
-        # Use a recording callback that counts on_start calls by description
-        class _RecordingCallback:
-            def __init__(self):
-                self.starts = []
-                self.completes = 0
-
-            def on_start(self, total, description):
-                self.starts.append(description)
-
-            def on_progress(self, current, item_description):
-                pass
-
-            def on_complete(self):
-                self.completes += 1
-
-            def on_error(self, item_description, error_message):
-                pass
-
-        cb = _RecordingCallback()
-
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", progress_callback=cb)
-
-        # StageWeightedProgress forwards inner.on_start exactly once — on the
-        # very first stage (extract). Later stages (expression audio,
-        # definitions, cards) advance the band counter and refresh the label via
-        # inner.on_progress (never a second on_start), so cb.starts has exactly
-        # 1 entry regardless of band count. The expression-audio band being
-        # registered is verified indirectly: fetch_candidates was called
-        # (feature ran) AND finish() emitted one on_complete, confirming the
-        # full 4-band sweep completed without band-accounting errors.
-        assert len(cb.starts) == 1
-        assert cb.completes == 1  # from StageWeightedProgress.finish()
-
-        # Cross-check: fetcher was called (expression-audio band ran)
-        assert fetcher.fetch_candidates.call_count == 1
-
-    def test_feature_on_on_start_description_includes_expression_audio(self, test_config, mock_services, tmp_path):
-        """The expression-audio on_start description is passed to the inner callback.
-
-        Because StageWeightedProgress only forwards on_start once (first stage),
-        we pass the raw callback directly to _phase3_extract to inspect all
-        on_start calls without the wrapper.
-        """
-        config = self._enabled_config(test_config)
-        pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
-        self._wire_pipeline(mock_services, pairs)
-
-        fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = None
-
-        # Pass a raw MagicMock as progress_callback so we can inspect all calls.
-        raw_cb = MagicMock()
-
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", progress_callback=raw_cb)
-
-        # Check that on_start was called with "Fetching expression audio" description
-        on_start_descriptions = [c.args[1] for c in raw_cb.on_start.call_args_list]
-        assert any("expression audio" in d.lower() for d in on_start_descriptions)
-
-    def test_feature_on_zero_media_results_band_still_consumed(self, test_config, mock_services, tmp_path):
-        """Feature ON + empty media_results: band consumed (on_start(0) + on_complete called).
-
-        The gate in _phase3_extract must NOT include `media_results` non-empty —
-        otherwise the band is silently skipped and the next stage steals it.
-        We call _phase3_extract directly with a raw callback (bypassing
-        StageWeightedProgress) so every on_start/on_complete lands on our mock.
-        """
-        config = self._enabled_config(test_config)
-
-        fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = None
-
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-
-        # extract_media_batch returns empty — simulates total extraction failure
-        mock_services["media_extractor"].extract_media_batch.return_value = []
-
-        raw_cb = MagicMock()
-
-        ctx = _make_episode_context(tmp_path)
-        # Call _phase3_extract directly with the raw callback (no wrapper)
-        result = processor._phase3_extract(
-            ctx=ctx,
-            video_file=tmp_path / "v.mkv",
-            unknown_words=[self._word("食べる", "たべる")],
-            progress_callback=raw_cb,
-            run_temp_folder=tmp_path,
-        )
-
-        # Band must be consumed: on_start(0, "Fetching expression audio") + on_complete
-        assert raw_cb.on_start.call_count == 1
-        on_start_args = raw_cb.on_start.call_args
-        assert on_start_args.args[0] == 0  # total = 0 (empty media_results)
-        assert "expression audio" in on_start_args.args[1].lower()
-        assert raw_cb.on_complete.call_count == 1
-        # Fetcher never called — no words to iterate
-        fetcher.fetch_candidates.assert_not_called()
-        # Returns empty list unchanged
-        assert result == []
-
-    def test_feature_off_no_expression_audio_on_start(self, test_config, mock_services, tmp_path):
-        """Feature OFF: no expression-audio on_start; baseline stage count unchanged."""
-        # Feature disabled via blank expression_audio field (the on/off switch).
-        config = replace(
-            test_config,
-            anki_fields={**test_config.anki_fields, "expression_audio": ""},
-        )
-        pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
-        self._wire_pipeline(mock_services, pairs)
-
-        fetcher = MagicMock()
-        raw_cb = MagicMock()
-
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", progress_callback=raw_cb)
-
-        on_start_descriptions = [c.args[1] for c in raw_cb.on_start.call_args_list]
-        assert not any("expression audio" in d.lower() for d in on_start_descriptions)
-        fetcher.fetch_candidates.assert_not_called()
-
-    def test_feature_off_no_fetcher_no_expression_audio_on_start(self, test_config, mock_services, tmp_path):
-        """Feature enabled but no fetcher injected: no expression-audio band."""
-        config = self._enabled_config(test_config)
-        pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
-        self._wire_pipeline(mock_services, pairs)
-
-        raw_cb = MagicMock()
-
-        # No fetcher injected
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            **mock_services,
-        )
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", progress_callback=raw_cb)
-
-        on_start_descriptions = [c.args[1] for c in raw_cb.on_start.call_args_list]
-        assert not any("expression audio" in d.lower() for d in on_start_descriptions)
 
 
 # ---------------------------------------------------------------------------
@@ -4738,7 +4068,7 @@ class TestRecordDifficultyGuard:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             stats_service=stats,
@@ -4771,7 +4101,7 @@ class TestRecordDifficultyGuard:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             stats_service=stats,
@@ -4799,7 +4129,7 @@ class TestRecordDifficultyGuard:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
         mock_services["anki_service"].create_cards_batch.return_value = 1
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             stats_service=stats,
@@ -4873,7 +4203,7 @@ class TestMinedFormsOnResult:
         ]
         mock_services["anki_service"].create_cards_batch.return_value = 2
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             **mock_services,
@@ -4888,7 +4218,7 @@ class TestMinedFormsOnResult:
         """mined_forms must be empty when no words are found."""
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = []
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=test_config,
             presenter=NullPresenter(),
             **mock_services,
@@ -4920,7 +4250,7 @@ class TestMinedFormsOnResult:
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat", "1. cat"]
         mock_services["anki_service"].create_cards_batch.return_value = 2
 
-        processor = EpisodeProcessor(
+        processor = build_processor(
             config=replace(test_config, use_known_words_db=True),
             presenter=NullPresenter(),
             known_word_db=mock_known_db,
@@ -4956,13 +4286,9 @@ class TestOfflineDefinitionPreFilter:
         }
 
     def _build(self, config, mock_services):
-        return EpisodeProcessor(
+        return build_processor(
             config=config,
-            subtitle_parser=mock_services["subtitle_parser"],
-            word_filter=mock_services["word_filter"],
-            media_extractor=mock_services["media_extractor"],
-            definition_service=mock_services["definition_service"],
-            anki_service=mock_services["anki_service"],
+            **mock_services,
             presenter=NullPresenter(),
         )
 
@@ -5084,13 +4410,9 @@ class TestWithinRunDuplicateCollapse:
         }
 
     def _build(self, config, mock_services):
-        return EpisodeProcessor(
+        return build_processor(
             config=config,
-            subtitle_parser=mock_services["subtitle_parser"],
-            word_filter=mock_services["word_filter"],
-            media_extractor=mock_services["media_extractor"],
-            definition_service=mock_services["definition_service"],
-            anki_service=mock_services["anki_service"],
+            **mock_services,
             presenter=NullPresenter(),
         )
 
@@ -5159,158 +4481,6 @@ class TestWithinRunDuplicateCollapse:
         assert captured["mined_forms"] == ["食べる", "食べる"]
 
 
-def _counts(**kw):
-    """Build a full failure-cause counts dict, defaulting unset buckets to 0."""
-    from anki_miner.services.expression_audio_fetcher import FAILURE_KEYS
-
-    base = dict.fromkeys(FAILURE_KEYS, 0)
-    base.update(kw)
-    return base
-
-
-class TestAudioFailureDiagnosis:
-    """_audio_failure_diagnosis: name the dominant cause only when it matters."""
-
-    def test_no_failures_returns_none(self):
-        assert _audio_failure_diagnosis(_counts(), attempts=10) is None
-
-    def test_zero_attempts_returns_none(self):
-        assert _audio_failure_diagnosis(_counts(ssl=5), attempts=0) is None
-
-    def test_scattered_failures_below_half_stay_quiet(self):
-        # 2 failures out of 10 attempts — noise beside real hits/misses.
-        assert _audio_failure_diagnosis(_counts(ssl=2), attempts=10) is None
-
-    def test_ssl_dominant_reports_certificate_connection_message(self):
-        msg = _audio_failure_diagnosis(_counts(ssl=8), attempts=10)
-        assert msg is not None
-        assert "connection/certificate failure" in msg
-
-    def test_connection_dominant_reports_certificate_connection_message(self):
-        msg = _audio_failure_diagnosis(_counts(connection=6), attempts=10)
-        assert "connection/certificate failure" in msg
-
-    def test_timeout_dominant_reports_certificate_connection_message(self):
-        msg = _audio_failure_diagnosis(_counts(timeout=6), attempts=10)
-        assert "connection/certificate failure" in msg
-
-    def test_http_status_dominant_reports_server_errors(self):
-        msg = _audio_failure_diagnosis(_counts(http_status=6), attempts=10)
-        assert "server errors" in msg
-
-    def test_non_audio_dominant_reports_rate_limited(self):
-        msg = _audio_failure_diagnosis(_counts(non_audio=6), attempts=10)
-        assert "rate-limited" in msg
-
-    def test_tie_resolves_to_ssl_first(self):
-        # ssl and http_status tie at 3 each; ssl wins on stable key order.
-        msg = _audio_failure_diagnosis(_counts(ssl=3, http_status=3), attempts=10)
-        assert "connection/certificate failure" in msg
-
-    def test_exactly_half_triggers(self):
-        # total * 2 >= attempts boundary: 5 failures / 10 attempts fires.
-        assert _audio_failure_diagnosis(_counts(ssl=5), attempts=10) is not None
-
-
-class TestProcessorAudioFailureSummary:
-    """Phase-3 summary surfaces the dominant audio-failure cause."""
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
-    @staticmethod
-    def _enabled_config(test_config):
-        return replace(
-            test_config,
-            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
-        )
-
-    @staticmethod
-    def _wire(mock_services, pairs):
-        words = [word for word, _ in pairs]
-        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
-        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
-        mock_services["word_filter"].filter_unknown.return_value = words
-        mock_services["media_extractor"].extract_media_batch.return_value = pairs
-        mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"] * len(words)
-        mock_services["anki_service"].create_cards_batch.return_value = len(words)
-
-    def test_dominant_ssl_failure_warns(self, test_config, mock_services, tmp_path):
-        config = self._enabled_config(test_config)
-        pairs = [(_make_word("食べる"), _make_media("taberu"))]
-        self._wire(mock_services, pairs)
-
-        fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = None
-        fetcher.stats.return_value = _counts(ssl=1)
-
-        presenter = MagicMock()
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=presenter,
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        warnings = [c.args[0] for c in presenter.show_warning.call_args_list]
-        assert any("connection/certificate failure" in w for w in warnings)
-
-    def test_no_failures_emits_no_warning(self, test_config, mock_services, tmp_path):
-        config = self._enabled_config(test_config)
-        pairs = [(_make_word("食べる"), _make_media("taberu"))]
-        self._wire(mock_services, pairs)
-
-        fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = tmp_path / "hit.mp3"
-        fetcher.stats.return_value = _counts()
-
-        presenter = MagicMock()
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=presenter,
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        warnings = [c.args[0] for c in presenter.show_warning.call_args_list]
-        assert not any("skipped this run" in w for w in warnings)
-
-    def test_fetcher_without_stats_is_safe(self, test_config, mock_services, tmp_path):
-        """A fetcher whose stats() returns a non-dict never crashes the run."""
-        config = self._enabled_config(test_config)
-        pairs = [(_make_word("食べる"), _make_media("taberu"))]
-        self._wire(mock_services, pairs)
-
-        # MagicMock's auto-stubbed stats() returns a MagicMock (not a dict).
-        fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = None
-
-        processor = EpisodeProcessor(
-            config=config,
-            presenter=NullPresenter(),
-            expression_audio_fetcher=fetcher,
-            **mock_services,
-        )
-        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
-
-        assert result.cards_created == 1
-
-
 class TestDictionaryStalenessGate:
     """4.0 backstop: process_episode refuses to start when an enabled indexed
     dict slot is schema-stale, rather than silently emitting zero cards."""
@@ -5327,26 +4497,10 @@ class TestDictionaryStalenessGate:
             db_path=tmp_path / "old-dict" / "index.sqlite",
         )
 
-    def _make_processor(self, test_config, registry):
-        subtitle_parser = MagicMock()
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return EpisodeProcessor(
-            config=test_config,
-            subtitle_parser=subtitle_parser,
-            word_filter=MagicMock(),
-            media_extractor=media_extractor,
-            definition_service=definition_service,
-            anki_service=anki_service,
-            presenter=NullPresenter(),
-            dictionary_registry=registry,
-        )
-
     def test_stale_enabled_slot_raises_actionable_error(self, test_config, tmp_path):
         registry = MagicMock()
         registry.stale_enabled.return_value = [self._make_meta(tmp_path)]
-        proc = self._make_processor(test_config, registry)
+        proc = build_processor(config=test_config, dictionary_registry=registry)
 
         with pytest.raises(SetupError, match="Reimport All"):
             proc.process_episode(tmp_path / "ep01.mkv", tmp_path / "ep01.ass")
@@ -5357,7 +4511,7 @@ class TestDictionaryStalenessGate:
     def test_no_stale_slot_proceeds(self, test_config, tmp_path):
         registry = MagicMock()
         registry.stale_enabled.return_value = []
-        proc = self._make_processor(test_config, registry)
+        proc = build_processor(config=test_config, dictionary_registry=registry)
 
         proc.subtitle_parser.parse_subtitle_file.return_value = []
         # No words → early return, but the point is it did NOT raise.
@@ -5366,7 +4520,7 @@ class TestDictionaryStalenessGate:
         proc.subtitle_parser.parse_subtitle_file.assert_called_once()
 
     def test_no_registry_is_noop(self, test_config, tmp_path):
-        proc = self._make_processor(test_config, None)
+        proc = build_processor(config=test_config, dictionary_registry=None)
         proc.subtitle_parser.parse_subtitle_file.return_value = []
         proc.process_episode(tmp_path / "ep01.mkv", tmp_path / "ep01.ass")
         proc.subtitle_parser.parse_subtitle_file.assert_called_once()
