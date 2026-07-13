@@ -20,6 +20,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from anki_miner.utils.bundled_binary import bundled_name, frozen_state
+
 __all__ = ["resolve_ffmpeg", "resolve_ffprobe"]
 
 # Cache keyed by (name, override-as-str, frozen-state, meipass) so that a changed
@@ -32,21 +34,9 @@ def _clear_cache() -> None:
     _CACHE.clear()
 
 
-def _frozen_state() -> tuple[bool, str | None]:
-    """Return (is_frozen, _MEIPASS) using the same idiom as get_resource_dir()."""
-    frozen = bool(getattr(sys, "frozen", False)) and hasattr(sys, "_MEIPASS")
-    meipass = getattr(sys, "_MEIPASS", None) if frozen else None
-    return frozen, meipass
-
-
-def _bundled_name(base: str) -> str:
-    """Return the platform-specific executable name (``.exe`` on Windows)."""
-    return f"{base}.exe" if sys.platform == "win32" else base
-
-
 def _resolve(base: str, override: Any) -> str:
     override_key = str(override) if override else None
-    frozen, meipass = _frozen_state()
+    frozen, meipass = frozen_state()
     cache_key = (base, override_key, frozen, meipass)
     cached = _CACHE.get(cache_key)
     if cached is not None:
@@ -69,7 +59,7 @@ def _compute(base: str, override: Any, frozen: bool, meipass: str | None) -> str
     #    instead of being returned and failing later at subprocess time. X_OK is
     #    meaningless on Windows, so skip the check there.
     if frozen and meipass is not None:
-        bundled = Path(meipass) / "bin" / _bundled_name(base)
+        bundled = Path(meipass) / "bin" / bundled_name(base)
         if bundled.is_file() and (sys.platform == "win32" or os.access(bundled, os.X_OK)):
             return str(bundled)
 

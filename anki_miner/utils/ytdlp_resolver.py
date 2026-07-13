@@ -11,7 +11,8 @@ Resolution order (first hit wins):
 4. **PATH fallback** — the bare literal ``"yt-dlp"``.
 
 Mirrors :mod:`anki_miner.utils.ffmpeg_resolver`: module-level ``_CACHE`` dict,
-``_clear_cache()`` test/updater hook, ``_frozen_state()``, ``_bundled_name()``.
+``_clear_cache()`` test/updater hook, and the shared ``frozen_state()`` /
+``bundled_name()`` bundle helpers.
 
 Returning the bare literal (rather than an absolute ``shutil.which`` path) in the
 no-override / non-frozen / no-download case is intentional: it preserves the
@@ -29,6 +30,7 @@ from pathlib import Path
 from typing import Any
 
 from anki_miner.config import paths
+from anki_miner.utils.bundled_binary import bundled_name, frozen_state
 
 __all__ = ["resolve_ytdlp", "ytdlp_binary_name", "ytdlp_download_dir"]
 
@@ -58,18 +60,6 @@ def ytdlp_download_dir() -> Path:
     return paths.ANKI_MINER_HOME / "bin"
 
 
-def _frozen_state() -> tuple[bool, str | None]:
-    """Return (is_frozen, _MEIPASS) using the same idiom as get_resource_dir()."""
-    frozen = bool(getattr(sys, "frozen", False)) and hasattr(sys, "_MEIPASS")
-    meipass = getattr(sys, "_MEIPASS", None) if frozen else None
-    return frozen, meipass
-
-
-def _bundled_name(base: str) -> str:
-    """Return the platform-specific executable name (``.exe`` on Windows)."""
-    return f"{base}.exe" if sys.platform == "win32" else base
-
-
 def _is_runnable(path: Path) -> bool:
     """True if *path* is a file and (Windows, or has the POSIX exec bit).
 
@@ -82,7 +72,7 @@ def resolve_ytdlp(config) -> str:
     """Resolve the yt-dlp executable path/literal for the given config."""
     override = getattr(config, "ytdlp_location", None)
     override_key = str(override) if override else None
-    frozen, meipass = _frozen_state()
+    frozen, meipass = frozen_state()
     download_dir = ytdlp_download_dir()
     cache_key = (override_key, frozen, meipass, str(download_dir))
     cached = _CACHE.get(cache_key)
@@ -110,7 +100,7 @@ def _compute(override: Any, frozen: bool, meipass: str | None, download_dir: Pat
 
     # 3. Bundled binary inside the frozen distributable (forward-compat tier).
     if frozen and meipass is not None:
-        bundled = Path(meipass) / "bin" / _bundled_name("yt-dlp")
+        bundled = Path(meipass) / "bin" / bundled_name("yt-dlp")
         if _is_runnable(bundled):
             return str(bundled)
 

@@ -29,8 +29,6 @@ cuDNN 9). Bumping a version means updating its url AND sha256 together
 
 from __future__ import annotations
 
-import contextlib
-import hashlib
 import logging
 import os
 import shutil
@@ -42,6 +40,7 @@ from pathlib import Path
 
 from anki_miner.exceptions import SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
+from anki_miner.services._install_common import cleanup_part, sweep_stale, verify_sha256
 from anki_miner.services.resource_downloader import download_to_temp
 
 logger = logging.getLogger(__name__)
@@ -51,8 +50,6 @@ __all__ = [
     "is_installed",
     "install_cuda_pack",
 ]
-
-_CHUNK_SIZE = 1024 * 1024  # 1 MiB chunks for streamed sha256.
 
 #: The cuDNN wheel is ~688 MB, over resource_downloader's 600 MB default cap, so
 #: every component download lifts the cap to this value.
@@ -203,7 +200,7 @@ def install_cuda_pack(
     # download and os.replace leaves a multi-hundred-MB .part wheel and/or a
     # .staging-* dir behind). is_installed only inspects cudnn/ and cublas/, so
     # these can't false-positive a partial install — they just accumulate.
-    _sweep_stale(cuda_libs_root)
+    sweep_stale(cuda_libs_root)
     cancelled_check = cancel_event.is_set if cancel_event is not None else None
 
     for spec in specs:
@@ -224,27 +221,16 @@ def install_cuda_pack(
             if cancel_event is not None and cancel_event.is_set():
                 raise SetupError("CUDA library installation cancelled")
 
-            _verify_sha256(part_path, spec.sha256)
+            verify_sha256(part_path, spec.sha256, "CUDA library download")
 
             if cancel_event is not None and cancel_event.is_set():
                 raise SetupError("CUDA library installation cancelled")
 
             _extract_component(part_path, spec, cuda_libs_root)
         finally:
-            _cleanup(part_path)
+            cleanup_part(part_path)
 
     return cuda_libs_root
-
-
-def _verify_sha256(path: Path, expected: str) -> None:
-    """Stream *path* in chunks and raise ``SetupError`` on a sha256 mismatch."""
-    digest = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(_CHUNK_SIZE), b""):
-            digest.update(chunk)
-    actual = digest.hexdigest()
-    if actual != expected:
-        raise SetupError(f"CUDA library download checksum mismatch: expected {expected}, got {actual}")
 
 
 def _extract_component(part_path: Path, spec: _CudaLibSpec, cuda_libs_root: Path) -> None:
@@ -292,24 +278,3 @@ def _select_members(names: list[str], spec: _CudaLibSpec) -> list[str]:
         if any(sfx in basename for sfx in spec.member_suffixes):
             selected.append(name)
     return selected
-
-
-def _sweep_stale(cuda_libs_root: Path) -> None:
-    """Remove leftover ``.part`` wheels and ``.staging-*`` dirs from a crashed install.
-
-    Best-effort: a missing dir or an unremovable entry is ignored. Never touches
-    the promoted ``cudnn/`` / ``cublas/`` component dirs.
-    """
-    with contextlib.suppress(OSError):
-        for part in cuda_libs_root.glob("*.part"):
-            with contextlib.suppress(OSError):
-                part.unlink()
-        for staging in cuda_libs_root.glob(".staging-*"):
-            shutil.rmtree(staging, ignore_errors=True)
-
-
-def _cleanup(path: Path | None) -> None:
-    """Remove *path* if it exists, ignoring errors."""
-    if path is not None:
-        with contextlib.suppress(OSError):
-            path.unlink()
