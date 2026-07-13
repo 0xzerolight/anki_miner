@@ -13,11 +13,15 @@ not leak its workspace into the retry. On cancel, the fetcher kills the
 yt-dlp process tree (including the ffmpeg child) via psutil BEFORE the
 rmtree fires, so cleanup never races a live writer.
 
+Signal shapes, ctor validation, the skip channel, ``curation_processor``, and
+the stale-gate + factory-build ``run()`` preamble all live on
+:class:`SequentialQueueWorker`; this subclass supplies only the per-item body.
+
 Signal shapes (exact):
 
 * ``item_started(int)`` — idx fired before the first attempt for the item.
-  Items removed mid-run via :meth:`YouTubeQueueWorker.skip_item` are
-  silently skipped: no ``item_started`` / ``item_finished`` for them.
+  Items removed mid-run via :meth:`skip_item` are silently skipped: no
+  ``item_started`` / ``item_finished`` for them.
 * ``item_progress(int, str, int)`` — idx, label, pct. ``pct`` is an
   ``int(round(0..100))`` percentage covering the WHOLE item as one
   continuous sweep — download fills 0-30, mining fills 30-100 — or ``-1``
@@ -30,13 +34,14 @@ Signal shapes (exact):
 
 Cancel semantics deliberately mirror the spec:
 
-* Before each item: outer ``if self.is_cancelled: break`` exits the for
-  loop; ``queue_finished`` still emits.
+* Before each item: outer ``if self.is_cancelled: break`` (in the base loop)
+  exits the for loop; ``queue_finished`` still emits.
 * Inside the ``YouTubeFetchError`` except: re-check ``is_cancelled`` and
-  ``return`` immediately so no further signals fire. The fetcher's psutil
-  subprocess-kill path raises ``YouTubeFetchError("Cancelled")`` when the
-  cancel event fires mid-download — retrying that would just kill the
-  freshly-spawned subprocess again.
+  return ``True`` from ``_run_item`` so the base ``run()`` returns immediately
+  and no further signals fire. The fetcher's psutil subprocess-kill path
+  raises ``YouTubeFetchError("Cancelled")`` when the cancel event fires
+  mid-download — retrying that would just kill the freshly-spawned subprocess
+  again.
 * Mid-mine: ``cancel_event`` is forwarded to ``process_youtube_url``, which
   bridges it into ``process_episode``'s phase checkpoints for that run. A
   Stop landing after the fetch therefore returns a cancelled
@@ -49,18 +54,15 @@ from __future__ import annotations
 import logging
 import shutil
 import tempfile
-import threading
 from collections.abc import Callable
 from pathlib import Path
-
-from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.youtube import YouTubeFetchError
 from anki_miner.gui.workers._queue_progress import (
     QueueMiningProgressAdapter as _QueueMiningProgressAdapter,
 )
-from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
+from anki_miner.gui.workers._queue_worker_base import SequentialQueueWorker
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.models.youtube_queue import YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
@@ -69,7 +71,7 @@ from anki_miner.services.dictionary.registry import stale_dict_reimport_error
 logger = logging.getLogger(__name__)
 
 
-class YouTubeQueueWorker(ProcessorOwningWorker):
+class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
     """Worker thread that processes a queue of YouTube URLs sequentially.
 
     Each item runs fetch + mine through ``EpisodeProcessor.process_youtube_url``.
@@ -78,17 +80,6 @@ class YouTubeQueueWorker(ProcessorOwningWorker):
     The queue continues on to the next item regardless of per-item outcome,
     except on mid-fetch cancellation, which returns from ``run()`` early.
     """
-
-    # Per-item index; emitted once before the first attempt for that item.
-    item_started = pyqtSignal(int)
-    # (idx, label, pct) where pct == -1 signals indeterminate progress.
-    item_progress = pyqtSignal(int, str, int)
-    # (idx, result|None, error|None, attempts). Fires exactly once per item
-    # that runs to completion (success or terminal failure).
-    item_finished = pyqtSignal(int, object, object, int)
-    # Fires once after the last item, unless mid-fetch cancellation
-    # returned from run() early.
-    queue_finished = pyqtSignal()
 
     def __init__(
         self,
@@ -100,141 +91,73 @@ class YouTubeQueueWorker(ProcessorOwningWorker):
         *,
         processor_factory: Callable[[], EpisodeProcessor] | None = None,
     ) -> None:
-        """Initialize the queue worker.
+        """Initialize the queue worker (see :class:`SequentialQueueWorker`).
 
-        Args:
-            processor: Episode processor instance, or None when
-                ``processor_factory`` is provided (built at run() start).
-            config: Frozen app config; ``media_temp_folder`` is the workspace root.
-            items: Queue items to process, in order. Each must already have
-                ``video_id`` and ``resolved_sub_mode`` populated (probe step
-                handles that before items reach this worker).
-            curation_callback: Forwarded to ``process_youtube_url``. Pass
-                ``None`` to disable entirely (the tab gates on its review
-                checkbox).
-            parent: Optional parent QObject.
-            processor_factory: Zero-arg callable that returns an EpisodeProcessor.
-                Mutually exclusive with a non-None ``processor``.  When supplied,
-                the processor is constructed on the worker thread inside run(),
-                keeping the GUI thread free of the registry/sqlite/CSV work.
+        ``config.media_temp_folder`` is the workspace root. Each item must
+        already have ``video_id`` and ``resolved_sub_mode`` populated (the probe
+        step handles that before items reach this worker).
         """
-        if processor is not None and processor_factory is not None:
-            raise ValueError("Provide either processor or processor_factory, not both")
-        if processor is None and processor_factory is None:
-            raise ValueError("Either processor or processor_factory must be provided")
-        super().__init__(parent)
-        self._processor = processor
-        self._processor_factory = processor_factory
-        self._config = config
-        self._items = items
-        self._curation_callback = curation_callback
-        # Published for the GUI curation bridge. Attribute names mirror
-        # BatchQueueWorkerThread's _curation_* so the shared curation bridge can
+        super().__init__(
+            processor,
+            config,
+            items,
+            curation_callback,
+            parent,
+            processor_factory=processor_factory,
+        )
+        # Published for the GUI curation bridge. Attribute names mirror the
+        # other queue workers' _curation_* so the shared curation bridge can
         # read the same attribute names regardless of which worker is driving it.
         self._curation_video: Path | None = None
         self._curation_subtitle: Path | None = None
         self._curation_offset: float = config.subtitle_offset
-        # Skip channel: items the user removed mid-run (Clear / row [x]).
-        # The run loop iterates the frozen constructor snapshot, so a GUI-side
-        # removal alone would still mine the item — cards for rows that no
-        # longer exist. Identity-based membership (YouTubeQueueItem is
-        # eq=False); ``self._items`` keeps every snapshot item alive, so
-        # identities are stable for the whole run.
-        self._skip_lock = threading.Lock()
-        self._skipped: set[YouTubeQueueItem] = set()
 
-    @property
-    def curation_processor(self) -> EpisodeProcessor | None:
-        """The processor shared by every queue item.
+    def _stale_reimport_message(self) -> str | None:
+        return stale_dict_reimport_error(self._config)
 
-        None before run() has built it via a supplied ``processor_factory``;
-        the GUI caches it back after the run so subsequent runs reuse it.
+    def _run_item(self, idx: int, item: YouTubeQueueItem) -> bool:
+        """Fetch + mine one item with retry-once per fetch error.
+
+        Returns ``True`` on mid-fetch cancellation to make the base ``run()``
+        return early (suppressing ``queue_finished``); ``False`` otherwise.
         """
-        return self._processor
-
-    def skip_item(self, item: YouTubeQueueItem) -> None:
-        """Mark *item* to be skipped if its turn has not started yet.
-
-        Thread-safe; called from the GUI thread when the user removes a queued
-        row during an active run. Best-effort: an item the loop has already
-        started runs to completion (its idx signals resolve against the tab's
-        frozen ``_run_items`` snapshot, which tolerates removed rows). Skipped
-        items emit no signals at all.
-        """
-        with self._skip_lock:
-            self._skipped.add(item)
-
-    def _is_skipped(self, item: YouTubeQueueItem) -> bool:
-        """Thread-safe membership check for the skip channel."""
-        with self._skip_lock:
-            return item in self._skipped
-
-    def run(self) -> None:
-        """Process the queue end-to-end with retry-once per fetch error."""
-        # Schema-staleness pre-loop gate (4.0): abort the whole queue once with
-        # a single actionable error when an enabled indexed dict slot needs
-        # reimport — before any fetch/mine — instead of one silent zero-card
-        # failure row per queued video.
-        stale_msg = stale_dict_reimport_error(self._config)
-        if stale_msg is not None:
-            self.error.emit(stale_msg)
-            self.queue_finished.emit()
-            return
-        # Build the processor on the worker thread when a factory was supplied,
-        # keeping the GUI thread free of the slow registry/sqlite/CSV work during
-        # EpisodeProcessor construction. A factory failure ends the whole run:
-        # emit error, then queue_finished so the tab recovers like any exit path.
-        if self._processor is None:
-            assert self._processor_factory is not None  # validated in __init__
+        self.item_started.emit(idx)
+        attempts = 0
+        last_error: str | None = None
+        result: object = None
+        for attempt in (0, 1):
+            attempts = attempt + 1
+            # Allocate inside the try: an mkdir OSError (ENOSPC, perms)
+            # must be a per-item error caught below, not propagate out of
+            # run() and strand the whole queue with the item stuck in
+            # PROCESSING (no item_finished / queue_finished). The finally
+            # skips cleanup when allocation never produced a directory.
+            workspace: Path | None = None
             try:
-                self._processor = self._processor_factory()
-            except Exception as exc:  # noqa: BLE001 - surface every failure to GUI
-                logger.exception("YouTubeQueueWorker processor build failed")
-                self.error.emit(f"{type(exc).__name__}: {exc}")
-                self.queue_finished.emit()
-                return
-        for idx, item in enumerate(self._items):
-            if self.is_cancelled:
+                workspace = self._allocate_workspace()
+                result = self._mine_one(idx, item, workspace)
+                last_error = None
                 break
-            if self._is_skipped(item):
-                continue  # removed from the GUI mid-run; no signals for it
-            self.item_started.emit(idx)
-            attempts = 0
-            last_error: str | None = None
-            result: object = None
-            for attempt in (0, 1):
-                attempts = attempt + 1
-                # Allocate inside the try: an mkdir OSError (ENOSPC, perms)
-                # must be a per-item error caught below, not propagate out of
-                # run() and strand the whole queue with the item stuck in
-                # PROCESSING (no item_finished / queue_finished). The finally
-                # skips cleanup when allocation never produced a directory.
-                workspace: Path | None = None
-                try:
-                    workspace = self._allocate_workspace()
-                    result = self._mine_one(idx, item, workspace)
-                    last_error = None
-                    break
-                except YouTubeFetchError as exc:
-                    if self.is_cancelled:
-                        # Mid-fetch cancellation: don't retry, don't emit
-                        # item_finished, and skip queue_finished entirely.
-                        return
-                    last_error = f"{type(exc).__name__}: {exc}"
-                    if attempt == 0:
-                        continue  # retry once
-                except Exception as exc:  # noqa: BLE001 - surface any other failure to GUI
-                    logger.exception("YouTubeQueueWorker item failed")
-                    last_error = f"{type(exc).__name__}: {exc}"
-                    break
-                finally:
-                    if workspace is not None:
-                        shutil.rmtree(workspace, ignore_errors=True)
-            if last_error is None:
-                self.item_finished.emit(idx, result, None, attempts)
-            else:
-                self.item_finished.emit(idx, None, last_error, attempts)
-        self.queue_finished.emit()
+            except YouTubeFetchError as exc:
+                if self.is_cancelled:
+                    # Mid-fetch cancellation: don't retry, don't emit
+                    # item_finished, and skip queue_finished entirely.
+                    return True
+                last_error = f"{type(exc).__name__}: {exc}"
+                if attempt == 0:
+                    continue  # retry once
+            except Exception as exc:  # noqa: BLE001 - surface any other failure to GUI
+                logger.exception("YouTubeQueueWorker item failed")
+                last_error = f"{type(exc).__name__}: {exc}"
+                break
+            finally:
+                if workspace is not None:
+                    shutil.rmtree(workspace, ignore_errors=True)
+        if last_error is None:
+            self.item_finished.emit(idx, result, None, attempts)
+        else:
+            self.item_finished.emit(idx, None, last_error, attempts)
+        return False
 
     def _allocate_workspace(self) -> Path:
         """Create and return a fresh per-attempt workspace directory.
@@ -257,7 +180,7 @@ class YouTubeQueueWorker(ProcessorOwningWorker):
         """Run a single fetch + mine attempt against ``workspace``.
 
         Returns the orchestrator ``ProcessingResult`` on success; any
-        exception propagates to the retry/error handling in ``run``.
+        exception propagates to the retry/error handling in ``_run_item``.
 
         Items that reach this method are READY (probe already populated
         ``video_id``, ``resolved_sub_mode``, and ``video_info``). The guard
