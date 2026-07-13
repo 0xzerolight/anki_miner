@@ -73,6 +73,27 @@ def test_progress_adapter_emits_status(qapp, tmp_path, monkeypatch):
     assert any("%" in s for s in statuses)
 
 
+def test_progress_resolves_under_onnx_context(qapp, tmp_path, monkeypatch):
+    """The ``%1 (%2%)`` template resolves under the Onnx context (not CudaPack)."""
+    import anki_miner.gui.workers.install_worker as iw
+
+    seen_ctx: list[str] = []
+    monkeypatch.setattr(iw, "_progress_template", lambda ctx: seen_ctx.append(ctx) or "%1 (%2%)")
+
+    def _install(onnx_pack_root, progress=None, cancel_event=None):
+        if progress is not None:
+            progress(50, 100, "onnxruntime: downloading")
+        return onnx_pack_root
+
+    monkeypatch.setattr(_INSTALL, _install)
+    worker = _worker(tmp_path)
+
+    _run_worker_sync(worker)
+
+    assert seen_ctx == ["OnnxPackDownloadWorker"]
+    assert worker._progress_ctx == "OnnxPackDownloadWorker"
+
+
 def test_failure_emits_result_false(qapp, tmp_path, monkeypatch):
     monkeypatch.setattr(
         _INSTALL,

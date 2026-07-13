@@ -21,8 +21,10 @@ i18n: each task's translated strings are emitted via
 ``QCoreApplication.translate("<OriginalWorkerContext>", …)`` so they resolve
 against the existing catalog entries (which still live under the pre-collapse
 worker-class contexts) with zero catalog churn. The shared ``%1 (%2%)`` progress
-template is byte-identical across the three original progress contexts, so one
-canonical context (``CudaPackDownloadWorker``) is used for it.
+template is NOT byte-identical across the three original progress contexts
+(French carries a non-breaking space and Simplified Chinese fullwidth
+parentheses in the Vulkan variant only), so each progress task resolves it
+under its own origin context via ``_progress_ctx`` — see :func:`_progress_template`.
 """
 
 from __future__ import annotations
@@ -66,6 +68,12 @@ class InstallWorker(CancellableWorker):
         """Initialise the install worker."""
         super().__init__(parent)
         self._task = task
+        #: Qt context the shared ``%1 (%2%)`` progress template resolves under.
+        #: Each progress-reporting task builder overwrites this with its own
+        #: origin worker context (the fr/zh_cn variants diverge — non-breaking
+        #: space / fullwidth parens — between contexts). alass/ASR never emit
+        #: progress, so the default here is only a harmless fallback.
+        self._progress_ctx = "CudaPackDownloadWorker"
 
     @property
     def cancel_event(self) -> threading.Event:
@@ -81,7 +89,7 @@ class InstallWorker(CancellableWorker):
         """
         if total > 0:
             pct = min(100, int(downloaded * 100 / total))
-            self.status.emit(tr_format(_progress_template(), message, str(pct)))
+            self.status.emit(tr_format(_progress_template(self._progress_ctx), message, str(pct)))
         else:
             self.status.emit(message)
 
@@ -109,13 +117,21 @@ class InstallWorker(CancellableWorker):
             self.result_ready.emit(True, message)
 
 
-def _progress_template() -> str:
-    """Translated ``%1 (%2%)`` progress template.
+def _progress_template(context: str) -> str:
+    """Translated ``%1 (%2%)`` progress template, resolved under *context*.
 
-    Kept under the ``CudaPackDownloadWorker`` context: the three pre-collapse
-    progress workers carried byte-identical translations for this string in
-    every catalog, so any one of them resolves correctly.
+    The three pre-collapse progress workers each carry their OWN catalog entry
+    for this string, and they are NOT byte-identical: French uses a non-breaking
+    space (``%1 (%2\xa0%)``) and Simplified Chinese fullwidth parentheses
+    (``%1（%2%）``) for the Vulkan variant only. Resolving under the emitting
+    tool's origin context (rather than one canonical context) keeps each locale
+    rendering its intended variant. The literal-context ``translate`` calls also
+    keep all three catalog entries statically extractable by pylupdate6.
     """
+    if context == "OnnxPackDownloadWorker":
+        return QCoreApplication.translate("OnnxPackDownloadWorker", "%1 (%2%)")
+    if context == "VulkanModelDownloadWorker":
+        return QCoreApplication.translate("VulkanModelDownloadWorker", "%1 (%2%)")
     return QCoreApplication.translate("CudaPackDownloadWorker", "%1 (%2%)")
 
 
@@ -155,6 +171,7 @@ def cuda_pack_task(cuda_libs_root: Path) -> InstallTask:
     def _task(worker: InstallWorker) -> str:
         from anki_miner.services.asr.cuda_pack_installer import install_cuda_pack
 
+        worker._progress_ctx = "CudaPackDownloadWorker"
         worker.status.emit(QCoreApplication.translate("CudaPackDownloadWorker", "Downloading GPU libraries…"))
         install_cuda_pack(cuda_libs_root, progress=worker._on_progress, cancel_event=worker.cancel_event)
         return QCoreApplication.translate("CudaPackDownloadWorker", "GPU libraries installed successfully.")
@@ -168,6 +185,7 @@ def onnx_pack_task(onnx_pack_root: Path) -> InstallTask:
     def _task(worker: InstallWorker) -> str:
         from anki_miner.services.asr.onnx_pack_installer import install_onnx_pack
 
+        worker._progress_ctx = "OnnxPackDownloadWorker"
         worker.status.emit(QCoreApplication.translate("OnnxPackDownloadWorker", "Downloading silence-removal library…"))
         install_onnx_pack(onnx_pack_root, progress=worker._on_progress, cancel_event=worker.cancel_event)
         return QCoreApplication.translate("OnnxPackDownloadWorker", "Silence-removal library installed successfully.")
@@ -186,6 +204,7 @@ def vulkan_model_task(asr_model: str, asr_models_root: Path) -> InstallTask:
     def _task(worker: InstallWorker) -> str:
         from anki_miner.services.asr.ggml_model_installer import install_ggml_model, install_vad_model
 
+        worker._progress_ctx = "VulkanModelDownloadWorker"
         worker.status.emit(QCoreApplication.translate("VulkanModelDownloadWorker", "Downloading Vulkan model…"))
         install_ggml_model(asr_model, asr_models_root, progress=worker._on_progress, cancel_event=worker.cancel_event)
         if not worker.check_cancelled():
