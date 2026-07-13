@@ -20,16 +20,13 @@ from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.reading_queue_worker import ReadingQueueWorker
 from anki_miner.models.reading import ReadingSourceRef
 from anki_miner.models.reading_queue import ReadingItemStatus, ReadingQueueItem
-
-
-class _SignalCapture:
-    """Collect emissions from a Qt signal for later inspection."""
-
-    def __init__(self) -> None:
-        self.calls: list[tuple] = []
-
-    def __call__(self, *args) -> None:
-        self.calls.append(args)
+from tests.unit._queue_worker_harness import (
+    connect_all as _connect_all,
+)
+from tests.unit._queue_worker_harness import (
+    make_mock_processor,
+    make_queue_worker_factory,
+)
 
 
 def _make_item(stem: str = "vol01", kind: str = "epub") -> ReadingQueueItem:
@@ -52,9 +49,7 @@ def _result(cards: int) -> SimpleNamespace:
 @pytest.fixture
 def mock_processor():
     """MagicMock stand-in for EpisodeProcessor."""
-    processor = MagicMock()
-    processor.process_reading = MagicMock(return_value=_result(3))
-    return processor
+    return make_mock_processor("process_reading", _result(3))
 
 
 @pytest.fixture
@@ -71,37 +66,7 @@ def fake_load(monkeypatch):
 @pytest.fixture
 def make_worker(qapp, mock_processor, test_config, fake_load):
     """Factory producing a ReadingQueueWorker with sensible defaults."""
-
-    def _make(
-        items: list[ReadingQueueItem] | None = None,
-        curation_callback=None,
-        config=None,
-    ) -> ReadingQueueWorker:
-        if items is None:
-            items = [_make_item()]
-        return ReadingQueueWorker(
-            processor=mock_processor,
-            config=config if config is not None else test_config,
-            items=items,
-            curation_callback=curation_callback,
-        )
-
-    return _make
-
-
-def _connect_all(worker: ReadingQueueWorker):
-    """Wire capture objects to all queue worker signals; return them as a dict."""
-    captures = {
-        "started": _SignalCapture(),
-        "progress": _SignalCapture(),
-        "finished": _SignalCapture(),
-        "queue_finished": _SignalCapture(),
-    }
-    worker.item_started.connect(captures["started"])
-    worker.item_progress.connect(captures["progress"])
-    worker.item_finished.connect(captures["finished"])
-    worker.queue_finished.connect(captures["queue_finished"])
-    return captures
+    return make_queue_worker_factory(ReadingQueueWorker, mock_processor, test_config, _make_item)
 
 
 # ---------------------------------------------------------------------------

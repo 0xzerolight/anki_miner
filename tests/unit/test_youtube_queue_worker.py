@@ -22,6 +22,13 @@ from anki_miner.gui.workers.youtube_queue_worker import (
 )
 from anki_miner.models.youtube import VideoInfo
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
+from tests.unit._queue_worker_harness import (
+    connect_all as _connect_all,
+)
+from tests.unit._queue_worker_harness import (
+    make_mock_processor,
+    make_queue_worker_factory,
+)
 
 
 def _make_video_info(video_id: str = "abc", title: str = "Some Title") -> VideoInfo:
@@ -37,16 +44,6 @@ def _make_video_info(video_id: str = "abc", title: str = "Some Title") -> VideoI
     )
 
 
-class _SignalCapture:
-    """Collect emissions from a Qt signal for later inspection."""
-
-    def __init__(self) -> None:
-        self.calls: list[tuple] = []
-
-    def __call__(self, *args) -> None:
-        self.calls.append(args)
-
-
 @pytest.fixture
 def youtube_config(test_config, tmp_path):
     """Config pointing media_temp_folder into a test-owned tmp_path."""
@@ -56,9 +53,7 @@ def youtube_config(test_config, tmp_path):
 @pytest.fixture
 def mock_processor():
     """MagicMock stand-in for EpisodeProcessor."""
-    processor = MagicMock()
-    processor.process_youtube_url = MagicMock(return_value=MagicMock(name="ProcessingResult"))
-    return processor
+    return make_mock_processor("process_youtube_url", MagicMock(name="ProcessingResult"))
 
 
 def _make_item(
@@ -80,36 +75,7 @@ def _make_item(
 @pytest.fixture
 def make_worker(qapp, mock_processor, youtube_config):
     """Factory producing a YouTubeQueueWorker with sensible defaults."""
-
-    def _make(
-        items: list[YouTubeQueueItem] | None = None,
-        curation_callback=None,
-    ) -> YouTubeQueueWorker:
-        if items is None:
-            items = [_make_item()]
-        return YouTubeQueueWorker(
-            processor=mock_processor,
-            config=youtube_config,
-            items=items,
-            curation_callback=curation_callback,
-        )
-
-    return _make
-
-
-def _connect_all(worker: YouTubeQueueWorker):
-    """Wire capture objects to all queue worker signals; return them as a dict."""
-    captures = {
-        "started": _SignalCapture(),
-        "progress": _SignalCapture(),
-        "finished": _SignalCapture(),
-        "queue_finished": _SignalCapture(),
-    }
-    worker.item_started.connect(captures["started"])
-    worker.item_progress.connect(captures["progress"])
-    worker.item_finished.connect(captures["finished"])
-    worker.queue_finished.connect(captures["queue_finished"])
-    return captures
+    return make_queue_worker_factory(YouTubeQueueWorker, mock_processor, youtube_config, _make_item)
 
 
 # ---------------------------------------------------------------------------
