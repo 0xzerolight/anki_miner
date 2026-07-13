@@ -24,6 +24,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from anki_miner.utils.bundled_binary import bundled_name, frozen_state
+
 __all__ = ["alass_available", "resolve_alass"]
 
 # Cache keyed by (name, override-as-str, bin-root-as-str, frozen-state, meipass)
@@ -37,22 +39,10 @@ def _clear_cache() -> None:
     _CACHE.clear()
 
 
-def _frozen_state() -> tuple[bool, str | None]:
-    """Return (is_frozen, _MEIPASS) using the same idiom as get_resource_dir()."""
-    frozen = bool(getattr(sys, "frozen", False)) and hasattr(sys, "_MEIPASS")
-    meipass = getattr(sys, "_MEIPASS", None) if frozen else None
-    return frozen, meipass
-
-
-def _bundled_name(base: str) -> str:
-    """Return the platform-specific executable name (``.exe`` on Windows)."""
-    return f"{base}.exe" if sys.platform == "win32" else base
-
-
 def _resolve(base: str, override: Any, bin_root: Any) -> str:
     override_key = str(override) if override else None
     bin_root_key = str(bin_root) if bin_root else None
-    frozen, meipass = _frozen_state()
+    frozen, meipass = frozen_state()
     cache_key = (base, override_key, bin_root_key, frozen, meipass)
     cached = _CACHE.get(cache_key)
     if cached is not None:
@@ -84,13 +74,13 @@ def _compute(base: str, override: Any, bin_root: Any, frozen: bool, meipass: str
     #    bit (POSIX) so a present-but-non-exec bundle falls through instead of
     #    being returned and failing later at subprocess time.
     if frozen and meipass is not None:
-        bundled = Path(meipass) / "bin" / _bundled_name(base)
+        bundled = Path(meipass) / "bin" / bundled_name(base)
         if _executable_file(bundled):
             return str(bundled)
 
     # 3. Managed in-app-downloaded binary under bin_root.
     if bin_root:
-        managed = Path(bin_root) / _bundled_name(base)
+        managed = Path(bin_root) / bundled_name(base)
         if _executable_file(managed):
             return str(managed)
 
