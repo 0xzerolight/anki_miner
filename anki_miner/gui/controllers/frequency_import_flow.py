@@ -13,34 +13,26 @@ sources are purely additive, so a freshly imported source is simply *appended*
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Callable
 from pathlib import Path
 
-from PyQt6.QtCore import QCoreApplication, Qt
-from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog, QWidget
+from PyQt6.QtCore import QCoreApplication
+from PyQt6.QtWidgets import QFileDialog, QMessageBox, QWidget
 
 from anki_miner.config import AnkiMinerConfig, FreqEntry
+from anki_miner.gui.controllers.import_flow_common import ModalImportFlowMixin
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
-from anki_miner.gui.utils.run_off_thread import join_worker
 from anki_miner.gui.widgets.panels.frequency_settings_panel import FrequencySettingsPanel
 from anki_miner.gui.workers.import_worker import ImportWorker
 from anki_miner.services.frequency import storage
 from anki_miner.utils.i18n import tr_format
 
-logger = logging.getLogger(__name__)
-
 # Suffixes the per-source dir may hold for the persisted original input,
 # checked in order when locating the file to re-import from.
 _SOURCE_COPY_SUFFIXES = (".zip", ".csv", ".tsv", ".txt")
 
-# Bounded join for the predecessor import worker before its reference is
-# dropped. A stuck worker must never freeze the GUI thread; on timeout we log
-# and proceed (mirrors ``MiningTabBase._teardown_previous_run``).
-_IMPORT_JOIN_TIMEOUT_MS = 5000
 
-
-class FrequencyImportFlow:
+class FrequencyImportFlow(ModalImportFlowMixin):
     """Drives frequency-source imports for the Settings → Frequency panel.
 
     Plain (non-Qt) class mirroring
@@ -116,36 +108,9 @@ class FrequencyImportFlow:
         if not chosen:
             return
 
-        dest_root = self._get_config().freqs_root
-        dlg = QProgressDialog(
-            QCoreApplication.translate("FrequencyImportFlow", "Importing frequency source…"),
-            QCoreApplication.translate("FrequencyImportFlow", "Cancel"),
-            0,
-            0,
-            self._parent,
-        )
-        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dlg.show()
+        worker = ImportWorker.for_source(Path(chosen), self._get_config().freqs_root)
 
-        worker = ImportWorker.for_source(Path(chosen), dest_root)
-        prev = self._active_import_worker
-        if not join_worker(prev, timeout_ms=_IMPORT_JOIN_TIMEOUT_MS):
-            logger.warning(
-                "Lingering frequency import worker did not stop within %d ms; replacing it anyway",
-                _IMPORT_JOIN_TIMEOUT_MS,
-            )
-        self._active_import_worker = worker
-        self._set_import_buttons_enabled(False)
-
-        def on_progress(cur: int, total: int, msg: str) -> None:
-            if total:
-                dlg.setMaximum(total)
-                dlg.setValue(cur)
-            dlg.setLabelText(msg)
-
-        def on_done(source_id: str, meta: dict) -> None:
-            dlg.close()
-            self._set_import_buttons_enabled(True)
+        def on_success(source_id: str, meta: dict) -> None:
             new_chain = self._chain_with_new_source_appended(source_id)
             self._panel.refresh_registry()
             self._panel.set_chain(new_chain)
@@ -180,27 +145,15 @@ class FrequencyImportFlow:
                 + self._categorical_note(meta),
             )
 
-        def on_failed(err: str) -> None:
-            dlg.close()
-            self._set_import_buttons_enabled(True)
-            # The worker fires this only for a genuine failure — a user cancel
-            # comes through on_cancelled instead, so no error-text sniffing here.
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("FrequencyImportFlow", "Import Failed"),
-                err,
-            )
-
-        def on_cancelled() -> None:
-            dlg.close()
-            self._set_import_buttons_enabled(True)
-
-        worker.progress.connect(on_progress)
-        worker.import_finished.connect(on_done)
-        worker.failed.connect(on_failed)
-        worker.cancelled.connect(on_cancelled)
-        dlg.canceled.connect(worker.cancel)
-        worker.start()
+        self._run_modal_import(
+            worker=worker,
+            progress_label=QCoreApplication.translate("FrequencyImportFlow", "Importing frequency source…"),
+            cancel_label=QCoreApplication.translate("FrequencyImportFlow", "Cancel"),
+            determinate=False,
+            join_noun="frequency import worker",
+            failure_title=QCoreApplication.translate("FrequencyImportFlow", "Import Failed"),
+            on_success=on_success,
+        )
 
     def reimport_source(self, source_id: str) -> None:
         """Re-import an existing source into the same id.
@@ -225,40 +178,14 @@ class FrequencyImportFlow:
                 return
             source_file = Path(chosen)
 
-        dlg = QProgressDialog(
-            QCoreApplication.translate("FrequencyImportFlow", "Re-importing frequency source…"),
-            QCoreApplication.translate("FrequencyImportFlow", "Cancel"),
-            0,
-            0,
-            self._parent,
-        )
-        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dlg.show()
-
         # Preserve the existing display name across reimport: without this the
         # CSV path re-derives the name from the generic "source.csv" persisted
         # copy's stem and collapses the label to "source". Read the authoritative
         # SQLite meta (not the sidecar); None for a zip / missing index is fine.
         existing_name = storage.read_meta(dest_root / source_id / "index.sqlite").get("source_name")
         worker = ImportWorker.for_source(source_file, dest_root, source_id=source_id, source_name=existing_name)
-        prev = self._active_import_worker
-        if not join_worker(prev, timeout_ms=_IMPORT_JOIN_TIMEOUT_MS):
-            logger.warning(
-                "Lingering frequency import worker did not stop within %d ms; replacing it anyway",
-                _IMPORT_JOIN_TIMEOUT_MS,
-            )
-        self._active_import_worker = worker
-        self._set_import_buttons_enabled(False)
 
-        def on_progress(cur: int, total: int, msg: str) -> None:
-            if total:
-                dlg.setMaximum(total)
-                dlg.setValue(cur)
-            dlg.setLabelText(msg)
-
-        def on_done(imported_id: str, meta: dict) -> None:
-            dlg.close()
-            self._set_import_buttons_enabled(True)
+        def on_success(imported_id: str, meta: dict) -> None:
             current_chain = self._panel.get_chain()
             self._panel.refresh_registry()
             self._panel.set_chain(current_chain)
@@ -272,26 +199,15 @@ class FrequencyImportFlow:
                 + self._categorical_note(meta),
             )
 
-        def on_failed(err: str) -> None:
-            dlg.close()
-            self._set_import_buttons_enabled(True)
-            # Genuine failure only — cancellation routes to on_cancelled.
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("FrequencyImportFlow", "Re-import Failed"),
-                err,
-            )
-
-        def on_cancelled() -> None:
-            dlg.close()
-            self._set_import_buttons_enabled(True)
-
-        worker.progress.connect(on_progress)
-        worker.import_finished.connect(on_done)
-        worker.failed.connect(on_failed)
-        worker.cancelled.connect(on_cancelled)
-        dlg.canceled.connect(worker.cancel)
-        worker.start()
+        self._run_modal_import(
+            worker=worker,
+            progress_label=QCoreApplication.translate("FrequencyImportFlow", "Re-importing frequency source…"),
+            cancel_label=QCoreApplication.translate("FrequencyImportFlow", "Cancel"),
+            determinate=False,
+            join_noun="frequency import worker",
+            failure_title=QCoreApplication.translate("FrequencyImportFlow", "Re-import Failed"),
+            on_success=on_success,
+        )
 
     @staticmethod
     def _find_source_copy(source_dir: Path) -> Path | None:
