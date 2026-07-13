@@ -475,6 +475,10 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         item = self._item_at(idx)
         if item is None:
             return
+        # Capture the title before the identity compare below: `item is
+        # self._running_item` re-widens `item` to include None (mypy 2.x),
+        # which would defeat the None-guard above at the .title accesses.
+        title = item.title
         # Nothing is in flight between this item finishing and the next starting,
         # so its row (and any not-yet-started rows) become freely removable.
         if item is self._running_item:
@@ -483,7 +487,7 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         if error is None:
             cards = int(getattr(result, "cards_created", 0) or 0)
             self._record_item_result(result)
-            self.log_widget.append_success(tr_format(self.tr("Mined %1: %2 cards."), item.title, cards))
+            self.log_widget.append_success(tr_format(self.tr("Mined %1: %2 cards."), title, cards))
             if self._presenter is not None:
                 # Presenter forwarding is best-effort — the worker has already
                 # recorded the result; a broken presenter slot shouldn't take
@@ -491,7 +495,7 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
                 with contextlib.suppress(Exception):
                     self._presenter.show_processing_result(result)  # type: ignore[arg-type]
         else:
-            self.log_widget.append_error(tr_format(self.tr("Failed %1: %2."), item.title, error))
+            self.log_widget.append_error(tr_format(self.tr("Failed %1: %2."), title, error))
 
     def _on_queue_finished(self) -> None:
         """Log the whole-run outcome for a multi-file run.
