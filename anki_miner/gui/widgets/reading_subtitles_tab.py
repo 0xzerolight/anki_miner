@@ -67,6 +67,12 @@ _SUBTITLE_FILTER_GLOB = "*.srt *.ass *.ssa *.vtt"
 _MANGA_EXTS = (".mokuro", ".cbz", ".zip")
 _NOVEL_EXTS = (".epub", ".txt")
 
+# Item-data role stamping each list row with its ephemeral ``ReadingQueueItem``
+# at Mine time, so a mid-run Remove/Clear can route the removed row to the
+# worker's identity-keyed skip channel (the worker iterates its own frozen
+# snapshot, not the live list).
+_ITEM_ROLE = Qt.ItemDataRole.UserRole
+
 
 class ReadingSubtitlesTab(_ReadingMiningTabBase):
     """Multi-file subtitle mining sub-tab (sequential ephemeral items).
@@ -103,6 +109,13 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
                 processor rebuilds so reading mining sessions land in analytics.
         """
         super().__init__(config, processor, presenter, parent, stats_service)
+
+        # The queue item the worker is mining right now, tracked by identity so
+        # a mid-run Remove/Clear leaves the in-flight row in place (skipping an
+        # already-started item is a no-op and yanking the watched row confuses).
+        # READ-ONLY on item state: this only holds a reference — the worker owns
+        # status/cards_created/error_message.
+        self._running_item: ReadingQueueItem | None = None
 
         self._setup_ui()
         self._setup_drag_drop()
@@ -259,14 +272,49 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
             self._add_paths([Path(f) for f in files])
 
     def _on_remove_selected_clicked(self) -> None:
-        """Remove the selected rows from the list."""
+        """Remove the selected rows from the list.
+
+        Mid-run this also routes each removed row to the worker's skip channel
+        so the queue worker drops it before mining (it iterates its own frozen
+        snapshot, not the live list) — mirroring the YouTube/audiobook tabs. The
+        in-flight row is left in place: its item has already started, so skipping
+        is a no-op and yanking the row the user is watching mine only confuses.
+        """
+        worker = self.worker_thread
+        running = self._running_item
         for item in self.file_list.selectedItems():
+            queue_item = item.data(_ITEM_ROLE)
+            if worker is not None and queue_item is not None:
+                if queue_item is running:
+                    continue  # leave the row currently being mined in place
+                worker.skip_item(queue_item)
             self.file_list.takeItem(self.file_list.row(item))
         self._recompute_buttons()
 
     def _on_clear_clicked(self) -> None:
-        """Empty the file list."""
-        self.file_list.clear()
+        """Empty the file list.
+
+        Idle, the whole list is dropped. Mid-run the in-flight row is preserved
+        and every other listed row is routed to the worker's skip channel
+        (mirroring the YouTube/audiobook tabs).
+        """
+        worker = self.worker_thread
+        if worker is None:
+            self.file_list.clear()
+            self._recompute_buttons()
+            return
+        running = self._running_item
+        # Reverse order so takeItem doesn't shift not-yet-visited row indices.
+        for row in reversed(range(self.file_list.count())):
+            list_item = self.file_list.item(row)
+            if list_item is None:
+                continue
+            queue_item = list_item.data(_ITEM_ROLE)
+            if queue_item is not None and queue_item is running:
+                continue  # keep the row being mined
+            if queue_item is not None:
+                worker.skip_item(queue_item)
+            self.file_list.takeItem(row)
         self._recompute_buttons()
 
     # ------------------------------------------------------------------
@@ -336,11 +384,18 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
             return
 
         items: list[ReadingQueueItem] = []
-        for path in paths:
+        for row, path in enumerate(paths):
             refs = self._detect_or_report(path)
             if refs is None:
                 return
-            items.extend(ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind) for ref in refs)
+            row_items = [ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind) for ref in refs]
+            items.extend(row_items)
+            # Stamp the list row with its queue item so a mid-run Remove/Clear
+            # can route it to worker.skip_item. Subtitle files always classify
+            # to exactly one ref (detector._subtitle_ref), so row↔item is 1:1.
+            list_item = self.file_list.item(row)
+            if list_item is not None and row_items:
+                list_item.setData(_ITEM_ROLE, row_items[0])
 
         if self._launch_run(items):
             self._begin_progress()
@@ -379,6 +434,8 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         item = self._item_at(idx)
         if item is None:
             return
+        # Mark the in-flight item so a mid-run Remove/Clear leaves its row alone.
+        self._running_item = item
         total = len(self._run_items)
         if total > 1:
             self._current_item_title = tr_format(self.tr("File %1/%2: %3"), idx + 1, total, item.title)
@@ -418,6 +475,10 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         item = self._item_at(idx)
         if item is None:
             return
+        # Nothing is in flight between this item finishing and the next starting,
+        # so its row (and any not-yet-started rows) become freely removable.
+        if item is self._running_item:
+            self._running_item = None
 
         if error is None:
             cards = int(getattr(result, "cards_created", 0) or 0)
@@ -446,6 +507,7 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         Restores the Cancel button, resets the progress bar, and recomputes
         button state. Runs on every run-exit path (success, cancel, exception).
         """
+        self._running_item = None
         self.cancel_button.setText(self.tr("Cancel"))
         self.cancel_button.setEnabled(True)
         self._apply_terminal_bar_state(self.overall_progress_widget)
@@ -459,12 +521,15 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         """Refresh button state from the worker handle and the file list.
 
         Pure derived state: a live run hides Mine and shows Cancel; idle shows
-        Mine and hides Cancel. List-management buttons lock during a run.
+        Mine and hides Cancel. Add locks during a run (a new row would have no
+        queue item), but Remove/Clear stay enabled whenever the list is
+        non-empty — mid-run they drop rows through the worker's skip channel.
         """
         run_active = self.worker_thread is not None
+        has_items = self.file_list.count() > 0
         self.mine_button.setVisible(not run_active)
         self.mine_button.setEnabled(not run_active)
         self.cancel_button.setVisible(run_active)
         self.add_files_button.setEnabled(not run_active)
-        self.remove_selected_button.setEnabled(not run_active)
-        self.clear_button.setEnabled(not run_active)
+        self.remove_selected_button.setEnabled(has_items)
+        self.clear_button.setEnabled(has_items)

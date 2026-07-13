@@ -18,18 +18,16 @@ import pytest
 
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.reading_queue_worker import ReadingQueueWorker
+from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading import ReadingSourceRef
-from anki_miner.models.reading_queue import ReadingItemStatus, ReadingQueueItem
-
-
-class _SignalCapture:
-    """Collect emissions from a Qt signal for later inspection."""
-
-    def __init__(self) -> None:
-        self.calls: list[tuple] = []
-
-    def __call__(self, *args) -> None:
-        self.calls.append(args)
+from anki_miner.models.reading_queue import ReadingQueueItem
+from tests.unit._queue_worker_harness import (
+    connect_all as _connect_all,
+)
+from tests.unit._queue_worker_harness import (
+    make_mock_processor,
+    make_queue_worker_factory,
+)
 
 
 def _make_item(stem: str = "vol01", kind: str = "epub") -> ReadingQueueItem:
@@ -52,9 +50,7 @@ def _result(cards: int) -> SimpleNamespace:
 @pytest.fixture
 def mock_processor():
     """MagicMock stand-in for EpisodeProcessor."""
-    processor = MagicMock()
-    processor.process_reading = MagicMock(return_value=_result(3))
-    return processor
+    return make_mock_processor("process_reading", _result(3))
 
 
 @pytest.fixture
@@ -71,37 +67,7 @@ def fake_load(monkeypatch):
 @pytest.fixture
 def make_worker(qapp, mock_processor, test_config, fake_load):
     """Factory producing a ReadingQueueWorker with sensible defaults."""
-
-    def _make(
-        items: list[ReadingQueueItem] | None = None,
-        curation_callback=None,
-        config=None,
-    ) -> ReadingQueueWorker:
-        if items is None:
-            items = [_make_item()]
-        return ReadingQueueWorker(
-            processor=mock_processor,
-            config=config if config is not None else test_config,
-            items=items,
-            curation_callback=curation_callback,
-        )
-
-    return _make
-
-
-def _connect_all(worker: ReadingQueueWorker):
-    """Wire capture objects to all queue worker signals; return them as a dict."""
-    captures = {
-        "started": _SignalCapture(),
-        "progress": _SignalCapture(),
-        "finished": _SignalCapture(),
-        "queue_finished": _SignalCapture(),
-    }
-    worker.item_started.connect(captures["started"])
-    worker.item_progress.connect(captures["progress"])
-    worker.item_finished.connect(captures["finished"])
-    worker.queue_finished.connect(captures["queue_finished"])
-    return captures
+    return make_queue_worker_factory(ReadingQueueWorker, mock_processor, test_config, _make_item)
 
 
 # ---------------------------------------------------------------------------
@@ -130,8 +96,8 @@ def test_two_item_success_signal_sequence(make_worker, mock_processor, fake_load
 
     # Worker owns the item lifecycle: statuses COMPLETED, cards_created set.
     assert [i.status for i in items] == [
-        ReadingItemStatus.COMPLETED,
-        ReadingItemStatus.COMPLETED,
+        ReadyItemStatus.COMPLETED,
+        ReadyItemStatus.COMPLETED,
     ]
     assert [i.cards_created for i in items] == [4, 7]
     assert [i.error_message for i in items] == [None, None]
@@ -149,7 +115,7 @@ def test_failed_result_marks_item_error(make_worker, mock_processor, fake_load):
     caps = _connect_all(worker)
     worker.run()
 
-    assert items[0].status == ReadingItemStatus.ERROR
+    assert items[0].status == ReadyItemStatus.ERROR
     assert items[0].error_message == "ffmpeg exploded"
     # item_finished carries the error string (result=None), so the tab logs a failure.
     assert caps["finished"].calls[0][1] is None
@@ -168,7 +134,7 @@ def test_cancelled_result_marks_item_ready(make_worker, mock_processor, fake_loa
     worker = make_worker(items=items)
     worker.run()
 
-    assert items[0].status == ReadingItemStatus.READY
+    assert items[0].status == ReadyItemStatus.READY
     assert items[0].error_message is None
 
 
@@ -205,10 +171,10 @@ def test_load_setuperror_on_first_item_continues_queue(make_worker, mock_process
     worker.run()
 
     # Item 1 errored on load; item 2 still mined.
-    assert items[0].status is ReadingItemStatus.ERROR
+    assert items[0].status is ReadyItemStatus.ERROR
     assert items[0].error_message == "This EPUB is DRM-protected and cannot be mined."
     assert items[0].cards_created == 0
-    assert items[1].status is ReadingItemStatus.COMPLETED
+    assert items[1].status is ReadyItemStatus.COMPLETED
     assert items[1].cards_created == 9
 
     # SetupError message surfaced verbatim (no type prefix) via item_finished.
@@ -237,9 +203,9 @@ def test_mining_exception_on_first_item_continues_queue(make_worker, mock_proces
     worker.run()
 
     # Non-SetupError failures keep the type prefix.
-    assert items[0].status is ReadingItemStatus.ERROR
+    assert items[0].status is ReadyItemStatus.ERROR
     assert items[0].error_message == "ValueError: boom"
-    assert items[1].status is ReadingItemStatus.COMPLETED
+    assert items[1].status is ReadyItemStatus.COMPLETED
     assert caps["finished"].calls[0] == (0, None, "ValueError: boom", 1)
     assert caps["finished"].calls[1][2] is None
     assert len(caps["queue_finished"].calls) == 1

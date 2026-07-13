@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from anki_miner.models.mining_queue import MiningQueue
 from anki_miner.models.youtube import SubMode, VideoInfo
 
 
@@ -34,12 +35,8 @@ class YouTubeQueueItem:
     display_title: str | None = None  # shown while status is PROBING (set by playlist expansion)
 
 
-class YouTubeQueue:
+class YouTubeQueue(MiningQueue[YouTubeQueueItem]):
     """Manages a queue of YouTube URLs for sequential batch mining."""
-
-    def __init__(self) -> None:
-        """Initialize an empty YouTube queue."""
-        self._items: list[YouTubeQueueItem] = []
 
     def add(self, url: str) -> YouTubeQueueItem:
         """Create a new PENDING item for the given URL and append it to the queue.
@@ -53,22 +50,3 @@ class YouTubeQueue:
         item = YouTubeQueueItem(url=url, status=YouTubeItemStatus.PENDING)
         self._items.append(item)
         return item
-
-    def remove(self, item: YouTubeQueueItem) -> None:
-        """Remove the given item instance from the queue.
-
-        Args:
-            item: The exact item object to remove.
-
-        Raises:
-            ValueError: If *item* is not present in the queue (mirrors list.remove behaviour).
-        """
-        self._items.remove(item)
-
-    def all_items(self) -> list[YouTubeQueueItem]:
-        """Return a copy of all items in the queue.
-
-        Returns:
-            Shallow copy of the internal items list.
-        """
-        return self._items.copy()

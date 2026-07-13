@@ -253,6 +253,6 @@ def test_build_curation_context_routes_through_shared_helpers(tab, facade_proces
     with patch.object(YouTubeTab, "_make_curation_media_context", return_value=sentinel_ctx) as helper:
         media_context, lookup_fn = tab._build_curation_context()
 
-    helper.assert_called_once_with(tab._config, video, subs, offset=4.0)
+    helper.assert_called_once_with(tab.config, video, subs, offset=4.0)
     assert media_context is sentinel_ctx
     assert lookup_fn is facade_processor.definition_service.lookup_all_offline

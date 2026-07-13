@@ -135,6 +135,71 @@ class TestFileList:
         assert tab.listed_paths() == []
 
 
+class TestMidRunSkip:
+    """Mid-run Remove/Clear route dropped rows to the worker's skip channel."""
+
+    def test_remove_and_clear_enabled_mid_run(self, tab, tmp_path):
+        _mine(tab, [_sub_file(tmp_path, "Ep01.srt")])
+        assert tab.worker_thread is not None
+        assert tab.remove_selected_button.isEnabled()
+        assert tab.clear_button.isEnabled()
+
+    def test_remove_during_run_skips_item_in_worker(self, tab, tmp_path):
+        _mine(tab, [_sub_file(tmp_path, "Ep01.srt"), _sub_file(tmp_path, "Ep02.srt")])
+        worker = tab.worker_thread
+        tab._on_item_started(0)  # Ep01 in flight
+        item2 = tab._run_items[1]
+
+        tab.file_list.setCurrentRow(1)
+        tab._on_remove_selected_clicked()
+
+        worker.skip_item.assert_called_once_with(item2)
+        assert [p.name for p in tab.listed_paths()] == ["Ep01.srt"]
+
+    def test_remove_leaves_in_flight_row_in_place(self, tab, tmp_path):
+        _mine(tab, [_sub_file(tmp_path, "Ep01.srt")])
+        worker = tab.worker_thread
+        tab._on_item_started(0)  # Ep01 in flight
+
+        tab.file_list.setCurrentRow(0)
+        tab._on_remove_selected_clicked()
+
+        assert [p.name for p in tab.listed_paths()] == ["Ep01.srt"]
+        worker.skip_item.assert_not_called()
+
+    def test_remove_after_item_finished_is_removable(self, tab, tmp_path):
+        _mine(tab, [_sub_file(tmp_path, "Ep01.srt"), _sub_file(tmp_path, "Ep02.srt")])
+        worker = tab.worker_thread
+        tab._on_item_started(0)
+        item1 = tab._run_items[0]
+        tab._on_item_finished(0, object(), None, 1)  # Ep01 done -> row freed
+
+        tab.file_list.setCurrentRow(0)
+        tab._on_remove_selected_clicked()
+
+        worker.skip_item.assert_called_once_with(item1)
+        assert [p.name for p in tab.listed_paths()] == ["Ep02.srt"]
+
+    def test_clear_during_run_preserves_in_flight_and_skips_rest(self, tab, tmp_path):
+        _mine(
+            tab,
+            [
+                _sub_file(tmp_path, "Ep01.srt"),
+                _sub_file(tmp_path, "Ep02.srt"),
+                _sub_file(tmp_path, "Ep03.srt"),
+            ],
+        )
+        worker = tab.worker_thread
+        tab._on_item_started(0)  # Ep01 in flight
+        item2, item3 = tab._run_items[1], tab._run_items[2]
+
+        tab._on_clear_clicked()
+
+        assert [p.name for p in tab.listed_paths()] == ["Ep01.srt"]
+        skipped = {c.args[0] for c in worker.skip_item.call_args_list}
+        assert skipped == {item2, item3}
+
+
 class TestDragDrop:
     """Tab-level drops: subtitles append (all of them), other kinds hint."""
 
