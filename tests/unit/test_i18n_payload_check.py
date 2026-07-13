@@ -223,3 +223,10 @@ def test_compare_preexisting_unfinished_not_flagged():
     lost, newly = pc.compare(base, work)
     assert lost == []
     assert newly == []
+
+
+def test_unresolvable_base_ref_errors() -> None:
+    """A typo'd --base must error out, not silently pass against nothing."""
+    from scripts.i18n_payload_check import main
+
+    assert main(["--base", "definitely-not-a-real-ref"]) == 2

@@ -125,6 +125,24 @@ def default_base() -> str:
     return "main"
 
 
+def resolve_base_ref(base_ref: str) -> str | None:
+    """Resolve ``base_ref`` to a commit hash, or ``None`` if it doesn't exist.
+
+    Guards the gate against a typo'd ``--base``: with an unknown revision every
+    ``git show`` fails, all catalogs would read as empty, and the check would
+    silently pass while comparing against nothing.
+    """
+    result = subprocess.run(
+        ["git", "-C", str(REPO_ROOT), "rev-parse", "--verify", f"{base_ref}^{{commit}}"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
+
+
 def read_base_catalog(base_ref: str, ts_path: Path) -> str:
     """Return ``ts_path``'s contents at ``base_ref`` via ``git show``.
 
@@ -183,7 +201,11 @@ def main(argv: list[str] | None = None) -> int:
         help="git ref to compare against (default: merge-base of HEAD with main)",
     )
     args = parser.parse_args(argv)
-    base_ref = args.base or default_base()
+    resolved = resolve_base_ref(args.base or default_base())
+    if resolved is None:
+        print(f"Base ref does not resolve to a commit: {args.base!r}", file=sys.stderr)
+        return 2
+    base_ref = resolved
 
     catalog_paths = sorted(TS_DIR.glob("*.ts"))
     if not catalog_paths:
