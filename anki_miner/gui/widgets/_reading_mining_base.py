@@ -104,6 +104,9 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
     # Enable the promoted stranded-PROCESSING recovery sweep for reading too.
     _status_ready = ReadingItemStatus.READY
     _status_processing = ReadingItemStatus.PROCESSING
+    # Narrow the base's worker handle back to the reading worker so sub-tabs can
+    # read ReadingQueueWorker-specific attrs (e.g. the manga curation_document).
+    worker_thread: ReadingQueueWorker | None
 
     def __init__(
         self,
