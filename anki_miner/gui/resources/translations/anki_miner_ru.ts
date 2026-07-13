@@ -606,16 +606,16 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Выберите папку аудиопакета для повторного импорта</translation>
     </message>
     <message>
-        <source>Re-importing audio pack…</source>
-        <translation>Повторный импорт аудиопакета…</translation>
-    </message>
-    <message>
         <source>Audio Pack Re-imported</source>
         <translation>Аудиопакет повторно импортирован</translation>
     </message>
     <message>
         <source>Re-imported %1 successfully.</source>
         <translation>%1 успешно импортирован повторно.</translation>
+    </message>
+    <message>
+        <source>Re-importing audio pack…</source>
+        <translation>Повторный импорт аудиопакета…</translation>
     </message>
     <message>
         <source>Re-import Failed</source>
@@ -626,6 +626,20 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Loading…</source>
         <translation>Загрузка…</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation>Не удалось удалить</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The audio pack was not removed.</source>
+        <translation>Не удалось удалить %1:
+%2
+
+Аудиопакет не был удалён.</translation>
     </message>
     <message>
         <source>Active Audio Sources</source>
@@ -722,20 +736,6 @@ This cannot be undone. You would need to re-import to use this pack again.</sour
 Это действие нельзя отменить. Чтобы снова использовать этот пакет, потребуется повторный импорт.</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>Не удалось удалить</translation>
-    </message>
-    <message>
-        <source>Could not delete %1:
-%2
-
-The audio pack was not removed.</source>
-        <translation>Не удалось удалить %1:
-%2
-
-Аудиопакет не был удалён.</translation>
-    </message>
-    <message>
         <source>Re-import…</source>
         <translation>Повторный импорт…</translation>
     </message>
@@ -778,6 +778,62 @@ The audio pack was not removed.</source>
 </context><context>
     <name>AudiobookTab</name>
     <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation>Майнинг недоступен — службы не инициализированы.</translation>
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation>Запуск %1 начинается — элементов: %2.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Майнить</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Отмена…</translation>
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation>Остановить все</translation>
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation>Очередь завершена: успешно — %1, с ошибкой — %2.</translation>
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation>Майнинг %1 из %2: %3</translation>
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation>%1: создано карточек — %2.</translation>
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
+        <translation>Отменено: %1.</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation>Ошибка %1: %2.</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Отменено</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Ошибка — см. журнал</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation>Завершено — успешно: %1</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation>Завершено — успешно: %1, с ошибкой: %2</translation>
+    </message>
+    <message>
         <source>Audio queue</source>
         <translation>Очередь аудио</translation>
     </message>
@@ -810,10 +866,6 @@ The audio pack was not removed.</source>
         <translation>Показывать всплывающее окно выбора слов для каждого аудиофайла перед созданием карточек.</translation>
     </message>
     <message>
-        <source>Mine</source>
-        <translation>Майнить</translation>
-    </message>
-    <message>
         <source>Mine every queued item into Anki cards.</source>
         <translation>Майнить каждый элемент очереди в карточки Anki.</translation>
     </message>
@@ -824,10 +876,6 @@ The audio pack was not removed.</source>
     <message>
         <source>Remove every queued item that is not currently mining.</source>
         <translation>Удалить все элементы очереди, которые сейчас не майнятся.</translation>
-    </message>
-    <message>
-        <source>Stop All</source>
-        <translation>Остановить все</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
@@ -848,54 +896,6 @@ The audio pack was not removed.</source>
     <message>
         <source>Subtitle file not found: %1</source>
         <translation>Файл субтитров не найден: %1</translation>
-    </message>
-    <message>
-        <source>Mining unavailable — services not initialized.</source>
-        <translation>Майнинг недоступен — службы не инициализированы.</translation>
-    </message>
-    <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation>Запуск %1 начинается — элементов: %2.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Отмена…</translation>
-    </message>
-    <message>
-        <source>Mining %1 of %2: %3</source>
-        <translation>Майнинг %1 из %2: %3</translation>
-    </message>
-    <message>
-        <source>Mined %1: %2 cards.</source>
-        <translation>%1: создано карточек — %2.</translation>
-    </message>
-    <message>
-        <source>Cancelled %1.</source>
-        <translation>Отменено: %1.</translation>
-    </message>
-    <message>
-        <source>Failed %1: %2.</source>
-        <translation>Ошибка %1: %2.</translation>
-    </message>
-    <message>
-        <source>Queue done: %1 succeeded, %2 failed.</source>
-        <translation>Очередь завершена: успешно — %1, с ошибкой — %2.</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Отменено</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>Ошибка — см. журнал</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded, %2 failed</source>
-        <translation>Завершено — успешно: %1, с ошибкой: %2</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded</source>
-        <translation>Завершено — успешно: %1</translation>
     </message>
 </context><context>
     <name>BatchProcessingTab</name>
@@ -926,6 +926,18 @@ The audio pack was not removed.</source>
     <message>
         <source>Subtitle Folder:</source>
         <translation>Папка с субтитрами:</translation>
+    </message>
+    <message>
+        <source>Subtitle Offset:</source>
+        <translation>Смещение субтитров:</translation>
+    </message>
+    <message>
+        <source> seconds</source>
+        <translation> секунд</translation>
+    </message>
+    <message>
+        <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Process Folder</source>
@@ -1468,6 +1480,50 @@ Total cards created: %2</source>
 </context><context>
     <name>CondenseTab</name>
     <message>
+        <source>Progress</source>
+        <translation>Прогресс</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Готово</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Готово: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Пропущено</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Пропущено: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Отмена</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Отмена…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Отменено</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>Завершено — обработано файлов: %1</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Выбрать папку для вывода</translation>
+    </message>
+    <message>
+        <source>Next to source</source>
+        <translation>Рядом с исходником</translation>
+    </message>
+    <message>
         <source>Input</source>
         <translation>Ввод</translation>
     </message>
@@ -1596,10 +1652,6 @@ Total cards created: %2</source>
         <translation>Вывод:</translation>
     </message>
     <message>
-        <source>Next to source</source>
-        <translation>Рядом с исходником</translation>
-    </message>
-    <message>
         <source>Choose Folder…</source>
         <translation>Выбрать папку…</translation>
     </message>
@@ -1622,14 +1674,6 @@ Total cards created: %2</source>
     <message>
         <source>Condense Audio</source>
         <translation>Сжать аудио</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Отмена</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Прогресс</translation>
     </message>
     <message>
         <source>No Media File Selected</source>
@@ -1678,10 +1722,6 @@ Total cards created: %2</source>
     <message>
         <source>Failed to detect subtitle tracks. Check that ffprobe is installed.</source>
         <translation>Не удалось обнаружить дорожки субтитров. Убедитесь, что ffprobe установлен.</translation>
-    </message>
-    <message>
-        <source>Select Output Folder</source>
-        <translation>Выбрать папку для вывода</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -1743,34 +1783,6 @@ Total cards created: %2</source>
         <source>Condensing file %1 of %2</source>
         <translation>Сжатие файла %1 из %2</translation>
     </message>
-    <message>
-        <source>Done: </source>
-        <translation>Готово: </translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>Готово</translation>
-    </message>
-    <message>
-        <source>Skipped: </source>
-        <translation>Пропущено: </translation>
-    </message>
-    <message>
-        <source>Skipped</source>
-        <translation>Пропущено</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Отменено</translation>
-    </message>
-    <message>
-        <source>Complete — %1 files processed</source>
-        <translation>Завершено — обработано файлов: %1</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Отмена…</translation>
-    </message>
 </context><context>
     <name>CondenseWorker</name>
     <message>
@@ -1778,24 +1790,20 @@ Total cards created: %2</source>
         <translation>Пропущено, уже существует</translation>
     </message>
     <message>
-        <source>No dialogue lines found in %1</source>
-        <translation>Не найдено строк диалога в %1</translation>
-    </message>
-    <message>
         <source>Condensing: %1%</source>
         <translation>Сжатие: %1%</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>Отменено</translation>
-    </message>
-    <message>
-        <source>Condensing failed for %1</source>
-        <translation>Не удалось выполнить сжатие для %1</translation>
+        <source>Audio done; subtitle write failed: %1</source>
+        <translation>Аудио готово; не удалось записать субтитры: %1</translation>
     </message>
     <message>
         <source>Done</source>
         <translation>Готово</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Отменено</translation>
     </message>
     <message>
         <source>No subtitle source found for %1</source>
@@ -1814,8 +1822,12 @@ Total cards created: %2</source>
         <translation>Не удалось извлечь встроенные субтитры из %1</translation>
     </message>
     <message>
-        <source>Audio done; subtitle write failed: %1</source>
-        <translation>Аудио готово; не удалось записать субтитры: %1</translation>
+        <source>No dialogue lines found in %1</source>
+        <translation>Не найдено строк диалога в %1</translation>
+    </message>
+    <message>
+        <source>Condensing failed for %1</source>
+        <translation>Не удалось выполнить сжатие для %1</translation>
     </message>
 </context><context>
     <name>CudaPackDownloadWorker</name>
@@ -2096,20 +2108,20 @@ Total cards created: %2</source>
         <translation>Zip-архив Yomitan (*.zip)</translation>
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>Импорт словаря…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Отмена</translation>
-    </message>
-    <message>
         <source>Dictionary added</source>
         <translation>Словарь добавлен</translation>
     </message>
     <message>
         <source>Imported %1 (%2 entries)</source>
         <translation>Импортирован %1 (записей: %2)</translation>
+    </message>
+    <message>
+        <source>Importing dictionary…</source>
+        <translation>Импорт словаря…</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Отмена</translation>
     </message>
     <message>
         <source>Import Failed</source>
@@ -2136,16 +2148,16 @@ Total cards created: %2</source>
         <translation>Выполняется сеанс майнинга. Остановите его перед повторным импортом словарей.</translation>
     </message>
     <message>
-        <source>Re-importing dictionary…</source>
-        <translation>Повторный импорт словаря…</translation>
-    </message>
-    <message>
         <source>Dictionary re-imported</source>
         <translation>Словарь импортирован повторно</translation>
     </message>
     <message>
         <source>Re-imported %1 (%2 entries)</source>
         <translation>Повторно импортирован %1 (записей: %2)</translation>
+    </message>
+    <message>
+        <source>Re-importing dictionary…</source>
+        <translation>Повторный импорт словаря…</translation>
     </message>
     <message>
         <source>Re-import Failed</source>
@@ -2248,6 +2260,20 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation>Загрузка…</translation>
     </message>
     <message>
+        <source>Remove failed</source>
+        <translation>Не удалось удалить</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The dictionary was not removed.</source>
+        <translation>Не удалось удалить %1:
+%2
+
+Словарь не был удалён.</translation>
+    </message>
+    <message>
         <source>Select dictionary storage folder...</source>
         <translation>Выберите папку для хранения словарей...</translation>
     </message>
@@ -2316,6 +2342,14 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation>CSV/TSV со столбцами (чтение, кандзи, шаблон) или zip-архив тонального ударения в формате Yomitan (например, Kanjium, NHK). Zip-архивы Yomitan импортируются в ~/.anki_miner/pitch_accent.csv при сохранении.</translation>
     </message>
     <message>
+        <source>Jisho (online fallback)</source>
+        <translation>Jisho (онлайн-резерв)</translation>
+    </message>
+    <message>
+        <source>⚠ rate-limited, slower</source>
+        <translation>⚠ ограничение по частоте запросов, медленнее</translation>
+    </message>
+    <message>
         <source>Remove dictionary</source>
         <translation>Удалить словарь</translation>
     </message>
@@ -2328,34 +2362,12 @@ This cannot be undone. You would need to reimport from the source zip.</source>
 Это действие необратимо. Потребуется повторно импортировать из исходного zip-архива.</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>Не удалось удалить</translation>
-    </message>
-    <message>
         <source>A mining run is in progress. Stop it before removing dictionaries.</source>
         <translation>Выполняется сеанс майнинга. Остановите его перед удалением словарей.</translation>
     </message>
     <message>
-        <source>Could not delete %1:
-%2
-
-The dictionary was not removed.</source>
-        <translation>Не удалось удалить %1:
-%2
-
-Словарь не был удалён.</translation>
-    </message>
-    <message>
         <source>Re-import…</source>
         <translation>Повторный импорт…</translation>
-    </message>
-    <message>
-        <source>Jisho (online fallback)</source>
-        <translation>Jisho (онлайн-резерв)</translation>
-    </message>
-    <message>
-        <source>⚠ rate-limited, slower</source>
-        <translation>⚠ ограничение по частоте запросов, медленнее</translation>
     </message>
 </context><context>
     <name>DonePage</name>
@@ -2426,6 +2438,30 @@ The dictionary was not removed.</source>
     <message>
         <source>Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run</source>
         <translation>TTS для аудио предложений вернул неаудиоответы (вероятно, из-за ограничения частоты) — аудио предложений пропущено в этом запуске, будет повторено в следующем</translation>
+    </message>
+    <message>
+        <source>Fetching expression audio</source>
+        <translation>Получение аудио выражения</translation>
+    </message>
+    <message>
+        <source>Expression audio: %1</source>
+        <translation>Аудио выражения: %1</translation>
+    </message>
+    <message>
+        <source>Expression audio: %1/%2 available</source>
+        <translation>Аудио выражения: доступно %1/%2</translation>
+    </message>
+    <message>
+        <source>Generating sentence audio</source>
+        <translation>Генерация аудио предложений</translation>
+    </message>
+    <message>
+        <source>Sentence audio: %1</source>
+        <translation>Аудио предложений: %1</translation>
+    </message>
+    <message>
+        <source>Sentence audio: %1/%2 sentences</source>
+        <translation>Аудио предложений: %1/%2 предложений</translation>
     </message>
     <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
@@ -2548,30 +2584,6 @@ The dictionary was not removed.</source>
         <translation>Анимированные скриншоты недоступны — в этой сборке ffmpeg нет кодировщика AVIF или WebP; переключитесь на статичные скриншоты в настройках.</translation>
     </message>
     <message>
-        <source>Fetching expression audio</source>
-        <translation>Получение аудио выражения</translation>
-    </message>
-    <message>
-        <source>Expression audio: %1</source>
-        <translation>Аудио выражения: %1</translation>
-    </message>
-    <message>
-        <source>Expression audio: %1/%2 available</source>
-        <translation>Аудио выражения: доступно %1/%2</translation>
-    </message>
-    <message>
-        <source>Generating sentence audio</source>
-        <translation>Генерация аудио предложений</translation>
-    </message>
-    <message>
-        <source>Sentence audio: %1</source>
-        <translation>Аудио предложений: %1</translation>
-    </message>
-    <message>
-        <source>Sentence audio: %1/%2 sentences</source>
-        <translation>Аудио предложений: %1/%2 предложений</translation>
-    </message>
-    <message>
         <source>Step 4/5 — Fetching definitions</source>
         <translation>Шаг 4/5 — Получение определений</translation>
     </message>
@@ -2616,8 +2628,12 @@ The dictionary was not removed.</source>
         </translation>
     </message>
     <message>
-        <source>No words found in subtitles</source>
-        <translation>Слов в субтитрах не найдено</translation>
+        <source>Error: %1</source>
+        <translation>Ошибка: %1</translation>
+    </message>
+    <message>
+        <source>Unexpected error: %1</source>
+        <translation>Непредвиденная ошибка: %1</translation>
     </message>
     <message>
         <source>No words selected for card creation</source>
@@ -2632,6 +2648,10 @@ The dictionary was not removed.</source>
         </translation>
     </message>
     <message>
+        <source>No words found in subtitles</source>
+        <translation>Слов в субтитрах не найдено</translation>
+    </message>
+    <message>
         <source>No media extracted successfully</source>
         <translation>Медиа не извлечено</translation>
     </message>
@@ -2642,14 +2662,6 @@ The dictionary was not removed.</source>
             <numerusform>Извлечено медиа для %n слов</numerusform>
             <numerusform>Извлечено медиа для %n слов</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>Error: %1</source>
-        <translation>Ошибка: %1</translation>
-    </message>
-    <message>
-        <source>Unexpected error: %1</source>
-        <translation>Непредвиденная ошибка: %1</translation>
     </message>
     <message numerus="yes">
         <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
@@ -3104,14 +3116,6 @@ The dictionary was not removed.</source>
         <translation>Источник частотности (*.zip *.csv *.tsv);;Все файлы (*)</translation>
     </message>
     <message>
-        <source>Importing frequency source…</source>
-        <translation>Импорт источника частотности…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Отмена</translation>
-    </message>
-    <message>
         <source> (skipped %1 malformed entries)</source>
         <translation> (пропущено %1 некорректных записей)</translation>
     </message>
@@ -3128,16 +3132,20 @@ The dictionary was not removed.</source>
         <translation>Импортировано записей: %1 из «%2».</translation>
     </message>
     <message>
+        <source>Importing frequency source…</source>
+        <translation>Импорт источника частотности…</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Отмена</translation>
+    </message>
+    <message>
         <source>Import Failed</source>
         <translation>Сбой импорта</translation>
     </message>
     <message>
         <source>Choose frequency source to re-import</source>
         <translation>Выберите источник частотности для повторного импорта</translation>
-    </message>
-    <message>
-        <source>Re-importing frequency source…</source>
-        <translation>Повторный импорт источника частотности…</translation>
     </message>
     <message>
         <source>Frequency Source Re-imported</source>
@@ -3148,6 +3156,10 @@ The dictionary was not removed.</source>
         <translation>%1 успешно импортирован повторно.</translation>
     </message>
     <message>
+        <source>Re-importing frequency source…</source>
+        <translation>Повторный импорт источника частотности…</translation>
+    </message>
+    <message>
         <source>Re-import Failed</source>
         <translation>Ошибка повторного импорта</translation>
     </message>
@@ -3156,6 +3168,20 @@ The dictionary was not removed.</source>
     <message>
         <source>Loading…</source>
         <translation>Загрузка…</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation>Не удалось удалить</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The frequency source was not removed.</source>
+        <translation>Не удалось удалить %1:
+%2
+
+Источник частотности не был удалён.</translation>
     </message>
     <message>
         <source>Active Frequency Sources</source>
@@ -3196,22 +3222,8 @@ This cannot be undone. You would need to re-import to use this source again.</so
 Это действие необратимо. Чтобы снова использовать этот источник, понадобится повторный импорт.</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>Не удалось удалить</translation>
-    </message>
-    <message>
         <source>A mining run is in progress. Stop it before removing frequency sources.</source>
         <translation>Выполняется сеанс майнинга. Остановите его перед удалением источников частотности.</translation>
-    </message>
-    <message>
-        <source>Could not delete %1:
-%2
-
-The frequency source was not removed.</source>
-        <translation>Не удалось удалить %1:
-%2
-
-Источник частотности не был удалён.</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -4884,6 +4896,50 @@ Imported values override your current settings; anything not in the file is kept
 </context><context>
     <name>SubtitleCreationTab</name>
     <message>
+        <source>Progress</source>
+        <translation>Прогресс</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Готово</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Готово: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Пропущено</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Пропущено: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Отмена</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Отмена…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Отменено</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>Завершено — обработано файлов: %1</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Выбрать папку для вывода</translation>
+    </message>
+    <message>
+        <source>Next to source video</source>
+        <translation>Рядом с исходным видео</translation>
+    </message>
+    <message>
         <source>Input</source>
         <translation>Ввод</translation>
     </message>
@@ -4940,10 +4996,6 @@ Imported values override your current settings; anything not in the file is kept
         <translation>Вывод:</translation>
     </message>
     <message>
-        <source>Next to source video</source>
-        <translation>Рядом с исходным видео</translation>
-    </message>
-    <message>
         <source>Choose Folder…</source>
         <translation>Выбрать папку…</translation>
     </message>
@@ -4966,18 +5018,6 @@ Imported values override your current settings; anything not in the file is kept
     <message>
         <source>Generate Subtitles</source>
         <translation>Сгенерировать субтитры</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Отмена</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Прогресс</translation>
-    </message>
-    <message>
-        <source>Select Output Folder</source>
-        <translation>Выбрать папку для вывода</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -5037,34 +5077,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <source>Transcribing file %1 of %2</source>
         <translation>Транскрибирование файла %1 из %2</translation>
     </message>
-    <message>
-        <source>Done: </source>
-        <translation>Готово: </translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>Готово</translation>
-    </message>
-    <message>
-        <source>Skipped: </source>
-        <translation>Пропущено: </translation>
-    </message>
-    <message>
-        <source>Skipped</source>
-        <translation>Пропущено</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Отменено</translation>
-    </message>
-    <message>
-        <source>Complete — %1 files processed</source>
-        <translation>Завершено — обработано файлов: %1</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Отмена…</translation>
-    </message>
 </context><context>
     <name>SubtitleGenWorker</name>
     <message>
@@ -5076,27 +5088,31 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Извлечение звука: %1</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>Отменено</translation>
-    </message>
-    <message>
-        <source>Audio extraction failed for %1</source>
-        <translation>Не удалось извлечь звук для %1</translation>
-    </message>
-    <message>
         <source>Transcribing: %1%</source>
         <translation>Транскрибирование: %1%</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Готово</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Отменено</translation>
     </message>
     <message>
         <source>No speech detected in %1</source>
         <translation>Речь не обнаружена в %1</translation>
     </message>
     <message>
-        <source>Done</source>
-        <translation>Готово</translation>
+        <source>Audio extraction failed for %1</source>
+        <translation>Не удалось извлечь звук для %1</translation>
     </message>
 </context><context>
     <name>SubtitlePlayerWidget</name>
+    <message>
+        <source>Could not load video: %1</source>
+        <translation>Не удалось загрузить видео: %1</translation>
+    </message>
     <message>
         <source>This video uses AV1, which your system can't decode for in-app preview. Audio and subtitles still play.</source>
         <translation>Это видео использует AV1, который ваша система не может декодировать для предпросмотра в приложении. Звук и субтитры по-прежнему воспроизводятся.</translation>
@@ -5106,8 +5122,12 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Воспроизвести</translation>
     </message>
     <message>
-        <source>Could not load video: %1</source>
-        <translation>Не удалось загрузить видео: %1</translation>
+        <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>playback failed</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Pause</source>
@@ -5117,8 +5137,56 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <source>Video error: %1</source>
         <translation>Ошибка видео: %1</translation>
     </message>
+    <message>
+        <source>Video preview is unavailable on this display. Audio and subtitles still play.</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>SubtitleRetimeTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>Прогресс</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Готово</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Готово: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Пропущено</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Пропущено: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Отмена</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Отмена…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Отменено</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>Завершено — обработано файлов: %1</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Выбрать папку для вывода</translation>
+    </message>
+    <message>
+        <source>Next to source video</source>
+        <translation>Рядом с исходным видео</translation>
+    </message>
     <message>
         <source>Input</source>
         <translation>Ввод</translation>
@@ -5192,10 +5260,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Вывод:</translation>
     </message>
     <message>
-        <source>Next to source video</source>
-        <translation>Рядом с исходным видео</translation>
-    </message>
-    <message>
         <source>Choose Folder…</source>
         <translation>Выбрать папку…</translation>
     </message>
@@ -5244,14 +5308,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Пересинхронизировать субтитры</translation>
     </message>
     <message>
-        <source>Cancel</source>
-        <translation>Отмена</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Прогресс</translation>
-    </message>
-    <message>
         <source>No Video File Selected</source>
         <translation>Видеофайл не выбран</translation>
     </message>
@@ -5286,10 +5342,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
         <translation>Не удалось обнаружить аудиодорожки. Убедитесь, что ffprobe установлен.</translation>
-    </message>
-    <message>
-        <source>Select Output Folder</source>
-        <translation>Выбрать папку для вывода</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -5358,34 +5410,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Retiming file %1 of %2</source>
         <translation>Пересинхронизация файла %1 из %2</translation>
-    </message>
-    <message>
-        <source>Done: </source>
-        <translation>Готово: </translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>Готово</translation>
-    </message>
-    <message>
-        <source>Skipped: </source>
-        <translation>Пропущено: </translation>
-    </message>
-    <message>
-        <source>Skipped</source>
-        <translation>Пропущено</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Отменено</translation>
-    </message>
-    <message>
-        <source>Complete — %1 files processed</source>
-        <translation>Завершено — обработано файлов: %1</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Отмена…</translation>
     </message>
 </context><context>
     <name>SubtitleRetimeWorker</name>
@@ -5948,6 +5972,62 @@ Go to Settings → ASR to download it before generating subtitles.</source>
 </context><context>
     <name>YouTubeTab</name>
     <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation>Майнинг недоступен — службы не инициализированы.</translation>
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation>Запуск %1 начинается — элементов: %2.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Майнить</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Отмена…</translation>
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation>Остановить все</translation>
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation>Очередь завершена: успешно — %1, с ошибкой — %2.</translation>
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation>Майнинг %1 из %2: %3</translation>
+    </message>
+    <message>
+        <source>Mined %1: %2 cards (attempts=%3).</source>
+        <translation>Намайнено %1: %2 карточек (попыток=%3).</translation>
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
+        <translation>Отменено: %1.</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2 (attempts=%3).</source>
+        <translation>Не удалось %1: %2 (попыток=%3).</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Отменено</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Ошибка — см. журнал</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation>Завершено — успешно: %1</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation>Завершено — успешно: %1, с ошибкой: %2</translation>
+    </message>
+    <message>
         <source>YouTube queue</source>
         <translation>Очередь YouTube</translation>
     </message>
@@ -5972,10 +6052,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Показывать всплывающее окно выбора слов для каждого видео перед созданием карточек.</translation>
     </message>
     <message>
-        <source>Mine</source>
-        <translation>Майнить</translation>
-    </message>
-    <message>
         <source>Mine every READY item in the queue into Anki cards.</source>
         <translation>Намайнить в карточки Anki каждый элемент очереди со статусом READY.</translation>
     </message>
@@ -5988,64 +6064,12 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Удалить все элементы очереди, которые сейчас не майнятся.</translation>
     </message>
     <message>
-        <source>Stop All</source>
-        <translation>Остановить все</translation>
-    </message>
-    <message>
         <source>Cancel the active run.</source>
         <translation>Отменить активный запуск.</translation>
     </message>
     <message>
         <source>Progress</source>
         <translation>Прогресс</translation>
-    </message>
-    <message>
-        <source>Mining unavailable — services not initialized.</source>
-        <translation>Майнинг недоступен — службы не инициализированы.</translation>
-    </message>
-    <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation>Запуск %1 начинается — элементов: %2.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Отмена…</translation>
-    </message>
-    <message>
-        <source>Mining %1 of %2: %3</source>
-        <translation>Майнинг %1 из %2: %3</translation>
-    </message>
-    <message>
-        <source>Mined %1: %2 cards (attempts=%3).</source>
-        <translation>Намайнено %1: %2 карточек (попыток=%3).</translation>
-    </message>
-    <message>
-        <source>Cancelled %1.</source>
-        <translation>Отменено: %1.</translation>
-    </message>
-    <message>
-        <source>Failed %1: %2 (attempts=%3).</source>
-        <translation>Не удалось %1: %2 (попыток=%3).</translation>
-    </message>
-    <message>
-        <source>Queue done: %1 succeeded, %2 failed.</source>
-        <translation>Очередь завершена: успешно — %1, с ошибкой — %2.</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Отменено</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>Ошибка — см. журнал</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded, %2 failed</source>
-        <translation>Завершено — успешно: %1, с ошибкой: %2</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded</source>
-        <translation>Завершено — успешно: %1</translation>
     </message>
 </context><context>
     <name>ZipImportFlow</name>
@@ -6128,5 +6152,11 @@ Continue with import?</source>
     <message>
         <source>⚠ folder missing — re-import</source>
         <translation>⚠ папка отсутствует — переимпортируйте</translation>
+    </message>
+</context><context>
+    <name>app</name>
+    <message>
+        <source>Anki Miner — Unexpected Error</source>
+        <translation type="unfinished" />
     </message>
 </context></TS>

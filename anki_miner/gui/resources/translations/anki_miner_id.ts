@@ -606,16 +606,16 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
         <translation>Pilih folder paket audio untuk diimpor ulang</translation>
     </message>
     <message>
-        <source>Re-importing audio pack…</source>
-        <translation>Mengimpor ulang paket audio…</translation>
-    </message>
-    <message>
         <source>Audio Pack Re-imported</source>
         <translation>Paket Audio Diimpor Ulang</translation>
     </message>
     <message>
         <source>Re-imported %1 successfully.</source>
         <translation>Berhasil mengimpor ulang %1.</translation>
+    </message>
+    <message>
+        <source>Re-importing audio pack…</source>
+        <translation>Mengimpor ulang paket audio…</translation>
     </message>
     <message>
         <source>Re-import Failed</source>
@@ -626,6 +626,20 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
     <message>
         <source>Loading…</source>
         <translation>Memuat…</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation>Penghapusan gagal</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The audio pack was not removed.</source>
+        <translation>Tidak dapat menghapus %1:
+%2
+
+Paket audio tidak dihapus.</translation>
     </message>
     <message>
         <source>Active Audio Sources</source>
@@ -722,20 +736,6 @@ Hanya berkas indeks yang dihapus — berkas audio asli Anda tidak tersentuh.
 Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang untuk menggunakan paket ini lagi.</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>Penghapusan gagal</translation>
-    </message>
-    <message>
-        <source>Could not delete %1:
-%2
-
-The audio pack was not removed.</source>
-        <translation>Tidak dapat menghapus %1:
-%2
-
-Paket audio tidak dihapus.</translation>
-    </message>
-    <message>
         <source>Re-import…</source>
         <translation>Impor ulang…</translation>
     </message>
@@ -778,6 +778,62 @@ Paket audio tidak dihapus.</translation>
 </context><context>
     <name>AudiobookTab</name>
     <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation>Mining tidak tersedia — layanan belum diinisialisasi.</translation>
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation>Proses %1 dimulai — %2 item.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Mining</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation>Hentikan Semua</translation>
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation>Antrean selesai: %1 berhasil, %2 gagal.</translation>
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation>Mining %1 dari %2: %3</translation>
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation>Selesai mining %1: %2 kartu.</translation>
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
+        <translation>Dibatalkan %1.</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation>Gagal %1: %2.</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Dibatalkan</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Gagal — lihat log</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation>Selesai — %1 berhasil</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation>Selesai — %1 berhasil, %2 gagal</translation>
+    </message>
+    <message>
         <source>Audio queue</source>
         <translation>Antrean audio</translation>
     </message>
@@ -810,10 +866,6 @@ Paket audio tidak dihapus.</translation>
         <translation>Tampilkan popup pemilihan kata untuk setiap berkas audio sebelum membuat kartu.</translation>
     </message>
     <message>
-        <source>Mine</source>
-        <translation>Mining</translation>
-    </message>
-    <message>
         <source>Mine every queued item into Anki cards.</source>
         <translation>Mining setiap item dalam antrean menjadi kartu Anki.</translation>
     </message>
@@ -824,10 +876,6 @@ Paket audio tidak dihapus.</translation>
     <message>
         <source>Remove every queued item that is not currently mining.</source>
         <translation>Hapus setiap item dalam antrean yang tidak sedang di-mining.</translation>
-    </message>
-    <message>
-        <source>Stop All</source>
-        <translation>Hentikan Semua</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
@@ -848,54 +896,6 @@ Paket audio tidak dihapus.</translation>
     <message>
         <source>Subtitle file not found: %1</source>
         <translation>Berkas subtitel tidak ditemukan: %1</translation>
-    </message>
-    <message>
-        <source>Mining unavailable — services not initialized.</source>
-        <translation>Mining tidak tersedia — layanan belum diinisialisasi.</translation>
-    </message>
-    <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation>Proses %1 dimulai — %2 item.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Membatalkan…</translation>
-    </message>
-    <message>
-        <source>Mining %1 of %2: %3</source>
-        <translation>Mining %1 dari %2: %3</translation>
-    </message>
-    <message>
-        <source>Mined %1: %2 cards.</source>
-        <translation>Selesai mining %1: %2 kartu.</translation>
-    </message>
-    <message>
-        <source>Cancelled %1.</source>
-        <translation>Dibatalkan %1.</translation>
-    </message>
-    <message>
-        <source>Failed %1: %2.</source>
-        <translation>Gagal %1: %2.</translation>
-    </message>
-    <message>
-        <source>Queue done: %1 succeeded, %2 failed.</source>
-        <translation>Antrean selesai: %1 berhasil, %2 gagal.</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Dibatalkan</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>Gagal — lihat log</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded, %2 failed</source>
-        <translation>Selesai — %1 berhasil, %2 gagal</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded</source>
-        <translation>Selesai — %1 berhasil</translation>
     </message>
 </context><context>
     <name>BatchProcessingTab</name>
@@ -926,6 +926,18 @@ Paket audio tidak dihapus.</translation>
     <message>
         <source>Subtitle Folder:</source>
         <translation>Folder Subtitel:</translation>
+    </message>
+    <message>
+        <source>Subtitle Offset:</source>
+        <translation>Offset Subtitel:</translation>
+    </message>
+    <message>
+        <source> seconds</source>
+        <translation> detik</translation>
+    </message>
+    <message>
+        <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Process Folder</source>
@@ -1468,6 +1480,50 @@ Total kartu dibuat: %2</translation>
 </context><context>
     <name>CondenseTab</name>
     <message>
+        <source>Progress</source>
+        <translation>Progres</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Selesai</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Selesai: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Dilewati</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Dilewati: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Batal</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Dibatalkan</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>Selesai — %1 berkas diproses</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Pilih Folder Keluaran</translation>
+    </message>
+    <message>
+        <source>Next to source</source>
+        <translation>Di samping sumber</translation>
+    </message>
+    <message>
         <source>Input</source>
         <translation>Masukan</translation>
     </message>
@@ -1596,10 +1652,6 @@ Total kartu dibuat: %2</translation>
         <translation>Keluaran:</translation>
     </message>
     <message>
-        <source>Next to source</source>
-        <translation>Di samping sumber</translation>
-    </message>
-    <message>
         <source>Choose Folder…</source>
         <translation>Pilih Folder…</translation>
     </message>
@@ -1622,14 +1674,6 @@ Total kartu dibuat: %2</translation>
     <message>
         <source>Condense Audio</source>
         <translation>Padatkan Audio</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Batal</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Progres</translation>
     </message>
     <message>
         <source>No Media File Selected</source>
@@ -1678,10 +1722,6 @@ Total kartu dibuat: %2</translation>
     <message>
         <source>Failed to detect subtitle tracks. Check that ffprobe is installed.</source>
         <translation>Gagal mendeteksi trek subtitel. Periksa bahwa ffprobe terpasang.</translation>
-    </message>
-    <message>
-        <source>Select Output Folder</source>
-        <translation>Pilih Folder Keluaran</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -1743,34 +1783,6 @@ Total kartu dibuat: %2</translation>
         <source>Condensing file %1 of %2</source>
         <translation>Memadatkan berkas %1 dari %2</translation>
     </message>
-    <message>
-        <source>Done: </source>
-        <translation>Selesai: </translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>Selesai</translation>
-    </message>
-    <message>
-        <source>Skipped: </source>
-        <translation>Dilewati: </translation>
-    </message>
-    <message>
-        <source>Skipped</source>
-        <translation>Dilewati</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Dibatalkan</translation>
-    </message>
-    <message>
-        <source>Complete — %1 files processed</source>
-        <translation>Selesai — %1 berkas diproses</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Membatalkan…</translation>
-    </message>
 </context><context>
     <name>CondenseWorker</name>
     <message>
@@ -1778,24 +1790,20 @@ Total kartu dibuat: %2</translation>
         <translation>Dilewati, sudah ada</translation>
     </message>
     <message>
-        <source>No dialogue lines found in %1</source>
-        <translation>Tidak ada baris dialog yang ditemukan dalam %1</translation>
-    </message>
-    <message>
         <source>Condensing: %1%</source>
         <translation>Memadatkan: %1%</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>Dibatalkan</translation>
-    </message>
-    <message>
-        <source>Condensing failed for %1</source>
-        <translation>Pemadatan gagal untuk %1</translation>
+        <source>Audio done; subtitle write failed: %1</source>
+        <translation>Audio selesai; penulisan subtitel gagal: %1</translation>
     </message>
     <message>
         <source>Done</source>
         <translation>Selesai</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Dibatalkan</translation>
     </message>
     <message>
         <source>No subtitle source found for %1</source>
@@ -1814,8 +1822,12 @@ Total kartu dibuat: %2</translation>
         <translation>Gagal mengekstrak subtitel tertanam dari %1</translation>
     </message>
     <message>
-        <source>Audio done; subtitle write failed: %1</source>
-        <translation>Audio selesai; penulisan subtitel gagal: %1</translation>
+        <source>No dialogue lines found in %1</source>
+        <translation>Tidak ada baris dialog yang ditemukan dalam %1</translation>
+    </message>
+    <message>
+        <source>Condensing failed for %1</source>
+        <translation>Pemadatan gagal untuk %1</translation>
     </message>
 </context><context>
     <name>CudaPackDownloadWorker</name>
@@ -2096,20 +2108,20 @@ Total kartu dibuat: %2</translation>
         <translation>Zip Yomitan (*.zip)</translation>
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>Mengimpor kamus…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Batal</translation>
-    </message>
-    <message>
         <source>Dictionary added</source>
         <translation>Kamus ditambahkan</translation>
     </message>
     <message>
         <source>Imported %1 (%2 entries)</source>
         <translation>Mengimpor %1 (%2 entri)</translation>
+    </message>
+    <message>
+        <source>Importing dictionary…</source>
+        <translation>Mengimpor kamus…</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Batal</translation>
     </message>
     <message>
         <source>Import Failed</source>
@@ -2136,16 +2148,16 @@ Total kartu dibuat: %2</translation>
         <translation>Proses mining sedang berjalan. Hentikan sebelum mengimpor ulang kamus.</translation>
     </message>
     <message>
-        <source>Re-importing dictionary…</source>
-        <translation>Mengimpor ulang kamus…</translation>
-    </message>
-    <message>
         <source>Dictionary re-imported</source>
         <translation>Kamus diimpor ulang</translation>
     </message>
     <message>
         <source>Re-imported %1 (%2 entries)</source>
         <translation>Mengimpor ulang %1 (%2 entri)</translation>
+    </message>
+    <message>
+        <source>Re-importing dictionary…</source>
+        <translation>Mengimpor ulang kamus…</translation>
     </message>
     <message>
         <source>Re-import Failed</source>
@@ -2248,6 +2260,20 @@ Dilewati (tidak ada sumber tersimpan — klik kanan baris kamus → Impor ulang�
         <translation>Memuat…</translation>
     </message>
     <message>
+        <source>Remove failed</source>
+        <translation>Penghapusan gagal</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The dictionary was not removed.</source>
+        <translation>Tidak dapat menghapus %1:
+%2
+
+Kamus tidak dihapus.</translation>
+    </message>
+    <message>
         <source>Select dictionary storage folder...</source>
         <translation>Pilih folder penyimpanan kamus...</translation>
     </message>
@@ -2316,6 +2342,14 @@ Dilewati (tidak ada sumber tersimpan — klik kanan baris kamus → Impor ulang�
         <translation>CSV/TSV dengan kolom (reading, kanji, pattern), atau zip aksen nada format Yomitan (mis. Kanjium, NHK). Zip Yomitan diimpor ke ~/.anki_miner/pitch_accent.csv saat Simpan.</translation>
     </message>
     <message>
+        <source>Jisho (online fallback)</source>
+        <translation>Jisho (fallback daring)</translation>
+    </message>
+    <message>
+        <source>⚠ rate-limited, slower</source>
+        <translation>⚠ dibatasi laju, lebih lambat</translation>
+    </message>
+    <message>
         <source>Remove dictionary</source>
         <translation>Hapus kamus</translation>
     </message>
@@ -2328,34 +2362,12 @@ This cannot be undone. You would need to reimport from the source zip.</source>
 Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang dari zip sumber.</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>Penghapusan gagal</translation>
-    </message>
-    <message>
         <source>A mining run is in progress. Stop it before removing dictionaries.</source>
         <translation>Proses mining sedang berjalan. Hentikan sebelum menghapus kamus.</translation>
     </message>
     <message>
-        <source>Could not delete %1:
-%2
-
-The dictionary was not removed.</source>
-        <translation>Tidak dapat menghapus %1:
-%2
-
-Kamus tidak dihapus.</translation>
-    </message>
-    <message>
         <source>Re-import…</source>
         <translation>Impor ulang…</translation>
-    </message>
-    <message>
-        <source>Jisho (online fallback)</source>
-        <translation>Jisho (fallback daring)</translation>
-    </message>
-    <message>
-        <source>⚠ rate-limited, slower</source>
-        <translation>⚠ dibatasi laju, lebih lambat</translation>
     </message>
 </context><context>
     <name>DonePage</name>
@@ -2426,6 +2438,30 @@ Kamus tidak dihapus.</translation>
     <message>
         <source>Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run</source>
         <translation>TTS audio-kalimat mengembalikan respons non-audio (kemungkinan dibatasi laju) — audio kalimat dilewati pada proses ini, akan dicoba lagi pada proses berikutnya</translation>
+    </message>
+    <message>
+        <source>Fetching expression audio</source>
+        <translation>Mengambil audio ekspresi</translation>
+    </message>
+    <message>
+        <source>Expression audio: %1</source>
+        <translation>Audio ekspresi: %1</translation>
+    </message>
+    <message>
+        <source>Expression audio: %1/%2 available</source>
+        <translation>Audio ekspresi: %1/%2 tersedia</translation>
+    </message>
+    <message>
+        <source>Generating sentence audio</source>
+        <translation>Membuat audio kalimat</translation>
+    </message>
+    <message>
+        <source>Sentence audio: %1</source>
+        <translation>Audio kalimat: %1</translation>
+    </message>
+    <message>
+        <source>Sentence audio: %1/%2 sentences</source>
+        <translation>Audio kalimat: %1/%2 kalimat</translation>
     </message>
     <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
@@ -2540,30 +2576,6 @@ Kamus tidak dihapus.</translation>
         <translation>Tangkapan layar beranimasi tidak tersedia — build ffmpeg ini tidak memiliki enkoder AVIF atau WebP; beralih ke tangkapan layar statis di Pengaturan.</translation>
     </message>
     <message>
-        <source>Fetching expression audio</source>
-        <translation>Mengambil audio ekspresi</translation>
-    </message>
-    <message>
-        <source>Expression audio: %1</source>
-        <translation>Audio ekspresi: %1</translation>
-    </message>
-    <message>
-        <source>Expression audio: %1/%2 available</source>
-        <translation>Audio ekspresi: %1/%2 tersedia</translation>
-    </message>
-    <message>
-        <source>Generating sentence audio</source>
-        <translation>Membuat audio kalimat</translation>
-    </message>
-    <message>
-        <source>Sentence audio: %1</source>
-        <translation>Audio kalimat: %1</translation>
-    </message>
-    <message>
-        <source>Sentence audio: %1/%2 sentences</source>
-        <translation>Audio kalimat: %1/%2 kalimat</translation>
-    </message>
-    <message>
         <source>Step 4/5 — Fetching definitions</source>
         <translation>Langkah 4/5 — Mengambil definisi</translation>
     </message>
@@ -2600,8 +2612,12 @@ Kamus tidak dihapus.</translation>
         </translation>
     </message>
     <message>
-        <source>No words found in subtitles</source>
-        <translation>Tidak ada kata yang ditemukan di subtitel</translation>
+        <source>Error: %1</source>
+        <translation>Kesalahan: %1</translation>
+    </message>
+    <message>
+        <source>Unexpected error: %1</source>
+        <translation>Kesalahan tak terduga: %1</translation>
     </message>
     <message>
         <source>No words selected for card creation</source>
@@ -2614,6 +2630,10 @@ Kamus tidak dihapus.</translation>
         </translation>
     </message>
     <message>
+        <source>No words found in subtitles</source>
+        <translation>Tidak ada kata yang ditemukan di subtitel</translation>
+    </message>
+    <message>
         <source>No media extracted successfully</source>
         <translation>Tidak ada media yang berhasil diekstrak</translation>
     </message>
@@ -2622,14 +2642,6 @@ Kamus tidak dihapus.</translation>
         <translation>
             <numerusform>Mengekstrak media untuk %n kata</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>Error: %1</source>
-        <translation>Kesalahan: %1</translation>
-    </message>
-    <message>
-        <source>Unexpected error: %1</source>
-        <translation>Kesalahan tak terduga: %1</translation>
     </message>
     <message numerus="yes">
         <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
@@ -3082,14 +3094,6 @@ Kamus tidak dihapus.</translation>
         <translation>Sumber frekuensi (*.zip *.csv *.tsv);;Semua Berkas (*)</translation>
     </message>
     <message>
-        <source>Importing frequency source…</source>
-        <translation>Mengimpor sumber frekuensi…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Batal</translation>
-    </message>
-    <message>
         <source> (skipped %1 malformed entries)</source>
         <translation> (melewati %1 entri yang rusak)</translation>
     </message>
@@ -3106,16 +3110,20 @@ Kamus tidak dihapus.</translation>
         <translation>Mengimpor %1 entri dari '%2'.</translation>
     </message>
     <message>
+        <source>Importing frequency source…</source>
+        <translation>Mengimpor sumber frekuensi…</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Batal</translation>
+    </message>
+    <message>
         <source>Import Failed</source>
         <translation>Impor Gagal</translation>
     </message>
     <message>
         <source>Choose frequency source to re-import</source>
         <translation>Pilih sumber frekuensi untuk diimpor ulang</translation>
-    </message>
-    <message>
-        <source>Re-importing frequency source…</source>
-        <translation>Mengimpor ulang sumber frekuensi…</translation>
     </message>
     <message>
         <source>Frequency Source Re-imported</source>
@@ -3126,6 +3134,10 @@ Kamus tidak dihapus.</translation>
         <translation>Berhasil mengimpor ulang %1.</translation>
     </message>
     <message>
+        <source>Re-importing frequency source…</source>
+        <translation>Mengimpor ulang sumber frekuensi…</translation>
+    </message>
+    <message>
         <source>Re-import Failed</source>
         <translation>Impor Ulang Gagal</translation>
     </message>
@@ -3134,6 +3146,20 @@ Kamus tidak dihapus.</translation>
     <message>
         <source>Loading…</source>
         <translation>Memuat…</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation>Penghapusan gagal</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The frequency source was not removed.</source>
+        <translation>Tidak dapat menghapus %1:
+%2
+
+Sumber frekuensi tidak dihapus.</translation>
     </message>
     <message>
         <source>Active Frequency Sources</source>
@@ -3174,22 +3200,8 @@ Hanya berkas indeks yang dihapus.
 Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang untuk menggunakan sumber ini lagi.</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>Penghapusan gagal</translation>
-    </message>
-    <message>
         <source>A mining run is in progress. Stop it before removing frequency sources.</source>
         <translation>Proses mining sedang berlangsung. Hentikan sebelum menghapus sumber frekuensi.</translation>
-    </message>
-    <message>
-        <source>Could not delete %1:
-%2
-
-The frequency source was not removed.</source>
-        <translation>Tidak dapat menghapus %1:
-%2
-
-Sumber frekuensi tidak dihapus.</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -4860,6 +4872,50 @@ Nilai yang diimpor menggantikan pengaturan Anda saat ini; apa pun yang tidak ada
 </context><context>
     <name>SubtitleCreationTab</name>
     <message>
+        <source>Progress</source>
+        <translation>Progres</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Selesai</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Selesai: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Dilewati</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Dilewati: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Batal</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Dibatalkan</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>Selesai — %1 berkas diproses</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Pilih Folder Keluaran</translation>
+    </message>
+    <message>
+        <source>Next to source video</source>
+        <translation>Di samping video sumber</translation>
+    </message>
+    <message>
         <source>Input</source>
         <translation>Masukan</translation>
     </message>
@@ -4916,10 +4972,6 @@ Nilai yang diimpor menggantikan pengaturan Anda saat ini; apa pun yang tidak ada
         <translation>Keluaran:</translation>
     </message>
     <message>
-        <source>Next to source video</source>
-        <translation>Di samping video sumber</translation>
-    </message>
-    <message>
         <source>Choose Folder…</source>
         <translation>Pilih Folder…</translation>
     </message>
@@ -4942,18 +4994,6 @@ Nilai yang diimpor menggantikan pengaturan Anda saat ini; apa pun yang tidak ada
     <message>
         <source>Generate Subtitles</source>
         <translation>Buat Subtitel</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Batal</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Progres</translation>
-    </message>
-    <message>
-        <source>Select Output Folder</source>
-        <translation>Pilih Folder Keluaran</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -5013,34 +5053,6 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <source>Transcribing file %1 of %2</source>
         <translation>Mentranskripsikan berkas %1 dari %2</translation>
     </message>
-    <message>
-        <source>Done: </source>
-        <translation>Selesai: </translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>Selesai</translation>
-    </message>
-    <message>
-        <source>Skipped: </source>
-        <translation>Dilewati: </translation>
-    </message>
-    <message>
-        <source>Skipped</source>
-        <translation>Dilewati</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Dibatalkan</translation>
-    </message>
-    <message>
-        <source>Complete — %1 files processed</source>
-        <translation>Selesai — %1 berkas diproses</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Membatalkan…</translation>
-    </message>
 </context><context>
     <name>SubtitleGenWorker</name>
     <message>
@@ -5052,27 +5064,31 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>Mengekstrak audio: %1</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>Dibatalkan</translation>
-    </message>
-    <message>
-        <source>Audio extraction failed for %1</source>
-        <translation>Ekstraksi audio gagal untuk %1</translation>
-    </message>
-    <message>
         <source>Transcribing: %1%</source>
         <translation>Mentranskripsikan: %1%</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Selesai</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Dibatalkan</translation>
     </message>
     <message>
         <source>No speech detected in %1</source>
         <translation>Tidak ada ucapan terdeteksi dalam %1</translation>
     </message>
     <message>
-        <source>Done</source>
-        <translation>Selesai</translation>
+        <source>Audio extraction failed for %1</source>
+        <translation>Ekstraksi audio gagal untuk %1</translation>
     </message>
 </context><context>
     <name>SubtitlePlayerWidget</name>
+    <message>
+        <source>Could not load video: %1</source>
+        <translation>Tidak dapat memuat video: %1</translation>
+    </message>
     <message>
         <source>This video uses AV1, which your system can't decode for in-app preview. Audio and subtitles still play.</source>
         <translation>Video ini menggunakan AV1, yang tidak dapat didekode sistem Anda untuk pratinjau dalam aplikasi. Audio dan subtitel tetap dapat diputar.</translation>
@@ -5082,8 +5098,12 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>Putar</translation>
     </message>
     <message>
-        <source>Could not load video: %1</source>
-        <translation>Tidak dapat memuat video: %1</translation>
+        <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>playback failed</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Pause</source>
@@ -5093,8 +5113,56 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <source>Video error: %1</source>
         <translation>Galat video: %1</translation>
     </message>
+    <message>
+        <source>Video preview is unavailable on this display. Audio and subtitles still play.</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>SubtitleRetimeTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>Kemajuan</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Selesai</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Selesai: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Dilewati</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Dilewati: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Batal</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Dibatalkan</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>Selesai — %1 berkas diproses</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Pilih Folder Keluaran</translation>
+    </message>
+    <message>
+        <source>Next to source video</source>
+        <translation>Di sebelah video sumber</translation>
+    </message>
     <message>
         <source>Input</source>
         <translation>Masukan</translation>
@@ -5168,10 +5236,6 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>Keluaran:</translation>
     </message>
     <message>
-        <source>Next to source video</source>
-        <translation>Di sebelah video sumber</translation>
-    </message>
-    <message>
         <source>Choose Folder…</source>
         <translation>Pilih Folder…</translation>
     </message>
@@ -5220,14 +5284,6 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>Sesuaikan Waktu Subtitel</translation>
     </message>
     <message>
-        <source>Cancel</source>
-        <translation>Batal</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Kemajuan</translation>
-    </message>
-    <message>
         <source>No Video File Selected</source>
         <translation>Tidak Ada Berkas Video yang Dipilih</translation>
     </message>
@@ -5262,10 +5318,6 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
     <message>
         <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
         <translation>Gagal mendeteksi trek audio. Periksa bahwa ffprobe terpasang.</translation>
-    </message>
-    <message>
-        <source>Select Output Folder</source>
-        <translation>Pilih Folder Keluaran</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -5334,34 +5386,6 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
     <message>
         <source>Retiming file %1 of %2</source>
         <translation>Menyesuaikan waktu berkas %1 dari %2</translation>
-    </message>
-    <message>
-        <source>Done: </source>
-        <translation>Selesai: </translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>Selesai</translation>
-    </message>
-    <message>
-        <source>Skipped: </source>
-        <translation>Dilewati: </translation>
-    </message>
-    <message>
-        <source>Skipped</source>
-        <translation>Dilewati</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Dibatalkan</translation>
-    </message>
-    <message>
-        <source>Complete — %1 files processed</source>
-        <translation>Selesai — %1 berkas diproses</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Membatalkan…</translation>
     </message>
 </context><context>
     <name>SubtitleRetimeWorker</name>
@@ -5924,6 +5948,62 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
 </context><context>
     <name>YouTubeTab</name>
     <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation>Mining tidak tersedia — layanan belum diinisialisasi.</translation>
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation>Proses %1 dimulai — %2 item.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Mining</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation>Hentikan Semua</translation>
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation>Antrean selesai: %1 berhasil, %2 gagal.</translation>
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation>Mining %1 dari %2: %3</translation>
+    </message>
+    <message>
+        <source>Mined %1: %2 cards (attempts=%3).</source>
+        <translation>Di-mining %1: %2 kartu (percobaan=%3).</translation>
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
+        <translation>Dibatalkan %1.</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2 (attempts=%3).</source>
+        <translation>Gagal %1: %2 (percobaan=%3).</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Dibatalkan</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Gagal — lihat log</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation>Selesai — %1 berhasil</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation>Selesai — %1 berhasil, %2 gagal</translation>
+    </message>
+    <message>
         <source>YouTube queue</source>
         <translation>Antrean YouTube</translation>
     </message>
@@ -5948,10 +6028,6 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>Tampilkan popup pemilihan kata untuk setiap video sebelum membuat kartu.</translation>
     </message>
     <message>
-        <source>Mine</source>
-        <translation>Mining</translation>
-    </message>
-    <message>
         <source>Mine every READY item in the queue into Anki cards.</source>
         <translation>Mining setiap item READY dalam antrean menjadi kartu Anki.</translation>
     </message>
@@ -5964,64 +6040,12 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>Hapus setiap item antrean yang sedang tidak di-mining.</translation>
     </message>
     <message>
-        <source>Stop All</source>
-        <translation>Hentikan Semua</translation>
-    </message>
-    <message>
         <source>Cancel the active run.</source>
         <translation>Batalkan proses yang aktif.</translation>
     </message>
     <message>
         <source>Progress</source>
         <translation>Progres</translation>
-    </message>
-    <message>
-        <source>Mining unavailable — services not initialized.</source>
-        <translation>Mining tidak tersedia — layanan belum diinisialisasi.</translation>
-    </message>
-    <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation>Proses %1 dimulai — %2 item.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Membatalkan…</translation>
-    </message>
-    <message>
-        <source>Mining %1 of %2: %3</source>
-        <translation>Mining %1 dari %2: %3</translation>
-    </message>
-    <message>
-        <source>Mined %1: %2 cards (attempts=%3).</source>
-        <translation>Di-mining %1: %2 kartu (percobaan=%3).</translation>
-    </message>
-    <message>
-        <source>Cancelled %1.</source>
-        <translation>Dibatalkan %1.</translation>
-    </message>
-    <message>
-        <source>Failed %1: %2 (attempts=%3).</source>
-        <translation>Gagal %1: %2 (percobaan=%3).</translation>
-    </message>
-    <message>
-        <source>Queue done: %1 succeeded, %2 failed.</source>
-        <translation>Antrean selesai: %1 berhasil, %2 gagal.</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Dibatalkan</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>Gagal — lihat log</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded, %2 failed</source>
-        <translation>Selesai — %1 berhasil, %2 gagal</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded</source>
-        <translation>Selesai — %1 berhasil</translation>
     </message>
 </context><context>
     <name>ZipImportFlow</name>
@@ -6104,5 +6128,11 @@ Lanjutkan impor?</translation>
     <message>
         <source>⚠ folder missing — re-import</source>
         <translation>⚠ folder hilang — impor ulang</translation>
+    </message>
+</context><context>
+    <name>app</name>
+    <message>
+        <source>Anki Miner — Unexpected Error</source>
+        <translation type="unfinished" />
     </message>
 </context></TS>

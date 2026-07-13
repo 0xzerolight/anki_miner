@@ -606,16 +606,16 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Chọn thư mục gói âm thanh để nhập lại</translation>
     </message>
     <message>
-        <source>Re-importing audio pack…</source>
-        <translation>Đang nhập lại gói âm thanh…</translation>
-    </message>
-    <message>
         <source>Audio Pack Re-imported</source>
         <translation>Đã nhập lại gói âm thanh</translation>
     </message>
     <message>
         <source>Re-imported %1 successfully.</source>
         <translation>Đã nhập lại %1 thành công.</translation>
+    </message>
+    <message>
+        <source>Re-importing audio pack…</source>
+        <translation>Đang nhập lại gói âm thanh…</translation>
     </message>
     <message>
         <source>Re-import Failed</source>
@@ -626,6 +626,20 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Loading…</source>
         <translation>Đang tải…</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation>Xóa thất bại</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The audio pack was not removed.</source>
+        <translation>Không thể xóa %1:
+%2
+
+Gói âm thanh chưa được xóa.</translation>
     </message>
     <message>
         <source>Active Audio Sources</source>
@@ -722,20 +736,6 @@ Chỉ các tệp chỉ mục bị xóa — các tệp âm thanh gốc của bạ
 Thao tác này không thể hoàn tác. Bạn sẽ cần nhập lại để dùng gói này lần nữa.</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>Xóa thất bại</translation>
-    </message>
-    <message>
-        <source>Could not delete %1:
-%2
-
-The audio pack was not removed.</source>
-        <translation>Không thể xóa %1:
-%2
-
-Gói âm thanh chưa được xóa.</translation>
-    </message>
-    <message>
         <source>Re-import…</source>
         <translation>Nhập lại…</translation>
     </message>
@@ -778,6 +778,62 @@ Gói âm thanh chưa được xóa.</translation>
 </context><context>
     <name>AudiobookTab</name>
     <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation>Không thể khai thác — dịch vụ chưa được khởi tạo.</translation>
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation>Bắt đầu lần chạy %1 — %2 mục.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Khai thác</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation>Dừng tất cả</translation>
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation>Hoàn tất hàng đợi: %1 thành công, %2 thất bại.</translation>
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation>Đang khai thác %1 trong %2: %3</translation>
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation>Đã khai thác %1: %2 thẻ.</translation>
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
+        <translation>Đã hủy %1.</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation>Thất bại %1: %2.</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Đã hủy</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Thất bại — xem nhật ký</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation>Hoàn tất — %1 thành công</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation>Hoàn tất — %1 thành công, %2 thất bại</translation>
+    </message>
+    <message>
         <source>Audio queue</source>
         <translation>Hàng đợi âm thanh</translation>
     </message>
@@ -810,10 +866,6 @@ Gói âm thanh chưa được xóa.</translation>
         <translation>Hiển thị cửa sổ chọn từ cho mỗi tệp âm thanh trước khi tạo thẻ.</translation>
     </message>
     <message>
-        <source>Mine</source>
-        <translation>Khai thác</translation>
-    </message>
-    <message>
         <source>Mine every queued item into Anki cards.</source>
         <translation>Khai thác mọi mục trong hàng đợi thành thẻ Anki.</translation>
     </message>
@@ -824,10 +876,6 @@ Gói âm thanh chưa được xóa.</translation>
     <message>
         <source>Remove every queued item that is not currently mining.</source>
         <translation>Xóa mọi mục trong hàng đợi hiện không khai thác.</translation>
-    </message>
-    <message>
-        <source>Stop All</source>
-        <translation>Dừng tất cả</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
@@ -848,54 +896,6 @@ Gói âm thanh chưa được xóa.</translation>
     <message>
         <source>Subtitle file not found: %1</source>
         <translation>Không tìm thấy tệp phụ đề: %1</translation>
-    </message>
-    <message>
-        <source>Mining unavailable — services not initialized.</source>
-        <translation>Không thể khai thác — dịch vụ chưa được khởi tạo.</translation>
-    </message>
-    <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation>Bắt đầu lần chạy %1 — %2 mục.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Đang hủy…</translation>
-    </message>
-    <message>
-        <source>Mining %1 of %2: %3</source>
-        <translation>Đang khai thác %1 trong %2: %3</translation>
-    </message>
-    <message>
-        <source>Mined %1: %2 cards.</source>
-        <translation>Đã khai thác %1: %2 thẻ.</translation>
-    </message>
-    <message>
-        <source>Cancelled %1.</source>
-        <translation>Đã hủy %1.</translation>
-    </message>
-    <message>
-        <source>Failed %1: %2.</source>
-        <translation>Thất bại %1: %2.</translation>
-    </message>
-    <message>
-        <source>Queue done: %1 succeeded, %2 failed.</source>
-        <translation>Hoàn tất hàng đợi: %1 thành công, %2 thất bại.</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Đã hủy</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>Thất bại — xem nhật ký</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded, %2 failed</source>
-        <translation>Hoàn tất — %1 thành công, %2 thất bại</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded</source>
-        <translation>Hoàn tất — %1 thành công</translation>
     </message>
 </context><context>
     <name>BatchProcessingTab</name>
@@ -926,6 +926,18 @@ Gói âm thanh chưa được xóa.</translation>
     <message>
         <source>Subtitle Folder:</source>
         <translation>Thư mục phụ đề:</translation>
+    </message>
+    <message>
+        <source>Subtitle Offset:</source>
+        <translation>Độ lệch phụ đề:</translation>
+    </message>
+    <message>
+        <source> seconds</source>
+        <translation> giây</translation>
+    </message>
+    <message>
+        <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Process Folder</source>
@@ -1468,6 +1480,50 @@ Tổng số thẻ đã tạo: %2</translation>
 </context><context>
     <name>CondenseTab</name>
     <message>
+        <source>Progress</source>
+        <translation>Tiến độ</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Xong</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Xong: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Đã bỏ qua</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Đã bỏ qua: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Hủy</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Đã hủy</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>Hoàn tất — đã xử lý %1 tệp</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Chọn thư mục đầu ra</translation>
+    </message>
+    <message>
+        <source>Next to source</source>
+        <translation>Bên cạnh nguồn</translation>
+    </message>
+    <message>
         <source>Input</source>
         <translation>Đầu vào</translation>
     </message>
@@ -1596,10 +1652,6 @@ Tổng số thẻ đã tạo: %2</translation>
         <translation>Đầu ra:</translation>
     </message>
     <message>
-        <source>Next to source</source>
-        <translation>Bên cạnh nguồn</translation>
-    </message>
-    <message>
         <source>Choose Folder…</source>
         <translation>Chọn thư mục…</translation>
     </message>
@@ -1622,14 +1674,6 @@ Tổng số thẻ đã tạo: %2</translation>
     <message>
         <source>Condense Audio</source>
         <translation>Cô đọng âm thanh</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Hủy</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Tiến độ</translation>
     </message>
     <message>
         <source>No Media File Selected</source>
@@ -1678,10 +1722,6 @@ Tổng số thẻ đã tạo: %2</translation>
     <message>
         <source>Failed to detect subtitle tracks. Check that ffprobe is installed.</source>
         <translation>Không phát hiện được rãnh phụ đề. Kiểm tra rằng ffprobe đã được cài đặt.</translation>
-    </message>
-    <message>
-        <source>Select Output Folder</source>
-        <translation>Chọn thư mục đầu ra</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -1743,34 +1783,6 @@ Tổng số thẻ đã tạo: %2</translation>
         <source>Condensing file %1 of %2</source>
         <translation>Đang cô đọng tệp %1 trên %2</translation>
     </message>
-    <message>
-        <source>Done: </source>
-        <translation>Xong: </translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>Xong</translation>
-    </message>
-    <message>
-        <source>Skipped: </source>
-        <translation>Đã bỏ qua: </translation>
-    </message>
-    <message>
-        <source>Skipped</source>
-        <translation>Đã bỏ qua</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Đã hủy</translation>
-    </message>
-    <message>
-        <source>Complete — %1 files processed</source>
-        <translation>Hoàn tất — đã xử lý %1 tệp</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Đang hủy…</translation>
-    </message>
 </context><context>
     <name>CondenseWorker</name>
     <message>
@@ -1778,24 +1790,20 @@ Tổng số thẻ đã tạo: %2</translation>
         <translation>Đã bỏ qua, đã tồn tại</translation>
     </message>
     <message>
-        <source>No dialogue lines found in %1</source>
-        <translation>Không tìm thấy dòng thoại nào trong %1</translation>
-    </message>
-    <message>
         <source>Condensing: %1%</source>
         <translation>Đang cô đọng: %1%</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>Đã hủy</translation>
-    </message>
-    <message>
-        <source>Condensing failed for %1</source>
-        <translation>Cô đọng thất bại cho %1</translation>
+        <source>Audio done; subtitle write failed: %1</source>
+        <translation>Âm thanh xong; ghi phụ đề thất bại: %1</translation>
     </message>
     <message>
         <source>Done</source>
         <translation>Xong</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Đã hủy</translation>
     </message>
     <message>
         <source>No subtitle source found for %1</source>
@@ -1814,8 +1822,12 @@ Tổng số thẻ đã tạo: %2</translation>
         <translation>Không trích xuất được phụ đề nhúng từ %1</translation>
     </message>
     <message>
-        <source>Audio done; subtitle write failed: %1</source>
-        <translation>Âm thanh xong; ghi phụ đề thất bại: %1</translation>
+        <source>No dialogue lines found in %1</source>
+        <translation>Không tìm thấy dòng thoại nào trong %1</translation>
+    </message>
+    <message>
+        <source>Condensing failed for %1</source>
+        <translation>Cô đọng thất bại cho %1</translation>
     </message>
 </context><context>
     <name>CudaPackDownloadWorker</name>
@@ -2096,20 +2108,20 @@ Tổng số thẻ đã tạo: %2</translation>
         <translation>Zip Yomitan (*.zip)</translation>
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>Đang nhập từ điển…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Hủy</translation>
-    </message>
-    <message>
         <source>Dictionary added</source>
         <translation>Đã thêm từ điển</translation>
     </message>
     <message>
         <source>Imported %1 (%2 entries)</source>
         <translation>Đã nhập %1 (%2 mục)</translation>
+    </message>
+    <message>
+        <source>Importing dictionary…</source>
+        <translation>Đang nhập từ điển…</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Hủy</translation>
     </message>
     <message>
         <source>Import Failed</source>
@@ -2136,16 +2148,16 @@ Tổng số thẻ đã tạo: %2</translation>
         <translation>Một lượt khai thác đang diễn ra. Hãy dừng nó trước khi nhập lại từ điển.</translation>
     </message>
     <message>
-        <source>Re-importing dictionary…</source>
-        <translation>Đang nhập lại từ điển…</translation>
-    </message>
-    <message>
         <source>Dictionary re-imported</source>
         <translation>Đã nhập lại từ điển</translation>
     </message>
     <message>
         <source>Re-imported %1 (%2 entries)</source>
         <translation>Đã nhập lại %1 (%2 mục)</translation>
+    </message>
+    <message>
+        <source>Re-importing dictionary…</source>
+        <translation>Đang nhập lại từ điển…</translation>
     </message>
     <message>
         <source>Re-import Failed</source>
@@ -2248,6 +2260,20 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation>Đang tải…</translation>
     </message>
     <message>
+        <source>Remove failed</source>
+        <translation>Xóa thất bại</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The dictionary was not removed.</source>
+        <translation>Không thể xóa %1:
+%2
+
+Từ điển chưa được xóa.</translation>
+    </message>
+    <message>
         <source>Select dictionary storage folder...</source>
         <translation>Chọn thư mục lưu trữ từ điển...</translation>
     </message>
@@ -2316,6 +2342,14 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation>CSV/TSV với các cột (cách đọc, kanji, mẫu), hoặc một zip trọng âm định dạng Yomitan (ví dụ Kanjium, NHK). Zip Yomitan được nhập vào ~/.anki_miner/pitch_accent.csv khi Lưu.</translation>
     </message>
     <message>
+        <source>Jisho (online fallback)</source>
+        <translation>Jisho (dự phòng trực tuyến)</translation>
+    </message>
+    <message>
+        <source>⚠ rate-limited, slower</source>
+        <translation>⚠ bị giới hạn tần suất, chậm hơn</translation>
+    </message>
+    <message>
         <source>Remove dictionary</source>
         <translation>Xóa từ điển</translation>
     </message>
@@ -2328,34 +2362,12 @@ This cannot be undone. You would need to reimport from the source zip.</source>
 Hành động này không thể hoàn tác. Bạn sẽ cần nhập lại từ zip nguồn.</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>Xóa thất bại</translation>
-    </message>
-    <message>
         <source>A mining run is in progress. Stop it before removing dictionaries.</source>
         <translation>Một lượt khai thác đang diễn ra. Hãy dừng nó trước khi xóa từ điển.</translation>
     </message>
     <message>
-        <source>Could not delete %1:
-%2
-
-The dictionary was not removed.</source>
-        <translation>Không thể xóa %1:
-%2
-
-Từ điển chưa được xóa.</translation>
-    </message>
-    <message>
         <source>Re-import…</source>
         <translation>Nhập lại…</translation>
-    </message>
-    <message>
-        <source>Jisho (online fallback)</source>
-        <translation>Jisho (dự phòng trực tuyến)</translation>
-    </message>
-    <message>
-        <source>⚠ rate-limited, slower</source>
-        <translation>⚠ bị giới hạn tần suất, chậm hơn</translation>
     </message>
 </context><context>
     <name>DonePage</name>
@@ -2426,6 +2438,30 @@ Từ điển chưa được xóa.</translation>
     <message>
         <source>Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run</source>
         <translation>TTS âm thanh câu trả về phản hồi không phải âm thanh (có thể bị giới hạn tần suất) — bỏ qua âm thanh câu lần chạy này, sẽ thử lại lần chạy sau</translation>
+    </message>
+    <message>
+        <source>Fetching expression audio</source>
+        <translation>Đang tải âm thanh biểu thức</translation>
+    </message>
+    <message>
+        <source>Expression audio: %1</source>
+        <translation>Âm thanh biểu thức: %1</translation>
+    </message>
+    <message>
+        <source>Expression audio: %1/%2 available</source>
+        <translation>Âm thanh biểu thức: %1/%2 khả dụng</translation>
+    </message>
+    <message>
+        <source>Generating sentence audio</source>
+        <translation>Đang tạo âm thanh câu</translation>
+    </message>
+    <message>
+        <source>Sentence audio: %1</source>
+        <translation>Âm thanh câu: %1</translation>
+    </message>
+    <message>
+        <source>Sentence audio: %1/%2 sentences</source>
+        <translation>Âm thanh câu: %1/%2 câu</translation>
     </message>
     <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
@@ -2540,30 +2576,6 @@ Từ điển chưa được xóa.</translation>
         <translation>Ảnh chụp màn hình động không khả dụng — bản ffmpeg này không có bộ mã hóa AVIF hay WebP; hãy chuyển sang ảnh chụp màn hình tĩnh trong Cài đặt.</translation>
     </message>
     <message>
-        <source>Fetching expression audio</source>
-        <translation>Đang tải âm thanh biểu thức</translation>
-    </message>
-    <message>
-        <source>Expression audio: %1</source>
-        <translation>Âm thanh biểu thức: %1</translation>
-    </message>
-    <message>
-        <source>Expression audio: %1/%2 available</source>
-        <translation>Âm thanh biểu thức: %1/%2 khả dụng</translation>
-    </message>
-    <message>
-        <source>Generating sentence audio</source>
-        <translation>Đang tạo âm thanh câu</translation>
-    </message>
-    <message>
-        <source>Sentence audio: %1</source>
-        <translation>Âm thanh câu: %1</translation>
-    </message>
-    <message>
-        <source>Sentence audio: %1/%2 sentences</source>
-        <translation>Âm thanh câu: %1/%2 câu</translation>
-    </message>
-    <message>
         <source>Step 4/5 — Fetching definitions</source>
         <translation>Bước 4/5 — Lấy định nghĩa</translation>
     </message>
@@ -2600,8 +2612,12 @@ Từ điển chưa được xóa.</translation>
         </translation>
     </message>
     <message>
-        <source>No words found in subtitles</source>
-        <translation>Không tìm thấy từ nào trong phụ đề</translation>
+        <source>Error: %1</source>
+        <translation>Lỗi: %1</translation>
+    </message>
+    <message>
+        <source>Unexpected error: %1</source>
+        <translation>Lỗi không mong đợi: %1</translation>
     </message>
     <message>
         <source>No words selected for card creation</source>
@@ -2614,6 +2630,10 @@ Từ điển chưa được xóa.</translation>
         </translation>
     </message>
     <message>
+        <source>No words found in subtitles</source>
+        <translation>Không tìm thấy từ nào trong phụ đề</translation>
+    </message>
+    <message>
         <source>No media extracted successfully</source>
         <translation>Không trích xuất được media nào thành công</translation>
     </message>
@@ -2622,14 +2642,6 @@ Từ điển chưa được xóa.</translation>
         <translation>
             <numerusform>Đã trích xuất media cho %n từ</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>Error: %1</source>
-        <translation>Lỗi: %1</translation>
-    </message>
-    <message>
-        <source>Unexpected error: %1</source>
-        <translation>Lỗi không mong đợi: %1</translation>
     </message>
     <message numerus="yes">
         <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
@@ -3082,14 +3094,6 @@ Từ điển chưa được xóa.</translation>
         <translation>Nguồn tần suất (*.zip *.csv *.tsv);;Tất cả tệp (*)</translation>
     </message>
     <message>
-        <source>Importing frequency source…</source>
-        <translation>Đang nhập nguồn tần suất…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Hủy</translation>
-    </message>
-    <message>
         <source> (skipped %1 malformed entries)</source>
         <translation> (đã bỏ qua %1 mục sai định dạng)</translation>
     </message>
@@ -3106,16 +3110,20 @@ Từ điển chưa được xóa.</translation>
         <translation>Đã nhập %1 mục từ '%2'.</translation>
     </message>
     <message>
+        <source>Importing frequency source…</source>
+        <translation>Đang nhập nguồn tần suất…</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Hủy</translation>
+    </message>
+    <message>
         <source>Import Failed</source>
         <translation>Nhập thất bại</translation>
     </message>
     <message>
         <source>Choose frequency source to re-import</source>
         <translation>Chọn nguồn tần suất để nhập lại</translation>
-    </message>
-    <message>
-        <source>Re-importing frequency source…</source>
-        <translation>Đang nhập lại nguồn tần suất…</translation>
     </message>
     <message>
         <source>Frequency Source Re-imported</source>
@@ -3126,6 +3134,10 @@ Từ điển chưa được xóa.</translation>
         <translation>Đã nhập lại %1 thành công.</translation>
     </message>
     <message>
+        <source>Re-importing frequency source…</source>
+        <translation>Đang nhập lại nguồn tần suất…</translation>
+    </message>
+    <message>
         <source>Re-import Failed</source>
         <translation>Nhập lại thất bại</translation>
     </message>
@@ -3134,6 +3146,20 @@ Từ điển chưa được xóa.</translation>
     <message>
         <source>Loading…</source>
         <translation>Đang tải…</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation>Gỡ bỏ thất bại</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The frequency source was not removed.</source>
+        <translation>Không thể xóa %1:
+%2
+
+Nguồn tần suất chưa được gỡ bỏ.</translation>
     </message>
     <message>
         <source>Active Frequency Sources</source>
@@ -3174,22 +3200,8 @@ Chỉ các tệp chỉ mục bị xóa.
 Không thể hoàn tác. Bạn sẽ cần nhập lại để dùng nguồn này lần nữa.</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>Gỡ bỏ thất bại</translation>
-    </message>
-    <message>
         <source>A mining run is in progress. Stop it before removing frequency sources.</source>
         <translation>Một lần chạy khai thác đang diễn ra. Hãy dừng nó trước khi gỡ bỏ nguồn tần suất.</translation>
-    </message>
-    <message>
-        <source>Could not delete %1:
-%2
-
-The frequency source was not removed.</source>
-        <translation>Không thể xóa %1:
-%2
-
-Nguồn tần suất chưa được gỡ bỏ.</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -4860,6 +4872,50 @@ Giá trị nhập vào ghi đè cài đặt hiện tại của bạn; bất kỳ
 </context><context>
     <name>SubtitleCreationTab</name>
     <message>
+        <source>Progress</source>
+        <translation>Tiến trình</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Hoàn tất</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Hoàn tất: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Đã bỏ qua</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Đã bỏ qua: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Hủy</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Đã hủy</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>Hoàn tất — đã xử lý %1 tệp</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Chọn thư mục đầu ra</translation>
+    </message>
+    <message>
+        <source>Next to source video</source>
+        <translation>Cạnh video nguồn</translation>
+    </message>
+    <message>
         <source>Input</source>
         <translation>Đầu vào</translation>
     </message>
@@ -4916,10 +4972,6 @@ Giá trị nhập vào ghi đè cài đặt hiện tại của bạn; bất kỳ
         <translation>Đầu ra:</translation>
     </message>
     <message>
-        <source>Next to source video</source>
-        <translation>Cạnh video nguồn</translation>
-    </message>
-    <message>
         <source>Choose Folder…</source>
         <translation>Chọn thư mục…</translation>
     </message>
@@ -4942,18 +4994,6 @@ Giá trị nhập vào ghi đè cài đặt hiện tại của bạn; bất kỳ
     <message>
         <source>Generate Subtitles</source>
         <translation>Tạo phụ đề</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Hủy</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Tiến trình</translation>
-    </message>
-    <message>
-        <source>Select Output Folder</source>
-        <translation>Chọn thư mục đầu ra</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -5013,34 +5053,6 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <source>Transcribing file %1 of %2</source>
         <translation>Đang chép lời tệp %1 trên %2</translation>
     </message>
-    <message>
-        <source>Done: </source>
-        <translation>Hoàn tất: </translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>Hoàn tất</translation>
-    </message>
-    <message>
-        <source>Skipped: </source>
-        <translation>Đã bỏ qua: </translation>
-    </message>
-    <message>
-        <source>Skipped</source>
-        <translation>Đã bỏ qua</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Đã hủy</translation>
-    </message>
-    <message>
-        <source>Complete — %1 files processed</source>
-        <translation>Hoàn tất — đã xử lý %1 tệp</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Đang hủy…</translation>
-    </message>
 </context><context>
     <name>SubtitleGenWorker</name>
     <message>
@@ -5052,27 +5064,31 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>Đang trích xuất âm thanh: %1</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>Đã hủy</translation>
-    </message>
-    <message>
-        <source>Audio extraction failed for %1</source>
-        <translation>Trích xuất âm thanh thất bại cho %1</translation>
-    </message>
-    <message>
         <source>Transcribing: %1%</source>
         <translation>Đang chép lời: %1%</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Hoàn tất</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Đã hủy</translation>
     </message>
     <message>
         <source>No speech detected in %1</source>
         <translation>Không phát hiện giọng nói trong %1</translation>
     </message>
     <message>
-        <source>Done</source>
-        <translation>Hoàn tất</translation>
+        <source>Audio extraction failed for %1</source>
+        <translation>Trích xuất âm thanh thất bại cho %1</translation>
     </message>
 </context><context>
     <name>SubtitlePlayerWidget</name>
+    <message>
+        <source>Could not load video: %1</source>
+        <translation>Không thể tải video: %1</translation>
+    </message>
     <message>
         <source>This video uses AV1, which your system can't decode for in-app preview. Audio and subtitles still play.</source>
         <translation>Video này dùng AV1, mà hệ thống của bạn không thể giải mã để xem trước trong ứng dụng. Âm thanh và phụ đề vẫn phát.</translation>
@@ -5082,8 +5098,12 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>Phát</translation>
     </message>
     <message>
-        <source>Could not load video: %1</source>
-        <translation>Không thể tải video: %1</translation>
+        <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>playback failed</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Pause</source>
@@ -5093,8 +5113,56 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <source>Video error: %1</source>
         <translation>Lỗi video: %1</translation>
     </message>
+    <message>
+        <source>Video preview is unavailable on this display. Audio and subtitles still play.</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>SubtitleRetimeTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>Tiến trình</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Xong</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Xong: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Đã bỏ qua</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Đã bỏ qua: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Hủy</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Đã hủy</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>Hoàn tất — đã xử lý %1 tệp</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Chọn thư mục đầu ra</translation>
+    </message>
+    <message>
+        <source>Next to source video</source>
+        <translation>Cạnh video nguồn</translation>
+    </message>
     <message>
         <source>Input</source>
         <translation>Đầu vào</translation>
@@ -5168,10 +5236,6 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>Đầu ra:</translation>
     </message>
     <message>
-        <source>Next to source video</source>
-        <translation>Cạnh video nguồn</translation>
-    </message>
-    <message>
         <source>Choose Folder…</source>
         <translation>Chọn thư mục…</translation>
     </message>
@@ -5220,14 +5284,6 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>Chỉnh lại thời gian phụ đề</translation>
     </message>
     <message>
-        <source>Cancel</source>
-        <translation>Hủy</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Tiến trình</translation>
-    </message>
-    <message>
         <source>No Video File Selected</source>
         <translation>Chưa chọn tệp video</translation>
     </message>
@@ -5262,10 +5318,6 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     <message>
         <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
         <translation>Không phát hiện được rãnh âm thanh. Kiểm tra rằng ffprobe đã được cài đặt.</translation>
-    </message>
-    <message>
-        <source>Select Output Folder</source>
-        <translation>Chọn thư mục đầu ra</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -5334,34 +5386,6 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     <message>
         <source>Retiming file %1 of %2</source>
         <translation>Đang chỉnh lại thời gian tệp %1 trên %2</translation>
-    </message>
-    <message>
-        <source>Done: </source>
-        <translation>Xong: </translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>Xong</translation>
-    </message>
-    <message>
-        <source>Skipped: </source>
-        <translation>Đã bỏ qua: </translation>
-    </message>
-    <message>
-        <source>Skipped</source>
-        <translation>Đã bỏ qua</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Đã hủy</translation>
-    </message>
-    <message>
-        <source>Complete — %1 files processed</source>
-        <translation>Hoàn tất — đã xử lý %1 tệp</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Đang hủy…</translation>
     </message>
 </context><context>
     <name>SubtitleRetimeWorker</name>
@@ -5924,6 +5948,62 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
 </context><context>
     <name>YouTubeTab</name>
     <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation>Không thể khai thác — dịch vụ chưa được khởi tạo.</translation>
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation>Lần chạy %1 bắt đầu — %2 mục.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Khai thác</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation>Dừng tất cả</translation>
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation>Hàng đợi xong: %1 thành công, %2 thất bại.</translation>
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation>Đang khai thác %1 trong %2: %3</translation>
+    </message>
+    <message>
+        <source>Mined %1: %2 cards (attempts=%3).</source>
+        <translation>Đã khai thác %1: %2 thẻ (số lần thử=%3).</translation>
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
+        <translation>Đã hủy %1.</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2 (attempts=%3).</source>
+        <translation>Thất bại %1: %2 (số lần thử=%3).</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Đã hủy</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Thất bại — xem nhật ký</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation>Hoàn tất — %1 thành công</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation>Hoàn tất — %1 thành công, %2 thất bại</translation>
+    </message>
+    <message>
         <source>YouTube queue</source>
         <translation>Hàng đợi YouTube</translation>
     </message>
@@ -5948,10 +6028,6 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>Hiển thị hộp thoại chọn từ cho mỗi video trước khi tạo thẻ.</translation>
     </message>
     <message>
-        <source>Mine</source>
-        <translation>Khai thác</translation>
-    </message>
-    <message>
         <source>Mine every READY item in the queue into Anki cards.</source>
         <translation>Khai thác mọi mục SẴN SÀNG trong hàng đợi thành thẻ Anki.</translation>
     </message>
@@ -5964,64 +6040,12 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>Xóa mọi mục trong hàng đợi hiện không đang khai thác.</translation>
     </message>
     <message>
-        <source>Stop All</source>
-        <translation>Dừng tất cả</translation>
-    </message>
-    <message>
         <source>Cancel the active run.</source>
         <translation>Hủy lần chạy đang hoạt động.</translation>
     </message>
     <message>
         <source>Progress</source>
         <translation>Tiến độ</translation>
-    </message>
-    <message>
-        <source>Mining unavailable — services not initialized.</source>
-        <translation>Không thể khai thác — dịch vụ chưa được khởi tạo.</translation>
-    </message>
-    <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation>Lần chạy %1 bắt đầu — %2 mục.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Đang hủy…</translation>
-    </message>
-    <message>
-        <source>Mining %1 of %2: %3</source>
-        <translation>Đang khai thác %1 trong %2: %3</translation>
-    </message>
-    <message>
-        <source>Mined %1: %2 cards (attempts=%3).</source>
-        <translation>Đã khai thác %1: %2 thẻ (số lần thử=%3).</translation>
-    </message>
-    <message>
-        <source>Cancelled %1.</source>
-        <translation>Đã hủy %1.</translation>
-    </message>
-    <message>
-        <source>Failed %1: %2 (attempts=%3).</source>
-        <translation>Thất bại %1: %2 (số lần thử=%3).</translation>
-    </message>
-    <message>
-        <source>Queue done: %1 succeeded, %2 failed.</source>
-        <translation>Hàng đợi xong: %1 thành công, %2 thất bại.</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Đã hủy</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>Thất bại — xem nhật ký</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded, %2 failed</source>
-        <translation>Hoàn tất — %1 thành công, %2 thất bại</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded</source>
-        <translation>Hoàn tất — %1 thành công</translation>
     </message>
 </context><context>
     <name>ZipImportFlow</name>
@@ -6104,5 +6128,11 @@ Tiếp tục nhập?</translation>
     <message>
         <source>⚠ folder missing — re-import</source>
         <translation>⚠ thiếu thư mục — nhập lại</translation>
+    </message>
+</context><context>
+    <name>app</name>
+    <message>
+        <source>Anki Miner — Unexpected Error</source>
+        <translation type="unfinished" />
     </message>
 </context></TS>
