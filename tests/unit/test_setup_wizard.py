@@ -265,8 +265,6 @@ def test_notetype_page_auto_map_stages_fields(qtbot, wiz_config):
     assert cfg.anki_fields["word"] == "Expression"
     assert cfg.anki_fields["sentence"] == "Sentence"
     assert cfg.anki_fields["definition"] == "MainDefinition"
-    # anki_word_field stays synced with anki_fields["word"].
-    assert cfg.anki_word_field == "Expression"
     # anki_fields is a plain dict at stage time, re-wrapped to MappingProxy by config.
     import types as _types  # noqa: PLC0415
 

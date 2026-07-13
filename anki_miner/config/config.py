@@ -77,7 +77,6 @@ class AnkiMinerConfig:
     # Anki settings
     anki_deck_name: str = "Anki Miner"
     anki_note_type: str = "Lapis"
-    anki_word_field: str = "Expression"
     anki_fields: Mapping[str, str] = field(
         default_factory=lambda: {
             "word": "Expression",
@@ -581,11 +580,6 @@ class AnkiMinerConfig:
         # pass an unsupported backend name through to the transcriber.
         if self.asr_device not in {"auto", "cuda", "cpu", "vulkan"}:
             object.__setattr__(self, "asr_device", "auto")
-
-        # Keep anki_word_field in sync with anki_fields["word"]
-        word_field_from_mapping = self.anki_fields.get("word", "")
-        if word_field_from_mapping and word_field_from_mapping != self.anki_word_field:
-            object.__setattr__(self, "anki_word_field", word_field_from_mapping)
 
     @property
     def frequency_active(self) -> bool:

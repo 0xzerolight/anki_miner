@@ -152,7 +152,6 @@ def base_config(tmp_path):
     return AnkiMinerConfig(
         anki_deck_name="original_deck",
         anki_note_type="test_type",
-        anki_word_field="word",
         anki_fields={
             "word": "word",
             "sentence": "sentence",

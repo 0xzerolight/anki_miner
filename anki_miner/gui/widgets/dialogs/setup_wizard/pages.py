@@ -415,13 +415,11 @@ class NoteTypePage(QWizardPage):
         merged = {**dict(self._wizard.working_config().anki_fields)}
         merged.update({key: value for key, value in mapped.items() if value})
         # Stage anki_fields as a PLAIN dict; config re-wraps it in MappingProxyType.
-        # Keep anki_word_field synced to anki_fields["word"] (same as panel.contribute).
         self._wizard.update_working_config(
             replace(
                 self._wizard.working_config(),
                 anki_note_type=note_type or self._wizard.working_config().anki_note_type,
                 anki_fields=merged,
-                anki_word_field=merged.get("word", "") or "Expression",
             )
         )
         self._show_mapping_summary(mapped)
