@@ -216,7 +216,7 @@ class TestRunStartup:
         assert queue_cls.call_count == 1
         kwargs = queue_cls.call_args.kwargs
         assert kwargs["processor"] is tab._processor
-        assert kwargs["config"] is tab._config
+        assert kwargs["config"] is tab.config
         # Curation callback gated by the (default-unchecked) review checkbox.
         assert kwargs["curation_callback"] is None
         assert tab.worker_thread is not None
@@ -794,7 +794,7 @@ class TestCurationContext:
         with patch.object(AudiobookTab, "_make_curation_media_context", return_value=sentinel_ctx) as helper:
             media_context, lookup_fn = tab._build_curation_context()
 
-        helper.assert_called_once_with(tab._config, audio, subs, offset=4.0)
+        helper.assert_called_once_with(tab.config, audio, subs, offset=4.0)
         assert media_context is sentinel_ctx
         assert lookup_fn is facade_processor.definition_service.lookup_all_offline
 
@@ -815,7 +815,7 @@ class TestUpdateConfig:
         ) as mock_create:
             tab.update_config(new_cfg)
 
-        assert tab._config is new_cfg
+        assert tab.config is new_cfg
         # Lazy-drop: processor is None; no eager rebuild on the config-refresh path.
         assert tab._processor is None
         mock_create.assert_not_called()
@@ -836,7 +836,7 @@ class TestUpdateConfig:
         ) as mock_create:
             tab.update_config(new_cfg)
 
-        assert tab._config is new_cfg
+        assert tab.config is new_cfg
         assert tab._processor is original_processor
         # Dirty flag set so _on_worker_finished can reconcile.
         assert tab._config_dirty is True

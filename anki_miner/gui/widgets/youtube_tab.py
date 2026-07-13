@@ -103,7 +103,7 @@ class YouTubeTab(MiningTabBase):
                 in at construction or built on demand.
         """
         super().__init__(parent)
-        self._config = config
+        self.config = config
         # Optional so release_dictionary_resources() can null it out and
         # _start_run rebuilds lazily on the next user click (Issue #30).
         # Also None on startup-deferred init: app.py skips the eager
@@ -322,7 +322,7 @@ class YouTubeTab(MiningTabBase):
 
             def processor_factory() -> EpisodeProcessor:
                 return create_episode_processor(
-                    self._config,
+                    self.config,
                     presenter,
                     stats_service=self._stats_service,  # type: ignore[arg-type]
                 )
@@ -341,7 +341,7 @@ class YouTubeTab(MiningTabBase):
         curation_cb = self._curation_bridge if self.review_words_checkbox.isChecked() else None
         worker = YouTubeQueueWorker(
             processor=self._processor,
-            config=self._config,
+            config=self.config,
             items=ready_items,
             curation_callback=curation_cb,
             processor_factory=processor_factory,
@@ -672,21 +672,9 @@ class YouTubeTab(MiningTabBase):
         if w is None:
             return None, None
         media_context = self._make_curation_media_context(
-            self._config, w._curation_video, w._curation_subtitle, offset=w._curation_offset
+            self.config, w._curation_video, w._curation_subtitle, offset=w._curation_offset
         )
         return media_context, self._lookup_fn_from_processor(w.curation_processor)
-
-    def _mark_known(self, forms: set[str]) -> int:
-        """Persist curator-selected forms to the local known/ignore list (Issue #42).
-
-        Writes immediately (source='user') so words persist even if the dialog is
-        cancelled. Builds the DB ad hoc from the config path.
-        """
-        from anki_miner.services.known_word_db import KnownWordDB
-
-        db = KnownWordDB(self._config.known_words_db_path)
-        db.initialize()
-        return db.add_words(forms, source="user")
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -708,7 +696,7 @@ class YouTubeTab(MiningTabBase):
         Args:
             config: New frozen configuration.
         """
-        self._config = config
+        self.config = config
         self._fetcher = create_youtube_fetcher(config)
         # Push the new snapshot into the add-flow controller so future probes
         # classify against the updated limits; in-flight workers captured the
