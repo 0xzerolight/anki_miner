@@ -11,6 +11,10 @@ child, and the parent reads a clean ``0`` (CPU) from our stdout.
 Contract: print a single integer to stdout and exit 0. On ANY error or a
 missing ggml-vulkan lib, print ``0`` and exit 0 — never a nonzero exit, never a
 traceback on stdout — so the parent always parses a clean number.
+
+Internal-but-tested: this private module (leading underscore) has no public facade —
+``tests/unit/test_asr_vulkan_probe.py`` (and ``test_asr_engine.py``) import it directly.
+The underscore stays and the module path is a stable test surface; do not rename it.
 """
 
 import sys
