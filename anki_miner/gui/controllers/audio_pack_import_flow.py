@@ -1,7 +1,7 @@
 """Audio pack import orchestration (add / per-row reimport).
 
 Mirrors :class:`~anki_miner.gui.controllers.dictionary_import_flow.DictionaryImportFlow`.
-Owns the :class:`~anki_miner.gui.workers.audio_pack_import_worker.AudioPackImportWorker`
+Owns the :class:`~anki_miner.gui.workers.import_worker.ImportWorker`
 lifecycle and every dialog in the import flows.  The tab keeps the panel
 widgets, the signal wiring, and the narrow chain persist
 (``_persist_audio_chain_change``), injected here as callables so the
@@ -21,7 +21,7 @@ from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.run_off_thread import join_worker
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
-from anki_miner.gui.workers.audio_pack_import_worker import AudioPackImportWorker
+from anki_miner.gui.workers.import_worker import ImportWorker
 from anki_miner.services.audio_packs.formats import scan_importable_packs
 from anki_miner.services.audio_packs.importer import derive_pack_id
 from anki_miner.utils.i18n import tr_format
@@ -71,9 +71,9 @@ class AudioPackImportFlow:
         self._panel = panel
         self._get_config = get_config
         self._persist_chain = persist_chain
-        # Long-lived worker reference: AudioPackImportWorker is a QThread and
-        # would be destroyed mid-run if it fell out of scope before joining.
-        self._active_import_worker: AudioPackImportWorker | None = None
+        # Long-lived worker reference: ImportWorker is a QThread and would be
+        # destroyed mid-run if it fell out of scope before joining.
+        self._active_import_worker: ImportWorker | None = None
 
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close.
@@ -246,7 +246,7 @@ class AudioPackImportFlow:
                 )
             )
 
-            worker = AudioPackImportWorker.for_pack(pack_dir, dest_root)
+            worker = ImportWorker.for_pack(pack_dir, dest_root)
             # Join the predecessor before dropping its reference (same as
             # DictionaryImportFlow.reimport_all T-09 join rationale).
             prev = self._active_import_worker
@@ -257,7 +257,7 @@ class AudioPackImportFlow:
                 )
             self._active_import_worker = worker
 
-            def on_progress(msg: str) -> None:
+            def on_progress(_cur: int, _total: int, msg: str) -> None:
                 dlg.setLabelText(msg)
 
             def on_done(pack_id: str, _meta: dict) -> None:
@@ -272,9 +272,19 @@ class AudioPackImportFlow:
                 state["index"] = idx + 1
                 launch_next()
 
+            def on_cancelled() -> None:
+                # A mid-batch user cancel arrives on ``cancelled`` (not
+                # ``failed``); re-enter the pump so it reaches finish() instead
+                # of stranding the modal. state["cancelled"] is already set by
+                # on_cancel (dlg.canceled); set it defensively so launch_next()
+                # short-circuits to finish().
+                state["cancelled"] = True
+                launch_next()
+
             worker.progress.connect(on_progress)
             worker.import_finished.connect(on_done)
             worker.failed.connect(on_failed)
+            worker.cancelled.connect(on_cancelled)
             worker.start()
 
         def on_cancel() -> None:
@@ -314,7 +324,7 @@ class AudioPackImportFlow:
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
 
-        worker = AudioPackImportWorker.for_pack(Path(chosen_dir), dest_root, pack_id=pack_id, overwrite=True)
+        worker = ImportWorker.for_pack(Path(chosen_dir), dest_root, pack_id=pack_id, overwrite=True)
         # Join the predecessor before dropping its reference (same as
         # launch_next in add_pack — a still-running QThread must not be
         # garbage-collected mid-run).
@@ -327,7 +337,7 @@ class AudioPackImportFlow:
         self._active_import_worker = worker
         self._set_import_buttons_enabled(False)
 
-        def on_progress(msg: str) -> None:
+        def on_progress(_cur: int, _total: int, msg: str) -> None:
             dlg.setLabelText(msg)
 
         def on_done(imported_id: str, _meta: dict) -> None:
@@ -351,8 +361,14 @@ class AudioPackImportFlow:
             )
             self._set_import_buttons_enabled(True)
 
+        def on_cancelled() -> None:
+            # User cancel — close silently, no "Re-import Failed" dialog.
+            dlg.close()
+            self._set_import_buttons_enabled(True)
+
         worker.progress.connect(on_progress)
         worker.import_finished.connect(on_done)
         worker.failed.connect(on_failed)
+        worker.cancelled.connect(on_cancelled)
         dlg.canceled.connect(worker.cancel)
         worker.start()

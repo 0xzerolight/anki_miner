@@ -1,7 +1,7 @@
 """Frequency-source import orchestration (add / per-row reimport).
 
 Mirrors :class:`~anki_miner.gui.controllers.audio_pack_import_flow.AudioPackImportFlow`.
-Owns the :class:`~anki_miner.gui.workers.frequency_import_worker.FrequencyImportWorker`
+Owns the :class:`~anki_miner.gui.workers.import_worker.ImportWorker`
 lifecycle and every dialog in the import flows. The settings tab keeps the panel
 widgets, the signal wiring, and the narrow chain persist (injected here as a
 callable so the dependency stays one-way: tab → controller → workers/services).
@@ -24,7 +24,7 @@ from anki_miner.config import AnkiMinerConfig, FreqEntry
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.run_off_thread import join_worker
 from anki_miner.gui.widgets.panels.frequency_settings_panel import FrequencySettingsPanel
-from anki_miner.gui.workers.frequency_import_worker import FrequencyImportWorker
+from anki_miner.gui.workers.import_worker import ImportWorker
 from anki_miner.services.frequency import storage
 from anki_miner.utils.i18n import tr_format
 
@@ -68,9 +68,9 @@ class FrequencyImportFlow:
         self._panel = panel
         self._get_config = get_config
         self._persist_chain = persist_chain
-        # Long-lived worker reference: FrequencyImportWorker is a QThread and
-        # would be destroyed mid-run if it fell out of scope before joining.
-        self._active_import_worker: FrequencyImportWorker | None = None
+        # Long-lived worker reference: ImportWorker is a QThread and would be
+        # destroyed mid-run if it fell out of scope before joining.
+        self._active_import_worker: ImportWorker | None = None
 
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close.
@@ -127,7 +127,7 @@ class FrequencyImportFlow:
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
 
-        worker = FrequencyImportWorker.for_source(Path(chosen), dest_root)
+        worker = ImportWorker.for_source(Path(chosen), dest_root)
         prev = self._active_import_worker
         if not join_worker(prev, timeout_ms=_IMPORT_JOIN_TIMEOUT_MS):
             logger.warning(
@@ -240,9 +240,7 @@ class FrequencyImportFlow:
         # copy's stem and collapses the label to "source". Read the authoritative
         # SQLite meta (not the sidecar); None for a zip / missing index is fine.
         existing_name = storage.read_meta(dest_root / source_id / "index.sqlite").get("source_name")
-        worker = FrequencyImportWorker.for_source(
-            source_file, dest_root, source_id=source_id, source_name=existing_name
-        )
+        worker = ImportWorker.for_source(source_file, dest_root, source_id=source_id, source_name=existing_name)
         prev = self._active_import_worker
         if not join_worker(prev, timeout_ms=_IMPORT_JOIN_TIMEOUT_MS):
             logger.warning(

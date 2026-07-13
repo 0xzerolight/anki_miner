@@ -1,6 +1,6 @@
 """Dictionary import orchestration (add / per-row reimport / JMdict / Reimport All).
 
-Extracted from ``SettingsTab`` (T-66). Owns the ``DictionaryImportWorker``
+Extracted from ``SettingsTab`` (T-66). Owns the ``ImportWorker``
 lifecycles and every dialog in the import flows — including the Reimport-All
 chained state machine and its predecessor-join (T-09). The tab keeps the
 panel widgets, the signal wiring, and the narrow chain persist
@@ -20,7 +20,7 @@ from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.run_off_thread import join_worker
 from anki_miner.gui.widgets.panels import DictionarySettingsPanel
-from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
+from anki_miner.gui.workers.import_worker import ImportWorker
 from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip, read_yomitan_title
 from anki_miner.services.dictionary.registry import DictionaryRegistry
 from anki_miner.services.dictionary.storage import read_meta
@@ -70,9 +70,9 @@ class DictionaryImportFlow:
         self._get_config = get_config
         self._persist_chain = persist_chain
         self._notify_config_changed = notify_config_changed
-        # Long-lived worker reference; DictionaryImportWorker is a QThread and
-        # would be destroyed mid-run if it fell out of scope before joining.
-        self._active_import_worker: DictionaryImportWorker | None = None
+        # Long-lived worker reference; ImportWorker is a QThread and would be
+        # destroyed mid-run if it fell out of scope before joining.
+        self._active_import_worker: ImportWorker | None = None
 
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close.
@@ -150,7 +150,7 @@ class DictionaryImportFlow:
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
 
-        worker = DictionaryImportWorker.for_yomitan(Path(zip_path_str), dest_root)
+        worker = ImportWorker.for_yomitan(Path(zip_path_str), dest_root)
         self._active_import_worker = worker  # keep alive across QThread lifetime
         self._set_import_buttons_enabled(False)
 
@@ -184,9 +184,16 @@ class DictionaryImportFlow:
             QMessageBox.warning(self._parent, QCoreApplication.translate("DictionaryImportFlow", "Import Failed"), err)
             self._set_import_buttons_enabled(True)
 
+        def on_cancelled() -> None:
+            # User cancel arrives on the distinct ``cancelled`` signal — close
+            # silently, no "Import Failed" dialog (the pre-unification bug).
+            dlg.close()
+            self._set_import_buttons_enabled(True)
+
         worker.progress.connect(on_progress)
         worker.import_finished.connect(on_import_finished)
         worker.failed.connect(on_failed)
+        worker.cancelled.connect(on_cancelled)
         dlg.canceled.connect(worker.cancel)
         worker.start()
 
@@ -292,7 +299,7 @@ class DictionaryImportFlow:
         # Pin the existing slot so a same-dictionary zip with a newer date
         # rebuilds in place (dict_id=slot_id is a no-op for non-catalog slots,
         # where derived_id already equals slot_id).
-        worker = DictionaryImportWorker.for_yomitan(zip_path, dest_root, overwrite=True, dict_id=slot_id)
+        worker = ImportWorker.for_yomitan(zip_path, dest_root, overwrite=True, dict_id=slot_id)
         self._active_import_worker = worker  # keep alive across QThread lifetime
         self._set_import_buttons_enabled(False)
 
@@ -329,9 +336,15 @@ class DictionaryImportFlow:
             )
             self._set_import_buttons_enabled(True)
 
+        def on_cancelled() -> None:
+            # User cancel — close silently, no "Re-import Failed" dialog.
+            dlg.close()
+            self._set_import_buttons_enabled(True)
+
         worker.progress.connect(on_progress)
         worker.import_finished.connect(on_done)
         worker.failed.connect(on_failed)
+        worker.cancelled.connect(on_cancelled)
         dlg.canceled.connect(worker.cancel)
         worker.start()
 
@@ -375,7 +388,7 @@ class DictionaryImportFlow:
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
 
-        worker = DictionaryImportWorker.for_jmdict(xml, dest_root)
+        worker = ImportWorker.for_jmdict(xml, dest_root)
         self._active_import_worker = worker
         self._set_import_buttons_enabled(False)
 
@@ -402,9 +415,15 @@ class DictionaryImportFlow:
             )
             self._set_import_buttons_enabled(True)
 
+        def on_cancelled() -> None:
+            # User cancel — close silently, no "Reimport Failed" dialog.
+            dlg.close()
+            self._set_import_buttons_enabled(True)
+
         worker.progress.connect(on_progress)
         worker.import_finished.connect(on_done)
         worker.failed.connect(on_failed)
+        worker.cancelled.connect(on_cancelled)
         dlg.canceled.connect(worker.cancel)
         worker.start()
 
@@ -576,14 +595,14 @@ class DictionaryImportFlow:
             dlg.setValue(0)
 
             if kind == "jmdict":
-                worker = DictionaryImportWorker.for_jmdict(source_path, self._get_config().dicts_root)
+                worker = ImportWorker.for_jmdict(source_path, self._get_config().dicts_root)
             else:
                 # Pin the existing slot id so a saved source whose title embeds a
                 # changing release date (e.g. Jitendex) rebuilds the index in the
                 # SAME folder instead of forking a new date-named dir — which would
                 # orphan the chained slot and permanently wedge the stale-schema
                 # pre-run gate (it could never clear the old slot).
-                worker = DictionaryImportWorker.for_yomitan(
+                worker = ImportWorker.for_yomitan(
                     source_path, self._get_config().dicts_root, overwrite=True, dict_id=dict_id
                 )
             # Join the predecessor before dropping its reference (T-09). This
@@ -619,9 +638,20 @@ class DictionaryImportFlow:
                 state["index"] = idx + 1
                 launch_next()
 
+            def on_cancelled() -> None:
+                # A mid-job user cancel now arrives on ``cancelled`` (not
+                # ``failed``). Without re-entering the pump here the state
+                # machine would never reach finish() and the modal would
+                # strand. ``state["cancelled"]`` is already set by on_cancel
+                # (dlg.canceled), but set it defensively so launch_next() short-
+                # circuits straight to finish() regardless.
+                state["cancelled"] = True
+                launch_next()
+
             worker.progress.connect(on_progress)
             worker.import_finished.connect(on_done)
             worker.failed.connect(on_failed)
+            worker.cancelled.connect(on_cancelled)
             worker.start()
 
         def on_cancel() -> None:
