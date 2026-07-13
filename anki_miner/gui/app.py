@@ -3,12 +3,12 @@
 import logging
 import os
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
-from PyQt6.QtCore import QCoreApplication, Qt, QThread, QTimer
+from PyQt6.QtCore import QCoreApplication, Qt, QThread, QTimer, pyqtBoundSignal
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
 
@@ -340,6 +340,73 @@ def _connect_settings_validation(window: MainWindow, settings_tab: SettingsTab) 
     settings_tab.validation_requested.connect(window._run_validation)
 
 
+# --- Resource download-button wiring (ARC-010) --------------------------------
+#
+# The five in-app resource downloads (ASR model, alass, CUDA pack, VAD pack,
+# Vulkan model) share one connect skeleton: on the request signal, build an
+# ``_on_finished`` that sets the panel status line then runs a per-tool tail,
+# and hand the worker off to ``background_tasks.start_*``. Only the tail (which
+# panel notify + any post-success extra) and the ``start`` call differ per tool,
+# so those two closures are the sole per-tool table entries; ``_connect_download``
+# owns everything shared. The named ``_connect_*_download`` builders survive as
+# the unit-test seam (``test_app_*_download_wiring``) and the main() loop entries.
+
+# request arg: model name for ASR/Vulkan, None for the 0-arg pack buttons.
+_DownloadStart = Callable[[object, Callable[[str], None], Callable[[bool, str], None]], None]
+_DownloadTail = Callable[[object, bool, str], None]
+
+
+def _connect_download(
+    requested: pyqtBoundSignal,
+    *,
+    set_status: Callable[[str], None],
+    start: _DownloadStart,
+    on_finished_tail: _DownloadTail,
+) -> None:
+    """Wire one resource download button (see the ARC-010 note above).
+
+    ``requested`` may be 0-arg (pack buttons) or 1-arg (ASR/Vulkan model name);
+    the model name, when present, flows into both ``start`` and
+    ``on_finished_tail``. ``set_status`` receives every status line and the
+    final message; ``on_finished_tail`` runs after it on completion.
+    """
+
+    def _on_requested(*args: object) -> None:
+        request_arg = args[0] if args else None
+
+        def _on_finished(ok: bool, message: str) -> None:
+            set_status(message)
+            on_finished_tail(request_arg, ok, message)
+
+        start(request_arg, set_status, _on_finished)
+
+    requested.connect(_on_requested)
+
+
+def _connect_asr_download(window: MainWindow, settings_tab: SettingsTab) -> None:
+    """Wire the Subtitles panel's "Download model" button to the ASR download worker.
+
+    Status flows back to the panel's status label; on finish the panel's
+    downloaded-state label is refreshed (clearing the in-flight guard) so it
+    reflects the new on-disk state.
+    """
+
+    def _tail(request_arg: object, ok: bool, message: str) -> None:
+        settings_tab.subtitles_panel.notify_asr_download_finished(str(request_arg), window.get_config().asr_models_root)
+
+    def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
+        window.background_tasks.start_asr_model_download(
+            str(request_arg), window.get_config().asr_models_root, on_status, on_finished
+        )
+
+    _connect_download(
+        settings_tab.asr_download_requested,
+        set_status=settings_tab.set_asr_model_status,
+        start=_start,
+        on_finished_tail=_tail,
+    )
+
+
 def _connect_alass_download(window: MainWindow, settings_tab: SettingsTab) -> None:
     """Wire the Subtitles panel's "Download alass" button to the install worker.
 
@@ -348,26 +415,23 @@ def _connect_alass_download(window: MainWindow, settings_tab: SettingsTab) -> No
     ``config_refreshed`` so the (non-Settings) Retime tab re-runs its
     availability guard and enables. Without that, the download→retime happy
     path stays disabled until a Settings save or app restart.
-
-    Extracted from ``main()`` so the post-install refresh is unit-testable
-    without standing up the whole app.
     """
 
-    def _on_alass_download_requested() -> None:
-        def _on_alass_finished(ok: bool, message: str) -> None:
-            settings_tab.set_alass_status(message)
-            settings_tab.subtitles_panel.notify_alass_download_finished()
-            if ok:
-                alass_resolver._clear_cache()
-                window.config_refreshed.emit(window.get_config())
+    def _tail(request_arg: object, ok: bool, message: str) -> None:
+        settings_tab.subtitles_panel.notify_alass_download_finished()
+        if ok:
+            alass_resolver._clear_cache()
+            window.config_refreshed.emit(window.get_config())
 
-        window.background_tasks.start_alass_download(
-            window.get_config().bin_root,
-            settings_tab.set_alass_status,
-            _on_alass_finished,
-        )
+    def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
+        window.background_tasks.start_alass_download(window.get_config().bin_root, on_status, on_finished)
 
-    settings_tab.alass_download_requested.connect(_on_alass_download_requested)
+    _connect_download(
+        settings_tab.alass_download_requested,
+        set_status=settings_tab.set_alass_status,
+        start=_start,
+        on_finished_tail=_tail,
+    )
 
 
 def _connect_cuda_pack_download(window: MainWindow, settings_tab: SettingsTab) -> None:
@@ -375,24 +439,21 @@ def _connect_cuda_pack_download(window: MainWindow, settings_tab: SettingsTab) -
 
     Status flows back to the panel; on finish the panel's in-flight guard is
     cleared and its installed-state label refreshed via
-    ``notify_cuda_pack_download_finished``. Mirrors :func:`_connect_alass_download`.
-
-    Extracted from ``main()`` so the wiring is unit-testable without standing up
-    the whole app.
+    ``notify_cuda_pack_download_finished``.
     """
 
-    def _on_cuda_pack_download_requested() -> None:
-        def _on_cuda_finished(ok: bool, message: str) -> None:
-            settings_tab.set_cuda_pack_status(message)
-            settings_tab.subtitles_panel.notify_cuda_pack_download_finished(window.get_config().cuda_libs_root)
+    def _tail(request_arg: object, ok: bool, message: str) -> None:
+        settings_tab.subtitles_panel.notify_cuda_pack_download_finished(window.get_config().cuda_libs_root)
 
-        window.background_tasks.start_cuda_pack_download(
-            window.get_config().cuda_libs_root,
-            settings_tab.set_cuda_pack_status,
-            _on_cuda_finished,
-        )
+    def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
+        window.background_tasks.start_cuda_pack_download(window.get_config().cuda_libs_root, on_status, on_finished)
 
-    settings_tab.cuda_pack_download_requested.connect(_on_cuda_pack_download_requested)
+    _connect_download(
+        settings_tab.cuda_pack_download_requested,
+        set_status=settings_tab.set_cuda_pack_status,
+        start=_start,
+        on_finished_tail=_tail,
+    )
 
 
 def _connect_vad_pack_download(window: MainWindow, settings_tab: SettingsTab) -> None:
@@ -400,24 +461,21 @@ def _connect_vad_pack_download(window: MainWindow, settings_tab: SettingsTab) ->
 
     Status flows back to the panel; on finish the panel's in-flight guard is
     cleared and its installed-state label refreshed via
-    ``notify_vad_pack_download_finished``. Mirrors :func:`_connect_cuda_pack_download`.
-
-    Extracted from ``main()`` so the wiring is unit-testable without standing up
-    the whole app.
+    ``notify_vad_pack_download_finished``.
     """
 
-    def _on_vad_pack_download_requested() -> None:
-        def _on_vad_finished(ok: bool, message: str) -> None:
-            settings_tab.set_vad_pack_status(message)
-            settings_tab.subtitles_panel.notify_vad_pack_download_finished(window.get_config().onnx_pack_root)
+    def _tail(request_arg: object, ok: bool, message: str) -> None:
+        settings_tab.subtitles_panel.notify_vad_pack_download_finished(window.get_config().onnx_pack_root)
 
-        window.background_tasks.start_vad_pack_download(
-            window.get_config().onnx_pack_root,
-            settings_tab.set_vad_pack_status,
-            _on_vad_finished,
-        )
+    def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
+        window.background_tasks.start_vad_pack_download(window.get_config().onnx_pack_root, on_status, on_finished)
 
-    settings_tab.vad_pack_download_requested.connect(_on_vad_pack_download_requested)
+    _connect_download(
+        settings_tab.vad_pack_download_requested,
+        set_status=settings_tab.set_vad_pack_status,
+        start=_start,
+        on_finished_tail=_tail,
+    )
 
 
 def _connect_vulkan_download(window: MainWindow, settings_tab: SettingsTab) -> None:
@@ -425,26 +483,24 @@ def _connect_vulkan_download(window: MainWindow, settings_tab: SettingsTab) -> N
 
     One action fetches BOTH the ggml acoustic model and the Silero VAD. Status
     flows back to the panel; on finish the panel's in-flight guard is cleared and
-    its installed-state label refreshed via ``notify_vulkan_download_finished``.
-    Mirrors :func:`_connect_cuda_pack_download`.
-
-    Extracted from ``main()`` so the wiring is unit-testable without standing up
-    the whole app.
+    its installed-state label refreshed via ``notify_vulkan_download_finished``,
+    which is passed the verbatim ``(ok, message)`` (not a root path).
     """
 
-    def _on_vulkan_download_requested(model_name: str) -> None:
-        def _on_vulkan_finished(ok: bool, message: str) -> None:
-            settings_tab.set_vulkan_status(message)
-            settings_tab.subtitles_panel.notify_vulkan_download_finished(ok, message)
+    def _tail(request_arg: object, ok: bool, message: str) -> None:
+        settings_tab.subtitles_panel.notify_vulkan_download_finished(ok, message)
 
+    def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
         window.background_tasks.start_vulkan_download(
-            model_name,
-            window.get_config().asr_models_root,
-            settings_tab.set_vulkan_status,
-            _on_vulkan_finished,
+            str(request_arg), window.get_config().asr_models_root, on_status, on_finished
         )
 
-    settings_tab.vulkan_model_download_requested.connect(_on_vulkan_download_requested)
+    _connect_download(
+        settings_tab.vulkan_model_download_requested,
+        set_status=settings_tab.set_vulkan_status,
+        start=_start,
+        on_finished_tail=_tail,
+    )
 
 
 _in_excepthook = False
@@ -711,30 +767,18 @@ def main():
     )
     window.background_tasks.ytdlp_update_result.connect(settings_tab.set_ytdlp_status_from_result)
 
-    # ASR model download: the Subtitles panel's "Download model" button →
-    # background download worker. Status flows back to the panel's status label;
-    # on finish refresh the downloaded-state label via _refresh_status so it
-    # reflects the new on-disk state.
-    def _on_asr_download_requested(model_name: str) -> None:
-        def _on_asr_finished(ok: bool, message: str) -> None:
-            settings_tab.set_asr_model_status(message)
-            # Clear the in-flight guard and refresh the downloaded-state label
-            # regardless of success/failure (re-enables the button).
-            settings_tab.subtitles_panel.notify_asr_download_finished(model_name, window.get_config().asr_models_root)
-
-        window.background_tasks.start_asr_model_download(
-            model_name,
-            window.get_config().asr_models_root,
-            settings_tab.set_asr_model_status,
-            _on_asr_finished,
-        )
-
-    settings_tab.asr_download_requested.connect(_on_asr_download_requested)
-
-    _connect_alass_download(window, settings_tab)
-    _connect_cuda_pack_download(window, settings_tab)
-    _connect_vad_pack_download(window, settings_tab)
-    _connect_vulkan_download(window, settings_tab)
+    # Resource download buttons (ASR model, alass, CUDA pack, VAD pack, Vulkan
+    # model): each Subtitles-panel "Download …" button hands off to a background
+    # worker and refreshes the panel on finish. All five share the connect
+    # skeleton in _connect_download; the per-tool builders carry the differences.
+    for _connect in (
+        _connect_asr_download,
+        _connect_alass_download,
+        _connect_cuda_pack_download,
+        _connect_vad_pack_download,
+        _connect_vulkan_download,
+    ):
+        _connect(window, settings_tab)
     # Wire the Dictionary Settings panel's pre-remove hook so deleting a
     # dictionary closes cached sqlite handles across every tab first — Win11
     # rejects the rmtree otherwise (Issue #30).
