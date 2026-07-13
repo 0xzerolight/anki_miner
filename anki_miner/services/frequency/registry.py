@@ -14,15 +14,15 @@ disk; the caller invokes ``.load()`` on each (matching ``build_provider_chain``)
 from __future__ import annotations
 
 import logging
-import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.services._sqlite_index import scan_index_root
 from anki_miner.services.frequency.providers.indexed_freq_provider import (
     IndexedFreqProvider,
 )
-from anki_miner.services.frequency.storage import SCHEMA_VERSION, read_meta_cached
+from anki_miner.services.frequency.storage import SCHEMA_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -57,53 +57,33 @@ class FrequencySourceRegistry:
         self._sources: dict[str, FreqSourceMeta] = {}
 
     def load(self) -> None:
-        self._sources.clear()
+        self._sources = scan_index_root(self._root, self._parse_meta, warn_label="frequency source")
+
+    def _parse_meta(self, child: Path, db: Path, meta: dict[str, str]) -> FreqSourceMeta:
         try:
-            if not self._root.is_dir():
-                return
-            children = sorted(self._root.iterdir())
-        except OSError as e:
-            logger.warning(
-                "Could not scan frequency-sources folder '%s': %s — no frequency sources will be loaded",
-                self._root,
-                e,
-            )
-            return
-        for child in children:
-            if not child.is_dir():
-                continue
-            db = child / "index.sqlite"
-            if not db.exists():
-                continue
-            try:
-                meta = read_meta_cached(db)
-            except sqlite3.DatabaseError as e:
-                logger.warning("Skipping corrupt frequency source %s: %s", child.name, e)
-                continue
-            try:
-                version = int(meta.get("schema_version", "0"))
-            except ValueError:
-                version = 0
-            try:
-                count = int(meta.get("entry_count", "0"))
-            except ValueError:
-                count = 0
-            self._sources[child.name] = FreqSourceMeta(
-                source_id=child.name,
-                source_name=meta.get("source_name", child.name),
-                format=meta.get("format", "unknown"),
-                entry_count=count,
-                # Additive-only migrations: every version from 1..current is
-                # readable (older = fewer columns, filled as absent by readers).
-                # A future version > SCHEMA_VERSION (written by a newer app) is
-                # rejected — we don't know its schema.
-                schema_ok=(1 <= version <= SCHEMA_VERSION),
-                version=version,
-                db_path=db,
-                # Explicit == "1" — meta values are strings, so bool("0") would be
-                # truthy; only the literal "1" (or absent -> False) means categorical.
-                is_categorical=(meta.get("is_categorical") == "1"),
-            )
+            version = int(meta.get("schema_version", "0"))
+        except ValueError:
+            version = 0
+        try:
+            count = int(meta.get("entry_count", "0"))
+        except ValueError:
+            count = 0
+        return FreqSourceMeta(
+            source_id=child.name,
+            source_name=meta.get("source_name", child.name),
+            format=meta.get("format", "unknown"),
+            entry_count=count,
+            # schema_ok policy: additive-only migrations, so every version from
+            # 1..current is readable (older = fewer columns, filled as absent by
+            # readers). A future version > SCHEMA_VERSION (written by a newer app)
+            # is rejected — we don't know its schema.
+            schema_ok=(1 <= version <= SCHEMA_VERSION),
+            version=version,
+            db_path=db,
+            # Explicit == "1" — meta values are strings, so bool("0") would be
+            # truthy; only the literal "1" (or absent -> False) means categorical.
+            is_categorical=(meta.get("is_categorical") == "1"),
+        )
 
     def get(self, source_id: str) -> FreqSourceMeta | None:
         return self._sources.get(source_id)

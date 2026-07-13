@@ -18,13 +18,13 @@ across the importer's staging-dir cleanup (matters on Windows).
 
 from __future__ import annotations
 
-import json
-import logging
 import sqlite3
 from collections.abc import Iterable
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
+import anki_miner.services._sqlite_index as _sqlite_index
+from anki_miner.services._sqlite_index import read_meta as read_meta
+from anki_miner.services._sqlite_index import write_meta as write_meta
 
 # v2 (this release) adds a nullable ``display_value`` column. The change is
 # purely additive — term/reading/rank are unchanged — so a v1 index (which lacks
@@ -42,11 +42,6 @@ SCHEMA_VERSION = 2
 # safe (the word looks *rarest*, filtered out, never falsely "common"). No
 # schema change: it is an ordinary INTEGER value in the existing ``rank`` column.
 CATEGORICAL_RANK = 2**31 - 1
-
-# Sidecar filename living next to each ``index.sqlite``. Holds the source's
-# ``meta`` rows as JSON so a registry ``load()`` can skip the SQLite open on
-# every app startup. Refreshed whenever ``write_meta`` runs.
-_META_SIDECAR = "meta.json"
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS entries (
@@ -125,69 +120,11 @@ def build_index(db_path: Path, rows: Iterable[FreqRow], meta: dict[str, str]) ->
     return total
 
 
-def write_meta(db_path: Path, items: dict[str, str]) -> None:
-    """Upsert ``meta`` rows and refresh the ``meta.json`` sidecar.
-
-    The sidecar lets the next :func:`read_meta_cached` call avoid re-opening
-    SQLite when nothing changed.
-    """
-    conn = sqlite3.connect(db_path)
-    try:
-        for key, value in items.items():
-            conn.execute(
-                "INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-                (key, value),
-            )
-        conn.commit()
-        full_meta = {row[0]: row[1] for row in conn.execute("SELECT key, value FROM meta")}
-    finally:
-        conn.close()
-    _write_meta_sidecar(db_path, full_meta)
-
-
-def read_meta(db_path: Path) -> dict[str, str]:
-    """Read all ``meta`` rows. Returns an empty dict if the file is missing."""
-    if not db_path.exists():
-        return {}
-    conn = sqlite3.connect(db_path)
-    try:
-        return {row[0]: row[1] for row in conn.execute("SELECT key, value FROM meta")}
-    finally:
-        conn.close()
-
-
 def read_meta_cached(db_path: Path) -> dict[str, str]:
-    """Read ``meta`` rows via the ``meta.json`` sidecar when it is fresh.
+    """Read ``meta`` rows via the ``meta.json`` sidecar when it is fresh, falling
+    back to :func:`read_meta` when the sidecar is missing/stale/corrupt.
 
-    Falls through to :func:`read_meta` and rewrites the sidecar when:
-    * the sidecar is missing,
-    * ``index.sqlite`` is newer than the sidecar,
-    * the sidecar is unreadable / not valid JSON.
-
-    Mirrors the dictionary storage layer so a frequency registry can skip the
-    SQLite open on startup when nothing changed since the last run.
+    Lets a frequency registry skip the SQLite open on startup when nothing
+    changed since the last run. Thin wrapper over the shared cached reader.
     """
-    if not db_path.exists():
-        return {}
-    sidecar = db_path.parent / _META_SIDECAR
-    try:
-        if sidecar.is_file() and sidecar.stat().st_mtime >= db_path.stat().st_mtime:
-            data = json.loads(sidecar.read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                return {str(k): str(v) for k, v in data.items()}
-    except (OSError, json.JSONDecodeError) as e:
-        logger.debug("meta sidecar miss for %s: %s", db_path, e)
-
-    meta = read_meta(db_path)
-    _write_meta_sidecar(db_path, meta)
-    return meta
-
-
-def _write_meta_sidecar(db_path: Path, meta: dict[str, str]) -> None:
-    """Best-effort sidecar write. Cache misses are logged, not raised — the
-    next :func:`read_meta_cached` call simply falls back to :func:`read_meta`."""
-    sidecar = db_path.parent / _META_SIDECAR
-    try:
-        sidecar.write_text(json.dumps(meta), encoding="utf-8")
-    except OSError as e:  # pragma: no cover - defensive
-        logger.debug("Failed to write meta sidecar %s: %s", sidecar, e)
+    return _sqlite_index.read_meta_cached(db_path, read_meta)
