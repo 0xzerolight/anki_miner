@@ -3,7 +3,6 @@
 from .audio_track_detector import (
     BITMAP_SUBTITLE_CODECS,
     AudioStream,
-    JapaneseAudioStream,
     SubtitleStream,
     find_japanese_audio_stream,
     get_primary_video_codec,
@@ -38,7 +37,6 @@ __all__ = [
     "hiragana_to_katakana",
     "is_hiragana_only",
     "is_katakana_only",
-    "JapaneseAudioStream",
     "katakana_to_hiragana",
     "list_audio_streams",
     "list_subtitle_streams",
