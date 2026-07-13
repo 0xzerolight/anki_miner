@@ -26,11 +26,11 @@ import contextlib
 import hashlib
 import logging
 import os
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
 from anki_miner.exceptions import SetupError
+from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services.asr import model_manager
 from anki_miner.services.resource_downloader import download_to_temp
 
@@ -45,8 +45,6 @@ __all__ = [
     "install_ggml_model",
     "install_vad_model",
 ]
-
-ProgressCallback = Callable[[int, int, str], None]
 
 _CHUNK_SIZE = 1024 * 1024  # 1 MiB chunks for streamed sha256.
 
@@ -146,7 +144,7 @@ def install_ggml_model(
     asr_model: str,
     asr_models_root: Path,
     *,
-    progress: ProgressCallback | None = None,
+    progress: DownloadProgressFn | None = None,
     cancel_event=None,
 ) -> Path:
     """Download, verify, and install *asr_model*'s acoustic ggml file.
@@ -180,7 +178,7 @@ def install_ggml_model(
 def install_vad_model(
     asr_models_root: Path,
     *,
-    progress: ProgressCallback | None = None,
+    progress: DownloadProgressFn | None = None,
     cancel_event=None,
 ) -> Path:
     """Download, verify, and install the shared Silero VAD ggml file.
@@ -207,7 +205,7 @@ def _install_spec(
     spec: _GgmlSpec,
     asr_models_root: Path,
     *,
-    progress: ProgressCallback | None,
+    progress: DownloadProgressFn | None,
     cancel_event,
 ) -> Path:
     """Shared download/verify/promote path for one ggml file spec."""

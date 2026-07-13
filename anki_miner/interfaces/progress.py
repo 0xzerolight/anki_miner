@@ -1,6 +1,11 @@
 """Progress callback protocol for progress reporting."""
 
+from collections.abc import Callable
 from typing import Protocol
+
+# Shared alias for the (bytes_done, bytes_total, description) download progress
+# callback used by the resource downloader and its installer wrappers.
+DownloadProgressFn = Callable[[int, int, str], None]
 
 
 class ProgressCallback(Protocol):
