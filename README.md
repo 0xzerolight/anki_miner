@@ -37,9 +37,7 @@ Please leave a ⭐ star if Anki Miner helped you - it helps others find it :).
 ### Requirements
 
 - **Anki** with the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on (code `2055492159`)
-- **ffmpeg** + **libmpv** (video preview only) - needed only when installing via pip/pipx, `.deb`, or source; release bundles include them. (Windows pip: `libmpv-2.dll` on PATH or `ANKI_MINER_LIBMPV`.)
-
-### Download
+- **ffmpeg** + **libmpv** (video preview only) - needed only when installing via pip/pipx, `.deb`, or source.
 
 Grab the download for your platform from the [latest release](https://github.com/0xzerolight/anki_miner/releases/latest):
 
@@ -172,17 +170,12 @@ List of ideas for future versions of Anki Miner. Not in priority order. Feature 
   - [x] Local subtitle creation tab: Opt-in tab to locally generate subtitles.
   - [x] Reading tab: Mine manga and books.
   - [ ] Media library: Expand Analytics tab to display local media library across all media forms.
-
-- **Improvements**:
-  - [x] Improved user onboarding: automatic recommended resource fetching, easier setup.
-
-- **Researching/Under consideration**:
-  - [ ] Android port.
-  - [ ] Jellyfin integration.
-  - [ ] Jimaku integration.
+  - [ ] Backfill tool.
+  - [ ] Automatic subtitle downloading.
 
 - **Long-term**:
   - [ ] Beyond Japanese: Mining other languages.
+  - [ ] Android port.
 
 ## Contributing
 
