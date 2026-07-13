@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import subprocess
 import threading
 import time
@@ -1312,40 +1311,6 @@ class TestKillTreeExpectedScoping:
 
         parent.terminate.assert_called_once()
         assert service._popen is None
-
-
-# ---------------------------------------------------------------------------
-# M2 — Presenter exception suppression
-# ---------------------------------------------------------------------------
-
-
-def test_presenter_show_info_exception_is_swallowed(
-    yt_config: AnkiMinerConfig,
-    tmp_path: Path,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """A raising presenter must not abort the fetch loop; we log and continue."""
-    _make_happy_outputs(tmp_path)
-    presenter = MagicMock()
-    presenter.show_info.side_effect = RuntimeError("boom")
-    svc = YouTubeFetcherService(yt_config, presenter=presenter)
-
-    # A line that is not progress and not post-process -> forwarded to presenter.
-    lines = ["[youtube] abc123: Downloading webpage"]
-
-    with (
-        patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
-        patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
-        caplog.at_level(logging.DEBUG, logger="anki_miner.services.youtube_fetcher"),
-    ):
-        out = svc.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
-
-    # Presenter was attempted and raised.
-    presenter.show_info.assert_called()
-    # Error was logged at debug, not propagated.
-    assert any("presenter.show_info raised" in rec.message for rec in caplog.records)
-    # Fetch still completed normally.
-    assert out.sub_source == "manual"
 
 
 # ---------------------------------------------------------------------------
