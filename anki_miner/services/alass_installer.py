@@ -21,7 +21,6 @@ removed (success or failure).
 from __future__ import annotations
 
 import contextlib
-import hashlib
 import logging
 import os
 import sys
@@ -32,6 +31,7 @@ from pathlib import Path
 
 from anki_miner.exceptions import SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
+from anki_miner.services._install_common import cleanup_part, verify_sha256
 from anki_miner.services.resource_downloader import download_to_temp
 
 logger = logging.getLogger(__name__)
@@ -42,8 +42,6 @@ __all__ = [
     "is_installed",
     "install_alass",
 ]
-
-_CHUNK_SIZE = 1024 * 1024  # 1 MiB chunks for streamed sha256.
 
 
 @dataclass(frozen=True)
@@ -173,7 +171,7 @@ def install_alass(
         if cancel_event is not None and cancel_event.is_set():
             raise SetupError("alass installation cancelled")
 
-        _verify_sha256(part_path, spec.sha256)
+        verify_sha256(part_path, spec.sha256, "alass download")
 
         target = bin_root / spec.dest_name
         if spec.is_zip:
@@ -186,18 +184,7 @@ def install_alass(
 
         return target
     finally:
-        _cleanup(part_path)
-
-
-def _verify_sha256(path: Path, expected: str) -> None:
-    """Stream *path* in chunks and raise ``SetupError`` on a sha256 mismatch."""
-    digest = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(_CHUNK_SIZE), b""):
-            digest.update(chunk)
-    actual = digest.hexdigest()
-    if actual != expected:
-        raise SetupError(f"alass download checksum mismatch: expected {expected}, got {actual}")
+        cleanup_part(part_path)
 
 
 def _place_file(part_path: Path, target: Path) -> None:
@@ -251,10 +238,3 @@ def _promote(staged: Path, target: Path) -> None:
         with contextlib.suppress(OSError):
             staged.unlink()
         raise SetupError(f"Failed to install alass binary: {exc}") from exc
-
-
-def _cleanup(path: Path | None) -> None:
-    """Remove *path* if it exists, ignoring errors."""
-    if path is not None:
-        with contextlib.suppress(OSError):
-            path.unlink()

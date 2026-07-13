@@ -436,7 +436,7 @@ class SettingsTab(QWidget):
     def _on_asr_download_clicked(self, model_name: str) -> None:
         """Set a pending status and re-emit so the caller can start the download.
 
-        The wiring (SettingsTab → caller → AsrModelDownloadWorker) mirrors the
+        The wiring (SettingsTab → caller → InstallWorker) mirrors the
         ytdlp_update_requested pattern: the tab updates its own status label and
         re-emits; the download itself is owned by the caller (MainWindow /
         background_tasks).

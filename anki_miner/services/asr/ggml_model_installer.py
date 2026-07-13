@@ -22,8 +22,6 @@ its url AND sha256 together (alass-style).
 
 from __future__ import annotations
 
-import contextlib
-import hashlib
 import logging
 import os
 from dataclasses import dataclass
@@ -31,6 +29,7 @@ from pathlib import Path
 
 from anki_miner.exceptions import SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
+from anki_miner.services._install_common import cleanup_part, sweep_stale, verify_sha256
 from anki_miner.services.asr import model_manager
 from anki_miner.services.resource_downloader import download_to_temp
 
@@ -45,8 +44,6 @@ __all__ = [
     "install_ggml_model",
     "install_vad_model",
 ]
-
-_CHUNK_SIZE = 1024 * 1024  # 1 MiB chunks for streamed sha256.
 
 #: The largest pinned file (large-v3 acoustic) is ~1.03 GB, over
 #: resource_downloader's 600 MB default cap, so every download lifts the cap to
@@ -223,7 +220,7 @@ def _install_spec(
     # Reclaim orphans from a previous crashed/killed install (a hard kill between
     # download and os.replace leaves a large .part behind). The promoted .bin
     # files are never touched, so the presence checks are unaffected.
-    _sweep_stale(ggml_dir)
+    sweep_stale(ggml_dir)
     cancelled_check = cancel_event.is_set if cancel_event is not None else None
 
     def _on_progress(downloaded: int, total: int, _msg: str) -> None:
@@ -241,7 +238,7 @@ def _install_spec(
         if cancel_event is not None and cancel_event.is_set():
             raise SetupError(f"ggml model installation cancelled ({spec.filename})")
 
-        _verify_sha256(part_path, spec.sha256)
+        verify_sha256(part_path, spec.sha256, "ggml model download")
 
         if cancel_event is not None and cancel_event.is_set():
             raise SetupError(f"ggml model installation cancelled ({spec.filename})")
@@ -250,36 +247,6 @@ def _install_spec(
         os.replace(part_path, target)
         part_path = None  # type: ignore[assignment]  # promoted; do not unlink.
     finally:
-        _cleanup(part_path)
+        cleanup_part(part_path)
 
     return target
-
-
-def _verify_sha256(path: Path, expected: str) -> None:
-    """Stream *path* in chunks and raise ``SetupError`` on a sha256 mismatch."""
-    digest = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(_CHUNK_SIZE), b""):
-            digest.update(chunk)
-    actual = digest.hexdigest()
-    if actual != expected:
-        raise SetupError(f"ggml model download checksum mismatch: expected {expected}, got {actual}")
-
-
-def _sweep_stale(ggml_dir: Path) -> None:
-    """Remove leftover ``.part`` files from a crashed install.
-
-    Best-effort: a missing dir or an unremovable entry is ignored. Never touches
-    the promoted ``.bin`` model files.
-    """
-    with contextlib.suppress(OSError):
-        for part in ggml_dir.glob("*.part"):
-            with contextlib.suppress(OSError):
-                part.unlink()
-
-
-def _cleanup(path: Path | None) -> None:
-    """Remove *path* if it exists, ignoring errors."""
-    if path is not None:
-        with contextlib.suppress(OSError):
-            path.unlink()

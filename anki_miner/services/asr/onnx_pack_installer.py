@@ -27,8 +27,6 @@ Placement mirrors the atomic-staging idiom in ``cuda_pack_installer`` and
 
 from __future__ import annotations
 
-import contextlib
-import hashlib
 import logging
 import os
 import platform
@@ -41,6 +39,7 @@ from pathlib import Path
 
 from anki_miner.exceptions import SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
+from anki_miner.services._install_common import cleanup_part, sweep_stale, verify_sha256
 from anki_miner.services.resource_downloader import download_to_temp
 
 logger = logging.getLogger(__name__)
@@ -50,8 +49,6 @@ __all__ = [
     "is_installed",
     "install_onnx_pack",
 ]
-
-_CHUNK_SIZE = 1024 * 1024  # 1 MiB chunks for streamed sha256.
 
 #: onnxruntime wheels are ~16-60 MB; cap generously below resource_downloader's
 #: 600 MB default to fail fast on a wrong/oversized download.
@@ -190,7 +187,7 @@ def install_onnx_pack(
     # Reclaim orphans from a previous crashed/killed install (a hard kill between
     # download and os.replace leaves a .part wheel and/or a .staging-* dir). The
     # promoted onnxruntime/ tree is never touched, so is_installed is unaffected.
-    _sweep_stale(onnx_pack_root)
+    sweep_stale(onnx_pack_root)
     cancelled_check = cancel_event.is_set if cancel_event is not None else None
 
     def _on_progress(downloaded: int, total: int, _msg: str) -> None:
@@ -208,27 +205,16 @@ def install_onnx_pack(
         if cancel_event is not None and cancel_event.is_set():
             raise SetupError("onnxruntime installation cancelled")
 
-        _verify_sha256(part_path, spec.sha256)
+        verify_sha256(part_path, spec.sha256, "onnxruntime download")
 
         if cancel_event is not None and cancel_event.is_set():
             raise SetupError("onnxruntime installation cancelled")
 
         _extract_package(part_path, onnx_pack_root)
     finally:
-        _cleanup(part_path)
+        cleanup_part(part_path)
 
     return onnx_pack_root
-
-
-def _verify_sha256(path: Path, expected: str) -> None:
-    """Stream *path* in chunks and raise ``SetupError`` on a sha256 mismatch."""
-    digest = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(_CHUNK_SIZE), b""):
-            digest.update(chunk)
-    actual = digest.hexdigest()
-    if actual != expected:
-        raise SetupError(f"onnxruntime download checksum mismatch: expected {expected}, got {actual}")
 
 
 def _safe_member_path(base: Path, member: str) -> Path:
@@ -275,24 +261,3 @@ def _extract_package(part_path: Path, onnx_pack_root: Path) -> None:
         os.replace(extracted_pkg, target)
     finally:
         shutil.rmtree(staging, ignore_errors=True)
-
-
-def _sweep_stale(onnx_pack_root: Path) -> None:
-    """Remove leftover ``.part`` wheels and ``.staging-*`` dirs from a crashed install.
-
-    Best-effort: a missing dir or an unremovable entry is ignored. Never touches
-    the promoted ``onnxruntime/`` tree.
-    """
-    with contextlib.suppress(OSError):
-        for part in onnx_pack_root.glob("*.part"):
-            with contextlib.suppress(OSError):
-                part.unlink()
-        for staging in onnx_pack_root.glob(".staging-*"):
-            shutil.rmtree(staging, ignore_errors=True)
-
-
-def _cleanup(path: Path | None) -> None:
-    """Remove *path* if it exists, ignoring errors."""
-    if path is not None:
-        with contextlib.suppress(OSError):
-            path.unlink()

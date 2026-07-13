@@ -12,7 +12,6 @@ mirrors ``JPod101AudioFetcher`` in ``expression_audio_fetcher.py``. Unlike that
 fetcher, this function RAISES on failure (the worker catches per item).
 """
 
-import contextlib
 import logging
 import tempfile
 from collections.abc import Callable
@@ -22,6 +21,7 @@ import requests
 
 from anki_miner.exceptions import SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
+from anki_miner.services._install_common import cleanup_part
 
 logger = logging.getLogger(__name__)
 
@@ -132,21 +132,14 @@ def download_to_temp(
             finally:
                 response.close()
     except SetupError:
-        _cleanup(tmp_path)
+        cleanup_part(tmp_path)
         raise
     except (requests.RequestException, OSError) as exc:
         logger.debug("resource download failed for %s: %s", url, exc)
-        _cleanup(tmp_path)
+        cleanup_part(tmp_path)
         raise SetupError(f"Failed to download {url}: {exc}") from exc
 
     # tmp_path is always set here: NamedTemporaryFile assigns it before any
     # statement that could leave the try block without raising.
     assert tmp_path is not None
     return tmp_path
-
-
-def _cleanup(tmp_path: Path | None) -> None:
-    """Remove the partial temp file if it exists, ignoring errors."""
-    if tmp_path is not None:
-        with contextlib.suppress(OSError):
-            tmp_path.unlink()
