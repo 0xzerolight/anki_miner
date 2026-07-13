@@ -30,13 +30,12 @@ import os
 import shutil
 from dataclasses import replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Collection, Iterator, cast
+from typing import TYPE_CHECKING, Collection, cast
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -50,10 +49,9 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog, SubtitleTracksDialog
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
-from anki_miner.gui.widgets.log_widget import LogWidget
-from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.condense_worker import CondenseItem, CondenseWorker
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES, list_subtitle_streams
@@ -95,8 +93,11 @@ _OFFSET_MAX = 600_000
 _OFFSET_STEP = 100
 
 
-class CondenseTab(QWidget):
+class CondenseTab(_ToolTabBase):
     """Tab for condensing media files to dialogue-only audio.
+
+    Shared worker-signal slots, output-location slots, progress chrome, and the
+    close contract live in :class:`~anki_miner.gui.widgets._tool_tab_base._ToolTabBase`.
 
     Args:
         config: Frozen application configuration.
@@ -118,7 +119,7 @@ class CondenseTab(QWidget):
         # seeds the option widgets (setValue/setChecked would otherwise feed back
         # through config_changed and re-persist during a refresh).
         self._seeding: bool = False
-        self.worker_thread: CondenseWorker | None = None
+        self.worker_thread = None
         self._custom_output_dir: Path | None = None
         self._total_files: int = 0
         self._cancelled: bool = False
@@ -130,10 +131,28 @@ class CondenseTab(QWidget):
         # resolve_ffprobe + shutil.which / Path.exists) is a PATH scan we must
         # not repeat on every read. Recomputed only here and in update_config().
         self._ffmpeg_is_available: bool = self._compute_ffmpeg_available()
+        # Built here (not in the base) so each literal stays in this tab's
+        # tr-context — see _ToolTabBase for the rationale.
+        self._strings = _ToolTabStrings(
+            progress=self.tr("Progress"),
+            done=self.tr("Done"),
+            done_prefix=self.tr("Done: "),
+            skipped=self.tr("Skipped"),
+            skipped_prefix=self.tr("Skipped: "),
+            cancel=self.tr("Cancel"),
+            cancelling=self.tr("Cancelling…"),
+            cancelled=self.tr("Cancelled"),
+            complete_template=self.tr("Complete — %1 files processed"),
+            select_output_folder=self.tr("Select Output Folder"),
+            output_default=self.tr("Next to source"),
+        )
 
         self._setup_ui()
         self._apply_config_defaults()
         self._refresh_engine_state()
+
+    def _item_total(self) -> int:
+        return self._total_files
 
     # ------------------------------------------------------------------
     # Config refresh
@@ -440,7 +459,7 @@ class CondenseTab(QWidget):
         out_row.setSpacing(SPACING.xs)
         out_row.addWidget(QLabel(self.tr("Output:")))
 
-        self.output_location_label = QLabel(self.tr("Next to source"))
+        self.output_location_label = QLabel(self._strings.output_default)
         self.output_location_label.setObjectName("output-location-value")
         out_row.addWidget(self.output_location_label, 1)
 
@@ -478,6 +497,8 @@ class CondenseTab(QWidget):
 
         self.condense_button = ModernButton(self.tr("Condense Audio"), variant="primary")
         self.condense_button.clicked.connect(self._on_condense)
+        # Base slots (queue-finished re-enable) act on the tool's primary button.
+        self._primary_button = self.condense_button
         btn_row.addWidget(self.condense_button)
 
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="danger")
@@ -487,24 +508,6 @@ class CondenseTab(QWidget):
 
         btn_row.addStretch()
         layout.addLayout(btn_row)
-
-        group.setLayout(layout)
-        return group
-
-    def _create_progress_section(self) -> QFrame:
-        group = QFrame()
-        group.setObjectName("card")
-        layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
-
-        layout.addWidget(SectionHeader(self.tr("Progress")))
-
-        self.progress_widget = ProgressWidget()
-        layout.addWidget(self.progress_widget)
-
-        self.log_widget = LogWidget()
-        layout.addWidget(self.log_widget)
 
         group.setLayout(layout)
         return group
@@ -715,26 +718,6 @@ class CondenseTab(QWidget):
         run_off_thread(self, _probe, _on_streams, _on_probe_error)
 
     # ------------------------------------------------------------------
-    # Output location slots
-    # ------------------------------------------------------------------
-
-    def _on_choose_output(self) -> None:
-        folder = QFileDialog.getExistingDirectory(
-            self,
-            self.tr("Select Output Folder"),
-            str(Path.home()),
-        )
-        if folder:
-            self._custom_output_dir = Path(folder)
-            self.output_location_label.setText(folder)
-            self.clear_output_button.show()
-
-    def _on_clear_output(self) -> None:
-        self._custom_output_dir = None
-        self.output_location_label.setText(self.tr("Next to source"))
-        self.clear_output_button.hide()
-
-    # ------------------------------------------------------------------
     # Condense
     # ------------------------------------------------------------------
 
@@ -938,64 +921,3 @@ class CondenseTab(QWidget):
         self.progress_widget.set_status(
             tr_format(self.tr("Condensing file %1 of %2"), str(idx + 1), str(self._total_files))
         )
-
-    def _on_file_progress(self, idx: int, pct: int, message: str) -> None:
-        # Compose the intra-file condense fraction into the whole-run bar so
-        # long files show live movement, not a bar frozen per file.
-        self.progress_widget.set_composed(idx, pct, self._total_files, message)
-
-    def _on_file_finished(self, idx: int, out_path: object, error_str: object) -> None:
-        # Whole-file advance in percent units (matches set_composed's ETA math).
-        if self._total_files:
-            self.progress_widget.set_percent(int((idx + 1) / self._total_files * 100))
-        if error_str:
-            self.log_widget.append_error(str(error_str))
-        else:
-            path_label = str(out_path) if out_path else ""
-            self.log_widget.append_success(self.tr("Done: ") + Path(path_label).name if path_label else self.tr("Done"))
-
-    def _on_file_skipped(self, idx: int, out_path: object) -> None:
-        # Advance the progress bar just like a finished file.
-        if self._total_files:
-            self.progress_widget.set_percent(int((idx + 1) / self._total_files * 100))
-        path_label = str(out_path) if out_path else ""
-        self.log_widget.append_info(self.tr("Skipped: ") + Path(path_label).name if path_label else self.tr("Skipped"))
-
-    def _on_queue_finished(self) -> None:
-        self.condense_button.setEnabled(True)
-        self.cancel_button.hide()
-        # Reset for the next run's cancel button.
-        self.cancel_button.setText(self.tr("Cancel"))
-        self.cancel_button.setEnabled(True)
-        if self._cancelled:
-            self.progress_widget.reset()
-            self.progress_widget.set_status(self.tr("Cancelled"))
-        else:
-            self.progress_widget.show_completion(tr_format(self.tr("Complete — %1 files processed"), self._total_files))
-
-    def _on_worker_finished(self) -> None:
-        """Release the QThread once it has actually exited."""
-        worker = self.worker_thread
-        if worker is not None:
-            worker.deleteLater()
-            self.worker_thread = None
-
-    # ------------------------------------------------------------------
-    # Cancel
-    # ------------------------------------------------------------------
-
-    def _on_cancel(self) -> None:
-        self._cancelled = True
-        if self.worker_thread is not None:
-            self.worker_thread.cancel()
-        self.cancel_button.setText(self.tr("Cancelling…"))
-        self.cancel_button.setEnabled(False)
-
-    # ------------------------------------------------------------------
-    # Close contract
-    # ------------------------------------------------------------------
-
-    def iter_close_workers(self) -> Iterator[CondenseWorker]:
-        """Yield the active worker so BackgroundTaskController can join it on close."""
-        if self.worker_thread is not None:
-            yield self.worker_thread
