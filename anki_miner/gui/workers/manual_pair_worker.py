@@ -61,10 +61,7 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
                 supplied, the processor is constructed on the worker thread
                 inside run().
         """
-        if episode_processor is not None and processor_factory is not None:
-            raise ValueError("Provide either episode_processor or processor_factory, not both")
-        if episode_processor is None and processor_factory is None:
-            raise ValueError("Either episode_processor or processor_factory must be provided")
+        self._validate_processor_xor_factory(episode_processor, processor_factory, param_name="episode_processor")
         super().__init__(parent)
         self.episode_processor = episode_processor
         self._processor_factory = processor_factory
