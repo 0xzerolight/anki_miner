@@ -233,7 +233,6 @@ class TestRoundTripImmutabilityAndPaths:
         assert isinstance(loaded.dicts_root, Path)
         assert isinstance(loaded.audio_packs_root, Path)
         assert isinstance(loaded.pitch_accent_path, Path)
-        assert isinstance(loaded.frequency_list_path, Path)
         assert isinstance(loaded.known_words_db_path, Path)
         assert isinstance(loaded.stats_db_path, Path)
         assert isinstance(loaded.log_path, Path)

@@ -238,11 +238,6 @@ class AnkiMinerConfig:
     pitch_category_format: Literal["jp", "romaji"] = "jp"
 
     # Frequency settings
-    # DEPRECATED: the UI no longer writes this (superseded by frequency_chain).
-    # Kept only as the read source for the one-time legacy_migration that folds
-    # an existing frequency.csv into the chain; it still round-trips so old
-    # configs migrate cleanly. Do not wire new writers to it.
-    frequency_list_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "frequency.csv")
     # Activation is resource-driven (see the frequency_active property): the
     # frequency service loads iff at least one enabled source is in the chain.
     # There is no separate on/off flag — adding a source is the switch.
@@ -453,8 +448,6 @@ class AnkiMinerConfig:
             object.__setattr__(self, "audio_packs_root", Path(self.audio_packs_root))
         if isinstance(self.pitch_accent_path, str):
             object.__setattr__(self, "pitch_accent_path", Path(self.pitch_accent_path))
-        if isinstance(self.frequency_list_path, str):
-            object.__setattr__(self, "frequency_list_path", Path(self.frequency_list_path))
         if isinstance(self.freqs_root, str):
             object.__setattr__(self, "freqs_root", Path(self.freqs_root))
         if isinstance(self.known_words_db_path, str):
