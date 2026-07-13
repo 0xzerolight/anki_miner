@@ -287,13 +287,13 @@ def test_remove_confirmed_deletes_dir_and_entry(qapp, qtbot, tmp_path, confirm_r
     qtbot.addWidget(panel)
     panel.set_chain((FreqEntry(source_id="jpdb", enabled=True),))
 
-    removed: list[int] = []
-    panel.source_removed.connect(lambda: removed.append(1))
+    changed: list[int] = []
+    panel.chain_changed.connect(lambda: changed.append(1))
 
     panel.remove(0)
 
     # rmtree now runs off the GUI thread.
-    qtbot.waitUntil(lambda: removed == [1], timeout=3000)
+    qtbot.waitUntil(lambda: changed == [1], timeout=3000)
     assert panel.get_chain() == ()
     assert not (tmp_path / "jpdb").exists()
 
@@ -352,16 +352,16 @@ def test_context_menu_bails_during_scan_placeholder(qapp, qtbot, tmp_path, monke
     menu_cls = MagicMock()
     monkeypatch.setattr(fsp_mod, "QMenu", menu_cls)
     reimports: list = []
-    removed: list = []
+    changed: list = []
     panel.reimport_source_requested.connect(reimports.append)
-    panel.source_removed.connect(lambda: removed.append(1))
+    panel.chain_changed.connect(lambda: changed.append(1))
 
     panel._on_row_context_menu(QPoint(1, 1))
 
     # No menu constructed, nothing removed or re-imported.
     menu_cls.assert_not_called()
     assert reimports == []
-    assert removed == []
+    assert changed == []
 
 
 # ---------------------------------------------------------------------------

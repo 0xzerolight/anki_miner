@@ -129,7 +129,7 @@ class TestFrequencyBoundedJoin:
     def _patch_worker(self, monkeypatch):
         new = _stub_import_worker()
         monkeypatch.setattr(
-            "anki_miner.gui.controllers.frequency_import_flow.FrequencyImportWorker.for_source",
+            "anki_miner.gui.controllers.frequency_import_flow.ImportWorker.for_source",
             MagicMock(return_value=new),
         )
         return new
@@ -202,7 +202,7 @@ class TestAudioPackBoundedJoin:
     def _patch_worker(self, monkeypatch):
         new = _stub_import_worker()
         monkeypatch.setattr(
-            "anki_miner.gui.controllers.audio_pack_import_flow.AudioPackImportWorker.for_pack",
+            "anki_miner.gui.controllers.audio_pack_import_flow.ImportWorker.for_pack",
             MagicMock(return_value=new),
         )
         return new
@@ -261,7 +261,7 @@ class TestDictionaryBoundedJoin:
 
         new = _stub_import_worker()
         monkeypatch.setattr(
-            f"{mod}.DictionaryImportWorker.for_yomitan",
+            f"{mod}.ImportWorker.for_yomitan",
             MagicMock(return_value=new),
         )
 

@@ -2,7 +2,7 @@
 
 Covers the validation gate that guards against the user picking a zip that
 derives a different dict_id than the slot being re-imported. Mismatch must
-abort with a warning; match must invoke DictionaryImportWorker.for_yomitan
+abort with a warning; match must invoke ImportWorker.for_yomitan
 with overwrite=True and refresh the panel registry on completion.
 """
 
@@ -29,7 +29,7 @@ def tab(test_config: AnkiMinerConfig, qtbot):
 
 @pytest.fixture
 def stub_worker(monkeypatch):
-    """Replace DictionaryImportWorker.for_yomitan with a MagicMock + capture.
+    """Replace ImportWorker.for_yomitan with a MagicMock + capture.
 
     The mock returns an instance whose signals are also MagicMocks so the
     handler's `.connect(...)` calls succeed and `.start()` is a no-op. We
@@ -38,18 +38,19 @@ def stub_worker(monkeypatch):
     factory = MagicMock(name="for_yomitan")
 
     def _build_instance(*args, **kwargs):
-        instance = MagicMock(name="DictionaryImportWorker")
+        instance = MagicMock(name="ImportWorker")
         # Signals: any attribute access yields a MagicMock with .connect/.emit
         instance.progress = MagicMock()
         instance.import_finished = MagicMock()
         instance.failed = MagicMock()
+        instance.cancelled = MagicMock()
         instance.cancel = MagicMock()
         instance.start = MagicMock()
         return instance
 
     factory.side_effect = _build_instance
     monkeypatch.setattr(
-        "anki_miner.gui.controllers.dictionary_import_flow.DictionaryImportWorker.for_yomitan",
+        "anki_miner.gui.controllers.dictionary_import_flow.ImportWorker.for_yomitan",
         factory,
     )
     return factory
@@ -147,6 +148,26 @@ def test_cancelled_dialog_skips_warning_and_worker(tab, monkeypatch, stub_worker
     stub_worker.assert_not_called()
 
 
+def test_add_dict_user_cancel_closes_without_warning(tab, monkeypatch, stub_worker, tmp_path):
+    """A user cancel arrives on the worker's distinct ``cancelled`` signal — the
+    flow must close silently and re-enable the buttons, never popping the
+    "Import Failed" dialog. This is the pre-unification bug ARC-013 fixes:
+    cancellation used to route through ``failed``."""
+    zip_path = build_yomitan_zip(tmp_path / "src.zip", title="Test Dict", revision="v1")
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **kw: (str(zip_path), "Yomitan zip (*.zip)"))
+    warnings = _capture_warnings(monkeypatch)
+
+    tab._dict_import_flow.add_dict()
+    assert tab.dictionary_panel._add_btn.isEnabled() is False, "buttons disabled while import runs"
+
+    worker = tab._dict_import_flow._active_import_worker
+    on_cancelled = worker.cancelled.connect.call_args.args[0]
+    on_cancelled()
+
+    assert warnings == [], "user cancel must not surface an Import Failed dialog"
+    assert tab.dictionary_panel._add_btn.isEnabled() is True, "buttons re-enabled after cancel"
+
+
 def test_resource_release_refusal_blocks_worker(tab, monkeypatch, stub_worker, tmp_path):
     """When the release hook refuses (mining run in flight), the handler must
     show the "Re-import blocked" warning and never spawn the importer worker —
@@ -198,7 +219,7 @@ def test_reimport_dict_opens_file_dialog_at_home(tab, monkeypatch, stub_worker):
 
 
 def test_resource_release_runs_before_worker_start(tab, monkeypatch, stub_worker, tmp_path):
-    """The release hook must fire strictly before DictionaryImportWorker is
+    """The release hook must fire strictly before ImportWorker is
     constructed, so cached sqlite handles are dropped before the importer
     renames the dict folder (Issue #32 root-cause ordering)."""
     zip_path = build_yomitan_zip(tmp_path / "src.zip", title="Test Dict", revision="v1")

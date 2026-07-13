@@ -321,11 +321,9 @@ class SettingsTab(QWidget):
         # deleted dict_id orphaned — the exact Issue #30 bug this wiring
         # prevents — while its success path silently commits every panel's
         # unsaved edits.
-        # Removal also emits chain_changed (dictionary_settings_panel.py:498,
-        # before dictionary_removed at 499), so this single wiring covers it;
-        # wiring dictionary_removed too would persist the same chain twice.
-        # dictionary_removed stays unconnected until a consumer needs the
-        # removal-specific notification (OVH-032).
+        # A destructive remove re-emits chain_changed (its sole persist
+        # trigger), so this single wiring covers reorder, toggle, and remove
+        # alike (OVH-032).
         self.dictionary_panel.chain_changed.connect(
             lambda: self._persist_chain_change(self.dictionary_panel.get_chain())
         )
@@ -334,10 +332,8 @@ class SettingsTab(QWidget):
         self.audio_panel.add_pack_requested.connect(self._audio_pack_import_flow.add_pack)
         self.audio_panel.reimport_pack_requested.connect(self._audio_pack_import_flow.reimport_pack)
         # Persist chain immediately after reorder/toggle or destructive remove.
-        # Removal also emits chain_changed (after pack deletion succeeds), so
-        # this single wiring covers it; wiring pack_removed too would persist
-        # the same chain twice. pack_removed stays unconnected until a
-        # consumer needs the removal-specific notification.
+        # Removal re-emits chain_changed (after pack deletion succeeds), so this
+        # single wiring covers it.
         self.audio_panel.chain_changed.connect(lambda: self._persist_audio_chain_change(self.audio_panel.get_chain()))
         self.audio_panel.retry_missing_audio_requested.connect(self._on_retry_missing_audio)
         # Sentence-TTS toggles persist immediately, like the chain above.
@@ -347,10 +343,8 @@ class SettingsTab(QWidget):
         self.frequency_panel.add_source_requested.connect(self._frequency_import_flow.add_source)
         self.frequency_panel.reimport_source_requested.connect(self._frequency_import_flow.reimport_source)
         # Persist chain immediately after reorder/toggle or destructive remove.
-        # Removal also emits chain_changed (after source deletion succeeds), so
-        # this single wiring covers it; wiring source_removed too would persist
-        # the same chain twice. source_removed stays unconnected until a
-        # consumer needs the removal-specific notification.
+        # Removal re-emits chain_changed (after source deletion succeeds), so
+        # this single wiring covers it.
         self.frequency_panel.chain_changed.connect(
             lambda: self._persist_frequency_chain_change(self.frequency_panel.get_chain())
         )

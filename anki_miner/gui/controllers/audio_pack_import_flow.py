@@ -1,7 +1,7 @@
 """Audio pack import orchestration (add / per-row reimport).
 
 Mirrors :class:`~anki_miner.gui.controllers.dictionary_import_flow.DictionaryImportFlow`.
-Owns the :class:`~anki_miner.gui.workers.audio_pack_import_worker.AudioPackImportWorker`
+Owns the :class:`~anki_miner.gui.workers.import_worker.ImportWorker`
 lifecycle and every dialog in the import flows.  The tab keeps the panel
 widgets, the signal wiring, and the narrow chain persist
 (``_persist_audio_chain_change``), injected here as callables so the
@@ -18,10 +18,11 @@ from PyQt6.QtCore import QCoreApplication, Qt
 from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog, QWidget
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
+from anki_miner.gui.controllers.import_flow_common import ModalImportFlowMixin
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.run_off_thread import join_worker
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
-from anki_miner.gui.workers.audio_pack_import_worker import AudioPackImportWorker
+from anki_miner.gui.workers.import_worker import ImportWorker
 from anki_miner.services.audio_packs.formats import scan_importable_packs
 from anki_miner.services.audio_packs.importer import derive_pack_id
 from anki_miner.utils.i18n import tr_format
@@ -47,7 +48,7 @@ _PACK_PRIORITY: dict[str, int] = {
 }
 
 
-class AudioPackImportFlow:
+class AudioPackImportFlow(ModalImportFlowMixin):
     """Drives audio pack directory imports for the Settings → Audio panel.
 
     Args:
@@ -71,9 +72,9 @@ class AudioPackImportFlow:
         self._panel = panel
         self._get_config = get_config
         self._persist_chain = persist_chain
-        # Long-lived worker reference: AudioPackImportWorker is a QThread and
-        # would be destroyed mid-run if it fell out of scope before joining.
-        self._active_import_worker: AudioPackImportWorker | None = None
+        # Long-lived worker reference: ImportWorker is a QThread and would be
+        # destroyed mid-run if it fell out of scope before joining.
+        self._active_import_worker: ImportWorker | None = None
 
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close.
@@ -246,7 +247,7 @@ class AudioPackImportFlow:
                 )
             )
 
-            worker = AudioPackImportWorker.for_pack(pack_dir, dest_root)
+            worker = ImportWorker.for_pack(pack_dir, dest_root)
             # Join the predecessor before dropping its reference (same as
             # DictionaryImportFlow.reimport_all T-09 join rationale).
             prev = self._active_import_worker
@@ -257,7 +258,7 @@ class AudioPackImportFlow:
                 )
             self._active_import_worker = worker
 
-            def on_progress(msg: str) -> None:
+            def on_progress(_cur: int, _total: int, msg: str) -> None:
                 dlg.setLabelText(msg)
 
             def on_done(pack_id: str, _meta: dict) -> None:
@@ -272,9 +273,19 @@ class AudioPackImportFlow:
                 state["index"] = idx + 1
                 launch_next()
 
+            def on_cancelled() -> None:
+                # A mid-batch user cancel arrives on ``cancelled`` (not
+                # ``failed``); re-enter the pump so it reaches finish() instead
+                # of stranding the modal. state["cancelled"] is already set by
+                # on_cancel (dlg.canceled); set it defensively so launch_next()
+                # short-circuits to finish().
+                state["cancelled"] = True
+                launch_next()
+
             worker.progress.connect(on_progress)
             worker.import_finished.connect(on_done)
             worker.failed.connect(on_failed)
+            worker.cancelled.connect(on_cancelled)
             worker.start()
 
         def on_cancel() -> None:
@@ -301,37 +312,11 @@ class AudioPackImportFlow:
         if not chosen_dir:
             return
 
-        dest_root = self._get_config().audio_packs_root
-        # Busy/indeterminate (maximum 0) like add_pack — import has no
-        # percentage granularity, only progress message updates.
-        dlg = QProgressDialog(
-            QCoreApplication.translate("AudioPackImportFlow", "Re-importing audio pack…"),
-            QCoreApplication.translate("AudioPackImportFlow", "Cancel"),
-            0,
-            0,
-            self._parent,
+        worker = ImportWorker.for_pack(
+            Path(chosen_dir), self._get_config().audio_packs_root, pack_id=pack_id, overwrite=True
         )
-        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dlg.show()
 
-        worker = AudioPackImportWorker.for_pack(Path(chosen_dir), dest_root, pack_id=pack_id, overwrite=True)
-        # Join the predecessor before dropping its reference (same as
-        # launch_next in add_pack — a still-running QThread must not be
-        # garbage-collected mid-run).
-        prev = self._active_import_worker
-        if not join_worker(prev, timeout_ms=_IMPORT_JOIN_TIMEOUT_MS):
-            logger.warning(
-                "Lingering audio pack import worker did not stop within %d ms; replacing it anyway",
-                _IMPORT_JOIN_TIMEOUT_MS,
-            )
-        self._active_import_worker = worker
-        self._set_import_buttons_enabled(False)
-
-        def on_progress(msg: str) -> None:
-            dlg.setLabelText(msg)
-
-        def on_done(imported_id: str, _meta: dict) -> None:
-            dlg.close()
+        def on_success(imported_id: str, _meta: dict) -> None:
             QMessageBox.information(
                 self._parent,
                 QCoreApplication.translate("AudioPackImportFlow", "Audio Pack Re-imported"),
@@ -342,17 +327,15 @@ class AudioPackImportFlow:
             current_chain = self._panel.get_chain()
             self._panel.refresh_registry()
             self._panel.set_chain(current_chain)
-            self._set_import_buttons_enabled(True)
 
-        def on_failed(err: str) -> None:
-            dlg.close()
-            QMessageBox.warning(
-                self._parent, QCoreApplication.translate("AudioPackImportFlow", "Re-import Failed"), err
-            )
-            self._set_import_buttons_enabled(True)
-
-        worker.progress.connect(on_progress)
-        worker.import_finished.connect(on_done)
-        worker.failed.connect(on_failed)
-        dlg.canceled.connect(worker.cancel)
-        worker.start()
+        # Busy/indeterminate bar (determinate=False) like add_pack — the pack
+        # importer reports only progress messages, no percentage granularity.
+        self._run_modal_import(
+            worker=worker,
+            progress_label=QCoreApplication.translate("AudioPackImportFlow", "Re-importing audio pack…"),
+            cancel_label=QCoreApplication.translate("AudioPackImportFlow", "Cancel"),
+            determinate=False,
+            join_noun="audio pack import worker",
+            failure_title=QCoreApplication.translate("AudioPackImportFlow", "Re-import Failed"),
+            on_success=on_success,
+        )
