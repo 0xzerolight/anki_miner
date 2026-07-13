@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 import logging
-import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces.dictionary_provider import DictionaryProvider
+from anki_miner.services._sqlite_index import scan_index_root
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 from anki_miner.services.dictionary.providers.jisho_provider import JishoProvider
-from anki_miner.services.dictionary.storage import SCHEMA_VERSION, read_meta_cached
+from anki_miner.services.dictionary.storage import SCHEMA_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -34,45 +34,27 @@ class DictionaryRegistry:
         self._dicts: dict[str, DictMeta] = {}
 
     def load(self) -> None:
-        self._dicts.clear()
+        self._dicts = scan_index_root(self._root, self._parse_meta, warn_label="dictionary")
+
+    def _parse_meta(self, child: Path, db: Path, meta: dict[str, str]) -> DictMeta:
         try:
-            if not self._root.is_dir():
-                return
-            children = sorted(self._root.iterdir())
-        except OSError as e:
-            logger.warning(
-                "Could not scan dictionaries folder '%s': %s — no offline dicts will be loaded",
-                self._root,
-                e,
-            )
-            return
-        for child in children:
-            if not child.is_dir():
-                continue
-            db = child / "index.sqlite"
-            if not db.exists():
-                continue
-            try:
-                meta = read_meta_cached(db)
-            except sqlite3.DatabaseError as e:
-                logger.warning("Skipping corrupt dictionary %s: %s", child.name, e)
-                continue
-            try:
-                version = int(meta.get("schema_version", "0"))
-            except ValueError:
-                version = 0
-            try:
-                count = int(meta.get("entry_count", "0"))
-            except ValueError:
-                count = 0
-            self._dicts[child.name] = DictMeta(
-                dict_id=child.name,
-                source_name=meta.get("source_name", child.name),
-                format=meta.get("format", "unknown"),
-                entry_count=count,
-                schema_ok=(version == SCHEMA_VERSION),
-                db_path=db,
-            )
+            version = int(meta.get("schema_version", "0"))
+        except ValueError:
+            version = 0
+        try:
+            count = int(meta.get("entry_count", "0"))
+        except ValueError:
+            count = 0
+        # schema_ok policy: dictionaries require an exact-version match — a
+        # mismatch is dropped from the chain and gated for reimport.
+        return DictMeta(
+            dict_id=child.name,
+            source_name=meta.get("source_name", child.name),
+            format=meta.get("format", "unknown"),
+            entry_count=count,
+            schema_ok=(version == SCHEMA_VERSION),
+            db_path=db,
+        )
 
     def get(self, dict_id: str) -> DictMeta | None:
         return self._dicts.get(dict_id)

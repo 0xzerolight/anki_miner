@@ -21,6 +21,7 @@ import logging
 import sqlite3
 from pathlib import Path
 
+from anki_miner.services._sqlite_index import open_readonly
 from anki_miner.services.frequency.storage import SCHEMA_VERSION, read_meta_cached
 from anki_miner.utils.text_utils import katakana_to_hiragana
 
@@ -122,7 +123,7 @@ class IndexedFreqProvider:
             return False
 
         try:
-            self._conn = self._open_readonly(self._db_path)
+            self._conn = open_readonly(self._db_path)
         except sqlite3.DatabaseError as e:
             logger.warning("Failed to open %s: %s", self._db_path, e)
             return False
@@ -212,19 +213,6 @@ class IndexedFreqProvider:
         for term, reading, rank in rows:
             by_term.setdefault(term, []).append((reading, rank))
         return {t: _resolve_scoped_rank(by_term.get(t, []), r) for t, r in pairs}
-
-    @staticmethod
-    def _open_readonly(db_path: Path) -> sqlite3.Connection:
-        """Open a read-only, thread-shareable connection.
-
-        Uses a ``file:...?mode=ro`` URI built via ``Path.as_uri()`` so
-        URI-significant characters in the path (``#``/``?``/``%``) are
-        percent-encoded, mirroring the dictionary storage layer.
-        """
-        uri = db_path.resolve().as_uri() + "?mode=ro"
-        conn = sqlite3.connect(uri, uri=True, check_same_thread=False)
-        conn.execute("PRAGMA query_only=ON")
-        return conn
 
     def close(self) -> None:
         if self._conn is not None:
