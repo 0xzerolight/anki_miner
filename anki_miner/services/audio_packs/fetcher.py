@@ -9,8 +9,8 @@ import sqlite3
 from collections.abc import Callable
 from pathlib import Path
 
+from anki_miner.services.audio_fetch_common import first_candidate_hit as _first_candidate_hit
 from anki_miner.services.audio_packs import storage
-from anki_miner.services.expression_audio_fetcher import _first_candidate_hit
 from anki_miner.utils.file_utils import safe_filename
 
 logger = logging.getLogger(__name__)
