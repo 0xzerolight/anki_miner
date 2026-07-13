@@ -750,8 +750,8 @@ class TestDictionaryRemovedPersistsNarrowly:
     the removed dict_id in gui_config.json (Issue #30 / T-08 / OVH-032).
 
     The wiring is chain_changed → _persist_chain_change.  Since panel.remove()
-    emits chain_changed then dictionary_removed, we drive chain_changed directly
-    here so the tests remain independent of disk state.
+    emits chain_changed (its sole persist trigger), we drive chain_changed
+    directly here so the tests remain independent of disk state.
     """
 
     def test_removed_persists_chain_despite_failing_validation(self, test_config, tmp_path, monkeypatch, qtbot):

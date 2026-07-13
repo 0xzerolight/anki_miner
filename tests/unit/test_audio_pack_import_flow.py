@@ -505,14 +505,13 @@ class TestSettingsTabAudioPanelWiring:
         assert persist_calls, "chain_changed must trigger _persist_audio_chain_change"
 
     def test_removal_persists_exactly_once(self, tab):
-        """Removal emits chain_changed AND pack_removed; only chain_changed is
-        wired to persist, so a single removal saves the chain exactly once."""
+        """Removal re-emits chain_changed (its sole persist trigger), so a single
+        removal saves the chain exactly once."""
         persist_calls: list[tuple[AudioSourceEntry, ...]] = []
         tab._persist_audio_chain_change = persist_calls.append
 
-        # Simulate the panel's removal emission sequence.
+        # Simulate the panel's removal emission.
         tab.audio_panel.chain_changed.emit()
-        tab.audio_panel.pack_removed.emit()
 
         assert len(persist_calls) == 1, f"removal must persist exactly once, got {len(persist_calls)}"
 

@@ -1,8 +1,8 @@
 """Tests for OVH-032: dictionary chain reorder/toggle instant persist.
 
 chain_changed must be wired to _persist_chain_change (mirroring the audio
-panel).  dictionary_removed must NOT be separately wired — remove emits BOTH
-chain_changed AND dictionary_removed, so a double-wiring would persist twice.
+panel).  A destructive remove re-emits chain_changed (and nothing else), so the
+single wiring persists a removal exactly once.
 """
 
 from __future__ import annotations
@@ -97,7 +97,7 @@ class TestDictChainReorderPersists:
 
 
 class TestDictChainRemovalPersistsExactlyOnce:
-    """Removal must persist exactly once (chain_changed only, not also dictionary_removed)."""
+    """Removal must persist exactly once (a single chain_changed emit)."""
 
     def test_remove_persists_exactly_once(self, tab, confirm_remove, tmp_path, qtbot):
         """Removing a dict triggers chain_changed → exactly one config_changed emit."""
@@ -148,21 +148,3 @@ class TestDictChainRemovalPersistsExactlyOnce:
         # be updated via the post-delete chain_changed persist.
         qtbot.waitUntil(lambda: len(tab.config.dictionary_chain) == 1, timeout=3000)
         assert tab.config.dictionary_chain[0].kind == "jisho"
-
-    def test_dictionary_removed_signal_not_connected_to_persist(self, tab):
-        """dictionary_removed must NOT be wired to _persist_chain_change.
-
-        We verify this indirectly by checking that connecting our own slot to
-        dictionary_removed and then removing a dict results in _persist_chain_change
-        being called exactly once (from chain_changed), not twice.
-        """
-        # This test just verifies the wiring count via the count approach above;
-        # the test_remove_persists_exactly_once already covers the observable
-        # behaviour.  Here we do a structural check using Qt's receiver count.
-        # dictionary_removed should have 0 connections to any slot in SettingsTab.
-
-        # We can't easily introspect Qt connection count from Python, so we rely
-        # on test_remove_persists_exactly_once as the authoritative count check.
-        # This test is a documentation anchor — if someone re-adds the wiring,
-        # test_remove_persists_exactly_once will catch the double-persist.
-        assert True  # structural intent documented above
