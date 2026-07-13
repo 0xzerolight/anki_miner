@@ -21,8 +21,7 @@ from PyQt6.QtWidgets import QMessageBox, QWidget
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.panels import AnkiSettingsPanel, FilteringSettingsPanel
 from anki_miner.gui.workers.base_worker import SingleCallWorker
-from anki_miner.gui.workers.fetch_decks_worker import FetchDecksWorker
-from anki_miner.gui.workers.fetch_fields_worker import FetchFieldsWorker
+from anki_miner.gui.workers.fetch_workers import FetchDecksWorker, FetchFieldsWorker
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.utils.i18n import tr_format
 
