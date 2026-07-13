@@ -937,7 +937,7 @@ This cannot be undone. You would need to re-import to use this pack again.</sour
     </message>
     <message>
         <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
-        <translation type="unfinished" />
+        <translation>调整所有剧集的字幕时间（正值 = 延后，负值 = 提前）</translation>
     </message>
     <message>
         <source>Process Folder</source>
@@ -5086,24 +5086,16 @@ Go to Settings → ASR to download it before generating subtitles.</source>
 </context><context>
     <name>SubtitlePlayerWidget</name>
     <message>
-        <source>Could not load video: %1</source>
-        <translation>无法加载视频：%1</translation>
-    </message>
-    <message>
-        <source>This video uses AV1, which your system can't decode for in-app preview. Audio and subtitles still play.</source>
-        <translation>该视频使用 AV1 编码，你的系统无法解码以进行应用内预览。音频和字幕仍可播放。</translation>
-    </message>
-    <message>
         <source>Play</source>
         <translation>播放</translation>
     </message>
     <message>
         <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
-        <translation type="unfinished" />
+        <translation>视频预览需要 mpv（libmpv）。捆绑版本已内置；在 Linux 上请通过包管理器安装（例如 libmpv2），在 macOS 上通过 Homebrew 安装（brew install mpv）。</translation>
     </message>
     <message>
         <source>playback failed</source>
-        <translation type="unfinished" />
+        <translation>播放失败</translation>
     </message>
     <message>
         <source>Pause</source>
@@ -5115,7 +5107,7 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Video preview is unavailable on this display. Audio and subtitles still play.</source>
-        <translation type="unfinished" />
+        <translation>此显示器不支持视频预览。音频和字幕仍可播放。</translation>
     </message>
 </context><context>
     <name>SubtitleRetimeTab</name>
@@ -6133,6 +6125,6 @@ Continue with import?</source>
     <name>app</name>
     <message>
         <source>Anki Miner — Unexpected Error</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner — 意外错误</translation>
     </message>
 </context></TS>

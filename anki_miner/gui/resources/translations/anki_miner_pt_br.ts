@@ -937,7 +937,7 @@ Isso não pode ser desfeito. Você precisaria reimportar para usar este pacote n
     </message>
     <message>
         <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
-        <translation type="unfinished" />
+        <translation>Ajustar o tempo das legendas para todos os episódios (positivo = mais tarde, negativo = mais cedo)</translation>
     </message>
     <message>
         <source>Process Folder</source>
@@ -5098,24 +5098,16 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
 </context><context>
     <name>SubtitlePlayerWidget</name>
     <message>
-        <source>Could not load video: %1</source>
-        <translation>Não foi possível carregar o vídeo: %1</translation>
-    </message>
-    <message>
-        <source>This video uses AV1, which your system can't decode for in-app preview. Audio and subtitles still play.</source>
-        <translation>Este vídeo usa AV1, que seu sistema não consegue decodificar para a pré-visualização no app. O áudio e as legendas continuam sendo reproduzidos.</translation>
-    </message>
-    <message>
         <source>Play</source>
         <translation>Reproduzir</translation>
     </message>
     <message>
         <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
-        <translation type="unfinished" />
+        <translation>A pré-visualização de vídeo requer mpv (libmpv). Versões empacotadas já o incluem; no Linux, instale-o pelo gerenciador de pacotes (por exemplo, libmpv2); no macOS, pelo Homebrew (brew install mpv).</translation>
     </message>
     <message>
         <source>playback failed</source>
-        <translation type="unfinished" />
+        <translation>falha na reprodução</translation>
     </message>
     <message>
         <source>Pause</source>
@@ -5127,7 +5119,7 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
     </message>
     <message>
         <source>Video preview is unavailable on this display. Audio and subtitles still play.</source>
-        <translation type="unfinished" />
+        <translation>A pré-visualização de vídeo não está disponível neste monitor. O áudio e as legendas continuam sendo reproduzidos.</translation>
     </message>
 </context><context>
     <name>SubtitleRetimeTab</name>
@@ -6145,6 +6137,6 @@ Continuar com a importação?</translation>
     <name>app</name>
     <message>
         <source>Anki Miner — Unexpected Error</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner — Erro inesperado</translation>
     </message>
 </context></TS>
