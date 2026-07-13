@@ -1,11 +1,9 @@
 """Worker that condenses media files to dialogue-only audio (Audio Condenser).
 
-Signal contract (frozen — mirrors SubtitleGenWorker / SubtitleRetimeWorker):
-    ``file_started(int)``                      — emitted at the start of each file (idx)
-    ``file_progress(int, int, str)``           — (idx, pct 0-100, message) during condensing
-    ``file_finished(int, object, object)``     — (idx, out_path|None, error_str|None)
-    ``file_skipped(int, object)``              — (idx, out_path) when output exists and overwrite is False
-    ``queue_finished()``                       — emitted once after the last file
+The 5-signal contract and per-file queue loop live in
+:class:`~anki_miner.gui.workers.file_queue_worker.FileQueueWorker`; this worker
+supplies only the per-file condensing logic and declares
+``EncoderUnavailableError`` as a queue-stopping fatal exception.
 """
 
 from __future__ import annotations
@@ -15,9 +13,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-from PyQt6.QtCore import pyqtSignal
-
-from anki_miner.gui.workers.base_worker import CancellableWorker
+from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
 from anki_miner.services.audio_condenser import (
     EncoderUnavailableError,
     build_periods,
@@ -56,7 +52,7 @@ class CondenseItem:
     external_sub: Path | None = None
 
 
-class CondenseWorker(CancellableWorker):
+class CondenseWorker(FileQueueWorker):
     """Condense a list of media files down to their dialogue audio.
 
     Per file:
@@ -105,16 +101,8 @@ class CondenseWorker(CancellableWorker):
         parent: Optional parent QObject.
     """
 
-    #: Emitted at the start of each file; argument is the 0-based file index.
-    file_started = pyqtSignal(int)
-    #: (idx, pct 0-100, message) — progress within a single file.
-    file_progress = pyqtSignal(int, int, str)
-    #: (idx, out_path|None, error_str|None) — outcome for each file.
-    file_finished = pyqtSignal(int, object, object)
-    #: (idx, out_path) — emitted when the output already exists and overwrite is False.
-    file_skipped = pyqtSignal(int, object)
-    #: Emitted once after all files have been processed (or skipped / errored).
-    queue_finished = pyqtSignal()
+    #: A missing encoder dooms every remaining file — stop the queue (see base loop).
+    _FATAL_QUEUE_EXCEPTIONS = (EncoderUnavailableError,)
 
     def __init__(
         self,
@@ -148,9 +136,6 @@ class CondenseWorker(CancellableWorker):
         self._write_subs = write_subs
         self._audio_track_override = audio_track_override
         self._subtitle_track_override = subtitle_track_override
-        # Set when the encoder is missing: stops the queue without poisoning
-        # is_cancelled (a tool error, not a user cancel).
-        self._stop_queue = False
 
         if service is None:
             from anki_miner.services.audio_condenser import AudioCondenserService
@@ -159,38 +144,28 @@ class CondenseWorker(CancellableWorker):
         else:
             self._service = service
 
-    def run(self) -> None:
-        """Execute condensing for all files in the background thread."""
-        try:
-            self._process_queue()
-        finally:
-            self.queue_finished.emit()
+    def _queue_items(self) -> list[CondenseItem]:
+        return self._items
 
-    def _process_queue(self) -> None:
-        for idx, item in enumerate(self._items):
-            if self.is_cancelled or self._stop_queue:
-                break
+    def _process_item(self, idx: int, item: CondenseItem) -> None:
+        # Output name: <media stem>_condensed.<format>, resolved against
+        # existing on-disk files so an overwrite replaces a visually-identical
+        # (NFC/NFD- or case-variant) twin in place instead of spawning a
+        # Windows duplicate. See resolve_output_path.
+        out_dir = self._output_dir if self._output_dir is not None else item.media.parent
+        out_audio = resolve_output_path(out_dir, f"{item.media.stem}_condensed.{self._output_format}")
 
-            self.file_started.emit(idx)
+        # Skip-if-exists keyed on the audio file only (D11).
+        if out_audio.exists() and not self._overwrite:
+            logger.debug("condense_worker: skipped %s (exists)", out_audio)
+            self.file_progress.emit(idx, 100, self.tr("Skipped, exists"))
+            self.file_skipped.emit(idx, out_audio)
+            return
 
-            # Output name: <media stem>_condensed.<format>, resolved against
-            # existing on-disk files so an overwrite replaces a visually-identical
-            # (NFC/NFD- or case-variant) twin in place instead of spawning a
-            # Windows duplicate. See resolve_output_path.
-            out_dir = self._output_dir if self._output_dir is not None else item.media.parent
-            out_audio = resolve_output_path(out_dir, f"{item.media.stem}_condensed.{self._output_format}")
+        if self._output_dir is not None:
+            self._output_dir.mkdir(parents=True, exist_ok=True)
 
-            # Skip-if-exists keyed on the audio file only (D11).
-            if out_audio.exists() and not self._overwrite:
-                logger.debug("condense_worker: skipped %s (exists)", out_audio)
-                self.file_progress.emit(idx, 100, self.tr("Skipped, exists"))
-                self.file_skipped.emit(idx, out_audio)
-                continue
-
-            if self._output_dir is not None:
-                self._output_dir.mkdir(parents=True, exist_ok=True)
-
-            self._process_file(idx, item, out_audio)
+        self._process_file(idx, item, out_audio)
 
     def _process_file(self, idx: int, item: CondenseItem, out_audio: Path) -> None:
         """Process a single media file; never raises (errors forwarded as signals)."""
@@ -245,13 +220,12 @@ class CondenseWorker(CancellableWorker):
             self.file_progress.emit(idx, 100, warning or self.tr("Done"))
             self.file_finished.emit(idx, out_audio, None)
 
-        except EncoderUnavailableError as exc:
-            # Missing encoder affects every remaining file — report this file's
-            # failure first, then flag the queue to stop. Do NOT touch
-            # _cancel_event: is_cancelled must stay False so callers can tell a
-            # tool error from a user cancel.
-            self.file_finished.emit(idx, None, str(exc))
-            self._stop_queue = True
+        except self._FATAL_QUEUE_EXCEPTIONS:
+            # Missing encoder affects every remaining file. Re-raise so the base
+            # queue loop reports this file's error and stops the queue without
+            # poisoning is_cancelled (a tool error, not a user cancel). The
+            # per-file finally below still runs (embedded-sub temp cleanup).
+            raise
 
         except Exception as exc:  # noqa: BLE001 — per-file isolation
             logger.exception("condense_worker: error on %s", item.media)

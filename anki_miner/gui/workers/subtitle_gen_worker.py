@@ -1,11 +1,8 @@
 """Worker that transcribes video files to SRT subtitles using the ASR engine.
 
-Signal contract (frozen — mirrors SubtitleRetimeWorker):
-    ``file_started(int)``                      — emitted at the start of each file (idx)
-    ``file_progress(int, int, str)``           — (idx, pct 0-100, message) during transcription
-    ``file_finished(int, object, object)``     — (idx, out_path|None, error_str|None)
-    ``file_skipped(int, object)``              — (idx, out_path) when output exists and overwrite is False
-    ``queue_finished()``                       — emitted once after the last file
+The 5-signal contract and per-file queue loop live in
+:class:`~anki_miner.gui.workers.file_queue_worker.FileQueueWorker`; this worker
+supplies only the per-file transcription logic.
 """
 
 from __future__ import annotations
@@ -15,16 +12,14 @@ import os
 import tempfile
 from pathlib import Path
 
-from PyQt6.QtCore import pyqtSignal
-
-from anki_miner.gui.workers.base_worker import CancellableWorker
+from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
 from anki_miner.utils.file_pairing import resolve_output_path
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
 
-class SubtitleGenWorker(CancellableWorker):
+class SubtitleGenWorker(FileQueueWorker):
     """Transcribe a list of video files to SRT subtitle files.
 
     Per file:
@@ -52,17 +47,6 @@ class SubtitleGenWorker(CancellableWorker):
         parent: Optional parent QObject.
     """
 
-    #: Emitted at the start of each file; argument is the 0-based file index.
-    file_started = pyqtSignal(int)
-    #: (idx, pct 0-100, message) — progress within a single file.
-    file_progress = pyqtSignal(int, int, str)
-    #: (idx, out_path|None, error_str|None) — outcome for each file.
-    file_finished = pyqtSignal(int, object, object)
-    #: (idx, out_path) — emitted when the output already exists and overwrite is False.
-    file_skipped = pyqtSignal(int, object)
-    #: Emitted once after all files have been processed (or skipped / errored).
-    queue_finished = pyqtSignal()
-
     def __init__(
         self,
         config,
@@ -87,35 +71,25 @@ class SubtitleGenWorker(CancellableWorker):
         else:
             self._extractor = extractor
 
-    def run(self) -> None:
-        """Execute transcription for all files in the background thread."""
-        try:
-            self._process_queue()
-        finally:
-            self.queue_finished.emit()
+    def _queue_items(self) -> list[Path]:
+        return self._video_files
 
-    def _process_queue(self) -> None:
-        for idx, video_path in enumerate(self._video_files):
-            if self.is_cancelled:
-                break
+    def _process_item(self, idx: int, video_path: Path) -> None:
+        # Determine output SRT path, resolved against existing on-disk files
+        # so a re-generate overwrites a visually-identical (NFC/NFD- or
+        # case-variant) subtitle in place instead of spawning a Windows
+        # duplicate. See resolve_output_path.
+        out_dir = self._output_dir if self._output_dir is not None else video_path.parent
+        out_srt = resolve_output_path(out_dir, video_path.stem + ".srt")
 
-            self.file_started.emit(idx)
+        # Skip-if-exists logic.
+        if out_srt.exists() and not self._overwrite:
+            logger.debug("subtitle_gen_worker: skipped %s (exists)", out_srt)
+            self.file_progress.emit(idx, 100, self.tr("Skipped, exists"))
+            self.file_skipped.emit(idx, out_srt)
+            return
 
-            # Determine output SRT path, resolved against existing on-disk files
-            # so a re-generate overwrites a visually-identical (NFC/NFD- or
-            # case-variant) subtitle in place instead of spawning a Windows
-            # duplicate. See resolve_output_path.
-            out_dir = self._output_dir if self._output_dir is not None else video_path.parent
-            out_srt = resolve_output_path(out_dir, video_path.stem + ".srt")
-
-            # Skip-if-exists logic.
-            if out_srt.exists() and not self._overwrite:
-                logger.debug("subtitle_gen_worker: skipped %s (exists)", out_srt)
-                self.file_progress.emit(idx, 100, self.tr("Skipped, exists"))
-                self.file_skipped.emit(idx, out_srt)
-                continue
-
-            self._process_file(idx, video_path, out_srt)
+        self._process_file(idx, video_path, out_srt)
 
     def _process_file(self, idx: int, video_path: Path, out_srt: Path) -> None:
         """Process a single video file; never raises (errors forwarded as signals)."""
