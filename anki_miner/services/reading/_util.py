@@ -1,4 +1,9 @@
-"""Shared pure-stdlib helpers for the reading-tab source loaders."""
+"""Shared pure-stdlib helpers for the reading-tab source loaders.
+
+Internal-but-tested: this private module (leading underscore) has no public facade —
+``tests/unit/reading/test_reading_util.py`` imports it directly. The underscore stays
+and the module path is a stable test surface; do not rename it.
+"""
 
 from __future__ import annotations
 
