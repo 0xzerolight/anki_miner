@@ -16,15 +16,6 @@ from anki_miner.services import ytdlp_updater
 from anki_miner.services.ytdlp_updater import YtdlpUpdater, YtdlpUpdateResult
 
 
-@pytest.fixture(autouse=True)
-def _clear_resolver_cache():
-    from anki_miner.utils import ytdlp_resolver
-
-    ytdlp_resolver._clear_cache()
-    yield
-    ytdlp_resolver._clear_cache()
-
-
 @pytest.fixture
 def config(tmp_path):
     return AnkiMinerConfig(media_temp_folder=tmp_path / "temp_media")

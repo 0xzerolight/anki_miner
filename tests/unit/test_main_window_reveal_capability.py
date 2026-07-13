@@ -12,20 +12,7 @@ from unittest.mock import Mock
 import pytest
 from PyQt6.QtWidgets import QWidget
 
-from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
-
-
-def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
-    from anki_miner.gui import main_window as mw_module
-
-    monkeypatch.setattr(mw_module.GUIConfigManager, "load_config", lambda: test_config)
-    monkeypatch.setattr(mw_module.GUIConfigManager, "save_config", lambda cfg: None)
-    monkeypatch.setattr(mw_module.ValidationService, "__init__", lambda self, *a, **kw: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_run_validation", lambda self: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_check_for_updates", lambda self: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_maybe_create_shortcut_on_first_run", lambda self: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_maybe_offer_first_run_setup", lambda self: None)
 
 
 # Stub tab classes named exactly like the real ones, so _main_tab_index matches.
@@ -52,8 +39,8 @@ class SettingsTab(QWidget):
 
 
 @pytest.fixture
-def window(qtbot, monkeypatch, test_config):
-    _patch_heavy_init(monkeypatch, test_config)
+def window(qtbot, patch_heavy_init, test_config):
+    patch_heavy_init(test_config)
     from anki_miner.gui.main_window import MainWindow
 
     win = MainWindow()

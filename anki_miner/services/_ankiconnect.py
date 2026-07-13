@@ -1,4 +1,13 @@
-"""Shared AnkiConnect HTTP helper."""
+"""Shared AnkiConnect HTTP helper.
+
+Internal-but-tested: the leading underscore marks this as a private module, yet it
+has no public facade because it is an implementation seam shared by the AnkiConnect
+services. White-box unit tests import it directly and patch
+``anki_miner.services._ankiconnect.requests.post`` at many sites (see
+``tests/unit/test_anki_service.py``) to drive the HTTP layer without a live Anki. The
+underscore therefore stays and the module path is a deliberately stable test surface;
+do not rename it or reroute those patch targets.
+"""
 
 from typing import Any
 

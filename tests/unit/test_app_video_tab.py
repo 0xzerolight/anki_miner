@@ -1,7 +1,7 @@
 """Smoke test: VideoTab is registered in the main() wiring.
 
-Reuses the ``_build_tabs`` helper from ``test_app_deck_builder_tab`` (which
-mirrors ``anki_miner.gui.app.main``'s tab-construction block) and asserts the
+Uses the shared ``wired_window`` fixture (``tests/unit/conftest.py``), which
+mirrors ``anki_miner.gui.app.main``'s tab-construction block, and asserts the
 "Video" tab is present at index 0, correctly typed, and that it nests the
 Single/Batch/YouTube sub-tabs with per-child presenters.
 """
@@ -16,15 +16,6 @@ from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.video_tab import VideoTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
-from tests.unit.test_app_deck_builder_tab import _build_tabs
-
-
-@pytest.fixture
-def wired_window(monkeypatch, test_config, qtbot):
-    window, titles, tabs = _build_tabs(monkeypatch, test_config)
-    qtbot.addWidget(window)
-    yield window, titles, tabs
-    window.deleteLater()
 
 
 def test_video_tab_present(wired_window):

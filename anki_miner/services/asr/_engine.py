@@ -14,6 +14,11 @@ top-level ``import pywhispercpp`` or ``import ctypes``; ``whisper_cpp_available`
 and ``vulkan_device_count`` never raise; and the Vulkan device count is probed
 in a *subprocess* (a broken Vulkan driver can C-abort uncatchably — isolating it
 in a child means the abort kills only the child and the parent reads a clean 0).
+
+Internal-but-tested: this private module (leading underscore) has no public facade —
+``tests/unit/test_asr_engine.py`` (and the subtitle-tab tests) import it directly and
+monkeypatch its seam functions. The underscore stays and the module path is a stable
+test surface; do not rename it.
 """
 
 import importlib.util

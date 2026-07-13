@@ -43,22 +43,11 @@ def test_add_min_max_buttons_preserves_existing_flags(qtbot):
     assert dialog.windowFlags() & _MAX
 
 
-def test_word_curation_dialog_has_min_max_buttons(qtbot):
+def test_word_curation_dialog_has_min_max_buttons(qtbot, make_tokenized_word):
     """The reported dialog (Word Curator) gets both buttons via the helper."""
     from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
-    from anki_miner.models import TokenizedWord
 
-    words = [
-        TokenizedWord(
-            surface="食べた",
-            lemma="食べる",
-            reading="タベル",
-            sentence="食べるのテスト",
-            start_time=0.0,
-            end_time=2.0,
-            duration=2.0,
-        )
-    ]
+    words = [make_tokenized_word(surface="食べた", sentence="食べるのテスト", start_time=0.0, end_time=2.0)]
     dialog = WordCurationDialog(words)
     qtbot.addWidget(dialog)
 

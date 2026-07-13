@@ -14,7 +14,6 @@ from unittest.mock import MagicMock
 import pytest
 from PyQt6.QtCore import QEvent
 
-from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
@@ -24,24 +23,10 @@ from anki_miner.gui.widgets.video_tab import VideoTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 
 
-def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig):
-    """Replace config persistence, validation service, and auto-check calls."""
-    from anki_miner.gui import main_window as mw_module
-
-    monkeypatch.setattr(mw_module.GUIConfigManager, "load_config", lambda: test_config)
-    monkeypatch.setattr(mw_module.GUIConfigManager, "save_config", lambda cfg: None)
-    # Prevent any validation worker from actually running.
-    monkeypatch.setattr(mw_module.ValidationService, "__init__", lambda self, *a, **kw: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_run_validation", lambda self: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_check_for_updates", lambda self: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_maybe_create_shortcut_on_first_run", lambda self: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_maybe_offer_first_run_setup", lambda self: None)
-
-
 @pytest.fixture
-def main_window(qtbot, monkeypatch, test_config):
+def main_window(qtbot, patch_heavy_init, test_config):
     """Build a MainWindow without side-effect-heavy startup behaviour."""
-    _patch_heavy_init(monkeypatch, test_config)
+    patch_heavy_init(test_config)
     from anki_miner.gui.main_window import MainWindow
 
     window = MainWindow()

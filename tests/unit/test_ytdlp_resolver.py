@@ -13,14 +13,6 @@ from anki_miner.utils.ytdlp_resolver import (
 )
 
 
-@pytest.fixture(autouse=True)
-def _clear_resolver_cache():
-    """Ensure the module-level cache never leaks across tests."""
-    ytdlp_resolver._clear_cache()
-    yield
-    ytdlp_resolver._clear_cache()
-
-
 @pytest.fixture
 def base_config(tmp_path):
     return AnkiMinerConfig(media_temp_folder=tmp_path / "temp_media")
