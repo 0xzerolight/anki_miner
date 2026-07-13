@@ -233,3 +233,26 @@ class KnownWordDB:
         """Count rows in the known_words table using an open connection."""
         cursor = conn.execute("SELECT COUNT(*) FROM known_words")
         return int(cursor.fetchone()[0])
+
+
+def add_user_known_words(db_path: Path, forms: set[str]) -> int:
+    """Persist curator-selected forms to the local known/ignore list (Issue #42).
+
+    Encapsulates the user "mark known" rule shared by every mining tab's
+    curation callback: build the DB ad hoc from the config path, write
+    immediately with ``source='user'`` (so the words persist even if the dialog
+    is later cancelled), and store the ``mined_form`` spelling as passed — never
+    the lemma. Same pattern the settings tab uses for the rebuild action.
+
+    Args:
+        db_path: Path to the known-words SQLite database
+            (``config.known_words_db_path``).
+        forms: Set of ``mined_form`` strings the curator marked as known.
+
+    Returns:
+        Number of newly inserted rows (an in-place source upgrade is not
+        counted as new).
+    """
+    db = KnownWordDB(db_path)
+    db.initialize()
+    return db.add_words(forms, source="user")
