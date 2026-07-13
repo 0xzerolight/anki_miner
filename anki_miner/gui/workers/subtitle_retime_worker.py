@@ -148,7 +148,11 @@ class SubtitleRetimeWorker(FileQueueWorker):
             return False
 
     def _process_pair(self, idx: int, video: Path, in_sub: Path, out_sub: Path) -> None:
-        """Process a single (video, subtitle) pair; never raises (errors forwarded as signals)."""
+        """Process a single (video, subtitle) pair.
+
+        Per-pair errors are forwarded as signals; only a ``_FATAL_QUEUE_EXCEPTIONS``
+        member (alass missing) propagates, for the base loop to stop the queue.
+        """
         try:
             # log_cb forwards alass stdout lines via file_progress.
             # alass provides no percentage — emit pct=0 for in-progress lines.

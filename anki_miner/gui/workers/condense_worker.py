@@ -168,7 +168,11 @@ class CondenseWorker(FileQueueWorker):
         self._process_file(idx, item, out_audio)
 
     def _process_file(self, idx: int, item: CondenseItem, out_audio: Path) -> None:
-        """Process a single media file; never raises (errors forwarded as signals)."""
+        """Process a single media file.
+
+        Per-file errors are forwarded as signals; only a ``_FATAL_QUEUE_EXCEPTIONS``
+        member (encoder missing) propagates, for the base loop to stop the queue.
+        """
         temp_sub: Path | None = None
         try:
             sub_path, temp_sub, source_error = self._resolve_subtitle_source(item)
