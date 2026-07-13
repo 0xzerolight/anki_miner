@@ -32,12 +32,20 @@ from pathlib import Path
 
 import gtts  # type: ignore[import-untyped]
 
-from anki_miner.services.expression_audio_fetcher import (
+from anki_miner.services.audio_fetch_common import (
     MAX_AUDIO_BYTES,
-    _classify_request_exception,
-    _first_candidate_hit,
-    _is_mp3,
-    _new_failure_counts,
+)
+from anki_miner.services.audio_fetch_common import (
+    classify_request_exception as _classify_request_exception,
+)
+from anki_miner.services.audio_fetch_common import (
+    first_candidate_hit as _first_candidate_hit,
+)
+from anki_miner.services.audio_fetch_common import (
+    is_mp3 as _is_mp3,
+)
+from anki_miner.services.audio_fetch_common import (
+    new_failure_counts as _new_failure_counts,
 )
 from anki_miner.utils.file_utils import safe_filename
 

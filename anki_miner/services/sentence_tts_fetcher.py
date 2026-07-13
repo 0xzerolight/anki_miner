@@ -29,14 +29,26 @@ from typing import TYPE_CHECKING
 
 import requests
 
-from anki_miner.services.expression_audio_fetcher import (
-    _aggregate_failure_stats,
-    _classify_request_exception,
-    _close_all,
-    _find_cached_by_stem,
-    _new_browser_session,
-    _new_failure_counts,
+from anki_miner.services.audio_fetch_common import (
+    aggregate_failure_stats as _aggregate_failure_stats,
+)
+from anki_miner.services.audio_fetch_common import (
+    classify_request_exception as _classify_request_exception,
+)
+from anki_miner.services.audio_fetch_common import (
+    close_all as _close_all,
+)
+from anki_miner.services.audio_fetch_common import (
     download_audio_to_cache,
+)
+from anki_miner.services.audio_fetch_common import (
+    find_cached_by_stem as _find_cached_by_stem,
+)
+from anki_miner.services.audio_fetch_common import (
+    new_browser_session as _new_browser_session,
+)
+from anki_miner.services.audio_fetch_common import (
+    new_failure_counts as _new_failure_counts,
 )
 from anki_miner.services.google_translate_audio_fetcher import _synthesize_gtts_to_cache
 
