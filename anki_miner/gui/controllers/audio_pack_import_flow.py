@@ -18,6 +18,7 @@ from PyQt6.QtCore import QCoreApplication, Qt
 from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog, QWidget
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
+from anki_miner.gui.controllers.import_flow_common import ModalImportFlowMixin
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.run_off_thread import join_worker
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
@@ -47,7 +48,7 @@ _PACK_PRIORITY: dict[str, int] = {
 }
 
 
-class AudioPackImportFlow:
+class AudioPackImportFlow(ModalImportFlowMixin):
     """Drives audio pack directory imports for the Settings → Audio panel.
 
     Args:
@@ -311,37 +312,11 @@ class AudioPackImportFlow:
         if not chosen_dir:
             return
 
-        dest_root = self._get_config().audio_packs_root
-        # Busy/indeterminate (maximum 0) like add_pack — import has no
-        # percentage granularity, only progress message updates.
-        dlg = QProgressDialog(
-            QCoreApplication.translate("AudioPackImportFlow", "Re-importing audio pack…"),
-            QCoreApplication.translate("AudioPackImportFlow", "Cancel"),
-            0,
-            0,
-            self._parent,
+        worker = ImportWorker.for_pack(
+            Path(chosen_dir), self._get_config().audio_packs_root, pack_id=pack_id, overwrite=True
         )
-        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dlg.show()
 
-        worker = ImportWorker.for_pack(Path(chosen_dir), dest_root, pack_id=pack_id, overwrite=True)
-        # Join the predecessor before dropping its reference (same as
-        # launch_next in add_pack — a still-running QThread must not be
-        # garbage-collected mid-run).
-        prev = self._active_import_worker
-        if not join_worker(prev, timeout_ms=_IMPORT_JOIN_TIMEOUT_MS):
-            logger.warning(
-                "Lingering audio pack import worker did not stop within %d ms; replacing it anyway",
-                _IMPORT_JOIN_TIMEOUT_MS,
-            )
-        self._active_import_worker = worker
-        self._set_import_buttons_enabled(False)
-
-        def on_progress(_cur: int, _total: int, msg: str) -> None:
-            dlg.setLabelText(msg)
-
-        def on_done(imported_id: str, _meta: dict) -> None:
-            dlg.close()
+        def on_success(imported_id: str, _meta: dict) -> None:
             QMessageBox.information(
                 self._parent,
                 QCoreApplication.translate("AudioPackImportFlow", "Audio Pack Re-imported"),
@@ -352,23 +327,15 @@ class AudioPackImportFlow:
             current_chain = self._panel.get_chain()
             self._panel.refresh_registry()
             self._panel.set_chain(current_chain)
-            self._set_import_buttons_enabled(True)
 
-        def on_failed(err: str) -> None:
-            dlg.close()
-            QMessageBox.warning(
-                self._parent, QCoreApplication.translate("AudioPackImportFlow", "Re-import Failed"), err
-            )
-            self._set_import_buttons_enabled(True)
-
-        def on_cancelled() -> None:
-            # User cancel — close silently, no "Re-import Failed" dialog.
-            dlg.close()
-            self._set_import_buttons_enabled(True)
-
-        worker.progress.connect(on_progress)
-        worker.import_finished.connect(on_done)
-        worker.failed.connect(on_failed)
-        worker.cancelled.connect(on_cancelled)
-        dlg.canceled.connect(worker.cancel)
-        worker.start()
+        # Busy/indeterminate bar (determinate=False) like add_pack — the pack
+        # importer reports only progress messages, no percentage granularity.
+        self._run_modal_import(
+            worker=worker,
+            progress_label=QCoreApplication.translate("AudioPackImportFlow", "Re-importing audio pack…"),
+            cancel_label=QCoreApplication.translate("AudioPackImportFlow", "Cancel"),
+            determinate=False,
+            join_noun="audio pack import worker",
+            failure_title=QCoreApplication.translate("AudioPackImportFlow", "Re-import Failed"),
+            on_success=on_success,
+        )
