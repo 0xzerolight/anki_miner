@@ -4011,3 +4011,21 @@ class TestInflectedCompoundHeadwordReading:
         assert word.expression_reading == "てっとりばやい"
         assert word.reading == "てっとりばやい"
         assert "早[ばや]" in word.expression_furigana
+
+
+class TestParseRelevantConfigFields:
+    """Drift tripwire: every name in PARSE_RELEVANT_CONFIG_FIELDS must remain a
+    real symbol the parser module references, so the Deck Builder cache-reuse
+    assertion can't silently guard a renamed/deleted field."""
+
+    def test_listed_fields_appear_in_module_source(self):
+        import inspect
+
+        from anki_miner.services import subtitle_parser
+        from anki_miner.services.subtitle_parser import (
+            PARSE_RELEVANT_CONFIG_FIELDS,
+        )
+
+        source = inspect.getsource(subtitle_parser)
+        for field in PARSE_RELEVANT_CONFIG_FIELDS:
+            assert field in source, f"{field} not referenced in subtitle_parser module"
