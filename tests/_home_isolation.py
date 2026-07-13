@@ -38,7 +38,6 @@ HOME_CONSUMERS = (
         lambda home: home,
     ),
     ("anki_miner.gui.controllers.zip_import_flow", "ANKI_MINER_HOME", lambda home: home),
-    ("anki_miner.services.history_service", "DEFAULT_DB_PATH", lambda home: home / "history.db"),
 )
 
 

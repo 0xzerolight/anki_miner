@@ -172,7 +172,6 @@ def base_config(tmp_path):
         # words DB, which would otherwise poison collection-filter tests.
         dicts_root=tmp_path / "dicts",
         known_words_db_path=tmp_path / "known_words.db",
-        history_db_path=tmp_path / "history.db",
         stats_db_path=tmp_path / "stats.db",
     )
 
