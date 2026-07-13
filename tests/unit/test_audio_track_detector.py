@@ -10,7 +10,6 @@ from anki_miner.utils.audio_track_detector import (
     BITMAP_SUBTITLE_CODECS,
     JAPANESE_LANGUAGE_CODES,
     AudioStream,
-    JapaneseAudioStream,
     SubtitleStream,
     find_japanese_audio_stream,
     get_primary_video_codec,
@@ -63,7 +62,10 @@ class TestFindJapaneseAudioStream:
         stdout = _ffprobe_json([{"index": 0, "language": "jpn"}])
         with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
             result = find_japanese_audio_stream(video_file)
-        assert result == JapaneseAudioStream(global_index=0, audio_index=0, language_tag="jpn")
+        assert result is not None
+        assert result.global_index == 0
+        assert result.audio_index == 0
+        assert result.language_tag == "jpn"
 
     def test_japanese_after_english(self, video_file):
         stdout = _ffprobe_json(

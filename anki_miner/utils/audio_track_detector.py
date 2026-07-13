@@ -36,20 +36,6 @@ class AudioStream:
 
 
 @dataclass(frozen=True)
-class JapaneseAudioStream:
-    """Located Japanese audio stream within a video file.
-
-    `global_index` is the ffprobe stream index, suitable for ffmpeg `-map 0:N`.
-    `audio_index` is the position within the audio-only track list (0-indexed,
-    demuxer order); the mpv preview maps it to `aid = N + 1`.
-    """
-
-    global_index: int
-    audio_index: int
-    language_tag: str
-
-
-@dataclass(frozen=True)
 class SubtitleStream:
     """Full metadata for a single subtitle stream from ffprobe.
 
@@ -237,7 +223,7 @@ def list_subtitle_streams(video_path: Path, ffprobe_cmd: str = "ffprobe") -> lis
     return result
 
 
-def find_japanese_audio_stream(video_file: Path, ffprobe_cmd: str = "ffprobe") -> JapaneseAudioStream | None:
+def find_japanese_audio_stream(video_file: Path, ffprobe_cmd: str = "ffprobe") -> AudioStream | None:
     """Probe a video file with ffprobe and return its Japanese audio stream.
 
     Returns None if ffprobe fails, returns malformed JSON, or no audio stream
@@ -254,11 +240,7 @@ def find_japanese_audio_stream(video_file: Path, ffprobe_cmd: str = "ffprobe") -
                 f"Found Japanese audio: global stream {stream.global_index}, "
                 f"audio track {stream.audio_index} (language: {stream.language_tag})"
             )
-            return JapaneseAudioStream(
-                global_index=stream.global_index,
-                audio_index=stream.audio_index,
-                language_tag=stream.language_tag,
-            )
+            return stream
 
     available_langs = [s.language_tag or "unknown" for s in streams]
     logger.warning(f"No Japanese audio found in {video_file}. Available languages: {available_langs}")
