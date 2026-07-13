@@ -31,14 +31,10 @@ if TYPE_CHECKING:
 
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.gui.main_window import MainWindow
-    from anki_miner.gui.workers.alass_install_worker import AlassInstallWorker
-    from anki_miner.gui.workers.asr_model_download_worker import AsrModelDownloadWorker
-    from anki_miner.gui.workers.cuda_pack_download_worker import CudaPackDownloadWorker
     from anki_miner.gui.workers.import_worker import ImportWorker
-    from anki_miner.gui.workers.onnx_pack_download_worker import OnnxPackDownloadWorker
+    from anki_miner.gui.workers.install_worker import InstallWorker
     from anki_miner.gui.workers.restyle_cards_worker import RestyleCardsWorker
     from anki_miner.gui.workers.update_worker import UpdateWorkerThread
-    from anki_miner.gui.workers.vulkan_model_download_worker import VulkanModelDownloadWorker
     from anki_miner.gui.workers.ytdlp_update_worker import YtdlpUpdateWorker
     from anki_miner.services import ValidationService
     from anki_miner.services.anki_service import AnkiService
@@ -115,11 +111,14 @@ class BackgroundTaskController(QObject):
         self.update_worker: UpdateWorkerThread | None = None
         self.ytdlp_update_worker: YtdlpUpdateWorker | None = None
         self.jmdict_migration_worker: ImportWorker | None = None
-        self.asr_model_download_worker: AsrModelDownloadWorker | None = None
-        self.alass_install_worker: AlassInstallWorker | None = None
-        self.cuda_pack_download_worker: CudaPackDownloadWorker | None = None
-        self.onnx_pack_download_worker: OnnxPackDownloadWorker | None = None
-        self.vulkan_model_download_worker: VulkanModelDownloadWorker | None = None
+        # The five resource install/download handles are all InstallWorker now
+        # (ARC-010), but stay separate attributes so each releases independently
+        # and the shutdown join can address them by name.
+        self.asr_model_download_worker: InstallWorker | None = None
+        self.alass_install_worker: InstallWorker | None = None
+        self.cuda_pack_download_worker: InstallWorker | None = None
+        self.onnx_pack_download_worker: InstallWorker | None = None
+        self.vulkan_model_download_worker: InstallWorker | None = None
         self.restyle_cards_worker: RestyleCardsWorker | None = None
         # Best-effort cache prewarm worker, scheduled by ``app.main()`` after
         # the first paint and adopted via set_prewarm(); cleared once it
@@ -218,20 +217,14 @@ class BackgroundTaskController(QObject):
             on_finished: Slot for ``result_ready(bool, str)`` — called with
                 ``(ok, message)`` when the download completes or fails.
         """
-        if self.asr_model_download_worker is not None and self.asr_model_download_worker.isRunning():
-            return
+        from anki_miner.gui.workers.install_worker import InstallWorker, asr_download_task
 
-        from anki_miner.gui.workers.asr_model_download_worker import AsrModelDownloadWorker
-
-        worker = AsrModelDownloadWorker(model_name, models_root, parent=self)
-        self.asr_model_download_worker = worker
-        worker.status.connect(on_status)
-        worker.result_ready.connect(on_finished)
-        # Release on the native QThread.finished (0-arg) so the handle is freed
-        # on real thread exit — including the cancel path, where result_ready
-        # never fires. Mirrors validation/update/ytdlp workers.
-        worker.finished.connect(lambda w=worker: self._release_worker("asr_model_download_worker", w))
-        worker.start()
+        self._start_install(
+            "asr_model_download_worker",
+            lambda: InstallWorker(asr_download_task(model_name, models_root), parent=self),
+            on_status,
+            on_finished,
+        )
 
     def start_restyle_cards(
         self,
@@ -269,11 +262,6 @@ class BackgroundTaskController(QObject):
     ) -> None:
         """Start an alass install worker unless one is already running.
 
-        Mirrors :meth:`start_asr_model_download`: guards against a concurrent
-        run, lazy-imports the worker, connects ``status`` and ``result_ready`` to
-        the provided callbacks, and releases the handle on the native
-        ``QThread.finished``.
-
         Args:
             bin_root: Directory where the alass binary will be placed; typically
                 ``config.bin_root``.
@@ -282,17 +270,14 @@ class BackgroundTaskController(QObject):
             on_finished: Slot for ``result_ready(bool, str)`` — called with
                 ``(ok, message)`` when the install completes or fails.
         """
-        if self.alass_install_worker is not None and self.alass_install_worker.isRunning():
-            return
+        from anki_miner.gui.workers.install_worker import InstallWorker, alass_install_task
 
-        from anki_miner.gui.workers.alass_install_worker import AlassInstallWorker
-
-        worker = AlassInstallWorker(bin_root, parent=self)
-        self.alass_install_worker = worker
-        worker.status.connect(on_status)
-        worker.result_ready.connect(on_finished)
-        worker.finished.connect(lambda w=worker: self._release_worker("alass_install_worker", w))
-        worker.start()
+        self._start_install(
+            "alass_install_worker",
+            lambda: InstallWorker(alass_install_task(bin_root), parent=self),
+            on_status,
+            on_finished,
+        )
 
     def start_cuda_pack_download(
         self,
@@ -302,11 +287,6 @@ class BackgroundTaskController(QObject):
     ) -> None:
         """Start a CUDA library-pack download worker unless one is already running.
 
-        Mirrors :meth:`start_alass_download`: guards against a concurrent run,
-        lazy-imports the worker, connects ``status`` and ``result_ready`` to the
-        provided callbacks, and releases the handle on the native
-        ``QThread.finished``.
-
         Args:
             cuda_libs_root: Directory where the GPU libraries will be placed;
                 typically ``config.cuda_libs_root``.
@@ -315,17 +295,14 @@ class BackgroundTaskController(QObject):
             on_finished: Slot for ``result_ready(bool, str)`` — called with
                 ``(ok, message)`` when the install completes or fails.
         """
-        if self.cuda_pack_download_worker is not None and self.cuda_pack_download_worker.isRunning():
-            return
+        from anki_miner.gui.workers.install_worker import InstallWorker, cuda_pack_task
 
-        from anki_miner.gui.workers.cuda_pack_download_worker import CudaPackDownloadWorker
-
-        worker = CudaPackDownloadWorker(cuda_libs_root, parent=self)
-        self.cuda_pack_download_worker = worker
-        worker.status.connect(on_status)
-        worker.result_ready.connect(on_finished)
-        worker.finished.connect(lambda w=worker: self._release_worker("cuda_pack_download_worker", w))
-        worker.start()
+        self._start_install(
+            "cuda_pack_download_worker",
+            lambda: InstallWorker(cuda_pack_task(cuda_libs_root), parent=self),
+            on_status,
+            on_finished,
+        )
 
     def start_vad_pack_download(
         self,
@@ -335,11 +312,6 @@ class BackgroundTaskController(QObject):
     ) -> None:
         """Start an onnxruntime (VAD) pack download worker unless one is running.
 
-        Mirrors :meth:`start_cuda_pack_download`: guards against a concurrent run,
-        lazy-imports the worker, connects ``status`` and ``result_ready`` to the
-        provided callbacks, and releases the handle on the native
-        ``QThread.finished``.
-
         Args:
             onnx_pack_root: Directory where the onnxruntime package will be
                 placed; typically ``config.onnx_pack_root``.
@@ -348,17 +320,14 @@ class BackgroundTaskController(QObject):
             on_finished: Slot for ``result_ready(bool, str)`` — called with
                 ``(ok, message)`` when the install completes or fails.
         """
-        if self.onnx_pack_download_worker is not None and self.onnx_pack_download_worker.isRunning():
-            return
+        from anki_miner.gui.workers.install_worker import InstallWorker, onnx_pack_task
 
-        from anki_miner.gui.workers.onnx_pack_download_worker import OnnxPackDownloadWorker
-
-        worker = OnnxPackDownloadWorker(onnx_pack_root, parent=self)
-        self.onnx_pack_download_worker = worker
-        worker.status.connect(on_status)
-        worker.result_ready.connect(on_finished)
-        worker.finished.connect(lambda w=worker: self._release_worker("onnx_pack_download_worker", w))
-        worker.start()
+        self._start_install(
+            "onnx_pack_download_worker",
+            lambda: InstallWorker(onnx_pack_task(onnx_pack_root), parent=self),
+            on_status,
+            on_finished,
+        )
 
     def start_vulkan_download(
         self,
@@ -370,10 +339,6 @@ class BackgroundTaskController(QObject):
         """Start a Vulkan model download worker unless one is already running.
 
         One action fetches BOTH the ggml acoustic model and the Silero VAD.
-        Mirrors :meth:`start_cuda_pack_download`: guards against a concurrent run,
-        lazy-imports the worker, connects ``status`` and ``result_ready`` to the
-        provided callbacks, and releases the handle on the native
-        ``QThread.finished``.
 
         Args:
             asr_model: Acoustic model identifier (e.g. ``"large-v3"``); typically
@@ -385,16 +350,41 @@ class BackgroundTaskController(QObject):
             on_finished: Slot for ``result_ready(bool, str)`` — called with
                 ``(ok, message)`` when the install completes or fails.
         """
-        if self.vulkan_model_download_worker is not None and self.vulkan_model_download_worker.isRunning():
+        from anki_miner.gui.workers.install_worker import InstallWorker, vulkan_model_task
+
+        self._start_install(
+            "vulkan_model_download_worker",
+            lambda: InstallWorker(vulkan_model_task(asr_model, asr_models_root), parent=self),
+            on_status,
+            on_finished,
+        )
+
+    def _start_install(
+        self,
+        attr: str,
+        factory: Callable[[], InstallWorker],
+        on_status: Callable[[str], None],
+        on_finished: Callable[[bool, str], None],
+    ) -> None:
+        """Shared starter for the five resource install/download workers.
+
+        Guards against a concurrent run on ``attr``, builds the worker via
+        ``factory`` (deferred so a refused start constructs nothing), stores it
+        on ``attr``, wires ``status``/``result_ready`` to the caller's slots, and
+        releases the per-``attr`` handle on the native ``QThread.finished``
+        (0-arg, fires on real thread exit including the cancel path where
+        ``result_ready`` never fires). Mirrors the validation/update/ytdlp
+        starters; the per-attribute handle keeps the shutdown join addressable.
+        """
+        existing = getattr(self, attr)
+        if existing is not None and existing.isRunning():
             return
 
-        from anki_miner.gui.workers.vulkan_model_download_worker import VulkanModelDownloadWorker
-
-        worker = VulkanModelDownloadWorker(asr_model, asr_models_root, parent=self)
-        self.vulkan_model_download_worker = worker
+        worker = factory()
+        setattr(self, attr, worker)
         worker.status.connect(on_status)
         worker.result_ready.connect(on_finished)
-        worker.finished.connect(lambda w=worker: self._release_worker("vulkan_model_download_worker", w))
+        worker.finished.connect(lambda w=worker: self._release_worker(attr, w))
         worker.start()
 
     def maybe_migrate_jmdict(self, config: AnkiMinerConfig) -> bool:

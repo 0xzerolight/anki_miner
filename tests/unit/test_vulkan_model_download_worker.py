@@ -1,6 +1,7 @@
-"""Tests for VulkanModelDownloadWorker — success/failure/cancel with mocked install.
+"""Tests for the Vulkan model install task run through InstallWorker.
 
-Mirrors ``test_cuda_pack_download_worker``: the worker fetches BOTH the ggml
+Post-ARC-010 the per-resource ``VulkanModelDownloadWorker`` collapsed into
+``InstallWorker`` + ``vulkan_model_task``; one run fetches BOTH the ggml
 acoustic model and the Silero VAD via the ggml_model_installer seam, so both
 ``install_ggml_model`` and ``install_vad_model`` are mocked here.
 """
@@ -12,12 +13,16 @@ import pytest
 pytest.importorskip("PyQt6.QtCore")
 
 from anki_miner.exceptions import SetupError
-from anki_miner.gui.workers.vulkan_model_download_worker import VulkanModelDownloadWorker
+from anki_miner.gui.workers.install_worker import InstallWorker, vulkan_model_task
 
-_MOD = "anki_miner.gui.workers.vulkan_model_download_worker"
+_MOD = "anki_miner.services.asr.ggml_model_installer"
 
 
-def _run_worker_sync(worker: VulkanModelDownloadWorker) -> None:
+def _worker(asr_model: str, asr_models_root) -> InstallWorker:
+    return InstallWorker(vulkan_model_task(asr_model, asr_models_root))
+
+
+def _run_worker_sync(worker: InstallWorker) -> None:
     """Run the worker's run() synchronously (bypass QThread.start)."""
     worker.run()
 
@@ -35,7 +40,7 @@ def _patch_installers(monkeypatch, *, ggml=None, vad=None) -> None:
 
 def test_success_emits_result_true(qapp, tmp_path, monkeypatch):
     _patch_installers(monkeypatch)
-    worker = VulkanModelDownloadWorker("large-v3", tmp_path)
+    worker = _worker("large-v3", tmp_path)
 
     results: list[tuple] = []
     worker.result_ready.connect(lambda ok, msg: results.append((ok, msg)))
@@ -51,7 +56,7 @@ def test_success_emits_result_true(qapp, tmp_path, monkeypatch):
 def test_success_emits_status_before_result(qapp, tmp_path, monkeypatch):
     _patch_installers(monkeypatch)
     statuses: list[str] = []
-    worker = VulkanModelDownloadWorker("large-v3", tmp_path)
+    worker = _worker("large-v3", tmp_path)
     worker.status.connect(statuses.append)
 
     results: list[tuple] = []
@@ -77,7 +82,7 @@ def test_installs_both_acoustic_and_vad(qapp, tmp_path, monkeypatch):
         return root
 
     _patch_installers(monkeypatch, ggml=_ggml, vad=_vad)
-    worker = VulkanModelDownloadWorker("small", tmp_path)
+    worker = _worker("small", tmp_path)
 
     _run_worker_sync(worker)
 
@@ -94,7 +99,7 @@ def test_progress_adapter_emits_status(qapp, tmp_path, monkeypatch):
         return root
 
     _patch_installers(monkeypatch, ggml=_ggml)
-    worker = VulkanModelDownloadWorker("large-v3", tmp_path)
+    worker = _worker("large-v3", tmp_path)
     worker.status.connect(statuses.append)
 
     _run_worker_sync(worker)
@@ -109,7 +114,7 @@ def test_failure_emits_result_false(qapp, tmp_path, monkeypatch):
         raise SetupError("checksum mismatch")
 
     _patch_installers(monkeypatch, ggml=_ggml)
-    worker = VulkanModelDownloadWorker("large-v3", tmp_path)
+    worker = _worker("large-v3", tmp_path)
 
     results: list[tuple] = []
     worker.result_ready.connect(lambda ok, msg: results.append((ok, msg)))
@@ -129,7 +134,7 @@ def test_vad_failure_emits_result_false(qapp, tmp_path, monkeypatch):
         raise SetupError("vad download failed")
 
     _patch_installers(monkeypatch, vad=_vad)
-    worker = VulkanModelDownloadWorker("large-v3", tmp_path)
+    worker = _worker("large-v3", tmp_path)
 
     results: list[tuple] = []
     worker.result_ready.connect(lambda ok, msg: results.append((ok, msg)))
@@ -149,7 +154,7 @@ def test_cancel_before_run_skips_install(qapp, tmp_path, monkeypatch):
         ggml=lambda asr_model, root, progress=None, cancel_event=None: calls.append(root),
         vad=lambda root, progress=None, cancel_event=None: calls.append(root),
     )
-    worker = VulkanModelDownloadWorker("large-v3", tmp_path)
+    worker = _worker("large-v3", tmp_path)
     worker.cancel()
 
     results: list[tuple] = []
@@ -168,11 +173,11 @@ def test_cancel_event_passed_to_install(qapp, tmp_path, monkeypatch):
         ggml=lambda asr_model, root, progress=None, cancel_event=None: received.append(cancel_event) or root,
         vad=lambda root, progress=None, cancel_event=None: received.append(cancel_event) or root,
     )
-    worker = VulkanModelDownloadWorker("large-v3", tmp_path)
+    worker = _worker("large-v3", tmp_path)
     _run_worker_sync(worker)
 
     assert len(received) == 2
-    assert all(ev is worker._cancel_event for ev in received)
+    assert all(ev is worker.cancel_event for ev in received)
 
 
 def test_cancel_during_install_suppresses_result(qapp, tmp_path, monkeypatch):
@@ -182,7 +187,7 @@ def test_cancel_during_install_suppresses_result(qapp, tmp_path, monkeypatch):
         raise SetupError("installation cancelled")
 
     _patch_installers(monkeypatch, ggml=_ggml)
-    worker = VulkanModelDownloadWorker("large-v3", tmp_path)
+    worker = _worker("large-v3", tmp_path)
     worker.cancel()
 
     results: list[tuple] = []
@@ -206,7 +211,7 @@ def test_cancel_between_installs_skips_vad(qapp, tmp_path, monkeypatch):
         ggml=_ggml,
         vad=lambda root, progress=None, cancel_event=None: vad_calls.append(root),
     )
-    worker = VulkanModelDownloadWorker("large-v3", tmp_path)
+    worker = _worker("large-v3", tmp_path)
 
     results: list[tuple] = []
     worker.result_ready.connect(lambda ok, msg: results.append((ok, msg)))
@@ -220,7 +225,7 @@ def test_cancel_between_installs_skips_vad(qapp, tmp_path, monkeypatch):
 def test_runs_on_thread_and_joins(qapp, qtbot, tmp_path, monkeypatch):
     """The worker runs to completion on its QThread and is joinable with wait()."""
     _patch_installers(monkeypatch)
-    worker = VulkanModelDownloadWorker("large-v3", tmp_path)
+    worker = _worker("large-v3", tmp_path)
 
     results: list[tuple] = []
     worker.result_ready.connect(lambda ok, msg: results.append((ok, msg)))
