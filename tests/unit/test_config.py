@@ -24,7 +24,6 @@ class TestYouTubeConfig:
         """New YouTube fields should default to the documented values."""
         config = AnkiMinerConfig()
         assert config.youtube_max_duration_s == 7200
-        assert config.youtube_max_height == 720
         assert config.youtube_cookies_from_browser is None
         assert config.youtube_cookies_file is None
         assert config.youtube_ffmpeg_location is None
