@@ -28,7 +28,7 @@ from PyQt6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.fonts import make_scaled_font
-from anki_miner.services.reading.models import ImageRef
+from anki_miner.models.reading import ImageRef
 
 # Pre-filter on the DECLARED uncompressed member size before reading an
 # archive page into memory. The declared size is attacker-controllable

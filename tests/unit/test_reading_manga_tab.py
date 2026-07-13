@@ -38,13 +38,13 @@ from PyQt6.QtGui import QDropEvent
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
-from anki_miner.models.reading_queue import ReadingItemStatus
-from anki_miner.services.reading.models import (
+from anki_miner.models.reading import (
     ImageRef,
     ReadingDocument,
     ReadingSourceRef,
     ReadingUnit,
 )
+from anki_miner.models.reading_queue import ReadingItemStatus
 
 _WORKER_TARGET = "anki_miner.gui.widgets._reading_mining_base.ReadingQueueWorker"
 _CREATE_TARGET = "anki_miner.gui.widgets._reading_mining_base.create_episode_processor"

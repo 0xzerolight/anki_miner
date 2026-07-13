@@ -45,11 +45,11 @@ from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.models import MiningOutcome, classify_result, result_error_text
+from anki_miner.models.reading import ReadingDocument
 from anki_miner.models.reading_queue import ReadingItemStatus, ReadingQueueItem
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.dictionary.registry import stale_dict_reimport_error
 from anki_miner.services.reading import detector
-from anki_miner.services.reading.models import ReadingDocument
 
 logger = logging.getLogger(__name__)
 

@@ -13,8 +13,8 @@ from unittest.mock import MagicMock
 import pytest
 
 from anki_miner.exceptions import SetupError
+from anki_miner.models.reading import ReadingSourceRef
 from anki_miner.services.reading import detector
-from anki_miner.services.reading.models import ReadingSourceRef
 
 _LOADER_MODULES = {
     "mokuro": "anki_miner.services.reading.mokuro_source",
@@ -436,7 +436,7 @@ def test_load_does_not_import_sibling_modules():
         from pathlib import Path
 
         from anki_miner.services.reading import detector
-        from anki_miner.services.reading.models import ReadingSourceRef
+        from anki_miner.models.reading import ReadingSourceRef
 
         # Stub the mokuro loader (both sys.modules and the package attr, so
         # ``from . import mokuro_source`` resolves to the stub) to avoid disk I/O.

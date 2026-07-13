@@ -21,7 +21,7 @@ from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
     WordCurationDialog,
 )
 from anki_miner.models import TokenizedWord
-from anki_miner.services.reading.models import ImageRef, ReadingUnit
+from anki_miner.models.reading import ImageRef, ReadingUnit
 
 # ---------------------------------------------------------------------------
 # Helpers

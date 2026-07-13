@@ -9,11 +9,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from anki_miner.models.reading import ReadingSourceRef
 from anki_miner.models.reading_queue import (
     ReadingItemStatus,
     ReadingQueueItem,
 )
-from anki_miner.services.reading.models import ReadingSourceRef
 
 
 def _ref(

@@ -12,6 +12,7 @@ import pysubs2
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import LineLemmas, TokenizedWord
+from anki_miner.models.reading import ReadingUnit
 from anki_miner.models.word import select_mined_form
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, TermLookup
 from anki_miner.services.deinflection import find_highlight_end
@@ -28,7 +29,6 @@ from anki_miner.services.morphology import (
     mining_base,
     replace_overridden_spans,
 )
-from anki_miner.services.reading.models import ReadingUnit
 from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.utils import (
     clean_subtitle_text,

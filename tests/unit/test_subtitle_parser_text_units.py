@@ -12,8 +12,8 @@ from unittest.mock import MagicMock, patch
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import LineLemmas
+from anki_miner.models.reading import ReadingUnit
 from anki_miner.services.compound_matcher import CompoundSyntheticToken
-from anki_miner.services.reading.models import ReadingUnit
 from anki_miner.services.subtitle_parser import SubtitleParserService
 
 

@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 
 from anki_miner.exceptions import SetupError
+from anki_miner.models.reading import ReadingSourceRef
 from anki_miner.services.reading import subtitle_source
-from anki_miner.services.reading.models import ReadingSourceRef
 from anki_miner.services.reading.subtitle_source import _format_cue_time
 
 _SRT = """\
