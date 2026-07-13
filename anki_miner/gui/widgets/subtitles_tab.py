@@ -29,9 +29,7 @@ from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 
 if TYPE_CHECKING:
-    from anki_miner.gui.workers.condense_worker import CondenseWorker
-    from anki_miner.gui.workers.subtitle_gen_worker import SubtitleGenWorker
-    from anki_miner.gui.workers.subtitle_retime_worker import SubtitleRetimeWorker
+    from anki_miner.gui.workers.base_worker import CancellableWorker
 
 
 class SubtitlesTab(QWidget):
@@ -103,9 +101,7 @@ class SubtitlesTab(QWidget):
     # Close contract
     # ------------------------------------------------------------------
 
-    def iter_close_workers(
-        self,
-    ) -> Iterator[SubtitleGenWorker | SubtitleRetimeWorker | CondenseWorker]:
+    def iter_close_workers(self) -> Iterator[CancellableWorker]:
         """Yield active workers from all children for BackgroundTaskController."""
         yield from self.generate_tab.iter_close_workers()
         yield from self.retime_tab.iter_close_workers()
