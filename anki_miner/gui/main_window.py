@@ -2,7 +2,6 @@
 
 import logging
 from dataclasses import replace
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
@@ -125,10 +124,8 @@ class MainWindow(QMainWindow):
         if self.config.check_for_updates:
             self._check_for_updates()
 
-        # One-time legacy frequency.csv → freqs/legacy-frequency migration.
-        # Synchronous (CSV→sqlite is fast and one-time, unlike JMdict XML) and
-        # must run before any frequency-consuming service is built.
-        self._maybe_migrate_legacy_frequency()
+        # One-time repair of the collapsed legacy frequency source display name.
+        self._maybe_repair_legacy_frequency_source_name()
 
         # One-time JMdict XML → SQLite migration (background)
         self._maybe_migrate_jmdict()
@@ -846,30 +843,6 @@ class MainWindow(QMainWindow):
         )
         dialog.exec()
 
-        # Record to history after dialog closes (skip if user undid the cards)
-        if self.config.enable_history and result.cards_created > 0 and not dialog.undo_completed:
-            self._record_history(result)
-
-    def _record_history(self, result: ProcessingResult) -> None:
-        """Record processing result to history database.
-
-        Args:
-            result: Processing result to record
-        """
-        from anki_miner.services.history_service import HistoryService
-
-        try:
-            service = HistoryService(self.config.history_db_path)
-            service.initialize()
-            service.record_session(
-                video_file=Path(result.video_file) if result.video_file else Path("unknown"),
-                subtitle_file=(Path(result.subtitle_file) if result.subtitle_file else Path("unknown")),
-                result=result,
-                card_ids=result.card_ids,
-            )
-        except Exception:
-            logger.debug("Failed to record history", exc_info=True)
-
     def get_config(self) -> AnkiMinerConfig:
         """Get current configuration.
 
@@ -1031,28 +1004,14 @@ class MainWindow(QMainWindow):
         if not silent:
             QMessageBox.critical(self, self.tr("Validation Error"), error_message)
 
-    def _maybe_migrate_legacy_frequency(self) -> None:
-        """One-time: fold a legacy single frequency.csv into the multi-source chain.
+    def _maybe_repair_legacy_frequency_source_name(self) -> None:
+        """One-time: repair the collapsed "source" label on the legacy source.
 
-        Synchronous (CSV→sqlite is fast and one-time, unlike JMdict XML, so no
-        background worker). No-ops once migrated; persists the updated config so
-        the chain reference survives the next launch.
+        Idempotent and self-guarded on the stored name; fixes a reimport bug
+        that collapsed the ``legacy-frequency`` source's display name.
         """
-        from anki_miner.services.frequency.legacy_migration import (
-            migrate_legacy_frequency_csv,
-            repair_legacy_frequency_source_name,
-        )
+        from anki_miner.services.frequency.legacy_migration import repair_legacy_frequency_source_name
 
-        migrated = migrate_legacy_frequency_csv(self.config)
-        if migrated is not None:
-            self.config = migrated
-            GUIConfigManager.save_config(self.config)
-            logger.info("Migrated legacy frequency.csv into freqs/legacy-frequency")
-
-        # Unconditional (NOT gated on `migrated`): users whose chain is already
-        # populated — exactly those whose reimport collapsed the label to
-        # "source" — take the no-op path above, so the repair must run
-        # independently. Idempotent and self-guarded on the stored name.
         repair_legacy_frequency_source_name(self.config)
 
     def _maybe_migrate_jmdict(self) -> None:

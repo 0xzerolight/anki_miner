@@ -364,7 +364,6 @@ class TestWorkerExceptionLogging:
             jmdict_path=tmp_path / "JMdict_e",
             dicts_root=tmp_path / "dicts",
             known_words_db_path=tmp_path / "known_words.db",
-            history_db_path=tmp_path / "history.db",
             stats_db_path=tmp_path / "stats.db",
         )
         processor = EpisodeProcessor(

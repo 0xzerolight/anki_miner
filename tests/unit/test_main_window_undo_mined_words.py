@@ -89,7 +89,7 @@ class TestUndoRevertsMinedWords:
         _fake_delete_notes(monkeypatch, deleted_count=2)
 
         # use_known_words_db must be True for the revert path to run.
-        config_with_kwdb = replace(main_window.config, use_known_words_db=True, enable_history=False)
+        config_with_kwdb = replace(main_window.config, use_known_words_db=True)
         main_window.update_config(config_with_kwdb)
 
         result = ProcessingResult(
@@ -116,7 +116,7 @@ class TestUndoRevertsMinedWords:
         captured = _capture_undo_callback(monkeypatch)
         _fake_delete_notes(monkeypatch, deleted_count=1)
 
-        config_with_kwdb = replace(main_window.config, use_known_words_db=True, enable_history=False)
+        config_with_kwdb = replace(main_window.config, use_known_words_db=True)
         main_window.update_config(config_with_kwdb)
 
         result = ProcessingResult(
@@ -144,7 +144,7 @@ class TestUndoRevertsMinedWords:
         captured = _capture_undo_callback(monkeypatch)
         _fake_delete_notes(monkeypatch, deleted_count=1)
 
-        config_with_kwdb = replace(main_window.config, use_known_words_db=True, enable_history=False)
+        config_with_kwdb = replace(main_window.config, use_known_words_db=True)
         main_window.update_config(config_with_kwdb)
 
         result = ProcessingResult(
@@ -176,7 +176,7 @@ class TestUndoRevertsMinedWords:
         captured = _capture_undo_callback(monkeypatch)
         _fake_delete_notes(monkeypatch, deleted_count=1)
 
-        config_no_kwdb = replace(main_window.config, use_known_words_db=False, enable_history=False)
+        config_no_kwdb = replace(main_window.config, use_known_words_db=False)
         main_window.update_config(config_no_kwdb)
 
         result = ProcessingResult(
@@ -201,7 +201,7 @@ class TestUndoRevertsMinedWords:
         captured = _capture_undo_callback(monkeypatch)
         _fake_delete_notes(monkeypatch, deleted_count=1)
 
-        config = replace(main_window.config, known_words_db_path=absent_db, enable_history=False)
+        config = replace(main_window.config, known_words_db_path=absent_db)
         main_window.update_config(config)
 
         result = ProcessingResult(
@@ -227,7 +227,7 @@ class TestUndoRevertsMinedWords:
         captured = _capture_undo_callback(monkeypatch)
         _fake_delete_notes(monkeypatch, deleted_count=0)
 
-        config_with_kwdb = replace(main_window.config, use_known_words_db=True, enable_history=False)
+        config_with_kwdb = replace(main_window.config, use_known_words_db=True)
         main_window.update_config(config_with_kwdb)
 
         result = ProcessingResult(
@@ -253,7 +253,7 @@ class TestUndoRevertsMinedWords:
         captured = _capture_undo_callback(monkeypatch)
         _fake_delete_notes(monkeypatch, deleted_count=1)
 
-        config_with_kwdb = replace(main_window.config, use_known_words_db=True, enable_history=False)
+        config_with_kwdb = replace(main_window.config, use_known_words_db=True)
         main_window.update_config(config_with_kwdb)
 
         result = ProcessingResult(

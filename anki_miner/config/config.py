@@ -238,11 +238,6 @@ class AnkiMinerConfig:
     pitch_category_format: Literal["jp", "romaji"] = "jp"
 
     # Frequency settings
-    # DEPRECATED: the UI no longer writes this (superseded by frequency_chain).
-    # Kept only as the read source for the one-time legacy_migration that folds
-    # an existing frequency.csv into the chain; it still round-trips so old
-    # configs migrate cleanly. Do not wire new writers to it.
-    frequency_list_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "frequency.csv")
     # Activation is resource-driven (see the frequency_active property): the
     # frequency service loads iff at least one enabled source is in the chain.
     # There is no separate on/off flag — adding a source is the switch.
@@ -338,10 +333,6 @@ class AnkiMinerConfig:
     # threshold is <= 1. Migration-safe: absent in old configs → backfilled to 1
     # by GUIConfigManager.load_config (unknown-key filter + dataclass default).
     reading_min_occurrence: int = 1
-
-    # History settings
-    history_db_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "history.db")
-    enable_history: bool = True
 
     # Update settings
     check_for_updates: bool = True
@@ -457,8 +448,6 @@ class AnkiMinerConfig:
             object.__setattr__(self, "audio_packs_root", Path(self.audio_packs_root))
         if isinstance(self.pitch_accent_path, str):
             object.__setattr__(self, "pitch_accent_path", Path(self.pitch_accent_path))
-        if isinstance(self.frequency_list_path, str):
-            object.__setattr__(self, "frequency_list_path", Path(self.frequency_list_path))
         if isinstance(self.freqs_root, str):
             object.__setattr__(self, "freqs_root", Path(self.freqs_root))
         if isinstance(self.known_words_db_path, str):
@@ -469,8 +458,6 @@ class AnkiMinerConfig:
             object.__setattr__(self, "whitelist_path", Path(self.whitelist_path) if self.whitelist_path else None)
         if isinstance(self.stats_db_path, str):
             object.__setattr__(self, "stats_db_path", Path(self.stats_db_path))
-        if isinstance(self.history_db_path, str):
-            object.__setattr__(self, "history_db_path", Path(self.history_db_path))
         if isinstance(self.log_path, str):
             object.__setattr__(self, "log_path", Path(self.log_path))
         if isinstance(self.youtube_cookies_file, str):

@@ -134,7 +134,6 @@ def build_app_config(e2e: E2EConfig, test_home: Path, *, bypass_known_words: boo
         media_temp_folder=test_home / MEDIA_TEMP_BASENAME,
         dicts_root=dicts_root,
         known_words_db_path=test_home / "known_words.db",
-        history_db_path=test_home / "history.db",
         stats_db_path=test_home / "stats.db",
         audio_packs_root=test_home / "audio_packs",
         themes_root=test_home / "themes",
@@ -145,6 +144,5 @@ def build_app_config(e2e: E2EConfig, test_home: Path, *, bypass_known_words: boo
         include_known_words=include_known_words,
         deduplicate_sentences=deduplicate_sentences,
         allow_duplicate_cards=allow_duplicate_cards,
-        enable_history=True,
         # Default expression_audio field stays "" (feature off) → no audio fetch.
     )

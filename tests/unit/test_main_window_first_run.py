@@ -180,12 +180,10 @@ def test_first_run_reentrancy_guard_blocks_second_call(main_window, monkeypatch)
 def test_first_run_offer_triggers_regardless_of_resource_files(main_window, monkeypatch, tmp_path):
     """Broadened trigger: the wizard is offered whenever not first_run_setup_done.
 
-    Even when freq + pitch files already exist (an existing user), the wizard is
+    Even when a pitch file already exists (an existing user), the wizard is
     still offered — the resource step is just skippable.
     """
-    freq = tmp_path / "frequency.csv"
     pitch = tmp_path / "pitch_accent.csv"
-    freq.write_text("x,1\n")
     pitch.write_text("x,0\n")
 
     calls = {"run": 0}
@@ -202,7 +200,6 @@ def test_first_run_offer_triggers_regardless_of_resource_files(main_window, monk
     main_window.config = replace(
         main_window.config,
         first_run_setup_done=False,
-        frequency_list_path=freq,
         pitch_accent_path=pitch,
     )
     main_window._first_run_setup_handled = False

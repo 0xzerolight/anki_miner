@@ -108,7 +108,7 @@ def test_undo_callback_uses_rebuilt_anki_service(main_window, monkeypatch):
     monkeypatch.setattr(mw_module, "ResultsDialog", _FakeDialog)
 
     # Change config -> service rebuilds against the new URL.
-    new_config = replace(main_window.config, ankiconnect_url="http://new:1234", enable_history=False)
+    new_config = replace(main_window.config, ankiconnect_url="http://new:1234")
     main_window.update_config(new_config)
 
     result = ProcessingResult(
