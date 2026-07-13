@@ -9,14 +9,6 @@ from anki_miner.utils import ffmpeg_resolver
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 
 
-@pytest.fixture(autouse=True)
-def _clear_resolver_cache():
-    """Ensure the module-level cache never leaks across tests."""
-    ffmpeg_resolver._clear_cache()
-    yield
-    ffmpeg_resolver._clear_cache()
-
-
 @pytest.fixture
 def base_config(tmp_path):
     return AnkiMinerConfig(media_temp_folder=tmp_path / "temp_media")
