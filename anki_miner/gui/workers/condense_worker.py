@@ -1,43 +1,33 @@
 """Worker that condenses media files to dialogue-only audio (Audio Condenser).
 
 The 5-signal contract and per-file queue loop live in
-:class:`~anki_miner.gui.workers.file_queue_worker.FileQueueWorker`; this worker
-supplies only the per-file condensing logic and declares
-``EncoderUnavailableError`` as a queue-stopping fatal exception.
+:class:`~anki_miner.gui.workers.file_queue_worker.FileQueueWorker`; the per-file
+product policy (subtitle-source priority, JP-track pick, the pure interval math,
+the ffmpeg condense pass, sidecar writing) lives in
+:func:`~anki_miner.services.audio_condenser.condense_one`. This worker is the
+signal adapter: it resolves the output path, runs the skip gate, calls
+``condense_one``, and maps its structured :class:`~anki_miner.services.audio_condenser.CondenseStatus`
+back to translated messages. ``EncoderUnavailableError`` is declared as a
+queue-stopping fatal exception.
 """
 
 from __future__ import annotations
 
-import contextlib
 import logging
 from dataclasses import dataclass
 from pathlib import Path
 
 from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
 from anki_miner.services.audio_condenser import (
+    CondenseResult,
+    CondenseStatus,
     EncoderUnavailableError,
-    build_periods,
-    filter_lines,
-    load_subtitle_events,
-    map_events_to_condensed,
-    shift_events,
-    write_condensed_lrc,
-    write_condensed_srt,
+    condense_one,
 )
-from anki_miner.utils.audio_track_detector import (
-    JAPANESE_LANGUAGE_CODES,
-    SubtitleStream,
-    list_subtitle_streams,
-)
-from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
-from anki_miner.utils.file_pairing import find_sibling_subtitle, resolve_output_path
+from anki_miner.utils.file_pairing import resolve_output_path
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
-
-# Subtitle-source priority for the condenser (D9). Unlike the mining default it
-# includes ``.vtt`` — the condenser accepts WebVTT sidecars (D12).
-_CONDENSER_SUBTITLE_PRIORITY: tuple[str, ...] = (".ass", ".ssa", ".srt", ".vtt")
 
 
 @dataclass
@@ -45,7 +35,7 @@ class CondenseItem:
     """One media file queued for condensing.
 
     ``external_sub`` is a user-picked subtitle file (single mode); when None the
-    worker discovers a sibling or embedded subtitle track (D9).
+    service discovers a sibling or embedded subtitle track (D9).
     """
 
     media: Path
@@ -60,16 +50,14 @@ class CondenseWorker(FileQueueWorker):
     2. Resolves ``<stem>_condensed.<format>`` in *output_dir* (or next to the
        media). If it already exists and *overwrite* is False — emits
        ``file_skipped(idx, out_audio)`` and continues.
-    3. Resolves a subtitle source (D9 priority: explicit → sibling → embedded
-       text track); runs the pure pipeline (load → shift → filter → build
-       periods). Zero periods (empty/all-comment sub or every line filtered) →
-       ``file_finished(idx, None, reason)`` **without** invoking ffmpeg.
-    4. Calls ``service.condense`` (progress forwarded via ``file_progress``).
-    5. On success, optionally writes ``<stem>_condensed.srt``/``.lrc`` sidecars.
-       A sidecar write failure is **non-fatal** — the audio already succeeded, so
-       it is logged and surfaced as the final progress message, never turned into
-       a ``file_finished`` error (the error slot stays None on audio success).
-    6. Emits ``file_progress(idx, 100, …)`` + ``file_finished(idx, out_audio, None)``.
+    3. Delegates to :func:`~anki_miner.services.audio_condenser.condense_one`,
+       which resolves a subtitle source (D9 priority), runs the pipeline, invokes
+       ffmpeg, and optionally writes sidecars.
+    4. Maps the returned :class:`~anki_miner.services.audio_condenser.CondenseStatus`
+       to a translated ``file_finished`` / ``file_progress`` message. On a
+       successful audio write whose optional sidecar write failed, the warning is
+       surfaced through the final progress message — never as a ``file_finished``
+       error (the audio is already good).
 
     :class:`~anki_miner.services.audio_condenser.EncoderUnavailableError` stops
     the entire queue (every remaining file would hit the same missing encoder)
@@ -168,167 +156,85 @@ class CondenseWorker(FileQueueWorker):
         self._process_file(idx, item, out_audio)
 
     def _process_file(self, idx: int, item: CondenseItem, out_audio: Path) -> None:
-        """Process a single media file.
+        """Run :func:`condense_one` for one file and map its result to signals.
 
         Per-file errors are forwarded as signals; only a ``_FATAL_QUEUE_EXCEPTIONS``
         member (encoder missing) propagates, for the base loop to stop the queue.
         """
-        temp_sub: Path | None = None
+
+        def _progress_cb(pct: int) -> None:
+            self.file_progress.emit(idx, pct, tr_format(self.tr("Condensing: %1%"), pct))
+
         try:
-            sub_path, temp_sub, source_error = self._resolve_subtitle_source(item)
-            if sub_path is None:
-                self.file_finished.emit(idx, None, source_error)
-                return
-
-            events = load_subtitle_events(sub_path)
-            shifted = shift_events(events, self._offset_ms)
-            filtered = filter_lines(shifted, self._filtered_chars)
-            periods = build_periods(filtered, self._padding_ms)
-
-            if not periods:
-                self.file_finished.emit(
-                    idx,
-                    None,
-                    tr_format(self.tr("No dialogue lines found in %1"), item.media.name),
-                )
-                return
-
-            def _progress_cb(pct: int) -> None:
-                self.file_progress.emit(idx, pct, tr_format(self.tr("Condensing: %1%"), pct))
-
-            ok = self._service.condense(
+            result = condense_one(
+                self._service,
+                self._config,
                 item.media,
-                periods,
+                item.external_sub,
                 out_audio,
-                audio_track_override=self._audio_track_override,
+                offset_ms=self._offset_ms,
+                padding_ms=self._padding_ms,
+                filtered_chars=self._filtered_chars,
                 bitrate_kbps=self._bitrate_kbps,
+                audio_track_override=self._audio_track_override,
+                subtitle_track_override=self._subtitle_track_override,
+                write_subs=self._write_subs,
                 progress_cb=_progress_cb,
                 cancel_event=self._cancel_event,
             )
-
-            if not ok:
-                if self.is_cancelled:
-                    self.file_finished.emit(idx, None, self.tr("Cancelled"))
-                else:
-                    self.file_finished.emit(
-                        idx,
-                        None,
-                        tr_format(self.tr("Condensing failed for %1"), item.media.name),
-                    )
-                return
-
-            # Audio written. Optional condensed subtitle sidecars are best-effort:
-            # a write failure is surfaced as a warning message, never a
-            # file_finished error (the audio is already good).
-            warning = self._write_condensed_subs(filtered, periods, out_audio) if self._write_subs else None
-            self.file_progress.emit(idx, 100, warning or self.tr("Done"))
-            self.file_finished.emit(idx, out_audio, None)
-
         except self._FATAL_QUEUE_EXCEPTIONS:
             # Missing encoder affects every remaining file. Re-raise so the base
             # queue loop reports this file's error and stops the queue without
-            # poisoning is_cancelled (a tool error, not a user cancel). The
-            # per-file finally below still runs (embedded-sub temp cleanup).
+            # poisoning is_cancelled (a tool error, not a user cancel).
             raise
-
         except Exception as exc:  # noqa: BLE001 — per-file isolation
             logger.exception("condense_worker: error on %s", item.media)
             if not self.is_cancelled:
                 self.file_finished.emit(idx, None, str(exc))
-        finally:
-            # Delete the extracted embedded-subtitle temp file (the service hands
-            # ownership to the caller). External/sibling subs are never touched.
-            if temp_sub is not None:
-                with contextlib.suppress(OSError):
-                    if temp_sub.exists():
-                        temp_sub.unlink()
+            return
 
-    def _resolve_subtitle_source(self, item: CondenseItem) -> tuple[Path | None, Path | None, str | None]:
-        """Resolve *item*'s subtitle source (D9 priority).
+        self._emit_result(idx, item, result)
 
-        Returns ``(sub_path, temp_sub, error)``:
-          * usable external / sibling / embedded sub → ``(path, temp_or_None, None)``
-          * no usable source → ``(None, temp_or_None, reason_message)``
+    def _emit_result(self, idx: int, item: CondenseItem, result: CondenseResult) -> None:
+        """Map a :class:`CondenseResult` status code to translated worker signals."""
+        name = item.media.name
+        status = result.status
 
-        ``temp_sub`` is the extracted embedded temp file (deleted by the caller in
-        the per-file ``finally``); it is None for external and sibling subs.
-        """
-        # 1. Explicit user-picked file (single mode).
-        if item.external_sub is not None:
-            return item.external_sub, None, None
-
-        # 2. Sibling external sub (condenser priority, incl. .vtt).
-        sibling = find_sibling_subtitle(item.media, priority=_CONDENSER_SUBTITLE_PRIORITY)
-        if sibling is not None:
-            return sibling, None, None
-
-        # 3. Embedded text subtitle track.
-        return self._resolve_embedded_subtitle(item.media)
-
-    def _resolve_embedded_subtitle(self, media: Path) -> tuple[Path | None, Path | None, str | None]:
-        """Extract an embedded text subtitle from *media* (D9), or report why not."""
-        streams = list_subtitle_streams(media, resolve_ffprobe(self._config))
-        if not streams:
-            return None, None, tr_format(self.tr("No subtitle source found for %1"), media.name)
-
-        stream = self._pick_subtitle_stream(streams)
-        if stream is None:
-            if self._subtitle_track_override is not None:
-                return (
-                    None,
-                    None,
-                    tr_format(
-                        self.tr("Subtitle track %1 not found in %2"),
-                        self._subtitle_track_override,
-                        media.name,
-                    ),
-                )
-            codecs = ", ".join(sorted({s.codec_name or "unknown" for s in streams}))
-            return (
+        if status is CondenseStatus.SUCCESS:
+            warning = (
+                tr_format(self.tr("Audio done; subtitle write failed: %1"), result.sidecar_error)
+                if result.sidecar_error
+                else None
+            )
+            self.file_progress.emit(idx, 100, warning or self.tr("Done"))
+            self.file_finished.emit(idx, result.out_audio, None)
+        elif status is CondenseStatus.CANCELLED:
+            self.file_finished.emit(idx, None, self.tr("Cancelled"))
+        elif status is CondenseStatus.NO_SOURCE:
+            self.file_finished.emit(idx, None, tr_format(self.tr("No subtitle source found for %1"), name))
+        elif status is CondenseStatus.SUBTITLE_TRACK_NOT_FOUND:
+            self.file_finished.emit(
+                idx,
                 None,
+                tr_format(
+                    self.tr("Subtitle track %1 not found in %2"),
+                    self._subtitle_track_override,
+                    name,
+                ),
+            )
+        elif status is CondenseStatus.BITMAP_ONLY:
+            self.file_finished.emit(
+                idx,
                 None,
                 tr_format(
                     self.tr("Only image-based subtitles (%1) in %2, which can't be condensed"),
-                    codecs,
-                    media.name,
+                    result.codecs,
+                    name,
                 ),
             )
-
-        temp_dir = self._config.media_temp_folder
-        temp_dir.mkdir(parents=True, exist_ok=True)
-        extracted = self._service.extract_embedded_subtitle(media, stream, temp_dir, cancel_event=self._cancel_event)
-        if extracted is None:
-            if self.is_cancelled:
-                return None, None, self.tr("Cancelled")
-            return None, None, tr_format(self.tr("Failed to extract embedded subtitle from %1"), media.name)
-        return extracted, extracted, None
-
-    def _pick_subtitle_stream(self, streams: list[SubtitleStream]) -> SubtitleStream | None:
-        """Choose a subtitle stream: override sub_index → first JP text → first text."""
-        if self._subtitle_track_override is not None:
-            return next((s for s in streams if s.sub_index == self._subtitle_track_override), None)
-        text_streams = [s for s in streams if s.is_text]
-        if not text_streams:
-            return None
-        return next(
-            (s for s in text_streams if s.language_tag in JAPANESE_LANGUAGE_CODES),
-            text_streams[0],
-        )
-
-    def _write_condensed_subs(self, filtered_events, periods, out_audio: Path) -> str | None:
-        """Write condensed SRT + LRC sidecars beside *out_audio*.
-
-        Consumes the **filtered, shifted** events (D4) so the sidecars show only
-        the audible dialogue. Returns None on success, or a warning string when a
-        writer fails — the audio is already written, so this is non-fatal.
-        """
-        try:
-            condensed = map_events_to_condensed(filtered_events, periods)
-            srt_path = resolve_output_path(out_audio.parent, f"{out_audio.stem}.srt")
-            lrc_path = resolve_output_path(out_audio.parent, f"{out_audio.stem}.lrc")
-            write_condensed_srt(condensed, srt_path)
-            write_condensed_lrc(condensed, lrc_path)
-            return None
-        except Exception as exc:  # noqa: BLE001 — sidecar failure must never fail an already-written audio
-            logger.warning("condense_worker: condensed subtitle write failed for %s: %s", out_audio, exc)
-            return tr_format(self.tr("Audio done; subtitle write failed: %1"), str(exc))
+        elif status is CondenseStatus.EXTRACT_FAILED:
+            self.file_finished.emit(idx, None, tr_format(self.tr("Failed to extract embedded subtitle from %1"), name))
+        elif status is CondenseStatus.NO_DIALOGUE:
+            self.file_finished.emit(idx, None, tr_format(self.tr("No dialogue lines found in %1"), name))
+        elif status is CondenseStatus.CONDENSE_FAILED:
+            self.file_finished.emit(idx, None, tr_format(self.tr("Condensing failed for %1"), name))
