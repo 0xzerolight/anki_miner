@@ -67,7 +67,7 @@ def test_settings_tab_scans_custom_dicts_root(qtbot, tmp_path):
     # scan runs off the GUI thread, so wait for it to land + re-render.
     panel.set_chain(config.dictionary_chain)
     panel.refresh_registry()
-    qtbot.waitUntil(lambda: panel._registry is not None and not panel._scan_in_flight, timeout=3000)
+    qtbot.waitUntil(lambda: panel._view is not None and not panel._scan_in_flight, timeout=3000)
 
     row = panel._row_widget(0)
     assert row is not None, "indexed row must render for the seeded dict"
