@@ -332,3 +332,30 @@ class TestRoundTripImmutabilityAndPaths:
         assert loaded.condenser_bitrate_kbps == 96
         assert loaded.condenser_filtered_chars == "♪♫♬♩〜～"
         assert loaded.condenser_write_subtitles is False
+
+
+class TestSchemaVersionMarker:
+    """config_schema_version marker (ARC-002): stamped on save, tolerant on load."""
+
+    def test_saved_json_carries_schema_version(self, tmp_config: Path):
+        """save_config stamps the current CONFIG_SCHEMA_VERSION into the file."""
+        import json
+
+        GUIConfigManager.save_config(create_default_config())
+        raw = json.loads(tmp_config.read_text(encoding="utf-8"))
+        assert raw["config_schema_version"] == GUIConfigManager.CONFIG_SCHEMA_VERSION
+
+    def test_markerless_json_still_loads(self, tmp_config: Path):
+        """A pre-versioning config (version 0, no marker) loads cleanly, no reset."""
+        import json
+
+        tmp_config.write_text(json.dumps({"anki_deck_name": "Legacy"}), encoding="utf-8")
+        loaded = GUIConfigManager.load_config()
+        assert isinstance(loaded, AnkiMinerConfig)
+        assert loaded.anki_deck_name == "Legacy"
+
+    def test_marker_does_not_leak_onto_dataclass(self, tmp_config: Path):
+        """The marker is JSON-only; it must never become a dataclass attribute."""
+        GUIConfigManager.save_config(create_default_config())
+        loaded = GUIConfigManager.load_config()
+        assert not hasattr(loaded, "config_schema_version")
