@@ -3,7 +3,7 @@
 `anki_miner/services/deinflection.py` (engine),
 `anki_miner/services/japanese_transforms.py` (rule table),
 `anki_miner/utils/furigana_distribute.py` (furigana distribution),
-`anki_miner/services/ja_normalize.py` (pre-tokenization normalization), and their
+`anki_miner/utils/ja_normalize.py` (pre-tokenization normalization), and their
 test corpus are Python ports of code from
 [Yomitan](https://github.com/yomidevs/yomitan), Copyright (C)
 Yomitan Authors, licensed under the **GNU General Public License, version 3
@@ -18,7 +18,7 @@ the combined work carries the same license.
 | `anki_miner/services/deinflection.py` | `ext/js/language/language-transformer.js`, `ext/js/language/language-transforms.js` |
 | `anki_miner/services/japanese_transforms.py` | `ext/js/language/ja/japanese-transforms.js` |
 | `anki_miner/utils/furigana_distribute.py` | `ext/js/language/ja/japanese.js` (`distributeFurigana` family) |
-| `anki_miner/services/ja_normalize.py` | `ext/js/language/ja/japanese.js` (`convertHalfWidthKanaToFullWidth`, `HALFWIDTH_KATAKANA_MAPPING`, `normalizeCJKCompatibilityCharacters`), `ext/js/language/CJK-util.js` (`normalizeRadicals`, `CJK_IDEOGRAPH_RANGES`, `isCodePointInRanges`) |
+| `anki_miner/utils/ja_normalize.py` | `ext/js/language/ja/japanese.js` (`convertHalfWidthKanaToFullWidth`, `HALFWIDTH_KATAKANA_MAPPING`, `normalizeCJKCompatibilityCharacters`), `ext/js/language/CJK-util.js` (`normalizeRadicals`, `CJK_IDEOGRAPH_RANGES`, `isCodePointInRanges`) |
 | `tests/unit/test_ja_normalize.py` (fixture slices) | `test/japanese-util.test.js` |
 | `anki_miner/services/pitch_accent_service.py` (`classify_pitch`, `downstep_positions`, `format_categories` H/L handling) | `ext/js/language/ja/japanese.js` (`getPitchCategory`, `getDownstepPositions`) |
 | `anki_miner/services/pitch_accent/yomitan_pitch_importer.py` (`_to_number_array`) | `ext/js/language/translator.js` (`Translator._toNumberArray`) |

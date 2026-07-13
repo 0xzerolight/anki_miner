@@ -13,7 +13,7 @@ import unicodedata
 
 import pytest
 
-from anki_miner.services.ja_normalize import (
+from anki_miner.utils.ja_normalize import (
     CJK_IDEOGRAPH_RANGES,
     convert_halfwidth_katakana,
     is_cjk_ideograph,
@@ -279,7 +279,7 @@ def test_cjk_ideograph_ranges_are_well_formed():
 
 # --- TV-caption decoration glyphs (owned strip, 2026-07 card audit) -----------
 
-from anki_miner.services.ja_normalize import strip_decoration_glyphs  # noqa: E402
+from anki_miner.utils.ja_normalize import strip_decoration_glyphs  # noqa: E402
 
 
 class TestStripDecorationGlyphs:

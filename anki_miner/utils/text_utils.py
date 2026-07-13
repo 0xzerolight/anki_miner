@@ -6,13 +6,11 @@ from collections.abc import Iterable
 from typing import Any
 
 from anki_miner.utils.furigana_distribute import distribute_furigana
-
-# NOTE: anki_miner.services.ja_normalize is imported *inside* the functions that
-# use it, not at module top. text_utils is imported (via anki_miner.utils) before
-# the services package finishes initializing, and services/__init__ eagerly loads
-# subtitle_parser, which imports clean_subtitle_text back from here — a top-level
-# import would deadlock that cycle. Function-local imports hit the sys.modules
-# cache after first load, so the cost is negligible.
+from anki_miner.utils.ja_normalize import (
+    is_cjk_ideograph,
+    normalize_for_tokenization,
+    standardize_kanji_variants,
+)
 
 
 def strip_subtitle_markup(text: str) -> str:
@@ -64,12 +62,7 @@ def clean_subtitle_text(text: str) -> str:
     # Normalize whitespace
     text = " ".join(text.split())
 
-    # Japanese pre-tokenization normalization (see anki_miner.services.ja_normalize).
-    from anki_miner.services.ja_normalize import (
-        normalize_for_tokenization,
-        standardize_kanji_variants,
-    )
-
+    # Japanese pre-tokenization normalization (see anki_miner.utils.ja_normalize).
     text = normalize_for_tokenization(text)
     text = standardize_kanji_variants(text)
 
@@ -125,7 +118,7 @@ def _is_kanji(char: str) -> bool:
     """True iff *char* is a CJK ideograph or the iteration mark 々.
 
     Delegates the ideograph test to the shared
-    :func:`anki_miner.services.ja_normalize.is_cjk_ideograph` (ported from
+    :func:`anki_miner.utils.ja_normalize.is_cjk_ideograph` (ported from
     Yomitan's ``CJK_IDEOGRAPH_RANGES``: Unified + Ext A–I + compatibility +
     astral), so Ext-A/compat/astral kanji (﨑, 𠮟) are recognized, not just the
     BMP Unified block. 々 (U+3005) sits below that range, so it is added
@@ -133,8 +126,6 @@ def _is_kanji(char: str) -> bool:
     not 時[とき]々). Used both as the kanji-containment gate and by
     :func:`_format_furigana` to find the okurigana boundary.
     """
-    from anki_miner.services.ja_normalize import is_cjk_ideograph
-
     return is_cjk_ideograph(char) or char == "々"
 
 

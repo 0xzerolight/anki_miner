@@ -15,10 +15,6 @@ from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.word import select_mined_form
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, TermLookup
 from anki_miner.services.deinflection import find_highlight_end
-from anki_miner.services.ja_normalize import (
-    normalize_for_tokenization,
-    standardize_kanji_variants,
-)
 from anki_miner.services.morphology import (
     ReadingLookup,
     TokenInclusionRule,
@@ -40,6 +36,10 @@ from anki_miner.utils import (
     generate_reading,
     katakana_to_hiragana,
     wrap_target_plain,
+)
+from anki_miner.utils.ja_normalize import (
+    normalize_for_tokenization,
+    standardize_kanji_variants,
 )
 from anki_miner.utils.subtitle_encoding import load_with_fallback_encoding
 from anki_miner.utils.text_utils import (
