@@ -107,16 +107,12 @@ def test_reading_threaded_to_each_provider():
     assert b.last_reading == "ねこ"
 
 
-def test_reading_threaded_through_min_and_harmonic():
-    a = _FakeProvider("A", {"猫": 100})
-    svc = MultiFrequencyService([a])
-    svc.lookup_min("猫", "ねこ")
-    assert a.last_reading == "ねこ"
-    svc.lookup_harmonic("猫", "みゃー")
-    assert a.last_reading == "みゃー"
+# min_rank/harmonic_rank reduce a fetched lookup_all list; the tests below drive
+# them through the live production path (service.lookup_all -> pure helper), the
+# same single-fetch form EpisodeProcessor uses.
 
 
-def test_lookup_min_picks_smallest():
+def test_min_rank_over_service_picks_smallest():
     svc = MultiFrequencyService(
         [
             _FakeProvider("JPDB", {"猫": 100}),
@@ -124,29 +120,29 @@ def test_lookup_min_picks_smallest():
             _FakeProvider("BCCWJ", {"猫": 300}),
         ]
     )
-    assert svc.lookup_min("猫") == 42
+    assert min_rank(svc.lookup_all("猫")) == 42
 
 
-def test_lookup_min_single_hit():
+def test_min_rank_over_service_single_hit():
     svc = MultiFrequencyService(
         [
             _FakeProvider("JPDB", {}),
             _FakeProvider("Novel", {"猫": 42}),
         ]
     )
-    assert svc.lookup_min("猫") == 42
+    assert min_rank(svc.lookup_all("猫")) == 42
 
 
-def test_lookup_min_none_when_no_hits():
+def test_min_rank_over_service_none_when_no_hits():
     svc = MultiFrequencyService([_FakeProvider("JPDB", {}), _FakeProvider("BCCWJ", {})])
-    assert svc.lookup_min("猫") is None
+    assert min_rank(svc.lookup_all("猫")) is None
 
 
-def test_lookup_min_none_no_providers():
-    assert MultiFrequencyService([]).lookup_min("猫") is None
+def test_min_rank_over_service_none_no_providers():
+    assert min_rank(MultiFrequencyService([]).lookup_all("猫")) is None
 
 
-def test_lookup_harmonic_multiple_sources():
+def test_harmonic_rank_over_service_multiple_sources():
     # floor(3 / (1/100 + 1/42 + 1/300)) = floor(80.77) = 80. The harmonic mean
     # keeps one niche source from dominating the way a bare MIN would.
     svc = MultiFrequencyService(
@@ -156,10 +152,10 @@ def test_lookup_harmonic_multiple_sources():
             _FakeProvider("BCCWJ", {"猫": 300}),
         ]
     )
-    assert svc.lookup_harmonic("猫") == 80
+    assert harmonic_rank(svc.lookup_all("猫")) == 80
 
 
-def test_lookup_harmonic_two_sources():
+def test_harmonic_rank_over_service_two_sources():
     # floor(2 / (1/500 + 1/612)) = floor(550.36) = 550.
     svc = MultiFrequencyService(
         [
@@ -167,10 +163,10 @@ def test_lookup_harmonic_two_sources():
             _FakeProvider("JPDB", {"猫": 612}),
         ]
     )
-    assert svc.lookup_harmonic("猫") == 550
+    assert harmonic_rank(svc.lookup_all("猫")) == 550
 
 
-def test_lookup_harmonic_single_hit_equals_rank():
+def test_harmonic_rank_over_service_single_hit_equals_rank():
     # With one source the harmonic mean collapses to that source's rank.
     svc = MultiFrequencyService(
         [
@@ -178,19 +174,19 @@ def test_lookup_harmonic_single_hit_equals_rank():
             _FakeProvider("Novel", {"猫": 42}),
         ]
     )
-    assert svc.lookup_harmonic("猫") == 42
+    assert harmonic_rank(svc.lookup_all("猫")) == 42
 
 
-def test_lookup_harmonic_none_when_no_hits():
+def test_harmonic_rank_over_service_none_when_no_hits():
     svc = MultiFrequencyService([_FakeProvider("JPDB", {}), _FakeProvider("BCCWJ", {})])
-    assert svc.lookup_harmonic("猫") is None
+    assert harmonic_rank(svc.lookup_all("猫")) is None
 
 
-def test_lookup_harmonic_none_no_providers():
-    assert MultiFrequencyService([]).lookup_harmonic("猫") is None
+def test_harmonic_rank_over_service_none_no_providers():
+    assert harmonic_rank(MultiFrequencyService([]).lookup_all("猫")) is None
 
 
-def test_lookup_harmonic_ignores_nonpositive_rank():
+def test_harmonic_rank_over_service_ignores_nonpositive_rank():
     # Yomitan's getFrequencyNumbers drops frequencies <= 0; mirror that so a bad
     # source rank of 0 neither divides-by-zero nor skews the mean.
     svc = MultiFrequencyService(
@@ -199,7 +195,7 @@ def test_lookup_harmonic_ignores_nonpositive_rank():
             _FakeProvider("Novel", {"猫": 50}),
         ]
     )
-    assert svc.lookup_harmonic("猫") == 50
+    assert harmonic_rank(svc.lookup_all("猫")) == 50
 
 
 class TestPureRankHelpers:
@@ -235,20 +231,6 @@ class TestPureRankHelpers:
         assert harmonic_rank([("A", 29814, None), ("B", 29814, None)]) == 29814
         # floor(2 / (1/3 + 1/7)) = floor(4.2) = 4
         assert harmonic_rank([("A", 3, None), ("B", 7, None)]) == 4
-
-    def test_helpers_agree_with_service_methods(self):
-        # The wrappers must return exactly what the pure helpers do on the same
-        # fetched list — the EpisodeProcessor single-fetch path relies on it.
-        svc = MultiFrequencyService(
-            [
-                _FakeProvider("A", {"猫": 100}),
-                _FakeProvider("B", {"猫": 42}),
-                _FakeProvider("C", {"猫": 300}),
-            ]
-        )
-        sources = svc.lookup_all("猫")
-        assert svc.lookup_min("猫") == min_rank(sources)
-        assert svc.lookup_harmonic("猫") == harmonic_rank(sources)
 
 
 def test_close_closes_each_provider_once():
@@ -319,10 +301,11 @@ class TestCategoricalSentinelExclusion:
         categorical = _FakeProvider("JLPT", {"猫": CATEGORICAL_RANK}, displays={"猫": "N5"})
         svc = MultiFrequencyService([numeric, categorical])
         # Both sources appear in the card breakdown, categorical carrying its label.
-        assert svc.lookup_all("猫") == [("Freq", 45000, None), ("JLPT", CATEGORICAL_RANK, "N5")]
+        sources = svc.lookup_all("猫")
+        assert sources == [("Freq", 45000, None), ("JLPT", CATEGORICAL_RANK, "N5")]
         # But the scalar rank/sort come from the numeric source only.
-        assert svc.lookup_min("猫") == 45000
-        assert svc.lookup_harmonic("猫") == 45000
+        assert min_rank(sources) == 45000
+        assert harmonic_rank(sources) == 45000
 
 
 class TestHasNumericSource:

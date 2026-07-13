@@ -485,11 +485,10 @@ class EpisodeProcessor:
                 # inheriting each other's ranks; hiragana-normalize so a katakana
                 # subtitle reading matches a hiragana-stored frequency reading.
                 reading = katakana_to_hiragana(word.expression_reading or word.lemma_reading or word.reading)
-                # One per-source fetch, then derive min + harmonic locally: the
-                # service's lookup_min/lookup_harmonic each re-run lookup_all
-                # internally, so calling all three would run the per-source SQL
-                # three times per word. min_rank/harmonic_rank are the same pure
-                # derivations lookup_min/lookup_harmonic wrap.
+                # One per-source fetch, then derive min + harmonic locally via
+                # the pure min_rank/harmonic_rank helpers. A single lookup_all
+                # feeds both scalars, so the per-source SQL runs once per word
+                # instead of once for each derived rank.
                 sources = self.frequency_service.lookup_all(word.mined_form, reading)
                 # Whole-result miss-only lemma fallback (mirrors the JPod101
                 # audio retry ladder): fires only when NO source attests the

@@ -11,6 +11,7 @@ from anki_miner.gui.utils import service_factory
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.expression_audio_fetcher import ChainedExpressionAudioFetcher, JPod101AudioFetcher
+from anki_miner.services.frequency.multi_frequency_service import min_rank
 
 
 @pytest.fixture
@@ -225,7 +226,7 @@ class TestFrequencyServiceWiring:
 
         assert isinstance(services.frequency_service, MultiFrequencyService)
         assert services.frequency_service.is_available()
-        assert services.frequency_service.lookup_min("食べる") == 3
+        assert min_rank(services.frequency_service.lookup_all("食べる")) == 3
         # lookup_all reports (display name, rank, display_value); the CSV stem is
         # the source name, and a CSV rank has no display string (None).
         assert services.frequency_service.lookup_all("猫") == [("ranks", 1, None)]
@@ -321,7 +322,7 @@ class TestFrequencyServiceWiring:
 
         assert services.frequency_service is not None
         # A ranked word resolves → the cutoff filter has real ranks to keep.
-        assert services.frequency_service.lookup_min("食べる") == 3
+        assert min_rank(services.frequency_service.lookup_all("食べる")) == 3
 
 
 class TestPitchServiceWiring:

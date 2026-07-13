@@ -151,7 +151,7 @@ def test_glossary_concatenates_two_offline_dicts(tmp_path: Path) -> None:
         "anki_miner.services.dictionary.providers.jisho_provider.requests.get",
         side_effect=AssertionError("Jisho should not be called when offline hits exist"),
     ):
-        result = service.get_glossary("食べる")
+        result = service.get_glossaries_batch([("食べる", None)])[0]
 
     assert result is not None
     assert result.count('<div class="yomitan-glossary">') == 2
@@ -200,7 +200,7 @@ def test_glossary_falls_back_to_jisho_when_no_offline_hit(tmp_path: Path) -> Non
         "anki_miner.services.dictionary.providers.jisho_provider.requests.get",
         return_value=_R(),
     ):
-        result = service.get_glossary("食べる")
+        result = service.get_glossaries_batch([("食べる", None)])[0]
 
     assert result is not None
     assert 'data-dictionary="Jisho API"' in result

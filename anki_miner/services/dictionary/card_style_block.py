@@ -75,23 +75,6 @@ def _minify_css(css: str) -> str:
     return "".join(out).strip()
 
 
-def minified_base_css() -> str:
-    """The FULL minified base ``glossary.css`` (no ``<style>`` wrapper).
-
-    Since the Issue #93 tree-shaking this is no longer what every card embeds —
-    ``build_card_style_block`` embeds the witness-selected ``base_css_variant``
-    — but it stays the whole-sheet reference: ``base_css_variant(ALL_GROUPS)``
-    must equal it byte-for-byte (the marker-boundary tripwire in
-    ``test_card_style_block``). Newline-free by construction (the minifier
-    collapses all whitespace runs outside string literals, and the sheet carries
-    no multi-line string literal); every variant inherits that property, which
-    ``card_restyler._refresh_base_sheet`` relies on to swap a stale embedded
-    base head in place. Pinned by ``test_minified_base_is_newline_free`` /
-    ``test_minified_base_has_no_data_dictionary_literals``.
-    """
-    return _minify_css(load_glossary_css())
-
-
 # ---------------------------------------------------------------------------
 # Per-card tree-shaking (Issue #93). glossary.css is partitioned by
 # `/* @am-group: <name> */ … /* @am-endgroup */` marker comments; unmarked text
@@ -161,7 +144,7 @@ def base_css_variant(groups: frozenset[str]) -> str:
 
     Joined with ``""``: the whole-sheet minifier tightens whitespace around
     ``}``, so region boundaries — always immediately after a ``}`` — carry no
-    separator, and ``base_css_variant(ALL_GROUPS) == minified_base_css()``
+    separator, and ``base_css_variant(ALL_GROUPS) == _minify_css(load_glossary_css())``
     byte-for-byte. Every variant is newline-free and carries the
     ``ol[data-count]`` head-detection token (both load-bearing for
     ``card_restyler``), asserted here so a bad marker edit fails loudly.
