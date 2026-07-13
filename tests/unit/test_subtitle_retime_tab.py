@@ -422,7 +422,7 @@ def test_choose_output_sets_label_and_shows_reset(qtbot, tmp_path):
     out.mkdir()
 
     with patch(
-        "anki_miner.gui.widgets.subtitle_retime_tab.QFileDialog.getExistingDirectory",
+        "anki_miner.gui.widgets._tool_tab_base.QFileDialog.getExistingDirectory",
         return_value=str(out),
     ):
         tab._on_choose_output()
@@ -439,7 +439,7 @@ def test_clear_output_resets_label(qtbot, tmp_path):
     out.mkdir()
 
     with patch(
-        "anki_miner.gui.widgets.subtitle_retime_tab.QFileDialog.getExistingDirectory",
+        "anki_miner.gui.widgets._tool_tab_base.QFileDialog.getExistingDirectory",
         return_value=str(out),
     ):
         tab._on_choose_output()

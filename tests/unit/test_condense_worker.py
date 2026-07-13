@@ -18,7 +18,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtCore")
 
-import anki_miner.gui.workers.condense_worker as cw
+import anki_miner.services.audio_condenser as ac
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.workers.condense_worker import CondenseItem, CondenseWorker
 from anki_miner.services.audio_condenser import EncoderUnavailableError
@@ -138,8 +138,8 @@ def _capture(worker: CondenseWorker) -> dict:
 
 def _no_streams(monkeypatch) -> None:
     """Stub embedded-stream discovery so no ffprobe runs and no streams exist."""
-    monkeypatch.setattr(cw, "resolve_ffprobe", lambda config: "ffprobe")
-    monkeypatch.setattr(cw, "list_subtitle_streams", lambda media, ffprobe: [])
+    monkeypatch.setattr(ac, "resolve_ffprobe", lambda config: "ffprobe")
+    monkeypatch.setattr(ac, "list_subtitle_streams", lambda media, ffprobe: [])
 
 
 # ---------------------------------------------------------------------------
@@ -401,9 +401,9 @@ def test_bitmap_only_embedded_reports_clear_message(qapp, tmp_path, monkeypatch)
     config = _make_config(tmp_path)
     media = tmp_path / "ep01.mkv"
     media.write_bytes(b"")
-    monkeypatch.setattr(cw, "resolve_ffprobe", lambda config: "ffprobe")
+    monkeypatch.setattr(ac, "resolve_ffprobe", lambda config: "ffprobe")
     monkeypatch.setattr(
-        cw,
+        ac,
         "list_subtitle_streams",
         lambda m, ffprobe: [_sub_stream(sub_index=0, codec="hdmv_pgs_subtitle", is_text=False)],
     )
@@ -432,7 +432,7 @@ def test_external_beats_sibling_beats_embedded(qapp, tmp_path, monkeypatch):
     external = _write_srt(tmp_path / "explicit.srt", [(9000, 10000, "explicit")])
 
     captured: list[Path] = []
-    monkeypatch.setattr(cw, "find_sibling_subtitle", lambda *a, **k: captured.append("sibling") or None)
+    monkeypatch.setattr(ac, "find_sibling_subtitle", lambda *a, **k: captured.append("sibling") or None)
 
     service = _FakeService()
     worker = _make_worker([CondenseItem(media, external)], config, service=service)
@@ -453,8 +453,8 @@ def test_sibling_beats_embedded(qapp, tmp_path, monkeypatch):
     _write_srt(tmp_path / "ep01.srt", [(1000, 2000, "sibling")])
 
     list_calls: list = []
-    monkeypatch.setattr(cw, "resolve_ffprobe", lambda config: "ffprobe")
-    monkeypatch.setattr(cw, "list_subtitle_streams", lambda m, ffprobe: list_calls.append(1) or [])
+    monkeypatch.setattr(ac, "resolve_ffprobe", lambda config: "ffprobe")
+    monkeypatch.setattr(ac, "list_subtitle_streams", lambda m, ffprobe: list_calls.append(1) or [])
 
     service = _FakeService()
     worker = _make_worker([CondenseItem(media)], config, service=service)
@@ -470,9 +470,9 @@ def test_embedded_used_when_no_external_or_sibling(qapp, tmp_path, monkeypatch):
     config = _make_config(tmp_path)
     media = tmp_path / "ep01.mkv"
     media.write_bytes(b"")
-    monkeypatch.setattr(cw, "find_sibling_subtitle", lambda *a, **k: None)
-    monkeypatch.setattr(cw, "resolve_ffprobe", lambda config: "ffprobe")
-    monkeypatch.setattr(cw, "list_subtitle_streams", lambda m, ffprobe: [_sub_stream(sub_index=0, codec="subrip")])
+    monkeypatch.setattr(ac, "find_sibling_subtitle", lambda *a, **k: None)
+    monkeypatch.setattr(ac, "resolve_ffprobe", lambda config: "ffprobe")
+    monkeypatch.setattr(ac, "list_subtitle_streams", lambda m, ffprobe: [_sub_stream(sub_index=0, codec="subrip")])
 
     service = _FakeService()
     worker = _make_worker([CondenseItem(media)], config, service=service)
@@ -568,9 +568,9 @@ def test_encoder_unavailable_stops_queue(qapp, tmp_path):
 
 
 def _embedded_worker(config, media, service, monkeypatch):
-    monkeypatch.setattr(cw, "find_sibling_subtitle", lambda *a, **k: None)
-    monkeypatch.setattr(cw, "resolve_ffprobe", lambda config: "ffprobe")
-    monkeypatch.setattr(cw, "list_subtitle_streams", lambda m, ffprobe: [_sub_stream(sub_index=0, codec="subrip")])
+    monkeypatch.setattr(ac, "find_sibling_subtitle", lambda *a, **k: None)
+    monkeypatch.setattr(ac, "resolve_ffprobe", lambda config: "ffprobe")
+    monkeypatch.setattr(ac, "list_subtitle_streams", lambda m, ffprobe: [_sub_stream(sub_index=0, codec="subrip")])
     return CondenseWorker(config, [CondenseItem(media)], service=service)
 
 
@@ -686,7 +686,7 @@ def test_sub_write_failure_does_not_fail_audio(qapp, tmp_path, monkeypatch):
     def _boom(events, path):
         raise OSError("disk full")
 
-    monkeypatch.setattr(cw, "write_condensed_srt", _boom)
+    monkeypatch.setattr(ac, "write_condensed_srt", _boom)
 
     service = _FakeService()
     worker = _make_worker([CondenseItem(media, sub)], config, service=service, write_subs=True)
@@ -713,7 +713,7 @@ def test_sub_write_non_oserror_does_not_fail_audio(qapp, tmp_path, monkeypatch):
     def _boom(events, path):
         raise ValueError("bad cue")
 
-    monkeypatch.setattr(cw, "write_condensed_srt", _boom)
+    monkeypatch.setattr(ac, "write_condensed_srt", _boom)
 
     service = _FakeService()
     worker = _make_worker([CondenseItem(media, sub)], config, service=service, write_subs=True)

@@ -19,9 +19,12 @@ import pytest
 
 from anki_miner.services.audio_condenser import (
     AudioCondenserService,
+    CondenseResult,
+    CondenseStatus,
     EncoderUnavailableError,
     build_aselect_graph,
     build_periods,
+    condense_one,
     filter_lines,
     load_subtitle_events,
     map_events_to_condensed,
@@ -852,3 +855,237 @@ def test_extract_embedded_subtitle_cleans_partial_on_failure(tmp_path):
 
     assert out is None
     assert not (tmp_path / "ep01.s0.srt").exists()
+
+
+# ===========================================================================
+# Part 3 — condense_one (ARC-015: per-file policy, no QThread, structured codes)
+# ===========================================================================
+
+_LIST_STREAMS = "anki_miner.services.audio_condenser.list_subtitle_streams"
+_RESOLVE_FFPROBE = "anki_miner.services.audio_condenser.resolve_ffprobe"
+_WRITE_SRT = "anki_miner.services.audio_condenser.write_condensed_srt"
+
+
+def _write_srt(path: Path, cues: list[tuple[int, int, str]]) -> Path:
+    subs = pysubs2.SSAFile()
+    for start, end, text in cues:
+        subs.append(pysubs2.SSAEvent(start=start, end=end, text=text))
+    subs.save(str(path), format_="srt")
+    return path
+
+
+class _StubCondenser:
+    """AudioCondenserService stand-in for condense_one — records calls, writes real files."""
+
+    def __init__(
+        self,
+        *,
+        condense_result: bool = True,
+        encoder_error: bool = False,
+        cancel_on_condense: bool = False,
+        extract_returns: bool = True,
+    ) -> None:
+        self._condense_result = condense_result
+        self._encoder_error = encoder_error
+        self._cancel_on_condense = cancel_on_condense
+        self._extract_returns = extract_returns
+        self.condense_calls: list[dict] = []
+        self.extract_calls: list[dict] = []
+
+    def extract_embedded_subtitle(self, video, stream, out_dir, cancel_event=None):
+        self.extract_calls.append({"video": video, "stream": stream, "out_dir": out_dir})
+        if not self._extract_returns:
+            return None
+        out = Path(out_dir) / f"{video.stem}.s{stream.sub_index}.srt"
+        _write_srt(out, [(1000, 2000, "embedded")])
+        return out
+
+    def condense(
+        self,
+        media,
+        periods,
+        out_audio,
+        *,
+        audio_track_override=None,
+        bitrate_kbps=96,
+        progress_cb=None,
+        cancel_event=None,
+    ):
+        self.condense_calls.append({"media": media, "periods": list(periods), "out_audio": out_audio})
+        if self._encoder_error:
+            raise EncoderUnavailableError("ffmpeg encoder 'libmp3lame' is unavailable")
+        if self._cancel_on_condense and cancel_event is not None:
+            cancel_event.set()
+            return False
+        if progress_cb is not None:
+            progress_cb(50)
+        if self._condense_result:
+            Path(out_audio).write_bytes(b"AUDIO")
+        return self._condense_result
+
+
+def test_condense_one_external_sub_success(tmp_path):
+    """External sub → SUCCESS with the built periods forwarded to the service."""
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "explicit.srt", [(1000, 2000, "hi"), (5000, 6000, "world")])
+    out = tmp_path / "ep01_condensed.mp3"
+    svc = _StubCondenser()
+
+    result = condense_one(svc, _make_config(tmp_path), media, sub, out)
+
+    assert result == CondenseResult(CondenseStatus.SUCCESS, out_audio=out)
+    assert svc.condense_calls[0]["periods"] == [(500, 2500), (4500, 6500)]
+
+
+def test_condense_one_offset_shifts_periods_once(tmp_path):
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "explicit.srt", [(1000, 2000, "hi")])
+    svc = _StubCondenser()
+
+    condense_one(svc, _make_config(tmp_path), media, sub, tmp_path / "o.mp3", offset_ms=1000, padding_ms=0)
+
+    assert svc.condense_calls[0]["periods"] == [(2000, 3000)]
+
+
+def test_condense_one_no_dialogue_skips_ffmpeg(tmp_path):
+    """Every line filtered out → NO_DIALOGUE and the service is never invoked."""
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "explicit.srt", [(1000, 2000, "♪"), (3000, 4000, "♫")])
+    svc = _StubCondenser()
+
+    result = condense_one(svc, _make_config(tmp_path), media, sub, tmp_path / "o.mp3", filtered_chars="♪♫")
+
+    assert result.status is CondenseStatus.NO_DIALOGUE
+    assert svc.condense_calls == []
+
+
+def test_condense_one_no_source(tmp_path, monkeypatch):
+    """No explicit / sibling / embedded sub → NO_SOURCE."""
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    monkeypatch.setattr(_RESOLVE_FFPROBE, lambda config: "ffprobe")
+    monkeypatch.setattr(_LIST_STREAMS, lambda m, ffprobe: [])
+    svc = _StubCondenser()
+
+    result = condense_one(svc, _make_config(tmp_path), media, None, tmp_path / "o.mp3")
+
+    assert result.status is CondenseStatus.NO_SOURCE
+    assert svc.condense_calls == []
+
+
+def test_condense_one_bitmap_only_reports_codecs(tmp_path, monkeypatch):
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    monkeypatch.setattr(_RESOLVE_FFPROBE, lambda config: "ffprobe")
+    monkeypatch.setattr(
+        _LIST_STREAMS,
+        lambda m, ffprobe: [_sub_stream(sub_index=0, codec="hdmv_pgs_subtitle", is_text=False)],
+    )
+    svc = _StubCondenser()
+
+    result = condense_one(svc, _make_config(tmp_path), media, None, tmp_path / "o.mp3")
+
+    assert result.status is CondenseStatus.BITMAP_ONLY
+    assert result.codecs == "hdmv_pgs_subtitle"
+    assert svc.extract_calls == []
+
+
+def test_condense_one_subtitle_track_override_not_found(tmp_path, monkeypatch):
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    monkeypatch.setattr(_RESOLVE_FFPROBE, lambda config: "ffprobe")
+    monkeypatch.setattr(_LIST_STREAMS, lambda m, ffprobe: [_sub_stream(sub_index=0, codec="subrip")])
+    svc = _StubCondenser()
+
+    result = condense_one(svc, _make_config(tmp_path), media, None, tmp_path / "o.mp3", subtitle_track_override=9)
+
+    assert result.status is CondenseStatus.SUBTITLE_TRACK_NOT_FOUND
+
+
+def test_condense_one_embedded_success_and_temp_cleanup(tmp_path, monkeypatch):
+    """No external/sibling → embedded text track extracted, condensed, temp deleted."""
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    monkeypatch.setattr(_RESOLVE_FFPROBE, lambda config: "ffprobe")
+    monkeypatch.setattr(_LIST_STREAMS, lambda m, ffprobe: [_sub_stream(sub_index=0, codec="subrip")])
+    svc = _StubCondenser()
+
+    result = condense_one(svc, _make_config(tmp_path), media, None, tmp_path / "o.mp3")
+
+    assert result.status is CondenseStatus.SUCCESS
+    assert len(svc.extract_calls) == 1
+    assert svc.condense_calls[0]["periods"] == [(500, 2500)]
+    # Extracted embedded temp must be gone.
+    assert not (tmp_path / "ep01.s0.srt").exists()
+
+
+def test_condense_one_condense_failed(tmp_path):
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "explicit.srt", [(1000, 2000, "hi")])
+    svc = _StubCondenser(condense_result=False)
+
+    result = condense_one(svc, _make_config(tmp_path), media, sub, tmp_path / "o.mp3")
+
+    assert result.status is CondenseStatus.CONDENSE_FAILED
+
+
+def test_condense_one_cancelled_during_condense(tmp_path):
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "explicit.srt", [(1000, 2000, "hi")])
+    svc = _StubCondenser(cancel_on_condense=True)
+    cancel = threading.Event()
+
+    result = condense_one(svc, _make_config(tmp_path), media, sub, tmp_path / "o.mp3", cancel_event=cancel)
+
+    assert result.status is CondenseStatus.CANCELLED
+
+
+def test_condense_one_encoder_error_propagates(tmp_path):
+    """EncoderUnavailableError is NOT swallowed — it propagates for the queue-stop path."""
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "explicit.srt", [(1000, 2000, "hi")])
+    svc = _StubCondenser(encoder_error=True)
+
+    with pytest.raises(EncoderUnavailableError):
+        condense_one(svc, _make_config(tmp_path), media, sub, tmp_path / "o.mp3")
+
+
+def test_condense_one_sidecar_error_is_non_fatal(tmp_path, monkeypatch):
+    """A sidecar write failure returns SUCCESS with the raw error string, not a failure."""
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "explicit.srt", [(1000, 2000, "hi")])
+    out = tmp_path / "ep01_condensed.mp3"
+
+    def _boom(events, path):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(_WRITE_SRT, _boom)
+    svc = _StubCondenser()
+
+    result = condense_one(svc, _make_config(tmp_path), media, sub, out, write_subs=True)
+
+    assert result.status is CondenseStatus.SUCCESS
+    assert result.out_audio == out
+    assert result.sidecar_error is not None and "disk full" in result.sidecar_error
+
+
+def test_condense_one_write_subs_writes_sidecars(tmp_path):
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "explicit.srt", [(1000, 2000, "hello")])
+    out = tmp_path / "ep01_condensed.mp3"
+    svc = _StubCondenser()
+
+    result = condense_one(svc, _make_config(tmp_path), media, sub, out, write_subs=True)
+
+    assert result.status is CondenseStatus.SUCCESS
+    assert result.sidecar_error is None
+    assert (tmp_path / "ep01_condensed.srt").exists()
+    assert (tmp_path / "ep01_condensed.lrc").exists()
