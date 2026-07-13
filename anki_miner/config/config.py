@@ -174,13 +174,6 @@ class AnkiMinerConfig:
             "固有名詞",
         )
     )
-    # Dictionary-attested compound matching (Yomitan longest-match principle):
-    # multi-token spans whose joined form is an offline-dictionary headword are
-    # mined as ONE word (走り出した → 走り出す, 応急処置 stays whole); longest
-    # match wins and consumed components are not separately mined from that
-    # occurrence. Requires at least one enabled indexed offline dictionary;
-    # without one, mining behavior is unchanged.
-    compound_matching: bool = True
     # Enabled name-wordset IDs (Issue #59). Each ID maps to a bundled
     # plain-text proper-noun list under resources/wordsets/<id>.txt.
     # Words on any enabled set are dropped from mining unless whitelisted.
@@ -339,9 +332,6 @@ class AnkiMinerConfig:
     max_sentence_duration_seconds: float = 0.0  # 0 = no duration cap
     max_sentence_chars: int = 0  # 0 = no character cap
 
-    # Cross-episode frequency settings
-    min_episode_appearances: int = 2  # Only mine words appearing in at least N episodes
-
     # Reading tab: minimum times a word must occur in a single book/volume to be
     # mined. 1 = no minimum (filter off). Consumed via
     # WordFilterService.filter_by_episode_count, which early-returns when the
@@ -376,7 +366,6 @@ class AnkiMinerConfig:
 
     # --- YouTube ---
     youtube_max_duration_s: int = 7200
-    youtube_max_height: int = 720
     youtube_playlist_max: int = 100
     youtube_cookies_from_browser: str | None = None
     youtube_cookies_file: Path | None = None

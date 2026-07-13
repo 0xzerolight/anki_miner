@@ -78,7 +78,6 @@ def yt_config(tmp_path: Path) -> AnkiMinerConfig:
         media_temp_folder=tmp_path / "media",
         jmdict_path=tmp_path / "JMdict_e",
         youtube_max_duration_s=3600,
-        youtube_max_height=720,
         youtube_cookies_from_browser=None,
         youtube_cookies_file=None,
         youtube_ffmpeg_location=None,
