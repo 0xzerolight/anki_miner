@@ -13,7 +13,7 @@ import threading
 import time
 import uuid
 import zipfile
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -1327,6 +1327,119 @@ class EpisodeProcessor:
 
         return cards_created, created_note_ids, mined_forms_for_undo
 
+    def _run_pipeline(
+        self,
+        ctx: _EpisodeContext,
+        cancel_event: threading.Event | None,
+        body: Callable[[Path], ProcessingResult],
+    ) -> ProcessingResult:
+        """Shared run skeleton for :meth:`process_episode` / :meth:`process_reading`.
+
+        Owns ONLY the machinery both entry points share verbatim: the pre-flight
+        gates (staleness backstop then card-target verify, both *outside* the
+        try so a ``SetupError`` propagates instead of collapsing into a
+        "completed" result and *before* temp allocation so no dir leaks on
+        failure), the per-run temp folder, the partial-IDs reset, the per-run
+        ``_external_cancel`` bridge, and the try/except/finally tail (partial-card
+        harvest on failure; bridge drop + temp cleanup in ``finally``). ``body``
+        receives the allocated ``run_temp_folder`` and returns this run's
+        ``ProcessingResult``; it may early-return at phase boundaries and may
+        raise (caught here). Everything path-specific — identity/ctx construction,
+        the video-only audio-stream-cache invalidation, the reading occurrence
+        floor — lives in the caller's ``body`` closure.
+        """
+        self.check_dictionary_staleness()
+        self._preflight_card_target()
+        run_temp_folder = self._allocate_run_temp_folder()
+        keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
+
+        # Reset the partial-IDs accumulator before this run so that if it fails
+        # mid-batch the except handlers harvest ONLY IDs created during THIS run,
+        # not stale IDs left over from a prior run on the same processor instance
+        # (OVH-008). create_cards_batch resets it again at its own start — this
+        # guard is belt-and-suspenders for a failure before phase 5 even runs.
+        self.anki_service.last_created_note_ids = []
+
+        # Bridge the caller's cancel_event into this run's cancellation
+        # checkpoints for the duration of this call only: the phase checkpoints
+        # and the media extractor's cancelled_check consult self.cancelled, which
+        # folds this source in. See __init__ for why the sticky self._cancelled
+        # flag must NOT be used here (shared processor reuse across runs); the
+        # finally below drops the reference so the bridge is per-run by construction.
+        if cancel_event is not None:
+            self._external_cancel = cancel_event.is_set
+        try:
+            return body(run_temp_folder)
+        except AnkiMinerException as e:
+            ctx.errors.append(str(e))
+            partial_ids = list(self.anki_service.last_created_note_ids)
+            self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
+            return self._partial_failure_result(ctx, partial_ids)
+        except Exception as e:
+            logger.exception("EpisodeProcessor unhandled exception")
+            ctx.errors.append(f"Unexpected error: {e}")
+            partial_ids = list(self.anki_service.last_created_note_ids)
+            self.presenter.show_error(
+                tr_format(QCoreApplication.translate("EpisodeProcessor", "Unexpected error: %1"), str(e))
+            )
+            return self._partial_failure_result(ctx, partial_ids)
+        finally:
+            if cancel_event is not None:
+                self._external_cancel = None
+            if keep_temp:
+                logger.info(
+                    "ANKI_MINER_KEEP_TEMP set; leaving run temp folder at %s",
+                    run_temp_folder,
+                )
+            else:
+                shutil.rmtree(run_temp_folder, ignore_errors=True)
+
+    def _run_curation(
+        self,
+        ctx: _EpisodeContext,
+        unknown_words: list[TokenizedWord],
+        line_index: list[LineLemmas] | None,
+        occurrence_counts: Mapping[str, int],
+        curation_callback: Callable[[list], list | None],
+    ) -> list[TokenizedWord] | ProcessingResult:
+        """Shared interactive-curation step for both mining paths.
+
+        Attaches the per-word sentence candidates (when a line index exists) and
+        occurrence counts the curator dialog needs, then invokes the callback.
+        Preserves the trichotomy of the inline blocks it replaces:
+
+        * cancelled/rejected (callback returns ``None``) → returns a cancelled
+          ``ProcessingResult`` (caller returns it);
+        * confirmed with nothing selected (empty list) → returns a completed
+          zero-card ``ProcessingResult`` (caller returns it) — an intentional
+          "card nothing this run", NOT a cancellation, so stats/batch status stay
+          accurate;
+        * a non-empty selection → returns the curated word list (caller continues).
+
+        The caller distinguishes the two outcomes with ``isinstance(..., ProcessingResult)``.
+        """
+        if line_index is not None:
+            # Attach alternative example sentences so the curator can offer a
+            # per-word sentence picker (no-op for words on a single line).
+            self.word_filter.attach_sentence_candidates(unknown_words, line_index)
+        # Attach per-run occurrence counts for the curator's "Occurrences"
+        # column/sort (Issue #88).
+        self.word_filter.attach_occurrence_counts(unknown_words, occurrence_counts)
+        curated = curation_callback(unknown_words)
+        if curated is None:
+            # The user cancelled/rejected the curation dialog.
+            return self._cancelled_result_from_ctx(ctx)
+        ctx.new_words_found = len(curated)
+        if not curated:
+            self.presenter.show_info(
+                QCoreApplication.translate("EpisodeProcessor", "No words selected for card creation")
+            )
+            return ctx.build_result(new_words_found=0)
+        self.presenter.show_info(
+            QCoreApplication.translate("EpisodeProcessor", "Mining %n selected word(s)", "", len(curated))
+        )
+        return curated
+
     def process_episode(
         self,
         video_file: Path,
@@ -1345,8 +1458,10 @@ class EpisodeProcessor:
 
         Orchestrates the five phase helpers: parse → filter → extract media →
         lookup definitions/pitch → create cards. Each phase is a small method
-        on this class; this entrypoint owns only cancellation checkpoints,
-        early-return paths, and temp folder cleanup.
+        on this class; this entrypoint owns only the phase body (cancellation
+        checkpoints and early-return paths), while the shared run skeleton
+        (pre-flight, temp allocation, cancel bridge, cleanup) lives in
+        :meth:`_run_pipeline`.
 
         Args:
             video_file: Path to video file.
@@ -1400,46 +1515,19 @@ class EpisodeProcessor:
             series_name=series_name,
             source_label=source_label_override or _sanitize_source_label(f"{series_name} — {episode_name}"),
         )
-        # Outside the try/except so SetupError propagates to callers instead of
-        # being absorbed into a "completed" ProcessingResult.  Before temp-folder
-        # allocation so no dir is leaked on failure. The staleness backstop (4.0)
-        # runs first: a stale-index run would otherwise drop every word for lack
-        # of a definition and report a silent zero-card success.
-        self.check_dictionary_staleness()
-        self._preflight_card_target()
-        run_temp_folder = self._allocate_run_temp_folder()
-        keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
 
-        # Invalidate the per-file audio stream cache before extraction so that
-        # cross-run file replacement (re-encode, swap, restore) cannot strand
-        # the resolver on stale ffprobe output. Within this run the cache will
-        # repopulate on the first probe and protect against double-probes
-        # (the 2e0cc13 perf win).
-        self.media_extractor.invalidate_audio_stream_cache(video_file)
+        def _body(run_temp_folder: Path) -> ProcessingResult:
+            # Invalidate the per-file audio stream cache before extraction so that
+            # cross-run file replacement (re-encode, swap, restore) cannot strand
+            # the resolver on stale ffprobe output. Within this run the cache will
+            # repopulate on the first probe and protect against double-probes
+            # (the 2e0cc13 perf win). Video-only — omitted on the reading path.
+            self.media_extractor.invalidate_audio_stream_cache(video_file)
 
-        # Reset the partial-IDs accumulator before this episode's run so that
-        # if the episode fails mid-batch the except handlers harvest ONLY IDs
-        # created during THIS run, not any stale IDs left over from a prior
-        # episode on the same processor instance (OVH-008). create_cards_batch
-        # resets it again at its own start — this guard is belt-and-suspenders
-        # for the case where the failure happens before phase 5 even runs.
-        self.anki_service.last_created_note_ids = []
-
-        # Bridge the caller's cancel_event into this run's cancellation
-        # checkpoints for the duration of this call only: the phase
-        # checkpoints below and the media extractor's cancelled_check consult
-        # self.cancelled, which folds this source in. See the __init__
-        # comment for why the sticky self._cancelled flag must NOT be used
-        # here (shared processor reuse across runs); the finally below drops
-        # the reference so the bridge is per-run by construction.
-        if cancel_event is not None:
-            self._external_cancel = cancel_event.is_set
-
-        # Interactive curation offers a per-word sentence picker, which needs
-        # the line index (all lines each lemma appears on). Build it for that
-        # path too — not just the i+1 filter.
-        want_line_index = curation_callback is not None
-        try:
+            # Interactive curation offers a per-word sentence picker, which needs
+            # the line index (all lines each lemma appears on). Build it for that
+            # path too — not just the i+1 filter.
+            want_line_index = curation_callback is not None
             all_words, line_index = self._phase1_parse(ctx, subtitle_file, want_line_index=want_line_index)
             if not all_words:
                 self.presenter.show_warning(
@@ -1457,35 +1545,17 @@ class EpisodeProcessor:
                 return self._cancelled_result_from_ctx(ctx)
 
             if curation_callback is not None:
-                if line_index is not None:
-                    # Attach alternative example sentences so the curator can
-                    # offer a per-word sentence picker (no-op for words that
-                    # appear on a single line).
-                    self.word_filter.attach_sentence_candidates(unknown_words, line_index)
-                # Attach per-episode occurrence counts for the curator's
-                # "Occurrences" column/sort (Issue #88). count_lemmas reuses the
-                # phase-1 parse cache, so no second MeCab pass.
-                self.word_filter.attach_occurrence_counts(
-                    unknown_words, self.subtitle_parser.count_lemmas(subtitle_file)
+                # count_lemmas reuses the phase-1 parse cache, so no second MeCab pass.
+                outcome = self._run_curation(
+                    ctx,
+                    unknown_words,
+                    line_index,
+                    self.subtitle_parser.count_lemmas(subtitle_file),
+                    curation_callback,
                 )
-                curated = curation_callback(unknown_words)
-                if curated is None:
-                    # The user cancelled/rejected the curation dialog.
-                    return self._cancelled_result_from_ctx(ctx)
-                unknown_words = curated
-                ctx.new_words_found = len(unknown_words)
-                if not unknown_words:
-                    # The user confirmed with everything deselected: this is an
-                    # intentional "card nothing this episode", a completed run
-                    # with zero new cards — NOT a cancellation (keeps stats and
-                    # batch status accurate).
-                    self.presenter.show_info(
-                        QCoreApplication.translate("EpisodeProcessor", "No words selected for card creation")
-                    )
-                    return ctx.build_result(new_words_found=0)
-                self.presenter.show_info(
-                    QCoreApplication.translate("EpisodeProcessor", "Mining %n selected word(s)", "", len(unknown_words))
-                )
+                if isinstance(outcome, ProcessingResult):
+                    return outcome
+                unknown_words = outcome
 
             # Wrap the raw callback so the bar reflects whole-episode progress
             # instead of resetting 0->100 per stage. One weight per stage that
@@ -1542,29 +1612,7 @@ class EpisodeProcessor:
             self._record_session(ctx, result)
             return result
 
-        except AnkiMinerException as e:
-            ctx.errors.append(str(e))
-            partial_ids = list(self.anki_service.last_created_note_ids)
-            self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
-            return self._partial_failure_result(ctx, partial_ids)
-        except Exception as e:
-            logger.exception("EpisodeProcessor unhandled exception")
-            ctx.errors.append(f"Unexpected error: {e}")
-            partial_ids = list(self.anki_service.last_created_note_ids)
-            self.presenter.show_error(
-                tr_format(QCoreApplication.translate("EpisodeProcessor", "Unexpected error: %1"), str(e))
-            )
-            return self._partial_failure_result(ctx, partial_ids)
-        finally:
-            if cancel_event is not None:
-                self._external_cancel = None
-            if keep_temp:
-                logger.info(
-                    "ANKI_MINER_KEEP_TEMP set; leaving run temp folder at %s",
-                    run_temp_folder,
-                )
-            else:
-                shutil.rmtree(run_temp_folder, ignore_errors=True)
+        return self._run_pipeline(ctx, cancel_event, _body)
 
     def _partial_failure_result(self, ctx: _EpisodeContext, partial_ids: list[int]) -> ProcessingResult:
         """Shared except-handler tail: note any partial cards and build the failure result."""
@@ -1800,28 +1848,13 @@ class EpisodeProcessor:
         for warning in document.warnings:
             self.presenter.show_warning(warning)
 
-        # Outside the try so SetupError propagates to callers (staleness backstop
-        # first, for the same silent-zero-card reason as process_episode).
-        self.check_dictionary_staleness()
-        self._preflight_card_target()
-        run_temp_folder = self._allocate_run_temp_folder()
-        keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
-
-        # Reset the partial-IDs accumulator so a mid-run failure harvests only
-        # THIS run's IDs, never stale IDs from a prior run on this shared
-        # processor (see process_episode).
-        self.anki_service.last_created_note_ids = []
-
-        if cancel_event is not None:
-            self._external_cancel = cancel_event.is_set
-
-        # D4: fuse the two triggers for building the line index. The episode path
-        # splits this across caller (curation) and callee (i+1); here we call
-        # parse_text_units directly, so an i+1-enabled Mine run must set
-        # want_line_index itself — otherwise the filter gets an empty index and
-        # silently drops every word.
-        want_line_index = self.config.use_i_plus_one_filter or curation_callback is not None
-        try:
+        def _body(run_temp_folder: Path) -> ProcessingResult:
+            # D4: fuse the two triggers for building the line index. The episode
+            # path splits this across caller (curation) and callee (i+1); here we
+            # call parse_text_units directly, so an i+1-enabled Mine run must set
+            # want_line_index itself — otherwise the filter gets an empty index
+            # and silently drops every word.
+            want_line_index = self.config.use_i_plus_one_filter or curation_callback is not None
             self.presenter.show_info(
                 tr_format(
                     QCoreApplication.translate("EpisodeProcessor", "Step 1/5 — Parsing text: %1"),
@@ -1861,22 +1894,10 @@ class EpisodeProcessor:
                 return self._cancelled_result_from_ctx(ctx)
 
             if curation_callback is not None:
-                if line_index is not None:
-                    self.word_filter.attach_sentence_candidates(unknown_words, line_index)
-                self.word_filter.attach_occurrence_counts(unknown_words, counts)
-                curated = curation_callback(unknown_words)
-                if curated is None:
-                    return self._cancelled_result_from_ctx(ctx)
-                unknown_words = curated
-                ctx.new_words_found = len(unknown_words)
-                if not unknown_words:
-                    self.presenter.show_info(
-                        QCoreApplication.translate("EpisodeProcessor", "No words selected for card creation")
-                    )
-                    return ctx.build_result(new_words_found=0)
-                self.presenter.show_info(
-                    QCoreApplication.translate("EpisodeProcessor", "Mining %n selected word(s)", "", len(unknown_words))
-                )
+                outcome = self._run_curation(ctx, unknown_words, line_index, counts, curation_callback)
+                if isinstance(outcome, ProcessingResult):
+                    return outcome
+                unknown_words = outcome
 
             # Wrap only phases 3'/4/5 in one weighted sweep (no parse/filter
             # bands). Bands, in firing order: image prep, [expression audio],
@@ -1916,29 +1937,7 @@ class EpisodeProcessor:
             self._record_session(ctx, result)
             return result
 
-        except AnkiMinerException as e:
-            ctx.errors.append(str(e))
-            partial_ids = list(self.anki_service.last_created_note_ids)
-            self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
-            return self._partial_failure_result(ctx, partial_ids)
-        except Exception as e:
-            logger.exception("EpisodeProcessor unhandled exception")
-            ctx.errors.append(f"Unexpected error: {e}")
-            partial_ids = list(self.anki_service.last_created_note_ids)
-            self.presenter.show_error(
-                tr_format(QCoreApplication.translate("EpisodeProcessor", "Unexpected error: %1"), str(e))
-            )
-            return self._partial_failure_result(ctx, partial_ids)
-        finally:
-            if cancel_event is not None:
-                self._external_cancel = None
-            if keep_temp:
-                logger.info(
-                    "ANKI_MINER_KEEP_TEMP set; leaving run temp folder at %s",
-                    run_temp_folder,
-                )
-            else:
-                shutil.rmtree(run_temp_folder, ignore_errors=True)
+        return self._run_pipeline(ctx, cancel_event, _body)
 
     def _record_session(self, ctx: _EpisodeContext, result: ProcessingResult) -> None:
         """Record a mining session in the stats service if one is configured."""
