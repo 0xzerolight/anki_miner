@@ -50,7 +50,7 @@ class ExpressionAudioFetcher(Protocol):
         Tries each candidate form in order and returns the first hit.  The
         candidate list is the audio retry ladder (surface form, katakana
         variant, unidic lemma, lemma-katakana) — see
-        ``orchestration.episode_processor._expression_audio_candidates``.
+        ``orchestration.audio_stage._expression_audio_candidates``.
 
         This source-first ordering is the whole point: a leaf fetcher exhausts
         ALL candidate forms before a composite chain falls through to a
