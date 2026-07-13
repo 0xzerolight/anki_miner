@@ -26,12 +26,20 @@ from urllib.parse import urljoin
 
 import requests
 
-from anki_miner.services.expression_audio_fetcher import (
-    _find_cached_by_stem,
-    _first_candidate_hit,
-    _new_browser_session,
-    _new_failure_counts,
+from anki_miner.services.audio_fetch_common import (
     download_audio_to_cache,
+)
+from anki_miner.services.audio_fetch_common import (
+    find_cached_by_stem as _find_cached_by_stem,
+)
+from anki_miner.services.audio_fetch_common import (
+    first_candidate_hit as _first_candidate_hit,
+)
+from anki_miner.services.audio_fetch_common import (
+    new_browser_session as _new_browser_session,
+)
+from anki_miner.services.audio_fetch_common import (
+    new_failure_counts as _new_failure_counts,
 )
 from anki_miner.utils.file_utils import safe_filename
 

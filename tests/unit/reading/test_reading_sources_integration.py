@@ -15,12 +15,12 @@ import json
 import zipfile
 from pathlib import Path
 
-from anki_miner.services.reading import detector
-from anki_miner.services.reading.models import (
+from anki_miner.models.reading import (
     ImageRef,
     ReadingDocument,
     ReadingSourceRef,
 )
+from anki_miner.services.reading import detector
 
 # Tiny real image blobs — pairing/cover peek reads magic bytes only, never decodes.
 _JPEG_BYTES = b"\xff\xd8\xff\xe0" + b"\x00" * 16

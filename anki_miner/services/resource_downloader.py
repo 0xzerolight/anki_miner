@@ -21,6 +21,7 @@ from pathlib import Path
 import requests
 
 from anki_miner.exceptions import SetupError
+from anki_miner.interfaces.progress import DownloadProgressFn
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,6 @@ def _new_session() -> requests.Session:
     return session
 
 
-ProgressCallback = Callable[[int, int, str], None]
 CancelledCheck = Callable[[], bool]
 
 
@@ -60,7 +60,7 @@ def download_to_temp(
     url: str,
     *,
     dest_dir: Path,
-    progress: ProgressCallback | None = None,
+    progress: DownloadProgressFn | None = None,
     cancelled_check: CancelledCheck | None = None,
     max_bytes: int | None = None,
 ) -> Path:

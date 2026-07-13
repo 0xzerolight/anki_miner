@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from anki_miner.services.reading.models import (
+from anki_miner.models.reading import (
     ImageRef,
     ReadingDocument,
     ReadingSourceRef,

@@ -12,13 +12,10 @@ import pysubs2
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import LineLemmas, TokenizedWord
+from anki_miner.models.reading import ReadingUnit
 from anki_miner.models.word import select_mined_form
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, TermLookup
 from anki_miner.services.deinflection import find_highlight_end
-from anki_miner.services.ja_normalize import (
-    normalize_for_tokenization,
-    standardize_kanji_variants,
-)
 from anki_miner.services.morphology import (
     ReadingLookup,
     TokenInclusionRule,
@@ -32,7 +29,6 @@ from anki_miner.services.morphology import (
     mining_base,
     replace_overridden_spans,
 )
-from anki_miner.services.reading.models import ReadingUnit
 from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.utils import (
     clean_subtitle_text,
@@ -40,6 +36,10 @@ from anki_miner.utils import (
     generate_reading,
     katakana_to_hiragana,
     wrap_target_plain,
+)
+from anki_miner.utils.ja_normalize import (
+    normalize_for_tokenization,
+    standardize_kanji_variants,
 )
 from anki_miner.utils.subtitle_encoding import load_with_fallback_encoding
 from anki_miner.utils.text_utils import (
@@ -50,6 +50,21 @@ from anki_miner.utils.text_utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Config fields SubtitleParserService actually reads. Callers that reuse a
+# parser instance across configs (e.g. Deck Builder Phase 2 reusing Phase 1's
+# filled per-file tokenization cache) must assert every one of these is
+# untouched, or cached tokenization silently goes stale.
+PARSE_RELEVANT_CONFIG_FIELDS = (
+    "subtitle_offset",
+    "bold_target_in_sentence",
+    "allowed_pos",
+    "excluded_subtypes",
+    "compound_matching",
+    "use_subtitle_regex_filter",
+    "subtitle_regex_filter",
+    "subtitle_regex_replacement",
+)
 
 # Maximum number of files held simultaneously in the per-instance per-file
 # tokenization cache.  When the cap is hit the oldest entry (insertion order)

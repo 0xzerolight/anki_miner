@@ -73,9 +73,9 @@ if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
     from anki_miner.interfaces.presenter import PresenterProtocol
+    from anki_miner.models.reading import ReadingSourceRef
     from anki_miner.models.reading_queue import ReadingQueueItem
     from anki_miner.orchestration import EpisodeProcessor
-    from anki_miner.services.reading.models import ReadingSourceRef
 
 logger = logging.getLogger(__name__)
 

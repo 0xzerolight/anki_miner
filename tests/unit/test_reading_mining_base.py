@@ -31,8 +31,8 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.log_widget import LogWidget
+from anki_miner.models.reading import ReadingSourceRef
 from anki_miner.models.reading_queue import ReadingQueueItem
-from anki_miner.services.reading.models import ReadingSourceRef
 
 _WORKER_TARGET = "anki_miner.gui.widgets._reading_mining_base.ReadingQueueWorker"
 _CREATE_TARGET = "anki_miner.gui.widgets._reading_mining_base.create_episode_processor"

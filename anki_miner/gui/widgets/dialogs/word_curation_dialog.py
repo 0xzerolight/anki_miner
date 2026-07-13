@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
-    from anki_miner.services.reading.models import ImageRef, ReadingUnit
+    from anki_miner.models.reading import ImageRef, ReadingUnit
 
 from PyQt6.QtCore import QPoint, Qt, QTimer
 from PyQt6.QtGui import QColor, QFont, QImage, QKeySequence, QPixmap, QShortcut

@@ -27,11 +27,11 @@ import os
 import sys
 import tempfile
 import zipfile
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
 from anki_miner.exceptions import SetupError
+from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services.resource_downloader import download_to_temp
 
 logger = logging.getLogger(__name__)
@@ -42,8 +42,6 @@ __all__ = [
     "is_installed",
     "install_alass",
 ]
-
-ProgressCallback = Callable[[int, int, str], None]
 
 _CHUNK_SIZE = 1024 * 1024  # 1 MiB chunks for streamed sha256.
 
@@ -126,7 +124,7 @@ def is_installed(bin_root: Path) -> bool:
 def install_alass(
     bin_root: Path,
     *,
-    progress: ProgressCallback | None = None,
+    progress: DownloadProgressFn | None = None,
     cancel_event=None,
 ) -> Path:
     """Download, verify, and install the alass binary into *bin_root*.

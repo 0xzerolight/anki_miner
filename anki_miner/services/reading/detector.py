@@ -21,9 +21,9 @@ from pathlib import Path
 from typing import Any, Literal
 
 from anki_miner.exceptions import SetupError
+from anki_miner.models.reading import ReadingDocument, ReadingSourceRef
 
 from ._util import is_junk_path, natural_sort_key
-from .models import ReadingDocument, ReadingSourceRef
 
 # Required top-level keys in a ``.mokuro`` sidecar. Unknown keys are ignored —
 # community files carry extras like ``chars``/``spine_width``.
