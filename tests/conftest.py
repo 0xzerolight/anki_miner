@@ -439,25 +439,53 @@ def test_config(temp_dir):
     )
 
 
+_REQUIRED_SERVICES = (
+    "subtitle_parser",
+    "word_filter",
+    "media_extractor",
+    "definition_service",
+    "anki_service",
+)
+
+
+def build_processor(config, *, presenter=None, **services):
+    """Construct a real ``EpisodeProcessor`` over MagicMock services (ARC-036).
+
+    The single canonical processor factory for the orchestration tests: the
+    five required services default to fresh ``MagicMock``s so a test names only
+    what it cares about, while any service — required or optional
+    (``expression_audio_fetcher``, ``sentence_audio_fetcher``,
+    ``youtube_fetcher``, ``dictionary_registry``, ``frequency_service``,
+    ``word_list_service``, ``stats_service``, …) — can be overridden by
+    keyword. Splat a class's shared ``mock_services`` dict in to reuse its
+    pre-wired mocks::
+
+        build_processor(config, **mock_services)
+
+    ``presenter`` defaults to a real ``NullPresenter``; pass a ``MagicMock`` to
+    assert on ``show_info`` / ``show_warning``.
+    """
+    from anki_miner.orchestration.episode_processor import EpisodeProcessor
+
+    for name in _REQUIRED_SERVICES:
+        services.setdefault(name, MagicMock(name=name))
+    return EpisodeProcessor(
+        config=config,
+        presenter=presenter if presenter is not None else NullPresenter(),
+        **services,
+    )
+
+
 @pytest.fixture
 def facade_processor(test_config):
     """Real EpisodeProcessor over MagicMock services.
 
     For GUI-level tests that exercise the processor's dictionary-resource
     facade (``offline_lookup_fn`` / ``release_dictionary_resources``) against
-    a mock definition service without standing up real services (T-60).
+    a mock definition service without standing up real services (T-60). Thin
+    wrapper over :func:`build_processor` (ARC-036).
     """
-    from anki_miner.orchestration.episode_processor import EpisodeProcessor
-
-    return EpisodeProcessor(
-        config=test_config,
-        subtitle_parser=MagicMock(name="SubtitleParser"),
-        word_filter=MagicMock(name="WordFilter"),
-        media_extractor=MagicMock(name="MediaExtractor"),
-        definition_service=MagicMock(name="DefinitionService"),
-        anki_service=MagicMock(name="AnkiService"),
-        presenter=NullPresenter(),
-    )
+    return build_processor(test_config)
 
 
 @pytest.fixture
