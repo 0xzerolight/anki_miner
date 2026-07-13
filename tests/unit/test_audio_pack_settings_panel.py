@@ -456,7 +456,7 @@ def test_jpod101_row_not_removable(qapp, qtbot, tmp_path):
     assert events == []
 
 
-def test_pack_row_removable_emits_signals(qapp, qtbot, tmp_path, confirm_remove):
+def test_pack_row_removable_emits_chain_changed(qapp, qtbot, tmp_path, confirm_remove):
     pack_dir = tmp_path / "a"
     pack_dir.mkdir()
     (pack_dir / "index.sqlite").write_bytes(b"placeholder")
@@ -471,17 +471,14 @@ def test_pack_row_removable_emits_signals(qapp, qtbot, tmp_path, confirm_remove)
     )
 
     changed: list[None] = []
-    removed: list[None] = []
     panel.chain_changed.connect(lambda: changed.append(None))
-    panel.pack_removed.connect(lambda: removed.append(None))
 
     panel.remove(0)
 
     # rmtree now runs off the GUI thread.
-    qtbot.waitUntil(lambda: removed == [None], timeout=3000)
+    qtbot.waitUntil(lambda: changed == [None], timeout=3000)
     chain = panel.get_chain()
     assert [e.kind for e in chain] == ["jpod101"]
-    assert changed == [None]
 
 
 def test_remove_deletes_index_dir_on_disk(qapp, qtbot, tmp_path, confirm_remove):
@@ -526,15 +523,12 @@ def test_remove_cancelled_keeps_pack_and_chain(qapp, qtbot, monkeypatch, tmp_pat
 
     events: list[None] = []
     panel.chain_changed.connect(lambda: events.append(None))
-    removed: list[None] = []
-    panel.pack_removed.connect(lambda: removed.append(None))
 
     panel.remove(0)
 
     assert pack_dir.exists(), "cancel must not touch disk"
     assert [e.pack_id for e in panel.get_chain()[:1]] == ["a"]
     assert events == []
-    assert removed == []
 
 
 def test_remove_tolerates_missing_index_folder(qapp, qtbot, tmp_path, confirm_remove):
@@ -553,7 +547,7 @@ def test_remove_tolerates_missing_index_folder(qapp, qtbot, tmp_path, confirm_re
     assert [e.kind for e in panel.get_chain()] == ["jpod101"]
 
 
-def test_remove_failed_rmtree_does_not_emit_pack_removed(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
+def test_remove_failed_rmtree_does_not_emit_chain_changed(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
     pack_dir = tmp_path / "a"
     pack_dir.mkdir()
     (pack_dir / "index.sqlite").write_bytes(b"placeholder")
@@ -577,14 +571,14 @@ def test_remove_failed_rmtree_does_not_emit_pack_removed(qapp, qtbot, monkeypatc
         )
     )
 
-    removed: list[None] = []
-    panel.pack_removed.connect(lambda: removed.append(None))
+    changed: list[None] = []
+    panel.chain_changed.connect(lambda: changed.append(None))
 
     panel.remove(0)
     # The off-thread rmtree fails; wait for the error handler to re-enable the
     # Remove button (proof the error callback ran on the GUI thread).
     qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
-    assert removed == []
+    assert changed == []
     assert [e.pack_id for e in panel.get_chain()[:1]] == ["a"], "failed remove must leave chain intact"
 
 
@@ -620,18 +614,18 @@ def test_remove_retries_on_transient_permission_error(qapp, qtbot, monkeypatch, 
         )
     )
 
-    removed: list[None] = []
-    panel.pack_removed.connect(lambda: removed.append(None))
+    changed: list[None] = []
+    panel.chain_changed.connect(lambda: changed.append(None))
 
     # First remove → _robust_rmtree raises off-thread → pack stays, no signal.
     panel.remove(0)
     qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
-    assert removed == [], "first attempt raised — pack_removed must not fire"
+    assert changed == [], "first attempt raised — chain_changed must not fire"
     assert [e.pack_id for e in panel.get_chain()[:1]] == ["a"]
 
     # Second remove → _robust_rmtree succeeds off-thread → pack gone, signal fires.
     panel.remove(0)
-    qtbot.waitUntil(lambda: removed == [None], timeout=3000)
+    qtbot.waitUntil(lambda: changed == [None], timeout=3000)
     assert [e.kind for e in panel.get_chain()] == ["jpod101"]
 
 
@@ -780,15 +774,15 @@ def test_right_click_remove_action_removes_pack(qapp, qtbot, monkeypatch, tmp_pa
 
     _patch_menu_exec(monkeypatch, "Remove")
 
-    removed: list[None] = []
-    panel.pack_removed.connect(lambda: removed.append(None))
+    changed: list[None] = []
+    panel.chain_changed.connect(lambda: changed.append(None))
 
     item = panel._list.item(0)
     pos = panel._list.visualItemRect(item).center()
     panel._on_row_context_menu(pos)
 
     # Remove delegates to self.remove(), whose rmtree runs off-thread.
-    qtbot.waitUntil(lambda: removed == [None], timeout=3000)
+    qtbot.waitUntil(lambda: changed == [None], timeout=3000)
     assert panel._list.count() == 0
 
 

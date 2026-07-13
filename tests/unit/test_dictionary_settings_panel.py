@@ -43,7 +43,7 @@ def _make_dict_on_disk(
 
 
 def _wait_scan(panel, qtbot):
-    """Wait for the panel's off-thread registry scan to populate _registry.
+    """Wait for the panel's off-thread registry scan to populate _view.
 
     The disk scan now runs on a worker thread (OVH disk-scan-off-thread); row
     metadata is only available once it lands back on the GUI thread.
@@ -581,9 +581,9 @@ def test_right_click_jmdict_row_emits_reimport_jmdict_requested(qapp, qtbot, mon
     assert generic_fired == [], "JMdict row must not fire the generic signal"
 
 
-def test_remove_emits_dictionary_removed_signal(qapp, qtbot, tmp_path, confirm_remove):
-    """remove() must fire dictionary_removed so settings_tab can persist the
-    chain to gui_config.json without waiting for the user to click Save."""
+def test_remove_emits_chain_changed_signal(qapp, qtbot, tmp_path, confirm_remove):
+    """remove() must fire chain_changed so settings_tab can persist the chain to
+    gui_config.json without waiting for the user to click Save."""
     dict_dir = tmp_path / "a"
     dict_dir.mkdir()
     (dict_dir / "index.sqlite").write_bytes(b"placeholder")
@@ -597,16 +597,16 @@ def test_remove_emits_dictionary_removed_signal(qapp, qtbot, tmp_path, confirm_r
         )
     )
 
-    removed: list[None] = []
-    panel.dictionary_removed.connect(lambda: removed.append(None))
+    changed: list[None] = []
+    panel.chain_changed.connect(lambda: changed.append(None))
 
     panel.remove(0)
-    qtbot.waitUntil(lambda: removed == [None], timeout=3000)
+    qtbot.waitUntil(lambda: changed == [None], timeout=3000)
 
 
-def test_remove_cancelled_does_not_emit_dictionary_removed(qapp, qtbot, monkeypatch, tmp_path):
-    """Cancelling the confirm dialog must not fire dictionary_removed — nothing
-    on disk changed, so we don't want settings_tab to persist."""
+def test_remove_cancelled_does_not_emit_chain_changed(qapp, qtbot, monkeypatch, tmp_path):
+    """Cancelling the confirm dialog must not fire chain_changed — nothing on
+    disk changed, so we don't want settings_tab to persist."""
     monkeypatch.setattr(
         "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.question",
         lambda *a, **kw: QMessageBox.StandardButton.No,
@@ -624,16 +624,16 @@ def test_remove_cancelled_does_not_emit_dictionary_removed(qapp, qtbot, monkeypa
         )
     )
 
-    removed: list[None] = []
-    panel.dictionary_removed.connect(lambda: removed.append(None))
+    changed: list[None] = []
+    panel.chain_changed.connect(lambda: changed.append(None))
 
     panel.remove(0)
-    assert removed == []
+    assert changed == []
 
 
-def test_remove_failed_rmtree_does_not_emit_dictionary_removed(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
-    """If rmtree exhausts its retries we abort early; dictionary_removed must
-    not fire because the chain mutation also did not happen."""
+def test_remove_failed_rmtree_does_not_emit_chain_changed(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
+    """If rmtree exhausts its retries we abort early; chain_changed must not fire
+    because the chain mutation also did not happen."""
     dict_dir = tmp_path / "a"
     dict_dir.mkdir()
     (dict_dir / "index.sqlite").write_bytes(b"placeholder")
@@ -660,14 +660,14 @@ def test_remove_failed_rmtree_does_not_emit_dictionary_removed(qapp, qtbot, monk
         )
     )
 
-    removed: list[None] = []
-    panel.dictionary_removed.connect(lambda: removed.append(None))
+    changed: list[None] = []
+    panel.chain_changed.connect(lambda: changed.append(None))
 
     panel.remove(0)
     # The off-thread rmtree fails; wait for the error handler to re-enable the
     # Remove button (proof the error callback ran on the GUI thread).
     qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
-    assert removed == []
+    assert changed == []
     chain = panel.get_chain()
     assert [e.dict_id for e in chain[:1]] == ["a"], "failed remove must leave chain intact"
 
@@ -706,13 +706,13 @@ def test_remove_retries_transient_oserror(qapp, qtbot, monkeypatch, tmp_path, co
         )
     )
 
-    removed: list[None] = []
-    panel.dictionary_removed.connect(lambda: removed.append(None))
+    changed: list[None] = []
+    panel.chain_changed.connect(lambda: changed.append(None))
 
     panel.remove(0)
 
     # rmtree (with its retry loop) now runs off the GUI thread.
-    qtbot.waitUntil(lambda: removed == [None], timeout=3000)
+    qtbot.waitUntil(lambda: changed == [None], timeout=3000)
     assert calls["n"] >= 2, "retry loop should have triggered at least once"
     assert not dict_dir.exists(), "second attempt must complete the rmtree"
     assert warned == [], "successful retry must not show an error dialog"
@@ -771,15 +771,15 @@ def test_release_callback_returning_false_aborts_remove(qapp, qtbot, monkeypatch
     )
     panel.set_release_callback(lambda: False)
 
-    removed: list[None] = []
-    panel.dictionary_removed.connect(lambda: removed.append(None))
+    changed: list[None] = []
+    panel.chain_changed.connect(lambda: changed.append(None))
 
     panel.remove(0)
 
     assert rmtree_calls == [], "rmtree must not run when release callback refuses"
     assert dict_dir.exists()
     assert any("mining run" in w.lower() for w in warned), warned
-    assert removed == []
+    assert changed == []
     assert [e.dict_id for e in panel.get_chain()[:1]] == ["a"]
 
 
@@ -1243,8 +1243,8 @@ class TestRescanWhileInFlight:
         assert row is not None
         texts = [lbl.text() for lbl in row.findChildren(QLabel)]
         assert any("Late Dict" in t for t in texts), texts
-        assert panel._registry is not None
-        meta = panel._registry.get("latedict")
+        assert panel._view is not None
+        meta = panel._view.get("latedict")
         assert meta is not None and meta.source_name == "Late Dict"
 
 
@@ -1272,7 +1272,7 @@ def test_context_menu_bails_during_scan_placeholder(qapp, qtbot, tmp_path, monke
     meta.format = "yomitan"
     registry = MagicMock()
     registry.get.return_value = meta
-    panel._registry = registry
+    panel._view = registry
 
     menu_cls = MagicMock()
     monkeypatch.setattr(dsp_mod, "QMenu", menu_cls)
