@@ -24,7 +24,8 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base.eliding_label import ElidingLabel
-from anki_miner.models.audiobook_queue import AudiobookItemStatus, AudiobookQueueItem
+from anki_miner.models.audiobook_queue import AudiobookQueueItem
+from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.utils.i18n import tr_format
 
 # ---------------------------------------------------------------------------
@@ -36,11 +37,11 @@ from anki_miner.utils.i18n import tr_format
 #   COMPLETED  ✓  "N cards created"       yes
 #   ERROR      ✗  error_message           yes
 # ---------------------------------------------------------------------------
-_STATUS_GLYPH: dict[AudiobookItemStatus, str] = {
-    AudiobookItemStatus.READY: "●",
-    AudiobookItemStatus.PROCESSING: "▶",
-    AudiobookItemStatus.COMPLETED: "✓",
-    AudiobookItemStatus.ERROR: "✗",
+_STATUS_GLYPH: dict[ReadyItemStatus, str] = {
+    ReadyItemStatus.READY: "●",
+    ReadyItemStatus.PROCESSING: "▶",
+    ReadyItemStatus.COMPLETED: "✓",
+    ReadyItemStatus.ERROR: "✗",
 }
 
 
@@ -85,7 +86,7 @@ class AudiobookQueueItemWidget(QFrame):
         self.status_label.setText(_STATUS_GLYPH.get(status, "●"))
         self.title_label.setText(item.audio_file.name)
         self.detail_label.setText(self._resolve_detail(item))
-        self.remove_button.setEnabled(status != AudiobookItemStatus.PROCESSING)
+        self.remove_button.setEnabled(status != ReadyItemStatus.PROCESSING)
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -94,9 +95,9 @@ class AudiobookQueueItemWidget(QFrame):
     def _resolve_detail(self, item: AudiobookQueueItem) -> str:
         """Return the second-line text for the given item state."""
         status = item.status
-        if status == AudiobookItemStatus.COMPLETED:
+        if status == ReadyItemStatus.COMPLETED:
             return tr_format(self.tr("%1 cards created"), item.cards_created)
-        if status == AudiobookItemStatus.ERROR:
+        if status == ReadyItemStatus.ERROR:
             return item.error_message or ""
         return item.subtitle_file.name
 

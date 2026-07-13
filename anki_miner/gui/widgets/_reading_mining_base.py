@@ -72,7 +72,7 @@ from anki_miner.exceptions import SetupError
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._queue_mining_tab_base import _QueueMiningTabBase, _QueueRunStrings
 from anki_miner.gui.workers.reading_queue_worker import ReadingQueueWorker
-from anki_miner.models.reading_queue import ReadingItemStatus
+from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.services.reading import detector
 from anki_miner.utils.i18n import tr_format
 
@@ -102,8 +102,8 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
 
     _shutdown_log_name = "Reading"
     # Enable the promoted stranded-PROCESSING recovery sweep for reading too.
-    _status_ready = ReadingItemStatus.READY
-    _status_processing = ReadingItemStatus.PROCESSING
+    _status_ready = ReadyItemStatus.READY
+    _status_processing = ReadyItemStatus.PROCESSING
     # Narrow the base's worker handle back to the reading worker so sub-tabs can
     # read ReadingQueueWorker-specific attrs (e.g. the manga curation_document).
     worker_thread: ReadingQueueWorker | None

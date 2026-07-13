@@ -6,11 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from anki_miner.models.audiobook_queue import (
-    AudiobookItemStatus,
-    AudiobookQueue,
-    AudiobookQueueItem,
-)
+from anki_miner.models.audiobook_queue import AudiobookQueue, AudiobookQueueItem
+from anki_miner.models.mining_queue import ReadyItemStatus
 
 AUDIO = Path("/books/show/episode_01.mp3")
 SUB = Path("/books/show/episode_01.srt")
@@ -25,7 +22,7 @@ class TestAudiobookQueueItemDefaults:
 
     def test_default_optional_fields(self):
         item = AudiobookQueueItem(audio_file=AUDIO, subtitle_file=SUB)
-        assert item.status == AudiobookItemStatus.READY
+        assert item.status == ReadyItemStatus.READY
         assert item.cards_created == 0
         assert item.error_message is None
 
@@ -38,21 +35,21 @@ class TestAudiobookQueueItemDefaults:
         item = AudiobookQueueItem(
             audio_file=AUDIO,
             subtitle_file=SUB,
-            status=AudiobookItemStatus.PROCESSING,
+            status=ReadyItemStatus.PROCESSING,
         )
-        assert item.status == AudiobookItemStatus.PROCESSING
+        assert item.status == ReadyItemStatus.PROCESSING
 
 
 # ---------------------------------------------------------------------------
-# AudiobookItemStatus
+# ReadyItemStatus
 # ---------------------------------------------------------------------------
 
 
-class TestAudiobookItemStatus:
+class TestReadyItemStatus:
     """No probe stage for local files, so the status set is smaller."""
 
     def test_status_members(self):
-        assert {s.name for s in AudiobookItemStatus} == {
+        assert {s.name for s in ReadyItemStatus} == {
             "READY",
             "PROCESSING",
             "COMPLETED",
@@ -71,7 +68,7 @@ class TestAudiobookQueueAdd:
     def test_add_returns_ready_item(self):
         queue = AudiobookQueue()
         item = queue.add(AUDIO, SUB)
-        assert item.status == AudiobookItemStatus.READY
+        assert item.status == ReadyItemStatus.READY
 
     def test_add_sets_files(self):
         queue = AudiobookQueue()

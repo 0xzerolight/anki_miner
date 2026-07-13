@@ -261,14 +261,14 @@ class TestPerItemSignalsReadOnly:
         _run(tab, _book_file(tmp_path), [_make_ref("epub", "Solo Book")])
         item = tab._run_items[0]
         # Worker owns lifecycle: emulate it having already completed the item.
-        from anki_miner.models.reading_queue import ReadingItemStatus
+        from anki_miner.models.mining_queue import ReadyItemStatus
 
-        item.status = ReadingItemStatus.COMPLETED
+        item.status = ReadyItemStatus.COMPLETED
         item.cards_created = 9
 
         tab._on_item_started(0)
 
-        assert item.status == ReadingItemStatus.COMPLETED
+        assert item.status == ReadyItemStatus.COMPLETED
         assert item.cards_created == 9
         assert "Mining: Solo Book" in tab.progress_widget.status_label.text()
         assert tab.progress_widget.progress_bar.maximum() == 100

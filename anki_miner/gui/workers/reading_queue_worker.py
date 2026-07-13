@@ -45,8 +45,9 @@ from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
 from anki_miner.gui.workers._queue_worker_base import SequentialQueueWorker
 from anki_miner.models import MiningOutcome, classify_result, result_error_text
+from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading import ReadingDocument
-from anki_miner.models.reading_queue import ReadingItemStatus, ReadingQueueItem
+from anki_miner.models.reading_queue import ReadingQueueItem
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.dictionary.registry import stale_dict_reimport_error
 from anki_miner.services.reading import detector
@@ -96,7 +97,7 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
     def _run_item(self, idx: int, item: ReadingQueueItem) -> bool:
         """Load + mine one item, owning its READY→PROCESSING→COMPLETED/ERROR
         lifecycle. Never aborts the queue early (returns False)."""
-        item.status = ReadingItemStatus.PROCESSING
+        item.status = ReadyItemStatus.PROCESSING
         self.item_started.emit(idx)
         try:
             result = self._mine_one(idx, item)
@@ -126,25 +127,25 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
         cards = int(getattr(result, "cards_created", 0) or 0)
         outcome = classify_result(result)
         if outcome is MiningOutcome.SUCCESS:
-            item.status = ReadingItemStatus.COMPLETED
+            item.status = ReadyItemStatus.COMPLETED
             item.cards_created = cards
             item.error_message = None
             self.item_finished.emit(idx, result, None, 1)
         elif outcome is MiningOutcome.CANCELLED:
-            item.status = ReadingItemStatus.READY
+            item.status = ReadyItemStatus.READY
             item.cards_created = cards
             item.error_message = None
             self.item_finished.emit(idx, result, None, 1)
         else:
             message = result_error_text(result)
-            item.status = ReadingItemStatus.ERROR
+            item.status = ReadyItemStatus.ERROR
             item.cards_created = cards
             item.error_message = message
             self.item_finished.emit(idx, None, message, 1)
 
     def _fail_item(self, idx: int, item: ReadingQueueItem, message: str) -> None:
         """Record a per-item failure on the item and via ``item_finished``."""
-        item.status = ReadingItemStatus.ERROR
+        item.status = ReadyItemStatus.ERROR
         item.error_message = message
         self.item_finished.emit(idx, None, message, 1)
 
