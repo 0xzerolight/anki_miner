@@ -28,7 +28,6 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 import shutil
 import tempfile
 import zipfile
@@ -54,6 +53,7 @@ from anki_miner.services.yomitan_meta_bank import (
     open_yomitan_meta_banks,
 )
 from anki_miner.utils.csv_utils import detect_delimiter, is_header_row
+from anki_miner.utils.slug import slugify
 
 logger = logging.getLogger(__name__)
 
@@ -480,26 +480,9 @@ def _derive_source_id(name: str) -> str:
     return _slug(name)
 
 
-_SLUG_RE = re.compile(r"[^a-z0-9]+")
-
-
 def _slug(text: str) -> str:
     """ASCII slug suitable for a directory name. CJK falls through as hex codepoints."""
-    text = text.strip().lower()
-    parts: list[str] = []
-    buf: list[str] = []
-    for ch in text:
-        if ord(ch) < 128:
-            buf.append(ch)
-        else:
-            if buf:
-                parts.append("".join(buf))
-                buf.clear()
-            parts.append(f"u{ord(ch):x}")
-    if buf:
-        parts.append("".join(buf))
-    slug = _SLUG_RE.sub("-", "-".join(parts)).strip("-")
-    return slug or "source"
+    return slugify(text, fallback="source")
 
 
 def derive_source_id_from_zip(zip_path: Path) -> str:

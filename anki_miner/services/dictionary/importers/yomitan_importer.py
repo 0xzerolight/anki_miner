@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 import shutil
 import tempfile
 import zipfile
@@ -31,6 +30,7 @@ from anki_miner.services.dictionary.yomitan_renderer import (
     render_glossary_entry,
 )
 from anki_miner.services.dictionary.zip_safety import raise_if_index_nested, validate_zip_safe
+from anki_miner.utils.slug import slugify
 
 ProgressFn = Callable[[int, int, str], None]
 
@@ -596,24 +596,6 @@ def read_yomitan_title(zip_path: Path) -> str:
     return title
 
 
-_SLUG_RE = re.compile(r"[^a-z0-9]+")
-
-
 def _slug(text: str) -> str:
     """ASCII slug suitable for a directory name. CJK falls through as hex codepoints."""
-    text = text.strip().lower()
-    # Convert non-ASCII chars to hex
-    parts: list[str] = []
-    buf: list[str] = []
-    for ch in text:
-        if ord(ch) < 128:
-            buf.append(ch)
-        else:
-            if buf:
-                parts.append("".join(buf))
-                buf.clear()
-            parts.append(f"u{ord(ch):x}")
-    if buf:
-        parts.append("".join(buf))
-    slug = _SLUG_RE.sub("-", "-".join(parts)).strip("-")
-    return slug or "dict"
+    return slugify(text, fallback="dict")
