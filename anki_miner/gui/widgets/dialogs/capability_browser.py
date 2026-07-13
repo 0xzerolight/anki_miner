@@ -93,10 +93,6 @@ class CapabilityBrowser(QDialog):
         add_min_max_buttons(self)
 
     # ------------------------------------------------------------------ filter
-    def visible_capabilities(self) -> list[Capability]:
-        """The capabilities currently shown (after the active search filter)."""
-        return list(self._current)
-
     def _apply_filter(self, text: str) -> None:
         self._current = search(text)
         self._rebuild_rows()

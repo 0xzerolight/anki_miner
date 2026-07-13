@@ -1,8 +1,7 @@
 """Tests for per-kanji furigana distribution.
 
-The ``distribute_furigana`` / ``distribute_furigana_inflected`` corpus below is
-ported line-for-line from Yomitan's ``test/japanese-util.test.js`` (the
-``distributeFurigana`` and ``distributeFuriganaInflected`` describe blocks),
+The ``distribute_furigana`` corpus below is ported line-for-line from Yomitan's
+``test/japanese-util.test.js`` (the ``distributeFurigana`` describe block),
 upstream commit ``e2ed450``. Segments are compared as ``(text, reading)``
 tuples so the Python port must reproduce Yomitan's segmentation exactly,
 including the deliberate whole-word fallback on ambiguous splits.
@@ -13,7 +12,6 @@ import pytest
 from anki_miner.utils.furigana_distribute import (
     FuriganaSegment,
     distribute_furigana,
-    distribute_furigana_inflected,
     get_stem_length,
 )
 
@@ -119,29 +117,11 @@ DISTRIBUTE_CASES = [
     (("逸らす", "そらす"), [("逸", "そ"), ("らす", "")]),
 ]
 
-# (term, reading, source) -> [(text, reading), ...]
-# Ported verbatim from test/japanese-util.test.js:746-795.
-DISTRIBUTE_INFLECTED_CASES = [
-    (("美味しい", "おいしい", "美味しかた"), [("美味", "おい"), ("しかた", "")]),
-    (("食べる", "たべる", "食べた"), [("食", "た"), ("べた", "")]),
-    (("迄に", "までに", "までに"), [("までに", "")]),
-    (("行う", "おこなう", "おこなわなかった"), [("おこなわなかった", "")]),
-    (("いい", "いい", "イイ"), [("イイ", "")]),
-    (("否か", "いなか", "否カ"), [("否", "いな"), ("カ", "か")]),
-]
-
 
 @pytest.mark.parametrize("term_reading,expected", DISTRIBUTE_CASES)
 def test_distribute_furigana(term_reading, expected):
     term, reading = term_reading
     actual = [(s.text, s.reading) for s in distribute_furigana(term, reading)]
-    assert actual == expected
-
-
-@pytest.mark.parametrize("inputs,expected", DISTRIBUTE_INFLECTED_CASES)
-def test_distribute_furigana_inflected(inputs, expected):
-    term, reading, source = inputs
-    actual = [(s.text, s.reading) for s in distribute_furigana_inflected(term, reading, source)]
     assert actual == expected
 
 

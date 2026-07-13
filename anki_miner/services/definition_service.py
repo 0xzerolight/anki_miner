@@ -487,78 +487,24 @@ class DefinitionService:
 
         return found
 
-    def get_glossary(self, word: str) -> str | None:
-        """Collect hits from all enabled providers and concatenate as one HTML blob.
-
-        Walk semantics:
-        * Every available *offline* provider is queried in chain order.
-        * *Online* providers (e.g. Jisho) are queried only if no offline
-          provider returned a hit — they act as a fallback, matching the
-          single-definition chain's existing semantics.
-        * Each provider's returned HTML is concatenated verbatim. Each
-          provider already wraps its hit in
-          ``<div class="yomitan-glossary"><ol><li data-dictionary="…">…</li></ol></div>``
-          so the result is a sequence of those wrappers — compatible with
-          the Senren dictionary-toggle.
-
-        Returns the concatenated HTML, or None when no provider hit.
-        """
-        self.ensure_loaded()
-        offline_hits: list[str] = []
-        online_providers: list[DictionaryProvider] = []
-        for provider in self._providers:
-            if not provider.is_available():
-                continue
-            if provider.is_online:
-                online_providers.append(provider)
-                continue
-            try:
-                result = provider.lookup(word)
-            except Exception as e:
-                logger.warning(
-                    "Provider '%s' raised during lookup of '%s'; skipping: %s",
-                    provider.name,
-                    word,
-                    e,
-                )
-                continue
-            if result:
-                offline_hits.append(result)
-
-        if offline_hits:
-            return "".join(offline_hits)
-
-        online_hits: list[str] = []
-        for provider in online_providers:
-            try:
-                result = provider.lookup(word)
-            except Exception as e:
-                logger.warning(
-                    "Provider '%s' raised during lookup of '%s'; skipping: %s",
-                    provider.name,
-                    word,
-                    e,
-                )
-                continue
-            if result:
-                online_hits.append(result)
-        return "".join(online_hits) if online_hits else None
-
     def get_glossaries_batch(
         self,
         words: list[tuple[str, str | None]],
         progress_callback: ProgressCallback | None = None,
     ) -> list[str | None]:
-        """Batch variant of get_glossary over ``(word, reading | None)`` pairs;
-        preserves input order. The reading is a per-word ranking BOOST threaded
-        to each offline provider's ``lookup_many``.
+        """Collect glossary HTML for ``(word, reading | None)`` pairs, preserving
+        input order. The reading is a per-word ranking BOOST threaded to each
+        offline provider's ``lookup_many``.
 
         Fast path (OVH-050): offline providers that expose ``lookup_many`` are
         queried ONCE for all words (one IN-clause SQLite query per dictionary
-        instead of N per-word queries). Walk semantics mirror ``get_glossary``:
-        * Every available *offline* provider is queried; hits are concatenated.
-        * *Online* providers are consulted per-word only when no offline provider
-          returned a hit for that word — they act as a fallback.
+        instead of N per-word queries). Walk semantics:
+        * Every available *offline* provider is queried in chain order; each
+          provider's returned HTML is concatenated verbatim (each provider wraps
+          its hit in ``<div class="yomitan-glossary">…</div>``, so the result is
+          a sequence of those wrappers — compatible with the Senren toggle).
+        * *Online* providers (e.g. Jisho) are consulted per-word only when no
+          offline provider returned a hit for that word — they act as a fallback.
         Providers lacking ``lookup_many`` (e.g. legacy offline or online Jisho)
         are consulted per-word, matching the old behaviour.
         """

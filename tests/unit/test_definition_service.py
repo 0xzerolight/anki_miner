@@ -396,8 +396,10 @@ class TestConfigStored:
         assert service.config is config
 
 
-class TestGetGlossary:
-    """Tests for DefinitionService.get_glossary — collect-all with online fallback."""
+class TestGetGlossariesBatchPerWordWalk:
+    """get_glossaries_batch walk semantics via the per-word path (providers lacking
+    lookup_many): offline concatenation + online fallback + skip-unavailable. The
+    fast (lookup_many) path is covered by TestGetGlossariesBatchFastPath."""
 
     def test_concatenates_all_offline_hits(self, test_config):
         p1 = make_provider("A", return_value="<div>A</div>")
@@ -406,7 +408,7 @@ class TestGetGlossary:
         p2.is_online = False
         service = DefinitionService(test_config, providers=[p1, p2])
 
-        assert service.get_glossary("x") == "<div>A</div><div>B</div>"
+        assert service.get_glossaries_batch([("x", None)]) == ["<div>A</div><div>B</div>"]
         p1.lookup.assert_called_once_with("x")
         p2.lookup.assert_called_once_with("x")
 
@@ -417,7 +419,7 @@ class TestGetGlossary:
         online.is_online = True
         service = DefinitionService(test_config, providers=[offline, online])
 
-        assert service.get_glossary("x") == "<div>off</div>"
+        assert service.get_glossaries_batch([("x", None)]) == ["<div>off</div>"]
         offline.lookup.assert_called_once_with("x")
         online.lookup.assert_not_called()
 
@@ -428,7 +430,7 @@ class TestGetGlossary:
         online.is_online = True
         service = DefinitionService(test_config, providers=[offline, online])
 
-        assert service.get_glossary("x") == "<div>online</div>"
+        assert service.get_glossaries_batch([("x", None)]) == ["<div>online</div>"]
         offline.lookup.assert_called_once_with("x")
         online.lookup.assert_called_once_with("x")
 
@@ -439,7 +441,7 @@ class TestGetGlossary:
         online.is_online = True
         service = DefinitionService(test_config, providers=[offline, online])
 
-        assert service.get_glossary("x") is None
+        assert service.get_glossaries_batch([("x", None)]) == [None]
 
     def test_skips_unavailable_providers(self, test_config):
         unavail = make_provider("X", available=False, return_value="<div>X</div>")
@@ -448,7 +450,7 @@ class TestGetGlossary:
         ok.is_online = False
         service = DefinitionService(test_config, providers=[unavail, ok])
 
-        assert service.get_glossary("x") == "<div>Y</div>"
+        assert service.get_glossaries_batch([("x", None)]) == ["<div>Y</div>"]
         unavail.lookup.assert_not_called()
 
 
@@ -776,7 +778,7 @@ class TestProviderRaisesMidChain:
     ``ensure_loaded`` (which wraps ``provider.load`` in try/except) and
     ``close`` (which wraps ``provider.close``) already guard per-provider calls.
     The per-word ``lookup`` / batch ``lookup_many`` calls in
-    ``get_definitions_batch``, ``get_glossary``, ``get_glossaries_batch``, and
+    ``get_definitions_batch``, ``get_glossaries_batch``, and
     ``lookup_all_offline`` now match that pattern: a raising provider is logged,
     treated as a miss, and the chain continues — earlier hits are preserved.
     """
@@ -809,16 +811,7 @@ class TestProviderRaisesMidChain:
         result = service.get_definitions_batch([("a", None), ("b", None)])
         assert result == ["hit-a", None]
 
-    def test_get_glossary_offline_skip_and_continue(self, test_config):
-        p = make_provider("Boom", return_value=None)
-        p.is_online = False
-        p.lookup.side_effect = RuntimeError("glossary boom")
-        service = DefinitionService(test_config, providers=[p])
-
-        result = service.get_glossary("x")
-        assert result is None
-
-    def test_get_glossary_online_skip_after_offline_miss(self, test_config):
+    def test_get_glossaries_batch_online_skip_after_offline_miss(self, test_config):
         """The online fallback raising is also skipped (offline missed first)."""
         offline = make_provider("Off", return_value=None)
         offline.is_online = False
@@ -827,8 +820,7 @@ class TestProviderRaisesMidChain:
         online.lookup.side_effect = RuntimeError("online boom")
         service = DefinitionService(test_config, providers=[offline, online])
 
-        result = service.get_glossary("x")
-        assert result is None
+        assert service.get_glossaries_batch([("x", None)]) == [None]
 
     def test_get_glossaries_batch_skip_and_continue(self, test_config):
         p = make_provider("Boom", return_value=None)

@@ -625,11 +625,9 @@ class TestOptionalServices:
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         # A single per-source fetch, reading-scoped (word.reading "タベル" →
-        # hiragana-normalized "たべる"); min + harmonic are derived locally, so the
-        # service's lookup_min/lookup_harmonic are never re-queried.
+        # hiragana-normalized "たべる"); min + harmonic are derived locally from
+        # that one lookup_all via the pure min_rank/harmonic_rank helpers.
         mock_frequency.lookup_all.assert_called_once_with(word.lemma, "たべる")
-        mock_frequency.lookup_min.assert_not_called()
-        mock_frequency.lookup_harmonic.assert_not_called()
         # Derived from the fetched breakdown: min = 200 (drives filtering),
         # harmonic = floor(2 / (1/400 + 1/200)) = 266 (drives the sort field).
         assert word.frequency_rank == 200
