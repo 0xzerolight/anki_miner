@@ -411,7 +411,6 @@ def test_config(temp_dir):
     return AnkiMinerConfig(
         anki_deck_name="test_deck",
         anki_note_type="test_note_type",
-        anki_word_field="word",
         anki_fields={
             "word": "word",
             "sentence": "sentence",
