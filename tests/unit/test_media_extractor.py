@@ -1771,15 +1771,6 @@ class TestFfmpegResolverWiring:
     A config override pointing at a real file must surface at ``cmd[0]``.
     """
 
-    @pytest.fixture(autouse=True)
-    def _clear_resolver_cache(self):
-        """The resolver caches by (name, override, frozen, meipass); reset per test."""
-        from anki_miner.utils import ffmpeg_resolver
-
-        ffmpeg_resolver._clear_cache()
-        yield
-        ffmpeg_resolver._clear_cache()
-
     def test_static_screenshot_uses_config_override(self, test_config, video_file, tmp_path):
         """When config.ffmpeg_location is a real file, it becomes cmd[0]."""
         fake_ffmpeg = tmp_path / "my_ffmpeg"

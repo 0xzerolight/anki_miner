@@ -15,6 +15,12 @@ Usage in QSS (after substitution):
     font-size: ${font-size-h3}px;
     padding: ${spacing-md}px;
     border-radius: ${border-radius-large}px;
+
+Internal-but-tested: this private module (leading underscore) is a stable test surface —
+``tests/unit/test_variables_font_scale.py`` and ``test_theme_font_scale.py`` import it
+directly for ``get_variable_dict``, which the ``styles`` package facade does NOT re-export
+(only ``SPACING``/``FONT_SIZES``/``BORDER_RADIUS`` are). The underscore stays; do not rename
+it or drop those direct imports to the facade.
 """
 
 from dataclasses import dataclass

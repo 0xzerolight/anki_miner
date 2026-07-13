@@ -16,23 +16,8 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from anki_miner.config import AnkiMinerConfig
 
-
-def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
-    """Replace config persistence + the other auto-check startup side-effects."""
-    from anki_miner.gui import main_window as mw_module
-
-    monkeypatch.setattr(mw_module.GUIConfigManager, "load_config", lambda: test_config)
-    monkeypatch.setattr(mw_module.GUIConfigManager, "save_config", lambda cfg: None)
-    monkeypatch.setattr(mw_module.ValidationService, "__init__", lambda self, *a, **kw: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_run_validation", lambda self: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_check_for_updates", lambda self: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_maybe_create_shortcut_on_first_run", lambda self: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_maybe_offer_first_run_setup", lambda self: None)
-
-
-def test_construction_never_spawns_real_ytdlp_worker(qtbot, monkeypatch, test_config):
+def test_construction_never_spawns_real_ytdlp_worker(qtbot, monkeypatch, patch_heavy_init, test_config):
     """auto_update_ytdlp=True + event loop spin must NOT reach start_ytdlp_update.
 
     Spy on start_ytdlp_update (so a regression cannot launch a real subprocess
@@ -48,7 +33,7 @@ def test_construction_never_spawns_real_ytdlp_worker(qtbot, monkeypatch, test_co
     )
 
     construction_config = replace(test_config, auto_update_ytdlp=True)
-    _patch_heavy_init(monkeypatch, construction_config)
+    patch_heavy_init(construction_config)
 
     from anki_miner.gui.main_window import MainWindow
 

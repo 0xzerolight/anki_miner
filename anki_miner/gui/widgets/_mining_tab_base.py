@@ -5,6 +5,11 @@ signal wiring and the ``dragMoveEvent``/``setAcceptDrops`` boilerplate. The bodi
 the four progress slots and the dragEnter/drop filtering diverged between them
 (different widget names, different file-type filters), so this base captures only the
 genuinely shared scaffolding and leaves slot bodies to the subclasses via duck typing.
+
+Internal-but-tested: the leading underscore marks this as a private module, but it has
+no public facade — ~11 test files import ``_mining_tab_base`` directly to exercise the
+shared curation/progress/shutdown lifecycle. The underscore therefore stays and the
+module path is a deliberately stable test surface; do not rename it.
 """
 
 from __future__ import annotations

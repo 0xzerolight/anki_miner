@@ -1,7 +1,5 @@
 """Tests for the alass runtime resolver."""
 
-import pytest
-
 from anki_miner.utils import alass_resolver
 from anki_miner.utils.alass_resolver import alass_available, resolve_alass
 
@@ -12,14 +10,6 @@ class _Cfg:
     def __init__(self, alass_location=None, bin_root=None):
         self.alass_location = alass_location
         self.bin_root = bin_root
-
-
-@pytest.fixture(autouse=True)
-def _clear_resolver_cache():
-    """Ensure the module-level cache never leaks across tests."""
-    alass_resolver._clear_cache()
-    yield
-    alass_resolver._clear_cache()
 
 
 class TestResolveAlass:

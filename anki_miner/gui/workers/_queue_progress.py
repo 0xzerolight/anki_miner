@@ -3,6 +3,10 @@
 Used by the YouTube, audiobook, and reading queue workers to translate
 ``ProgressCallback`` invocations from ``EpisodeProcessor`` into per-row
 ``(idx, label, pct)`` signal emissions.
+
+Internal-but-tested: this private module (leading underscore) has no public facade —
+``tests/unit/test_stage_weighted_progress.py`` imports it directly. The underscore stays
+and the module path is a stable test surface; do not rename it.
 """
 
 from __future__ import annotations

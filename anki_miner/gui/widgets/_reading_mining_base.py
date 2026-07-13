@@ -49,6 +49,11 @@ cleanup are the whole concurrency contract here.
 Base ``_launch_run`` does NOT reset progress or recompute buttons — those are
 per-tab UI concerns owned by the caller (which recomputes buttons after a
 ``True`` return; the novels tab has no dual-bar progress at all).
+
+Internal-but-tested: this private module (leading underscore) has no public facade —
+the reading manga/novels/subtitles tab tests and ``tests/unit/test_reading_mining_base.py``
+import it directly. The underscore stays and the module path is a stable test surface;
+do not rename it.
 """
 
 from __future__ import annotations
