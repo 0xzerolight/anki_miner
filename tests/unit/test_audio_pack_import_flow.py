@@ -88,7 +88,7 @@ def tab(test_config: AnkiMinerConfig, tmp_path, qtbot):
 
 @pytest.fixture
 def stub_worker(monkeypatch):
-    """Replace AudioPackImportWorker.for_pack with a controllable mock factory.
+    """Replace ImportWorker.for_pack with a controllable mock factory.
 
     Returns the factory mock so tests can inspect call_args and manually fire
     import_finished / failed signals by calling the stored `on_done` / `on_fail`
@@ -98,10 +98,11 @@ def stub_worker(monkeypatch):
     instances: list[MagicMock] = []
 
     def _build_instance(*args, **kwargs):
-        instance = MagicMock(name="AudioPackImportWorker")
+        instance = MagicMock(name="ImportWorker")
         instance.progress = MagicMock()
         instance.import_finished = MagicMock()
         instance.failed = MagicMock()
+        instance.cancelled = MagicMock()
         instance.cancel = MagicMock()
         instance.start = MagicMock()
         instance.isRunning = MagicMock(return_value=False)
@@ -111,7 +112,7 @@ def stub_worker(monkeypatch):
     factory.side_effect = _build_instance
     factory.instances = instances
     monkeypatch.setattr(
-        "anki_miner.gui.controllers.audio_pack_import_flow.AudioPackImportWorker.for_pack",
+        "anki_miner.gui.controllers.audio_pack_import_flow.ImportWorker.for_pack",
         factory,
     )
     return factory

@@ -30,7 +30,7 @@ Completion is signalled via the built-in ``QThread.finished`` signal, which Qt
 emits whenever :meth:`run` returns (every exit path), so callers can drop their
 GC reference to the worker safely. We deliberately do not declare a custom
 ``finished`` ``pyqtSignal`` (that would shadow ``QThread.finished``, which the
-codebase relies on for cleanup wiring — see ``dictionary_import_worker``).
+codebase relies on for cleanup wiring — see ``import_worker``).
 """
 
 from __future__ import annotations

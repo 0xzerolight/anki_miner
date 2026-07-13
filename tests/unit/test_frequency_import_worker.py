@@ -1,4 +1,4 @@
-"""Tests for FrequencyImportWorker."""
+"""Tests for ImportWorker.for_source (frequency source import path)."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtCore")
 
-from anki_miner.gui.workers.frequency_import_worker import FrequencyImportWorker
+from anki_miner.gui.workers.import_worker import ImportWorker
 
 
 def _write_zip(path: Path, *, title: str = "Test Freq", banks: list[list[Any]] | None = None) -> Path:
@@ -37,7 +37,7 @@ def _write_csv(path: Path) -> Path:
 def test_zip_import_emits_finished(tmp_path: Path, qapp):
     zip_path = _write_zip(tmp_path / "freq.zip")
     dest = tmp_path / "freqs"
-    worker = FrequencyImportWorker.for_source(zip_path, dest)
+    worker = ImportWorker.for_source(zip_path, dest)
 
     finished: list[str] = []
     failed: list[str] = []
@@ -54,7 +54,7 @@ def test_zip_import_emits_finished(tmp_path: Path, qapp):
 def test_csv_import_emits_finished(tmp_path: Path, qapp):
     csv_path = _write_csv(tmp_path / "mylist.csv")
     dest = tmp_path / "freqs"
-    worker = FrequencyImportWorker.for_source(csv_path, dest)
+    worker = ImportWorker.for_source(csv_path, dest)
 
     finished: list[str] = []
     worker.import_finished.connect(lambda source_id, meta: finished.append(source_id))
@@ -67,7 +67,7 @@ def test_csv_import_emits_finished(tmp_path: Path, qapp):
 def test_finished_meta_contains_expected_keys(tmp_path: Path, qapp):
     zip_path = _write_zip(tmp_path / "freq.zip")
     dest = tmp_path / "freqs"
-    worker = FrequencyImportWorker.for_source(zip_path, dest)
+    worker = ImportWorker.for_source(zip_path, dest)
 
     metas: list[dict] = []
     worker.import_finished.connect(lambda source_id, meta: metas.append(meta))
@@ -84,7 +84,7 @@ def test_finished_meta_contains_expected_keys(tmp_path: Path, qapp):
 def test_source_id_override(tmp_path: Path, qapp):
     zip_path = _write_zip(tmp_path / "freq.zip")
     dest = tmp_path / "freqs"
-    worker = FrequencyImportWorker.for_source(zip_path, dest, source_id="custom-id")
+    worker = ImportWorker.for_source(zip_path, dest, source_id="custom-id")
 
     finished: list[str] = []
     worker.import_finished.connect(lambda source_id, meta: finished.append(source_id))
@@ -98,7 +98,7 @@ def test_source_id_override(tmp_path: Path, qapp):
 def test_progress_strings_observed(tmp_path: Path, qapp):
     zip_path = _write_zip(tmp_path / "freq.zip")
     dest = tmp_path / "freqs"
-    worker = FrequencyImportWorker.for_source(zip_path, dest)
+    worker = ImportWorker.for_source(zip_path, dest)
 
     progress: list[tuple[int, int, str]] = []
     worker.progress.connect(lambda cur, total, msg: progress.append((cur, total, msg)))
@@ -116,7 +116,7 @@ def test_progress_strings_observed(tmp_path: Path, qapp):
 
 def test_setup_error_emits_failed(tmp_path: Path, qapp):
     missing = tmp_path / "nope.zip"
-    worker = FrequencyImportWorker.for_source(missing, tmp_path / "freqs")
+    worker = ImportWorker.for_source(missing, tmp_path / "freqs")
 
     failed: list[str] = []
     finished: list[str] = []
@@ -132,7 +132,7 @@ def test_setup_error_emits_failed(tmp_path: Path, qapp):
 def test_unsupported_suffix_emits_failed(tmp_path: Path, qapp):
     bad = tmp_path / "data.bin"
     bad.write_bytes(b"junk")
-    worker = FrequencyImportWorker.for_source(bad, tmp_path / "freqs")
+    worker = ImportWorker.for_source(bad, tmp_path / "freqs")
 
     failed: list[str] = []
     worker.failed.connect(lambda err: failed.append(err))
@@ -146,10 +146,10 @@ def test_unexpected_exception_emits_failed(tmp_path: Path, qapp):
     dest = tmp_path / "freqs"
 
     with patch(
-        "anki_miner.gui.workers.frequency_import_worker.import_frequency_source",
+        "anki_miner.gui.workers.import_worker.import_frequency_source",
         side_effect=RuntimeError("unexpected boom"),
     ):
-        worker = FrequencyImportWorker.for_source(zip_path, dest)
+        worker = ImportWorker.for_source(zip_path, dest)
         failed: list[str] = []
         finished: list[str] = []
         worker.failed.connect(lambda err: failed.append(err))
@@ -168,7 +168,7 @@ def test_unexpected_exception_emits_failed(tmp_path: Path, qapp):
 def test_cancel_before_run_no_import_finished(tmp_path: Path, qapp):
     zip_path = _write_zip(tmp_path / "freq.zip")
     dest = tmp_path / "freqs"
-    worker = FrequencyImportWorker.for_source(zip_path, dest)
+    worker = ImportWorker.for_source(zip_path, dest)
     worker.cancel()
 
     finished: list[str] = []
