@@ -1,7 +1,7 @@
 """Smoke test: ReadingTab is registered in the main() wiring.
 
-Reuses the ``_build_tabs`` helper from ``test_app_deck_builder_tab`` (which
-mirrors ``anki_miner.gui.app.main``'s tab-construction block) and asserts the
+Uses the shared ``wired_window`` fixture (``tests/unit/conftest.py``), which
+mirrors ``anki_miner.gui.app.main``'s tab-construction block, and asserts the
 "Reading" tab is present, correctly typed, ordered right after Audio, and that
 it nests the Manga/Novels sub-tabs behind a single shared presenter.
 """
@@ -16,15 +16,6 @@ from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
 from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
 from anki_miner.gui.widgets.reading_tab import ReadingTab
-from tests.unit.test_app_deck_builder_tab import _build_tabs
-
-
-@pytest.fixture
-def wired_window(monkeypatch, test_config, qtbot):
-    window, titles, tabs = _build_tabs(monkeypatch, test_config)
-    qtbot.addWidget(window)
-    yield window, titles, tabs
-    window.deleteLater()
 
 
 def test_reading_tab_present(wired_window):

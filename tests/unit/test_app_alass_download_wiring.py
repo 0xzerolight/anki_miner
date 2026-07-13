@@ -12,22 +12,15 @@ from __future__ import annotations
 
 import pytest
 
-from anki_miner.config import AnkiMinerConfig
 
+@pytest.fixture
+def wired(monkeypatch, patch_heavy_init, test_config, qtbot):
+    """MainWindow + SettingsTab joined by the production wiring helper.
 
-def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
-    from anki_miner.gui import main_window as mw_module
-
-    monkeypatch.setattr(mw_module.GUIConfigManager, "load_config", lambda: test_config)
-    monkeypatch.setattr(mw_module.GUIConfigManager, "save_config", lambda cfg: None)
-    monkeypatch.setattr(mw_module.ValidationService, "__init__", lambda self, *a, **kw: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_check_for_updates", lambda self: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_maybe_create_shortcut_on_first_run", lambda self: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_maybe_offer_first_run_setup", lambda self: None)
-    # MainWindow.__init__ starts a background ValidationWorker against the
-    # neutered (config-less) ValidationService above -> it crashes and leaks a
-    # QThread. Stop it: these tests don't exercise startup validation.
-    monkeypatch.setattr(mw_module.MainWindow, "_run_validation", lambda self: None)
+    ``start_alass_download`` is replaced with a recorder that captures the
+    ``on_finished`` callback so the test can fire it without a real worker.
+    """
+    patch_heavy_init(test_config)
     # notify_alass_download_finished() kicks off the panel's off-thread
     # re-probe, which calls alass_available -> alass_resolver._resolve and
     # RE-POPULATES the global _CACHE on a background thread. That write races
@@ -41,15 +34,6 @@ def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
 
     monkeypatch.setattr(SubtitlesSettingsPanel, "_refresh_state_async", lambda self, *a, **kw: None)
 
-
-@pytest.fixture
-def wired(monkeypatch, test_config, qtbot):
-    """MainWindow + SettingsTab joined by the production wiring helper.
-
-    ``start_alass_download`` is replaced with a recorder that captures the
-    ``on_finished`` callback so the test can fire it without a real worker.
-    """
-    _patch_heavy_init(monkeypatch, test_config)
     from anki_miner.gui import app as app_module
     from anki_miner.gui.main_window import MainWindow
     from anki_miner.gui.widgets.settings_tab import SettingsTab

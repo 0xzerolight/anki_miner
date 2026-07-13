@@ -16,29 +16,20 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from anki_miner.config import AnkiMinerConfig
 
-
-def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
+@pytest.fixture
+def main_window(qtbot, monkeypatch, patch_heavy_init, test_config):
+    # first_run_setup_done=True so the deferred first-run wizard never fires.
+    construction_config = replace(test_config, first_run_setup_done=True)
+    # stub_first_run_setup=False mirrors the original: the wizard is already inert
+    # (flag set above), so _maybe_offer_first_run_setup is left real.
+    patch_heavy_init(construction_config, stub_first_run_setup=False)
     from anki_miner.gui import main_window as mw_module
 
-    monkeypatch.setattr(mw_module.GUIConfigManager, "load_config", lambda: test_config)
-    monkeypatch.setattr(mw_module.GUIConfigManager, "save_config", lambda cfg: None)
-    monkeypatch.setattr(mw_module.ValidationService, "__init__", lambda self, *a, **kw: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_run_validation", lambda self: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_check_for_updates", lambda self: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_maybe_create_shortcut_on_first_run", lambda self: None)
     # Run any off-thread dispatch inline (no real QThread) so the startup
     # stale-dict singleShot can't leak a worker into a test that never spins a
     # loop. Individual tests re-patch run_off_thread when they assert on it.
     monkeypatch.setattr(mw_module, "run_off_thread", lambda parent, work, on_done, *a, **kw: on_done(work()))
-
-
-@pytest.fixture
-def main_window(qtbot, monkeypatch, test_config):
-    # first_run_setup_done=True so the deferred first-run wizard never fires.
-    construction_config = replace(test_config, first_run_setup_done=True)
-    _patch_heavy_init(monkeypatch, construction_config)
     from anki_miner.gui.main_window import MainWindow
 
     window = MainWindow()
