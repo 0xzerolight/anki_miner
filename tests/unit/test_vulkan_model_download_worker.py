@@ -14,17 +14,13 @@ pytest.importorskip("PyQt6.QtCore")
 
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.install_worker import InstallWorker, vulkan_model_task
+from tests.unit._worker_sync import _run_worker_sync
 
 _MOD = "anki_miner.services.asr.ggml_model_installer"
 
 
 def _worker(asr_model: str, asr_models_root) -> InstallWorker:
     return InstallWorker(vulkan_model_task(asr_model, asr_models_root))
-
-
-def _run_worker_sync(worker: InstallWorker) -> None:
-    """Run the worker's run() synchronously (bypass QThread.start)."""
-    worker.run()
 
 
 def _patch_installers(monkeypatch, *, ggml=None, vad=None) -> None:

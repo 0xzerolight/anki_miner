@@ -12,17 +12,13 @@ import pytest
 pytest.importorskip("PyQt6.QtCore")
 
 from anki_miner.gui.workers.install_worker import InstallWorker, onnx_pack_task
+from tests.unit._worker_sync import _run_worker_sync
 
 _INSTALL = "anki_miner.services.asr.onnx_pack_installer.install_onnx_pack"
 
 
 def _worker(onnx_pack_root) -> InstallWorker:
     return InstallWorker(onnx_pack_task(onnx_pack_root))
-
-
-def _run_worker_sync(worker: InstallWorker) -> None:
-    """Run the worker's run() synchronously (bypass QThread.start)."""
-    worker.run()
 
 
 def test_success_emits_result_true(qapp, tmp_path, monkeypatch):

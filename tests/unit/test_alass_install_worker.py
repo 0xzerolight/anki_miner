@@ -12,17 +12,13 @@ import pytest
 pytest.importorskip("PyQt6.QtCore")
 
 from anki_miner.gui.workers.install_worker import InstallWorker, alass_install_task
+from tests.unit._worker_sync import _run_worker_sync
 
 _INSTALL = "anki_miner.services.alass_installer.install_alass"
 
 
 def _worker(bin_root) -> InstallWorker:
     return InstallWorker(alass_install_task(bin_root))
-
-
-def _run_worker_sync(worker: InstallWorker) -> None:
-    """Run the worker's run() synchronously (bypass QThread.start)."""
-    worker.run()
 
 
 def test_success_emits_result_true(qapp, tmp_path, monkeypatch):

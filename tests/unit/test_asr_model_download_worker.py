@@ -12,17 +12,13 @@ import pytest
 pytest.importorskip("PyQt6.QtCore")
 
 from anki_miner.gui.workers.install_worker import InstallWorker, asr_download_task
+from tests.unit._worker_sync import _run_worker_sync
 
 _DOWNLOAD = "anki_miner.services.asr.model_manager.download"
 
 
 def _worker(name: str, models_root) -> InstallWorker:
     return InstallWorker(asr_download_task(name, models_root))
-
-
-def _run_worker_sync(worker: InstallWorker) -> None:
-    """Run the worker's run() synchronously (bypass QThread.start)."""
-    worker.run()
 
 
 # ---------------------------------------------------------------------------
