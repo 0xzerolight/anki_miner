@@ -6,11 +6,11 @@ import os
 import shutil
 import tempfile
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Callable
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services._staging import promote_staged_dir
 from anki_miner.services.audio_packs.formats import PARSERS, detect_pack_format
 from anki_miner.services.audio_packs.storage import (
     SCHEMA_VERSION,
@@ -161,22 +161,8 @@ def import_audio_pack(
         )
 
         # --- promote staging → final atomically ---
-        if final_path.exists():
-            # overwrite=True was already verified above
-            backup = final_path.with_name(final_path.name + ".bak-" + datetime.now(UTC).strftime("%Y%m%d%H%M%S%f"))
-            final_path.rename(backup)
-            try:
-                os.replace(staging, final_path)
-            except Exception:
-                # Restore the backup so the user is not left with an empty slot.
-                if final_path.exists():
-                    shutil.rmtree(final_path, ignore_errors=True)
-                if not final_path.exists():
-                    backup.rename(final_path)
-                raise
-            shutil.rmtree(backup, ignore_errors=True)
-        else:
-            os.replace(staging, final_path)
+        # overwrite=True was already verified above (pre-check near the top).
+        promote_staged_dir(staging, final_path, mover=os.replace, overwrite=True)
 
     finally:
         # staging_parent may already be gone via os.replace; ignore errors.
