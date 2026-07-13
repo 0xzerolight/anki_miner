@@ -9,11 +9,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading import ReadingSourceRef
-from anki_miner.models.reading_queue import (
-    ReadingItemStatus,
-    ReadingQueueItem,
-)
+from anki_miner.models.reading_queue import ReadingQueueItem
 
 
 def _ref(
@@ -43,7 +41,7 @@ class TestReadingQueueItemDefaults:
 
     def test_default_optional_fields(self):
         item = ReadingQueueItem(source=REF, title="Show", kind="mokuro")
-        assert item.status == ReadingItemStatus.READY
+        assert item.status == ReadyItemStatus.READY
         assert item.cards_created == 0
         assert item.error_message is None
 
@@ -58,21 +56,21 @@ class TestReadingQueueItemDefaults:
             source=REF,
             title="Show",
             kind="mokuro",
-            status=ReadingItemStatus.PROCESSING,
+            status=ReadyItemStatus.PROCESSING,
         )
-        assert item.status == ReadingItemStatus.PROCESSING
+        assert item.status == ReadyItemStatus.PROCESSING
 
 
 # ---------------------------------------------------------------------------
-# ReadingItemStatus
+# ReadyItemStatus
 # ---------------------------------------------------------------------------
 
 
-class TestReadingItemStatus:
+class TestReadyItemStatus:
     """No probe stage for local files, and no PENDING — the set is smaller."""
 
     def test_status_members(self):
-        assert {s.name for s in ReadingItemStatus} == {
+        assert {s.name for s in ReadyItemStatus} == {
             "READY",
             "PROCESSING",
             "COMPLETED",
@@ -80,10 +78,10 @@ class TestReadingItemStatus:
         }
 
     def test_status_values(self):
-        assert ReadingItemStatus.READY.value == "ready"
-        assert ReadingItemStatus.PROCESSING.value == "processing"
-        assert ReadingItemStatus.COMPLETED.value == "completed"
-        assert ReadingItemStatus.ERROR.value == "error"
+        assert ReadyItemStatus.READY.value == "ready"
+        assert ReadyItemStatus.PROCESSING.value == "processing"
+        assert ReadyItemStatus.COMPLETED.value == "completed"
+        assert ReadyItemStatus.ERROR.value == "error"
 
 
 # ---------------------------------------------------------------------------

@@ -5,38 +5,35 @@ Unlike the YouTube queue worker there is no fetch/probe stage, no retry
 (retry-once existed only for network fetch errors), and no workspace
 allocation: ``process_episode`` owns its own temp folder for local files.
 
-Signal shapes (exact, mirroring :class:`YouTubeQueueWorker` so the tab code
-mirrors too):
+Signal shapes, ctor validation, the skip channel, ``curation_processor``, and
+the stale-gate + factory-build ``run()`` preamble all live on
+:class:`SequentialQueueWorker`; this subclass supplies only the per-item body.
 
 * ``item_started(int)`` — idx fired before the item is mined. Items removed
-  mid-run via :meth:`AudiobookQueueWorker.skip_item` are silently skipped:
-  no ``item_started`` / ``item_finished`` for them.
+  mid-run via :meth:`skip_item` are silently skipped.
 * ``item_progress(int, str, int)`` — idx, label, pct.
 * ``item_finished(int, object, object, int)`` — idx, result-or-None,
   error-string-or-None, attempts. Attempts is always 1 (no retry). Fires
   exactly once per item that runs.
 * ``queue_finished()`` — fires once at the bottom of ``run()``. There is no
-  early-return suppression path here: YouTube suppresses it only on
-  mid-fetch cancellation, and there is no fetch stage. A cancel mid-mine
-  propagates via the worker's ``_cancel_event``, handed to
-  ``process_episode`` as ``cancel_event``: the processor's next phase
-  checkpoint returns a cancelled ``ProcessingResult`` (no exception),
-  ``item_finished`` fires for that item, and the loop-top check then stops
-  the queue, with ``queue_finished`` still emitted.
+  early-return suppression path here: YouTube suppresses it only on mid-fetch
+  cancellation, and there is no fetch stage. A cancel mid-mine propagates via
+  the worker's ``_cancel_event``, handed to ``process_episode`` as
+  ``cancel_event``: the processor's next phase checkpoint returns a cancelled
+  ``ProcessingResult`` (no exception), ``item_finished`` fires for that item,
+  and the loop-top check then stops the queue, with ``queue_finished`` still
+  emitted.
 """
 
 from __future__ import annotations
 
 import logging
-import threading
 from collections.abc import Callable
 from pathlib import Path
 
-from PyQt6.QtCore import pyqtSignal
-
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
-from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
+from anki_miner.gui.workers._queue_worker_base import SequentialQueueWorker
 from anki_miner.models.audiobook_queue import AudiobookQueueItem
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.dictionary.registry import stale_dict_reimport_error
@@ -44,22 +41,13 @@ from anki_miner.services.dictionary.registry import stale_dict_reimport_error
 logger = logging.getLogger(__name__)
 
 
-class AudiobookQueueWorker(ProcessorOwningWorker):
+class AudiobookQueueWorker(SequentialQueueWorker[AudiobookQueueItem]):
     """Worker thread that mines a queue of audiobook file pairs sequentially.
 
     Each item runs through ``EpisodeProcessor.process_episode`` with
     ``audio_only=True``. Any exception ends that item with the error string;
     the queue continues on to the next item regardless of per-item outcome.
     """
-
-    # Per-item index; emitted once before that item is mined.
-    item_started = pyqtSignal(int)
-    # (idx, label, pct).
-    item_progress = pyqtSignal(int, str, int)
-    # (idx, result|None, error|None, attempts). Attempts is always 1.
-    item_finished = pyqtSignal(int, object, object, int)
-    # Fires once after the last item.
-    queue_finished = pyqtSignal()
 
     def __init__(
         self,
@@ -71,117 +59,44 @@ class AudiobookQueueWorker(ProcessorOwningWorker):
         *,
         processor_factory: Callable[[], EpisodeProcessor] | None = None,
     ) -> None:
-        """Initialize the queue worker.
-
-        Args:
-            processor: Episode processor instance, or None when
-                ``processor_factory`` is provided (built at run() start).
-            config: Frozen app config.
-            items: Queue items to process, in order (frozen snapshot).
-            curation_callback: Forwarded to ``process_episode``. Pass ``None``
-                to disable entirely (the tab gates on its review checkbox).
-            parent: Optional parent QObject.
-            processor_factory: Zero-arg callable that returns an EpisodeProcessor.
-                Mutually exclusive with a non-None ``processor``.  When supplied,
-                the processor is constructed on the worker thread inside run(),
-                keeping the GUI thread free of the registry/sqlite/CSV work.
-        """
-        if processor is not None and processor_factory is not None:
-            raise ValueError("Provide either processor or processor_factory, not both")
-        if processor is None and processor_factory is None:
-            raise ValueError("Either processor or processor_factory must be provided")
-        super().__init__(parent)
-        self._processor = processor
-        self._processor_factory = processor_factory
-        self._config = config
-        self._items = items
-        self._curation_callback = curation_callback
-        # Published for the GUI curation bridge. Attribute names mirror
-        # the other queue workers' _curation_* so the shared curation bridge
-        # can read the same attribute names regardless of which worker is
-        # driving it. Set per item before mining starts (the worker blocks in
-        # the curation wait, so reads from the GUI thread are race-free).
+        """Initialize the queue worker (see :class:`SequentialQueueWorker`)."""
+        super().__init__(
+            processor,
+            config,
+            items,
+            curation_callback,
+            parent,
+            processor_factory=processor_factory,
+        )
+        # Published for the GUI curation bridge. Attribute names mirror the
+        # other queue workers' _curation_* so the shared curation bridge can
+        # read the same attribute names regardless of which worker is driving
+        # it. Set per item before mining starts (the worker blocks in the
+        # curation wait, so reads from the GUI thread are race-free).
         self._curation_video: Path | None = None
         self._curation_subtitle: Path | None = None
         self._curation_offset: float = config.subtitle_offset
-        # Skip channel: items the user removed mid-run (Clear / row [x]).
-        # The run loop iterates the frozen constructor snapshot, so a GUI-side
-        # removal alone would still mine the item — cards for rows that no
-        # longer exist. Identity-based membership (AudiobookQueueItem is
-        # eq=False); ``self._items`` keeps every snapshot item alive, so
-        # identities are stable for the whole run.
-        self._skip_lock = threading.Lock()
-        self._skipped: set[AudiobookQueueItem] = set()
 
-    @property
-    def curation_processor(self) -> EpisodeProcessor | None:
-        """The processor shared by every queue item.
+    def _stale_reimport_message(self) -> str | None:
+        return stale_dict_reimport_error(self._config)
 
-        None before run() has built it via a supplied ``processor_factory``;
-        the GUI caches it back after the run so subsequent runs reuse it.
-        """
-        return self._processor
-
-    def skip_item(self, item: AudiobookQueueItem) -> None:
-        """Mark *item* to be skipped if its turn has not started yet.
-
-        Thread-safe; called from the GUI thread when the user removes a queued
-        row during an active run. Best-effort: an item the loop has already
-        started runs to completion (its idx signals resolve against the tab's
-        frozen run-items snapshot, which tolerates removed rows). Skipped
-        items emit no signals at all.
-        """
-        with self._skip_lock:
-            self._skipped.add(item)
-
-    def _is_skipped(self, item: AudiobookQueueItem) -> bool:
-        """Thread-safe membership check for the skip channel."""
-        with self._skip_lock:
-            return item in self._skipped
-
-    def run(self) -> None:
-        """Process the queue end-to-end, one mining attempt per item."""
-        # Schema-staleness pre-loop gate (4.0): abort the whole queue once with
-        # a single actionable error when an enabled indexed dict slot needs
-        # reimport, instead of one silent zero-card failure row per item.
-        stale_msg = stale_dict_reimport_error(self._config)
-        if stale_msg is not None:
-            self.error.emit(stale_msg)
-            self.queue_finished.emit()
-            return
-        # Build the processor on the worker thread when a factory was supplied,
-        # keeping the GUI thread free of the slow registry/sqlite/CSV work during
-        # EpisodeProcessor construction. A factory failure ends the whole run:
-        # emit error, then queue_finished so the tab recovers like any exit path.
-        if self._processor is None:
-            assert self._processor_factory is not None  # validated in __init__
-            try:
-                self._processor = self._processor_factory()
-            except Exception as exc:  # noqa: BLE001 - surface every failure to GUI
-                logger.exception("AudiobookQueueWorker processor build failed")
-                self.error.emit(f"{type(exc).__name__}: {exc}")
-                self.queue_finished.emit()
-                return
-        for idx, item in enumerate(self._items):
-            if self.is_cancelled:
-                break
-            if self._is_skipped(item):
-                continue  # removed from the GUI mid-run; no signals for it
-            self.item_started.emit(idx)
-            try:
-                result = self._mine_one(idx, item)
-            except Exception as exc:  # noqa: BLE001 - surface any failure to GUI
-                logger.exception("AudiobookQueueWorker item %d failed", idx)
-                self.item_finished.emit(idx, None, f"{type(exc).__name__}: {exc}", 1)
-            else:
-                self.item_finished.emit(idx, result, None, 1)
-        self.queue_finished.emit()
+    def _run_item(self, idx: int, item: AudiobookQueueItem) -> bool:
+        """Mine one item, emitting item_started + item_finished. Never aborts early."""
+        self.item_started.emit(idx)
+        try:
+            result = self._mine_one(idx, item)
+        except Exception as exc:  # noqa: BLE001 - surface any failure to GUI
+            logger.exception("AudiobookQueueWorker item %d failed", idx)
+            self.item_finished.emit(idx, None, f"{type(exc).__name__}: {exc}", 1)
+        else:
+            self.item_finished.emit(idx, result, None, 1)
+        return False
 
     def _mine_one(self, idx: int, item: AudiobookQueueItem) -> object:
         """Mine a single audiobook file pair.
 
         Returns the orchestrator ``ProcessingResult`` on success; any
-        exception propagates to the error handling in ``run``.
+        exception propagates to the error handling in ``_run_item``.
         """
         # Publish curation media context BEFORE mining so the GUI curation
         # bridge can read it while the worker blocks in the curation wait.

@@ -147,7 +147,7 @@ class TestLaunchRunStart:
         item = _make_item()
         tab._launch_run([item])
         kwargs = tab._queue_worker_cls.call_args.kwargs
-        assert kwargs["config"] is tab._config
+        assert kwargs["config"] is tab.config
         assert kwargs["items"] == [item]
         # No preview plumbing survives on the worker ctor.
         assert "preview_mode" not in kwargs
@@ -362,7 +362,7 @@ class TestUpdateConfig:
         with patch(_CREATE_TARGET) as mock_create:
             tab.update_config(new_cfg)
 
-        assert tab._config is new_cfg
+        assert tab.config is new_cfg
         assert tab._processor is None
         mock_create.assert_not_called()
         old_processor.close.assert_called_once()
@@ -377,7 +377,7 @@ class TestUpdateConfig:
         with patch(_CREATE_TARGET) as mock_create:
             tab.update_config(new_cfg)
 
-        assert tab._config is new_cfg
+        assert tab.config is new_cfg
         assert tab._processor is original_processor
         assert tab._config_dirty is True
         original_processor.close.assert_not_called()
