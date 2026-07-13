@@ -121,13 +121,11 @@ class AnkiConnectPage(QWizardPage):
 
     def _recheck_work(self) -> tuple[bool, str]:
         """Blocking AnkiConnect check (runs off the GUI thread)."""
-        from anki_miner.gui.widgets.dialogs.setup_wizard import setup_wizard as sw_mod
-
         # The URL is staged into the working config by _write_url_to_config() on the
-        # main thread before this worker starts, so read it from there rather than
-        # touching the QLineEdit off-thread.
-        cfg = self._wizard.working_config()
-        return sw_mod.ValidationService(cfg).check_ankiconnect()
+        # main thread before this worker starts, so the wizard's validation_service()
+        # (bound to that working config) reads the staged URL rather than touching the
+        # QLineEdit off-thread.
+        return self._wizard.validation_service().check_ankiconnect()
 
     def _on_recheck_clicked(self) -> None:
         if self._worker is not None and self._worker.isRunning():

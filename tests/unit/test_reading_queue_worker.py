@@ -18,8 +18,8 @@ import pytest
 
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.reading_queue_worker import ReadingQueueWorker
+from anki_miner.models.reading import ReadingSourceRef
 from anki_miner.models.reading_queue import ReadingItemStatus, ReadingQueueItem
-from anki_miner.services.reading.models import ReadingSourceRef
 
 
 class _SignalCapture:

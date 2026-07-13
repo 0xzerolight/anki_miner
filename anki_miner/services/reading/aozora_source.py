@@ -16,14 +16,15 @@ from __future__ import annotations
 import re
 import unicodedata
 
-# _decode's canonical home is _util (shared with subtitle_source); imported
-# here both for load() and as a re-export for tests that patch/call it.
-from anki_miner.services.reading._util import _decode
-from anki_miner.services.reading.models import (
+from anki_miner.models.reading import (
     ReadingDocument,
     ReadingSourceRef,
     ReadingUnit,
 )
+
+# _decode's canonical home is _util (shared with subtitle_source); imported
+# here both for load() and as a re-export for tests that patch/call it.
+from anki_miner.services.reading._util import _decode
 from anki_miner.services.reading.sentence_splitter import split_sentences
 
 # --- gaiji (external characters) -----------------------------------------

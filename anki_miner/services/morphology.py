@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any, Iterator
 
-from anki_miner.services.ja_normalize import is_cjk_ideograph
+from anki_miner.utils.ja_normalize import is_cjk_ideograph
 from anki_miner.utils.text_utils import hiragana_to_katakana, katakana_to_hiragana
 
 # Batch attested-readings probe (DefinitionService.offline_term_readings):

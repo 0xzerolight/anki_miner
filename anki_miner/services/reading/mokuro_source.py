@@ -17,15 +17,15 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from anki_miner.services.ja_normalize import is_cjk_ideograph
-from anki_miner.services.reading._util import is_junk_path, natural_sort_key
-from anki_miner.services.reading.models import (
+from anki_miner.models.reading import (
     ImageRef,
     ReadingDocument,
     ReadingSourceRef,
     ReadingUnit,
 )
+from anki_miner.services.reading._util import is_junk_path, natural_sort_key
 from anki_miner.services.reading.sentence_splitter import split_sentences
+from anki_miner.utils.ja_normalize import is_cjk_ideograph
 
 # A single block over this many characters is a pathological merged block and is
 # split into sentences; normal manga speech balloons stay one mining unit.

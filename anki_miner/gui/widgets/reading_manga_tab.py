@@ -56,8 +56,8 @@ from anki_miner.utils.i18n import tr_format
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.interfaces.presenter import PresenterProtocol
+    from anki_miner.models.reading import ReadingSourceRef
     from anki_miner.orchestration import EpisodeProcessor
-    from anki_miner.services.reading.models import ReadingSourceRef
 
 # Extensions accepted from a drag-drop (directories are always accepted). Manga
 # sources fill the selector; novel/subtitle drops earn a cross-tab hint.

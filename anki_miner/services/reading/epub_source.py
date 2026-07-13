@@ -35,7 +35,7 @@ from urllib.parse import unquote
 from lxml import etree, html  # type: ignore[import-untyped]
 
 from anki_miner.exceptions import SetupError
-from anki_miner.services.reading.models import (
+from anki_miner.models.reading import (
     ImageRef,
     ReadingDocument,
     ReadingSourceRef,

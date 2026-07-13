@@ -20,9 +20,9 @@ from PIL import UnidentifiedImageError
 
 from anki_miner.exceptions import AnkiMinerException, SetupError
 from anki_miner.models import TokenizedWord
+from anki_miner.models.reading import ImageRef, ReadingDocument, ReadingUnit
 from anki_miner.orchestration.episode_processor import EpisodeProcessor, _format_timestamp
 from anki_miner.presenters import NullPresenter
-from anki_miner.services.reading.models import ImageRef, ReadingDocument, ReadingUnit
 from anki_miner.services.word_filter import WordFilterService
 from anki_miner.services.word_list_service import WordListService
 

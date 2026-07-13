@@ -52,11 +52,11 @@ if TYPE_CHECKING:
     from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
     from anki_miner.interfaces.sentence_audio import SentenceAudioFetcher
     from anki_miner.models import LineLemmas
+    from anki_miner.models.reading import ImageRef, ReadingDocument
     from anki_miner.services.dictionary.registry import DictionaryRegistry
     from anki_miner.services.frequency.multi_frequency_service import MultiFrequencyService
     from anki_miner.services.known_word_db import KnownWordDB
     from anki_miner.services.pitch_accent_service import PitchAccentService
-    from anki_miner.services.reading.models import ImageRef, ReadingDocument
     from anki_miner.services.stats_service import StatsService
     from anki_miner.services.word_list_service import WordListService
     from anki_miner.services.wordset_service import WordsetService
