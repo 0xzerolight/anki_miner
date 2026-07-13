@@ -32,7 +32,7 @@ import pytest
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
-from anki_miner.models.audiobook_queue import AudiobookItemStatus
+from anki_miner.models.mining_queue import ReadyItemStatus
 
 
 @pytest.fixture
@@ -109,7 +109,7 @@ class TestAddPair:
         assert len(items) == 1
         assert items[0].audio_file == audio
         assert items[0].subtitle_file == sub
-        assert items[0].status == AudiobookItemStatus.READY
+        assert items[0].status == ReadyItemStatus.READY
 
     def test_add_renders_row_and_clears_pickers(self, tab, tmp_path):
         audio, sub = _make_pair(tmp_path)
@@ -241,7 +241,7 @@ class TestRunStartup:
     def test_mine_passes_ready_items_only(self, tab, tmp_path):
         item_done = _add_pair(tab, tmp_path, "done")
         item_ready = _add_pair(tab, tmp_path, "ready")
-        item_done.status = AudiobookItemStatus.COMPLETED
+        item_done.status = ReadyItemStatus.COMPLETED
 
         queue_cls = tab._queue_worker_cls
         tab._on_mine_clicked()
@@ -430,7 +430,7 @@ class TestPerItemSignals:
 
         tab._on_item_started(0)
 
-        assert item_a.status == AudiobookItemStatus.PROCESSING
+        assert item_a.status == ReadyItemStatus.PROCESSING
         assert "Mining 1 of 3" in tab.progress_widget.status_label.text()
         assert "vol1.m4b" in tab.progress_widget.status_label.text()
         # Row's remove button disabled while PROCESSING.
@@ -465,7 +465,7 @@ class TestPerItemSignals:
         result = MagicMock(cards_created=5)
         tab._on_item_finished(0, result, None, 1)
 
-        assert item.status == AudiobookItemStatus.COMPLETED
+        assert item.status == ReadyItemStatus.COMPLETED
         assert item.cards_created == 5
         assert "5 cards created" in tab._row_widgets[item].detail_label.full_text
         # Presenter is forwarded the result.
@@ -478,7 +478,7 @@ class TestPerItemSignals:
 
         tab._on_item_finished(0, None, "FFmpegError: oops", 1)
 
-        assert item.status == AudiobookItemStatus.ERROR
+        assert item.status == ReadyItemStatus.ERROR
         assert item.error_message == "FFmpegError: oops"
         assert "FFmpegError: oops" in tab._row_widgets[item].detail_label.full_text
 
@@ -493,7 +493,7 @@ class TestPerItemSignals:
         result = ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0, errors=["anki went away"])
         tab._on_item_finished(0, result, None, 1)
 
-        assert item.status == AudiobookItemStatus.ERROR
+        assert item.status == ReadyItemStatus.ERROR
         assert item.error_message == "anki went away"
         tab._presenter.show_processing_result.assert_not_called()
 
@@ -509,7 +509,7 @@ class TestPerItemSignals:
         result = ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0, errors=[CANCELLED_ERROR])
         tab._on_item_finished(0, result, None, 1)
 
-        assert item.status == AudiobookItemStatus.READY
+        assert item.status == ReadyItemStatus.READY
         assert item.error_message is None
 
     def test_item_finished_presenter_error_swallowed(self, tab, tmp_path):
@@ -521,7 +521,7 @@ class TestPerItemSignals:
 
         # Must not propagate.
         tab._on_item_finished(0, MagicMock(cards_created=1), None, 1)
-        assert item.status == AudiobookItemStatus.COMPLETED
+        assert item.status == ReadyItemStatus.COMPLETED
 
     def test_item_started_out_of_range_idx_is_noop(self, tab, tmp_path):
         """An idx beyond the run snapshot must not raise or touch any state."""
@@ -531,7 +531,7 @@ class TestPerItemSignals:
 
         tab._on_item_started(99)
 
-        assert item.status == AudiobookItemStatus.READY
+        assert item.status == ReadyItemStatus.READY
         assert tab.progress_widget.status_label.text() == status_before
 
     def test_item_started_with_no_run_snapshot_is_noop(self, tab):
@@ -546,7 +546,7 @@ class TestPerItemSignals:
 
         tab._on_item_finished(99, None, "err", 1)
 
-        assert item.status == AudiobookItemStatus.PROCESSING
+        assert item.status == ReadyItemStatus.PROCESSING
         assert item.error_message is None
         tab._presenter.show_processing_result.assert_not_called()
 
@@ -632,7 +632,7 @@ class TestWorkerFinished:
         assert tab.add_button.isEnabled()
         assert not tab.mine_button.isEnabled()
         assert tab.stop_button.isHidden()
-        assert item.status == AudiobookItemStatus.COMPLETED
+        assert item.status == ReadyItemStatus.COMPLETED
 
     def test_worker_finished_restores_stop_button_and_progress(self, tab, tmp_path):
         _add_pair(tab, tmp_path)

@@ -58,7 +58,8 @@ from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.audiobook_queue_worker import AudiobookQueueWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
-from anki_miner.models.audiobook_queue import AudiobookItemStatus, AudiobookQueue, AudiobookQueueItem
+from anki_miner.models.audiobook_queue import AudiobookQueue, AudiobookQueueItem
+from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.utils.i18n import tr_format
 
@@ -83,10 +84,10 @@ class AudiobookTab(_ListQueueMiningTabBase):
     """
 
     _shutdown_log_name = "Audiobook"
-    _status_ready = AudiobookItemStatus.READY
-    _status_processing = AudiobookItemStatus.PROCESSING
-    _status_completed = AudiobookItemStatus.COMPLETED
-    _status_error = AudiobookItemStatus.ERROR
+    _status_ready = ReadyItemStatus.READY
+    _status_processing = ReadyItemStatus.PROCESSING
+    _status_completed = ReadyItemStatus.COMPLETED
+    _status_error = ReadyItemStatus.ERROR
 
     def __init__(
         self,

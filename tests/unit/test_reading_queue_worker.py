@@ -18,8 +18,9 @@ import pytest
 
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.reading_queue_worker import ReadingQueueWorker
+from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading import ReadingSourceRef
-from anki_miner.models.reading_queue import ReadingItemStatus, ReadingQueueItem
+from anki_miner.models.reading_queue import ReadingQueueItem
 from tests.unit._queue_worker_harness import (
     connect_all as _connect_all,
 )
@@ -95,8 +96,8 @@ def test_two_item_success_signal_sequence(make_worker, mock_processor, fake_load
 
     # Worker owns the item lifecycle: statuses COMPLETED, cards_created set.
     assert [i.status for i in items] == [
-        ReadingItemStatus.COMPLETED,
-        ReadingItemStatus.COMPLETED,
+        ReadyItemStatus.COMPLETED,
+        ReadyItemStatus.COMPLETED,
     ]
     assert [i.cards_created for i in items] == [4, 7]
     assert [i.error_message for i in items] == [None, None]
@@ -114,7 +115,7 @@ def test_failed_result_marks_item_error(make_worker, mock_processor, fake_load):
     caps = _connect_all(worker)
     worker.run()
 
-    assert items[0].status == ReadingItemStatus.ERROR
+    assert items[0].status == ReadyItemStatus.ERROR
     assert items[0].error_message == "ffmpeg exploded"
     # item_finished carries the error string (result=None), so the tab logs a failure.
     assert caps["finished"].calls[0][1] is None
@@ -133,7 +134,7 @@ def test_cancelled_result_marks_item_ready(make_worker, mock_processor, fake_loa
     worker = make_worker(items=items)
     worker.run()
 
-    assert items[0].status == ReadingItemStatus.READY
+    assert items[0].status == ReadyItemStatus.READY
     assert items[0].error_message is None
 
 
@@ -170,10 +171,10 @@ def test_load_setuperror_on_first_item_continues_queue(make_worker, mock_process
     worker.run()
 
     # Item 1 errored on load; item 2 still mined.
-    assert items[0].status is ReadingItemStatus.ERROR
+    assert items[0].status is ReadyItemStatus.ERROR
     assert items[0].error_message == "This EPUB is DRM-protected and cannot be mined."
     assert items[0].cards_created == 0
-    assert items[1].status is ReadingItemStatus.COMPLETED
+    assert items[1].status is ReadyItemStatus.COMPLETED
     assert items[1].cards_created == 9
 
     # SetupError message surfaced verbatim (no type prefix) via item_finished.
@@ -202,9 +203,9 @@ def test_mining_exception_on_first_item_continues_queue(make_worker, mock_proces
     worker.run()
 
     # Non-SetupError failures keep the type prefix.
-    assert items[0].status is ReadingItemStatus.ERROR
+    assert items[0].status is ReadyItemStatus.ERROR
     assert items[0].error_message == "ValueError: boom"
-    assert items[1].status is ReadingItemStatus.COMPLETED
+    assert items[1].status is ReadyItemStatus.COMPLETED
     assert caps["finished"].calls[0] == (0, None, "ValueError: boom", 1)
     assert caps["finished"].calls[1][2] is None
     assert len(caps["queue_finished"].calls) == 1

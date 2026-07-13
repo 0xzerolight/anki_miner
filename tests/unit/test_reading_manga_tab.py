@@ -38,13 +38,13 @@ from PyQt6.QtGui import QDropEvent
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
+from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading import (
     ImageRef,
     ReadingDocument,
     ReadingSourceRef,
     ReadingUnit,
 )
-from anki_miner.models.reading_queue import ReadingItemStatus
 
 _WORKER_TARGET = "anki_miner.gui.widgets._reading_mining_base.ReadingQueueWorker"
 _CREATE_TARGET = "anki_miner.gui.widgets._reading_mining_base.create_episode_processor"
@@ -239,7 +239,7 @@ class TestMineSeries:
     def test_item_finished_advances_composed_bar(self, tab):
         _mine(tab, _series(2))
         # Worker owns lifecycle: emulate it having completed item 0.
-        tab._run_items[0].status = ReadingItemStatus.COMPLETED
+        tab._run_items[0].status = ReadyItemStatus.COMPLETED
         tab._on_item_finished(0, MagicMock(cards_created=3, new_words_found=3), None, 1)
         # Composed: 1 of 2 volumes done -> 50%.
         assert tab.overall_progress_widget.progress_bar.value() == 50
@@ -261,8 +261,8 @@ class TestMineSeries:
 
     def test_queue_finished_summary_for_series(self, tab):
         _mine(tab, _series(2))
-        tab._run_items[0].status = ReadingItemStatus.COMPLETED
-        tab._run_items[1].status = ReadingItemStatus.ERROR
+        tab._run_items[0].status = ReadyItemStatus.COMPLETED
+        tab._run_items[1].status = ReadyItemStatus.ERROR
         tab._on_queue_finished()
         text = tab.log_widget.text_edit.toPlainText()
         assert "1 succeeded" in text
@@ -331,12 +331,12 @@ class TestPerItemSignalsReadOnly:
     def test_item_started_sets_bar_no_status_write(self, tab):
         _mine(tab, [_make_ref("mokuro", "Solo Vol")])
         item = tab._run_items[0]
-        item.status = ReadingItemStatus.COMPLETED
+        item.status = ReadyItemStatus.COMPLETED
         item.cards_created = 9
 
         tab._on_item_started(0)
 
-        assert item.status == ReadingItemStatus.COMPLETED
+        assert item.status == ReadyItemStatus.COMPLETED
         assert item.cards_created == 9
         assert "Solo Vol" in tab.overall_progress_widget.status_label.text()
         assert tab.overall_progress_widget.progress_bar.maximum() == 100
