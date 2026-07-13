@@ -21,7 +21,6 @@ def base_config(tmp_path):
         AnkiMinerConfig(),
         dicts_root=tmp_path / "dicts",
         known_words_db_path=tmp_path / "known_words.db",
-        history_db_path=tmp_path / "history.db",
         stats_db_path=tmp_path / "stats.db",
     )
 
@@ -144,7 +143,6 @@ class TestRegistryOSErrorInServiceFactory:
             AnkiMinerConfig(),
             dicts_root=tmp_path / "dicts",
             known_words_db_path=tmp_path / "known_words.db",
-            history_db_path=tmp_path / "history.db",
             stats_db_path=tmp_path / "stats.db",
             dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
         )
@@ -208,7 +206,6 @@ class TestFrequencyServiceWiring:
             AnkiMinerConfig(),
             dicts_root=tmp_path / "dicts",
             known_words_db_path=tmp_path / "known_words.db",
-            history_db_path=tmp_path / "history.db",
             stats_db_path=tmp_path / "stats.db",
             freqs_root=tmp_path / "freqs",
             frequency_chain=tuple(FreqEntry(source_id=sid) for sid in chain),
@@ -334,7 +331,6 @@ class TestPitchServiceWiring:
             AnkiMinerConfig(),
             dicts_root=tmp_path / "dicts",
             known_words_db_path=tmp_path / "known_words.db",
-            history_db_path=tmp_path / "history.db",
             stats_db_path=tmp_path / "stats.db",
             pitch_accent_path=pitch_path,
         )

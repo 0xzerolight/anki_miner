@@ -27,6 +27,20 @@ class GUIConfigManager:
 
     CONFIG_FILE = ANKI_MINER_HOME / "gui_config.json"
 
+    # Schema version stamped into every saved gui_config.json. Bump it only
+    # when introducing a migration shim that a load MUST run for files written
+    # under an older schema; that shim then gates on the loaded marker being
+    # below this floor.
+    #
+    # Floor policy: every migration shim below version 1 was deleted
+    # 2026-07-13 (the pre-v2.3.2 allowed_pos backfill, the QSettings→JSON theme
+    # carry-over, and the use_offline_dict strip). A config file with no marker
+    # is treated as version 0; it still loads cleanly — unknown keys are
+    # dropped and dataclass defaults fill any gaps — it merely forgoes those
+    # pre-v2.5 carry-overs. The three chain rebuilds are permanent
+    # deserializers, not version shims, and are unaffected.
+    CONFIG_SCHEMA_VERSION = 1
+
     @classmethod
     def save_config(cls, config: AnkiMinerConfig) -> None:
         """Save configuration to JSON file.
@@ -53,6 +67,11 @@ class GUIConfigManager:
 
         # Convert Path objects to strings
         config_dict = cls._paths_to_strings(config_dict)
+
+        # Stamp the schema version so future loads can tell which shims (if any)
+        # this file needs. It is a JSON-only marker, not a dataclass field, so
+        # the load path drops it before constructing AnkiMinerConfig.
+        config_dict["config_schema_version"] = cls.CONFIG_SCHEMA_VERSION
 
         # Atomic write: stage to a sibling .tmp then os.replace. A truncating
         # in-place write (open("w")) leaves invalid JSON if we crash or lose
@@ -101,7 +120,6 @@ class GUIConfigManager:
         cls,
         config_dict: dict[str, Any],
         *,
-        allow_qsettings_theme: bool = True,
         backfill_anki_fields: bool = True,
     ) -> dict[str, Any]:
         """Run the full pre-construction migration pipeline on a raw JSON dict.
@@ -113,10 +131,6 @@ class GUIConfigManager:
         fields.
 
         Args:
-            allow_qsettings_theme: When False, skip injecting the legacy
-                QSettings theme for a missing ``theme`` key. The import-overlay
-                path sets this so an imported file without a theme keeps the
-                current one instead of resurrecting a stale pre-v2.5 value.
             backfill_anki_fields: When False, skip default-filling missing
                 ``anki_fields`` sub-keys (the sub-key renames still apply).
                 The import-overlay path sets this so a partial ``anki_fields``
@@ -134,9 +148,6 @@ class GUIConfigManager:
         if backfill_anki_fields:
             config_dict = cls._backfill_anki_fields(config_dict)
 
-        # Migrate stale allowed_pos defaults (pre-v2.3.2 missing 代名詞)
-        config_dict = cls._migrate_allowed_pos(config_dict)
-
         # Migrate legacy dictionary fields → dictionary_chain
         config_dict = cls._migrate_dictionary_chain(config_dict)
 
@@ -146,10 +157,15 @@ class GUIConfigManager:
         # Migrate frequency_chain JSON dicts → FreqEntry
         config_dict = cls._migrate_frequency_chain(config_dict)
 
-        # Migrate theme key out of QSettings (only when the key is absent
-        # from the loaded dict — i.e. first launch after v2.5 upgrade).
-        if allow_qsettings_theme:
-            config_dict = cls._migrate_theme_from_qsettings(config_dict)
+        # Drop the schema-version marker (see CONFIG_SCHEMA_VERSION): a JSON-
+        # only key, never a dataclass field. A missing marker means the file
+        # predates schema versioning (version 0). Every migration shim below
+        # the current floor was removed 2026-07-13, so nothing gates on the
+        # version yet; a version-0 config still loads fine here (unknown keys
+        # dropped + dataclass defaults), it only forgoes the pre-v2.5 carry-
+        # overs those shims performed. Pop it so it neither reaches
+        # AnkiMinerConfig nor logs as a dropped unknown key below.
+        config_dict.pop("config_schema_version", None)
 
         # Drop keys not in the current dataclass (e.g., removed fields from old
         # versions). Without this filter, AnkiMinerConfig(**config_dict) raises
@@ -173,17 +189,7 @@ class GUIConfigManager:
             file before falling back to default configuration.
         """
         if not cls.CONFIG_FILE.exists():
-            default = create_default_config()
-            # Pre-v2.5: theme was stored in QSettings. If a user upgrades from
-            # such a build and has never saved any other GUI config, the file
-            # won't exist yet — read QSettings and seed the default so they
-            # don't lose their theme preference on first launch.
-            from dataclasses import replace
-
-            qs_theme = cls._read_qsettings_theme()
-            if qs_theme is not None and qs_theme != default.theme:
-                return replace(default, theme=qs_theme)
-            return default
+            return create_default_config()
 
         try:
             return cls._parse_and_migrate(cls.CONFIG_FILE)
@@ -289,11 +295,7 @@ class GUIConfigManager:
         if not isinstance(data, dict):
             raise ValueError("Not a settings file: expected a JSON object of config fields")
 
-        incoming = cls._migrate_dict(
-            dict(data),
-            allow_qsettings_theme=False,
-            backfill_anki_fields=False,
-        )
+        incoming = cls._migrate_dict(dict(data), backfill_anki_fields=False)
         excluded = cls.machine_specific_fields()
         incoming = {k: v for k, v in incoming.items() if k not in excluded}
 
@@ -309,44 +311,13 @@ class GUIConfigManager:
 
         return dataclasses.replace(current_config, **incoming)
 
-    # Pre-v2.3.2 default for allowed_pos (lacked 代名詞). Used to detect untouched
-    # legacy configs we can safely migrate to the current default.
-    _LEGACY_ALLOWED_POS: frozenset[str] = frozenset({"名詞", "動詞", "形容詞", "副詞", "形状詞"})
-
-    @classmethod
-    def _migrate_allowed_pos(cls, data: dict[str, Any]) -> dict[str, Any]:
-        """Replace stale pre-v2.3.2 allowed_pos default with the current default.
-
-        Only fires when the saved list matches the legacy default exactly (set
-        comparison so JSON ordering doesn't matter) AND 代名詞 is absent. User-
-        edited lists are left untouched. The migration is in-memory only; the
-        new value will persist the next time the user saves their config.
-        """
-        saved = data.get("allowed_pos")
-        if not isinstance(saved, list):
-            return data
-
-        saved_set = set(saved)
-        if saved_set == cls._LEGACY_ALLOWED_POS and "代名詞" not in saved_set:
-            logger.info("Migrating allowed_pos: adding 代名詞 to enable pronoun mining")
-            data["allowed_pos"] = list(create_default_config().allowed_pos)
-
-        return data
-
     @staticmethod
     def _migrate_dictionary_chain(data: dict[str, Any]) -> dict[str, Any]:
         """Rebuild ChainEntry instances when an existing dictionary_chain is
         loaded as list[dict] from JSON. Missing chains fall through to the
         dataclass defaults (jmdict-english + jisho).
-
-        Also strips the obsolete ``use_offline_dict`` key, which was the
-        pre-chain on/off toggle for the JMdict provider.
         """
         from anki_miner.config import ChainEntry
-
-        # use_offline_dict is no longer a config field; drop it so the
-        # AnkiMinerConfig constructor doesn't choke on unknown kwargs.
-        data.pop("use_offline_dict", None)
 
         raw_chain = data.get("dictionary_chain")
         if raw_chain is None:
@@ -441,46 +412,6 @@ class GUIConfigManager:
                         )
                     )
         data["frequency_chain"] = tuple(chain)
-        return data
-
-    @staticmethod
-    def _read_qsettings_theme() -> str | None:
-        """Read a legacy theme value from QSettings, returning None if absent.
-
-        Pre-v2.5 the active theme was persisted as a QSettings key
-        ``("AnkiMiner", "GUI", "theme")``. The new home is gui_config.json.
-        This helper exists only to migrate older installs on upgrade.
-
-        Imports PyQt6 lazily so the module is safely importable in non-GUI
-        contexts (e.g. CLI invocations or tests that don't pull in Qt).
-        """
-        try:
-            from PyQt6.QtCore import QSettings
-        except Exception:  # pragma: no cover — Qt not installed in this env
-            return None
-
-        settings = QSettings("AnkiMiner", "GUI")
-        if not settings.contains("theme"):
-            return None
-        value = settings.value("theme")
-        if isinstance(value, str) and value:
-            return value
-        return None
-
-    @classmethod
-    def _migrate_theme_from_qsettings(cls, data: dict[str, Any]) -> dict[str, Any]:
-        """Inject the legacy QSettings theme value when missing from the dict.
-
-        No-op when:
-          * ``data`` already contains a ``theme`` key (user is on v2.5+), or
-          * QSettings has no ``theme`` value (fresh install or never customised).
-        """
-        if "theme" in data:
-            return data
-        legacy = cls._read_qsettings_theme()
-        if legacy is None:
-            return data
-        data["theme"] = legacy
         return data
 
     @staticmethod

@@ -4,7 +4,6 @@ from .anki_service import AnkiService
 from .definition_service import DefinitionService
 from .dictionary.providers import IndexedDictProvider, JishoProvider
 from .export_service import ExportService
-from .history_service import HistoryService
 from .media_extractor import MediaExtractorService
 from .pitch_accent_service import PitchAccentService
 from .shortcut_service import ShortcutResult, ShortcutService
@@ -23,7 +22,6 @@ __all__ = [
     "ValidationService",
     "PitchAccentService",
     "StatsService",
-    "HistoryService",
     "IndexedDictProvider",
     "JishoProvider",
     "ShortcutService",

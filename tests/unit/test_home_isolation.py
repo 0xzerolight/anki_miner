@@ -38,7 +38,6 @@ def test_set_test_home_redirects_config_defaults(tmp_path):
 
         config = AnkiMinerConfig()
         assert config.known_words_db_path == tmp_path / "known_words.db"
-        assert config.history_db_path == tmp_path / "history.db"
         assert config.stats_db_path == tmp_path / "stats.db"
         assert config.dicts_root == tmp_path / "dicts"
     finally:
