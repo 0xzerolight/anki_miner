@@ -13,33 +13,19 @@ from dataclasses import replace
 
 import pytest
 
-from anki_miner.config import AnkiMinerConfig
-
-
-def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
-    """Replace config persistence, validation service, and auto-check calls."""
-    from anki_miner.gui import main_window as mw_module
-
-    monkeypatch.setattr(mw_module.GUIConfigManager, "load_config", lambda: test_config)
-    monkeypatch.setattr(mw_module.GUIConfigManager, "save_config", lambda cfg: None)
-    monkeypatch.setattr(mw_module.ValidationService, "__init__", lambda self, *a, **kw: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_run_validation", lambda self: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_check_for_updates", lambda self: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_maybe_create_shortcut_on_first_run", lambda self: None)
-    # NOTE: _maybe_offer_first_run_setup is deliberately LEFT UNPATCHED here — it
-    # is the method under test. Its __init__ trigger is a QTimer.singleShot(0,...)
-    # that only fires once the event loop runs, which these synchronous unit tests
-    # never spin, so leaving it real is safe.
-
 
 @pytest.fixture
-def main_window(qtbot, monkeypatch, test_config):
+def main_window(qtbot, patch_heavy_init, test_config):
     # Construct with the flag already set so __init__ does NOT schedule the
     # deferred QTimer that would otherwise fire the (unpatched) real first-run
     # offer during qtbot teardown and block on a real QWizard.exec(). Each test
     # flips first_run_setup_done back to False before invoking the method.
     construction_config = replace(test_config, first_run_setup_done=True)
-    _patch_heavy_init(monkeypatch, construction_config)
+    # stub_first_run_setup=False: _maybe_offer_first_run_setup is the method under
+    # test, so it must stay real. Its __init__ trigger is a QTimer.singleShot(0,...)
+    # that only fires once the event loop runs, which these synchronous unit tests
+    # never spin, so leaving it real is safe.
+    patch_heavy_init(construction_config, stub_first_run_setup=False)
     from anki_miner.gui.main_window import MainWindow
 
     window = MainWindow()

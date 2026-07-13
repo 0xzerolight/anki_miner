@@ -12,27 +12,13 @@ from __future__ import annotations
 
 import pytest
 
-from anki_miner.config import AnkiMinerConfig
-
-
-def _patch_heavy_init(monkeypatch, test_config: AnkiMinerConfig) -> None:
-    """Replace config persistence, validation service, and auto-check calls."""
-    from anki_miner.gui import main_window as mw_module
-
-    monkeypatch.setattr(mw_module.GUIConfigManager, "load_config", lambda: test_config)
-    monkeypatch.setattr(mw_module.GUIConfigManager, "save_config", lambda cfg: None)
-    monkeypatch.setattr(mw_module.ValidationService, "__init__", lambda self, *a, **kw: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_check_for_updates", lambda self: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_maybe_create_shortcut_on_first_run", lambda self: None)
-    monkeypatch.setattr(mw_module.MainWindow, "_maybe_offer_first_run_setup", lambda self: None)
-
 
 @pytest.fixture
-def wired(monkeypatch, test_config, qtbot):
+def wired(monkeypatch, patch_heavy_init, test_config, qtbot):
     """MainWindow + SettingsTab joined by the production wiring helper."""
-    # _run_validation is replaced with a recorder rather than the no-op patch
-    # used elsewhere, so the test can observe the wiring firing it.
-    _patch_heavy_init(monkeypatch, test_config)
+    # _run_validation is replaced with a recorder (below) rather than the no-op
+    # stub, so the test can observe the wiring firing it — hence stub_run_validation=False.
+    patch_heavy_init(test_config, stub_run_validation=False)
     from anki_miner.gui import app as app_module
     from anki_miner.gui.main_window import MainWindow
     from anki_miner.gui.widgets.settings_tab import SettingsTab
