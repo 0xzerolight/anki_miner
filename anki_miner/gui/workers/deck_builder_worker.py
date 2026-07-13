@@ -31,22 +31,9 @@ from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.models.deck_build import DeckBuildRequest
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.corpus_aggregator import aggregate, select
+from anki_miner.services.subtitle_parser import PARSE_RELEVANT_CONFIG_FIELDS
 
 logger = logging.getLogger(__name__)
-
-# Config fields SubtitleParserService actually reads. Phase 2 reuses Phase 1's
-# parser (with its filled per-file tokenization cache); that's only sound while
-# the per-episode cfg leaves every one of these untouched, so we assert it.
-_PARSE_RELEVANT_FIELDS = (
-    "subtitle_offset",
-    "bold_target_in_sentence",
-    "allowed_pos",
-    "excluded_subtypes",
-    "compound_matching",
-    "use_subtitle_regex_filter",
-    "subtitle_regex_filter",
-    "subtitle_regex_replacement",
-)
 
 
 class DeckBuilderWorker(ProcessorOwningWorker):
@@ -240,7 +227,7 @@ class DeckBuilderWorker(ProcessorOwningWorker):
                 # bypass_optional_filters / allow_duplicate_cards, none of which
                 # the parser reads) — assert that invariant rather than trust it.
                 assert all(
-                    getattr(cfg, name) == getattr(self.config, name) for name in _PARSE_RELEVANT_FIELDS
+                    getattr(cfg, name) == getattr(self.config, name) for name in PARSE_RELEVANT_CONFIG_FIELDS
                 ), "Deck Builder Phase-2 cfg changed a parse-relevant field; parser cache reuse is unsafe"
                 proc = create_episode_processor(
                     cfg, self.presenter, self.stats_service, subtitle_parser=base.subtitle_parser

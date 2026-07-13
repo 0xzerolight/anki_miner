@@ -51,6 +51,21 @@ from anki_miner.utils.text_utils import (
 
 logger = logging.getLogger(__name__)
 
+# Config fields SubtitleParserService actually reads. Callers that reuse a
+# parser instance across configs (e.g. Deck Builder Phase 2 reusing Phase 1's
+# filled per-file tokenization cache) must assert every one of these is
+# untouched, or cached tokenization silently goes stale.
+PARSE_RELEVANT_CONFIG_FIELDS = (
+    "subtitle_offset",
+    "bold_target_in_sentence",
+    "allowed_pos",
+    "excluded_subtypes",
+    "compound_matching",
+    "use_subtitle_regex_filter",
+    "subtitle_regex_filter",
+    "subtitle_regex_replacement",
+)
+
 # Maximum number of files held simultaneously in the per-instance per-file
 # tokenization cache.  When the cap is hit the oldest entry (insertion order)
 # is evicted so the dict stays bounded while still covering the Deck Builder's
