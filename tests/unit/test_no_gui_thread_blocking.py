@@ -99,13 +99,12 @@ ALLOWLIST: dict[str, set[str]] = {
     # requests.* — ALL occurrences are docstring/comment prose describing the
     # processor's owned requests.Session (teardown ordering notes). No live call.
     r"\brequests\.(get|post|Session)": {
-        "widgets/youtube_tab.py",
         "widgets/_mining_tab_base.py",
         "widgets/single_episode_tab.py",
-        "widgets/audiobook_tab.py",
         # Prose only: update_config's docstring notes the processor owns a
-        # requests.Session (lazy-drop teardown ordering). No live call.
-        "widgets/_reading_mining_base.py",
+        # requests.Session (lazy-drop teardown ordering). No live call. The
+        # queue-tab lifecycle (audiobook/YouTube/reading, ARC-008) shares this base.
+        "widgets/_queue_mining_tab_base.py",
     },
     # urllib — only `from urllib.parse import urlparse`: pure string parsing of a
     # URL, no network I/O. Cheap.
@@ -126,13 +125,12 @@ ALLOWLIST: dict[str, set[str]] = {
         # curation result (the worker->GUI->worker handoff). Worker-side, not GUI.
         # Most hits in these files are docstring references to that same wait.
         "widgets/_mining_tab_base.py",
-        "widgets/youtube_tab.py",
         "widgets/batch_processing_tab.py",
-        "widgets/audiobook_tab.py",
         # Prose only: shutdown's docstring references _curation_event.wait() (the
         # worker-side park the poison releases). The real join is the bounded
         # worker_thread.wait(_SHUTDOWN_WAIT_MS), which has an arg and never matches.
-        "widgets/_reading_mining_base.py",
+        # The queue-tab lifecycle (audiobook/YouTube/reading, ARC-008) shares this base.
+        "widgets/_queue_mining_tab_base.py",
         # worker.wait() after loop.exec() already returned on worker.finished —
         # the QThread is finished, so the join returns immediately (cheap).
         "widgets/dialogs/resource_download_dialog.py",
