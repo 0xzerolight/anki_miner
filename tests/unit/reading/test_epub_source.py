@@ -13,8 +13,8 @@ from pathlib import Path
 import pytest
 
 from anki_miner.exceptions import SetupError
+from anki_miner.models.reading import ImageRef, ReadingSourceRef
 from anki_miner.services.reading.epub_source import load
-from anki_miner.services.reading.models import ImageRef, ReadingSourceRef
 
 # --------------------------------------------------------------------------- #
 # Fixture builders

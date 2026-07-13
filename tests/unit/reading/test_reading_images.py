@@ -9,8 +9,8 @@ import pytest
 from PIL import Image
 
 from anki_miner.exceptions import SetupError
+from anki_miner.models.reading import ImageRef
 from anki_miner.services.reading.images import _MAX_EDGE, prepare_card_image
-from anki_miner.services.reading.models import ImageRef
 
 
 def _make_image(path: Path, size: tuple[int, int], mode: str = "RGB", fmt: str = "PNG") -> Path:

@@ -123,7 +123,7 @@ Data classes in `models/`:
 | `YouTubeQueueItem` / `YouTubeItemStatus` / `YouTubeQueue` | `youtube_queue.py` | YouTube mining queue + per-item status |
 | `AudiobookQueueItem` / `AudiobookItemStatus` / `AudiobookQueue` | `audiobook_queue.py` | Audiobook mining queue + per-item status |
 | `ReadingQueueItem` / `ReadingItemStatus` | `reading_queue.py` | Reading (manga/novel) mining queue item + status |
-| `ReadingDocument` / `ReadingSourceRef` / `ReadingUnit` / `ImageRef` | `services/reading/models.py` | Parsed reading source: units of text + page/cover image refs |
+| `ReadingDocument` / `ReadingSourceRef` / `ReadingUnit` / `ImageRef` | `reading.py` | Parsed reading source: units of text + page/cover image refs |
 | `DeckBuildRequest` / `DeckBuildPreview` / `DeckSelectionMode` | `deck_build.py` | Deck Builder request, corpus preview, and selection mode (ALL/TOP_N/COVERAGE_PCT) |
 | `VideoInfo` | `youtube.py` | YouTube probe result: id, title, duration, sub availability, is_live, is_age_restricted |
 | `FetchedMedia` | `youtube.py` | yt-dlp fetch result: video path, subtitle path, `sub_source` ("manual" or "auto") |

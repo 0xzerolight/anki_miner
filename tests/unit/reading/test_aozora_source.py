@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from anki_miner.models.reading import ReadingSourceRef
 from anki_miner.services.reading.aozora_source import (
     _decode,
     _gaiji_char,
@@ -11,7 +12,6 @@ from anki_miner.services.reading.aozora_source import (
     _strip_ruby,
     load,
 )
-from anki_miner.services.reading.models import ReadingSourceRef
 
 
 def _ref(path: Path, title: str | None = None) -> ReadingSourceRef:

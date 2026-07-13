@@ -17,8 +17,8 @@ from pathlib import Path
 
 from PIL import Image
 
+from anki_miner.models.reading import ImageRef
 from anki_miner.services.dictionary.zip_safety import validate_zip_safe
-from anki_miner.services.reading.models import ImageRef
 
 # Long-edge cap for a card image. Larger pages/covers are downscaled (never
 # upscaled) before JPEG encode to keep Anki media small.

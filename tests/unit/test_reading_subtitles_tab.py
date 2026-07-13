@@ -30,7 +30,7 @@ import pytest
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
-from anki_miner.services.reading.models import ReadingSourceRef
+from anki_miner.models.reading import ReadingSourceRef
 
 _WORKER_TARGET = "anki_miner.gui.widgets._reading_mining_base.ReadingQueueWorker"
 _DETECT = "anki_miner.gui.widgets._reading_mining_base.detector.detect"

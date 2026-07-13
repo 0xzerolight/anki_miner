@@ -18,7 +18,7 @@ from PyQt6.QtGui import QColor, QImage, QPixmap
 
 from anki_miner.gui.widgets import page_image_view as piv
 from anki_miner.gui.widgets.page_image_view import PageImageView, _PageCanvas, load_page_qimage
-from anki_miner.services.reading.models import ImageRef
+from anki_miner.models.reading import ImageRef
 
 # ---------------------------------------------------------------------------
 # Helpers

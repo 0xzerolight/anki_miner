@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from anki_miner.services.reading.models import ReadingSourceRef
+from anki_miner.models.reading import ReadingSourceRef
 
 
 class ReadingItemStatus(Enum):

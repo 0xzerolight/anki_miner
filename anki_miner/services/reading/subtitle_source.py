@@ -22,12 +22,12 @@ from __future__ import annotations
 import pysubs2
 
 from anki_miner.exceptions import SetupError
-from anki_miner.services.reading._util import _decode
-from anki_miner.services.reading.models import (
+from anki_miner.models.reading import (
     ReadingDocument,
     ReadingSourceRef,
     ReadingUnit,
 )
+from anki_miner.services.reading._util import _decode
 from anki_miner.utils.text_utils import clean_subtitle_text
 
 
