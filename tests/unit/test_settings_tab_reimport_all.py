@@ -70,7 +70,7 @@ def tab_for_reimport_all(test_config: AnkiMinerConfig, tmp_path: Path, qtbot):
 
 @pytest.fixture
 def stubbed_workers(monkeypatch):
-    """Replace DictionaryImportWorker.for_yomitan / .for_jmdict with capturing MagicMocks.
+    """Replace ImportWorker.for_yomitan / .for_jmdict with capturing MagicMocks.
 
     Returns a dict with:
       - 'yomitan_factory', 'jmdict_factory' — the patched class methods
@@ -82,10 +82,11 @@ def stubbed_workers(monkeypatch):
     instances: list[MagicMock] = []
 
     def _make_instance(*args, **kwargs):
-        inst = MagicMock(name="DictionaryImportWorker")
+        inst = MagicMock(name="ImportWorker")
         inst.progress = MagicMock()
         inst.import_finished = MagicMock()
         inst.failed = MagicMock()
+        inst.cancelled = MagicMock()
         inst.cancel = MagicMock()
         inst.start = MagicMock()
         inst.isRunning = MagicMock(return_value=True)
@@ -96,11 +97,11 @@ def stubbed_workers(monkeypatch):
     jmdict_factory = MagicMock(name="for_jmdict", side_effect=_make_instance)
 
     monkeypatch.setattr(
-        "anki_miner.gui.controllers.dictionary_import_flow.DictionaryImportWorker.for_yomitan",
+        "anki_miner.gui.controllers.dictionary_import_flow.ImportWorker.for_yomitan",
         yomitan_factory,
     )
     monkeypatch.setattr(
-        "anki_miner.gui.controllers.dictionary_import_flow.DictionaryImportWorker.for_jmdict",
+        "anki_miner.gui.controllers.dictionary_import_flow.ImportWorker.for_jmdict",
         jmdict_factory,
     )
     return {

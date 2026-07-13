@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from anki_miner.gui.workers.alass_install_worker import AlassInstallWorker
     from anki_miner.gui.workers.asr_model_download_worker import AsrModelDownloadWorker
     from anki_miner.gui.workers.cuda_pack_download_worker import CudaPackDownloadWorker
-    from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
+    from anki_miner.gui.workers.import_worker import ImportWorker
     from anki_miner.gui.workers.onnx_pack_download_worker import OnnxPackDownloadWorker
     from anki_miner.gui.workers.restyle_cards_worker import RestyleCardsWorker
     from anki_miner.gui.workers.update_worker import UpdateWorkerThread
@@ -114,7 +114,7 @@ class BackgroundTaskController(QObject):
         self.validation_worker: ValidationWorkerThread | None = None
         self.update_worker: UpdateWorkerThread | None = None
         self.ytdlp_update_worker: YtdlpUpdateWorker | None = None
-        self.jmdict_migration_worker: DictionaryImportWorker | None = None
+        self.jmdict_migration_worker: ImportWorker | None = None
         self.asr_model_download_worker: AsrModelDownloadWorker | None = None
         self.alass_install_worker: AlassInstallWorker | None = None
         self.cuda_pack_download_worker: CudaPackDownloadWorker | None = None
@@ -404,13 +404,13 @@ class BackgroundTaskController(QObject):
             True when a migration worker was started (the caller surfaces the
             in-progress status); False when no migration is needed.
         """
-        from anki_miner.gui.workers.dictionary_import_worker import DictionaryImportWorker
+        from anki_miner.gui.workers.import_worker import ImportWorker
 
         dicts_root = config.dicts_root
         if not _needs_jmdict_migration(config.jmdict_path, dicts_root, config.dictionary_chain):
             return False
 
-        self.jmdict_migration_worker = DictionaryImportWorker.for_jmdict(config.jmdict_path, dicts_root)
+        self.jmdict_migration_worker = ImportWorker.for_jmdict(config.jmdict_path, dicts_root)
         self.jmdict_migration_worker.import_finished.connect(self.jmdict_migration_finished)
         self.jmdict_migration_worker.failed.connect(lambda err: logger.warning("JMdict migration failed: %s", err))
         logger.info("Starting one-time JMdict SQLite migration")

@@ -35,17 +35,18 @@ def tab(test_config: AnkiMinerConfig, tmp_path, qtbot):
 
 @pytest.fixture
 def stub_worker(monkeypatch):
-    """Replace FrequencyImportWorker.for_source with a controllable mock factory."""
+    """Replace ImportWorker.for_source with a controllable mock factory."""
     from unittest.mock import MagicMock
 
     factory = MagicMock(name="for_source")
     instances: list[MagicMock] = []
 
     def _build_instance(*args, **kwargs):
-        instance = MagicMock(name="FrequencyImportWorker")
+        instance = MagicMock(name="ImportWorker")
         instance.progress = MagicMock()
         instance.import_finished = MagicMock()
         instance.failed = MagicMock()
+        instance.cancelled = MagicMock()
         instance.cancel = MagicMock()
         instance.start = MagicMock()
         instance.isRunning = MagicMock(return_value=False)
@@ -57,7 +58,7 @@ def stub_worker(monkeypatch):
     factory.side_effect = _build_instance
     factory.instances = instances
     monkeypatch.setattr(
-        "anki_miner.gui.controllers.frequency_import_flow.FrequencyImportWorker.for_source",
+        "anki_miner.gui.controllers.frequency_import_flow.ImportWorker.for_source",
         factory,
     )
     return factory
