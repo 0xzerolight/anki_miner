@@ -76,6 +76,12 @@ class MiningTabBase(QWidget):
     # and YouTubeTab; DeckBuilderTab builds its own batch curation callback).
     _curation_requested = pyqtSignal(list)
 
+    # Active frozen config. Every mining-tab subclass assigns this in its
+    # __init__ (public attribute unified across the whole family, ARC-018);
+    # declared here so base methods (e.g. _mark_known) can read it without a
+    # per-call type: ignore. Bare annotation only — no runtime class attribute.
+    config: AnkiMinerConfig
+
     # ------------------------------------------------------------------
     # Progress callback wiring
     # ------------------------------------------------------------------
@@ -293,16 +299,14 @@ class MiningTabBase(QWidget):
     def _mark_known(self, forms: set[str]) -> int:
         """Persist curator-selected forms to the local known/ignore list.
 
-        Passed as ``mark_known_callback`` to ``WordCurationDialog``. Writes
-        immediately (source='user') so the words persist even if the dialog is
-        cancelled. Builds the DB ad hoc from the config path — same pattern the
-        settings tab uses for the rebuild action.
+        Passed as ``mark_known_callback`` to ``WordCurationDialog``. Delegates to
+        :func:`add_user_known_words`, which writes immediately (source='user') so
+        the words persist even if the dialog is cancelled — same Issue #42 rule
+        the settings tab's rebuild action uses.
         """
-        from anki_miner.services.known_word_db import KnownWordDB
+        from anki_miner.services.known_word_db import add_user_known_words
 
-        db = KnownWordDB(self.config.known_words_db_path)  # type: ignore[attr-defined]
-        db.initialize()
-        return db.add_words(forms, source="user")
+        return add_user_known_words(self.config.known_words_db_path, forms)
 
     # ------------------------------------------------------------------
     # Word curation bridge (Issue #60)

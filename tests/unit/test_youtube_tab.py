@@ -313,7 +313,7 @@ class TestProbeOutcomes:
 
         tab._add_flow._on_probe_done(
             item,
-            _make_video_info(duration_s=tab._config.youtube_max_duration_s + 1),
+            _make_video_info(duration_s=tab.config.youtube_max_duration_s + 1),
         )
 
         assert item.status == YouTubeItemStatus.PROBE_ERROR
@@ -520,7 +520,7 @@ class TestRunStartup:
         assert queue_cls.call_count == 1
         kwargs = queue_cls.call_args.kwargs
         assert kwargs["processor"] is tab._processor
-        assert kwargs["config"] is tab._config
+        assert kwargs["config"] is tab.config
         # Curation callback gated by the (default-unchecked) review checkbox.
         assert kwargs["curation_callback"] is None
         # Worker handle set.
@@ -1155,7 +1155,7 @@ class TestUpdateConfig:
         ):
             tab.update_config(new_cfg)
 
-        assert tab._config is new_cfg
+        assert tab.config is new_cfg
         assert tab._fetcher is new_fetcher
         # Lazy-drop: processor is None; no eager rebuild on the config-refresh path.
         assert tab._processor is None
@@ -1242,7 +1242,7 @@ class TestPlaylistAdd:
         assert tab.url_edit.text() == ""
         # Resolve worker constructed with the configured cap and started.
         kwargs = tab._playlist_resolve_worker_cls.call_args.kwargs
-        assert kwargs["limit"] == tab._config.youtube_playlist_max
+        assert kwargs["limit"] == tab.config.youtube_playlist_max
         tab._add_flow._playlist_resolve_worker.start.assert_called_once()
 
     def test_mixed_url_spawns_resolve_worker(self, tab):

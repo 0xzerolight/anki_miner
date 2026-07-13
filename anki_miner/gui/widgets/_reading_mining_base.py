@@ -125,7 +125,7 @@ class _ReadingMiningTabBase(MiningTabBase):
                 construction or built on demand.
         """
         super().__init__(parent)
-        self._config = config
+        self.config = config
         # Optional so release_dictionary_resources() can null it out and
         # _launch_run rebuilds lazily on the next user click (Issue #30). Also
         # None on startup-deferred init: app.py skips the eager
@@ -199,7 +199,7 @@ class _ReadingMiningTabBase(MiningTabBase):
 
             def processor_factory() -> EpisodeProcessor:
                 return create_episode_processor(
-                    self._config,
+                    self.config,
                     presenter,
                     stats_service=self._stats_service,  # type: ignore[arg-type]
                 )
@@ -211,7 +211,7 @@ class _ReadingMiningTabBase(MiningTabBase):
         curation_cb = self._curation_bridge if self.review_words_checkbox.isChecked() else None  # type: ignore[attr-defined]
         worker = ReadingQueueWorker(
             processor=self._processor,
-            config=self._config,
+            config=self.config,
             items=items,
             curation_callback=curation_cb,
             processor_factory=processor_factory,
@@ -329,22 +329,6 @@ class _ReadingMiningTabBase(MiningTabBase):
             )
 
     # ------------------------------------------------------------------
-    # Known/ignore list (Issue #42)
-    # ------------------------------------------------------------------
-
-    def _mark_known(self, forms: set[str]) -> int:
-        """Persist curator-selected forms to the local known/ignore list (Issue #42).
-
-        Writes immediately (source='user') so words persist even if the dialog is
-        cancelled. Builds the DB ad hoc from the config path.
-        """
-        from anki_miner.services.known_word_db import KnownWordDB
-
-        db = KnownWordDB(self._config.known_words_db_path)
-        db.initialize()
-        return db.add_words(forms, source="user")
-
-    # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
 
@@ -363,7 +347,7 @@ class _ReadingMiningTabBase(MiningTabBase):
         Args:
             config: New frozen configuration.
         """
-        self._config = config
+        self.config = config
 
         worker_busy = self.worker_thread is not None and self.worker_thread.isRunning()
         if worker_busy:
