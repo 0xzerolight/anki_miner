@@ -36,10 +36,8 @@ Please leave a ⭐ star if Anki Miner helped you - it helps others find it :).
 
 ### Requirements
 
-- **ffmpeg** **only if installing from pip/pipx, .deb, or from source.**
-- **libmpv** (video preview) **only if installing from pip/pipx, .deb, or from source.** Release bundles include it. Linux: `sudo apt install libmpv2` (or your distro's libmpv package). macOS: `brew install mpv`. Windows pip users: place `libmpv-2.dll` on PATH or set `ANKI_MINER_LIBMPV` to its full path. Without it the app runs fine; only the in-app video preview shows a notice instead.
-- **alass** (optional) for automatic subtitle retiming. Linux and Windows release builds bundle it. macOS users: `brew install alass` or place it on PATH.
-- **Anki** with the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on. In Anki: **Tools -> Add-ons -> Get Add-ons**, paste code `2055492159`, restart.
+- **Anki** with the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on (code `2055492159`)
+- **ffmpeg** + **libmpv** (video preview only) - needed only when installing via pip/pipx, `.deb`, or source; release bundles include them. (Windows pip: `libmpv-2.dll` on PATH or `ANKI_MINER_LIBMPV`.)
 
 ### Download
 
@@ -53,16 +51,16 @@ Grab the download for your platform from the [latest release](https://github.com
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (other) | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
-¹ The Intel macOS build excludes local Whisper speech-to-text (Subtitles->Generate) and AVIF animated screenshots - every other feature works. For full functionality on an Intel Mac, install via pip instead: `pipx install "anki-miner[asr]"`. 
+¹ Excludes local Whisper subtitle generation and AVIF screenshots. For full functionality: `pipx install "anki-miner[asr]"`.
 
-**macOS first-run (unsigned binary):** macOS Gatekeeper will block the app because it is not notarised. Extract the archive first, then clear the quarantine flag on the extracted folder (clearing it on the `.tar.gz` does not carry over to the extracted files):
-```bash
-xattr -dr com.apple.quarantine AnkiMiner/
-```
+<details>
+<summary><strong>First-run notes (unsigned builds)</strong></summary>
 
-**Windows first-run (SmartScreen):** Windows SmartScreen may show "Windows protected your PC". Click **More info**, then **Run anyway**.
+- **macOS**: Gatekeeper blocks the app. Extract first, then `xattr -dr com.apple.quarantine AnkiMiner/`
+- **Windows SmartScreen**: **More info** -> **Run anyway**.
+- **Windows Defender false positive**: restore from **Protection history** or [report to Microsoft](https://www.microsoft.com/en-us/wdsi/filesubmission).
 
-**Windows Defender false positive:** Defender may wrongly flag the unsigned `.exe` (it bundles `yt-dlp`/`ffmpeg`, common AV triggers). Restore it from **Protection history** or [report it to Microsoft](https://www.microsoft.com/en-us/wdsi/filesubmission).
+</details>
 
 <details>
 <summary><strong>Install from PyPI (Python 3.11+)</strong></summary>
@@ -88,23 +86,23 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Tabs
 
-- **Video**: mine video, in three sub-tabs. **Single**: one video/subtitle pair with word curation. **Batch**: a folder of episode/subtitle pairs for sequential processing — files are paired by episode number, so each folder / queue item should hold a single show (use Multi-Series Queue for mining multiple series at a time). **YouTube**: paste one or more URLs, then mine the queue.
-- **Deck Builder**: point at a folder of episode/subtitle pairs and mine the full series into one named deck. Ranked by frequency; pick how many to include (all, top N, or a coverage target) and preview before cards are created.
-- **Audio**: queue local audio + subtitle/transcript pairs (audiobooks, podcasts, radio, songs, lectures) and mine them audio-only; embedded cover art stands in for screenshots.
-- **Reading**: mine manga and novels instead of video. Point at a mokuro-processed manga volume (an image folder or `.cbz` with its sibling `.mokuro` file) or a novel (`.epub`, or Aozora/plain `.txt`); cards carry the page image or the book cover. Anki Miner reads mokuro's output and does no OCR itself. Word curation works as in the other tabs.
-- **Analytics**: history, series difficulty rankings, milestones, undo.
-- **Tools**: generate subtitles from speech with a local Whisper model (no GPU required; optional CUDA/VAD packs install in-app), retime an out-of-sync subtitle file to your video with alass, or condense a video/audio file down to dialogue-only audio using its subtitles.
-- **Settings**: Anki, Media, Dictionaries, Audio, Filtering, Frequency, Subtitles, YouTube, Themes. Saved to `~/.anki_miner/gui_config.json`.
+- **Video** - mine a single video/subtitle pair, a batch folder, or YouTube URLs.
+- **Deck Builder** - mine a whole series into one frequency-ranked deck.
+- **Audio** - mine audiobooks, podcasts, radio, songs (audio + subtitle/transcript pairs).
+- **Reading** - mine manga (mokuro), novels (`.epub`, `.txt`), or standalone subtitle files.
+- **Analytics** - mining history, difficulty rankings, milestones, undo.
+- **Tools** - generate subtitles (local Whisper), retime subtitles (alass), condense media to dialogue-only audio.
+- **Settings** - everything configurable.
 
 ## Other Features
 
-- Extensive filtering options (i+1 filter, frequency limits, word blacklist, subtitle regex filtering, wordset filtering, per-volume minimum word occurrence, and more).
-- Offline Yomitan dictionary import (definitions, pitch accent, frequency data) with priority ordering.
-- Multiple frequency lists chained together, each indexed separately and ordered by priority.
-- Expression (word-level) audio on cards from local audio packs, JapanesePod101, or Google Translate TTS (opt-in, chained).
-- Per-dictionary glossary styling, Yomitan-style — each dictionary's own scoped CSS is applied automatically, self-contained per card.
+- Extensive filtering: i+1, frequency limits, blacklist, regex, wordsets, and more.
+- Offline Yomitan dictionary import - definitions, pitch accent, frequency - chained by priority.
+- Multiple frequency lists chained by priority.
+- Word audio on cards from local audio packs, JapanesePod101, or Google TTS.
+- Per-dictionary glossary styling, Yomitan-style.
 - Subtitle timing preview with adjustable offset.
-- Animated screenshots (see example card gifs).
+- Animated screenshots (see example cards above).
 
 <details>
 <summary><strong>Built-in themes (29)</strong></summary>
@@ -149,10 +147,6 @@ Want another theme added? Suggest in a GitHub Issue.
 | Frequency | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | Balanced corpus; pairs well with news/novels | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Filtering -> Frequency List File |
 
 
-Dictionaries are indexed once into `~/.anki_miner/dicts/` (drag to reorder the chain).
-The pitch and frequency pickers accept a raw CSV/TSV or a Yomitan zip, auto-converted to `~/.anki_miner/pitch_accent.csv` / `frequency.csv` on Save.
-[Bee's Character Dictionary](https://characterdictionary.tokyo/) builds a custom Yomitan dictionary from your AniList/VNDB media lists, so character names in the shows you mine resolve to real definitions; re-generate and re-import when your lists change.
-
 Proper-noun filtering uses bundled name wordsets derived from [JMnedict](https://www.edrdg.org/enamdict/enamdict_doc.html) (JMdict/EDICT project, EDRDG, CC BY-SA 4.0).
 
 ## Troubleshooting
@@ -166,7 +160,6 @@ Proper-noun filtering uses bundled name wordsets derived from [JMnedict](https:/
 | No definitions found     | Add a Yomitan dictionary in Settings -> Add Dictionary… (recommended), or enable the Jisho fallback (slower, rate-limited). |
 | Audio is wrong language  | The tool tries Japanese audio tracks first, then falls back to the default.      |
 | Subtitles out of sync    | Use the subtitle offset control in the GUI (range ±300 seconds).                 |
-| AV1 won't preview        | In-app AV1 preview needs a hardware AV1 decoder (RTX-30+/Tiger-Lake+). Without one, the pane shows an "AV1 can't be decoded for preview" notice. Mining is unaffected - screenshots are extracted by FFmpeg, not the preview. |
 
 ## Roadmap
 
