@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import re
 import shutil
 import tempfile
 from dataclasses import dataclass
@@ -19,6 +18,7 @@ from anki_miner.services.audio_packs.storage import (
     create_index,
     write_meta,
 )
+from anki_miner.utils.slug import slugify
 
 # Canonical folder name → canonical pack_id mapping for known local-audio-yomichan packs.
 _CANONICAL_IDS: dict[str, str] = {
@@ -30,30 +30,14 @@ _CANONICAL_IDS: dict[str, str] = {
     "jpod_alternate_files": "jpod_alternate",
 }
 
-_SLUG_RE = re.compile(r"[^a-z0-9]+")
-
 
 def _slugify(text: str) -> str:
     """ASCII slug suitable for a directory name.
 
-    Mirrors the approach used by yomitan_importer._slug: non-ASCII code points
-    are encoded as ``u{hex}`` so folder names survive filesystem restrictions.
+    Non-ASCII code points are encoded as ``u{hex}`` so folder names survive
+    filesystem restrictions.
     """
-    text = text.strip().lower()
-    parts: list[str] = []
-    buf: list[str] = []
-    for ch in text:
-        if ord(ch) < 128:
-            buf.append(ch)
-        else:
-            if buf:
-                parts.append("".join(buf))
-                buf.clear()
-            parts.append(f"u{ord(ch):x}")
-    if buf:
-        parts.append("".join(buf))
-    slug = _SLUG_RE.sub("-", "-".join(parts)).strip("-")
-    return slug or "pack"
+    return slugify(text, fallback="pack")
 
 
 def derive_pack_id(folder_name: str) -> str:
