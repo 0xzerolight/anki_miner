@@ -25,7 +25,6 @@ from anki_miner.exceptions import AnkiMinerException, SetupError
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
 from anki_miner.models import CANCELLED_ERROR, CardPayload, MediaData, ProcessingResult, TokenizedWord
 from anki_miner.models.youtube import FetchedMedia, SubMode
-from anki_miner.orchestration import audio_stage
 from anki_miner.orchestration.audio_stage import AudioStage
 from anki_miner.orchestration.stage_weighted_progress import StageWeightedProgress
 from anki_miner.services import (
@@ -48,14 +47,6 @@ from anki_miner.utils import ensure_directory, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
-
-# Transitional re-exports: the audio-stage helpers moved to audio_stage.py, but
-# tests still import them from this module (a later task relocates the tests).
-# Kept as module-attribute aliases so every commit stays green until then.
-_audio_failure_diagnosis = audio_stage._audio_failure_diagnosis
-_dominant_transient_failure = audio_stage._dominant_transient_failure
-_expression_audio_candidates = audio_stage._expression_audio_candidates
-_sentence_audio_failure_diagnosis = audio_stage._sentence_audio_failure_diagnosis
 
 
 if TYPE_CHECKING:
