@@ -20,8 +20,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from anki_miner.gui.workers.base_worker import SingleCallWorker
-from anki_miner.gui.workers.fetch_decks_worker import FetchDecksWorker
-from anki_miner.gui.workers.fetch_notetypes_worker import FetchNotetypesWorker
+from anki_miner.gui.workers.fetch_workers import FetchDecksWorker, FetchNotetypesWorker
 from anki_miner.gui.workers.update_worker import UpdateWorkerThread
 from anki_miner.gui.workers.validation_worker import ValidationWorkerThread
 
