@@ -339,10 +339,6 @@ class AnkiMinerConfig:
     # by GUIConfigManager.load_config (unknown-key filter + dataclass default).
     reading_min_occurrence: int = 1
 
-    # History settings
-    history_db_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "history.db")
-    enable_history: bool = True
-
     # Update settings
     check_for_updates: bool = True
     skipped_update_version: str = ""
@@ -469,8 +465,6 @@ class AnkiMinerConfig:
             object.__setattr__(self, "whitelist_path", Path(self.whitelist_path) if self.whitelist_path else None)
         if isinstance(self.stats_db_path, str):
             object.__setattr__(self, "stats_db_path", Path(self.stats_db_path))
-        if isinstance(self.history_db_path, str):
-            object.__setattr__(self, "history_db_path", Path(self.history_db_path))
         if isinstance(self.log_path, str):
             object.__setattr__(self, "log_path", Path(self.log_path))
         if isinstance(self.youtube_cookies_file, str):

@@ -235,7 +235,6 @@ class TestRoundTripImmutabilityAndPaths:
         assert isinstance(loaded.pitch_accent_path, Path)
         assert isinstance(loaded.frequency_list_path, Path)
         assert isinstance(loaded.known_words_db_path, Path)
-        assert isinstance(loaded.history_db_path, Path)
         assert isinstance(loaded.stats_db_path, Path)
         assert isinstance(loaded.log_path, Path)
         assert isinstance(loaded.themes_root, Path)

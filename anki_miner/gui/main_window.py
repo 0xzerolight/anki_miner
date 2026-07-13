@@ -2,7 +2,6 @@
 
 import logging
 from dataclasses import replace
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
@@ -845,30 +844,6 @@ class MainWindow(QMainWindow):
             on_undo_committed=lambda deleted: self.status_bar.increment_cards_created(-deleted),
         )
         dialog.exec()
-
-        # Record to history after dialog closes (skip if user undid the cards)
-        if self.config.enable_history and result.cards_created > 0 and not dialog.undo_completed:
-            self._record_history(result)
-
-    def _record_history(self, result: ProcessingResult) -> None:
-        """Record processing result to history database.
-
-        Args:
-            result: Processing result to record
-        """
-        from anki_miner.services.history_service import HistoryService
-
-        try:
-            service = HistoryService(self.config.history_db_path)
-            service.initialize()
-            service.record_session(
-                video_file=Path(result.video_file) if result.video_file else Path("unknown"),
-                subtitle_file=(Path(result.subtitle_file) if result.subtitle_file else Path("unknown")),
-                result=result,
-                card_ids=result.card_ids,
-            )
-        except Exception:
-            logger.debug("Failed to record history", exc_info=True)
 
     def get_config(self) -> AnkiMinerConfig:
         """Get current configuration.

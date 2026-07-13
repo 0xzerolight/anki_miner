@@ -1,7 +1,6 @@
 """Data models for Anki Miner."""
 
 from .card_payload import CardPayload
-from .history import HistoryEntry
 from .media import MediaData
 from .processing import (
     CANCELLED_ERROR,
@@ -32,5 +31,4 @@ __all__ = [
     "OverallStats",
     "DifficultyEntry",
     "Milestone",
-    "HistoryEntry",
 ]
