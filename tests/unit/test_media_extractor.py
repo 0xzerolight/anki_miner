@@ -1534,9 +1534,17 @@ class TestAudioTrackOverride:
             patch(f"{MODULE}.list_audio_streams") as mock_list,
             patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
         ):
-            from anki_miner.utils.audio_track_detector import JapaneseAudioStream
+            from anki_miner.utils.audio_track_detector import AudioStream
 
-            mock_find_jp.return_value = JapaneseAudioStream(global_index=2, audio_index=0, language_tag="jpn")
+            mock_find_jp.return_value = AudioStream(
+                global_index=2,
+                audio_index=0,
+                language_tag="jpn",
+                title_tag=None,
+                codec=None,
+                channels=None,
+                is_default=False,
+            )
 
             result = service._extract_audio(video_file, 1.0, 2.0, output_path, audio_track_override=None)
 

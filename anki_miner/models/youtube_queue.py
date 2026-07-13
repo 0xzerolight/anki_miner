@@ -31,7 +31,6 @@ class YouTubeQueueItem:
     resolved_sub_mode: SubMode | None = None
     cards_created: int = 0
     error_message: str | None = None
-    retry_count: int = 0  # incremented by worker; capped at 1 (single retry only)
     display_title: str | None = None  # shown while status is PROBING (set by playlist expansion)
 
 

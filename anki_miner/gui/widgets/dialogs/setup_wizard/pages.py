@@ -31,9 +31,11 @@ from anki_miner.gui.widgets.base import StatusBadge
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels.anki_settings_panel import _FIELD_KEYWORDS, auto_map_fields
 from anki_miner.gui.workers.base_worker import SingleCallWorker
-from anki_miner.gui.workers.fetch_decks_worker import FetchDecksWorker
-from anki_miner.gui.workers.fetch_fields_worker import FetchFieldsWorker
-from anki_miner.gui.workers.fetch_notetypes_worker import FetchNotetypesWorker
+from anki_miner.gui.workers.fetch_workers import (
+    FetchDecksWorker,
+    FetchFieldsWorker,
+    FetchNotetypesWorker,
+)
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -415,13 +417,11 @@ class NoteTypePage(QWizardPage):
         merged = {**dict(self._wizard.working_config().anki_fields)}
         merged.update({key: value for key, value in mapped.items() if value})
         # Stage anki_fields as a PLAIN dict; config re-wraps it in MappingProxyType.
-        # Keep anki_word_field synced to anki_fields["word"] (same as panel.contribute).
         self._wizard.update_working_config(
             replace(
                 self._wizard.working_config(),
                 anki_note_type=note_type or self._wizard.working_config().anki_note_type,
                 anki_fields=merged,
-                anki_word_field=merged.get("word", "") or "Expression",
             )
         )
         self._show_mapping_summary(mapped)

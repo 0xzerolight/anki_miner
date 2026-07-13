@@ -1060,31 +1060,6 @@ class SettingsTab(QWidget):
         """Get deck input widget."""
         return self.anki_panel.deck_input
 
-    @property
-    def note_type_input(self):
-        """Get note type input widget."""
-        return self.anki_panel.note_type_input
-
-    @property
-    def ankiconnect_url_input(self):
-        """Get AnkiConnect URL input widget."""
-        return self.anki_panel.ankiconnect_url_input
-
-    @property
-    def audio_padding_spinbox(self):
-        """Get audio padding spinbox widget."""
-        return self.media_panel.audio_padding_spinbox
-
-    @property
-    def screenshot_offset_spinbox(self):
-        """Get screenshot offset spinbox widget."""
-        return self.media_panel.screenshot_offset_spinbox
-
-    @property
-    def max_workers_spinbox(self):
-        """Get max workers spinbox widget."""
-        return self.media_panel.max_workers_spinbox
-
     # === Dictionary chain persistence ===
 
     def _persist_chain_change(self, new_chain: tuple[ChainEntry, ...]) -> None:
