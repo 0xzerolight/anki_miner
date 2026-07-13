@@ -8,8 +8,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.services._sqlite_index import scan_index_root
 from anki_miner.services.audio_packs.fetcher import LocalAudioPackFetcher
-from anki_miner.services.audio_packs.storage import SCHEMA_VERSION, read_meta_cached
+from anki_miner.services.audio_packs.storage import SCHEMA_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -53,59 +54,57 @@ class AudioPackRegistry:
         unreadable/corrupt meta or a schema_version mismatch are skipped
         with a warning.
         """
-        self._packs.clear()
-        if not self._root.is_dir():
-            return
-        for child in sorted(self._root.iterdir()):
-            if not child.is_dir():
-                continue
-            # Skip hidden dirs — importer staging artefacts.
-            if child.name.startswith("."):
-                continue
-            # Skip importer overwrite backups (<pack>.bak-<timestamp> siblings):
-            # a failed Windows rmtree must not surface a stale backup as a pack.
-            if ".bak-" in child.name:
-                continue
-            db = child / "index.sqlite"
-            if not db.exists():
-                continue
-            try:
-                meta = read_meta_cached(db)
-            except (sqlite3.Error, OSError) as exc:
-                logger.warning("Skipping corrupt audio pack %s: %s", child.name, exc)
-                continue
+        # Audio widens the meta-read guard to (sqlite3.Error, OSError) and
+        # pre-filters staging/backup dirs before the meta read (both preserved
+        # via scan_index_root's params); schema-mismatch drop-at-scan stays in
+        # _parse_meta (returns None to skip, unlike dict/freq's schema_ok flag).
+        self._packs = scan_index_root(
+            self._root,
+            self._parse_meta,
+            child_prefilter=self._is_candidate,
+            exception_types=(sqlite3.Error, OSError),
+            warn_label="audio pack",
+        )
 
-            # Schema version check — mismatch means the pack needs re-import.
-            try:
-                version = int(meta.get("schema_version", "0"))
-            except ValueError:
-                version = 0
-            if version != SCHEMA_VERSION:
-                logger.warning(
-                    "Audio pack '%s' has schema_version=%s, expected %s — needs re-import; skipping",
-                    child.name,
-                    version,
-                    SCHEMA_VERSION,
-                )
-                continue
+    @staticmethod
+    def _is_candidate(child: Path) -> bool:
+        # Skip hidden dirs (importer staging artefacts) and importer overwrite
+        # backups (<pack>.bak-<timestamp> siblings): a failed Windows rmtree must
+        # not surface a stale staging dir or backup as a pack.
+        return not child.name.startswith(".") and ".bak-" not in child.name
 
-            try:
-                count = int(meta.get("entry_count", "0"))
-            except ValueError:
-                count = 0
-
-            pack_dir_str = meta.get("pack_dir", "")
-            pack_dir = Path(pack_dir_str) if pack_dir_str else child
-
-            self._packs[child.name] = AudioPackMeta(
-                pack_id=meta.get("pack_id", child.name),
-                source=meta.get("source", child.name),
-                format=meta.get("format", "unknown"),
-                entry_count=count,
-                pack_dir=pack_dir,
-                pack_dir_exists=pack_dir.is_dir(),
-                db_path=db,
+    def _parse_meta(self, child: Path, db: Path, meta: dict[str, str]) -> AudioPackMeta | None:
+        # Schema version check — mismatch means the pack needs re-import.
+        try:
+            version = int(meta.get("schema_version", "0"))
+        except ValueError:
+            version = 0
+        if version != SCHEMA_VERSION:
+            logger.warning(
+                "Audio pack '%s' has schema_version=%s, expected %s — needs re-import; skipping",
+                child.name,
+                version,
+                SCHEMA_VERSION,
             )
+            return None
+
+        try:
+            count = int(meta.get("entry_count", "0"))
+        except ValueError:
+            count = 0
+
+        pack_dir_str = meta.get("pack_dir", "")
+        pack_dir = Path(pack_dir_str) if pack_dir_str else child
+
+        return AudioPackMeta(
+            pack_id=meta.get("pack_id", child.name),
+            source=meta.get("source", child.name),
+            format=meta.get("format", "unknown"),
+            entry_count=count,
+            pack_dir=pack_dir,
+            pack_dir_exists=pack_dir.is_dir(),
+            db_path=db,
+        )
 
     @property
     def packs(self) -> dict[str, AudioPackMeta]:
