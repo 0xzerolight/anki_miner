@@ -606,16 +606,16 @@ Formatos suportados: AJT (index.json + media/), NHK16 (entries.json + audio/), F
         <translation>Escolher pasta do pacote de áudio para reimportar</translation>
     </message>
     <message>
-        <source>Re-importing audio pack…</source>
-        <translation>Reimportando pacote de áudio…</translation>
-    </message>
-    <message>
         <source>Audio Pack Re-imported</source>
         <translation>Pacote de áudio reimportado</translation>
     </message>
     <message>
         <source>Re-imported %1 successfully.</source>
         <translation>%1 reimportado com sucesso.</translation>
+    </message>
+    <message>
+        <source>Re-importing audio pack…</source>
+        <translation>Reimportando pacote de áudio…</translation>
     </message>
     <message>
         <source>Re-import Failed</source>
@@ -626,6 +626,20 @@ Formatos suportados: AJT (index.json + media/), NHK16 (entries.json + audio/), F
     <message>
         <source>Loading…</source>
         <translation>Carregando…</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation>Falha ao remover</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The audio pack was not removed.</source>
+        <translation>Não foi possível excluir %1:
+%2
+
+O pacote de áudio não foi removido.</translation>
     </message>
     <message>
         <source>Active Audio Sources</source>
@@ -722,20 +736,6 @@ Apenas os arquivos de índice são excluídos — seus arquivos de áudio origin
 Isso não pode ser desfeito. Você precisaria reimportar para usar este pacote novamente.</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>Falha ao remover</translation>
-    </message>
-    <message>
-        <source>Could not delete %1:
-%2
-
-The audio pack was not removed.</source>
-        <translation>Não foi possível excluir %1:
-%2
-
-O pacote de áudio não foi removido.</translation>
-    </message>
-    <message>
         <source>Re-import…</source>
         <translation>Reimportar…</translation>
     </message>
@@ -778,6 +778,62 @@ O pacote de áudio não foi removido.</translation>
 </context><context>
     <name>AudiobookTab</name>
     <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation>Mineração indisponível — serviços não inicializados.</translation>
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation>Execução %1 iniciando — %2 itens.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Minerar</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Cancelando…</translation>
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation>Parar tudo</translation>
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation>Fila concluída: %1 com sucesso, %2 com falha.</translation>
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation>Minerando %1 de %2: %3</translation>
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation>Minerado %1: %2 cartões.</translation>
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
+        <translation>%1 cancelado.</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation>Falhou %1: %2.</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Cancelado</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Falhou — consulte o log</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation>Concluído — %1 com sucesso</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation>Concluído — %1 com sucesso, %2 com falha</translation>
+    </message>
+    <message>
         <source>Audio queue</source>
         <translation>Fila de áudio</translation>
     </message>
@@ -810,10 +866,6 @@ O pacote de áudio não foi removido.</translation>
         <translation>Mostrar o pop-up de seleção de palavras para cada arquivo de áudio antes de criar cartões.</translation>
     </message>
     <message>
-        <source>Mine</source>
-        <translation>Minerar</translation>
-    </message>
-    <message>
         <source>Mine every queued item into Anki cards.</source>
         <translation>Minerar todos os itens da fila em cartões do Anki.</translation>
     </message>
@@ -824,10 +876,6 @@ O pacote de áudio não foi removido.</translation>
     <message>
         <source>Remove every queued item that is not currently mining.</source>
         <translation>Remover todos os itens da fila que não estejam sendo minerados no momento.</translation>
-    </message>
-    <message>
-        <source>Stop All</source>
-        <translation>Parar tudo</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
@@ -848,54 +896,6 @@ O pacote de áudio não foi removido.</translation>
     <message>
         <source>Subtitle file not found: %1</source>
         <translation>Arquivo de legenda não encontrado: %1</translation>
-    </message>
-    <message>
-        <source>Mining unavailable — services not initialized.</source>
-        <translation>Mineração indisponível — serviços não inicializados.</translation>
-    </message>
-    <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation>Execução %1 iniciando — %2 itens.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Cancelando…</translation>
-    </message>
-    <message>
-        <source>Mining %1 of %2: %3</source>
-        <translation>Minerando %1 de %2: %3</translation>
-    </message>
-    <message>
-        <source>Mined %1: %2 cards.</source>
-        <translation>Minerado %1: %2 cartões.</translation>
-    </message>
-    <message>
-        <source>Cancelled %1.</source>
-        <translation>%1 cancelado.</translation>
-    </message>
-    <message>
-        <source>Failed %1: %2.</source>
-        <translation>Falhou %1: %2.</translation>
-    </message>
-    <message>
-        <source>Queue done: %1 succeeded, %2 failed.</source>
-        <translation>Fila concluída: %1 com sucesso, %2 com falha.</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Cancelado</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>Falhou — consulte o log</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded, %2 failed</source>
-        <translation>Concluído — %1 com sucesso, %2 com falha</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded</source>
-        <translation>Concluído — %1 com sucesso</translation>
     </message>
 </context><context>
     <name>BatchProcessingTab</name>
@@ -926,6 +926,18 @@ O pacote de áudio não foi removido.</translation>
     <message>
         <source>Subtitle Folder:</source>
         <translation>Pasta de legendas:</translation>
+    </message>
+    <message>
+        <source>Subtitle Offset:</source>
+        <translation>Deslocamento da Legenda:</translation>
+    </message>
+    <message>
+        <source> seconds</source>
+        <translation> segundos</translation>
+    </message>
+    <message>
+        <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Process Folder</source>
@@ -1468,6 +1480,50 @@ Total de cartões criados: %2</translation>
 </context><context>
     <name>CondenseTab</name>
     <message>
+        <source>Progress</source>
+        <translation>Progresso</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Concluído</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Concluído: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Ignorado</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Ignorado: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Cancelando…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Cancelado</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>Concluído — %1 arquivos processados</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Selecionar Pasta de Saída</translation>
+    </message>
+    <message>
+        <source>Next to source</source>
+        <translation>Ao lado da origem</translation>
+    </message>
+    <message>
         <source>Input</source>
         <translation>Entrada</translation>
     </message>
@@ -1596,10 +1652,6 @@ Total de cartões criados: %2</translation>
         <translation>Saída:</translation>
     </message>
     <message>
-        <source>Next to source</source>
-        <translation>Ao lado da origem</translation>
-    </message>
-    <message>
         <source>Choose Folder…</source>
         <translation>Escolher Pasta…</translation>
     </message>
@@ -1622,14 +1674,6 @@ Total de cartões criados: %2</translation>
     <message>
         <source>Condense Audio</source>
         <translation>Condensar Áudio</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Cancelar</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Progresso</translation>
     </message>
     <message>
         <source>No Media File Selected</source>
@@ -1678,10 +1722,6 @@ Total de cartões criados: %2</translation>
     <message>
         <source>Failed to detect subtitle tracks. Check that ffprobe is installed.</source>
         <translation>Falha ao detectar faixas de legenda. Verifique se o ffprobe está instalado.</translation>
-    </message>
-    <message>
-        <source>Select Output Folder</source>
-        <translation>Selecionar Pasta de Saída</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -1743,34 +1783,6 @@ Total de cartões criados: %2</translation>
         <source>Condensing file %1 of %2</source>
         <translation>Condensando arquivo %1 de %2</translation>
     </message>
-    <message>
-        <source>Done: </source>
-        <translation>Concluído: </translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>Concluído</translation>
-    </message>
-    <message>
-        <source>Skipped: </source>
-        <translation>Ignorado: </translation>
-    </message>
-    <message>
-        <source>Skipped</source>
-        <translation>Ignorado</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Cancelado</translation>
-    </message>
-    <message>
-        <source>Complete — %1 files processed</source>
-        <translation>Concluído — %1 arquivos processados</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Cancelando…</translation>
-    </message>
 </context><context>
     <name>CondenseWorker</name>
     <message>
@@ -1778,24 +1790,20 @@ Total de cartões criados: %2</translation>
         <translation>Ignorado, já existe</translation>
     </message>
     <message>
-        <source>No dialogue lines found in %1</source>
-        <translation>Nenhuma linha de diálogo encontrada em %1</translation>
-    </message>
-    <message>
         <source>Condensing: %1%</source>
         <translation>Condensando: %1%</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>Cancelado</translation>
-    </message>
-    <message>
-        <source>Condensing failed for %1</source>
-        <translation>Falha ao condensar %1</translation>
+        <source>Audio done; subtitle write failed: %1</source>
+        <translation>Áudio concluído; falha ao gravar legenda: %1</translation>
     </message>
     <message>
         <source>Done</source>
         <translation>Concluído</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Cancelado</translation>
     </message>
     <message>
         <source>No subtitle source found for %1</source>
@@ -1814,8 +1822,12 @@ Total de cartões criados: %2</translation>
         <translation>Falha ao extrair legenda incorporada de %1</translation>
     </message>
     <message>
-        <source>Audio done; subtitle write failed: %1</source>
-        <translation>Áudio concluído; falha ao gravar legenda: %1</translation>
+        <source>No dialogue lines found in %1</source>
+        <translation>Nenhuma linha de diálogo encontrada em %1</translation>
+    </message>
+    <message>
+        <source>Condensing failed for %1</source>
+        <translation>Falha ao condensar %1</translation>
     </message>
 </context><context>
     <name>CudaPackDownloadWorker</name>
@@ -2096,20 +2108,20 @@ Total de cartões criados: %2</translation>
         <translation>Zip Yomitan (*.zip)</translation>
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>Importando dicionário…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Cancelar</translation>
-    </message>
-    <message>
         <source>Dictionary added</source>
         <translation>Dicionário adicionado</translation>
     </message>
     <message>
         <source>Imported %1 (%2 entries)</source>
         <translation>%1 importado (%2 entradas)</translation>
+    </message>
+    <message>
+        <source>Importing dictionary…</source>
+        <translation>Importando dicionário…</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
     </message>
     <message>
         <source>Import Failed</source>
@@ -2136,16 +2148,16 @@ Total de cartões criados: %2</translation>
         <translation>Uma mineração está em andamento. Pare-a antes de reimportar dicionários.</translation>
     </message>
     <message>
-        <source>Re-importing dictionary…</source>
-        <translation>Reimportando dicionário…</translation>
-    </message>
-    <message>
         <source>Dictionary re-imported</source>
         <translation>Dicionário reimportado</translation>
     </message>
     <message>
         <source>Re-imported %1 (%2 entries)</source>
         <translation>%1 reimportado (%2 entradas)</translation>
+    </message>
+    <message>
+        <source>Re-importing dictionary…</source>
+        <translation>Reimportando dicionário…</translation>
     </message>
     <message>
         <source>Re-import Failed</source>
@@ -2248,6 +2260,20 @@ Pulados (sem fonte salva — clique com o botão direito na linha de um dicioná
         <translation>Carregando…</translation>
     </message>
     <message>
+        <source>Remove failed</source>
+        <translation>Falha ao remover</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The dictionary was not removed.</source>
+        <translation>Não foi possível excluir %1:
+%2
+
+O dicionário não foi removido.</translation>
+    </message>
+    <message>
         <source>Select dictionary storage folder...</source>
         <translation>Selecionar pasta de armazenamento de dicionários...</translation>
     </message>
@@ -2316,6 +2342,14 @@ Pulados (sem fonte salva — clique com o botão direito na linha de um dicioná
         <translation>CSV/TSV com colunas (leitura, kanji, padrão), ou um zip de acento tonal no formato Yomitan (por exemplo, Kanjium, NHK). Zips do Yomitan são importados para ~/.anki_miner/pitch_accent.csv ao salvar.</translation>
     </message>
     <message>
+        <source>Jisho (online fallback)</source>
+        <translation>Jisho (fallback online)</translation>
+    </message>
+    <message>
+        <source>⚠ rate-limited, slower</source>
+        <translation>⚠ com limite de taxa, mais lento</translation>
+    </message>
+    <message>
         <source>Remove dictionary</source>
         <translation>Remover dicionário</translation>
     </message>
@@ -2328,34 +2362,12 @@ This cannot be undone. You would need to reimport from the source zip.</source>
 Isso não pode ser desfeito. Você precisaria reimportar a partir do zip de origem.</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>Falha ao remover</translation>
-    </message>
-    <message>
         <source>A mining run is in progress. Stop it before removing dictionaries.</source>
         <translation>Uma mineração está em andamento. Pare-a antes de remover dicionários.</translation>
     </message>
     <message>
-        <source>Could not delete %1:
-%2
-
-The dictionary was not removed.</source>
-        <translation>Não foi possível excluir %1:
-%2
-
-O dicionário não foi removido.</translation>
-    </message>
-    <message>
         <source>Re-import…</source>
         <translation>Reimportar…</translation>
-    </message>
-    <message>
-        <source>Jisho (online fallback)</source>
-        <translation>Jisho (fallback online)</translation>
-    </message>
-    <message>
-        <source>⚠ rate-limited, slower</source>
-        <translation>⚠ com limite de taxa, mais lento</translation>
     </message>
 </context><context>
     <name>DonePage</name>
@@ -2426,6 +2438,30 @@ O dicionário não foi removido.</translation>
     <message>
         <source>Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run</source>
         <translation>O TTS de áudio de frase retornou respostas que não eram áudio (provavelmente limite de taxa) — áudio de frase ignorado nesta execução, será tentado na próxima</translation>
+    </message>
+    <message>
+        <source>Fetching expression audio</source>
+        <translation>Buscando áudio da expressão</translation>
+    </message>
+    <message>
+        <source>Expression audio: %1</source>
+        <translation>Áudio da expressão: %1</translation>
+    </message>
+    <message>
+        <source>Expression audio: %1/%2 available</source>
+        <translation>Áudio de expressão: %1/%2 disponíveis</translation>
+    </message>
+    <message>
+        <source>Generating sentence audio</source>
+        <translation>Gerando áudio de frase</translation>
+    </message>
+    <message>
+        <source>Sentence audio: %1</source>
+        <translation>Áudio de frase: %1</translation>
+    </message>
+    <message>
+        <source>Sentence audio: %1/%2 sentences</source>
+        <translation>Áudio de frase: %1/%2 frases</translation>
     </message>
     <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
@@ -2544,30 +2580,6 @@ O dicionário não foi removido.</translation>
         <translation>Capturas de tela animadas indisponíveis — esta build do ffmpeg não tem codificador AVIF ou WebP; mude para capturas de tela estáticas em Configurações.</translation>
     </message>
     <message>
-        <source>Fetching expression audio</source>
-        <translation>Buscando áudio da expressão</translation>
-    </message>
-    <message>
-        <source>Expression audio: %1</source>
-        <translation>Áudio da expressão: %1</translation>
-    </message>
-    <message>
-        <source>Expression audio: %1/%2 available</source>
-        <translation>Áudio de expressão: %1/%2 disponíveis</translation>
-    </message>
-    <message>
-        <source>Generating sentence audio</source>
-        <translation>Gerando áudio de frase</translation>
-    </message>
-    <message>
-        <source>Sentence audio: %1</source>
-        <translation>Áudio de frase: %1</translation>
-    </message>
-    <message>
-        <source>Sentence audio: %1/%2 sentences</source>
-        <translation>Áudio de frase: %1/%2 frases</translation>
-    </message>
-    <message>
         <source>Step 4/5 — Fetching definitions</source>
         <translation>Etapa 4/5 — Buscando definições</translation>
     </message>
@@ -2608,8 +2620,12 @@ O dicionário não foi removido.</translation>
         </translation>
     </message>
     <message>
-        <source>No words found in subtitles</source>
-        <translation>Nenhuma palavra encontrada nas legendas</translation>
+        <source>Error: %1</source>
+        <translation>Erro: %1</translation>
+    </message>
+    <message>
+        <source>Unexpected error: %1</source>
+        <translation>Erro inesperado: %1</translation>
     </message>
     <message>
         <source>No words selected for card creation</source>
@@ -2623,6 +2639,10 @@ O dicionário não foi removido.</translation>
         </translation>
     </message>
     <message>
+        <source>No words found in subtitles</source>
+        <translation>Nenhuma palavra encontrada nas legendas</translation>
+    </message>
+    <message>
         <source>No media extracted successfully</source>
         <translation>Nenhuma mídia extraída com sucesso</translation>
     </message>
@@ -2632,14 +2652,6 @@ O dicionário não foi removido.</translation>
             <numerusform>Mídia extraída para %n palavra</numerusform>
             <numerusform>Mídia extraída para %n palavras</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>Error: %1</source>
-        <translation>Erro: %1</translation>
-    </message>
-    <message>
-        <source>Unexpected error: %1</source>
-        <translation>Erro inesperado: %1</translation>
     </message>
     <message numerus="yes">
         <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
@@ -3093,14 +3105,6 @@ O dicionário não foi removido.</translation>
         <translation>Fonte de frequência (*.zip *.csv *.tsv);;Todos os Arquivos (*)</translation>
     </message>
     <message>
-        <source>Importing frequency source…</source>
-        <translation>Importando fonte de frequência…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Cancelar</translation>
-    </message>
-    <message>
         <source> (skipped %1 malformed entries)</source>
         <translation> (%1 entradas malformadas ignoradas)</translation>
     </message>
@@ -3117,16 +3121,20 @@ O dicionário não foi removido.</translation>
         <translation>%1 entradas importadas de '%2'.</translation>
     </message>
     <message>
+        <source>Importing frequency source…</source>
+        <translation>Importando fonte de frequência…</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
         <source>Import Failed</source>
         <translation>Falha na Importação</translation>
     </message>
     <message>
         <source>Choose frequency source to re-import</source>
         <translation>Escolha a fonte de frequência a reimportar</translation>
-    </message>
-    <message>
-        <source>Re-importing frequency source…</source>
-        <translation>Reimportando fonte de frequência…</translation>
     </message>
     <message>
         <source>Frequency Source Re-imported</source>
@@ -3137,6 +3145,10 @@ O dicionário não foi removido.</translation>
         <translation>%1 reimportada com sucesso.</translation>
     </message>
     <message>
+        <source>Re-importing frequency source…</source>
+        <translation>Reimportando fonte de frequência…</translation>
+    </message>
+    <message>
         <source>Re-import Failed</source>
         <translation>Falha na Reimportação</translation>
     </message>
@@ -3145,6 +3157,20 @@ O dicionário não foi removido.</translation>
     <message>
         <source>Loading…</source>
         <translation>Carregando…</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation>Falha na remoção</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The frequency source was not removed.</source>
+        <translation>Não foi possível excluir %1:
+%2
+
+A fonte de frequência não foi removida.</translation>
     </message>
     <message>
         <source>Active Frequency Sources</source>
@@ -3185,22 +3211,8 @@ Apenas os arquivos de índice são excluídos.
 Isso não pode ser desfeito. Você precisaria reimportar para usar esta fonte novamente.</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>Falha na remoção</translation>
-    </message>
-    <message>
         <source>A mining run is in progress. Stop it before removing frequency sources.</source>
         <translation>Uma mineração está em andamento. Pare-a antes de remover fontes de frequência.</translation>
-    </message>
-    <message>
-        <source>Could not delete %1:
-%2
-
-The frequency source was not removed.</source>
-        <translation>Não foi possível excluir %1:
-%2
-
-A fonte de frequência não foi removida.</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -4872,6 +4884,50 @@ Os valores importados substituem suas configurações atuais; qualquer coisa que
 </context><context>
     <name>SubtitleCreationTab</name>
     <message>
+        <source>Progress</source>
+        <translation>Progresso</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Concluído</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Concluído: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Ignorado</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Ignorado: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Cancelando…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Cancelado</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>Concluído — %1 arquivos processados</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Selecionar Pasta de Saída</translation>
+    </message>
+    <message>
+        <source>Next to source video</source>
+        <translation>Ao lado do vídeo de origem</translation>
+    </message>
+    <message>
         <source>Input</source>
         <translation>Entrada</translation>
     </message>
@@ -4928,10 +4984,6 @@ Os valores importados substituem suas configurações atuais; qualquer coisa que
         <translation>Saída:</translation>
     </message>
     <message>
-        <source>Next to source video</source>
-        <translation>Ao lado do vídeo de origem</translation>
-    </message>
-    <message>
         <source>Choose Folder…</source>
         <translation>Escolher Pasta…</translation>
     </message>
@@ -4954,18 +5006,6 @@ Os valores importados substituem suas configurações atuais; qualquer coisa que
     <message>
         <source>Generate Subtitles</source>
         <translation>Gerar Legendas</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Cancelar</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Progresso</translation>
-    </message>
-    <message>
-        <source>Select Output Folder</source>
-        <translation>Selecionar Pasta de Saída</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -5025,34 +5065,6 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
         <source>Transcribing file %1 of %2</source>
         <translation>Transcrevendo o arquivo %1 de %2</translation>
     </message>
-    <message>
-        <source>Done: </source>
-        <translation>Concluído: </translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>Concluído</translation>
-    </message>
-    <message>
-        <source>Skipped: </source>
-        <translation>Ignorado: </translation>
-    </message>
-    <message>
-        <source>Skipped</source>
-        <translation>Ignorado</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Cancelado</translation>
-    </message>
-    <message>
-        <source>Complete — %1 files processed</source>
-        <translation>Concluído — %1 arquivos processados</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Cancelando…</translation>
-    </message>
 </context><context>
     <name>SubtitleGenWorker</name>
     <message>
@@ -5064,27 +5076,31 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
         <translation>Extraindo áudio: %1</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>Cancelado</translation>
-    </message>
-    <message>
-        <source>Audio extraction failed for %1</source>
-        <translation>Falha na extração de áudio de %1</translation>
-    </message>
-    <message>
         <source>Transcribing: %1%</source>
         <translation>Transcrevendo: %1%</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Concluído</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Cancelado</translation>
     </message>
     <message>
         <source>No speech detected in %1</source>
         <translation>Nenhuma fala detectada em %1</translation>
     </message>
     <message>
-        <source>Done</source>
-        <translation>Concluído</translation>
+        <source>Audio extraction failed for %1</source>
+        <translation>Falha na extração de áudio de %1</translation>
     </message>
 </context><context>
     <name>SubtitlePlayerWidget</name>
+    <message>
+        <source>Could not load video: %1</source>
+        <translation>Não foi possível carregar o vídeo: %1</translation>
+    </message>
     <message>
         <source>This video uses AV1, which your system can't decode for in-app preview. Audio and subtitles still play.</source>
         <translation>Este vídeo usa AV1, que seu sistema não consegue decodificar para a pré-visualização no app. O áudio e as legendas continuam sendo reproduzidos.</translation>
@@ -5094,8 +5110,12 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
         <translation>Reproduzir</translation>
     </message>
     <message>
-        <source>Could not load video: %1</source>
-        <translation>Não foi possível carregar o vídeo: %1</translation>
+        <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>playback failed</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Pause</source>
@@ -5105,8 +5125,56 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
         <source>Video error: %1</source>
         <translation>Erro de vídeo: %1</translation>
     </message>
+    <message>
+        <source>Video preview is unavailable on this display. Audio and subtitles still play.</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>SubtitleRetimeTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>Progresso</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Concluído</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>Concluído: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>Ignorado</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>Ignorado: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Cancelando…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Cancelado</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>Concluído — %1 arquivos processados</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>Selecionar Pasta de Saída</translation>
+    </message>
+    <message>
+        <source>Next to source video</source>
+        <translation>Ao lado do vídeo de origem</translation>
+    </message>
     <message>
         <source>Input</source>
         <translation>Entrada</translation>
@@ -5180,10 +5248,6 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
         <translation>Saída:</translation>
     </message>
     <message>
-        <source>Next to source video</source>
-        <translation>Ao lado do vídeo de origem</translation>
-    </message>
-    <message>
         <source>Choose Folder…</source>
         <translation>Escolher Pasta…</translation>
     </message>
@@ -5232,14 +5296,6 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
         <translation>Reajustar Tempo das Legendas</translation>
     </message>
     <message>
-        <source>Cancel</source>
-        <translation>Cancelar</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>Progresso</translation>
-    </message>
-    <message>
         <source>No Video File Selected</source>
         <translation>Nenhum Arquivo de Vídeo Selecionado</translation>
     </message>
@@ -5274,10 +5330,6 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
     <message>
         <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
         <translation>Falha ao detectar faixas de áudio. Verifique se o ffprobe está instalado.</translation>
-    </message>
-    <message>
-        <source>Select Output Folder</source>
-        <translation>Selecionar Pasta de Saída</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -5346,34 +5398,6 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
     <message>
         <source>Retiming file %1 of %2</source>
         <translation>Reajustando o tempo do arquivo %1 de %2</translation>
-    </message>
-    <message>
-        <source>Done: </source>
-        <translation>Concluído: </translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>Concluído</translation>
-    </message>
-    <message>
-        <source>Skipped: </source>
-        <translation>Ignorado: </translation>
-    </message>
-    <message>
-        <source>Skipped</source>
-        <translation>Ignorado</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Cancelado</translation>
-    </message>
-    <message>
-        <source>Complete — %1 files processed</source>
-        <translation>Concluído — %1 arquivos processados</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Cancelando…</translation>
     </message>
 </context><context>
     <name>SubtitleRetimeWorker</name>
@@ -5936,6 +5960,62 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
 </context><context>
     <name>YouTubeTab</name>
     <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation>Mineração indisponível — serviços não inicializados.</translation>
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation>Execução %1 iniciando — %2 itens.</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Minerar</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Cancelando…</translation>
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation>Parar Tudo</translation>
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation>Fila concluída: %1 com sucesso, %2 com falha.</translation>
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation>Minerando %1 de %2: %3</translation>
+    </message>
+    <message>
+        <source>Mined %1: %2 cards (attempts=%3).</source>
+        <translation>Minerado %1: %2 cartões (tentativas=%3).</translation>
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
+        <translation>%1 cancelado.</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2 (attempts=%3).</source>
+        <translation>Falhou %1: %2 (tentativas=%3).</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>Cancelado</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>Falhou — consulte o log</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation>Concluído — %1 com sucesso</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation>Concluído — %1 com sucesso, %2 com falha</translation>
+    </message>
+    <message>
         <source>YouTube queue</source>
         <translation>Fila do YouTube</translation>
     </message>
@@ -5960,10 +6040,6 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
         <translation>Exibe o pop-up de seleção de palavras para cada vídeo antes de criar cartões.</translation>
     </message>
     <message>
-        <source>Mine</source>
-        <translation>Minerar</translation>
-    </message>
-    <message>
         <source>Mine every READY item in the queue into Anki cards.</source>
         <translation>Minera para cartões do Anki cada item PRONTO na fila.</translation>
     </message>
@@ -5976,64 +6052,12 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
         <translation>Remove todos os itens enfileirados que não estão sendo minerados no momento.</translation>
     </message>
     <message>
-        <source>Stop All</source>
-        <translation>Parar Tudo</translation>
-    </message>
-    <message>
         <source>Cancel the active run.</source>
         <translation>Cancela a execução ativa.</translation>
     </message>
     <message>
         <source>Progress</source>
         <translation>Progresso</translation>
-    </message>
-    <message>
-        <source>Mining unavailable — services not initialized.</source>
-        <translation>Mineração indisponível — serviços não inicializados.</translation>
-    </message>
-    <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation>Execução %1 iniciando — %2 itens.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Cancelando…</translation>
-    </message>
-    <message>
-        <source>Mining %1 of %2: %3</source>
-        <translation>Minerando %1 de %2: %3</translation>
-    </message>
-    <message>
-        <source>Mined %1: %2 cards (attempts=%3).</source>
-        <translation>Minerado %1: %2 cartões (tentativas=%3).</translation>
-    </message>
-    <message>
-        <source>Cancelled %1.</source>
-        <translation>%1 cancelado.</translation>
-    </message>
-    <message>
-        <source>Failed %1: %2 (attempts=%3).</source>
-        <translation>Falhou %1: %2 (tentativas=%3).</translation>
-    </message>
-    <message>
-        <source>Queue done: %1 succeeded, %2 failed.</source>
-        <translation>Fila concluída: %1 com sucesso, %2 com falha.</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Cancelado</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>Falhou — consulte o log</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded, %2 failed</source>
-        <translation>Concluído — %1 com sucesso, %2 com falha</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded</source>
-        <translation>Concluído — %1 com sucesso</translation>
     </message>
 </context><context>
     <name>ZipImportFlow</name>
@@ -6116,5 +6140,11 @@ Continuar com a importação?</translation>
     <message>
         <source>⚠ folder missing — re-import</source>
         <translation>⚠ pasta ausente — reimportar</translation>
+    </message>
+</context><context>
+    <name>app</name>
+    <message>
+        <source>Anki Miner — Unexpected Error</source>
+        <translation type="unfinished" />
     </message>
 </context></TS>
