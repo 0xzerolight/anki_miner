@@ -15,7 +15,6 @@ import pytest
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
-from anki_miner.models import TokenizedWord
 
 
 def _reset(font_scale: float = 1.0) -> None:
@@ -32,32 +31,12 @@ def _restore_scale():
     _reset(1.0)
 
 
-def _make_words(count: int = 3) -> list[TokenizedWord]:
-    names = ["食べる", "走る", "泳ぐ", "読む", "書く"]
-    words = []
-    for i in range(count):
-        lemma = names[i % len(names)]
-        words.append(
-            TokenizedWord(
-                surface=f"{lemma}た",
-                lemma=lemma,
-                reading="タベル",
-                sentence=f"{lemma}のテスト",
-                start_time=float(i),
-                end_time=float(i + 2),
-                duration=2.0,
-                frequency_rank=i * 100 if i > 0 else None,
-            )
-        )
-    return words
-
-
 class TestCurationRowHeight:
     """WordCurationDialog row height scales with the global font scale."""
 
-    def test_row_height_at_scale_1_0_equals_base(self, qtbot):
+    def test_row_height_at_scale_1_0_equals_base(self, qtbot, make_tokenized_words):
         _reset(1.0)
-        dlg = WordCurationDialog(_make_words(3))
+        dlg = WordCurationDialog(make_tokenized_words(3))
         qtbot.addWidget(dlg)
         try:
             vh = dlg.table.verticalHeader()
@@ -66,9 +45,9 @@ class TestCurationRowHeight:
         finally:
             dlg.deleteLater()
 
-    def test_row_height_doubles_at_scale_2_0(self, qtbot):
+    def test_row_height_doubles_at_scale_2_0(self, qtbot, make_tokenized_words):
         _reset(2.0)
-        dlg = WordCurationDialog(_make_words(3))
+        dlg = WordCurationDialog(make_tokenized_words(3))
         qtbot.addWidget(dlg)
         try:
             vh = dlg.table.verticalHeader()
@@ -77,9 +56,9 @@ class TestCurationRowHeight:
         finally:
             dlg.deleteLater()
 
-    def test_make_font_scales_pixel_size(self, qtbot):
+    def test_make_font_scales_pixel_size(self, qtbot, make_tokenized_words):
         _reset(1.5)
-        dlg = WordCurationDialog(_make_words(1))
+        dlg = WordCurationDialog(make_tokenized_words(1))
         qtbot.addWidget(dlg)
         try:
             assert dlg._make_font(16).pixelSize() == 24  # 16 * 1.5

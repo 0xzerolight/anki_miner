@@ -513,6 +513,37 @@ def make_tokenized_word():
 
 
 @pytest.fixture
+def make_tokenized_words(make_tokenized_word):
+    """Factory for a list of distinct TokenizedWords.
+
+    Surface/sentence are derived from each word's lemma so the list holds
+    genuinely distinct rows; ``frequency_rank`` climbs with the index (first
+    row unranked). Reproduces the ``_make_words`` helper that was copy-pasted
+    across the curation-dialog test modules.
+    """
+
+    def _make(count=3, lemmas=("食べる", "走る", "泳ぐ", "読む", "書く")):
+        words = []
+        for i in range(count):
+            lemma = lemmas[i % len(lemmas)]
+            words.append(
+                make_tokenized_word(
+                    surface=f"{lemma}た",
+                    lemma=lemma,
+                    reading="タベル",
+                    sentence=f"{lemma}のテスト",
+                    start_time=float(i),
+                    end_time=float(i + 2),
+                    duration=2.0,
+                    frequency_rank=i * 100 if i > 0 else None,
+                )
+            )
+        return words
+
+    return _make
+
+
+@pytest.fixture
 def make_media_data(tmp_path):
     """Factory fixture for creating MediaData instances with optional real files."""
 
