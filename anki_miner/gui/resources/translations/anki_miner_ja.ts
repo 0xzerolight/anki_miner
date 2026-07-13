@@ -937,7 +937,7 @@ This cannot be undone. You would need to re-import to use this pack again.</sour
     </message>
     <message>
         <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
-        <translation type="unfinished" />
+        <translation>すべてのエピソードの字幕タイミングを調整します（正 = 遅く、負 = 早く）</translation>
     </message>
     <message>
         <source>Process Folder</source>
@@ -5086,24 +5086,16 @@ Go to Settings → ASR to download it before generating subtitles.</source>
 </context><context>
     <name>SubtitlePlayerWidget</name>
     <message>
-        <source>Could not load video: %1</source>
-        <translation>動画を読み込めませんでした: %1</translation>
-    </message>
-    <message>
-        <source>This video uses AV1, which your system can't decode for in-app preview. Audio and subtitles still play.</source>
-        <translation>この動画はAV1を使用しており、お使いのシステムではアプリ内プレビュー用にデコードできません。音声と字幕は引き続き再生されます。</translation>
-    </message>
-    <message>
         <source>Play</source>
         <translation>再生</translation>
     </message>
     <message>
         <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
-        <translation type="unfinished" />
+        <translation>動画プレビューには mpv （libmpv）が必要です。バンドル版には含まれています。Linux ではパッケージマネージャーからインストールし（例： libmpv2）、macOS では Homebrew を使用してください（brew install mpv）。</translation>
     </message>
     <message>
         <source>playback failed</source>
-        <translation type="unfinished" />
+        <translation>再生に失敗しました</translation>
     </message>
     <message>
         <source>Pause</source>
@@ -5115,7 +5107,7 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Video preview is unavailable on this display. Audio and subtitles still play.</source>
-        <translation type="unfinished" />
+        <translation>このディスプレイでは動画プレビューを利用できません。音声と字幕は引き続き再生されます。</translation>
     </message>
 </context><context>
     <name>SubtitleRetimeTab</name>
@@ -6133,6 +6125,6 @@ Continue with import?</source>
     <name>app</name>
     <message>
         <source>Anki Miner — Unexpected Error</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner — 予期しないエラー</translation>
     </message>
 </context></TS>

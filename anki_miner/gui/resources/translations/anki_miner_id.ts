@@ -937,7 +937,7 @@ Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang untuk menggunakan paket i
     </message>
     <message>
         <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
-        <translation type="unfinished" />
+        <translation>Sesuaikan waktu subtitel untuk semua episode (positif = lebih lambat, negatif = lebih awal)</translation>
     </message>
     <message>
         <source>Process Folder</source>
@@ -5086,24 +5086,16 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
 </context><context>
     <name>SubtitlePlayerWidget</name>
     <message>
-        <source>Could not load video: %1</source>
-        <translation>Tidak dapat memuat video: %1</translation>
-    </message>
-    <message>
-        <source>This video uses AV1, which your system can't decode for in-app preview. Audio and subtitles still play.</source>
-        <translation>Video ini menggunakan AV1, yang tidak dapat didekode sistem Anda untuk pratinjau dalam aplikasi. Audio dan subtitel tetap dapat diputar.</translation>
-    </message>
-    <message>
         <source>Play</source>
         <translation>Putar</translation>
     </message>
     <message>
         <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
-        <translation type="unfinished" />
+        <translation>Pratinjau video memerlukan mpv (libmpv). Build bawaan sudah menyertakannya; di Linux instal melalui pengelola paket Anda (mis. libmpv2), di macOS melalui Homebrew (brew install mpv).</translation>
     </message>
     <message>
         <source>playback failed</source>
-        <translation type="unfinished" />
+        <translation>pemutaran gagal</translation>
     </message>
     <message>
         <source>Pause</source>
@@ -5115,7 +5107,7 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
     </message>
     <message>
         <source>Video preview is unavailable on this display. Audio and subtitles still play.</source>
-        <translation type="unfinished" />
+        <translation>Pratinjau video tidak tersedia di layar ini. Audio dan subtitel tetap diputar.</translation>
     </message>
 </context><context>
     <name>SubtitleRetimeTab</name>
@@ -6133,6 +6125,6 @@ Lanjutkan impor?</translation>
     <name>app</name>
     <message>
         <source>Anki Miner — Unexpected Error</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner — Kesalahan Tak Terduga</translation>
     </message>
 </context></TS>

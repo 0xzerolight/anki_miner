@@ -937,7 +937,7 @@ Thao tác này không thể hoàn tác. Bạn sẽ cần nhập lại để dùn
     </message>
     <message>
         <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
-        <translation type="unfinished" />
+        <translation>Điều chỉnh thời gian phụ đề cho tất cả các tập (dương = trễ hơn, âm = sớm hơn)</translation>
     </message>
     <message>
         <source>Process Folder</source>
@@ -5086,24 +5086,16 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
 </context><context>
     <name>SubtitlePlayerWidget</name>
     <message>
-        <source>Could not load video: %1</source>
-        <translation>Không thể tải video: %1</translation>
-    </message>
-    <message>
-        <source>This video uses AV1, which your system can't decode for in-app preview. Audio and subtitles still play.</source>
-        <translation>Video này dùng AV1, mà hệ thống của bạn không thể giải mã để xem trước trong ứng dụng. Âm thanh và phụ đề vẫn phát.</translation>
-    </message>
-    <message>
         <source>Play</source>
         <translation>Phát</translation>
     </message>
     <message>
         <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
-        <translation type="unfinished" />
+        <translation>Xem trước video cần mpv (libmpv). Các bản dựng đóng gói đã bao gồm sẵn; trên Linux hãy cài đặt từ trình quản lý gói (ví dụ libmpv2), trên macOS thì qua Homebrew (brew install mpv).</translation>
     </message>
     <message>
         <source>playback failed</source>
-        <translation type="unfinished" />
+        <translation>phát lại thất bại</translation>
     </message>
     <message>
         <source>Pause</source>
@@ -5115,7 +5107,7 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     </message>
     <message>
         <source>Video preview is unavailable on this display. Audio and subtitles still play.</source>
-        <translation type="unfinished" />
+        <translation>Xem trước video không khả dụng trên màn hình này. Âm thanh và phụ đề vẫn phát.</translation>
     </message>
 </context><context>
     <name>SubtitleRetimeTab</name>
@@ -6133,6 +6125,6 @@ Tiếp tục nhập?</translation>
     <name>app</name>
     <message>
         <source>Anki Miner — Unexpected Error</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner — Lỗi Không Mong Đợi</translation>
     </message>
 </context></TS>
