@@ -76,6 +76,26 @@ class ProcessorOwningWorker(CancellableWorker):
     storage (constructor arg or per-item current processor).
     """
 
+    @staticmethod
+    def _validate_processor_xor_factory(
+        processor: EpisodeProcessor | None,
+        processor_factory: Callable[[], EpisodeProcessor] | None,
+        *,
+        param_name: str = "processor",
+    ) -> None:
+        """Enforce the exactly-one-of processor/factory constructor contract.
+
+        Shared by all processor-owning workers (episode, manual, and the three
+        sequential queue workers): either a pre-built processor or a
+        ``processor_factory`` is supplied, never both and never neither.
+        ``param_name`` names the processor parameter in the message so
+        :class:`ManualPairWorkerThread` keeps its ``episode_processor`` wording.
+        """
+        if processor is not None and processor_factory is not None:
+            raise ValueError(f"Provide either {param_name} or processor_factory, not both")
+        if processor is None and processor_factory is None:
+            raise ValueError(f"Either {param_name} or processor_factory must be provided")
+
     @property
     def curation_processor(self) -> EpisodeProcessor | None:
         """Processor owning dictionary resources for the current or most recent run.

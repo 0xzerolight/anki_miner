@@ -61,10 +61,7 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
                 Mutually exclusive with a non-None ``processor``.  When supplied,
                 the processor is constructed on the worker thread inside run().
         """
-        if processor is not None and processor_factory is not None:
-            raise ValueError("Provide either processor or processor_factory, not both")
-        if processor is None and processor_factory is None:
-            raise ValueError("Either processor or processor_factory must be provided")
+        self._validate_processor_xor_factory(processor, processor_factory)
         super().__init__(parent)
         self.processor = processor
         self._processor_factory = processor_factory
