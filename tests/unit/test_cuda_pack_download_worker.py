@@ -74,6 +74,27 @@ def test_progress_adapter_emits_status(qapp, tmp_path, monkeypatch):
     assert any("%" in s for s in statuses)
 
 
+def test_progress_resolves_under_cuda_context(qapp, tmp_path, monkeypatch):
+    """The ``%1 (%2%)`` template resolves under the CudaPack context (not another)."""
+    import anki_miner.gui.workers.install_worker as iw
+
+    seen_ctx: list[str] = []
+    monkeypatch.setattr(iw, "_progress_template", lambda ctx: seen_ctx.append(ctx) or "%1 (%2%)")
+
+    def _install(cuda_libs_root, progress=None, cancel_event=None):
+        if progress is not None:
+            progress(50, 100, "cudnn")
+        return cuda_libs_root
+
+    monkeypatch.setattr(_INSTALL, _install)
+    worker = _worker(tmp_path)
+
+    _run_worker_sync(worker)
+
+    assert seen_ctx == ["CudaPackDownloadWorker"]
+    assert worker._progress_ctx == "CudaPackDownloadWorker"
+
+
 def test_failure_emits_result_false(qapp, tmp_path, monkeypatch):
     monkeypatch.setattr(
         _INSTALL,

@@ -109,6 +109,54 @@ def test_progress_adapter_emits_status(qapp, tmp_path, monkeypatch):
     assert any("%" in s for s in statuses)
 
 
+def test_progress_resolves_under_vulkan_context(qapp, tmp_path, monkeypatch):
+    """The ``%1 (%2%)`` template resolves under the Vulkan context, NOT CudaPack.
+
+    Regression guard: fr/zh_cn carry a distinct Vulkan variant (non-breaking
+    space / fullwidth parens), so a progress line during a Vulkan download must
+    resolve under ``VulkanModelDownloadWorker``.
+    """
+    import anki_miner.gui.workers.install_worker as iw
+
+    seen_ctx: list[str] = []
+    monkeypatch.setattr(iw, "_progress_template", lambda ctx: seen_ctx.append(ctx) or "%1 (%2%)")
+
+    def _ggml(asr_model, root, progress=None, cancel_event=None):
+        if progress is not None:
+            progress(50, 100, "ggml-large-v3")
+        return root
+
+    _patch_installers(monkeypatch, ggml=_ggml)
+    worker = _worker("large-v3", tmp_path)
+
+    _run_worker_sync(worker)
+
+    assert seen_ctx == ["VulkanModelDownloadWorker"]
+    assert worker._progress_ctx == "VulkanModelDownloadWorker"
+
+
+def test_progress_template_routes_each_context_to_its_own(qapp, monkeypatch):
+    """``_progress_template`` resolves the source under the passed-in context."""
+    from PyQt6.QtCore import QCoreApplication
+
+    import anki_miner.gui.workers.install_worker as iw
+
+    calls: list[tuple[str, str]] = []
+    monkeypatch.setattr(QCoreApplication, "translate", lambda ctx, src: calls.append((ctx, src)) or src)
+
+    iw._progress_template("VulkanModelDownloadWorker")
+    iw._progress_template("OnnxPackDownloadWorker")
+    iw._progress_template("CudaPackDownloadWorker")
+    iw._progress_template("SomethingElse")  # falls back to CudaPack
+
+    assert calls == [
+        ("VulkanModelDownloadWorker", "%1 (%2%)"),
+        ("OnnxPackDownloadWorker", "%1 (%2%)"),
+        ("CudaPackDownloadWorker", "%1 (%2%)"),
+        ("CudaPackDownloadWorker", "%1 (%2%)"),
+    ]
+
+
 def test_failure_emits_result_false(qapp, tmp_path, monkeypatch):
     def _ggml(asr_model, root, progress=None, cancel_event=None):
         raise SetupError("checksum mismatch")
