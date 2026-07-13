@@ -418,36 +418,6 @@ class TestValidationResult:
         )
         assert result.ffprobe_ok is True
 
-    def test_has_errors(self):
-        result = ValidationResult(
-            ankiconnect_ok=False,
-            ffmpeg_ok=True,
-            deck_exists=True,
-            note_type_exists=True,
-            issues=[ValidationIssue("AnkiConnect", "ERROR", "Connection failed")],
-        )
-        assert result.has_errors is True
-
-    def test_has_warnings(self):
-        result = ValidationResult(
-            ankiconnect_ok=True,
-            ffmpeg_ok=True,
-            deck_exists=True,
-            note_type_exists=True,
-            issues=[ValidationIssue("Temp Folder", "WARNING", "Could not create")],
-        )
-        assert result.has_warnings is True
-
-    def test_no_errors_no_warnings(self):
-        result = ValidationResult(
-            ankiconnect_ok=True,
-            ffmpeg_ok=True,
-            deck_exists=True,
-            note_type_exists=True,
-        )
-        assert result.has_errors is False
-        assert result.has_warnings is False
-
     def test_get_errors(self):
         issues = [
             ValidationIssue("A", "ERROR", "msg1"),

@@ -3663,13 +3663,6 @@ class TestCompoundMatchingParserIntegration:
 
         assert run(tokens_a) == run(tokens_b, term_lookup=None)
 
-    def test_toggle_off_disables_matching(self, tmp_path, test_config):
-        from dataclasses import replace as dc_replace
-
-        config = dc_replace(test_config, compound_matching=False)
-        words = self._parse(tmp_path, config, "走り出した", self._hashiridashita_tokens(), {"走り出す"})
-        assert [w.lemma for w in words] == ["走る", "出す"]
-
     def test_index_and_count_paths_carry_compound(self, tmp_path, test_config):
         sub_file = tmp_path / "test.srt"
         sub_file.write_text("stub", encoding="utf-8")

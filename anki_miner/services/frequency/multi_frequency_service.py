@@ -3,12 +3,13 @@
 Wraps an ordered list of already-loaded :class:`IndexedFreqProvider` instances
 and layers them additively:
 
-* :meth:`lookup_min` returns the best (minimum) rank any source reports, driving
-  the top-N frequency filter.
-* :meth:`lookup_harmonic` returns the harmonic mean of the per-source ranks
-  (Yomitan's ``getFrequencyHarmonic``), driving the card's numeric sort field.
 * :meth:`lookup_all` returns every source that has a rank for the term, in chain
   order — the per-source breakdown shown on the card.
+* :func:`min_rank` reduces a fetched ``lookup_all`` list to the best (minimum)
+  rank, driving the top-N frequency filter.
+* :func:`harmonic_rank` reduces the same list to the harmonic mean of the
+  per-source ranks (Yomitan's ``getFrequencyHarmonic``), driving the card's
+  numeric sort field.
 
 Providers are assembled and ``.load()``-ed by ``FrequencySourceRegistry``; this
 service only reads them.
@@ -107,26 +108,6 @@ class MultiFrequencyService:
                 rank, display_value = detail
                 results.append((provider.name, rank, display_value))
         return results
-
-    def lookup_min(self, term: str, reading: str | None = None) -> int | None:
-        """Minimum rank across all providers, or None if none rank ``term``.
-
-        Backs the top-N frequency filter (it genuinely wants the best rank in any
-        source). Thin wrapper over :func:`min_rank`; a caller that already fetched
-        ``lookup_all`` should call :func:`min_rank` directly to avoid re-querying.
-        """
-        return min_rank(self.lookup_all(term, reading))
-
-    def lookup_harmonic(self, term: str, reading: str | None = None) -> int | None:
-        """Harmonic mean of the per-source ranks, or None if none rank ``term``.
-
-        Drives the card's numeric ``frequency_sort`` field so no single niche
-        source dominates the sort the way a bare MIN can. Thin wrapper over
-        :func:`harmonic_rank` (Yomitan getFrequencyHarmonic); a caller that
-        already fetched ``lookup_all`` should call :func:`harmonic_rank` directly
-        to avoid re-querying.
-        """
-        return harmonic_rank(self.lookup_all(term, reading))
 
     def close(self) -> None:
         """Close every wrapped provider's sqlite handle.

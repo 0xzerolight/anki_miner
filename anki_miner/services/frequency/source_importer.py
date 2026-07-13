@@ -26,11 +26,9 @@ count first) before storage, so downstream rank filtering/sorting stays correct.
 
 from __future__ import annotations
 
-import json
 import logging
 import shutil
 import tempfile
-import zipfile
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -38,7 +36,6 @@ from typing import Callable
 
 from anki_miner.exceptions import SetupError
 from anki_miner.services._staging import promote_staged_dir
-from anki_miner.services.dictionary.zip_safety import raise_if_index_nested
 from anki_miner.services.frequency import mode_probe, storage
 from anki_miner.services.frequency.csv_parse import (
     _extract_word_rank,
@@ -57,11 +54,6 @@ from anki_miner.utils.csv_utils import detect_delimiter, is_header_row
 from anki_miner.utils.slug import slugify
 
 logger = logging.getLogger(__name__)
-
-# index.json is tiny; cap how much we pull into memory when peeking at a zip's
-# title for source_id derivation so a small zip carrying a multi-GB index.json
-# cannot OOM. 8 MiB is orders of magnitude beyond any legitimate index.json.
-_MAX_INDEX_JSON_BYTES = 8 * 1024 * 1024
 
 _ZIP_SUFFIXES = {".zip"}
 _CSV_SUFFIXES = {".csv", ".tsv", ".txt"}
@@ -471,44 +463,3 @@ def _derive_source_id(name: str) -> str:
 def _slug(text: str) -> str:
     """ASCII slug suitable for a directory name. CJK falls through as hex codepoints."""
     return slugify(text, fallback="source")
-
-
-def derive_source_id_from_zip(zip_path: Path) -> str:
-    """Peek at a Yomitan zip's ``index.json`` title → derived ``source_id``.
-
-    Used to validate a user-picked zip against a stale reimport slot without
-    invoking the full importer.
-
-    Raises:
-        SetupError: zip missing, corrupt, missing ``index.json``, or
-            ``index.json`` lacks a non-empty ``title``.
-    """
-    if not zip_path.exists():
-        raise SetupError(f"Yomitan zip not found: {zip_path}")
-    try:
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            try:
-                info = zf.getinfo("index.json")
-            except KeyError:
-                raise_if_index_nested(zf.namelist(), missing_msg="Zip missing required index.json")
-            if info.file_size > _MAX_INDEX_JSON_BYTES:
-                raise SetupError(
-                    f"index.json is implausibly large ({info.file_size:,} > {_MAX_INDEX_JSON_BYTES:,} bytes)"
-                )
-            with zf.open("index.json") as fp:
-                raw_bytes = fp.read(_MAX_INDEX_JSON_BYTES + 1)
-            if len(raw_bytes) > _MAX_INDEX_JSON_BYTES:
-                raise SetupError(f"index.json exceeds the {_MAX_INDEX_JSON_BYTES:,}-byte cap")
-            raw = raw_bytes.decode("utf-8")
-    except zipfile.BadZipFile as e:
-        raise SetupError(f"Corrupt zip file: {e}") from e
-
-    try:
-        index = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise SetupError(f"Invalid index.json: {e}") from e
-
-    title = str(index.get("title", "")).strip()
-    if not title:
-        raise SetupError("index.json missing required 'title'")
-    return _derive_source_id(title)

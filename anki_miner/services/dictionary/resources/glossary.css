@@ -30,7 +30,7 @@
  *    core). card_style_block embeds a group only when the card's HTML contains
  *    markup its rules could match. Markers sit ONLY between complete rules —
  *    immediately after a `}` and before the next selector — or the region
- *    concat breaks (pinned by base_css_variant(ALL) == minified_base_css()).
+ *    concat breaks (pinned by base_css_variant(ALL) == _minify_css(load_glossary_css())).
  *    Group placement is linted both ways in tests/unit/test_glossary_css.py.
  */
 

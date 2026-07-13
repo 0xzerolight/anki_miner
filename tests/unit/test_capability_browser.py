@@ -23,12 +23,12 @@ def dialog(qtbot):
 
 
 def test_starts_showing_everything(dialog):
-    assert dialog.visible_capabilities() == list(CAPABILITIES)
+    assert dialog._current == list(CAPABILITIES)
 
 
 def test_typing_filters_to_matches(dialog):
     dialog.search_box.setText("i+1")
-    shown = {c.id for c in dialog.visible_capabilities()}
+    shown = {c.id for c in dialog._current}
     assert "i-plus-one" in shown
     assert "youtube-mining" not in shown
 
@@ -36,20 +36,20 @@ def test_typing_filters_to_matches(dialog):
 def test_open_buttons_match_visible_rows(dialog):
     dialog.search_box.setText("youtube")
     buttons = [b for b in dialog.findChildren(QPushButton) if b.objectName() == "capability-open"]
-    assert len(buttons) == len(dialog.visible_capabilities())
+    assert len(buttons) == len(dialog._current)
 
 
 def test_no_match_shows_empty_state(dialog):
     dialog.search_box.setText("zzzz-nothing-here")
-    assert dialog.visible_capabilities() == []
+    assert dialog._current == []
     assert dialog._empty_label.isVisible() or dialog._empty_label.isVisibleTo(dialog)
 
 
 def test_clearing_search_restores_full_list(dialog):
     dialog.search_box.setText("pitch")
-    assert len(dialog.visible_capabilities()) < len(CAPABILITIES)
+    assert len(dialog._current) < len(CAPABILITIES)
     dialog.search_box.setText("")
-    assert dialog.visible_capabilities() == list(CAPABILITIES)
+    assert dialog._current == list(CAPABILITIES)
 
 
 def test_choosing_records_target_and_accepts(dialog, qtbot):
@@ -62,7 +62,7 @@ def test_choosing_records_target_and_accepts(dialog, qtbot):
 
 def test_clicking_open_button_selects_that_row(dialog, qtbot):
     dialog.search_box.setText("audiobook")  # narrows to a single row
-    visible = dialog.visible_capabilities()
+    visible = dialog._current
     assert len(visible) == 1
     button = next(b for b in dialog.findChildren(QPushButton) if b.objectName() == "capability-open")
     with qtbot.waitSignal(dialog.accepted, timeout=1000):

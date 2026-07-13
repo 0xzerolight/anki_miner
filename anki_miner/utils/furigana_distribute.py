@@ -15,7 +15,6 @@ This module                             Yomitan ``japanese.js``
 ``_get_furigana_kana_segments``         ``getFuriganaKanaSegments``
 ``get_stem_length``                     ``getStemLength``
 ``distribute_furigana``                 ``distributeFurigana``
-``distribute_furigana_inflected``       ``distributeFuriganaInflected``
 ======================================  ============================
 
 Python ``str`` is codepoint-indexed, so the upstream UTF-16 surrogate handling
@@ -43,8 +42,7 @@ from dataclasses import dataclass
 class FuriganaSegment:
     """One furigana segment: ``text`` with an (optionally empty) ``reading``.
 
-    Port of Yomitan's ``createFuriganaSegment``. Mutable because
-    :func:`distribute_furigana_inflected` extends a segment's ``text`` in place.
+    Port of Yomitan's ``createFuriganaSegment``.
     """
 
     text: str
@@ -250,55 +248,3 @@ def distribute_furigana(term: str, reading: str) -> list[FuriganaSegment]:
 
     # Fallback
     return [FuriganaSegment(term, reading)]
-
-
-def distribute_furigana_inflected(term: str, reading: str, source: str) -> list[FuriganaSegment]:
-    """Align a dictionary form against an inflected surface (distributeFuriganaInflected).
-
-    ``source`` is the inflected surface actually seen in text; the returned
-    segments carry ``source``'s okurigana rather than ``term``'s.
-    """
-    term_normalized = _convert_katakana_to_hiragana(term)
-    reading_normalized = _convert_katakana_to_hiragana(reading)
-    source_normalized = _convert_katakana_to_hiragana(source)
-
-    main_text = term
-    stem_length = get_stem_length(term_normalized, source_normalized)
-
-    # Check if source is derived from the reading instead of the term
-    reading_stem_length = get_stem_length(reading_normalized, source_normalized)
-    if reading_stem_length > 0 and reading_stem_length >= stem_length:
-        main_text = reading
-        stem_length = reading_stem_length
-        reading = f"{source[0:stem_length]}{reading[stem_length:]}"
-
-    segments: list[FuriganaSegment] = []
-    if stem_length > 0:
-        main_text = f"{source[0:stem_length]}{main_text[stem_length:]}"
-        segments2 = distribute_furigana(main_text, reading)
-        consumed = 0
-        for segment in segments2:
-            text = segment.text
-            start = consumed
-            consumed += len(text)
-            if consumed < stem_length:
-                segments.append(segment)
-            elif consumed == stem_length:
-                segments.append(segment)
-                break
-            else:
-                if start < stem_length:
-                    segments.append(FuriganaSegment(main_text[start:stem_length], ""))
-                break
-
-    if stem_length < len(source):
-        remainder = source[stem_length:]
-        segment_count = len(segments)
-        if segment_count > 0 and len(segments[segment_count - 1].reading) == 0:
-            # Append to the last segment if it has an empty reading
-            segments[segment_count - 1].text += remainder
-        else:
-            # Otherwise, create a new segment
-            segments.append(FuriganaSegment(remainder, ""))
-
-    return segments
