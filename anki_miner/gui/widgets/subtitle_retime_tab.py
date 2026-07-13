@@ -23,13 +23,12 @@ import logging
 import os
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator, cast
+from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QCheckBox,
     QDoubleSpinBox,
-    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -43,10 +42,9 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.constants import SUBTITLE_FILE_FILTER, VIDEO_FILE_FILTER
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
-from anki_miner.gui.widgets.log_widget import LogWidget
-from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.subtitle_retime_worker import SubtitleRetimeWorker
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.alass_resolver import resolve_alass
@@ -66,8 +64,11 @@ _SPLIT_PENALTY_MAX = 1000.0
 _SPLIT_PENALTY_STEP = 1.0
 
 
-class SubtitleRetimeTab(QWidget):
+class SubtitleRetimeTab(_ToolTabBase):
     """Tab for retiming subtitle files to video using alass.
+
+    Shared worker-signal slots, output-location slots, progress chrome, and the
+    close contract live in :class:`~anki_miner.gui.widgets._tool_tab_base._ToolTabBase`.
 
     Args:
         config: Frozen application configuration.
@@ -77,7 +78,7 @@ class SubtitleRetimeTab(QWidget):
     def __init__(self, config: AnkiMinerConfig, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.config = config
-        self.worker_thread: SubtitleRetimeWorker | None = None
+        self.worker_thread = None
         self._custom_output_dir: Path | None = None
         self._total_pairs: int = 0
         self._cancelled: bool = False
@@ -88,9 +89,27 @@ class SubtitleRetimeTab(QWidget):
         # shutil.which / Path.exists) is a PATH scan we must not repeat on every
         # _alass_available() read. Recomputed only here and in update_config().
         self._alass_is_available: bool = self._compute_alass_available()
+        # Built here (not in the base) so each literal stays in this tab's
+        # tr-context — see _ToolTabBase for the rationale.
+        self._strings = _ToolTabStrings(
+            progress=self.tr("Progress"),
+            done=self.tr("Done"),
+            done_prefix=self.tr("Done: "),
+            skipped=self.tr("Skipped"),
+            skipped_prefix=self.tr("Skipped: "),
+            cancel=self.tr("Cancel"),
+            cancelling=self.tr("Cancelling…"),
+            cancelled=self.tr("Cancelled"),
+            complete_template=self.tr("Complete — %1 files processed"),
+            select_output_folder=self.tr("Select Output Folder"),
+            output_default=self.tr("Next to source video"),
+        )
 
         self._setup_ui()
         self._refresh_engine_state()
+
+    def _item_total(self) -> int:
+        return self._total_pairs
 
     # ------------------------------------------------------------------
     # Config refresh
@@ -254,7 +273,7 @@ class SubtitleRetimeTab(QWidget):
         out_label = QLabel(self.tr("Output:"))
         out_row.addWidget(out_label)
 
-        self.output_location_label = QLabel(self.tr("Next to source video"))
+        self.output_location_label = QLabel(self._strings.output_default)
         self.output_location_label.setObjectName("output-location-value")
         out_row.addWidget(self.output_location_label, 1)
 
@@ -335,6 +354,8 @@ class SubtitleRetimeTab(QWidget):
 
         self.retime_button = ModernButton(self.tr("Retime Subtitles"), variant="primary")
         self.retime_button.clicked.connect(self._on_retime)
+        # Base slots (queue-finished re-enable) act on the tool's primary button.
+        self._primary_button = self.retime_button
         btn_row.addWidget(self.retime_button)
 
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="danger")
@@ -344,24 +365,6 @@ class SubtitleRetimeTab(QWidget):
 
         btn_row.addStretch()
         layout.addLayout(btn_row)
-
-        group.setLayout(layout)
-        return group
-
-    def _create_progress_section(self) -> QFrame:
-        group = QFrame()
-        group.setObjectName("card")
-        layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
-
-        layout.addWidget(SectionHeader(self.tr("Progress")))
-
-        self.progress_widget = ProgressWidget()
-        layout.addWidget(self.progress_widget)
-
-        self.log_widget = LogWidget()
-        layout.addWidget(self.log_widget)
 
         group.setLayout(layout)
         return group
@@ -492,26 +495,6 @@ class SubtitleRetimeTab(QWidget):
             )
 
         run_off_thread(self, _probe, _on_streams, _on_probe_error)
-
-    # ------------------------------------------------------------------
-    # Output location slots
-    # ------------------------------------------------------------------
-
-    def _on_choose_output(self) -> None:
-        folder = QFileDialog.getExistingDirectory(
-            self,
-            self.tr("Select Output Folder"),
-            str(Path.home()),
-        )
-        if folder:
-            self._custom_output_dir = Path(folder)
-            self.output_location_label.setText(folder)
-            self.clear_output_button.show()
-
-    def _on_clear_output(self) -> None:
-        self._custom_output_dir = None
-        self.output_location_label.setText(self.tr("Next to source video"))
-        self.clear_output_button.hide()
 
     # ------------------------------------------------------------------
     # Retime
@@ -708,64 +691,3 @@ class SubtitleRetimeTab(QWidget):
         self.progress_widget.set_status(
             tr_format(self.tr("Retiming file %1 of %2"), str(idx + 1), str(self._total_pairs))
         )
-
-    def _on_file_progress(self, idx: int, pct: int, message: str) -> None:
-        # alass emits no intra-file fraction (pct is 0 in-progress / 100 done),
-        # so composition advances per file with live status text.
-        self.progress_widget.set_composed(idx, pct, self._total_pairs, message)
-
-    def _on_file_finished(self, idx: int, out_path: object, error_str: object) -> None:
-        # Whole-file advance in percent units (matches set_composed's ETA math).
-        if self._total_pairs:
-            self.progress_widget.set_percent(int((idx + 1) / self._total_pairs * 100))
-        if error_str:
-            self.log_widget.append_error(str(error_str))
-        else:
-            path_label = str(out_path) if out_path else ""
-            self.log_widget.append_success(self.tr("Done: ") + Path(path_label).name if path_label else self.tr("Done"))
-
-    def _on_file_skipped(self, idx: int, out_path: object) -> None:
-        # Advance the progress bar just like a finished pair.
-        if self._total_pairs:
-            self.progress_widget.set_percent(int((idx + 1) / self._total_pairs * 100))
-        path_label = str(out_path) if out_path else ""
-        self.log_widget.append_info(self.tr("Skipped: ") + Path(path_label).name if path_label else self.tr("Skipped"))
-
-    def _on_queue_finished(self) -> None:
-        self.retime_button.setEnabled(True)
-        self.cancel_button.hide()
-        # Reset for the next run's cancel button.
-        self.cancel_button.setText(self.tr("Cancel"))
-        self.cancel_button.setEnabled(True)
-        if self._cancelled:
-            self.progress_widget.reset()
-            self.progress_widget.set_status(self.tr("Cancelled"))
-        else:
-            self.progress_widget.show_completion(tr_format(self.tr("Complete — %1 files processed"), self._total_pairs))
-
-    def _on_worker_finished(self) -> None:
-        """Release the QThread once it has actually exited."""
-        worker = self.worker_thread
-        if worker is not None:
-            worker.deleteLater()
-            self.worker_thread = None
-
-    # ------------------------------------------------------------------
-    # Cancel
-    # ------------------------------------------------------------------
-
-    def _on_cancel(self) -> None:
-        self._cancelled = True
-        if self.worker_thread is not None:
-            self.worker_thread.cancel()
-        self.cancel_button.setText(self.tr("Cancelling…"))
-        self.cancel_button.setEnabled(False)
-
-    # ------------------------------------------------------------------
-    # Close contract
-    # ------------------------------------------------------------------
-
-    def iter_close_workers(self) -> Iterator[SubtitleRetimeWorker]:
-        """Yield the active worker so BackgroundTaskController can join it on close."""
-        if self.worker_thread is not None:
-            yield self.worker_thread

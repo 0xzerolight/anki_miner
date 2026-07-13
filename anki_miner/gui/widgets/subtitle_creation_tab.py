@@ -22,12 +22,10 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Iterator
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QCheckBox,
-    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -40,9 +38,8 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.constants import VIDEO_FILE_FILTER
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
-from anki_miner.gui.widgets.log_widget import LogWidget
-from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.subtitle_gen_worker import SubtitleGenWorker
 from anki_miner.services.asr import _engine, model_manager
 from anki_miner.utils.file_pairing import FilePairMatcher
@@ -51,8 +48,11 @@ from anki_miner.utils.i18n import tr_format
 logger = logging.getLogger(__name__)
 
 
-class SubtitleCreationTab(QWidget):
+class SubtitleCreationTab(_ToolTabBase):
     """Tab for generating SRT subtitle files from video files via ASR.
+
+    Shared worker-signal slots, output-location slots, progress chrome, and the
+    close contract live in :class:`~anki_miner.gui.widgets._tool_tab_base._ToolTabBase`.
 
     Args:
         config: Frozen application configuration.
@@ -62,13 +62,31 @@ class SubtitleCreationTab(QWidget):
     def __init__(self, config: AnkiMinerConfig, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.config = config
-        self.worker_thread: SubtitleGenWorker | None = None
+        self.worker_thread = None
         self._custom_output_dir: Path | None = None
         self._total_files: int = 0
         self._cancelled: bool = False
+        # Built here (not in the base) so each literal stays in this tab's
+        # tr-context — see _ToolTabBase for the rationale.
+        self._strings = _ToolTabStrings(
+            progress=self.tr("Progress"),
+            done=self.tr("Done"),
+            done_prefix=self.tr("Done: "),
+            skipped=self.tr("Skipped"),
+            skipped_prefix=self.tr("Skipped: "),
+            cancel=self.tr("Cancel"),
+            cancelling=self.tr("Cancelling…"),
+            cancelled=self.tr("Cancelled"),
+            complete_template=self.tr("Complete — %1 files processed"),
+            select_output_folder=self.tr("Select Output Folder"),
+            output_default=self.tr("Next to source video"),
+        )
 
         self._setup_ui()
         self._refresh_engine_state()
+
+    def _item_total(self) -> int:
+        return self._total_files
 
     # ------------------------------------------------------------------
     # Config refresh
@@ -208,7 +226,7 @@ class SubtitleCreationTab(QWidget):
         out_label = QLabel(self.tr("Output:"))
         out_row.addWidget(out_label)
 
-        self.output_location_label = QLabel(self.tr("Next to source video"))
+        self.output_location_label = QLabel(self._strings.output_default)
         self.output_location_label.setObjectName("output-location-value")
         out_row.addWidget(self.output_location_label, 1)
 
@@ -247,6 +265,8 @@ class SubtitleCreationTab(QWidget):
 
         self.generate_button = ModernButton(self.tr("Generate Subtitles"), variant="primary")
         self.generate_button.clicked.connect(self._on_generate)
+        # Base slots (queue-finished re-enable) act on the tool's primary button.
+        self._primary_button = self.generate_button
         btn_row.addWidget(self.generate_button)
 
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="danger")
@@ -256,24 +276,6 @@ class SubtitleCreationTab(QWidget):
 
         btn_row.addStretch()
         layout.addLayout(btn_row)
-
-        group.setLayout(layout)
-        return group
-
-    def _create_progress_section(self) -> QFrame:
-        group = QFrame()
-        group.setObjectName("card")
-        layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
-
-        layout.addWidget(SectionHeader(self.tr("Progress")))
-
-        self.progress_widget = ProgressWidget()
-        layout.addWidget(self.progress_widget)
-
-        self.log_widget = LogWidget()
-        layout.addWidget(self.log_widget)
 
         group.setLayout(layout)
         return group
@@ -303,26 +305,6 @@ class SubtitleCreationTab(QWidget):
         self.file_mode_button.setChecked(False)
         self.file_selector.hide()
         self.folder_selector.show()
-
-    # ------------------------------------------------------------------
-    # Output location slots
-    # ------------------------------------------------------------------
-
-    def _on_choose_output(self) -> None:
-        folder = QFileDialog.getExistingDirectory(
-            self,
-            self.tr("Select Output Folder"),
-            str(Path.home()),
-        )
-        if folder:
-            self._custom_output_dir = Path(folder)
-            self.output_location_label.setText(folder)
-            self.clear_output_button.show()
-
-    def _on_clear_output(self) -> None:
-        self._custom_output_dir = None
-        self.output_location_label.setText(self.tr("Next to source video"))
-        self.clear_output_button.hide()
 
     # ------------------------------------------------------------------
     # Generate
@@ -462,65 +444,3 @@ class SubtitleCreationTab(QWidget):
         self.progress_widget.set_status(
             tr_format(self.tr("Transcribing file %1 of %2"), str(idx + 1), str(self._total_files))
         )
-
-    def _on_file_progress(self, idx: int, pct: int, message: str) -> None:
-        # Compose the intra-file transcription fraction into the whole-run
-        # bar so long files show live movement, not a bar frozen per file.
-        self.progress_widget.set_composed(idx, pct, self._total_files, message)
-
-    def _on_file_finished(self, idx: int, out_path: object, error_str: object) -> None:
-        # Whole-file advance in the same percent unit system as set_composed
-        # (a count-unit set_progress here would flip the ETA denominator).
-        if self._total_files:
-            self.progress_widget.set_percent(int((idx + 1) / self._total_files * 100))
-        if error_str:
-            self.log_widget.append_error(str(error_str))
-        else:
-            path_label = str(out_path) if out_path else ""
-            self.log_widget.append_success(self.tr("Done: ") + Path(path_label).name if path_label else self.tr("Done"))
-
-    def _on_file_skipped(self, idx: int, out_path: object) -> None:
-        # Advance the progress bar just like a finished file.
-        if self._total_files:
-            self.progress_widget.set_percent(int((idx + 1) / self._total_files * 100))
-        path_label = str(out_path) if out_path else ""
-        self.log_widget.append_info(self.tr("Skipped: ") + Path(path_label).name if path_label else self.tr("Skipped"))
-
-    def _on_queue_finished(self) -> None:
-        self.generate_button.setEnabled(True)
-        self.cancel_button.hide()
-        # Reset for the next run's cancel button.
-        self.cancel_button.setText(self.tr("Cancel"))
-        self.cancel_button.setEnabled(True)
-        if self._cancelled:
-            self.progress_widget.reset()
-            self.progress_widget.set_status(self.tr("Cancelled"))
-        else:
-            self.progress_widget.show_completion(tr_format(self.tr("Complete — %1 files processed"), self._total_files))
-
-    def _on_worker_finished(self) -> None:
-        """Release the QThread once it has actually exited."""
-        worker = self.worker_thread
-        if worker is not None:
-            worker.deleteLater()
-            self.worker_thread = None
-
-    # ------------------------------------------------------------------
-    # Cancel
-    # ------------------------------------------------------------------
-
-    def _on_cancel(self) -> None:
-        self._cancelled = True
-        if self.worker_thread is not None:
-            self.worker_thread.cancel()
-        self.cancel_button.setText(self.tr("Cancelling…"))
-        self.cancel_button.setEnabled(False)
-
-    # ------------------------------------------------------------------
-    # Close contract
-    # ------------------------------------------------------------------
-
-    def iter_close_workers(self) -> Iterator[SubtitleGenWorker]:
-        """Yield the active worker so BackgroundTaskController can join it on close."""
-        if self.worker_thread is not None:
-            yield self.worker_thread
