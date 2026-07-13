@@ -606,16 +606,16 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>選擇要重新匯入的音訊包資料夾</translation>
     </message>
     <message>
-        <source>Re-importing audio pack…</source>
-        <translation>正在重新匯入音訊包…</translation>
-    </message>
-    <message>
         <source>Audio Pack Re-imported</source>
         <translation>音訊包已重新匯入</translation>
     </message>
     <message>
         <source>Re-imported %1 successfully.</source>
         <translation>已成功重新匯入 %1。</translation>
+    </message>
+    <message>
+        <source>Re-importing audio pack…</source>
+        <translation>正在重新匯入音訊包…</translation>
     </message>
     <message>
         <source>Re-import Failed</source>
@@ -626,6 +626,20 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Loading…</source>
         <translation>載入中…</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation>移除失敗</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The audio pack was not removed.</source>
+        <translation>無法刪除 %1：
+%2
+
+音訊包未被移除。</translation>
     </message>
     <message>
         <source>Active Audio Sources</source>
@@ -722,20 +736,6 @@ This cannot be undone. You would need to re-import to use this pack again.</sour
 此操作無法復原。若要再次使用此音訊包需重新匯入。</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>移除失敗</translation>
-    </message>
-    <message>
-        <source>Could not delete %1:
-%2
-
-The audio pack was not removed.</source>
-        <translation>無法刪除 %1：
-%2
-
-音訊包未被移除。</translation>
-    </message>
-    <message>
         <source>Re-import…</source>
         <translation>重新匯入…</translation>
     </message>
@@ -778,6 +778,62 @@ The audio pack was not removed.</source>
 </context><context>
     <name>AudiobookTab</name>
     <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation>無法採集 — 服務尚未初始化。</translation>
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation>%1 執行開始 — %2 個項目。</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>採集</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation>全部停止</translation>
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation>佇列完成：%1 個成功，%2 個失敗。</translation>
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation>正在採集第 %1 / %2 個：%3</translation>
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation>已採集 %1：%2 張卡片。</translation>
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
+        <translation>已取消 %1。</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation>失敗 %1：%2。</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>失敗 — 請查看日誌</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation>完成 — %1 成功</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation>完成 — %1 成功，%2 失敗</translation>
+    </message>
+    <message>
         <source>Audio queue</source>
         <translation>音訊佇列</translation>
     </message>
@@ -810,10 +866,6 @@ The audio pack was not removed.</source>
         <translation>在建立卡片前，為每個音訊檔案顯示單字選取彈出視窗。</translation>
     </message>
     <message>
-        <source>Mine</source>
-        <translation>採集</translation>
-    </message>
-    <message>
         <source>Mine every queued item into Anki cards.</source>
         <translation>將所有佇列項目採集成 Anki 卡片。</translation>
     </message>
@@ -824,10 +876,6 @@ The audio pack was not removed.</source>
     <message>
         <source>Remove every queued item that is not currently mining.</source>
         <translation>移除所有目前未在採集的佇列項目。</translation>
-    </message>
-    <message>
-        <source>Stop All</source>
-        <translation>全部停止</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
@@ -848,54 +896,6 @@ The audio pack was not removed.</source>
     <message>
         <source>Subtitle file not found: %1</source>
         <translation>找不到字幕檔案：%1</translation>
-    </message>
-    <message>
-        <source>Mining unavailable — services not initialized.</source>
-        <translation>無法採集 — 服務尚未初始化。</translation>
-    </message>
-    <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation>%1 執行開始 — %2 個項目。</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>正在取消…</translation>
-    </message>
-    <message>
-        <source>Mining %1 of %2: %3</source>
-        <translation>正在採集第 %1 / %2 個：%3</translation>
-    </message>
-    <message>
-        <source>Mined %1: %2 cards.</source>
-        <translation>已採集 %1：%2 張卡片。</translation>
-    </message>
-    <message>
-        <source>Cancelled %1.</source>
-        <translation>已取消 %1。</translation>
-    </message>
-    <message>
-        <source>Failed %1: %2.</source>
-        <translation>失敗 %1：%2。</translation>
-    </message>
-    <message>
-        <source>Queue done: %1 succeeded, %2 failed.</source>
-        <translation>佇列完成：%1 個成功，%2 個失敗。</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>已取消</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>失敗 — 請查看日誌</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded, %2 failed</source>
-        <translation>完成 — %1 成功，%2 失敗</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded</source>
-        <translation>完成 — %1 成功</translation>
     </message>
 </context><context>
     <name>BatchProcessingTab</name>
@@ -926,6 +926,18 @@ The audio pack was not removed.</source>
     <message>
         <source>Subtitle Folder:</source>
         <translation>字幕資料夾：</translation>
+    </message>
+    <message>
+        <source>Subtitle Offset:</source>
+        <translation>字幕偏移：</translation>
+    </message>
+    <message>
+        <source> seconds</source>
+        <translation> 秒</translation>
+    </message>
+    <message>
+        <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Process Folder</source>
@@ -1468,6 +1480,50 @@ Total cards created: %2</source>
 </context><context>
     <name>CondenseTab</name>
     <message>
+        <source>Progress</source>
+        <translation>進度</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>完成</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>完成：</translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>已略過</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>已略過：</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>取消中……</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>完成 — 已處理 %1 個檔案</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>選擇輸出資料夾</translation>
+    </message>
+    <message>
+        <source>Next to source</source>
+        <translation>與來源同位置</translation>
+    </message>
+    <message>
         <source>Input</source>
         <translation>輸入</translation>
     </message>
@@ -1596,10 +1652,6 @@ Total cards created: %2</source>
         <translation>輸出：</translation>
     </message>
     <message>
-        <source>Next to source</source>
-        <translation>與來源同位置</translation>
-    </message>
-    <message>
         <source>Choose Folder…</source>
         <translation>選擇資料夾…</translation>
     </message>
@@ -1622,14 +1674,6 @@ Total cards created: %2</source>
     <message>
         <source>Condense Audio</source>
         <translation>濃縮音訊</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>取消</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>進度</translation>
     </message>
     <message>
         <source>No Media File Selected</source>
@@ -1678,10 +1722,6 @@ Total cards created: %2</source>
     <message>
         <source>Failed to detect subtitle tracks. Check that ffprobe is installed.</source>
         <translation>偵測字幕軌失敗。請確認已安裝 ffprobe。</translation>
-    </message>
-    <message>
-        <source>Select Output Folder</source>
-        <translation>選擇輸出資料夾</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -1743,34 +1783,6 @@ Total cards created: %2</source>
         <source>Condensing file %1 of %2</source>
         <translation>正在濃縮第 %1 個檔案，共 %2 個</translation>
     </message>
-    <message>
-        <source>Done: </source>
-        <translation>完成：</translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>完成</translation>
-    </message>
-    <message>
-        <source>Skipped: </source>
-        <translation>已略過：</translation>
-    </message>
-    <message>
-        <source>Skipped</source>
-        <translation>已略過</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>已取消</translation>
-    </message>
-    <message>
-        <source>Complete — %1 files processed</source>
-        <translation>完成 — 已處理 %1 個檔案</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>取消中……</translation>
-    </message>
 </context><context>
     <name>CondenseWorker</name>
     <message>
@@ -1778,24 +1790,20 @@ Total cards created: %2</source>
         <translation>已略過，已存在</translation>
     </message>
     <message>
-        <source>No dialogue lines found in %1</source>
-        <translation>在 %1 中找不到對白句子</translation>
-    </message>
-    <message>
         <source>Condensing: %1%</source>
         <translation>正在濃縮：%1%</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>已取消</translation>
-    </message>
-    <message>
-        <source>Condensing failed for %1</source>
-        <translation>%1 濃縮失敗</translation>
+        <source>Audio done; subtitle write failed: %1</source>
+        <translation>音訊已完成；字幕寫入失敗：%1</translation>
     </message>
     <message>
         <source>Done</source>
         <translation>完成</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
     </message>
     <message>
         <source>No subtitle source found for %1</source>
@@ -1814,8 +1822,12 @@ Total cards created: %2</source>
         <translation>無法從 %1 擷取內嵌字幕</translation>
     </message>
     <message>
-        <source>Audio done; subtitle write failed: %1</source>
-        <translation>音訊已完成；字幕寫入失敗：%1</translation>
+        <source>No dialogue lines found in %1</source>
+        <translation>在 %1 中找不到對白句子</translation>
+    </message>
+    <message>
+        <source>Condensing failed for %1</source>
+        <translation>%1 濃縮失敗</translation>
     </message>
 </context><context>
     <name>CudaPackDownloadWorker</name>
@@ -2096,20 +2108,20 @@ Total cards created: %2</source>
         <translation>Yomitan zip（*.zip）</translation>
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>正在匯入字典…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>取消</translation>
-    </message>
-    <message>
         <source>Dictionary added</source>
         <translation>已新增字典</translation>
     </message>
     <message>
         <source>Imported %1 (%2 entries)</source>
         <translation>已匯入 %1（%2 筆條目）</translation>
+    </message>
+    <message>
+        <source>Importing dictionary…</source>
+        <translation>正在匯入字典…</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
         <source>Import Failed</source>
@@ -2136,16 +2148,16 @@ Total cards created: %2</source>
         <translation>採集作業正在進行中。請先停止再重新匯入字典。</translation>
     </message>
     <message>
-        <source>Re-importing dictionary…</source>
-        <translation>正在重新匯入字典…</translation>
-    </message>
-    <message>
         <source>Dictionary re-imported</source>
         <translation>字典已重新匯入</translation>
     </message>
     <message>
         <source>Re-imported %1 (%2 entries)</source>
         <translation>已重新匯入 %1（%2 筆條目）</translation>
+    </message>
+    <message>
+        <source>Re-importing dictionary…</source>
+        <translation>正在重新匯入字典…</translation>
     </message>
     <message>
         <source>Re-import Failed</source>
@@ -2248,6 +2260,20 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation>載入中…</translation>
     </message>
     <message>
+        <source>Remove failed</source>
+        <translation>移除失敗</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The dictionary was not removed.</source>
+        <translation>無法刪除 %1：
+%2
+
+字典未被移除。</translation>
+    </message>
+    <message>
         <source>Select dictionary storage folder...</source>
         <translation>選擇字典儲存資料夾...</translation>
     </message>
@@ -2316,6 +2342,14 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation>含有（讀音、漢字、音調型）欄位的 CSV／TSV，或 Yomitan 格式的音調 zip（例如 Kanjium、NHK）。Yomitan zip 會在儲存時匯入 ~/.anki_miner/pitch_accent.csv。</translation>
     </message>
     <message>
+        <source>Jisho (online fallback)</source>
+        <translation>Jisho（線上備援）</translation>
+    </message>
+    <message>
+        <source>⚠ rate-limited, slower</source>
+        <translation>⚠ 受速率限制，較慢</translation>
+    </message>
+    <message>
         <source>Remove dictionary</source>
         <translation>移除字典</translation>
     </message>
@@ -2328,34 +2362,12 @@ This cannot be undone. You would need to reimport from the source zip.</source>
 此操作無法復原。你需要從來源 zip 重新匯入。</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>移除失敗</translation>
-    </message>
-    <message>
         <source>A mining run is in progress. Stop it before removing dictionaries.</source>
         <translation>採集作業正在進行中。請先停止再移除字典。</translation>
     </message>
     <message>
-        <source>Could not delete %1:
-%2
-
-The dictionary was not removed.</source>
-        <translation>無法刪除 %1：
-%2
-
-字典未被移除。</translation>
-    </message>
-    <message>
         <source>Re-import…</source>
         <translation>重新匯入…</translation>
-    </message>
-    <message>
-        <source>Jisho (online fallback)</source>
-        <translation>Jisho（線上備援）</translation>
-    </message>
-    <message>
-        <source>⚠ rate-limited, slower</source>
-        <translation>⚠ 受速率限制，較慢</translation>
     </message>
 </context><context>
     <name>DonePage</name>
@@ -2426,6 +2438,30 @@ The dictionary was not removed.</source>
     <message>
         <source>Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run</source>
         <translation>句子音訊 TTS 傳回非音訊回應（可能已被限速）— 本次執行略過句子音訊，將於下次執行重試</translation>
+    </message>
+    <message>
+        <source>Fetching expression audio</source>
+        <translation>正在擷取 Expression 音訊</translation>
+    </message>
+    <message>
+        <source>Expression audio: %1</source>
+        <translation>Expression 音訊：%1</translation>
+    </message>
+    <message>
+        <source>Expression audio: %1/%2 available</source>
+        <translation>表達音訊：%1/%2 可用</translation>
+    </message>
+    <message>
+        <source>Generating sentence audio</source>
+        <translation>正在產生句子音訊</translation>
+    </message>
+    <message>
+        <source>Sentence audio: %1</source>
+        <translation>句子音訊：%1</translation>
+    </message>
+    <message>
+        <source>Sentence audio: %1/%2 sentences</source>
+        <translation>句子音訊：%1/%2 個句子</translation>
     </message>
     <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
@@ -2540,30 +2576,6 @@ The dictionary was not removed.</source>
         <translation>無法製作動態螢幕截圖——此 ffmpeg 版本沒有 AVIF 或 WebP 編碼器；請在設定中改用靜態螢幕截圖。</translation>
     </message>
     <message>
-        <source>Fetching expression audio</source>
-        <translation>正在擷取 Expression 音訊</translation>
-    </message>
-    <message>
-        <source>Expression audio: %1</source>
-        <translation>Expression 音訊：%1</translation>
-    </message>
-    <message>
-        <source>Expression audio: %1/%2 available</source>
-        <translation>表達音訊：%1/%2 可用</translation>
-    </message>
-    <message>
-        <source>Generating sentence audio</source>
-        <translation>正在產生句子音訊</translation>
-    </message>
-    <message>
-        <source>Sentence audio: %1</source>
-        <translation>句子音訊：%1</translation>
-    </message>
-    <message>
-        <source>Sentence audio: %1/%2 sentences</source>
-        <translation>句子音訊：%1/%2 個句子</translation>
-    </message>
-    <message>
         <source>Step 4/5 — Fetching definitions</source>
         <translation>步驟 4/5——正在擷取釋義</translation>
     </message>
@@ -2600,8 +2612,12 @@ The dictionary was not removed.</source>
         </translation>
     </message>
     <message>
-        <source>No words found in subtitles</source>
-        <translation>字幕中找不到單字</translation>
+        <source>Error: %1</source>
+        <translation>錯誤：%1</translation>
+    </message>
+    <message>
+        <source>Unexpected error: %1</source>
+        <translation>未預期的錯誤：%1</translation>
     </message>
     <message>
         <source>No words selected for card creation</source>
@@ -2614,6 +2630,10 @@ The dictionary was not removed.</source>
         </translation>
     </message>
     <message>
+        <source>No words found in subtitles</source>
+        <translation>字幕中找不到單字</translation>
+    </message>
+    <message>
         <source>No media extracted successfully</source>
         <translation>沒有成功擷取的媒體</translation>
     </message>
@@ -2622,14 +2642,6 @@ The dictionary was not removed.</source>
         <translation>
             <numerusform>已為 %n 個單字擷取媒體</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>Error: %1</source>
-        <translation>錯誤：%1</translation>
-    </message>
-    <message>
-        <source>Unexpected error: %1</source>
-        <translation>未預期的錯誤：%1</translation>
     </message>
     <message numerus="yes">
         <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
@@ -3082,14 +3094,6 @@ The dictionary was not removed.</source>
         <translation>頻率來源 (*.zip *.csv *.tsv);;所有檔案 (*)</translation>
     </message>
     <message>
-        <source>Importing frequency source…</source>
-        <translation>正在匯入頻率來源…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>取消</translation>
-    </message>
-    <message>
         <source> (skipped %1 malformed entries)</source>
         <translation> （已跳過 %1 筆格式錯誤的項目）</translation>
     </message>
@@ -3106,16 +3110,20 @@ The dictionary was not removed.</source>
         <translation>已從「%2」匯入 %1 個項目。</translation>
     </message>
     <message>
+        <source>Importing frequency source…</source>
+        <translation>正在匯入頻率來源…</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
         <source>Import Failed</source>
         <translation>匯入失敗</translation>
     </message>
     <message>
         <source>Choose frequency source to re-import</source>
         <translation>選擇要重新匯入的頻率來源</translation>
-    </message>
-    <message>
-        <source>Re-importing frequency source…</source>
-        <translation>正在重新匯入頻率來源…</translation>
     </message>
     <message>
         <source>Frequency Source Re-imported</source>
@@ -3126,6 +3134,10 @@ The dictionary was not removed.</source>
         <translation>已成功重新匯入 %1。</translation>
     </message>
     <message>
+        <source>Re-importing frequency source…</source>
+        <translation>正在重新匯入頻率來源…</translation>
+    </message>
+    <message>
         <source>Re-import Failed</source>
         <translation>重新匯入失敗</translation>
     </message>
@@ -3134,6 +3146,20 @@ The dictionary was not removed.</source>
     <message>
         <source>Loading…</source>
         <translation>載入中…</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation>移除失敗</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The frequency source was not removed.</source>
+        <translation>無法刪除 %1：
+%2
+
+頻率來源未被移除。</translation>
     </message>
     <message>
         <source>Active Frequency Sources</source>
@@ -3174,22 +3200,8 @@ This cannot be undone. You would need to re-import to use this source again.</so
 此操作無法復原。你需要重新匯入才能再次使用此來源。</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>移除失敗</translation>
-    </message>
-    <message>
         <source>A mining run is in progress. Stop it before removing frequency sources.</source>
         <translation>採集執行進行中。請先停止再移除頻率來源。</translation>
-    </message>
-    <message>
-        <source>Could not delete %1:
-%2
-
-The frequency source was not removed.</source>
-        <translation>無法刪除 %1：
-%2
-
-頻率來源未被移除。</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -4860,6 +4872,50 @@ Imported values override your current settings; anything not in the file is kept
 </context><context>
     <name>SubtitleCreationTab</name>
     <message>
+        <source>Progress</source>
+        <translation>進度</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>完成</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>完成：</translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>已略過</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>已略過：</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>完成 — 已處理 %1 個檔案</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>選擇輸出資料夾</translation>
+    </message>
+    <message>
+        <source>Next to source video</source>
+        <translation>位於來源影片旁</translation>
+    </message>
+    <message>
         <source>Input</source>
         <translation>輸入</translation>
     </message>
@@ -4916,10 +4972,6 @@ Imported values override your current settings; anything not in the file is kept
         <translation>輸出：</translation>
     </message>
     <message>
-        <source>Next to source video</source>
-        <translation>位於來源影片旁</translation>
-    </message>
-    <message>
         <source>Choose Folder…</source>
         <translation>選擇資料夾…</translation>
     </message>
@@ -4942,18 +4994,6 @@ Imported values override your current settings; anything not in the file is kept
     <message>
         <source>Generate Subtitles</source>
         <translation>產生字幕</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>取消</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>進度</translation>
-    </message>
-    <message>
-        <source>Select Output Folder</source>
-        <translation>選擇輸出資料夾</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -5013,34 +5053,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <source>Transcribing file %1 of %2</source>
         <translation>正在轉錄第 %1 / %2 個檔案</translation>
     </message>
-    <message>
-        <source>Done: </source>
-        <translation>完成：</translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>完成</translation>
-    </message>
-    <message>
-        <source>Skipped: </source>
-        <translation>已略過：</translation>
-    </message>
-    <message>
-        <source>Skipped</source>
-        <translation>已略過</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>已取消</translation>
-    </message>
-    <message>
-        <source>Complete — %1 files processed</source>
-        <translation>完成 — 已處理 %1 個檔案</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>正在取消…</translation>
-    </message>
 </context><context>
     <name>SubtitleGenWorker</name>
     <message>
@@ -5052,27 +5064,31 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>正在擷取音訊：%1</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>已取消</translation>
-    </message>
-    <message>
-        <source>Audio extraction failed for %1</source>
-        <translation>%1 的音訊擷取失敗</translation>
-    </message>
-    <message>
         <source>Transcribing: %1%</source>
         <translation>正在轉錄：%1%</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>完成</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
     </message>
     <message>
         <source>No speech detected in %1</source>
         <translation>%1 中未偵測到語音</translation>
     </message>
     <message>
-        <source>Done</source>
-        <translation>完成</translation>
+        <source>Audio extraction failed for %1</source>
+        <translation>%1 的音訊擷取失敗</translation>
     </message>
 </context><context>
     <name>SubtitlePlayerWidget</name>
+    <message>
+        <source>Could not load video: %1</source>
+        <translation>無法載入影片：%1</translation>
+    </message>
     <message>
         <source>This video uses AV1, which your system can't decode for in-app preview. Audio and subtitles still play.</source>
         <translation>此影片使用 AV1 編碼，你的系統無法解碼以進行應用程式內預覽。音訊與字幕仍可播放。</translation>
@@ -5082,8 +5098,12 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>播放</translation>
     </message>
     <message>
-        <source>Could not load video: %1</source>
-        <translation>無法載入影片：%1</translation>
+        <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>playback failed</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Pause</source>
@@ -5093,8 +5113,56 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <source>Video error: %1</source>
         <translation>影片錯誤：%1</translation>
     </message>
+    <message>
+        <source>Video preview is unavailable on this display. Audio and subtitles still play.</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>SubtitleRetimeTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>進度</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>完成</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>完成：</translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>已略過</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>已略過：</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>完成 — 已處理 %1 個檔案</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>選擇輸出資料夾</translation>
+    </message>
+    <message>
+        <source>Next to source video</source>
+        <translation>與來源影片同一位置</translation>
+    </message>
     <message>
         <source>Input</source>
         <translation>輸入</translation>
@@ -5168,10 +5236,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>輸出：</translation>
     </message>
     <message>
-        <source>Next to source video</source>
-        <translation>與來源影片同一位置</translation>
-    </message>
-    <message>
         <source>Choose Folder…</source>
         <translation>選擇資料夾…</translation>
     </message>
@@ -5220,14 +5284,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>重新校時字幕</translation>
     </message>
     <message>
-        <source>Cancel</source>
-        <translation>取消</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>進度</translation>
-    </message>
-    <message>
         <source>No Video File Selected</source>
         <translation>未選擇影片檔</translation>
     </message>
@@ -5262,10 +5318,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
         <translation>偵測音訊軌失敗。請確認已安裝 ffprobe。</translation>
-    </message>
-    <message>
-        <source>Select Output Folder</source>
-        <translation>選擇輸出資料夾</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -5334,34 +5386,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Retiming file %1 of %2</source>
         <translation>正在重新校時第 %1 個檔案，共 %2 個</translation>
-    </message>
-    <message>
-        <source>Done: </source>
-        <translation>完成：</translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>完成</translation>
-    </message>
-    <message>
-        <source>Skipped: </source>
-        <translation>已略過：</translation>
-    </message>
-    <message>
-        <source>Skipped</source>
-        <translation>已略過</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>已取消</translation>
-    </message>
-    <message>
-        <source>Complete — %1 files processed</source>
-        <translation>完成 — 已處理 %1 個檔案</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>正在取消…</translation>
     </message>
 </context><context>
     <name>SubtitleRetimeWorker</name>
@@ -5924,6 +5948,62 @@ Go to Settings → ASR to download it before generating subtitles.</source>
 </context><context>
     <name>YouTubeTab</name>
     <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation>無法採集 — 服務未初始化。</translation>
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation>%1 執行開始中 — %2 個項目。</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>採集</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>取消中……</translation>
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation>全部停止</translation>
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation>佇列完成：%1 個成功，%2 個失敗。</translation>
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation>正在採集第 %1 個，共 %2 個：%3</translation>
+    </message>
+    <message>
+        <source>Mined %1: %2 cards (attempts=%3).</source>
+        <translation>已採集 %1：%2 張卡片（嘗試次數 = %3）。</translation>
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
+        <translation>已取消 %1。</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2 (attempts=%3).</source>
+        <translation>失敗 %1：%2（嘗試次數 = %3）。</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>失敗 — 請查看日誌</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation>完成 — %1 成功</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation>完成 — %1 成功，%2 失敗</translation>
+    </message>
+    <message>
         <source>YouTube queue</source>
         <translation>YouTube 佇列</translation>
     </message>
@@ -5948,10 +6028,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>為每部影片在建立卡片前顯示單字選擇彈出視窗。</translation>
     </message>
     <message>
-        <source>Mine</source>
-        <translation>採集</translation>
-    </message>
-    <message>
         <source>Mine every READY item in the queue into Anki cards.</source>
         <translation>將佇列中每個 READY 項目採集為 Anki 卡片。</translation>
     </message>
@@ -5964,64 +6040,12 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>移除佇列中所有目前未在採集的項目。</translation>
     </message>
     <message>
-        <source>Stop All</source>
-        <translation>全部停止</translation>
-    </message>
-    <message>
         <source>Cancel the active run.</source>
         <translation>取消進行中的執行。</translation>
     </message>
     <message>
         <source>Progress</source>
         <translation>進度</translation>
-    </message>
-    <message>
-        <source>Mining unavailable — services not initialized.</source>
-        <translation>無法採集 — 服務未初始化。</translation>
-    </message>
-    <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation>%1 執行開始中 — %2 個項目。</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>取消中……</translation>
-    </message>
-    <message>
-        <source>Mining %1 of %2: %3</source>
-        <translation>正在採集第 %1 個，共 %2 個：%3</translation>
-    </message>
-    <message>
-        <source>Mined %1: %2 cards (attempts=%3).</source>
-        <translation>已採集 %1：%2 張卡片（嘗試次數 = %3）。</translation>
-    </message>
-    <message>
-        <source>Cancelled %1.</source>
-        <translation>已取消 %1。</translation>
-    </message>
-    <message>
-        <source>Failed %1: %2 (attempts=%3).</source>
-        <translation>失敗 %1：%2（嘗試次數 = %3）。</translation>
-    </message>
-    <message>
-        <source>Queue done: %1 succeeded, %2 failed.</source>
-        <translation>佇列完成：%1 個成功，%2 個失敗。</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>已取消</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>失敗 — 請查看日誌</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded, %2 failed</source>
-        <translation>完成 — %1 成功，%2 失敗</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded</source>
-        <translation>完成 — %1 成功</translation>
     </message>
 </context><context>
     <name>ZipImportFlow</name>
@@ -6104,5 +6128,11 @@ Continue with import?</source>
     <message>
         <source>⚠ folder missing — re-import</source>
         <translation>⚠ 資料夾遺失 — 重新匯入</translation>
+    </message>
+</context><context>
+    <name>app</name>
+    <message>
+        <source>Anki Miner — Unexpected Error</source>
+        <translation type="unfinished" />
     </message>
 </context></TS>

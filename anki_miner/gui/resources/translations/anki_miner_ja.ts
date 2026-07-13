@@ -606,16 +606,16 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>再インポートする音声パックのフォルダを選択</translation>
     </message>
     <message>
-        <source>Re-importing audio pack…</source>
-        <translation>音声パックを再インポート中…</translation>
-    </message>
-    <message>
         <source>Audio Pack Re-imported</source>
         <translation>音声パックを再インポートしました</translation>
     </message>
     <message>
         <source>Re-imported %1 successfully.</source>
         <translation>%1 を再インポートしました。</translation>
+    </message>
+    <message>
+        <source>Re-importing audio pack…</source>
+        <translation>音声パックを再インポート中…</translation>
     </message>
     <message>
         <source>Re-import Failed</source>
@@ -626,6 +626,20 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Loading…</source>
         <translation>読み込み中…</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation>削除に失敗しました</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The audio pack was not removed.</source>
+        <translation>%1 を削除できませんでした:
+%2
+
+音声パックは削除されませんでした。</translation>
     </message>
     <message>
         <source>Active Audio Sources</source>
@@ -722,20 +736,6 @@ This cannot be undone. You would need to re-import to use this pack again.</sour
 この操作は取り消せません。このパックを再び使用するには再インポートが必要です。</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>削除に失敗しました</translation>
-    </message>
-    <message>
-        <source>Could not delete %1:
-%2
-
-The audio pack was not removed.</source>
-        <translation>%1 を削除できませんでした:
-%2
-
-音声パックは削除されませんでした。</translation>
-    </message>
-    <message>
         <source>Re-import…</source>
         <translation>再インポート…</translation>
     </message>
@@ -778,6 +778,62 @@ The audio pack was not removed.</source>
 </context><context>
     <name>AudiobookTab</name>
     <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation>マイニングを利用できません — サービスが初期化されていません。</translation>
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation>%1 の実行を開始します — %2 件。</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>マイニング</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation>すべて停止</translation>
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation>キュー完了: 成功 %1 件、失敗 %2 件。</translation>
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation>%2 件中 %1 件目をマイニング中: %3</translation>
+    </message>
+    <message>
+        <source>Mined %1: %2 cards.</source>
+        <translation>%1 をマイニングしました: %2 枚のカード。</translation>
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
+        <translation>%1 をキャンセルしました。</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation>%1 が失敗しました: %2。</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>キャンセルされました</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>失敗しました — ログを確認してください</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation>完了 — %1 件成功</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation>完了 — %1 件成功、%2 件失敗</translation>
+    </message>
+    <message>
         <source>Audio queue</source>
         <translation>音声キュー</translation>
     </message>
@@ -810,10 +866,6 @@ The audio pack was not removed.</source>
         <translation>カードを作成する前に、各音声ファイルの単語選択ポップアップを表示します。</translation>
     </message>
     <message>
-        <source>Mine</source>
-        <translation>マイニング</translation>
-    </message>
-    <message>
         <source>Mine every queued item into Anki cards.</source>
         <translation>キュー内のすべての項目をAnkiカードにマイニングします。</translation>
     </message>
@@ -824,10 +876,6 @@ The audio pack was not removed.</source>
     <message>
         <source>Remove every queued item that is not currently mining.</source>
         <translation>現在マイニング中でないキュー項目をすべて削除します。</translation>
-    </message>
-    <message>
-        <source>Stop All</source>
-        <translation>すべて停止</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
@@ -848,54 +896,6 @@ The audio pack was not removed.</source>
     <message>
         <source>Subtitle file not found: %1</source>
         <translation>字幕ファイルが見つかりません: %1</translation>
-    </message>
-    <message>
-        <source>Mining unavailable — services not initialized.</source>
-        <translation>マイニングを利用できません — サービスが初期化されていません。</translation>
-    </message>
-    <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation>%1 の実行を開始します — %2 件。</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>キャンセル中…</translation>
-    </message>
-    <message>
-        <source>Mining %1 of %2: %3</source>
-        <translation>%2 件中 %1 件目をマイニング中: %3</translation>
-    </message>
-    <message>
-        <source>Mined %1: %2 cards.</source>
-        <translation>%1 をマイニングしました: %2 枚のカード。</translation>
-    </message>
-    <message>
-        <source>Cancelled %1.</source>
-        <translation>%1 をキャンセルしました。</translation>
-    </message>
-    <message>
-        <source>Failed %1: %2.</source>
-        <translation>%1 が失敗しました: %2。</translation>
-    </message>
-    <message>
-        <source>Queue done: %1 succeeded, %2 failed.</source>
-        <translation>キュー完了: 成功 %1 件、失敗 %2 件。</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>キャンセルされました</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>失敗しました — ログを確認してください</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded, %2 failed</source>
-        <translation>完了 — %1 件成功、%2 件失敗</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded</source>
-        <translation>完了 — %1 件成功</translation>
     </message>
 </context><context>
     <name>BatchProcessingTab</name>
@@ -926,6 +926,18 @@ The audio pack was not removed.</source>
     <message>
         <source>Subtitle Folder:</source>
         <translation>字幕フォルダ:</translation>
+    </message>
+    <message>
+        <source>Subtitle Offset:</source>
+        <translation>字幕オフセット:</translation>
+    </message>
+    <message>
+        <source> seconds</source>
+        <translation> 秒</translation>
+    </message>
+    <message>
+        <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Process Folder</source>
@@ -1468,6 +1480,50 @@ Total cards created: %2</source>
 </context><context>
     <name>CondenseTab</name>
     <message>
+        <source>Progress</source>
+        <translation>進捗</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>完了</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>完了: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>スキップ</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>スキップ: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>キャンセルされました</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>完了 — %1 個のファイルを処理しました</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>出力フォルダを選択</translation>
+    </message>
+    <message>
+        <source>Next to source</source>
+        <translation>ソースの隣</translation>
+    </message>
+    <message>
         <source>Input</source>
         <translation>入力</translation>
     </message>
@@ -1596,10 +1652,6 @@ Total cards created: %2</source>
         <translation>出力:</translation>
     </message>
     <message>
-        <source>Next to source</source>
-        <translation>ソースの隣</translation>
-    </message>
-    <message>
         <source>Choose Folder…</source>
         <translation>フォルダを選択…</translation>
     </message>
@@ -1622,14 +1674,6 @@ Total cards created: %2</source>
     <message>
         <source>Condense Audio</source>
         <translation>音声を凝縮</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>キャンセル</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>進捗</translation>
     </message>
     <message>
         <source>No Media File Selected</source>
@@ -1678,10 +1722,6 @@ Total cards created: %2</source>
     <message>
         <source>Failed to detect subtitle tracks. Check that ffprobe is installed.</source>
         <translation>字幕トラックの検出に失敗しました。ffprobe がインストールされているか確認してください。</translation>
-    </message>
-    <message>
-        <source>Select Output Folder</source>
-        <translation>出力フォルダを選択</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -1743,34 +1783,6 @@ Total cards created: %2</source>
         <source>Condensing file %1 of %2</source>
         <translation>ファイル %1/%2 を凝縮しています</translation>
     </message>
-    <message>
-        <source>Done: </source>
-        <translation>完了: </translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>完了</translation>
-    </message>
-    <message>
-        <source>Skipped: </source>
-        <translation>スキップ: </translation>
-    </message>
-    <message>
-        <source>Skipped</source>
-        <translation>スキップ</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>キャンセルされました</translation>
-    </message>
-    <message>
-        <source>Complete — %1 files processed</source>
-        <translation>完了 — %1 個のファイルを処理しました</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>キャンセル中…</translation>
-    </message>
 </context><context>
     <name>CondenseWorker</name>
     <message>
@@ -1778,24 +1790,20 @@ Total cards created: %2</source>
         <translation>スキップしました（既に存在）</translation>
     </message>
     <message>
-        <source>No dialogue lines found in %1</source>
-        <translation>%1 にセリフ行が見つかりませんでした</translation>
-    </message>
-    <message>
         <source>Condensing: %1%</source>
         <translation>凝縮中: %1%</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>キャンセルされました</translation>
-    </message>
-    <message>
-        <source>Condensing failed for %1</source>
-        <translation>%1 の凝縮に失敗しました</translation>
+        <source>Audio done; subtitle write failed: %1</source>
+        <translation>音声は完了しましたが、字幕の書き出しに失敗しました: %1</translation>
     </message>
     <message>
         <source>Done</source>
         <translation>完了</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>キャンセルされました</translation>
     </message>
     <message>
         <source>No subtitle source found for %1</source>
@@ -1814,8 +1822,12 @@ Total cards created: %2</source>
         <translation>%1 からの埋め込み字幕の抽出に失敗しました</translation>
     </message>
     <message>
-        <source>Audio done; subtitle write failed: %1</source>
-        <translation>音声は完了しましたが、字幕の書き出しに失敗しました: %1</translation>
+        <source>No dialogue lines found in %1</source>
+        <translation>%1 にセリフ行が見つかりませんでした</translation>
+    </message>
+    <message>
+        <source>Condensing failed for %1</source>
+        <translation>%1 の凝縮に失敗しました</translation>
     </message>
 </context><context>
     <name>CudaPackDownloadWorker</name>
@@ -2096,20 +2108,20 @@ Total cards created: %2</source>
         <translation>Yomitan zip (*.zip)</translation>
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>辞書をインポートしています…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>キャンセル</translation>
-    </message>
-    <message>
         <source>Dictionary added</source>
         <translation>辞書を追加しました</translation>
     </message>
     <message>
         <source>Imported %1 (%2 entries)</source>
         <translation>%1 をインポートしました（%2 件）</translation>
+    </message>
+    <message>
+        <source>Importing dictionary…</source>
+        <translation>辞書をインポートしています…</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
     </message>
     <message>
         <source>Import Failed</source>
@@ -2136,16 +2148,16 @@ Total cards created: %2</source>
         <translation>マイニングの実行中です。辞書を再インポートする前に停止してください。</translation>
     </message>
     <message>
-        <source>Re-importing dictionary…</source>
-        <translation>辞書を再インポートしています…</translation>
-    </message>
-    <message>
         <source>Dictionary re-imported</source>
         <translation>辞書を再インポートしました</translation>
     </message>
     <message>
         <source>Re-imported %1 (%2 entries)</source>
         <translation>%1 を再インポートしました（%2 件）</translation>
+    </message>
+    <message>
+        <source>Re-importing dictionary…</source>
+        <translation>辞書を再インポートしています…</translation>
     </message>
     <message>
         <source>Re-import Failed</source>
@@ -2248,6 +2260,20 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation>読み込み中…</translation>
     </message>
     <message>
+        <source>Remove failed</source>
+        <translation>削除に失敗しました</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The dictionary was not removed.</source>
+        <translation>%1 を削除できませんでした：
+%2
+
+辞書は削除されませんでした。</translation>
+    </message>
+    <message>
         <source>Select dictionary storage folder...</source>
         <translation>辞書の保存フォルダを選択...</translation>
     </message>
@@ -2316,6 +2342,14 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation>列が（読み、漢字、パターン）の CSV/TSV、または Yomitan 形式のピッチ zip（Kanjium、NHK など）です。Yomitan zip は保存時に ~/.anki_miner/pitch_accent.csv にインポートされます。</translation>
     </message>
     <message>
+        <source>Jisho (online fallback)</source>
+        <translation>Jisho（オンラインフォールバック）</translation>
+    </message>
+    <message>
+        <source>⚠ rate-limited, slower</source>
+        <translation>⚠ レート制限あり、低速</translation>
+    </message>
+    <message>
         <source>Remove dictionary</source>
         <translation>辞書を削除</translation>
     </message>
@@ -2328,34 +2362,12 @@ This cannot be undone. You would need to reimport from the source zip.</source>
 この操作は取り消せません。元の zip から再インポートする必要があります。</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>削除に失敗しました</translation>
-    </message>
-    <message>
         <source>A mining run is in progress. Stop it before removing dictionaries.</source>
         <translation>マイニングの実行中です。辞書を削除する前に停止してください。</translation>
     </message>
     <message>
-        <source>Could not delete %1:
-%2
-
-The dictionary was not removed.</source>
-        <translation>%1 を削除できませんでした：
-%2
-
-辞書は削除されませんでした。</translation>
-    </message>
-    <message>
         <source>Re-import…</source>
         <translation>再インポート…</translation>
-    </message>
-    <message>
-        <source>Jisho (online fallback)</source>
-        <translation>Jisho（オンラインフォールバック）</translation>
-    </message>
-    <message>
-        <source>⚠ rate-limited, slower</source>
-        <translation>⚠ レート制限あり、低速</translation>
     </message>
 </context><context>
     <name>DonePage</name>
@@ -2426,6 +2438,30 @@ The dictionary was not removed.</source>
     <message>
         <source>Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run</source>
         <translation>文章音声 TTS が音声以外の応答を返しました（レート制限の可能性） — この実行では文章音声をスキップし、次回の実行で再試行します</translation>
+    </message>
+    <message>
+        <source>Fetching expression audio</source>
+        <translation>表現音声を取得中</translation>
+    </message>
+    <message>
+        <source>Expression audio: %1</source>
+        <translation>表現音声: %1</translation>
+    </message>
+    <message>
+        <source>Expression audio: %1/%2 available</source>
+        <translation>表現音声: %1/%2 が利用可能</translation>
+    </message>
+    <message>
+        <source>Generating sentence audio</source>
+        <translation>文章音声を生成しています</translation>
+    </message>
+    <message>
+        <source>Sentence audio: %1</source>
+        <translation>文章音声: %1</translation>
+    </message>
+    <message>
+        <source>Sentence audio: %1/%2 sentences</source>
+        <translation>文章音声: %1/%2 文</translation>
     </message>
     <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
@@ -2540,30 +2576,6 @@ The dictionary was not removed.</source>
         <translation>アニメーションスクリーンショットは利用できません — この ffmpeg ビルドには AVIF または WebP エンコーダーがありません。設定で静止スクリーンショットに切り替えてください。</translation>
     </message>
     <message>
-        <source>Fetching expression audio</source>
-        <translation>表現音声を取得中</translation>
-    </message>
-    <message>
-        <source>Expression audio: %1</source>
-        <translation>表現音声: %1</translation>
-    </message>
-    <message>
-        <source>Expression audio: %1/%2 available</source>
-        <translation>表現音声: %1/%2 が利用可能</translation>
-    </message>
-    <message>
-        <source>Generating sentence audio</source>
-        <translation>文章音声を生成しています</translation>
-    </message>
-    <message>
-        <source>Sentence audio: %1</source>
-        <translation>文章音声: %1</translation>
-    </message>
-    <message>
-        <source>Sentence audio: %1/%2 sentences</source>
-        <translation>文章音声: %1/%2 文</translation>
-    </message>
-    <message>
         <source>Step 4/5 — Fetching definitions</source>
         <translation>ステップ 4/5 — 語義を取得中</translation>
     </message>
@@ -2600,8 +2612,12 @@ The dictionary was not removed.</source>
         </translation>
     </message>
     <message>
-        <source>No words found in subtitles</source>
-        <translation>字幕に単語が見つかりませんでした</translation>
+        <source>Error: %1</source>
+        <translation>エラー: %1</translation>
+    </message>
+    <message>
+        <source>Unexpected error: %1</source>
+        <translation>予期しないエラー: %1</translation>
     </message>
     <message>
         <source>No words selected for card creation</source>
@@ -2614,6 +2630,10 @@ The dictionary was not removed.</source>
         </translation>
     </message>
     <message>
+        <source>No words found in subtitles</source>
+        <translation>字幕に単語が見つかりませんでした</translation>
+    </message>
+    <message>
         <source>No media extracted successfully</source>
         <translation>メディアを抽出できませんでした</translation>
     </message>
@@ -2622,14 +2642,6 @@ The dictionary was not removed.</source>
         <translation>
             <numerusform>%n 単語分のメディアを抽出しました</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>Error: %1</source>
-        <translation>エラー: %1</translation>
-    </message>
-    <message>
-        <source>Unexpected error: %1</source>
-        <translation>予期しないエラー: %1</translation>
     </message>
     <message numerus="yes">
         <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
@@ -3082,14 +3094,6 @@ The dictionary was not removed.</source>
         <translation>頻度ソース (*.zip *.csv *.tsv);;すべてのファイル (*)</translation>
     </message>
     <message>
-        <source>Importing frequency source…</source>
-        <translation>頻度ソースをインポートしています…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>キャンセル</translation>
-    </message>
-    <message>
         <source> (skipped %1 malformed entries)</source>
         <translation> （不正な形式のエントリを %1 件スキップしました）</translation>
     </message>
@@ -3106,16 +3110,20 @@ The dictionary was not removed.</source>
         <translation>'%2' から %1 件のエントリをインポートしました。</translation>
     </message>
     <message>
+        <source>Importing frequency source…</source>
+        <translation>頻度ソースをインポートしています…</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
         <source>Import Failed</source>
         <translation>インポート失敗</translation>
     </message>
     <message>
         <source>Choose frequency source to re-import</source>
         <translation>再インポートする頻度ソースを選択</translation>
-    </message>
-    <message>
-        <source>Re-importing frequency source…</source>
-        <translation>頻度ソースを再インポートしています…</translation>
     </message>
     <message>
         <source>Frequency Source Re-imported</source>
@@ -3126,6 +3134,10 @@ The dictionary was not removed.</source>
         <translation>%1 を再インポートしました。</translation>
     </message>
     <message>
+        <source>Re-importing frequency source…</source>
+        <translation>頻度ソースを再インポートしています…</translation>
+    </message>
+    <message>
         <source>Re-import Failed</source>
         <translation>再インポートに失敗しました</translation>
     </message>
@@ -3134,6 +3146,20 @@ The dictionary was not removed.</source>
     <message>
         <source>Loading…</source>
         <translation>読み込み中…</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation>削除に失敗しました</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The frequency source was not removed.</source>
+        <translation>%1 を削除できませんでした：
+%2
+
+頻度ソースは削除されませんでした。</translation>
     </message>
     <message>
         <source>Active Frequency Sources</source>
@@ -3174,22 +3200,8 @@ This cannot be undone. You would need to re-import to use this source again.</so
 この操作は取り消せません。このソースを再び使用するには再インポートが必要です。</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>削除に失敗しました</translation>
-    </message>
-    <message>
         <source>A mining run is in progress. Stop it before removing frequency sources.</source>
         <translation>マイニングの実行中です。頻度ソースを削除する前に停止してください。</translation>
-    </message>
-    <message>
-        <source>Could not delete %1:
-%2
-
-The frequency source was not removed.</source>
-        <translation>%1 を削除できませんでした：
-%2
-
-頻度ソースは削除されませんでした。</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -4860,6 +4872,50 @@ Imported values override your current settings; anything not in the file is kept
 </context><context>
     <name>SubtitleCreationTab</name>
     <message>
+        <source>Progress</source>
+        <translation>進捗</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>完了</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>完了: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>スキップ</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>スキップ: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>キャンセルされました</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>完了 — %1 個のファイルを処理しました</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>出力フォルダを選択</translation>
+    </message>
+    <message>
+        <source>Next to source video</source>
+        <translation>元の動画と同じ場所</translation>
+    </message>
+    <message>
         <source>Input</source>
         <translation>入力</translation>
     </message>
@@ -4916,10 +4972,6 @@ Imported values override your current settings; anything not in the file is kept
         <translation>出力:</translation>
     </message>
     <message>
-        <source>Next to source video</source>
-        <translation>元の動画と同じ場所</translation>
-    </message>
-    <message>
         <source>Choose Folder…</source>
         <translation>フォルダを選択…</translation>
     </message>
@@ -4942,18 +4994,6 @@ Imported values override your current settings; anything not in the file is kept
     <message>
         <source>Generate Subtitles</source>
         <translation>字幕を生成</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>キャンセル</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>進捗</translation>
-    </message>
-    <message>
-        <source>Select Output Folder</source>
-        <translation>出力フォルダを選択</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -5013,34 +5053,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <source>Transcribing file %1 of %2</source>
         <translation>ファイルを文字起こし中 %1 / %2</translation>
     </message>
-    <message>
-        <source>Done: </source>
-        <translation>完了: </translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>完了</translation>
-    </message>
-    <message>
-        <source>Skipped: </source>
-        <translation>スキップ: </translation>
-    </message>
-    <message>
-        <source>Skipped</source>
-        <translation>スキップ</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>キャンセルされました</translation>
-    </message>
-    <message>
-        <source>Complete — %1 files processed</source>
-        <translation>完了 — %1 個のファイルを処理しました</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>キャンセル中…</translation>
-    </message>
 </context><context>
     <name>SubtitleGenWorker</name>
     <message>
@@ -5052,27 +5064,31 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>音声を抽出中: %1</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>キャンセルされました</translation>
-    </message>
-    <message>
-        <source>Audio extraction failed for %1</source>
-        <translation>%1 の音声抽出に失敗しました</translation>
-    </message>
-    <message>
         <source>Transcribing: %1%</source>
         <translation>文字起こし中: %1%</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>完了</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>キャンセルされました</translation>
     </message>
     <message>
         <source>No speech detected in %1</source>
         <translation>%1 で音声が検出されませんでした</translation>
     </message>
     <message>
-        <source>Done</source>
-        <translation>完了</translation>
+        <source>Audio extraction failed for %1</source>
+        <translation>%1 の音声抽出に失敗しました</translation>
     </message>
 </context><context>
     <name>SubtitlePlayerWidget</name>
+    <message>
+        <source>Could not load video: %1</source>
+        <translation>動画を読み込めませんでした: %1</translation>
+    </message>
     <message>
         <source>This video uses AV1, which your system can't decode for in-app preview. Audio and subtitles still play.</source>
         <translation>この動画はAV1を使用しており、お使いのシステムではアプリ内プレビュー用にデコードできません。音声と字幕は引き続き再生されます。</translation>
@@ -5082,8 +5098,12 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>再生</translation>
     </message>
     <message>
-        <source>Could not load video: %1</source>
-        <translation>動画を読み込めませんでした: %1</translation>
+        <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>playback failed</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Pause</source>
@@ -5093,8 +5113,56 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <source>Video error: %1</source>
         <translation>動画エラー: %1</translation>
     </message>
+    <message>
+        <source>Video preview is unavailable on this display. Audio and subtitles still play.</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>SubtitleRetimeTab</name>
+    <message>
+        <source>Progress</source>
+        <translation>進捗</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>完了</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation>完了: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation>スキップ</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation>スキップ: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>キャンセルされました</translation>
+    </message>
+    <message>
+        <source>Complete — %1 files processed</source>
+        <translation>完了 — %1 個のファイルを処理しました</translation>
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation>出力フォルダを選択</translation>
+    </message>
+    <message>
+        <source>Next to source video</source>
+        <translation>元の動画と同じ場所</translation>
+    </message>
     <message>
         <source>Input</source>
         <translation>入力</translation>
@@ -5168,10 +5236,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>出力:</translation>
     </message>
     <message>
-        <source>Next to source video</source>
-        <translation>元の動画と同じ場所</translation>
-    </message>
-    <message>
         <source>Choose Folder…</source>
         <translation>フォルダを選択…</translation>
     </message>
@@ -5220,14 +5284,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>字幕をリタイミング</translation>
     </message>
     <message>
-        <source>Cancel</source>
-        <translation>キャンセル</translation>
-    </message>
-    <message>
-        <source>Progress</source>
-        <translation>進捗</translation>
-    </message>
-    <message>
         <source>No Video File Selected</source>
         <translation>動画ファイルが選択されていません</translation>
     </message>
@@ -5262,10 +5318,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
         <translation>音声トラックの検出に失敗しました。ffprobe がインストールされているか確認してください。</translation>
-    </message>
-    <message>
-        <source>Select Output Folder</source>
-        <translation>出力フォルダを選択</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -5334,34 +5386,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Retiming file %1 of %2</source>
         <translation>%2 件中 %1 件目をリタイミング中</translation>
-    </message>
-    <message>
-        <source>Done: </source>
-        <translation>完了: </translation>
-    </message>
-    <message>
-        <source>Done</source>
-        <translation>完了</translation>
-    </message>
-    <message>
-        <source>Skipped: </source>
-        <translation>スキップ: </translation>
-    </message>
-    <message>
-        <source>Skipped</source>
-        <translation>スキップ</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>キャンセルされました</translation>
-    </message>
-    <message>
-        <source>Complete — %1 files processed</source>
-        <translation>完了 — %1 個のファイルを処理しました</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>キャンセル中…</translation>
     </message>
 </context><context>
     <name>SubtitleRetimeWorker</name>
@@ -5924,6 +5948,62 @@ Go to Settings → ASR to download it before generating subtitles.</source>
 </context><context>
     <name>YouTubeTab</name>
     <message>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation>マイニングを利用できません — サービスが初期化されていません。</translation>
+    </message>
+    <message>
+        <source>%1 run starting — %2 items.</source>
+        <translation>%1 の実行を開始します — %2 件。</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>マイニング</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Stop All</source>
+        <translation>すべて停止</translation>
+    </message>
+    <message>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation>キュー完了: 成功 %1 件、失敗 %2 件。</translation>
+    </message>
+    <message>
+        <source>Mining %1 of %2: %3</source>
+        <translation>%2 件中 %1 件目をマイニング中: %3</translation>
+    </message>
+    <message>
+        <source>Mined %1: %2 cards (attempts=%3).</source>
+        <translation>%1 をマイニングしました: %2 枚のカード (attempts=%3)。</translation>
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
+        <translation>%1 をキャンセルしました。</translation>
+    </message>
+    <message>
+        <source>Failed %1: %2 (attempts=%3).</source>
+        <translation>%1 が失敗しました: %2 (attempts=%3)。</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>キャンセルされました</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation>失敗しました — ログを確認してください</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded</source>
+        <translation>完了 — %1 件成功</translation>
+    </message>
+    <message>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation>完了 — %1 件成功、%2 件失敗</translation>
+    </message>
+    <message>
         <source>YouTube queue</source>
         <translation>YouTube キュー</translation>
     </message>
@@ -5948,10 +6028,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>カードを作成する前に、各動画の単語選択ポップアップを表示します。</translation>
     </message>
     <message>
-        <source>Mine</source>
-        <translation>マイニング</translation>
-    </message>
-    <message>
         <source>Mine every READY item in the queue into Anki cards.</source>
         <translation>キュー内のすべての READY 項目を Anki カードにマイニングします。</translation>
     </message>
@@ -5964,64 +6040,12 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>現在マイニング中でないキュー項目をすべて削除します。</translation>
     </message>
     <message>
-        <source>Stop All</source>
-        <translation>すべて停止</translation>
-    </message>
-    <message>
         <source>Cancel the active run.</source>
         <translation>実行中の処理をキャンセルします。</translation>
     </message>
     <message>
         <source>Progress</source>
         <translation>進捗</translation>
-    </message>
-    <message>
-        <source>Mining unavailable — services not initialized.</source>
-        <translation>マイニングを利用できません — サービスが初期化されていません。</translation>
-    </message>
-    <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation>%1 の実行を開始します — %2 件。</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>キャンセル中…</translation>
-    </message>
-    <message>
-        <source>Mining %1 of %2: %3</source>
-        <translation>%2 件中 %1 件目をマイニング中: %3</translation>
-    </message>
-    <message>
-        <source>Mined %1: %2 cards (attempts=%3).</source>
-        <translation>%1 をマイニングしました: %2 枚のカード (attempts=%3)。</translation>
-    </message>
-    <message>
-        <source>Cancelled %1.</source>
-        <translation>%1 をキャンセルしました。</translation>
-    </message>
-    <message>
-        <source>Failed %1: %2 (attempts=%3).</source>
-        <translation>%1 が失敗しました: %2 (attempts=%3)。</translation>
-    </message>
-    <message>
-        <source>Queue done: %1 succeeded, %2 failed.</source>
-        <translation>キュー完了: 成功 %1 件、失敗 %2 件。</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>キャンセルされました</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>失敗しました — ログを確認してください</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded, %2 failed</source>
-        <translation>完了 — %1 件成功、%2 件失敗</translation>
-    </message>
-    <message>
-        <source>Complete — %1 succeeded</source>
-        <translation>完了 — %1 件成功</translation>
     </message>
 </context><context>
     <name>ZipImportFlow</name>
@@ -6104,5 +6128,11 @@ Continue with import?</source>
     <message>
         <source>⚠ folder missing — re-import</source>
         <translation>⚠ フォルダが見つかりません — 再インポート</translation>
+    </message>
+</context><context>
+    <name>app</name>
+    <message>
+        <source>Anki Miner — Unexpected Error</source>
+        <translation type="unfinished" />
     </message>
 </context></TS>
