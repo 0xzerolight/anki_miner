@@ -55,6 +55,7 @@ from typing import TYPE_CHECKING, Any
 from PyQt6.QtWidgets import QListWidgetItem
 
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
+from anki_miner.models import MiningOutcome, classify_result, result_error_text
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -563,8 +564,6 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Update the item with success/error and forward to the presenter."""
-        from anki_miner.models import MiningOutcome, classify_result, result_error_text
-
         item = self._item_at(idx)
         if item is None:
             return
