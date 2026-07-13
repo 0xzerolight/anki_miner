@@ -25,7 +25,6 @@ class TestYouTubeQueueItemDefaults:
         assert item.resolved_sub_mode is None
         assert item.cards_created == 0
         assert item.error_message is None
-        assert item.retry_count == 0
 
     def test_url_and_status_set(self):
         item = YouTubeQueueItem(url="https://youtu.be/xyz", status=YouTubeItemStatus.READY)

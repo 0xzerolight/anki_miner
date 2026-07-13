@@ -28,7 +28,6 @@ from anki_miner.exceptions.youtube import (
     YouTubeFetchError,
     YtdlpNotFoundError,
 )
-from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.models.youtube import FetchedMedia, PlaylistEntry, PlaylistInfo, SubMode, VideoInfo
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg
 from anki_miner.utils.subprocess_utils import no_window_kwargs
@@ -128,10 +127,8 @@ class YouTubeFetcherService:
     def __init__(
         self,
         config: AnkiMinerConfig,
-        presenter: PresenterProtocol | None = None,
     ) -> None:
         self._config = config
-        self._presenter = presenter
         self._popen: subprocess.Popen[str] | None = None
         # Serializes the claim in _kill_tree: the reader loop's inline cancel
         # check and the cancel watchdog thread may race to kill the same
@@ -525,13 +522,6 @@ class YouTubeFetcherService:
                             None,
                         )
                     continue
-
-                # Forward other output to the presenter for visibility.
-                if self._presenter is not None and line.strip():
-                    try:
-                        self._presenter.show_info(line)
-                    except Exception:  # pragma: no cover - presenter best effort
-                        logger.debug("presenter.show_info raised; ignoring")
         finally:
             returncode = popen.wait()
             self._popen = None

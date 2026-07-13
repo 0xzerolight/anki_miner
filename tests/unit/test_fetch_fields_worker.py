@@ -19,7 +19,7 @@ pytest.importorskip("PyQt6.QtCore")
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.settings_tab import SettingsTab
-from anki_miner.gui.workers.fetch_fields_worker import FetchFieldsWorker
+from anki_miner.gui.workers.fetch_workers import FetchFieldsWorker
 
 
 class TestFetchFieldsWorker:

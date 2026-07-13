@@ -63,7 +63,6 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
             "pitch_graph": "PitchGraph",
             "pitch_text": "PitchText",
         },
-        anki_word_field="Word",
         pitch_category_format="romaji",
         card_type="click",
         card_type_marker_fields={
@@ -124,7 +123,6 @@ _SAVE_PATH_FIELDS = frozenset(
         "ankiconnect_url",
         "anki_tags",
         "anki_fields",
-        "anki_word_field",
         "pitch_category_format",
         "card_type",
         "card_type_marker_fields",
@@ -235,7 +233,6 @@ class TestSavePathRoundTrip:
             "ankiconnect_url",
             "anki_tags",
             "anki_fields",
-            "anki_word_field",
             "pitch_category_format",
             "card_type",
             "card_type_marker_fields",

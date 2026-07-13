@@ -753,8 +753,6 @@ class AnkiSettingsPanel(FormPanel):
 
         Uses ``dataclasses.replace`` so the frozen-config invariant is preserved.
         Called by :meth:`SettingsTab.commit_settings` as part of the contribute fold.
-        ``anki_word_field`` is derived from ``anki_fields["word"]`` (same logic as
-        before — keeps the two in sync).
         """
         fields = self.get_card_fields()
         return replace(
@@ -764,7 +762,6 @@ class AnkiSettingsPanel(FormPanel):
             ankiconnect_url=self.get_ankiconnect_url(),
             anki_tags=self.get_anki_tags(),
             anki_fields=fields,
-            anki_word_field=fields.get("word", "Expression"),
             pitch_category_format=self.get_pitch_category_format(),
             card_type=cast(
                 Literal["", "word_and_sentence", "click", "sentence", "audio"],
