@@ -86,6 +86,8 @@ class ElidingLabel(QLabel):
         self._render()
 
     def minimumSizeHint(self) -> QSize:  # noqa: N802 - Qt override
-        # Small minimum so the label can shrink and elide instead of widening its row.
+        # Small minimum width so the label can shrink and elide instead of widening
+        # its row — but keep QLabel's height, which includes any stylesheet
+        # padding/min-height (bare font-metrics height clips styled captions).
         metrics = QFontMetrics(self.font())
-        return QSize(metrics.horizontalAdvance("…"), metrics.height())
+        return QSize(metrics.horizontalAdvance("…"), super().minimumSizeHint().height())

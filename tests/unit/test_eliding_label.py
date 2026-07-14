@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtGui import QResizeEvent
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QFontMetrics, QResizeEvent
+from PyQt6.QtWidgets import QApplication, QLabel
 
 from anki_miner.gui.widgets.base.eliding_label import ElidingLabel
 
@@ -74,6 +74,32 @@ def test_elide_middle_mode_keeps_both_ends(qtbot) -> None:
     assert "…" in shown
     assert shown.startswith("/home")
     assert shown.endswith(".mkv")
+
+
+def test_minimum_height_includes_stylesheet_box(qtbot) -> None:
+    # A styled caption (e.g. QLabel#caption's padding/min-height) must be part of
+    # the minimum height or tight layouts clip the glyphs — the Batch tab's
+    # "No folder selected" bug. Exact equality with a plain QLabel under the same
+    # stylesheet is font-independent; arithmetic on font height + padding is not.
+    sheet = "QLabel { padding: 6px 2px; }"
+    plain = QLabel("No folder selected")
+    qtbot.addWidget(plain)
+    plain.setStyleSheet(sheet)
+    label = ElidingLabel("No folder selected")
+    qtbot.addWidget(label)
+    label.setStyleSheet(sheet)
+    assert label.minimumSizeHint().height() == plain.minimumSizeHint().height()
+
+
+def test_minimum_width_stays_narrow_for_long_text(qtbot) -> None:
+    # The elide-not-widen contract: minimum width never demands the full text.
+    label = ElidingLabel(_LONG)
+    qtbot.addWidget(label)
+    plain = QLabel(_LONG)
+    qtbot.addWidget(plain)
+    ellipsis_width = QFontMetrics(label.font()).horizontalAdvance("…")
+    assert label.minimumSizeHint().width() == ellipsis_width
+    assert label.minimumSizeHint().width() < plain.minimumSizeHint().width()
 
 
 def test_reelides_on_resize(qtbot) -> None:
