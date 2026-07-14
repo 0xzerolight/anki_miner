@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.constants import MIN_HEIGHT_QUEUE_SECTION, SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
+from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
@@ -270,8 +270,9 @@ class BatchProcessingTab(MiningTabBase):
 
         section.setLayout(layout)
 
-        # Set minimum height and size policy to prevent compression
-        section.setMinimumHeight(MIN_HEIGHT_QUEUE_SECTION)
+        # No explicit minimum height: an explicit minimum OVERRIDES the (larger)
+        # layout-derived one (qSmartMinSize), letting the scroll area compress the
+        # card below its content and clip the selectors' status captions.
         section.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         return section
