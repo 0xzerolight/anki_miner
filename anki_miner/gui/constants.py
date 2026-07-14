@@ -18,7 +18,6 @@ APP_NAME = "Anki Miner"
 # =============================================================================
 MIN_HEIGHT_LOG_WIDGET = 200
 MIN_HEIGHT_PROGRESS_WIDGET = 80
-MIN_HEIGHT_QUEUE_SECTION = 260
 
 # =============================================================================
 # FILE FILTERS FOR DIALOGS
