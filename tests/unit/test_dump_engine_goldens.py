@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -15,6 +16,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = REPOSITORY_ROOT / "scripts" / "dump_engine_goldens.py"
 CORPUS_PATH = REPOSITORY_ROOT / "tests" / "fixtures" / "goldens" / "tokenizer-v1.json"
 RUNTIME_LOCK_PATH = REPOSITORY_ROOT / "scripts" / "golden-runtime-requirements.txt"
+GOLDEN_WORKFLOW_PATH = REPOSITORY_ROOT / ".github" / "workflows" / "android-engine-goldens.yml"
 PINNED_ENGINE_REVISION = "ba3b3cfbcc53e57a440c8b9f157209851408c62a"
 
 
@@ -27,6 +29,16 @@ def _load_exporter():
 
 
 exporter = _load_exporter()
+
+
+def test_repository_contains_pinned_engine_revision():
+    result = subprocess.run(
+        ["git", "-C", str(REPOSITORY_ROOT), "cat-file", "-e", f"{PINNED_ENGINE_REVISION}^{{commit}}"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, "CI checkout must fetch full history for the pinned Android engine revision"
 
 
 @pytest.fixture(scope="session")
@@ -257,6 +269,11 @@ def test_ci_runtime_lock_covers_every_hashed_distribution():
     assert all(
         "==" in line for line in RUNTIME_LOCK_PATH.read_text(encoding="utf-8").splitlines() if line[:1].isalpha()
     )
+
+
+def test_golden_workflow_pins_python_patch_version():
+    workflow = GOLDEN_WORKFLOW_PATH.read_text(encoding="utf-8")
+    assert re.findall(r'^\s+python-version: "([0-9.]+)"$', workflow, flags=re.MULTILINE) == ["3.13.7"]
 
 
 def test_cli_requires_explicit_unidic_provenance(clean_engine_root):
