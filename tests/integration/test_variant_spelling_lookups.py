@@ -105,6 +105,26 @@ class TestVariantSpellingFrequency:
 
         assert ranks == {"掛ける": [1500], "懸ける": [9000], "賭ける": [12000]}
 
+    def test_kana_usage_rows_do_not_clobber_spelling_ranks(self, tmp_path: Path):
+        """JPDB Kana dicts pair each spelling's own rank with a ㋕-marked
+        duplicate of the base word's kana-usage rank; the ㋕ row must not win
+        the import collision (reported bug: 懸かる carded as 300, not 19920)."""
+        banks = [
+            ["懸かる", "freq", {"reading": "かかる", "frequency": {"value": 300, "displayValue": "300㋕"}}],
+            ["懸かる", "freq", {"reading": "かかる", "frequency": {"value": 19920, "displayValue": "19920"}}],
+            ["掛かる", "freq", {"reading": "かかる", "frequency": {"value": 300, "displayValue": "300㋕"}}],
+            ["掛かる", "freq", {"reading": "かかる", "frequency": {"value": 4288, "displayValue": "4288"}}],
+            ["かかる", "freq", {"value": 300, "displayValue": "300㋕"}],
+        ]
+        service = _freq_service(tmp_path, banks)
+
+        ranks = {
+            spelling: [rank for _n, rank, _d in service.lookup_all(spelling, "かかる")]
+            for spelling in ("懸かる", "掛かる", "かかる")
+        }
+
+        assert ranks == {"懸かる": [19920], "掛かる": [4288], "かかる": [300]}
+
     def test_absent_spelling_misses_so_caller_can_fall_back(self, tmp_path: Path):
         """A spelling no source ranks returns an empty breakdown — the
         orchestration layer's whole-result fallback then retries the lemma."""
