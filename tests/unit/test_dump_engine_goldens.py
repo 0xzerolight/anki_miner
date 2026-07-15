@@ -96,6 +96,13 @@ def test_offsets_distinguish_codepoints_from_utf16_units():
     }
 
 
+def test_token_record_requires_all_26_unidic_fields():
+    token = _token("猫")
+    del token.feature.aModeType
+    with pytest.raises(exporter.GoldenExportError, match="missing UniDic fields: aModeType"):
+        exporter._token_record("猫", token, 0, 1)
+
+
 def test_token_locator_permits_only_whitespace_gaps():
     text = "猫 \n 猫"
     located = exporter._locate_tokens(text, [_token("猫"), _token("猫")])
@@ -142,6 +149,33 @@ def test_tree_hash_rejects_symlinks_and_special_files(tmp_path):
         exporter._sha256_tree(tree)
 
 
+def test_distribution_hash_includes_sibling_native_artifacts(tmp_path):
+    package = tmp_path / "example"
+    native_directory = tmp_path / "example.libs"
+    metadata = tmp_path / "example-1.0.dist-info"
+    package.mkdir()
+    native_directory.mkdir()
+    metadata.mkdir()
+    module = package / "__init__.py"
+    native = native_directory / "libexample.so"
+    record = metadata / "RECORD"
+    module.write_text("VALUE = 1\n", encoding="utf-8")
+    native.write_bytes(b"native-one")
+    record.write_text("environment-specific install record", encoding="utf-8")
+    entries = [Path("example/__init__.py"), Path("example.libs/libexample.so"), Path("example-1.0.dist-info/RECORD")]
+    distribution = SimpleNamespace(
+        files=entries,
+        metadata={"Name": "example"},
+        locate_file=lambda entry: tmp_path / entry,
+    )
+
+    files = exporter._distribution_file_map(distribution)
+    assert set(files) == {"example/__init__.py", "example.libs/libexample.so"}
+    original = exporter._sha256_named_files(files)
+    native.write_bytes(b"native-two")
+    assert exporter._sha256_named_files(files) != original
+
+
 def test_corpus_rejects_duplicate_case_ids(tmp_path):
     corpus = tmp_path / "corpus.json"
     case = {
@@ -168,6 +202,10 @@ def test_corpus_rejects_duplicate_case_ids(tmp_path):
         (
             lambda payload: payload["cases"][0]["expect"]["token"].update({"orth_base": "猫"}),
             "expect.token has unknown keys",
+        ),
+        (
+            lambda payload: payload["cases"][0]["expect"].update({"token": None, "word": {"surface": "猫"}}),
+            "expect.token must be an object",
         ),
     ],
 )
@@ -283,6 +321,13 @@ print(json.dumps({{
     result = subprocess.run([sys.executable, "-c", code], check=True, capture_output=True, text=True)
     payload = json.loads(result.stdout)
     assert payload == {"revision": PINNED_ENGINE_REVISION, "remaining": []}
+    ignored = subprocess.run(
+        ["git", "-C", str(clean_engine_root), "ls-files", "--others", "--ignored", "--exclude-standard"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert ignored.stdout == ""
 
 
 def test_engine_root_must_be_clean_git_toplevel(clean_engine_root, tmp_path):
@@ -311,7 +356,7 @@ def test_engine_root_must_be_clean_git_toplevel(clean_engine_root, tmp_path):
         text=True,
     )
     assert ignored_result.returncode == 2
-    assert "ignored non-bytecode files" in ignored_result.stderr
+    assert "engine checkout contains ignored files" in ignored_result.stderr
     assert "fugashi.py" in ignored_result.stderr
 
 
