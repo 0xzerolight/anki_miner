@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+- **JPDB "Kana" frequency dictionaries no longer give rare kanji spellings the base word's kana rank.** These dictionaries pair each spelling's own rank with a ㋕-marked copy of the word's written-in-kana rank (e.g. 懸かる ships both "19920" and "300㋕"); the importer kept the smaller number, so 懸かる carded as 300 — the rank of the common かかる — and the max-frequency-rank filter treated every rare variant as common. The spelling's own rank now wins. **To repair an affected source, right-click it under Settings → Frequency and choose Re-import.** A `Frequency` source migrated from an old `frequency.csv` has the collapse baked into the CSV itself and can't be repaired that way — remove it and import the JPDB zip fresh (or grab it via the recommended-resources download).
+
 ### Changed
 - **The in-app video preview now runs on embedded mpv (libmpv)** instead of Qt Multimedia. This retires a whole family of preview bugs: the Windows "Not Responding" freeze when closing a preview, and the AV1 "your system can't decode" notice — AV1 now just plays (software-decoded) on every machine, so that notice UI is gone. Two small behavior changes: Stop now holds the last frame paused at the start instead of going black, and video decoding uses the CPU (previews are small; the cost is negligible). Release bundles ship libmpv; pip/.deb/source installs use the system libmpv and show a notice in the preview pane when it's missing (see README Requirements).
 
