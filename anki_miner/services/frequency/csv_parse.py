@@ -31,6 +31,20 @@ logger = logging.getLogger(__name__)
 # instead of being rejected wholesale as display-only.
 _NUMBER_RE = re.compile(r"[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?")
 
+# JPDB's kana-usage display marker (e.g. "300㋕"): the row carries the BASE
+# WORD's rank when written in kana, duplicated onto every kanji spelling of the
+# word — it is NOT the spelling's own rank, so it must lose a (term, reading)
+# collision against an unmarked row (see source_importer._rank_preference).
+# U+32D5 is a JPDB-specific convention; no other known frequency dict uses it,
+# so for marker-free dicts the collision rule reduces to plain min(rank).
+KANA_USAGE_MARKER = "㋕"  # ㋕ (CIRCLED KATAKANA KA)
+
+
+def is_kana_usage_display(display_value: str | None) -> bool:
+    """True when a display string carries JPDB's ㋕ kana-usage marker."""
+    return display_value is not None and KANA_USAGE_MARKER in display_value
+
+
 # Header first-column values that unambiguously declare (word, rank) column order.
 # The Yomitan freq importer writes ``['term', 'rank']`` as its header; we recognise
 # both ``term`` and ``word`` so user-exported variants are also covered.
