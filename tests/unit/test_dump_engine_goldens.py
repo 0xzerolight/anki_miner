@@ -16,6 +16,8 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = REPOSITORY_ROOT / "scripts" / "dump_engine_goldens.py"
 CORPUS_PATH = REPOSITORY_ROOT / "tests" / "fixtures" / "goldens" / "tokenizer-v1.json"
 RUNTIME_LOCK_PATH = REPOSITORY_ROOT / "scripts" / "golden-runtime-requirements.txt"
+BUILD_LOCK_PATH = REPOSITORY_ROOT / "scripts" / "golden-build-requirements.txt"
+SOURCE_LOCK_PATH = REPOSITORY_ROOT / "scripts" / "golden-source-requirements.txt"
 GOLDEN_WORKFLOW_PATH = REPOSITORY_ROOT / ".github" / "workflows" / "android-engine-goldens.yml"
 PINNED_ENGINE_REVISION = "ba3b3cfbcc53e57a440c8b9f157209851408c62a"
 
@@ -202,6 +204,35 @@ def test_corpus_rejects_duplicate_case_ids(tmp_path):
         exporter._load_corpus(corpus)
 
 
+@pytest.mark.parametrize("case_id", ["Case", "_case", "-case", "case.dot", "case space", "café"])
+def test_corpus_rejects_nonportable_case_ids(tmp_path, case_id):
+    corpus = tmp_path / "corpus.json"
+    case = {
+        "id": case_id,
+        "text": "猫",
+        "coverage": ["case-id-check"],
+        "expect": {"token": {"surface": "猫"}},
+    }
+    _write_corpus(corpus, {"schema_version": 1, "cases": [case]})
+
+    with pytest.raises(exporter.GoldenExportError, match="stable lowercase identifier"):
+        exporter._load_corpus(corpus)
+
+
+@pytest.mark.parametrize("case_id", ["0", "case", "case-id_2"])
+def test_corpus_accepts_shared_android_case_id_grammar(tmp_path, case_id):
+    corpus = tmp_path / "corpus.json"
+    case = {
+        "id": case_id,
+        "text": "猫",
+        "coverage": ["case-id-check"],
+        "expect": {"token": {"surface": "猫"}},
+    }
+    _write_corpus(corpus, {"schema_version": 1, "cases": [case]})
+
+    assert exporter._load_corpus(corpus) == [case]
+
+
 @pytest.mark.parametrize(
     ("mutation", "message"),
     [
@@ -259,21 +290,48 @@ def test_section_status_freezes_implemented_and_pending_contract():
 
 
 def test_ci_runtime_lock_covers_every_hashed_distribution():
-    pins = {
-        line.split("==", 1)[0].lower().replace("_", "-")
-        for line in RUNTIME_LOCK_PATH.read_text(encoding="utf-8").splitlines()
-        if line and not line.startswith("#")
-    }
+    lines = RUNTIME_LOCK_PATH.read_text(encoding="utf-8").splitlines()
+    pins = {line.split()[0].split("==", 1)[0].lower().replace("_", "-") for line in lines if line[:1].isalpha()}
     expected = {name.lower().replace("_", "-") for name, _imports in exporter.RUNTIME_DISTRIBUTIONS}
     assert pins == expected
-    assert all(
-        "==" in line for line in RUNTIME_LOCK_PATH.read_text(encoding="utf-8").splitlines() if line[:1].isalpha()
-    )
+    assert all("==" in line and line.endswith(" \\") for line in lines if line[:1].isalpha())
+    assert len(re.findall(r"^\s+--hash=sha256:[0-9a-f]{64}$", "\n".join(lines), flags=re.MULTILINE)) == len(pins)
+
+    build_lock = BUILD_LOCK_PATH.read_text(encoding="utf-8")
+    assert re.findall(r"^[a-z][a-z0-9-]*==[^ ]+ \\$", build_lock, flags=re.MULTILINE) == [
+        "pip==25.1.1 \\",
+        "setuptools==80.9.0 \\",
+    ]
+    assert len(re.findall(r"^\s+--hash=sha256:[0-9a-f]{64}$", build_lock, flags=re.MULTILINE)) == 2
+
+    source_lock = SOURCE_LOCK_PATH.read_text(encoding="utf-8")
+    assert re.findall(r"^[a-z][a-z0-9-]*==[^ ]+ \\$", source_lock, flags=re.MULTILINE) == ["unidic-lite==1.0.8 \\"]
+    assert len(re.findall(r"^\s+--hash=sha256:[0-9a-f]{64}$", source_lock, flags=re.MULTILINE)) == 1
 
 
 def test_golden_workflow_pins_python_patch_version():
     workflow = GOLDEN_WORKFLOW_PATH.read_text(encoding="utf-8")
     assert re.findall(r'^\s+python-version: "([0-9.]+)"$', workflow, flags=re.MULTILINE) == ["3.13.7"]
+
+
+def test_golden_workflow_hash_locks_installation_and_process_environment():
+    workflow = GOLDEN_WORKFLOW_PATH.read_text(encoding="utf-8")
+    for option in ("--require-hashes", "--only-binary=:all:", "--no-binary=:all:", "--no-build-isolation"):
+        assert option in workflow
+    assert "python -m pip wheel" in workflow
+    assert "--find-links" in workflow
+    assert "--no-binary=unidic-lite" not in workflow
+    for setting in (
+        "LANG: C.UTF-8",
+        "LC_ALL: C.UTF-8",
+        'PYTHONDONTWRITEBYTECODE: "1"',
+        'PYTHONHASHSEED: "0"',
+        "PYTHONIOENCODING: utf-8",
+        'PYTHONUTF8: "1"',
+        'SOURCE_DATE_EPOCH: "315532800"',
+        "TZ: UTC",
+    ):
+        assert setting in workflow
 
 
 def test_cli_requires_explicit_unidic_provenance(clean_engine_root):

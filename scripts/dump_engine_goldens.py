@@ -91,6 +91,9 @@ RUNTIME_DISTRIBUTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("certifi", ("certifi",)),
     ("idna", ("idna",)),
     ("urllib3", ("urllib3",)),
+    ("PyQt6", ("PyQt6.QtCore",)),
+    ("PyQt6-Qt6", ()),
+    ("PyQt6-sip", ("PyQt6.sip",)),
 )
 
 CORPUS_ROOT_KEYS = frozenset({"schema_version", "cases"})
@@ -100,6 +103,7 @@ TOKEN_EXPECTATION_KEYS = frozenset({"surface", "lemma", "orthBase", "is_unknown"
 WORD_EXPECTATION_KEYS = frozenset(
     {"surface", "lemma", "orth_base", "mined_form", "surface_start", "surface_end", "highlight_end"}
 )
+CASE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 ASSET_NAME_PATTERN = re.compile(r"[a-z][a-z0-9_]{0,63}\Z")
 
 
@@ -279,6 +283,8 @@ def _load_corpus(path: Path) -> list[dict[str, Any]]:
         if not isinstance(case.get("id"), str) or not case["id"] or not isinstance(case.get("text"), str):
             raise GoldenExportError("every corpus case requires string id and text fields")
         case_id = case["id"]
+        if CASE_ID_RE.fullmatch(case_id) is None:
+            raise GoldenExportError(f"corpus case id must be a stable lowercase identifier: {case_id!r}")
         if case_id in seen:
             raise GoldenExportError(f"duplicate corpus case id: {case_id}")
         seen.add(case_id)
