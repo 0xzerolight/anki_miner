@@ -87,6 +87,33 @@ def test_corpus_rejects_duplicate_case_ids(tmp_path):
         exporter._load_corpus(corpus)
 
 
+def test_cli_requires_explicit_unidic_provenance():
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_PATH),
+            "--engine-root",
+            str(REPOSITORY_ROOT),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 2
+    assert "the following arguments are required: --dicdir" in result.stderr
+
+
+def test_callable_boundary_rejects_ambient_unidic():
+    with pytest.raises(exporter.GoldenExportError, match="--dicdir is required"):
+        exporter.build_goldens(
+            engine_root=REPOSITORY_ROOT,
+            corpus_path=CORPUS_PATH,
+            dicdir=None,
+            assets={},
+        )
+
+
 def test_seeded_export_has_exact_contract_and_no_host_paths(tmp_path):
     output_path = tmp_path / "engine-goldens.json"
     subprocess.run(
