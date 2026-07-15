@@ -1,0 +1,13 @@
+# Exact Linux/Python runtime used by the desktop Android-golden workflow.
+# The exporter also hashes the installed package and native-library contents,
+# so the artifact records the concrete runtime rather than trusting versions.
+certifi==2026.6.17
+charset-normalizer==3.4.7
+fugashi==1.5.2
+idna==3.18
+lxml==6.1.1
+pillow==12.2.0
+pysubs2==1.8.1
+requests==2.34.2
+unidic-lite==1.0.8
+urllib3==2.7.0
