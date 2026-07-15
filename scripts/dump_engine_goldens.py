@@ -208,11 +208,9 @@ def _token_record(text: str, token: Any, start: int, end: int) -> dict[str, Any]
     }
 
 
-def _make_tagger(dicdir: Path | None) -> Any:
+def _make_tagger(dicdir: Path) -> Any:
     import fugashi
 
-    if dicdir is None:
-        return fugashi.Tagger()
     resolved = dicdir.resolve()
     if not (resolved / "sys.dic").is_file():
         raise GoldenExportError(f"UniDic directory has no sys.dic: {resolved}")
@@ -390,12 +388,13 @@ def build_goldens(
         raise GoldenExportError(f"--engine-root does not contain anki_miner: {engine_root}")
     revision = _engine_revision(engine_root)
     corpus = _load_corpus(corpus_path)
-    resolved_dicdir = dicdir.expanduser().resolve() if dicdir is not None else None
+    if dicdir is None:
+        raise GoldenExportError("--dicdir is required so UniDic provenance is never ambient")
+    resolved_dicdir = dicdir.expanduser().resolve()
     effective_assets = dict(assets)
-    if resolved_dicdir is not None:
-        if "unidic_dicdir" in effective_assets:
-            raise GoldenExportError("asset name 'unidic_dicdir' is reserved for --dicdir provenance")
-        effective_assets["unidic_dicdir"] = resolved_dicdir
+    if "unidic_dicdir" in effective_assets:
+        raise GoldenExportError("asset name 'unidic_dicdir' is reserved for --dicdir provenance")
+    effective_assets["unidic_dicdir"] = resolved_dicdir
 
     # config.paths freezes ANKI_MINER_HOME at import time.  The environment and
     # import root therefore must be established before importing any engine code.
@@ -449,7 +448,12 @@ def _parser() -> argparse.ArgumentParser:
         type=Path,
         default=repository_root / "tests" / "fixtures" / "goldens" / "tokenizer-v1.json",
     )
-    parser.add_argument("--dicdir", type=Path, help="external UniDic directory; defaults to fugashi discovery")
+    parser.add_argument(
+        "--dicdir",
+        type=Path,
+        required=True,
+        help="external UniDic directory recorded in fixture provenance",
+    )
     parser.add_argument("--asset", action="append", default=[], metavar="NAME=PATH")
     parser.add_argument("--output", type=Path, help="destination JSON; omit for stdout")
     parser.add_argument("--compact", action="store_true", help="emit canonical compact JSON")
