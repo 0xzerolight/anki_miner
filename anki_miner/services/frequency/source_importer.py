@@ -11,7 +11,8 @@ Two input shapes are supported, dispatched by suffix:
 
 * ``.zip`` — a Yomitan ``frequency`` meta-bank dictionary. BCCWJ-style envelope
   readings are kept in the ``reading`` column; otherwise reading is ``NULL``. On
-  a ``(term, reading)`` collision the smaller (better) rank wins.
+  a ``(term, reading)`` collision an unmarked row beats a JPDB ㋕ kana-usage row,
+  then the smaller (better) rank wins (see :func:`_rank_preference`).
 * ``.csv`` / ``.tsv`` / ``.txt`` — a plain rank list. Delimiter is auto-detected,
   a header row is skipped, and rows are parsed with the shared
   :func:`~anki_miner.services.frequency.csv_parse._extract_word_rank`. A third
@@ -44,6 +45,7 @@ from anki_miner.services.frequency.csv_parse import (
     _string_to_rank,
     classify_categorical,
     extract_envelope_reading,
+    is_kana_usage_display,
     normalize_freq_rank,
 )
 from anki_miner.services.yomitan_meta_bank import (
@@ -57,6 +59,20 @@ logger = logging.getLogger(__name__)
 
 _ZIP_SUFFIXES = {".zip"}
 _CSV_SUFFIXES = {".csv", ".tsv", ".txt"}
+
+
+def _rank_preference(row: tuple[int, str | None]) -> tuple[bool, int]:
+    """Collision sort key for a ``(rank, display_value)`` row.
+
+    A row without JPDB's ㋕ kana-usage marker beats a ㋕-marked row regardless
+    of rank (the ㋕ row carries the base word's kana rank, not the spelling's
+    own — see :data:`~anki_miner.services.frequency.csv_parse.KANA_USAGE_MARKER`);
+    within a bucket the smaller rank wins. For dicts without ㋕ display values
+    this reduces exactly to min(rank) with first-wins on ties. A term whose
+    ONLY row is ㋕-marked keeps it — nothing better exists to prefer.
+    """
+    rank, display_value = row
+    return (is_kana_usage_display(display_value), rank)
 
 
 @dataclass(frozen=True)
@@ -148,7 +164,8 @@ def _import_zip(
         declared_mode = banks.index.frequency_mode
         resolved_id = source_id or _derive_source_id(title)
 
-        # Numeric path: key = (term, reading) -> (best (min) rank, display_value).
+        # Numeric path: key = (term, reading) -> (best rank, display_value),
+        # "best" per _rank_preference (non-㋕ beats ㋕, then min rank).
         ranks: dict[tuple[str, str | None], tuple[int, str | None]] = {}
         # Categorical path: key = (term, reading) -> level label (first non-empty
         # wins). Accumulated in the same pass so a word-based source is detected
@@ -180,9 +197,10 @@ def _import_zip(
 
                 if rank is not None:
                     key = (term, reading)
+                    candidate = (rank, display_value)
                     existing = ranks.get(key)
-                    if existing is None or rank < existing[0]:
-                        ranks[key] = (rank, display_value)
+                    if existing is None or _rank_preference(candidate) < _rank_preference(existing):
+                        ranks[key] = candidate
                 else:
                     skipped_display_only += 1
 

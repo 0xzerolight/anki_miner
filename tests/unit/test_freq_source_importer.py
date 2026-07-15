@@ -105,6 +105,94 @@ class TestZipImport:
         assert result.entry_count == 1
         assert _read_entries(dest, result.source_id) == [("生", None, 20)]
 
+    def test_kana_usage_marked_row_loses_to_spelling_rank(self, tmp_path: Path) -> None:
+        # JPDB Kana dicts duplicate the base word's kana-usage rank ("300㋕")
+        # onto every kanji spelling of the word; the spelling's own rank must
+        # win the (term, reading) collision even though it is numerically
+        # larger (reported bug: 懸かる carded as 300 instead of 19920).
+        zip_path = _write_zip(
+            tmp_path / "jpdb.zip",
+            banks=[
+                ["懸かる", "freq", {"reading": "かかる", "frequency": {"value": 300, "displayValue": "300㋕"}}],
+                ["懸かる", "freq", {"reading": "かかる", "frequency": {"value": 19920, "displayValue": "19920"}}],
+            ],
+        )
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert result.entry_count == 1
+        assert _read_display(dest, result.source_id) == [("懸かる", 19920, "19920")]
+
+    def test_kana_usage_collision_order_independent(self, tmp_path: Path) -> None:
+        # Same rows with the ㋕ row arriving second — result must not depend
+        # on bank order.
+        zip_path = _write_zip(
+            tmp_path / "jpdb2.zip",
+            banks=[
+                ["懸かる", "freq", {"reading": "かかる", "frequency": {"value": 19920, "displayValue": "19920"}}],
+                ["懸かる", "freq", {"reading": "かかる", "frequency": {"value": 300, "displayValue": "300㋕"}}],
+            ],
+        )
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert result.entry_count == 1
+        assert _read_display(dest, result.source_id) == [("懸かる", 19920, "19920")]
+
+    def test_all_kana_usage_rows_keep_min(self, tmp_path: Path) -> None:
+        # A pure-kana headword carries ONLY ㋕ rows (one per word sharing the
+        # kana spelling) — min still wins within the ㋕ bucket, display kept.
+        zip_path = _write_zip(
+            tmp_path / "kana.zip",
+            banks=[
+                ["かかる", "freq", {"value": 300, "displayValue": "300㋕"}],
+                ["かかる", "freq", {"value": 59801, "displayValue": "59801㋕"}],
+            ],
+        )
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert result.entry_count == 1
+        assert _read_display(dest, result.source_id) == [("かかる", 300, "300㋕")]
+
+    def test_kana_usage_string_payload_loses_too(self, tmp_path: Path) -> None:
+        # String-shaped payloads carry the marker in the raw display string.
+        zip_path = _write_zip(
+            tmp_path / "str.zip",
+            banks=[["懸かる", "freq", "300㋕"], ["懸かる", "freq", "19920"]],
+        )
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert result.entry_count == 1
+        assert _read_display(dest, result.source_id) == [("懸かる", 19920, "19920")]
+
+    def test_kana_usage_equal_rank_tie(self, tmp_path: Path) -> None:
+        # Equal ranks: the non-㋕ row wins deterministically in either order;
+        # a no-marker equal-rank pair keeps today's first-wins semantics.
+        for name, banks in (
+            ("tie1", [["生", "freq", "20㋕"], ["生", "freq", 20]]),
+            ("tie2", [["生", "freq", 20], ["生", "freq", "20㋕"]]),
+        ):
+            dest = tmp_path / f"{name}-sources"
+            result = import_frequency_source(_write_zip(tmp_path / f"{name}.zip", banks=banks), dest)
+            assert _read_display(dest, result.source_id) == [("生", 20, None)], name
+
+        dest = tmp_path / "plain-sources"
+        result = import_frequency_source(
+            _write_zip(tmp_path / "plain.zip", banks=[["生", "freq", "20/100"], ["生", "freq", "20/200"]]),
+            dest,
+        )
+        assert _read_display(dest, result.source_id) == [("生", 20, "20/100")]
+
+    def test_kana_usage_only_row_is_kept(self, tmp_path: Path) -> None:
+        # A kanji spelling whose ONLY row is ㋕-marked keeps that row — there
+        # is nothing better to prefer, and dropping it would lose data. (Real
+        # JPDB dicts always pair a ㋕ row with an own-rank row.)
+        zip_path = _write_zip(
+            tmp_path / "only.zip",
+            banks=[["懸かる", "freq", {"reading": "かかる", "frequency": {"value": 300, "displayValue": "300㋕"}}]],
+        )
+        dest = tmp_path / "sources"
+        result = import_frequency_source(zip_path, dest)
+        assert _read_display(dest, result.source_id) == [("懸かる", 300, "300㋕")]
+
     def test_distinct_reading_not_collapsed(self, tmp_path: Path) -> None:
         zip_path = _write_zip(
             tmp_path / "two.zip",
