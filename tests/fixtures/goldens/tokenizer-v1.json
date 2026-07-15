@@ -5,49 +5,80 @@
       "id": "variant-yaru",
       "text": "奴を殺る。",
       "coverage": ["homograph", "orthbase-variant"],
-      "expect": {"surface": "殺る", "lemma": "遣る", "orthBase": "殺る", "mining_base": "殺る"}
+      "expect": {
+        "token": {"surface": "殺る", "lemma": "遣る", "orthBase": "殺る"},
+        "word": {"surface": "殺る", "lemma": "遣る", "orth_base": "殺る", "mined_form": "殺る"}
+      }
     },
     {
       "id": "variant-kakeru",
       "text": "人生を賭ける。",
       "coverage": ["homograph", "orthbase-variant"],
-      "expect": {"surface": "賭ける", "lemma": "掛ける", "orthBase": "賭ける", "mining_base": "賭ける"}
+      "expect": {
+        "token": {"surface": "賭ける", "lemma": "掛ける", "orthBase": "賭ける"},
+        "word": {"surface": "賭ける", "lemma": "掛ける", "orth_base": "賭ける", "mined_form": "賭ける"}
+      }
     },
     {
       "id": "compound-hashiridasu",
       "text": "彼は急に走り出した。",
       "coverage": ["compound-merge", "auxiliary-highlight"],
-      "dictionary_terms": ["走り出す"]
+      "dictionary_terms": ["走り出す"],
+      "expect": {
+        "word": {
+          "surface": "走り出し",
+          "lemma": "走り出す",
+          "orth_base": "走り出す",
+          "mined_form": "走り出す",
+          "surface_start": 4,
+          "surface_end": 8,
+          "highlight_end": 9
+        }
+      }
     },
     {
       "id": "potential-tamoteru",
       "text": "秩序を保てる。",
       "coverage": ["potential-fold"],
-      "expect": {"surface": "保てる", "lemma": "保つ", "orthBase": "保てる", "mining_base": "保つ"}
+      "expect": {
+        "token": {"surface": "保てる", "lemma": "保つ", "orthBase": "保てる"},
+        "word": {"surface": "保てる", "lemma": "保つ", "orth_base": "保つ", "mined_form": "保つ"}
+      }
     },
     {
       "id": "ra-nuki-mireru",
       "text": "今なら見れる。",
       "coverage": ["ra-nuki-fold"],
-      "expect": {"surface": "見れる", "lemma": "見る", "orthBase": "見れる", "mining_base": "見る"}
+      "expect": {
+        "token": {"surface": "見れる", "lemma": "見る", "orthBase": "見れる"},
+        "word": {"surface": "見れる", "lemma": "見る", "orth_base": "見る", "mined_form": "見る"}
+      }
     },
     {
       "id": "ku-form-yoshi",
       "text": "この状態で良かれ。",
       "coverage": ["adjective-ku-form-fold"],
-      "expect": {"surface": "良かれ", "lemma": "良い", "orthBase": "良し", "mining_base": "良い"}
+      "expect": {
+        "token": {"surface": "良かれ", "lemma": "良い", "orthBase": "良し"},
+        "word": {"surface": "良かれ", "lemma": "良い", "orth_base": "良い", "mined_form": "良い"}
+      }
     },
     {
       "id": "jiru-zuru-guard",
       "text": "彼を信じる。",
       "coverage": ["jiru-zuru-canonicalization-guard"],
-      "expect": {"surface": "信じる", "lemma": "信ずる", "orthBase": "信じる", "mining_base": "信じる"}
+      "expect": {
+        "token": {"surface": "信じる", "lemma": "信ずる", "orthBase": "信じる"},
+        "word": {"surface": "信じる", "lemma": "信ずる", "orth_base": "信じる", "mined_form": "信じる"}
+      }
     },
     {
       "id": "astral-oov-offsets",
       "text": "猫𠮟𠮟𠮟犬",
       "coverage": ["astral-codepoint", "utf16-offset", "oov-empty-orthbase"],
-      "expect": {"surface": "𠮟𠮟𠮟", "lemma": null, "orthBase": null, "is_unknown": true}
+      "expect": {
+        "token": {"surface": "𠮟𠮟𠮟", "lemma": null, "orthBase": null, "is_unknown": true}
+      }
     }
   ]
 }
