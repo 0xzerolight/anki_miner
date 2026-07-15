@@ -19,6 +19,16 @@ concurrency:
   group: android-engine-goldens-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  LANG: C.UTF-8
+  LC_ALL: C.UTF-8
+  PYTHONDONTWRITEBYTECODE: "1"
+  PYTHONHASHSEED: "0"
+  PYTHONIOENCODING: utf-8
+  PYTHONUTF8: "1"
+  SOURCE_DATE_EPOCH: "315532800"
+  TZ: UTC
+
 jobs:
   derive:
     name: Derive versioned fixture artifact
@@ -41,10 +51,36 @@ jobs:
         with:
           python-version: "3.13.7"
           cache: pip
-          cache-dependency-path: tool/scripts/golden-runtime-requirements.txt
+          cache-dependency-path: |
+            tool/scripts/golden-build-requirements.txt
+            tool/scripts/golden-runtime-requirements.txt
+            tool/scripts/golden-source-requirements.txt
+
+      - name: Install frozen golden build tools
+        run: |
+          python -m pip install \
+            --require-hashes \
+            --only-binary=:all: \
+            --requirement tool/scripts/golden-build-requirements.txt
+
+      - name: Build frozen UniDic wheel
+        run: |
+          mkdir -p "$RUNNER_TEMP/golden-wheelhouse"
+          python -m pip wheel \
+            --require-hashes \
+            --no-binary=:all: \
+            --no-build-isolation \
+            --no-deps \
+            --wheel-dir "$RUNNER_TEMP/golden-wheelhouse" \
+            --requirement tool/scripts/golden-source-requirements.txt
 
       - name: Install frozen golden runtime
-        run: python -m pip install --requirement tool/scripts/golden-runtime-requirements.txt
+        run: |
+          python -m pip install \
+            --require-hashes \
+            --only-binary=:all: \
+            --find-links "$RUNNER_TEMP/golden-wheelhouse" \
+            --requirement tool/scripts/golden-runtime-requirements.txt
 
       - name: Resolve exact inputs
         id: inputs
@@ -101,7 +137,7 @@ jobs:
               if hashlib.sha256(canonical(unhashed)).hexdigest() != recorded:
                   raise SystemExit(f"invalid {section} aggregate provenance")
           pins = {
-              line.split("==", 1)[0].lower().replace("_", "-"): line.split("==", 1)[1]
+              line.split()[0].split("==", 1)[0].lower().replace("_", "-"): line.split()[0].split("==", 1)[1]
               for line in Path("tool/scripts/golden-runtime-requirements.txt").read_text(encoding="utf-8").splitlines()
               if line[:1].isalpha()
           }
