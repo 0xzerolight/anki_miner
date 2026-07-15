@@ -1,15 +1,15 @@
 # Testing
 
-Anki Miner has a substantial test suite — ~6,200+ test functions across roughly 310 unit test files plus the integration layer. This page documents how it is organized and how to run it.
+Anki Miner has a substantial test suite — ~6,800+ test functions across roughly 320 unit test files plus the integration layer. This page documents how it is organized and how to run it.
 
 ## Layout
 
 ```
 tests/
 ├── conftest.py            # shared fixtures
-├── unit/                  # ~310 files, external services mocked
+├── unit/                  # ~320 files, external services mocked
 │   └── gui/               # a handful of widget tests; most live in unit/ root
-├── integration/           # 7 files, real adapters where possible
+├── integration/           # 8 files, real adapters where possible
 └── e2e/                   # on-demand live harness (see E2E harness below)
 ```
 
