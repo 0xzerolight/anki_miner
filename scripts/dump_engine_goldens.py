@@ -209,12 +209,9 @@ def _engine_revision(engine_root: Path) -> str:
     if dirty:
         raise GoldenExportError(f"engine checkout is not clean:\n{dirty}")
     ignored = _git(engine_root, "ls-files", "--others", "--ignored", "--exclude-standard").splitlines()
-    unexpected_ignored = [
-        value for value in ignored if "__pycache__" not in Path(value).parts or not value.endswith((".pyc", ".pyo"))
-    ]
-    if unexpected_ignored:
-        rendered = "\n".join(unexpected_ignored)
-        raise GoldenExportError(f"engine checkout contains ignored non-bytecode files:\n{rendered}")
+    if ignored:
+        rendered = "\n".join(ignored)
+        raise GoldenExportError(f"engine checkout contains ignored files:\n{rendered}")
     return revision
 
 
@@ -318,7 +315,7 @@ def _validate_expectation(case_id: str, value: Any) -> None:
     _reject_unknown_keys(value, EXPECTATION_KEYS, f"{case_id}.expect")
 
     token = value.get("token")
-    if token is not None:
+    if "token" in value:
         if not isinstance(token, dict):
             raise GoldenExportError(f"{case_id}.expect.token must be an object")
         _reject_unknown_keys(token, TOKEN_EXPECTATION_KEYS, f"{case_id}.expect.token")
@@ -331,7 +328,7 @@ def _validate_expectation(case_id: str, value: Any) -> None:
             raise GoldenExportError(f"{case_id}.expect.token.is_unknown must be boolean")
 
     word = value.get("word")
-    if word is not None:
+    if "word" in value:
         if not isinstance(word, dict):
             raise GoldenExportError(f"{case_id}.expect.word must be an object")
         _reject_unknown_keys(word, WORD_EXPECTATION_KEYS, f"{case_id}.expect.word")
@@ -384,7 +381,10 @@ def _locate_tokens(text: str, tokens: Sequence[Any]) -> list[tuple[Any, int, int
 
 def _token_record(text: str, token: Any, start: int, end: int) -> dict[str, Any]:
     feature = token.feature
-    features = {name: _normalise_feature(getattr(feature, name, None)) for name in UNIDIC_FEATURE_FIELDS}
+    missing = [name for name in UNIDIC_FEATURE_FIELDS if not hasattr(feature, name)]
+    if missing:
+        raise GoldenExportError(f"token feature record is missing UniDic fields: {', '.join(missing)}")
+    features = {name: _normalise_feature(getattr(feature, name)) for name in UNIDIC_FEATURE_FIELDS}
     return {
         "surface": str(token.surface),
         "is_unknown": bool(getattr(token, "is_unk", False)),
@@ -552,14 +552,31 @@ def _assert_word_expectation(case: Mapping[str, Any], words: Sequence[Any]) -> N
             raise GoldenExportError(f"{case['id']}: {key} expected {expected[key]!r}, derived {actual!r}")
 
 
-def _distribution_file_set(distribution: importlib.metadata.Distribution) -> set[Path]:
+MUTABLE_DISTRIBUTION_METADATA = frozenset({"INSTALLER", "RECORD", "REQUESTED", "direct_url.json"})
+
+
+def _distribution_file_map(distribution: importlib.metadata.Distribution) -> dict[str, Path]:
     files = distribution.files
     if files is None:
         raise GoldenExportError(f"runtime distribution has no file manifest: {distribution.metadata['Name']}")
-    return {Path(str(distribution.locate_file(entry))).resolve() for entry in files}
+    resolved: dict[str, Path] = {}
+    for entry in files:
+        logical_path = Path(str(entry))
+        if ".." in logical_path.parts:
+            # Wheel-installed console scripts contain an environment-specific
+            # interpreter shebang. They are not import/runtime content.
+            continue
+        if "__pycache__" in logical_path.parts or logical_path.name.endswith((".pyc", ".pyo")):
+            continue
+        if logical_path.name in MUTABLE_DISTRIBUTION_METADATA and logical_path.parent.name.endswith(".dist-info"):
+            continue
+        resolved[logical_path.as_posix()] = Path(str(distribution.locate_file(entry))).resolve()
+    if not resolved:
+        raise GoldenExportError(f"runtime distribution has no stable content files: {distribution.metadata['Name']}")
+    return resolved
 
 
-def _module_content_hash(import_name: str, distribution_files: set[Path], engine_root: Path) -> str:
+def _assert_runtime_import_origin(import_name: str, distribution_files: Mapping[str, Path], engine_root: Path) -> None:
     module = importlib.import_module(import_name)
     raw_file = getattr(module, "__file__", None)
     if raw_file is None:
@@ -567,17 +584,19 @@ def _module_content_hash(import_name: str, distribution_files: set[Path], engine
     module_file = Path(raw_file).resolve()
     if _is_relative_to(module_file, engine_root):
         raise GoldenExportError(f"runtime import was shadowed by --engine-root: {import_name}")
-    if module_file not in distribution_files:
+    if module_file not in distribution_files.values():
         raise GoldenExportError(f"runtime import is not owned by its declared distribution: {import_name}")
 
-    raw_paths = getattr(module, "__path__", None)
-    if raw_paths is None:
-        return _sha256_file(module_file)
-    package_roots = sorted({Path(value).resolve() for value in raw_paths})
-    if not package_roots:
-        raise GoldenExportError(f"runtime package has no content roots: {import_name}")
-    content = {str(index): _sha256_tree(root) for index, root in enumerate(package_roots)}
-    return _sha256_bytes(_canonical_json_bytes(content))
+
+def _sha256_named_files(files: Mapping[str, Path]) -> str:
+    digest = hashlib.sha256()
+    for logical_name, path in sorted(files.items()):
+        encoded_name = logical_name.encode("utf-8")
+        content_sha256 = bytes.fromhex(_sha256_file(path))
+        digest.update(len(encoded_name).to_bytes(8, "big"))
+        digest.update(encoded_name)
+        digest.update(content_sha256)
+    return digest.hexdigest()
 
 
 def _runtime_provenance(engine_root: Path) -> dict[str, Any]:
@@ -587,14 +606,12 @@ def _runtime_provenance(engine_root: Path) -> dict[str, Any]:
             distribution = importlib.metadata.distribution(distribution_name)
         except importlib.metadata.PackageNotFoundError as exc:
             raise GoldenExportError(f"required golden runtime distribution is missing: {distribution_name}") from exc
-        distribution_files = _distribution_file_set(distribution)
-        import_hashes = {
-            import_name: _module_content_hash(import_name, distribution_files, engine_root)
-            for import_name in import_names
-        }
+        distribution_files = _distribution_file_map(distribution)
+        for import_name in import_names:
+            _assert_runtime_import_origin(import_name, distribution_files, engine_root)
         dependencies[distribution_name] = {
             "version": distribution.version,
-            "content_sha256": _sha256_bytes(_canonical_json_bytes(import_hashes)),
+            "content_sha256": _sha256_named_files(distribution_files),
         }
     runtime: dict[str, Any] = {
         "python_implementation": platform.python_implementation(),
@@ -701,8 +718,10 @@ def build_goldens(
     # import root therefore must be established before importing any engine code.
     previous_home = os.environ.get("ANKI_MINER_HOME")
     previous_sys_path = list(sys.path)
+    previous_dont_write_bytecode = sys.dont_write_bytecode
     with tempfile.TemporaryDirectory(prefix="anki-miner-goldens-") as isolated_home:
         os.environ["ANKI_MINER_HOME"] = isolated_home
+        sys.dont_write_bytecode = True
         try:
             # Validate and preload third-party modules before exposing engine_root,
             # so a root-level shadow module can never execute as runtime code.
@@ -716,6 +735,7 @@ def build_goldens(
         finally:
             _remove_engine_modules()
             sys.path[:] = previous_sys_path
+            sys.dont_write_bytecode = previous_dont_write_bytecode
             if previous_home is None:
                 os.environ.pop("ANKI_MINER_HOME", None)
             else:
