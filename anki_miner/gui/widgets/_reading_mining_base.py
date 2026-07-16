@@ -166,17 +166,27 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
     # Reading-specific helpers
     # ------------------------------------------------------------------
 
-    def _detect_or_report(self, path: Path) -> list[ReadingSourceRef] | None:
-        """Classify *path* with ``detector.detect``, reporting any failure.
+    def _detect_or_report(
+        self,
+        path: Path,
+        detect_fn: Callable[[Path], list[ReadingSourceRef]] | None = None,
+    ) -> list[ReadingSourceRef] | None:
+        """Classify *path*, reporting any failure.
 
-        Shared by both reading sub-tabs (manga folder / novel file): a
-        ``SetupError`` carries a crafted, user-facing message and is surfaced
-        verbatim; any other failure is logged and shown type-prefixed. Returns
-        the detected refs on success, or ``None`` when detection failed (the
-        caller then aborts the Mine without starting a run).
+        Shared by the reading sub-tabs (manga folder / novel file / book
+        folder): a ``SetupError`` carries a crafted, user-facing message and is
+        surfaced verbatim; any other failure is logged and shown type-prefixed.
+        Returns the detected refs on success, or ``None`` when detection failed
+        (the caller then aborts the Mine without starting a run).
+
+        ``detect_fn`` defaults to ``detector.detect``, resolved at call time —
+        NOT as a def-time default, which would bind the function object at
+        import and silently bypass the ``detector.detect`` patch seam the tab
+        tests rely on. The novels tab passes ``detector.detect_book_folder``
+        for its folder section.
         """
         try:
-            return detector.detect(path)
+            return (detect_fn or detector.detect)(path)
         except SetupError as exc:
             self.log_widget.append_error(str(exc))
             return None
