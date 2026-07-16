@@ -4110,6 +4110,26 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation>Khai thác cuốn sách đã chọn thành thẻ Anki.</translation>
     </message>
     <message>
+        <source>Book Folder</source>
+        <translation>Thư mục sách</translation>
+    </message>
+    <message>
+        <source>Folder:</source>
+        <translation>Thư mục:</translation>
+    </message>
+    <message>
+        <source>A folder of .epub or .txt books; each book is mined separately.</source>
+        <translation>Một thư mục chứa sách .epub hoặc .txt; mỗi cuốn sách được khai thác riêng.</translation>
+    </message>
+    <message>
+        <source>Mine Folder</source>
+        <translation>Khai thác thư mục</translation>
+    </message>
+    <message>
+        <source>Mine every book in the selected folder, one after another.</source>
+        <translation>Khai thác lần lượt từng cuốn sách trong thư mục đã chọn.</translation>
+    </message>
+    <message>
         <source>Cancel</source>
         <translation>Hủy</translation>
     </message>
@@ -4130,12 +4150,20 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation>Chọn một cuốn sách .epub hoặc .txt hợp lệ trước.</translation>
     </message>
     <message>
+        <source>Select a folder containing .epub or .txt books first.</source>
+        <translation>Chọn một thư mục chứa sách .epub hoặc .txt trước.</translation>
+    </message>
+    <message>
         <source>Starting…</source>
         <translation>Đang bắt đầu…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
         <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Book %1/%2: %3</source>
+        <translation>Sách %1/%2: %3</translation>
     </message>
     <message>
         <source>Mining: %1</source>
@@ -4148,6 +4176,10 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     <message>
         <source>Failed %1: %2.</source>
         <translation>Thất bại %1: %2.</translation>
+    </message>
+    <message>
+        <source>Done: %1 succeeded, %2 failed.</source>
+        <translation>Xong: %1 thành công, %2 thất bại.</translation>
     </message>
 </context><context>
     <name>ReadingSubtitlesTab</name>

@@ -4121,6 +4121,26 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>Estrai il libro selezionato in carte Anki.</translation>
     </message>
     <message>
+        <source>Book Folder</source>
+        <translation>Cartella libri</translation>
+    </message>
+    <message>
+        <source>Folder:</source>
+        <translation>Cartella:</translation>
+    </message>
+    <message>
+        <source>A folder of .epub or .txt books; each book is mined separately.</source>
+        <translation>Una cartella di libri .epub o .txt; ogni libro viene estratto separatamente.</translation>
+    </message>
+    <message>
+        <source>Mine Folder</source>
+        <translation>Estrai cartella</translation>
+    </message>
+    <message>
+        <source>Mine every book in the selected folder, one after another.</source>
+        <translation>Estrai ogni libro nella cartella selezionata, uno dopo l'altro.</translation>
+    </message>
+    <message>
         <source>Cancel</source>
         <translation>Annulla</translation>
     </message>
@@ -4141,12 +4161,20 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>Seleziona prima un libro .epub o .txt valido.</translation>
     </message>
     <message>
+        <source>Select a folder containing .epub or .txt books first.</source>
+        <translation>Seleziona prima una cartella contenente libri .epub o .txt.</translation>
+    </message>
+    <message>
         <source>Starting…</source>
         <translation>Avvio…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
         <translation>Annullamento…</translation>
+    </message>
+    <message>
+        <source>Book %1/%2: %3</source>
+        <translation>Libro %1/%2: %3</translation>
     </message>
     <message>
         <source>Mining: %1</source>
@@ -4159,6 +4187,10 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Failed %1: %2.</source>
         <translation>Non riuscito %1: %2.</translation>
+    </message>
+    <message>
+        <source>Done: %1 succeeded, %2 failed.</source>
+        <translation>Completato: %1 riusciti, %2 non riusciti.</translation>
     </message>
 </context><context>
     <name>ReadingSubtitlesTab</name>

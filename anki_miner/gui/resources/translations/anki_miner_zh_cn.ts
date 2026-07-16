@@ -4110,6 +4110,26 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>将所选书籍挖取为 Anki 卡片。</translation>
     </message>
     <message>
+        <source>Book Folder</source>
+        <translation>书籍文件夹</translation>
+    </message>
+    <message>
+        <source>Folder:</source>
+        <translation>文件夹：</translation>
+    </message>
+    <message>
+        <source>A folder of .epub or .txt books; each book is mined separately.</source>
+        <translation>包含 .epub 或 .txt 书籍的文件夹；每本书单独挖取。</translation>
+    </message>
+    <message>
+        <source>Mine Folder</source>
+        <translation>挖取文件夹</translation>
+    </message>
+    <message>
+        <source>Mine every book in the selected folder, one after another.</source>
+        <translation>依次挖取所选文件夹中的每本书。</translation>
+    </message>
+    <message>
         <source>Cancel</source>
         <translation>取消</translation>
     </message>
@@ -4130,12 +4150,20 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>请先选择一个有效的 .epub 或 .txt 书籍。</translation>
     </message>
     <message>
+        <source>Select a folder containing .epub or .txt books first.</source>
+        <translation>请先选择一个包含 .epub 或 .txt 书籍的文件夹。</translation>
+    </message>
+    <message>
         <source>Starting…</source>
         <translation>正在启动…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
         <translation>正在取消…</translation>
+    </message>
+    <message>
+        <source>Book %1/%2: %3</source>
+        <translation>第 %1/%2 本：%3</translation>
     </message>
     <message>
         <source>Mining: %1</source>
@@ -4148,6 +4176,10 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Failed %1: %2.</source>
         <translation>失败 %1：%2。</translation>
+    </message>
+    <message>
+        <source>Done: %1 succeeded, %2 failed.</source>
+        <translation>完成：%1 成功，%2 失败。</translation>
     </message>
 </context><context>
     <name>ReadingSubtitlesTab</name>

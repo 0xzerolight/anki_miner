@@ -4121,6 +4121,26 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
         <translation>Minere o livro selecionado em cartões do Anki.</translation>
     </message>
     <message>
+        <source>Book Folder</source>
+        <translation>Pasta de Livros</translation>
+    </message>
+    <message>
+        <source>Folder:</source>
+        <translation>Pasta:</translation>
+    </message>
+    <message>
+        <source>A folder of .epub or .txt books; each book is mined separately.</source>
+        <translation>Uma pasta de livros .epub ou .txt; cada livro é minerado separadamente.</translation>
+    </message>
+    <message>
+        <source>Mine Folder</source>
+        <translation>Minerar Pasta</translation>
+    </message>
+    <message>
+        <source>Mine every book in the selected folder, one after another.</source>
+        <translation>Minere cada livro da pasta selecionada, um após o outro.</translation>
+    </message>
+    <message>
         <source>Cancel</source>
         <translation>Cancelar</translation>
     </message>
@@ -4141,12 +4161,20 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
         <translation>Selecione um livro .epub ou .txt válido primeiro.</translation>
     </message>
     <message>
+        <source>Select a folder containing .epub or .txt books first.</source>
+        <translation>Selecione uma pasta com livros .epub ou .txt primeiro.</translation>
+    </message>
+    <message>
         <source>Starting…</source>
         <translation>Iniciando…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
         <translation>Cancelando…</translation>
+    </message>
+    <message>
+        <source>Book %1/%2: %3</source>
+        <translation>Livro %1/%2: %3</translation>
     </message>
     <message>
         <source>Mining: %1</source>
@@ -4159,6 +4187,10 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
     <message>
         <source>Failed %1: %2.</source>
         <translation>Falhou %1: %2.</translation>
+    </message>
+    <message>
+        <source>Done: %1 succeeded, %2 failed.</source>
+        <translation>Concluído: %1 com sucesso, %2 com falha.</translation>
     </message>
 </context><context>
     <name>ReadingSubtitlesTab</name>

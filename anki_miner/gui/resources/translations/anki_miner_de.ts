@@ -4121,6 +4121,26 @@ Sie können dies später unter Einstellungen → Anki verfeinern.</translation>
         <translation>Das ausgewählte Buch in Anki-Karten sammeln.</translation>
     </message>
     <message>
+        <source>Book Folder</source>
+        <translation>Bücherordner</translation>
+    </message>
+    <message>
+        <source>Folder:</source>
+        <translation>Ordner:</translation>
+    </message>
+    <message>
+        <source>A folder of .epub or .txt books; each book is mined separately.</source>
+        <translation>Ein Ordner mit .epub- oder .txt-Büchern; jedes Buch wird einzeln gesammelt.</translation>
+    </message>
+    <message>
+        <source>Mine Folder</source>
+        <translation>Ordner sammeln</translation>
+    </message>
+    <message>
+        <source>Mine every book in the selected folder, one after another.</source>
+        <translation>Jedes Buch im ausgewählten Ordner nacheinander sammeln.</translation>
+    </message>
+    <message>
         <source>Cancel</source>
         <translation>Abbrechen</translation>
     </message>
@@ -4141,12 +4161,20 @@ Sie können dies später unter Einstellungen → Anki verfeinern.</translation>
         <translation>Wählen Sie zuerst ein gültiges .epub- oder .txt-Buch aus.</translation>
     </message>
     <message>
+        <source>Select a folder containing .epub or .txt books first.</source>
+        <translation>Wählen Sie zuerst einen Ordner mit .epub- oder .txt-Büchern aus.</translation>
+    </message>
+    <message>
         <source>Starting…</source>
         <translation>Wird gestartet…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
         <translation>Wird abgebrochen…</translation>
+    </message>
+    <message>
+        <source>Book %1/%2: %3</source>
+        <translation>Buch %1/%2: %3</translation>
     </message>
     <message>
         <source>Mining: %1</source>
@@ -4159,6 +4187,10 @@ Sie können dies später unter Einstellungen → Anki verfeinern.</translation>
     <message>
         <source>Failed %1: %2.</source>
         <translation>%1 fehlgeschlagen: %2.</translation>
+    </message>
+    <message>
+        <source>Done: %1 succeeded, %2 failed.</source>
+        <translation>Fertig: %1 erfolgreich, %2 fehlgeschlagen.</translation>
     </message>
 </context><context>
     <name>ReadingSubtitlesTab</name>
