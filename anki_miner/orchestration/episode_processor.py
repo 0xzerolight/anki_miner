@@ -45,6 +45,7 @@ from anki_miner.services.pitch_accent.render import (
 from anki_miner.services.reading.images import prepare_card_image
 from anki_miner.utils import ensure_directory, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.timing import timed_phase
 
 logger = logging.getLogger(__name__)
 
@@ -184,6 +185,7 @@ class EpisodeProcessor:
         expression_audio_fetcher: ExpressionAudioFetcher | None = None,
         dictionary_registry: DictionaryRegistry | None = None,
         sentence_audio_fetcher: SentenceAudioFetcher | None = None,
+        owns_lookup_services: bool = True,
     ):
         """Initialize the episode processor.
 
@@ -219,6 +221,14 @@ class EpisodeProcessor:
                 Gated by ``_reading_tts_active``. ``None`` is only valid for
                 test construction; the service factory always provides a
                 (possibly empty-chain) fetcher.
+            owns_lookup_services: When False, this processor was built over a
+                worker-owned :class:`SharedLookupServices` bundle and must NOT
+                close the definition/frequency sqlite handles in ``close()`` /
+                ``release_dictionary_resources()`` — the sharing worker's
+                ``finally`` owns that teardown (frequency providers do NOT
+                lazily reopen after close, so a between-items close would
+                silently kill frequency data for the rest of the run). Default
+                True preserves the per-run ownership of every other caller.
         """
         self.config = config
         self.subtitle_parser = subtitle_parser
@@ -237,6 +247,7 @@ class EpisodeProcessor:
         self.expression_audio_fetcher = expression_audio_fetcher
         self.sentence_audio_fetcher = sentence_audio_fetcher
         self._dictionary_registry = dictionary_registry
+        self.owns_lookup_services = owns_lookup_services
         self._cancelled = False
         # Per-run external cancel source (e.g. a worker's threading.Event
         # ``is_set``), installed/removed by process_episode around each run
@@ -329,7 +340,13 @@ class EpisodeProcessor:
 
         The per-run frequency sources hold their own ``index.sqlite`` handles,
         so they are released here too (idempotent; safe when absent).
+
+        Skipped entirely when the lookup services are worker-owned
+        (``owns_lookup_services=False``): only the owner closes shared handles,
+        in its end-of-run ``finally``.
         """
+        if not self.owns_lookup_services:
+            return
         self.definition_service.close()
         if self.frequency_service is not None:
             self.frequency_service.close()
@@ -352,9 +369,14 @@ class EpisodeProcessor:
         # DEBUG-logged so a Windows reporter can confirm whether close() (vs the
         # subsequent processor build) is where a back-to-back mine blocks.
         logger.debug("closing processor resources")
-        self.definition_service.close()
-        if self.frequency_service is not None:
-            self.frequency_service.close()
+        # Worker-owned shared lookup services are NOT closed here — frequency
+        # providers never reopen after close, so a between-items close would
+        # strip frequency data from every later queue item. The owning worker
+        # closes the bundle once, in its end-of-run finally.
+        if self.owns_lookup_services:
+            self.definition_service.close()
+            if self.frequency_service is not None:
+                self.frequency_service.close()
         if self.expression_audio_fetcher is not None:
             close = getattr(self.expression_audio_fetcher, "close", None)
             if callable(close):
@@ -482,39 +504,58 @@ class EpisodeProcessor:
         # the min rank (frequency_rank) that drives the top-N filter, and the
         # harmonic-mean rank (frequency_harmonic_rank) that drives the sort field.
         if self.frequency_service and self.frequency_service.is_available():
-            for word in all_words:
-                # Keyed on mined_form (the card-front spelling), NOT lemma:
-                # unidic's canonical lemma collapses kanji variants
-                # (懸ける/賭ける/架ける → 掛ける), so lemma-keyed lookups gave
-                # every variant the common spelling's rank. Per-spelling sources
-                # (JPDB) carry distinct rows per orthography — query the spelling
-                # the card actually shows. Reading-scope so homographs stop
-                # inheriting each other's ranks; hiragana-normalize so a katakana
-                # subtitle reading matches a hiragana-stored frequency reading.
-                reading = katakana_to_hiragana(word.expression_reading or word.lemma_reading or word.reading)
-                # One per-source fetch, then derive min + harmonic locally via
-                # the pure min_rank/harmonic_rank helpers. A single lookup_all
-                # feeds both scalars, so the per-source SQL runs once per word
-                # instead of once for each derived rank.
-                sources = self.frequency_service.lookup_all(word.mined_form, reading)
-                # Whole-result miss-only lemma fallback (mirrors the JPod101
-                # audio retry ladder): fires only when NO source attests the
-                # variant spelling, so a ranked breakdown is always uniformly
-                # keyed — all spelling-true or all lemma. Deliberately NOT
-                # per-source: a per-source cascade would re-inject the lemma
-                # rank from any source lacking the per-spelling row, and since
-                # frequency_rank = min_rank(sources) gates the top-N filter,
-                # that low lemma rank would keep a rare variant above the
-                # max_frequency_rank cutoff it should now fall past. Known
-                # edge: a variant attested ONLY by a categorical source (JLPT
-                # band, CATEGORICAL_RANK sentinel) counts as attested and
-                # suppresses the numeric lemma fallback — accepted for
-                # breakdown uniformity; unreachable for per-spelling numeric
-                # sources.
-                if not sources and word.lemma and word.lemma != word.mined_form:
-                    sources = self.frequency_service.lookup_all(
-                        word.lemma, katakana_to_hiragana(word.lemma_reading or word.reading)
+            # Keyed on mined_form (the card-front spelling), NOT lemma:
+            # unidic's canonical lemma collapses kanji variants
+            # (懸ける/賭ける/架ける → 掛ける), so lemma-keyed lookups gave
+            # every variant the common spelling's rank. Per-spelling sources
+            # (JPDB) carry distinct rows per orthography — query the spelling
+            # the card actually shows. Reading-scope so homographs stop
+            # inheriting each other's ranks; hiragana-normalize so a katakana
+            # subtitle reading matches a hiragana-stored frequency reading.
+            # One batched per-source fetch for the whole word list (an
+            # IN-clause query per source instead of one query per word), then
+            # derive min + harmonic locally via the pure min_rank/harmonic_rank
+            # helpers — a single lookup_all_many feeds both scalars.
+            pairs: list[tuple[str, str | None]] = [
+                (
+                    word.mined_form,
+                    katakana_to_hiragana(word.expression_reading or word.lemma_reading or word.reading),
+                )
+                for word in all_words
+            ]
+            all_sources = self.frequency_service.lookup_all_many(pairs)
+            # Whole-result miss-only lemma fallback (mirrors the JPod101
+            # audio retry ladder): fires only when NO source attests the
+            # variant spelling, so a ranked breakdown is always uniformly
+            # keyed — all spelling-true or all lemma. Deliberately NOT
+            # per-source: a per-source cascade would re-inject the lemma
+            # rank from any source lacking the per-spelling row, and since
+            # frequency_rank = min_rank(sources) gates the top-N filter,
+            # that low lemma rank would keep a rare variant above the
+            # max_frequency_rank cutoff it should now fall past. Known
+            # edge: a variant attested ONLY by a categorical source (JLPT
+            # band, CATEGORICAL_RANK sentinel) counts as attested and
+            # suppresses the numeric lemma fallback — accepted for
+            # breakdown uniformity; unreachable for per-spelling numeric
+            # sources.
+            fallback_indexes = [
+                i
+                for i, (word, sources) in enumerate(zip(all_words, all_sources, strict=True))
+                if not sources and word.lemma and word.lemma != word.mined_form
+            ]
+            if fallback_indexes:
+                fallback_pairs: list[tuple[str, str | None]] = [
+                    (
+                        all_words[i].lemma,
+                        katakana_to_hiragana(all_words[i].lemma_reading or all_words[i].reading),
                     )
+                    for i in fallback_indexes
+                ]
+                for i, sources in zip(
+                    fallback_indexes, self.frequency_service.lookup_all_many(fallback_pairs), strict=True
+                ):
+                    all_sources[i] = sources
+            for word, sources in zip(all_words, all_sources, strict=True):
                 word.frequency_sources = sources
                 word.frequency_rank = min_rank(sources)
                 word.frequency_harmonic_rank = harmonic_rank(sources)
@@ -1528,7 +1569,8 @@ class EpisodeProcessor:
             # the line index (all lines each lemma appears on). Build it for that
             # path too — not just the i+1 filter.
             want_line_index = curation_callback is not None
-            all_words, line_index = self._phase1_parse(ctx, subtitle_file, want_line_index=want_line_index)
+            with timed_phase("parse", logger):
+                all_words, line_index = self._phase1_parse(ctx, subtitle_file, want_line_index=want_line_index)
             if not all_words:
                 self.presenter.show_warning(
                     QCoreApplication.translate("EpisodeProcessor", "No words found in subtitles")
@@ -1537,7 +1579,8 @@ class EpisodeProcessor:
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
-            unknown_words = self._phase2_filter(ctx, all_words, line_index, cross_episode_counts)
+            with timed_phase("filter", logger):
+                unknown_words = self._phase2_filter(ctx, all_words, line_index, cross_episode_counts)
             if not unknown_words:
                 self._report_no_mineable_words(ctx)
                 return ctx.build_result(new_words_found=0)
@@ -1575,15 +1618,16 @@ class EpisodeProcessor:
                 stage_weights.append(0.25)  # cards
                 stage_progress = StageWeightedProgress(progress_callback, stage_weights)
 
-            media_results = self._phase3_extract(
-                ctx,
-                video_file,
-                unknown_words,
-                stage_progress,
-                run_temp_folder,
-                audio_track_override,
-                audio_only=audio_only,
-            )
+            with timed_phase("extract", logger):
+                media_results = self._phase3_extract(
+                    ctx,
+                    video_file,
+                    unknown_words,
+                    stage_progress,
+                    run_temp_folder,
+                    audio_track_override,
+                    audio_only=audio_only,
+                )
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
             if not media_results:
@@ -1595,13 +1639,15 @@ class EpisodeProcessor:
                 QCoreApplication.translate("EpisodeProcessor", "Extracted media for %n word(s)", "", len(media_results))
             )
 
-            definitions, glossaries, pitch_data = self._phase4_lookup(ctx, media_results, stage_progress)
+            with timed_phase("lookup", logger):
+                definitions, glossaries, pitch_data = self._phase4_lookup(ctx, media_results, stage_progress)
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
-            cards_created, created_note_ids, mined_forms = self._phase5_create(
-                ctx, media_results, definitions, glossaries, pitch_data, stage_progress
-            )
+            with timed_phase("cards", logger):
+                cards_created, created_note_ids, mined_forms = self._phase5_create(
+                    ctx, media_results, definitions, glossaries, pitch_data, stage_progress
+                )
             if isinstance(stage_progress, StageWeightedProgress):
                 stage_progress.finish()
             result = ctx.build_result(
@@ -1861,7 +1907,8 @@ class EpisodeProcessor:
                     document.title,
                 )
             )
-            all_words, line_index, counts = self.subtitle_parser.parse_text_units(document.units, want_line_index)
+            with timed_phase("parse", logger):
+                all_words, line_index, counts = self.subtitle_parser.parse_text_units(document.units, want_line_index)
             self.presenter.show_success(
                 QCoreApplication.translate("EpisodeProcessor", "Found %n unique word(s)", "", len(all_words))
             )
@@ -1874,7 +1921,8 @@ class EpisodeProcessor:
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
-            unknown_words = self._phase2_filter(ctx, all_words, line_index, None)
+            with timed_phase("filter", logger):
+                unknown_words = self._phase2_filter(ctx, all_words, line_index, None)
             # Reading-specific in-document occurrence floor (reuses the
             # cross-episode filter's <=1 early-return). counts is the parse
             # Counter — replaces the episode path's count_lemmas(subtitle_file).
@@ -1916,17 +1964,22 @@ class EpisodeProcessor:
                 stage_weights.append(0.25)  # cards
                 stage_progress = StageWeightedProgress(progress_callback, stage_weights)
 
-            media_results = self._phase3_reading_media(ctx, document, unknown_words, stage_progress, run_temp_folder)
+            with timed_phase("reading-media", logger):
+                media_results = self._phase3_reading_media(
+                    ctx, document, unknown_words, stage_progress, run_temp_folder
+                )
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
-            definitions, glossaries, pitch_data = self._phase4_lookup(ctx, media_results, stage_progress)
+            with timed_phase("lookup", logger):
+                definitions, glossaries, pitch_data = self._phase4_lookup(ctx, media_results, stage_progress)
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
-            cards_created, created_note_ids, mined_forms = self._phase5_create(
-                ctx, media_results, definitions, glossaries, pitch_data, stage_progress
-            )
+            with timed_phase("cards", logger):
+                cards_created, created_note_ids, mined_forms = self._phase5_create(
+                    ctx, media_results, definitions, glossaries, pitch_data, stage_progress
+                )
             if isinstance(stage_progress, StageWeightedProgress):
                 stage_progress.finish()
             result = ctx.build_result(
@@ -2077,14 +2130,15 @@ class EpisodeProcessor:
         # verbatim and the post-fetch check below polls it); the mining stage
         # gets it via process_episode's cancel_event keyword, which installs
         # and removes the per-run self._external_cancel bridge itself.
-        fetched = self._youtube_fetcher.fetch_video(
-            url,
-            video_id,
-            workspace,
-            sub_mode,
-            progress_cb=fetch_progress_cb,
-            cancel_event=cancel_event,
-        )
+        with timed_phase("youtube-fetch", logger):
+            fetched = self._youtube_fetcher.fetch_video(
+                url,
+                video_id,
+                workspace,
+                sub_mode,
+                progress_cb=fetch_progress_cb,
+                cancel_event=cancel_event,
+            )
 
         if on_fetched is not None:
             on_fetched(fetched)

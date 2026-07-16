@@ -29,6 +29,11 @@ from PyQt6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.fonts import make_scaled_font
 from anki_miner.models.reading import ImageRef
+from anki_miner.utils.pil_limits import apply_pil_image_limits
+
+# Decompression-bomb ceiling: explicit project pin (== Pillow's default),
+# shared with the card path via utils.pil_limits.
+apply_pil_image_limits()
 
 # Pre-filter on the DECLARED uncompressed member size before reading an
 # archive page into memory. The declared size is attacker-controllable
@@ -53,8 +58,8 @@ def load_page_qimage(ref: ImageRef) -> QImage:
     coords, so any downscale here would desync the highlight (this is also
     why ``prepare_card_image``'s 1280-cap disk JPEG is not reused). EXIF
     orientation is deliberately NOT applied — the boxes live in the raw
-    decoded pixel space, same as the card path. PIL's default
-    ``MAX_IMAGE_PIXELS`` decompression-bomb limit is deliberately inherited
+    decoded pixel space, same as the card path. The ``MAX_IMAGE_PIXELS``
+    decompression-bomb limit is pinned project-wide via ``utils.pil_limits``
     (the card path shares it); a trip raises and becomes the error
     placeholder while the card itself is unaffected.
 

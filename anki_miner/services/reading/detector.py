@@ -23,7 +23,7 @@ from typing import Any, Literal
 from anki_miner.exceptions import SetupError
 from anki_miner.models.reading import ReadingDocument, ReadingSourceRef
 
-from ._util import is_junk_path, natural_sort_key
+from ._util import MAX_MOKURO_JSON_BYTES, is_junk_path, natural_sort_key, read_text_capped
 
 # Required top-level keys in a ``.mokuro`` sidecar. Unknown keys are ignored —
 # community files carry extras like ``chars``/``spine_width``.
@@ -254,7 +254,9 @@ def _read_mokuro_meta(mokuro_path: Path) -> dict[str, Any]:
     top level, or any missing required key.
     """
     try:
-        raw = mokuro_path.read_text(encoding="utf-8")
+        # Size-capped (module global so tests can shrink it): a hostile
+        # multi-GB sidecar must fail fast instead of OOMing the load.
+        raw = read_text_capped(mokuro_path, MAX_MOKURO_JSON_BYTES, ".mokuro file")
     except OSError as e:
         raise SetupError(f"Cannot read .mokuro file '{mokuro_path.name}': {e}") from e
 
