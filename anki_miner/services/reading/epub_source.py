@@ -92,6 +92,37 @@ _CONTENT_EXTS = (".xhtml", ".html", ".htm")
 # CJK line-wraps with "" (no space) while leaving internal U+3000 untouched.
 _INTERNAL_LINEBREAK = re.compile(r"[ \t]*\n[ \t]*")
 
+# Cap on any single decompressed member read out of the EPUB. Every member this
+# loader reads is text (container/OPF/encryption/spine XHTML/nav/NCX); real
+# chapters are well under 1 MiB, so 32 MiB is far above any legitimate book
+# while still bounding a highly-compressible zip-bomb member. This is the one
+# reading archive path without the importers' validate_zip_safe total-size
+# gate — the cover peek stays separately bomb-safe (fixed 16-byte read).
+_MAX_MEMBER_BYTES = 32 * 1024 * 1024
+
+
+def _read_member(zf: zipfile.ZipFile, entry: str, epub_path: Path) -> bytes:
+    """Read one zip member with a decompressed-size cap.
+
+    Declared-size check first, then a bounded read of ``cap + 1`` bytes so an
+    archive whose central directory under-declares the size cannot balloon
+    memory anyway (same belt-and-suspenders as the Yomitan importer's
+    ``_peek_zip_title_revision``). Raises :class:`SetupError` over the cap;
+    callers decide whether that aborts (structural members) or soft-degrades
+    (spine content, nav/NCX).
+    """
+    info = zf.getinfo(entry)
+    if info.file_size > _MAX_MEMBER_BYTES:
+        raise SetupError(
+            f"'{epub_path.name}': member '{entry}' declares {info.file_size:,} bytes "
+            f"(cap {_MAX_MEMBER_BYTES:,}); refusing to read."
+        )
+    with zf.open(entry) as fp:
+        data = fp.read(_MAX_MEMBER_BYTES + 1)
+    if len(data) > _MAX_MEMBER_BYTES:
+        raise SetupError(f"'{epub_path.name}': member '{entry}' exceeds the {_MAX_MEMBER_BYTES:,}-byte cap.")
+    return data
+
 
 def load(ref: ReadingSourceRef) -> ReadingDocument:
     """Load ``ref.path`` (an ``.epub``) into a book :class:`ReadingDocument`.
@@ -109,7 +140,7 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
 
         opf_path = _find_opf_path(zf, names, epub_path)
         opf_dir = posixpath.dirname(opf_path)
-        opf_root = _parse_xml(zf.read(opf_path))
+        opf_root = _parse_xml(_read_member(zf, opf_path, epub_path))
         if opf_root is None:
             raise SetupError(_invalid_epub_msg(epub_path, "the OPF package is unreadable"))
         manifest, spine_idrefs, spine_toc, cover_meta_id, title = _parse_opf(opf_root)
@@ -136,7 +167,15 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
             entry = _resolve(opf_dir, href)
             if entry not in names or _is_boilerplate_name(entry):
                 continue
-            body, is_cover = _parse_content(zf.read(entry))
+            try:
+                raw = _read_member(zf, entry, epub_path)
+            except SetupError:
+                # Mine-what-you-can: one oversized chapter degrades to a
+                # warning, unlike the structural members (container/OPF/
+                # encryption) whose oversize aborts like the DRM gate.
+                doc.warnings.append(f"Skipped oversized spine document '{posixpath.basename(entry)}'.")
+                continue
+            body, is_cover = _parse_content(raw)
             if body is None or is_cover:
                 continue
             paragraphs, gaiji = _walk_body(body)
@@ -205,7 +244,7 @@ def _resolve(base_dir: str, href: str) -> str:
 def _check_encryption(zf: zipfile.ZipFile, names: set[str], epub_path: Path) -> None:
     if _ENCRYPTION_PATH not in names:
         return
-    root = _parse_xml(zf.read(_ENCRYPTION_PATH))
+    root = _parse_xml(_read_member(zf, _ENCRYPTION_PATH, epub_path))
     if root is None:
         return
     for enc in root.iter():
@@ -234,7 +273,7 @@ def _check_encryption(zf: zipfile.ZipFile, names: set[str], epub_path: Path) -> 
 def _find_opf_path(zf: zipfile.ZipFile, names: set[str], epub_path: Path) -> str:
     if _CONTAINER_PATH not in names:
         raise SetupError(_invalid_epub_msg(epub_path, "META-INF/container.xml is missing"))
-    root = _parse_xml(zf.read(_CONTAINER_PATH))
+    root = _parse_xml(_read_member(zf, _CONTAINER_PATH, epub_path))
     fallback = None
     if root is not None:
         for el in root.iter():
@@ -486,7 +525,11 @@ def _parse_nav(zf: zipfile.ZipFile, names: set[str], opf_dir: str, nav_href: str
     nav_entry = _resolve(opf_dir, nav_href)
     if nav_entry not in names:
         return []
-    root = _parse_xml(zf.read(nav_entry))
+    try:
+        raw = _read_member(zf, nav_entry, Path(nav_entry))
+    except SetupError:
+        return []  # oversized nav → chapter labels fall back to spine index
+    root = _parse_xml(raw)
     if root is None:
         return []
     nav_dir = posixpath.dirname(nav_entry)
@@ -514,7 +557,11 @@ def _parse_ncx(zf: zipfile.ZipFile, names: set[str], opf_dir: str, ncx_href: str
     ncx_entry = _resolve(opf_dir, ncx_href)
     if ncx_entry not in names:
         return []
-    root = _parse_xml(zf.read(ncx_entry))
+    try:
+        raw = _read_member(zf, ncx_entry, Path(ncx_entry))
+    except SetupError:
+        return []  # oversized NCX → chapter labels fall back to spine index
+    root = _parse_xml(raw)
     if root is None:
         return []
     ncx_dir = posixpath.dirname(ncx_entry)

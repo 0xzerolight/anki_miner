@@ -9,7 +9,11 @@ from pathlib import Path
 from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.utils.service_factory import create_episode_processor
+from anki_miner.gui.utils.service_factory import (
+    SharedLookupServices,
+    create_episode_processor,
+    create_shared_lookup_services,
+)
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.progress import ProgressCallback
@@ -145,6 +149,31 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
         # items in a run — only subtitle_offset differs via config_with_offset.)
         shared_anki_service = AnkiService(self.config)
 
+        # Build the offset-independent lookup stack (dict registry + eager dict
+        # load + pitch CSV parse + frequency registry load) ONCE for the whole
+        # run instead of once per item — on this worker thread, same as the old
+        # per-item builds. Its load messages surface once per run here; the
+        # per-item create_episode_processor calls then skip those loads (and
+        # their messages) entirely. Processors built over the bundle do NOT
+        # close its sqlite handles (owns_lookup_services=False); the finally
+        # below is the run-level Issue #30 teardown on every exit path.
+        shared_lookup = create_shared_lookup_services(self.config)
+        for msg in shared_lookup.load_result.info:
+            self.presenter.show_info(msg)
+        for msg in shared_lookup.load_result.warnings:
+            self.presenter.show_warning(msg)
+        try:
+            self._process_items(total_cards, shared_anki_service, shared_lookup)
+        finally:
+            shared_lookup.close()
+
+    def _process_items(
+        self,
+        total_cards: int,
+        shared_anki_service: AnkiService,
+        shared_lookup: SharedLookupServices,
+    ) -> None:
+        """Run the per-item loop over the run-scoped shared services."""
         while not self.check_cancelled():
             # Close the previous item's processor before building the next
             # item's, so handles never accumulate across items.
@@ -170,9 +199,15 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                 config_with_offset = replace(self.config, subtitle_offset=item.subtitle_offset)
 
                 # Create processor for this item with its specific offset,
-                # injecting the shared AnkiService so the vocab cache persists.
+                # injecting the shared AnkiService (vocab cache persists) and
+                # the shared lookup bundle (dict/pitch/frequency built once per
+                # run; the processor won't close them between items).
                 episode_processor = create_episode_processor(
-                    config_with_offset, self.presenter, self.stats_service, anki_service=shared_anki_service
+                    config_with_offset,
+                    self.presenter,
+                    self.stats_service,
+                    anki_service=shared_anki_service,
+                    shared_lookup=shared_lookup,
                 )
                 self._current_processor = episode_processor
 

@@ -583,3 +583,18 @@ def test_book_folder_mokuro_only_errors_with_manga_hint(tmp_path):
 def test_book_folder_unreadable_errors(tmp_path):
     with pytest.raises(SetupError):
         detector.detect_book_folder(tmp_path / "missing")
+
+
+# --------------------------------------------------------------------------- #
+# Sidecar size cap
+# --------------------------------------------------------------------------- #
+
+
+def test_mokuro_meta_over_cap_raises_setup_error(tmp_path, monkeypatch):
+    mok = tmp_path / "vol.mokuro"
+    _write_mokuro(mok, extra={"padding": "x" * 4096})
+    (tmp_path / "vol").mkdir()
+    monkeypatch.setattr(detector, "MAX_MOKURO_JSON_BYTES", 1024)
+
+    with pytest.raises(SetupError, match="cap"):
+        detector.detect(mok)
