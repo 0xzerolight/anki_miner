@@ -1139,6 +1139,33 @@ class TestKanaWordRecovery:
         assert service._should_include_word(token) is False
         assert lookup.calls == []
 
+    @pytest.mark.parametrize(
+        ("construction", "surface", "lemma", "orth_base"),
+        [
+            ("ようだ", "よう", "様", "よう"),
+            ("みたいな", "みたい", "みたい", "みたい"),
+            ("みたいだ", "みたい", "みたい", "みたい"),
+        ],
+    )
+    def test_does_not_recover_auxiliary_stem_keijoushi(self, test_config, construction, surface, lemma, orth_base):
+        # 形状詞 pos2=助動詞語幹 auxiliaries (よう in ようだ, みたい in みたいな/みたいだ)
+        # pass {動詞,形容詞,形状詞} + content_gate_ok and are JMdict-attested, but
+        # are grammar not vocabulary. The pos2 backstop drops them before the probe.
+        lookup = _attest_lookup(surface)  # attested — proves pos2 gate, not the dict, drops it
+        service = self._service(test_config, lookup)
+        token = _make_token(surface, "形状詞", pos2="助動詞語幹", lemma=lemma, orth_base=orth_base)
+        assert service._should_include_word(token) is False, construction
+        assert lookup.calls == []  # pos2 gate short-circuits before the lookup
+
+    def test_recovers_pure_hiragana_verb_ta_inflection(self, test_config):
+        # わかった → わかっ token deinflects to orthBase わかる (the mined card front),
+        # a sanctioned 動詞 一般 recovery that must survive the auxiliary-stem gate.
+        lookup = _attest_lookup("わかる")
+        service = self._service(test_config, lookup)
+        token = _make_token("わかっ", "動詞", pos2="一般", lemma="分かる", orth_base="わかる")
+        assert service._should_include_word(token) is True
+        assert lookup.calls == [["わかる"]]
+
     def test_does_not_recover_non_attested_kana(self, test_config):
         # A pure-hiragana verb the dictionary does NOT attest stays dropped.
         lookup = _attest_lookup()  # attests nothing

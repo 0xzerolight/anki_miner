@@ -100,6 +100,13 @@ KanaAttestLookup = Callable[[list[str]], dict[str, bool]]
 # 副詞/代名詞 (kana adverbs/pronouns are overwhelmingly fragments).
 _KANA_RECOVER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "形状詞"})
 
+# Auxiliary-stem subtype rejected even inside _KANA_RECOVER_POS1. Grammaticalized
+# 形状詞 auxiliaries carry pos2=助動詞語幹 — よう in ようだ, みたい in みたいな/みたいだ —
+# and would otherwise pass the POS set + content_gate_ok as pure-hiragana,
+# JMdict-attested forms. They are grammar (copular/hearsay constructions), not
+# vocabulary; keep the kana path stricter than the kanji should_include path.
+_KANA_RECOVER_REJECT_POS2: str = "助動詞語幹"
+
 
 class SubtitleParserService:
     """Parse subtitles and extract Japanese vocabulary words (stateless service)."""
@@ -1034,8 +1041,10 @@ class SubtitleParserService:
 
         1. A reading-capable offline probe is wired — else safe-degrade to no
            recovery (``None`` ⇒ today's behavior).
-        2. ``pos1 ∈ {動詞, 形容詞, 形状詞}`` — the junk backstop that excludes 名詞
-           formal nouns (こと/もの/ため) content_gate_ok alone would let through.
+        2. ``pos1 ∈ {動詞, 形容詞, 形状詞}`` and ``pos2 != 助動詞語幹`` — the junk
+           backstop that excludes 名詞 formal nouns (こと/もの/ため) and
+           grammaticalized 形状詞 auxiliaries (よう/みたい in ようだ/みたいな)
+           content_gate_ok alone would let through.
         3. The surface is pure hiragana — the only class the script gate dropped;
            everything else was already decided by ``should_include``.
         4. ``content_gate_ok`` passes and the mined-form card front is attested
@@ -1047,6 +1056,9 @@ class SubtitleParserService:
         feature = getattr(word_token, "feature", None)
         pos1 = getattr(feature, "pos1", None)
         if pos1 not in _KANA_RECOVER_POS1:
+            return False
+        if getattr(feature, "pos2", None) == _KANA_RECOVER_REJECT_POS2:
+            # ようだ/みたいな auxiliaries — grammar, not vocabulary. See constant.
             return False
         surface = word_token.surface
         if not isinstance(surface, str) or not _is_pure_hiragana(surface):
