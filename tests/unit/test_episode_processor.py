@@ -609,7 +609,9 @@ class TestOptionalServices:
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
         # Two sources so min (200) and harmonic differ, proving both are derived.
-        mock_frequency.lookup_all.return_value = [("BCCWJ", 400, None), ("JPDB", 200, None)]
+        mock_frequency.lookup_all_many.side_effect = lambda pairs: [
+            [("BCCWJ", 400, None), ("JPDB", 200, None)] for _ in pairs
+        ]
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -627,10 +629,10 @@ class TestOptionalServices:
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        # A single per-source fetch, reading-scoped (word.reading "タベル" →
-        # hiragana-normalized "たべる"); min + harmonic are derived locally from
-        # that one lookup_all via the pure min_rank/harmonic_rank helpers.
-        mock_frequency.lookup_all.assert_called_once_with(word.lemma, "たべる")
+        # A single batched per-source fetch, reading-scoped (word.reading "タベル"
+        # → hiragana-normalized "たべる"); min + harmonic are derived locally from
+        # that one lookup_all_many via the pure min_rank/harmonic_rank helpers.
+        mock_frequency.lookup_all_many.assert_called_once_with([(word.lemma, "たべる")])
         # Derived from the fetched breakdown: min = 200 (drives filtering),
         # harmonic = floor(2 / (1/400 + 1/200)) = 266 (drives the sort field).
         assert word.frequency_rank == 200
@@ -647,7 +649,9 @@ class TestOptionalServices:
         word.expression_reading = "かける"
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup_all.side_effect = [[], [("BCCWJ", 1500, None)]]
+        # First batch: the spelling misses everywhere; second (fallback) batch
+        # resolves the lemma.
+        mock_frequency.lookup_all_many.side_effect = [[[]], [[("BCCWJ", 1500, None)]]]
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -664,9 +668,9 @@ class TestOptionalServices:
         )
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        assert mock_frequency.lookup_all.call_args_list == [
-            call("賭ける", "かける"),
-            call("掛ける", "かける"),
+        assert mock_frequency.lookup_all_many.call_args_list == [
+            call([("賭ける", "かける")]),
+            call([("掛ける", "かける")]),
         ]
         assert word.frequency_rank == 1500
 
@@ -679,7 +683,7 @@ class TestOptionalServices:
         word.expression_reading = "かける"
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup_all.return_value = [("JPDB", 12000, None)]
+        mock_frequency.lookup_all_many.side_effect = lambda pairs: [[("JPDB", 12000, None)] for _ in pairs]
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -696,8 +700,49 @@ class TestOptionalServices:
         )
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        mock_frequency.lookup_all.assert_called_once_with("賭ける", "かける")
+        mock_frequency.lookup_all_many.assert_called_once_with([("賭ける", "かける")])
         assert word.frequency_rank == 12000
+
+    def test_lemma_fallback_batch_only_contains_missed_words(self, test_config, mock_services, tmp_path):
+        """The fallback batch carries ONLY the whole-result-miss words, and each
+        fallback result merges back onto the right word — neighbours keep their
+        spelling-true sources."""
+        hit1 = _make_word("食べる")
+        miss = _make_word(lemma="掛ける", start_time=5.0)
+        miss.orth_base = "賭ける"
+        miss.lemma_reading = "かける"
+        miss.expression_reading = "かける"
+        hit2 = _make_word("走る", 10.0)
+
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = True
+        mock_frequency.lookup_all_many.side_effect = [
+            # Primary batch: hit, miss, hit.
+            [[("JPDB", 100, None)], [], [("JPDB", 300, None)]],
+            # Fallback batch: only the missed word's lemma.
+            [[("BCCWJ", 1500, None)]],
+        ]
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [hit1, miss, hit2]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [hit1, miss, hit2]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(hit1, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            frequency_service=mock_frequency,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        # Second call = fallback: exactly the one missed word, keyed by lemma.
+        assert mock_frequency.lookup_all_many.call_args_list[1] == call([("掛ける", "かける")])
+        assert hit1.frequency_rank == 100
+        assert miss.frequency_rank == 1500
+        assert hit2.frequency_rank == 300
 
     def test_categorical_only_word_gets_no_numeric_rank_but_keeps_label(self, test_config, mock_services, tmp_path):
         """A word ranked ONLY by a word-based (categorical) source has no numeric
@@ -708,7 +753,7 @@ class TestOptionalServices:
         word = _make_word("食べる")
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup_all.return_value = [("JLPT", CATEGORICAL_RANK, "N5")]
+        mock_frequency.lookup_all_many.side_effect = lambda pairs: [[("JLPT", CATEGORICAL_RANK, "N5")] for _ in pairs]
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -743,7 +788,9 @@ class TestOptionalServices:
         word = _make_word("食べる")
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup_all.return_value = [("Freq", 45000, None), ("JLPT", CATEGORICAL_RANK, "N5")]
+        mock_frequency.lookup_all_many.side_effect = lambda pairs: [
+            [("Freq", 45000, None), ("JLPT", CATEGORICAL_RANK, "N5")] for _ in pairs
+        ]
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -775,7 +822,8 @@ class TestOptionalServices:
 
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup_all.side_effect = [[("BCCWJ", 500, None)], [("BCCWJ", 5000, None)]]
+        # One batch call covering both words: word1 → 500, word2 → 5000.
+        mock_frequency.lookup_all_many.return_value = [[("BCCWJ", 500, None)], [("BCCWJ", 5000, None)]]
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -805,7 +853,7 @@ class TestOptionalServices:
         word1 = _make_word("食べる")
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup_all.return_value = [("BCCWJ", 500, None)]
+        mock_frequency.lookup_all_many.side_effect = lambda pairs: [[("BCCWJ", 500, None)] for _ in pairs]
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -911,7 +959,8 @@ class TestOptionalServices:
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True  # a source IS loaded...
         mock_frequency.has_numeric_source.return_value = False  # ...but it's categorical-only
-        mock_frequency.lookup_all.return_value = []  # categorical rows excluded from scalars
+        # Categorical rows excluded from scalars → every pair resolves empty.
+        mock_frequency.lookup_all_many.side_effect = lambda pairs: [[] for _ in pairs]
 
         presenter = MagicMock(spec=NullPresenter())
         services = {**mock_services, "word_filter": WordFilterService(config)}
@@ -937,7 +986,7 @@ class TestOptionalServices:
         # Loaded source, but the word ranks far below the cutoff → real filter drops it.
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup_all.return_value = [("Src", 5000, None)]
+        mock_frequency.lookup_all_many.side_effect = lambda pairs: [[("Src", 5000, None)] for _ in pairs]
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -1071,9 +1120,11 @@ class TestOptionalServices:
 
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup_all.return_value = [("BCCWJ", 500, None), ("JPDB", 612, "612/9M")]
+        mock_frequency.lookup_all_many.side_effect = lambda pairs: [
+            [("BCCWJ", 500, None), ("JPDB", 612, "612/9M")] for _ in pairs
+        ]
         # min = 500, harmonic = floor(2 / (1/500 + 1/612)) = 550 — both derived
-        # locally from the single lookup_all fetch, not re-queried on the service.
+        # locally from the single lookup_all_many fetch, not re-queried on the service.
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -1115,7 +1166,7 @@ class TestOptionalServices:
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
         # No source ranks this word — min + harmonic derive to None.
-        mock_frequency.lookup_all.return_value = []
+        mock_frequency.lookup_all_many.side_effect = lambda pairs: [[] for _ in pairs]
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -1155,7 +1206,7 @@ class TestOptionalServices:
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
         # No source ranks this word — min + harmonic derive to None.
-        mock_frequency.lookup_all.return_value = []
+        mock_frequency.lookup_all_many.side_effect = lambda pairs: [[] for _ in pairs]
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -2249,10 +2300,10 @@ class TestStatsServiceIntegration:
 
         # Frequency cutoff is gated on a loaded service now; inject one so the
         # mocked filter_by_frequency still runs and the 2->1 shrink stays real
-        # (lookup_all returns a 3-tuple the rank-assignment loop unpacks).
+        # (lookup_all_many returns per-pair 3-tuples the rank loop unpacks).
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup_all.return_value = [("Src", 1, None)]
+        mock_frequency.lookup_all_many.side_effect = lambda pairs: [[("Src", 1, None)] for _ in pairs]
 
         processor = build_processor(
             config=config,
@@ -3200,11 +3251,11 @@ class TestIPlusOneFilter:
 
         # The frequency cutoff is now gated on a loaded frequency_service (a
         # cutoff with no source is skipped entirely). Inject one so the mocked
-        # filter_by_frequency stays reachable; lookup_all must return a
-        # (name, rank, display) 3-tuple because the rank-assignment loop unpacks it.
+        # filter_by_frequency stays reachable; lookup_all_many must return
+        # per-pair (name, rank, display) 3-tuples because the rank loop unpacks them.
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True
-        mock_frequency.lookup_all.return_value = [("Src", 1, None)]
+        mock_frequency.lookup_all_many.side_effect = lambda pairs: [[("Src", 1, None)] for _ in pairs]
 
         processor = build_processor(
             config=config,
@@ -4604,3 +4655,80 @@ class TestDictionaryStalenessGate:
         proc.subtitle_parser.parse_subtitle_file.return_value = []
         proc.process_episode(tmp_path / "ep01.mkv", tmp_path / "ep01.ass")
         proc.subtitle_parser.parse_subtitle_file.assert_called_once()
+
+
+class TestSharedLookupOwnership:
+    """owns_lookup_services=False (worker-owned shared services): the processor
+    must NOT close the injected definition/frequency handles — the sharing
+    worker's finally owns that teardown (Issue #30 stays guaranteed there)."""
+
+    def test_close_skips_shared_lookup_services(self, test_config):
+        freq = MagicMock()
+        fetcher = MagicMock()
+        proc = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            frequency_service=freq,
+            expression_audio_fetcher=fetcher,
+            owns_lookup_services=False,
+        )
+        proc.close()
+        proc.definition_service.close.assert_not_called()
+        freq.close.assert_not_called()
+        # Per-item resources still close unconditionally.
+        fetcher.close.assert_called_once_with()
+
+    def test_release_dictionary_resources_respects_ownership(self, test_config):
+        freq = MagicMock()
+        proc = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            frequency_service=freq,
+            owns_lookup_services=False,
+        )
+        proc.release_dictionary_resources()
+        proc.definition_service.close.assert_not_called()
+        freq.close.assert_not_called()
+
+    def test_default_ownership_still_closes(self, test_config):
+        freq = MagicMock()
+        proc = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            frequency_service=freq,
+        )
+        proc.close()
+        proc.definition_service.close.assert_called_once_with()
+        freq.close.assert_called_once_with()
+
+
+class TestPhaseTimingLogs:
+    """Every pipeline phase logs one [timing] line to the module logger."""
+
+    def test_phase_timings_logged(self, test_config, tmp_path, caplog):
+        import logging
+
+        word = _make_word("食べる")
+        services = {
+            "subtitle_parser": MagicMock(),
+            "word_filter": MagicMock(),
+            "media_extractor": MagicMock(),
+            "definition_service": MagicMock(),
+            "anki_service": MagicMock(),
+        }
+        services["word_filter"].deduplicate_by_sentence.side_effect = lambda words: words
+        services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        services["anki_service"].get_existing_vocabulary.return_value = set()
+        services["word_filter"].filter_unknown.return_value = [word]
+        services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = build_processor(config=test_config, presenter=NullPresenter(), **services)
+        with caplog.at_level(logging.INFO, logger="anki_miner.orchestration.episode_processor"):
+            processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        timings = [r.getMessage() for r in caplog.records if "[timing]" in r.getMessage()]
+        for phase in ("parse", "filter", "extract", "lookup", "cards"):
+            matching = [t for t in timings if t.startswith(f"[timing] {phase}: ")]
+            assert len(matching) == 1, (phase, timings)
