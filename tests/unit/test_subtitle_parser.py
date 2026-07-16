@@ -8,6 +8,7 @@ import pytest
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import LineLemmas, TokenizedWord
+from anki_miner.models.reading import ReadingUnit
 from anki_miner.services.compound_matcher import CompoundSyntheticToken
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils import generate_furigana, generate_reading
@@ -4022,3 +4023,140 @@ class TestParseRelevantConfigFields:
         source = inspect.getsource(subtitle_parser)
         for field in PARSE_RELEVANT_CONFIG_FIELDS:
             assert field in source, f"{field} not referenced in subtitle_parser module"
+
+
+# Modern JMdict headwords attested by the fake offline term_lookup for the
+# verb-front resolver tests. Covers every verb/adjective exercised below plus
+# the archaic 〜ずる siblings and the potential/ra-nuki base forms — so the
+# resolver runs its full ranking (not a degenerate empty-attestation degrade)
+# and only the じる/ずる cases actually override.
+_RESOLVER_ATTESTED_HEADWORDS = {
+    "感じる",
+    "感ずる",
+    "論じる",
+    "論ずる",
+    "信じる",
+    "信ずる",
+    "生じる",
+    "生ずる",
+    "乞う",
+    "彷徨う",
+    "出逢う",
+    "立つ",
+    "待つ",
+    "言う",
+    "帰れる",
+    "帰る",
+    "見る",
+    "保つ",
+    "剛腕",
+}
+
+
+def _resolver_term_lookup(terms):
+    return {t for t in terms if t in _RESOLVER_ATTESTED_HEADWORDS}
+
+
+class TestVerbFrontResolver:
+    """End-to-end: the parser rewrites archaic じる/ずる verb fronts to the
+    modern JMdict headword via the real tagger + injected offline term_lookup.
+    """
+
+    def _mine(self, sentence, term_lookup=_resolver_term_lookup):
+        service = SubtitleParserService(AnkiMinerConfig(), term_lookup=term_lookup)
+        unit = ReadingUnit(text=sentence, index=0, location_label="t")
+        words, _index, _counts = service.parse_text_units([unit], want_line_index=False)
+        return words
+
+    def _one(self, sentence, **kw):
+        words = self._mine(sentence, **kw)
+        assert len(words) == 1, [w.mined_form for w in words]
+        return words[0]
+
+    # --- Produces the modern form (asserts PRODUCED, not just no false override). ---
+
+    def test_kanjita_produces_kanjiru(self):
+        word = self._one("感じた")
+        assert word.mined_form == "感じる"
+        assert word.orth_base == "感じる"
+        # Lemma is left as the token lemma (the archaic 感ずる) — it is the i+1 /
+        # occurrence / cross-episode correlation key and must NOT be folded.
+        assert word.lemma == "感ずる"
+
+    def test_ronjita_produces_ronjiru(self):
+        assert self._one("論じた").mined_form == "論じる"
+
+    def test_shinjirarenai_produces_shinjiru(self):
+        assert self._one("信じられない").mined_form == "信じる"
+
+    def test_shojita_produces_shojiru(self):
+        assert self._one("生じた").mined_form == "生じる"
+
+    # --- Reading realignment: the card-front reading follows the modern form. ---
+
+    def test_kanjita_resolved_reading_is_modern_kana(self):
+        word = self._one("感じた")
+        assert word.resolved_reading == "かんじる"
+        # Expression reading (the card front's own reading) matches too.
+        assert word.expression_reading == "かんじる"
+        # lemma_reading stays the archaic lemma's own reading for the audio retry.
+        assert word.lemma_reading == "かんずる"
+
+    # --- Regression guards: no false override. ---
+
+    def test_kou_unchanged(self):
+        word = self._one("乞う")
+        assert word.mined_form == "乞う"
+        assert word.resolved_reading == ""
+
+    def test_samayotta_unchanged(self):
+        assert self._one("彷徨った").mined_form == "彷徨う"
+
+    def test_deatta_unchanged(self):
+        assert self._one("出逢った").mined_form == "出逢う"
+
+    def test_noun_never_resolves(self):
+        # 剛腕 is a noun: the resolver never runs, mined_form stays the surface.
+        word = self._one("剛腕")
+        assert word.mined_form == "剛腕"
+        assert word.resolved_reading == ""
+
+    def test_kaereru_unchanged(self):
+        # 帰れる does NOT fold (lemma 返る is a kanji swap), so it is resolver-
+        # eligible — but its own orthBase 帰れる is already the longest prefix,
+        # so no override fires.
+        word = self._one("帰れる")
+        assert word.mined_form == "帰れる"
+        assert word.resolved_reading == ""
+
+    # --- Fold guard: mining_base folds win; the resolver never un-folds. ---
+
+    def test_mireru_folds_to_base_not_unfolded(self):
+        word = self._one("見れる")
+        assert word.mined_form == "見る"
+        assert word.resolved_reading == ""
+
+    def test_motereru_folds_to_base(self):
+        word = self._one("保てる")
+        assert word.mined_form == "保つ"
+        assert word.resolved_reading == ""
+
+    # --- Cross-conjugation: attested inflected surface must not win. ---
+
+    def test_tatta_resolves_to_tatsu(self):
+        assert self._one("立った").mined_form == "立つ"
+
+    def test_matta_resolves_to_matsu_not_matta(self):
+        # 待った is itself an attested JMdict headword ("matta!") but is the
+        # inflected surface — it must not become the card front.
+        assert self._one("待った").mined_form == "待つ"
+
+    def test_itta_resolves_to_iu(self):
+        assert self._one("言った").mined_form == "言う"
+
+    # --- Safe degrade: no offline lookup → today's archaic orthBase, no crash. ---
+
+    def test_no_term_lookup_keeps_archaic_orthbase(self):
+        word = self._one("感じた", term_lookup=None)
+        assert word.mined_form == "感ずる"
+        assert word.resolved_reading == ""
