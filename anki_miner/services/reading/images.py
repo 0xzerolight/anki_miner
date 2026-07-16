@@ -19,6 +19,11 @@ from PIL import Image
 
 from anki_miner.models.reading import ImageRef
 from anki_miner.services.dictionary.zip_safety import validate_zip_safe
+from anki_miner.utils.pil_limits import apply_pil_image_limits
+
+# Decompression-bomb ceiling: explicit project pin (== Pillow's default) so the
+# card-image decode limit is an intentional, tested value, not an inherited one.
+apply_pil_image_limits()
 
 # Long-edge cap for a card image. Larger pages/covers are downscaled (never
 # upscaled) before JPEG encode to keep Anki media small.
