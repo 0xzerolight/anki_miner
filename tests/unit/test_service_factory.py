@@ -367,9 +367,13 @@ class TestCompoundMatchingInjection:
             dictionary_chain=(ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),),
         )
         services = service_factory.create_services(cfg)
-        matcher = services.subtitle_parser._compound_matcher
+        parser = services.subtitle_parser
+        matcher = parser._compound_matcher
         assert matcher is not None
-        assert matcher._lookup == services.definition_service.offline_terms_exist
+        # The matcher shares the parser's per-instance memoized probe, whose
+        # underlying lookup is the definition service's offline existence probe.
+        assert matcher._lookup == parser._memoized_attest
+        assert parser._term_lookup == services.definition_service.offline_terms_exist
 
     def test_not_injected_without_indexed_entry(self, base_config):
         cfg = dataclasses.replace(
