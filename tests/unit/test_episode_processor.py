@@ -4700,3 +4700,35 @@ class TestSharedLookupOwnership:
         proc.close()
         proc.definition_service.close.assert_called_once_with()
         freq.close.assert_called_once_with()
+
+
+class TestPhaseTimingLogs:
+    """Every pipeline phase logs one [timing] line to the module logger."""
+
+    def test_phase_timings_logged(self, test_config, tmp_path, caplog):
+        import logging
+
+        word = _make_word("食べる")
+        services = {
+            "subtitle_parser": MagicMock(),
+            "word_filter": MagicMock(),
+            "media_extractor": MagicMock(),
+            "definition_service": MagicMock(),
+            "anki_service": MagicMock(),
+        }
+        services["word_filter"].deduplicate_by_sentence.side_effect = lambda words: words
+        services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        services["anki_service"].get_existing_vocabulary.return_value = set()
+        services["word_filter"].filter_unknown.return_value = [word]
+        services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = build_processor(config=test_config, presenter=NullPresenter(), **services)
+        with caplog.at_level(logging.INFO, logger="anki_miner.orchestration.episode_processor"):
+            processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        timings = [r.getMessage() for r in caplog.records if "[timing]" in r.getMessage()]
+        for phase in ("parse", "filter", "extract", "lookup", "cards"):
+            matching = [t for t in timings if t.startswith(f"[timing] {phase}: ")]
+            assert len(matching) == 1, (phase, timings)
