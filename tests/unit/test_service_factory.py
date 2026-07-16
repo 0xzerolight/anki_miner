@@ -424,3 +424,128 @@ class TestReadingAttestationInjection:
         )
         services = service_factory.create_services(cfg)
         assert services.subtitle_parser._reading_lookup is None
+
+
+# ---------------------------------------------------------------------------
+# SharedLookupServices (cross-item reuse bundle for multi-item runs)
+# ---------------------------------------------------------------------------
+
+
+class TestSharedLookupServices:
+    """create_shared_lookup_services + create_services(shared_lookup=...)."""
+
+    def _import_freq_source(self, freqs_root: Path, tmp_path: Path) -> str:
+        from anki_miner.services.frequency.source_importer import import_frequency_source
+
+        csv = tmp_path / "ranks.csv"
+        csv.write_text("rank,word\n1,猫\n2,犬\n3,食べる\n", encoding="utf-8")
+        return import_frequency_source(csv, freqs_root, source_id="testfreq").source_id
+
+    def _config(self, tmp_path: Path) -> AnkiMinerConfig:
+        from anki_miner.config import FreqEntry
+
+        pitch = tmp_path / "pitch.csv"
+        pitch.write_text("たべる,食べる,0\nのむ,飲む,1\n", encoding="utf-8")
+        source_id = self._import_freq_source(tmp_path / "freqs", tmp_path)
+        return dataclasses.replace(
+            AnkiMinerConfig(),
+            dicts_root=tmp_path / "dicts",
+            known_words_db_path=tmp_path / "known_words.db",
+            stats_db_path=tmp_path / "stats.db",
+            freqs_root=tmp_path / "freqs",
+            frequency_chain=(FreqEntry(source_id=source_id),),
+            pitch_accent_path=pitch,
+        )
+
+    def test_create_shared_lookup_services_builds_all(self, tmp_path: Path):
+        cfg = self._config(tmp_path)
+        bundle = service_factory.create_shared_lookup_services(cfg)
+        try:
+            assert bundle.dictionary_registry is not None
+            assert bundle.definition_service is not None
+            assert bundle.pitch_accent_service is not None
+            assert bundle.frequency_service is not None
+            joined = " ".join(bundle.load_result.info)
+            assert "Frequency data loaded" in joined
+            assert "Pitch accent data loaded" in joined
+        finally:
+            bundle.close()
+
+    def test_create_services_reuses_shared_bundle_identity(self, tmp_path: Path):
+        cfg = self._config(tmp_path)
+        bundle = service_factory.create_shared_lookup_services(cfg)
+        try:
+            services = service_factory.create_services(cfg, shared_lookup=bundle)
+            assert services.dictionary_registry is bundle.dictionary_registry
+            assert services.definition_service is bundle.definition_service
+            assert services.pitch_accent_service is bundle.pitch_accent_service
+            assert services.frequency_service is bundle.frequency_service
+        finally:
+            bundle.close()
+
+    def test_create_services_shared_skips_rebuild(self, tmp_path: Path):
+        cfg = self._config(tmp_path)
+        bundle = service_factory.create_shared_lookup_services(cfg)
+        try:
+            with (
+                patch.object(service_factory, "_load_dict_registry") as mock_reg,
+                patch.object(service_factory, "PitchAccentService") as mock_pitch,
+                patch.object(service_factory, "FrequencySourceRegistry") as mock_freq,
+            ):
+                service_factory.create_services(cfg, shared_lookup=bundle)
+            mock_reg.assert_not_called()
+            mock_pitch.assert_not_called()
+            mock_freq.assert_not_called()
+        finally:
+            bundle.close()
+
+    def test_create_services_shared_load_result_excludes_shared_messages(self, tmp_path: Path):
+        cfg = self._config(tmp_path)
+        bundle = service_factory.create_shared_lookup_services(cfg)
+        try:
+            services = service_factory.create_services(cfg, shared_lookup=bundle)
+            joined = " ".join(services.load_result.info)
+            assert "Frequency data loaded" not in joined
+            assert "Pitch accent data loaded" not in joined
+        finally:
+            bundle.close()
+
+    def test_create_episode_processor_shared_sets_ownership_false(self, tmp_path: Path):
+        from anki_miner.presenters.null_presenter import NullPresenter
+
+        cfg = self._config(tmp_path)
+        bundle = service_factory.create_shared_lookup_services(cfg)
+        try:
+            proc = service_factory.create_episode_processor(cfg, NullPresenter(), shared_lookup=bundle)
+            assert proc.owns_lookup_services is False
+            assert proc.frequency_service is bundle.frequency_service
+            assert proc.definition_service is bundle.definition_service
+        finally:
+            bundle.close()
+
+    def test_create_episode_processor_default_owner_true(self, tmp_path: Path):
+        from anki_miner.presenters.null_presenter import NullPresenter
+
+        cfg = self._config(tmp_path)
+        proc = service_factory.create_episode_processor(cfg, NullPresenter())
+        try:
+            assert proc.owns_lookup_services is True
+        finally:
+            proc.close()
+
+    def test_bundle_close_is_idempotent_and_never_raises(self):
+        from unittest.mock import MagicMock
+
+        definition = MagicMock()
+        freq = MagicMock()
+        freq.close.side_effect = RuntimeError("boom")
+        bundle = service_factory.SharedLookupServices(
+            dictionary_registry=MagicMock(),
+            definition_service=definition,
+            pitch_accent_service=None,
+            frequency_service=freq,
+            load_result=service_factory.ServiceLoadResult(),
+        )
+        bundle.close()  # must not raise despite freq.close raising
+        bundle.close()  # idempotent
+        assert definition.close.call_count == 2

@@ -1,5 +1,6 @@
 """Factory for creating service instances used in episode processing."""
 
+import contextlib
 import logging
 from dataclasses import dataclass, field
 
@@ -163,6 +164,131 @@ def build_definition_service(
     return definition_service
 
 
+def _build_pitch_service(
+    config: AnkiMinerConfig,
+    load_result: ServiceLoadResult,
+) -> PitchAccentService | None:
+    """Build + load the optional pitch accent service (full CSV parse).
+
+    Extracted from :func:`create_services` so :func:`create_shared_lookup_services`
+    constructs the identical service — single source of truth for the load,
+    the entry-count info line, and the failure-to-warning downgrade.
+    """
+    if not config.pitch_active:
+        return None
+    try:
+        pitch_accent_service = PitchAccentService(config.pitch_accent_path)
+        pitch_accent_service.load()
+        count = pitch_accent_service.entry_count
+        if count > 0:
+            load_result.info.append(tr_format(_tr("Pitch accent data loaded: %1 entries"), f"{count:,}"))
+            return pitch_accent_service
+        load_result.warnings.append(
+            _tr("Pitch accent file has no valid entries (expected CSV/TSV: reading, kanji, pattern)")
+        )
+        return None
+    except Exception as e:
+        logger.warning(f"Could not load pitch accent data: {e}")
+        load_result.warnings.append(tr_format(_tr("Couldn't load pitch accent data: %1"), e))
+        return None
+
+
+def _build_frequency_service(
+    config: AnkiMinerConfig,
+    load_result: ServiceLoadResult,
+) -> MultiFrequencyService | None:
+    """Build + load the optional multi-source frequency service.
+
+    Extracted from :func:`create_services` for the same single-source-of-truth
+    reason as :func:`_build_pitch_service`.
+    """
+    if not config.frequency_active:
+        return None
+    try:
+        registry = FrequencySourceRegistry(config.freqs_root)
+        registry.load()
+        providers = [p for p in registry.build_sources(config) if p.load()]
+        if not providers:
+            # Nothing enabled / on-disk: no providers loaded. Not an error —
+            # an enabled chain entry can still point at a missing on-disk index.
+            return None
+        frequency_service = MultiFrequencyService(providers)
+        # Sum entry counts from the registry meta for the enabled chain
+        # entries that actually produced a loaded provider. The provider
+        # exposes .name (display) and .source_id, not the count — counts
+        # live on FreqSourceMeta — so resolve each via registry.get().
+        total_entries = sum(meta.entry_count for p in providers if (meta := registry.get(p.source_id)) is not None)
+        load_result.info.append(
+            tr_format(
+                _tr("Frequency data loaded: %1 source(s), %2 entries"),
+                len(providers),
+                f"{total_entries:,}",
+            )
+        )
+        return frequency_service
+    except Exception as e:
+        logger.warning(f"Could not load frequency data: {e}")
+        load_result.warnings.append(tr_format(_tr("Couldn't load frequency data: %1"), e))
+        return None
+
+
+@dataclass(frozen=True)
+class SharedLookupServices:
+    """Offset-independent lookup services shared across one multi-item run.
+
+    Owned by the worker that built it: an :class:`EpisodeProcessor`
+    constructed over this bundle gets ``owns_lookup_services=False`` and must
+    NOT close these services between items — the worker closes the bundle in a
+    ``finally`` at end of run, preserving the Issue #30 (Windows file-lock)
+    teardown guarantee at run granularity instead of item granularity.
+
+    Bundle over loose injection kwargs: one param threads through both factory
+    layers, the coordinated :meth:`close` is what the worker's ``finally``
+    needs, and ``load_result`` carries the once-per-run load messages.
+    """
+
+    dictionary_registry: DictionaryRegistry
+    definition_service: DefinitionService
+    pitch_accent_service: PitchAccentService | None
+    frequency_service: MultiFrequencyService | None
+    load_result: ServiceLoadResult
+
+    def close(self) -> None:
+        """Release the bundle's sqlite handles. Idempotent, never raises.
+
+        Closes the definition service's per-dict handles and every frequency
+        provider's per-source handle (``MultiFrequencyService.close`` is itself
+        idempotent/never-raises). The in-memory pitch service has no handles.
+        """
+        with contextlib.suppress(Exception):
+            self.definition_service.close()
+        if self.frequency_service is not None:
+            # MultiFrequencyService.close is itself documented never-raises;
+            # the suppress keeps this bundle's contract independent of that.
+            with contextlib.suppress(Exception):
+                self.frequency_service.close()
+
+
+def create_shared_lookup_services(config: AnkiMinerConfig) -> SharedLookupServices:
+    """Build the offset-independent lookup stack once for a multi-item run.
+
+    Same construction as :func:`create_services` (shared private builders), so
+    a bundle-backed processor behaves byte-identically to a per-item build:
+    registry scan + eager dict load, pitch CSV parse, frequency registry load.
+    The caller owns the bundle's lifetime — close it in a ``finally``.
+    """
+    load_result = ServiceLoadResult()
+    dictionary_registry = _load_dict_registry(config, load_result)
+    definition_service = build_definition_service(config, load_result, registry=dictionary_registry)
+    return SharedLookupServices(
+        dictionary_registry=dictionary_registry,
+        definition_service=definition_service,
+        pitch_accent_service=_build_pitch_service(config, load_result),
+        frequency_service=_build_frequency_service(config, load_result),
+        load_result=load_result,
+    )
+
+
 def _build_expression_audio_fetcher(
     config: AnkiMinerConfig,
     load_result: ServiceLoadResult | None = None,
@@ -299,6 +425,7 @@ def create_services(
     config: AnkiMinerConfig,
     subtitle_parser: SubtitleParserService | None = None,
     anki_service: AnkiService | None = None,
+    shared_lookup: SharedLookupServices | None = None,
 ) -> Services:
     """Create all services needed for episode processing.
 
@@ -317,6 +444,15 @@ def create_services(
             worker passes a single shared instance so the cache survives across
             all items in the run. Default ``None`` preserves single-episode and
             deck-builder behaviour (a fresh instance per call).
+        shared_lookup: Optional pre-built :class:`SharedLookupServices` bundle.
+            When provided, the dictionary registry scan, eager dictionary load,
+            pitch CSV parse, and frequency registry load are all SKIPPED and
+            the bundle's instances are used — the batch queue worker builds one
+            bundle per run so N queue items pay one lookup-stack build instead
+            of N. The bundle's owner (the worker) closes it; processors built
+            over it must not (``owns_lookup_services=False``). The returned
+            ``load_result`` then excludes the bundle's load messages — the
+            owner surfaces those once per run.
 
     Returns:
         A frozen :class:`Services` bundle holding every constructed
@@ -326,12 +462,16 @@ def create_services(
     """
     load_result = ServiceLoadResult()
 
-    # Scan the dictionary registry ONCE, then reuse the same handle for both the
-    # provider chain and the EpisodeProcessor's staleness gate (4.0). Built
-    # BEFORE the parser because the parser's compound matcher borrows the
-    # DefinitionService's offline_terms_exist.
-    dictionary_registry = _load_dict_registry(config, load_result)
-    definition_service = build_definition_service(config, load_result, registry=dictionary_registry)
+    if shared_lookup is not None:
+        dictionary_registry = shared_lookup.dictionary_registry
+        definition_service = shared_lookup.definition_service
+    else:
+        # Scan the dictionary registry ONCE, then reuse the same handle for both the
+        # provider chain and the EpisodeProcessor's staleness gate (4.0). Built
+        # BEFORE the parser because the parser's compound matcher borrows the
+        # DefinitionService's offline_terms_exist.
+        dictionary_registry = _load_dict_registry(config, load_result)
+        definition_service = build_definition_service(config, load_result, registry=dictionary_registry)
 
     if subtitle_parser is None:
         # Headword-existence probe: injected iff an indexed offline dict is
@@ -372,55 +512,13 @@ def create_services(
     expression_audio_fetcher = _build_expression_audio_fetcher(config, load_result)
     sentence_audio_fetcher = _build_sentence_audio_fetcher(config)
 
-    # Optional services
-    pitch_accent_service = None
-    if config.pitch_active:
-        try:
-            pitch_accent_service = PitchAccentService(config.pitch_accent_path)
-            pitch_accent_service.load()
-            count = pitch_accent_service.entry_count
-            if count > 0:
-                load_result.info.append(tr_format(_tr("Pitch accent data loaded: %1 entries"), f"{count:,}"))
-            else:
-                load_result.warnings.append(
-                    _tr("Pitch accent file has no valid entries (expected CSV/TSV: reading, kanji, pattern)")
-                )
-                pitch_accent_service = None
-        except Exception as e:
-            logger.warning(f"Could not load pitch accent data: {e}")
-            load_result.warnings.append(tr_format(_tr("Couldn't load pitch accent data: %1"), e))
-            pitch_accent_service = None
-
-    frequency_service: MultiFrequencyService | None = None
-    if config.frequency_active:
-        try:
-            registry = FrequencySourceRegistry(config.freqs_root)
-            registry.load()
-            providers = [p for p in registry.build_sources(config) if p.load()]
-            if providers:
-                frequency_service = MultiFrequencyService(providers)
-                # Sum entry counts from the registry meta for the enabled chain
-                # entries that actually produced a loaded provider. The provider
-                # exposes .name (display) and .source_id, not the count — counts
-                # live on FreqSourceMeta — so resolve each via registry.get().
-                total_entries = sum(
-                    meta.entry_count for p in providers if (meta := registry.get(p.source_id)) is not None
-                )
-                load_result.info.append(
-                    tr_format(
-                        _tr("Frequency data loaded: %1 source(s), %2 entries"),
-                        len(providers),
-                        f"{total_entries:,}",
-                    )
-                )
-            else:
-                # Nothing enabled / on-disk: no providers loaded. Not an error —
-                # an enabled chain entry can still point at a missing on-disk index.
-                frequency_service = None
-        except Exception as e:
-            logger.warning(f"Could not load frequency data: {e}")
-            load_result.warnings.append(tr_format(_tr("Couldn't load frequency data: %1"), e))
-            frequency_service = None
+    # Optional services (reused from the bundle on the shared path).
+    if shared_lookup is not None:
+        pitch_accent_service = shared_lookup.pitch_accent_service
+        frequency_service = shared_lookup.frequency_service
+    else:
+        pitch_accent_service = _build_pitch_service(config, load_result)
+        frequency_service = _build_frequency_service(config, load_result)
 
     # Always construct the DB: the constructor is I/O-free and the user-curated
     # ignore list (source='user', Issue #42) must be applied on every run even
@@ -491,6 +589,7 @@ def create_episode_processor(
     stats_service: StatsService | None = None,
     subtitle_parser: SubtitleParserService | None = None,
     anki_service: AnkiService | None = None,
+    shared_lookup: SharedLookupServices | None = None,
 ) -> EpisodeProcessor:
     """Create an EpisodeProcessor with all required services.
 
@@ -505,11 +604,17 @@ def create_episode_processor(
             multiple calls (see :func:`create_services`). The batch queue worker
             passes a single shared instance to preserve the populated vocab
             cache across all queue items. Default ``None`` builds a fresh one.
+        shared_lookup: Optional shared lookup bundle (see
+            :func:`create_services`). When provided the processor is built with
+            ``owns_lookup_services=False`` so its ``close()`` leaves the
+            bundle's sqlite handles for the owning worker's ``finally``.
 
     Returns:
         Configured EpisodeProcessor instance
     """
-    services = create_services(config, subtitle_parser=subtitle_parser, anki_service=anki_service)
+    services = create_services(
+        config, subtitle_parser=subtitle_parser, anki_service=anki_service, shared_lookup=shared_lookup
+    )
 
     # Surface service load feedback to the user
     for msg in services.load_result.info:
@@ -535,6 +640,7 @@ def create_episode_processor(
         expression_audio_fetcher=services.expression_audio_fetcher,
         sentence_audio_fetcher=services.sentence_audio_fetcher,
         dictionary_registry=services.dictionary_registry,
+        owns_lookup_services=shared_lookup is None,
     )
 
 

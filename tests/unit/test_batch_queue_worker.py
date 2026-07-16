@@ -810,3 +810,179 @@ def test_setup_failure_emits_error_and_queue_finished(qapp):
     assert finished == [0]  # queue_finished(total_cards=0) even on setup failure
     # The item loop was never entered — the failure was before get_next_pending.
     queue.get_next_pending.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Shared lookup services across batch items (dict/pitch/frequency rebuild fix)
+# ---------------------------------------------------------------------------
+
+
+def _bundle_mock():
+    bundle = MagicMock(name="shared_lookup")
+    bundle.load_result.info = ["Frequency data loaded: 1 source(s), 3 entries"]
+    bundle.load_result.warnings = ["some warning"]
+    return bundle
+
+
+def test_shared_lookup_services_passed_to_each_processor(tmp_path):
+    """One SharedLookupServices bundle per run: built once, passed via
+    shared_lookup= to every create_episode_processor call."""
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+
+    queue = BatchQueue()
+    queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
+    queue.add_item(tmp_path / "video2", tmp_path / "subs2", "Show2")
+
+    proc = MagicMock()
+    proc.process_episode.return_value = _ok_result(cards=1)
+    bundle = _bundle_mock()
+
+    captured: list = []
+
+    def _fake_create_ep(config, presenter, stats_service=None, anki_service=None, shared_lookup=None, **kwargs):
+        captured.append(shared_lookup)
+        return proc
+
+    worker = _make_worker_with_queue(queue)
+    _wire_status_slots(worker, queue)
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_shared_lookup_services",
+            return_value=bundle,
+        ) as factory,
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            side_effect=_fake_create_ep,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+    ):
+        worker.run()
+
+    factory.assert_called_once()
+    assert len(captured) == 2
+    assert captured[0] is bundle
+    assert captured[1] is bundle
+
+
+def test_shared_lookup_services_closed_once_on_normal_exit(tmp_path):
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+
+    queue = BatchQueue()
+    queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
+
+    proc = MagicMock()
+    proc.process_episode.return_value = _ok_result(cards=1)
+    bundle = _bundle_mock()
+
+    worker = _make_worker_with_queue(queue)
+    _wire_status_slots(worker, queue)
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_shared_lookup_services",
+            return_value=bundle,
+        ),
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+    ):
+        worker.run()
+
+    bundle.close.assert_called_once_with()
+
+
+def test_shared_lookup_services_closed_on_exception_exit(tmp_path):
+    """A processor-construction crash still closes the bundle (finally path)."""
+    queue = BatchQueue()
+    queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
+
+    bundle = _bundle_mock()
+
+    worker = _make_worker_with_queue(queue)
+    _wire_status_slots(worker, queue)
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_shared_lookup_services",
+            return_value=bundle,
+        ),
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            side_effect=RuntimeError("construction boom"),
+        ),
+    ):
+        worker.run()  # must not raise; run() surfaces the error via signal
+
+    bundle.close.assert_called_once_with()
+
+
+def test_shared_lookup_services_closed_on_cancel(tmp_path):
+    queue = BatchQueue()
+    queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
+
+    bundle = _bundle_mock()
+
+    worker = _make_worker_with_queue(queue)
+    _wire_status_slots(worker, queue)
+    worker.cancel()  # cancelled before the loop starts
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_shared_lookup_services",
+            return_value=bundle,
+        ),
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+        ) as create_ep,
+    ):
+        worker.run()
+
+    create_ep.assert_not_called()
+    bundle.close.assert_called_once_with()
+
+
+def test_shared_load_messages_surfaced_once_per_run(tmp_path):
+    """The bundle's load_result info/warnings reach the presenter exactly once
+    per run (previously: once per item via each create_episode_processor)."""
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+
+    queue = BatchQueue()
+    queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
+    queue.add_item(tmp_path / "video2", tmp_path / "subs2", "Show2")
+
+    proc = MagicMock()
+    proc.process_episode.return_value = _ok_result(cards=1)
+    bundle = _bundle_mock()
+
+    worker = _make_worker_with_queue(queue)
+    _wire_status_slots(worker, queue)
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_shared_lookup_services",
+            return_value=bundle,
+        ),
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+    ):
+        worker.run()
+
+    info_calls = [c.args[0] for c in worker.presenter.show_info.call_args_list]
+    warning_calls = [c.args[0] for c in worker.presenter.show_warning.call_args_list]
+    assert info_calls.count("Frequency data loaded: 1 source(s), 3 entries") == 1
+    assert warning_calls.count("some warning") == 1

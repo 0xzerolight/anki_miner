@@ -23,7 +23,12 @@ from anki_miner.models.reading import (
     ReadingSourceRef,
     ReadingUnit,
 )
-from anki_miner.services.reading._util import is_junk_path, natural_sort_key
+from anki_miner.services.reading._util import (
+    MAX_MOKURO_JSON_BYTES,
+    is_junk_path,
+    natural_sort_key,
+    read_text_capped,
+)
 from anki_miner.services.reading.sentence_splitter import split_sentences
 from anki_miner.utils.ja_normalize import is_cjk_ideograph
 
@@ -63,7 +68,9 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
     """Load one mokuro volume into a ``ReadingDocument``. See module docstring."""
     # Per-kind ref contract: file-backed kinds always carry a path.
     assert ref.path is not None
-    data = json.loads(ref.path.read_text(encoding="utf-8"))
+    # Size-capped even though the detector normally gates first: load() trusts
+    # a ref, so it must be safe standalone against a hostile multi-GB sidecar.
+    data = json.loads(read_text_capped(ref.path, MAX_MOKURO_JSON_BYTES, ".mokuro file"))
     pages = data.get("pages", []) or []
 
     doc = ReadingDocument(
