@@ -1,0 +1,3 @@
+{"id":"kv01","sentence":"乞う","expected":["乞う"],"category":"kanji-variant","note":"must NOT become 請う"}
+{"id":"kv02","sentence":"出逢った","expected":["出逢う"],"category":"kanji-variant","note":"keep 逢, not 会"}
+{"id":"kv03","sentence":"剛腕","expected":["剛腕"],"category":"kanji-variant","note":"noun; not 豪腕"}
