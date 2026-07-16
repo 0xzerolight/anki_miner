@@ -4655,3 +4655,48 @@ class TestDictionaryStalenessGate:
         proc.subtitle_parser.parse_subtitle_file.return_value = []
         proc.process_episode(tmp_path / "ep01.mkv", tmp_path / "ep01.ass")
         proc.subtitle_parser.parse_subtitle_file.assert_called_once()
+
+
+class TestSharedLookupOwnership:
+    """owns_lookup_services=False (worker-owned shared services): the processor
+    must NOT close the injected definition/frequency handles — the sharing
+    worker's finally owns that teardown (Issue #30 stays guaranteed there)."""
+
+    def test_close_skips_shared_lookup_services(self, test_config):
+        freq = MagicMock()
+        fetcher = MagicMock()
+        proc = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            frequency_service=freq,
+            expression_audio_fetcher=fetcher,
+            owns_lookup_services=False,
+        )
+        proc.close()
+        proc.definition_service.close.assert_not_called()
+        freq.close.assert_not_called()
+        # Per-item resources still close unconditionally.
+        fetcher.close.assert_called_once_with()
+
+    def test_release_dictionary_resources_respects_ownership(self, test_config):
+        freq = MagicMock()
+        proc = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            frequency_service=freq,
+            owns_lookup_services=False,
+        )
+        proc.release_dictionary_resources()
+        proc.definition_service.close.assert_not_called()
+        freq.close.assert_not_called()
+
+    def test_default_ownership_still_closes(self, test_config):
+        freq = MagicMock()
+        proc = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            frequency_service=freq,
+        )
+        proc.close()
+        proc.definition_service.close.assert_called_once_with()
+        freq.close.assert_called_once_with()
