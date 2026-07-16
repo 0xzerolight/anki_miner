@@ -1,0 +1,232 @@
+{
+  "schema_version": 2,
+  "identity": {
+    "run_id": "run_00000000000000000000000000000001",
+    "request_id": "anki_00000000000000000000000000000002",
+    "client_note_id": "note_00000000000000000000000000000003",
+    "note_id": 7001,
+    "card_audio_asset_id": "asset_00000000000000000000000000000004",
+    "card_image_asset_id": "asset_00000000000000000000000000000005",
+    "dictionary_image_asset_id": "asset_00000000000000000000000000000006"
+  },
+  "filtering": {
+    "existing_first_fields": [
+      "<div>猫&nbsp;</div>[sound:old.mp3]",
+      "<span>ガク</span>",
+      "食べる[たべる]"
+    ],
+    "words": [
+      {
+        "id": "known-cat",
+        "surface": "猫",
+        "lemma": "猫",
+        "orth_base": "猫",
+        "reading": "ネコ",
+        "expression_reading": "ねこ",
+        "pos": "名詞",
+        "sentence": "猫がいる。",
+        "start_time": 1.0
+      },
+      {
+        "id": "variant-first",
+        "surface": "賭け",
+        "lemma": "掛ける",
+        "orth_base": "賭ける",
+        "reading": "カケ",
+        "expression_reading": "かける",
+        "lemma_reading": "かける",
+        "pos": "動詞",
+        "sentence": "人生を賭ける。",
+        "start_time": 2.0
+      },
+      {
+        "id": "variant-same-expression",
+        "surface": "賭け",
+        "lemma": "賭ける",
+        "orth_base": "賭ける",
+        "reading": "カケ",
+        "expression_reading": "かける",
+        "lemma_reading": "かける",
+        "pos": "動詞",
+        "sentence": "命を賭けた。",
+        "start_time": 3.0
+      },
+      {
+        "id": "unknown-word",
+        "surface": "未知",
+        "lemma": "未知",
+        "orth_base": "未知",
+        "reading": "ミチ",
+        "expression_reading": "みち",
+        "pos": "名詞",
+        "sentence": "未知の世界だ。",
+        "start_time": 4.0
+      },
+      {
+        "id": "known-nfc",
+        "surface": "ガク",
+        "lemma": "ガク",
+        "orth_base": "ガク",
+        "reading": "ガク",
+        "expression_reading": "がく",
+        "pos": "名詞",
+        "sentence": "ガクと読む。",
+        "start_time": 5.0
+      }
+    ]
+  },
+  "deinflection": [
+    {"id": "causative-passive-past", "source": "食べさせられた", "target": "食べる"},
+    {"id": "polite-negative-past", "source": "食べませんでした", "target": "食べる"},
+    {"id": "godan-negative-past", "source": "走らなかった", "target": "走る"}
+  ],
+  "dictionaries": {
+    "providers": [
+      {
+        "dict_id": "golden-primary",
+        "display_name": "Golden Primary",
+        "entries": [
+          {
+            "term": "賭ける",
+            "reading": "かける",
+            "definition_tags": "v1",
+            "rules": "v1",
+            "score": 100,
+            "glossary": [
+              "to stake; to wager",
+              {
+                "type": "structured-content",
+                "content": {
+                  "tag": "div",
+                  "content": [
+                    {"tag": "span", "content": "risk something important"},
+                    {"tag": "img", "path": "images/wager.png"}
+                  ]
+                }
+              }
+            ],
+            "sequence": 101,
+            "term_tags": "common"
+          },
+          {
+            "term": "食べる",
+            "reading": "たべる",
+            "definition_tags": "v1",
+            "rules": "v1",
+            "score": 90,
+            "glossary": ["to eat"],
+            "sequence": 102,
+            "term_tags": ""
+          }
+        ]
+      },
+      {
+        "dict_id": "golden-secondary",
+        "display_name": "Golden Secondary",
+        "entries": [
+          {
+            "term": "賭ける",
+            "reading": "かける",
+            "definition_tags": "v1",
+            "rules": "v1",
+            "score": 80,
+            "glossary": ["to risk"],
+            "sequence": 201,
+            "term_tags": ""
+          },
+          {
+            "term": "未知",
+            "reading": "みち",
+            "definition_tags": "n",
+            "rules": "n",
+            "score": 70,
+            "glossary": ["unknown; unexplored"],
+            "sequence": 202,
+            "term_tags": ""
+          }
+        ]
+      }
+    ],
+    "queries": [
+      {"id": "first-hit-and-glossary-order", "term": "賭ける", "reading": "かける"},
+      {"id": "second-provider-hit", "term": "未知", "reading": "みち"},
+      {
+        "id": "miss-only-orth-base-fallback",
+        "term": "食べさせられた",
+        "reading": "たべさせられた",
+        "fallback_orth_base": "食べる",
+        "fallback_ctype": "下一段-バ行"
+      }
+    ]
+  },
+  "frequency": {
+    "providers": [
+      {
+        "source_id": "golden-frequency-a",
+        "display_name": "Golden Frequency A",
+        "rows": [
+          ["猫", "ねこ", 50, "50/100000"],
+          ["賭ける", "かける", 100, "100/100000"],
+          ["未知", "みち", 500, null]
+        ]
+      },
+      {
+        "source_id": "golden-frequency-b",
+        "display_name": "Golden Frequency B",
+        "rows": [
+          ["賭ける", "かける", 300, null],
+          ["未知", "みち", 400, "400/50000"]
+        ]
+      }
+    ],
+    "queries": [
+      {"id": "two-source-harmonic", "term": "賭ける", "reading": "かける"},
+      {"id": "source-order-not-rank-order", "term": "未知", "reading": "みち"},
+      {"id": "single-source", "term": "猫", "reading": "ねこ"}
+    ]
+  },
+  "pitch": {
+    "rows": [
+      ["かける", "掛ける", "2", "1", "2"],
+      ["ねこ", "猫", "0", "", ""]
+    ],
+    "queries": [
+      {"id": "verb-kifuku", "term": "掛ける", "reading": "かける", "pos": "動詞"},
+      {"id": "noun-heiban", "term": "猫", "reading": "ねこ", "pos": "名詞"}
+    ]
+  },
+  "card": {
+    "deck_name": "Mining::Golden",
+    "model_name": "Golden Model",
+    "tags": "golden android parity",
+    "card_type": "sentence",
+    "field_mapping": {
+      "word": "Expression",
+      "sentence": "Sentence",
+      "definition": "MainDefinition",
+      "glossary": "Glossary",
+      "picture": "Picture",
+      "audio": "SentenceAudio",
+      "expression_furigana": "ExpressionFurigana",
+      "expression_reading": "ExpressionReading",
+      "sentence_furigana": "SentenceFurigana",
+      "sentence_reading": "SentenceReading",
+      "pitch_position": "PitchPosition",
+      "pitch_category": "PitchCategory",
+      "pitch_graph": "PitchGraph",
+      "pitch_text": "PitchText",
+      "frequency": "Frequency",
+      "frequency_sort": "FrequencySort",
+      "source": "Source",
+      "expression_audio": "ExpressionAudio"
+    },
+    "word_id": "variant-first",
+    "sentence_bolded": "人生を<b>賭ける</b>。",
+    "sentence_furigana": "人生[じんせい]を賭[か]ける。",
+    "sentence_furigana_bolded": "人生[じんせい]を<b>賭[か]ける</b>。",
+    "sentence_reading": "じんせいをかける。",
+    "card_audio": {"original_filename": "golden clip.mp3", "content_utf8": "golden-audio-bytes"},
+    "card_image": {"original_filename": "golden-frame.webp", "content_utf8": "golden-image-bytes"},
+    "source": "Golden Episode @ 00:02"
+  }
+}
