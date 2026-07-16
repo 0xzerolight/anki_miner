@@ -905,7 +905,11 @@ class WordCurationDialog(QDialog):
         if action == copy_lemma_action:
             clipboard.setText(word.lemma)
         elif action == copy_sentence_action:
-            clipboard.setText(word.sentence)
+            # Resolve the user's sentence pick (self._chosen), else the default —
+            # same "chosen, else original" pattern as get_selected_words. Without
+            # this the menu always copied the primary sentence (Issue #95).
+            chosen = self._chosen.get(original_index, word)
+            clipboard.setText(chosen.sentence)
 
     # ------------------------------------------------------------------
     # Bulk-action helpers
