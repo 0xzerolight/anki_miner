@@ -481,3 +481,99 @@ def test_load_unknown_kind_errors():
     )
     with pytest.raises(SetupError):
         detector.load(ref)
+
+
+# --------------------------------------------------------------------------- #
+# detect_book_folder: top-level .epub/.txt enumeration (Novels folder mining).
+# --------------------------------------------------------------------------- #
+
+
+def test_book_folder_yields_books_natural_sorted(tmp_path):
+    (tmp_path / "Vol10.epub").write_bytes(b"PK")
+    (tmp_path / "Vol2.epub").write_bytes(b"PK")
+    (tmp_path / "Vol1.epub").write_bytes(b"PK")
+
+    refs = detector.detect_book_folder(tmp_path)
+
+    assert [r.title for r in refs] == ["Vol1", "Vol2", "Vol10"]
+    assert all(r.kind == "epub" for r in refs)
+
+
+def test_book_folder_mixes_epub_and_txt(tmp_path):
+    (tmp_path / "b.txt").write_text("本文", encoding="utf-8")
+    (tmp_path / "a.epub").write_bytes(b"PK")
+
+    refs = detector.detect_book_folder(tmp_path)
+
+    assert [(r.title, r.kind) for r in refs] == [("a", "epub"), ("b", "txt")]
+
+
+def test_book_folder_extension_case_insensitive(tmp_path):
+    (tmp_path / "loud.EPUB").write_bytes(b"PK")
+    (tmp_path / "shout.TXT").write_text("x", encoding="utf-8")
+
+    refs = detector.detect_book_folder(tmp_path)
+
+    assert [(r.title, r.kind) for r in refs] == [("loud", "epub"), ("shout", "txt")]
+
+
+def test_book_folder_refs_are_provisional_no_file_open(tmp_path):
+    # Extension-only classification: title is the stem, loader stays authoritative.
+    (tmp_path / "My Novel.epub").write_bytes(b"PK")
+
+    ref = detector.detect_book_folder(tmp_path)[0]
+
+    assert ref.path == tmp_path / "My Novel.epub"
+    assert ref.title == "My Novel"
+    assert ref.volume is None
+    assert ref.image_root is None
+
+
+def test_book_folder_is_not_recursive(tmp_path):
+    (tmp_path / "top.txt").write_text("x", encoding="utf-8")
+    nested = tmp_path / "series"
+    nested.mkdir()
+    (nested / "nested.epub").write_bytes(b"PK")
+
+    refs = detector.detect_book_folder(tmp_path)
+
+    assert [r.title for r in refs] == ["top"]
+
+
+def test_book_folder_ignores_non_books_and_junk(tmp_path):
+    (tmp_path / "keep.epub").write_bytes(b"PK")
+    (tmp_path / "cover.jpg").write_bytes(b"x")
+    (tmp_path / "book.mokuro").write_text("{}", encoding="utf-8")
+    (tmp_path / ".DS_Store").write_bytes(b"x")
+    fake_dir = tmp_path / "dir.txt"  # a directory with a book suffix is not a book
+    fake_dir.mkdir()
+
+    refs = detector.detect_book_folder(tmp_path)
+
+    assert [r.title for r in refs] == ["keep"]
+
+
+def test_book_folder_empty_errors_with_name_and_manga_hint(tmp_path):
+    empty = tmp_path / "Comics"
+    empty.mkdir()
+
+    with pytest.raises(SetupError) as excinfo:
+        detector.detect_book_folder(empty)
+
+    msg = str(excinfo.value)
+    assert "Comics" in msg
+    assert "Manga" in msg
+
+
+def test_book_folder_mokuro_only_errors_with_manga_hint(tmp_path):
+    (tmp_path / "vol1.mokuro").write_text("{}", encoding="utf-8")
+
+    with pytest.raises(SetupError) as excinfo:
+        detector.detect_book_folder(tmp_path)
+
+    assert "Manga" in str(excinfo.value)
+
+
+def test_book_folder_unreadable_errors(tmp_path):
+    with pytest.raises(SetupError):
+        detector.detect_book_folder(tmp_path / "missing")
