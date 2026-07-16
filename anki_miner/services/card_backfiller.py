@@ -28,9 +28,9 @@ from __future__ import annotations
 import html
 import logging
 import re
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from anki_miner.services.anki_note_builder import (
     _HTML_TAG_RE,
@@ -63,6 +63,8 @@ if TYPE_CHECKING:
     from anki_miner.services.anki_service import AnkiService
 
 logger = logging.getLogger(__name__)
+
+_T = TypeVar("_T")
 
 BACKFILL_TAG = "anki-miner::backfill"
 _CHUNK = 500
@@ -202,7 +204,7 @@ def _reading_from_furigana(value: str) -> str | None:
     return reading or None
 
 
-def _chunks(items: list[int], size: int) -> Iterator[list[int]]:
+def _chunks(items: Sequence[_T], size: int) -> Iterator[Sequence[_T]]:
     for i in range(0, len(items), size):
         yield items[i : i + size]
 
@@ -574,3 +576,77 @@ def _frequency_proposals(
         rank = harmonic_rank(sources)
         proposals["frequency_sort"] = str(rank) if rank is not None else _FREQ_MISS_SENTINEL
     return proposals
+
+
+def apply_backfill(
+    anki_service: AnkiService,
+    plan: BackfillPlan,
+    *,
+    tag: str = BACKFILL_TAG,
+    progress: Callable[[int, int], None] | None = None,
+    is_cancelled: Callable[[], bool] | None = None,
+) -> BackfillResult:
+    """Write the plan's precomputed values, recheck staleness, tag touched notes.
+
+    What the user previewed is exactly what gets written — values are never
+    recomputed. Per chunk, one ``notesInfo`` recheck drops notes deleted since
+    the scan and (in fill-only-empty mode) drops any change whose target field
+    is no longer empty, so a value the user added between Scan and Apply is
+    never clobbered; overwrite mode only drops deleted notes (the user asked
+    for the replace). Tags are added per chunk immediately AFTER that chunk's
+    write, so cancellation never leaves written-but-untagged notes; a tag
+    failure is logged and reflected in ``tagged``, never fatal.
+
+    Cancellation is honored between chunks: committed chunks stay written and
+    tagged (the restyler precedent); partial counts are returned.
+    """
+    overwrite = plan.options.overwrite
+    total_notes = len(plan.notes)
+    notes_updated = fields_filled = tagged = skipped_stale = 0
+    written_so_far = 0
+
+    for chunk in _chunks(plan.notes, _CHUNK):
+        if is_cancelled and is_cancelled():
+            break
+        infos = {
+            info.get("noteId"): info.get("fields")
+            for info in anki_service.notes_info([note.note_id for note in chunk])
+            if isinstance(info, dict) and isinstance(info.get("noteId"), int)
+        }
+        updates: list[tuple[int, dict[str, str]]] = []
+        for note in chunk:
+            fields = infos.get(note.note_id)
+            if not isinstance(fields, dict):
+                skipped_stale += len(note.changes)  # deleted since scan
+                continue
+            payload: dict[str, str] = {}
+            for change in note.changes:
+                current = _field_value(fields, change.field_name)
+                if current is None:
+                    skipped_stale += 1
+                    continue
+                if not overwrite and not _is_empty(current):
+                    skipped_stale += 1
+                    continue
+                payload[change.field_name] = change.new_value
+            if payload:
+                updates.append((note.note_id, payload))
+        written_so_far += len(chunk)
+        if updates:
+            notes_updated += anki_service.update_notes_fields(updates)
+            fields_filled += sum(len(payload) for _nid, payload in updates)
+            attempted_ids = [nid for nid, _payload in updates]
+            try:
+                anki_service.add_tags(attempted_ids, tag)
+                tagged += len(attempted_ids)
+            except Exception as e:
+                logger.warning("Backfill tagging failed for %d note(s): %s", len(attempted_ids), e)
+        if progress:
+            progress(written_so_far, total_notes)
+
+    return BackfillResult(
+        notes_updated=notes_updated,
+        fields_filled=fields_filled,
+        tagged=tagged,
+        skipped_stale=skipped_stale,
+    )
