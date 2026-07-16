@@ -4187,6 +4187,26 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>將所選書籍採集成 Anki 卡片。</translation>
     </message>
     <message>
+        <source>Book Folder</source>
+        <translation>書籍資料夾</translation>
+    </message>
+    <message>
+        <source>Folder:</source>
+        <translation>資料夾：</translation>
+    </message>
+    <message>
+        <source>A folder of .epub or .txt books; each book is mined separately.</source>
+        <translation>內含 .epub 或 .txt 書籍的資料夾；每本書會分別採集。</translation>
+    </message>
+    <message>
+        <source>Mine Folder</source>
+        <translation>採集資料夾</translation>
+    </message>
+    <message>
+        <source>Mine every book in the selected folder, one after another.</source>
+        <translation>依序採集所選資料夾中的每一本書。</translation>
+    </message>
+    <message>
         <source>Cancel</source>
         <translation>取消</translation>
     </message>
@@ -4207,12 +4227,20 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>請先選擇有效的 .epub 或 .txt 書籍。</translation>
     </message>
     <message>
+        <source>Select a folder containing .epub or .txt books first.</source>
+        <translation>請先選擇內含 .epub 或 .txt 書籍的資料夾。</translation>
+    </message>
+    <message>
         <source>Starting…</source>
         <translation>開始中…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
         <translation>取消中……</translation>
+    </message>
+    <message>
+        <source>Book %1/%2: %3</source>
+        <translation>書籍 %1/%2：%3</translation>
     </message>
     <message>
         <source>Mining: %1</source>
@@ -4225,6 +4253,10 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Failed %1: %2.</source>
         <translation>失敗 %1：%2。</translation>
+    </message>
+    <message>
+        <source>Done: %1 succeeded, %2 failed.</source>
+        <translation>完成：%1 成功，%2 失敗。</translation>
     </message>
 </context><context>
     <name>ReadingSubtitlesTab</name>

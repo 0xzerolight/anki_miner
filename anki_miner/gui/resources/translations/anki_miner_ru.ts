@@ -4209,6 +4209,26 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>Майнить выбранную книгу в карточки Anki.</translation>
     </message>
     <message>
+        <source>Book Folder</source>
+        <translation>Папка с книгами</translation>
+    </message>
+    <message>
+        <source>Folder:</source>
+        <translation>Папка:</translation>
+    </message>
+    <message>
+        <source>A folder of .epub or .txt books; each book is mined separately.</source>
+        <translation>Папка с книгами .epub или .txt; каждая книга майнится отдельно.</translation>
+    </message>
+    <message>
+        <source>Mine Folder</source>
+        <translation>Майнить папку</translation>
+    </message>
+    <message>
+        <source>Mine every book in the selected folder, one after another.</source>
+        <translation>Майнить все книги в выбранной папке одну за другой.</translation>
+    </message>
+    <message>
         <source>Cancel</source>
         <translation>Отмена</translation>
     </message>
@@ -4229,12 +4249,20 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>Сначала выберите корректную книгу .epub или .txt.</translation>
     </message>
     <message>
+        <source>Select a folder containing .epub or .txt books first.</source>
+        <translation>Сначала выберите папку с книгами .epub или .txt.</translation>
+    </message>
+    <message>
         <source>Starting…</source>
         <translation>Запуск…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
         <translation>Отмена…</translation>
+    </message>
+    <message>
+        <source>Book %1/%2: %3</source>
+        <translation>Книга %1/%2: %3</translation>
     </message>
     <message>
         <source>Mining: %1</source>
@@ -4247,6 +4275,10 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Failed %1: %2.</source>
         <translation>Ошибка %1: %2.</translation>
+    </message>
+    <message>
+        <source>Done: %1 succeeded, %2 failed.</source>
+        <translation>Готово: успешно — %1, с ошибкой — %2.</translation>
     </message>
 </context><context>
     <name>ReadingSubtitlesTab</name>

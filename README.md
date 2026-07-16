@@ -87,7 +87,7 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Video** - mine a single video/subtitle pair, a batch folder, or YouTube URLs.
 - **Deck Builder** - mine a whole series into one frequency-ranked deck.
 - **Audio** - mine audiobooks, podcasts, radio, songs (audio + subtitle/transcript pairs).
-- **Reading** - mine manga (mokuro), novels (`.epub`, `.txt`), or standalone subtitle files.
+- **Reading** - mine manga (mokuro), novels (`.epub`, `.txt`; single book or a whole folder), or standalone subtitle files.
 - **Analytics** - mining history, difficulty rankings, milestones, undo.
 - **Tools** - generate subtitles (local Whisper), retime subtitles (alass), condense media to dialogue-only audio.
 - **Settings** - everything configurable.

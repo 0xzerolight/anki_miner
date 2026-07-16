@@ -4198,6 +4198,26 @@ Vous pourrez ajuster cela plus tard dans Paramètres → Anki.</translation>
         <translation>Extrayez le livre sélectionné dans des cartes Anki.</translation>
     </message>
     <message>
+        <source>Book Folder</source>
+        <translation>Dossier de livres</translation>
+    </message>
+    <message>
+        <source>Folder:</source>
+        <translation>Dossier :</translation>
+    </message>
+    <message>
+        <source>A folder of .epub or .txt books; each book is mined separately.</source>
+        <translation>Un dossier de livres .epub ou .txt ; chaque livre est extrait séparément.</translation>
+    </message>
+    <message>
+        <source>Mine Folder</source>
+        <translation>Extraire le dossier</translation>
+    </message>
+    <message>
+        <source>Mine every book in the selected folder, one after another.</source>
+        <translation>Extrayez chaque livre du dossier sélectionné, l'un après l'autre.</translation>
+    </message>
+    <message>
         <source>Cancel</source>
         <translation>Annuler</translation>
     </message>
@@ -4218,12 +4238,20 @@ Vous pourrez ajuster cela plus tard dans Paramètres → Anki.</translation>
         <translation>Sélectionnez d'abord un livre .epub ou .txt valide.</translation>
     </message>
     <message>
+        <source>Select a folder containing .epub or .txt books first.</source>
+        <translation>Sélectionnez d'abord un dossier contenant des livres .epub ou .txt.</translation>
+    </message>
+    <message>
         <source>Starting…</source>
         <translation>Démarrage…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
         <translation>Annulation…</translation>
+    </message>
+    <message>
+        <source>Book %1/%2: %3</source>
+        <translation>Livre %1/%2 : %3</translation>
     </message>
     <message>
         <source>Mining: %1</source>
@@ -4236,6 +4264,10 @@ Vous pourrez ajuster cela plus tard dans Paramètres → Anki.</translation>
     <message>
         <source>Failed %1: %2.</source>
         <translation>Échec %1 : %2.</translation>
+    </message>
+    <message>
+        <source>Done: %1 succeeded, %2 failed.</source>
+        <translation>Terminé : %1 réussi(s), %2 échoué(s).</translation>
     </message>
 </context><context>
     <name>ReadingSubtitlesTab</name>
