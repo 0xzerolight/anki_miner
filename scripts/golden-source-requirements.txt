@@ -1,4 +1,0 @@
-# Sole source input. PyPI publishes no unidic-lite wheel, so the workflow builds
-# this hash-locked sdist with the frozen backend before the binary-only install.
-unidic-lite==1.0.8 \
-    --hash=sha256:db9d4572d9fdd4d00a97949d4b0741ec480ee05a7e7e2e32f547500dae27b245
