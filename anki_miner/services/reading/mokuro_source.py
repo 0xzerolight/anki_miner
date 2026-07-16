@@ -61,6 +61,8 @@ class _ImageRecord:
 
 def load(ref: ReadingSourceRef) -> ReadingDocument:
     """Load one mokuro volume into a ``ReadingDocument``. See module docstring."""
+    # Per-kind ref contract: file-backed kinds always carry a path.
+    assert ref.path is not None
     data = json.loads(ref.path.read_text(encoding="utf-8"))
     pages = data.get("pages", []) or []
 

@@ -51,6 +51,8 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
     Raises:
         SetupError: unreadable file or unparseable subtitle content.
     """
+    # Per-kind ref contract: file-backed kinds always carry a path.
+    assert ref.path is not None
     path = ref.path
     try:
         raw = path.read_bytes()
