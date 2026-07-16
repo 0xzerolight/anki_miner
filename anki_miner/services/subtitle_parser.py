@@ -101,12 +101,19 @@ KanaAttestLookup = Callable[[list[str]], dict[str, bool]]
 # 副詞/代名詞 (kana adverbs/pronouns are overwhelmingly fragments).
 _KANA_RECOVER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "形状詞"})
 
-# Auxiliary-stem subtype rejected even inside _KANA_RECOVER_POS1. Grammaticalized
-# 形状詞 auxiliaries carry pos2=助動詞語幹 — よう in ようだ, みたい in みたいな/みたいだ —
-# and would otherwise pass the POS set + content_gate_ok as pure-hiragana,
-# JMdict-attested forms. They are grammar (copular/hearsay constructions), not
-# vocabulary; keep the kana path stricter than the kanji should_include path.
-_KANA_RECOVER_REJECT_POS2: str = "助動詞語幹"
+# Auxiliary pos2 subtypes rejected even inside _KANA_RECOVER_POS1. Both classes
+# pass the POS set + content_gate_ok as pure-hiragana, JMdict-attested forms:
+# - 助動詞語幹: grammaticalized 形状詞 auxiliaries (よう in ようだ, みたい in
+#   みたいな/みたいだ, そう in そうだ) — copular/hearsay grammar, not vocabulary.
+# - 非自立可能: auxiliary-capable verbs (いる/ある/くれる/おく/しまう). The tag is
+#   lexical, so 見ている's いる and 猫がいる's いる are byte-identical tokens — no
+#   token-local rule can split aux from main-verb use, and recovering the class
+#   would mint an いる card from every ている line (the dominant kana-recovery
+#   junk source). Rejecting wholesale is the deliberate precision-over-recall
+#   call: standalone kana いる/ある are N5 basics that were never mined pre-WS2
+#   either. Kanji-spelled 非自立可能 tokens (見る, 来る) are untouched — they pass
+#   should_include and never reach this path.
+_KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非自立可能"})
 
 
 class SubtitleParserService:
@@ -1063,7 +1070,7 @@ class SubtitleParserService:
         straight through. Anything it rejects gets ONE more chance:
         ``_recover_kana_content_word`` re-admits a pure-hiragana 動詞/形容詞/形状詞
         whose mined-form card front is an attested dictionary headword — recovering
-        real kana vocabulary (きれい, ある, すごい) that the script gate drops by
+        real kana vocabulary (きれい, すごい, わかる) that the script gate drops by
         default. count_lemmas and both mining passes call this method, so the
         recovery is identical across count and mine (the T-38 parity guard).
         """
@@ -1079,9 +1086,10 @@ class SubtitleParserService:
 
         1. A reading-capable offline probe is wired — else safe-degrade to no
            recovery (``None`` ⇒ today's behavior).
-        2. ``pos1 ∈ {動詞, 形容詞, 形状詞}`` and ``pos2 != 助動詞語幹`` — the junk
-           backstop that excludes 名詞 formal nouns (こと/もの/ため) and
-           grammaticalized 形状詞 auxiliaries (よう/みたい in ようだ/みたいな)
+        2. ``pos1 ∈ {動詞, 形容詞, 形状詞}`` and ``pos2 ∉ {助動詞語幹, 非自立可能}``
+           — the junk backstop that excludes 名詞 formal nouns (こと/もの/ため),
+           grammaticalized 形状詞 auxiliaries (よう/みたい in ようだ/みたいな) and
+           auxiliary-capable verbs (いる/ある/くれる in ている/てくれる)
            content_gate_ok alone would let through.
         3. The surface is pure hiragana — the only class the script gate dropped;
            everything else was already decided by ``should_include``.
@@ -1095,8 +1103,9 @@ class SubtitleParserService:
         pos1 = getattr(feature, "pos1", None)
         if pos1 not in _KANA_RECOVER_POS1:
             return False
-        if getattr(feature, "pos2", None) == _KANA_RECOVER_REJECT_POS2:
-            # ようだ/みたいな auxiliaries — grammar, not vocabulary. See constant.
+        if getattr(feature, "pos2", None) in _KANA_RECOVER_REJECT_POS2:
+            # ようだ/みたいな stems + いる/ある-class auxiliary-capable verbs —
+            # grammar, not vocabulary. See constant for the full rationale.
             return False
         surface = word_token.surface
         if not isinstance(surface, str) or not _is_pure_hiragana(surface):

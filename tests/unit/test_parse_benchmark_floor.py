@@ -21,10 +21,11 @@ under a temp dir at import). It pins two things:
    that were already correct under (a).
 
 Long-compound is provisional/dict-dependent (Task 6) — not gated here.
-Aux-context is gated only once the 非自立可能 kana-recovery reject lands (its
-fixtures deliberately attest いる/ある/くれる/おく/しまう so the category is red
-until the reject fires — see the fixture-dict comment in parse_benchmark.py).
-Linebreak-split is scoreboard-only (G4 incidence measurement, no fix shipped).
+Aux-context pins the 非自立可能 kana-recovery reject: its fixtures deliberately
+attest いる/ある/くれる/おく/しまう so the floor can only be green because the
+pos2 reject fires, never via a fixture-dict miss (the false-safe class this
+suite exists to prevent). Linebreak-split is scoreboard-only (G4 incidence
+measurement, no fix shipped).
 """
 
 from __future__ import annotations
@@ -159,6 +160,17 @@ def test_anchor_meets_colloquial_floor() -> None:
     # (e.g. the kanji lemma 凄い) or a reject regression (する from しちゃった).
     assert recall(b_co) == 1.0, f"strategy (b) colloquial recall {recall(b_co)} below 1.0"
     assert junk_rate(b_co) == 0.0, f"strategy (b) colloquial junk_rate {junk_rate(b_co)} above 0.0"
+
+
+def test_anchor_meets_aux_context_floor() -> None:
+    results = _scored()
+    b_ac = results["b-lite-anchor"].by_category["aux-context"]
+    # Load-bearing (A1): the fixtures deliberately ATTEST いる/ある/くれる/おく/
+    # しまう, so only the 非自立可能 pos2 reject keeps them out of the mined set.
+    # Junk here means the reject was reverted and every ている line mints an aux
+    # card again; a miss means a real content word (猫/見る/読む…) was lost.
+    assert recall(b_ac) == 1.0, f"strategy (b) aux-context recall {recall(b_ac)} below 1.0"
+    assert junk_rate(b_ac) == 0.0, f"strategy (b) aux-context junk_rate {junk_rate(b_ac)} above 0.0"
 
 
 def test_counter_category_is_clean() -> None:
