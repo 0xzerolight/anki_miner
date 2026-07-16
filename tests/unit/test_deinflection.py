@@ -580,6 +580,118 @@ class TestFindHighlightEndWithTrace:
         assert find_highlight_end_with_trace(text, tokens, 0, 3, tokens[0]) == (3, ())
 
 
+class TestCommonPrefixLen:
+    """``common_prefix_len`` — leading shared-character count."""
+
+    def test_no_shared_prefix(self):
+        from anki_miner.services.deinflection import common_prefix_len
+
+        assert common_prefix_len("感じる", "泳ぐ") == 0
+
+    def test_partial_shared_prefix(self):
+        from anki_miner.services.deinflection import common_prefix_len
+
+        # 感じる vs 感じた share the 感じ stem (2 chars) then diverge (る/た).
+        assert common_prefix_len("感じる", "感じた") == 2
+        # 感ずる vs 感じた share only 感.
+        assert common_prefix_len("感ずる", "感じた") == 1
+
+    def test_one_is_prefix_of_other(self):
+        from anki_miner.services.deinflection import common_prefix_len
+
+        assert common_prefix_len("感じ", "感じる") == 2
+        assert common_prefix_len("感じる", "感じ") == 2
+
+    def test_empty_string(self):
+        from anki_miner.services.deinflection import common_prefix_len
+
+        assert common_prefix_len("", "感じる") == 0
+        assert common_prefix_len("感じる", "") == 0
+
+
+def _lookup(*attested: str):
+    """Fake offline term_lookup: attests exactly the given headwords."""
+    attested_set = set(attested)
+    return lambda terms: {t for t in terms if t in attested_set}
+
+
+class TestResolveDictionaryForm:
+    """``resolve_dictionary_form`` — JMdict-anchored modern verb/adjective front.
+
+    Drives the REAL deinflection table for candidate generation; the
+    ``term_lookup`` is faked so attestation is deterministic and dict-free.
+    """
+
+    def _resolve(self, inflected_surface, orth_base, term_lookup):
+        from anki_miner.services.deinflection import resolve_dictionary_form
+
+        return resolve_dictionary_form(inflected_surface, orth_base, term_lookup)
+
+    # --- Produces the modern じる form (asserts PRODUCED, not merely no-op). ---
+
+    def test_kanjita_resolves_to_modern_jiru(self):
+        # 感じた: orthBase 感ずる (archaic サ変). transform(感じた) yields 感じる
+        # (v1) unmasked; it shares 感じ (prefix 2) with the surface, beating
+        # 感ずる (prefix 1) → override.
+        assert self._resolve("感じた", "感ずる", _lookup("感じる", "感ずる")) == "感じる"
+
+    def test_ronjita_resolves_to_modern_jiru(self):
+        assert self._resolve("論じた", "論ずる", _lookup("論じる", "論ずる")) == "論じる"
+
+    def test_shinji_stem_resolves_to_modern_jiru(self):
+        # 信じられない tokenizes to a bare 信じ verb stem (no rightward extension
+        # is a valid candidate here); transform(信じ) reaches 信じる.
+        assert self._resolve("信じ", "信ずる", _lookup("信じる", "信ずる")) == "信じる"
+
+    def test_shojita_resolves_to_modern_jiru(self):
+        assert self._resolve("生じた", "生ずる", _lookup("生じる", "生ずる")) == "生じる"
+
+    # --- Existence gate, never entries.score; orth_base need not be attested. ---
+
+    def test_override_when_only_modern_form_attested(self):
+        # Existence gate: even if 感ずる is NOT attested, the attested 感じる
+        # still wins the strictly-greater override.
+        assert self._resolve("感じた", "感ずる", _lookup("感じる")) == "感じる"
+
+    # --- Identity (the inflected surface itself) is excluded from candidates. ---
+
+    def test_attested_inflected_surface_does_not_win(self):
+        # 待った IS an attested JMdict headword ("matta!"), but it is the
+        # inflected surface itself — excluding it lets 待つ win, so the card
+        # front is the dictionary form, not the inflected string.
+        assert self._resolve("待った", "待つ", _lookup("待つ", "待った")) == "待つ"
+
+    def test_attested_te_form_surface_does_not_win(self):
+        # 通じて is attested but is the surface identity; 通じる wins.
+        assert self._resolve("通じて", "通ずる", _lookup("通じる", "通じて")) == "通じる"
+
+    # --- Regression guards: orthBase already the longest prefix → no override. ---
+
+    def test_kou_kept_when_orthbase_is_longest_prefix(self):
+        assert self._resolve("乞うた", "乞う", _lookup("乞う")) == "乞う"
+
+    def test_samayotta_kept(self):
+        assert self._resolve("彷徨った", "彷徨う", _lookup("彷徨う")) == "彷徨う"
+
+    def test_no_override_when_winner_prefix_not_strictly_greater(self):
+        # 立った → 立つ: the attested 立つ shares only 立 (prefix 1) with the
+        # surface, exactly as orthBase 立つ does — not STRICTLY greater, so the
+        # orthBase is kept unchanged (it is already correct).
+        assert self._resolve("立った", "立つ", _lookup("立つ")) == "立つ"
+
+    # --- Safe degrade. ---
+
+    def test_no_lookup_returns_orth_base_unchanged(self):
+        assert self._resolve("感じた", "感ずる", None) == "感ずる"
+
+    def test_no_attestation_returns_orth_base_unchanged(self):
+        assert self._resolve("感じた", "感ずる", _lookup()) == "感ずる"
+
+    def test_empty_inputs_return_orth_base(self):
+        assert self._resolve("", "感ずる", _lookup("感じる")) == "感ずる"
+        assert self._resolve("感じた", "", _lookup("感じる")) == ""
+
+
 class TestConditionFlagsFromRules:
     """``condition_flags_from_rules`` — Yomitan POS-check flag mapping."""
 
