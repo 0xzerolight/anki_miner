@@ -679,19 +679,29 @@ class TokenInclusionRule:
     allowed_pos: frozenset[str]
     excluded_subtypes: frozenset[str]
 
-    def should_include(self, word_token) -> bool:
-        """Whether a token is a mineable content word.
+    def content_gate_ok(self, word_token) -> bool:
+        """Content-word gate WITHOUT the final pure-hiragana script decision.
 
-        Applies the POS/subtype/script inclusion gate. Only surface forms
-        containing kanji (or valid katakana loanwords) are mined; pure-hiragana
-        content words are rejected because MeCab can't reliably tell a real kana
-        word from a grammar fragment.
+        Everything ``should_include`` checks — empty/whitespace, POS-attribute
+        presence, particle/aux/symbol/interjection skip, ``allowed_pos``
+        membership, excluded ``pos2`` subtype, non-empty lemma, and the
+        katakana-onomatopoeia REJECTIONS — EXCEPT the ``has_kanji`` script gate
+        (and the katakana ≥2-char / mixed-loanword ACCEPTANCE, which are script
+        decisions ``should_include`` applies once this returns ``True``).
+
+        Pure and I/O-free. Single source of truth for "is this a real content
+        word", reused by two callers: ``should_include`` (which layers the
+        script gate on top) and the parser's kana-recovery seam
+        (``subtitle_parser._recover_kana_content_word``), which needs the
+        content decision for a pure-hiragana token WITHOUT the script gate that
+        would otherwise drop it — the dictionary-attestation probe lives at the
+        parser layer to keep this module pure.
 
         Args:
             word_token: MeCab word token
 
         Returns:
-            True if word should be included, False otherwise
+            True if the token clears every non-script content check.
         """
         surface = word_token.surface
 
@@ -730,43 +740,69 @@ class TokenInclusionRule:
         except AttributeError:
             return False
 
-        # Check if word contains meaningful characters. Uses the shared ported
-        # CJK_IDEOGRAPH_RANGES (Unified + Ext A-I + compat + astral) so kanji
-        # outside the BMP Unified block (compat ideographs, astral Ext-B)
-        # also count as kanji, not just U+4E00-U+9FFF.
+        # Katakana-onomatopoeia REJECTIONS (the ≥2-char katakana ACCEPTANCE is a
+        # script decision applied by should_include, not here). has_kanji uses
+        # the shared ported CJK_IDEOGRAPH_RANGES (Unified + Ext A-I + compat +
+        # astral) so kanji outside the BMP Unified block also count.
         has_kanji = any(is_cjk_ideograph(c) for c in surface)
         is_katakana = all("\u30a0" <= c <= "\u30ff" or c in "ー・" for c in surface if c.strip())
-
-        # For katakana-only words, apply stricter filtering
         if is_katakana and not has_kanji:
-            # Skip onomatopoeia patterns
             stripped = surface.replace("ッ", "").replace("ー", "").replace("・", "")
             unique_chars = set(stripped)
-
-            # If only 1-2 unique characters, likely onomatopoeia/mimetic word.
-            # Gate on 副詞 (adverb) POS: mimetic/onomatopoeic words (ドキドキ,
-            # ふわふわ) are tagged as adverbs; 2-char katakana NOUNS (ビル, バス,
-            # ドア) are legitimate loanwords and must fall through to the ≥2-char
-            # acceptance floor below.
+            # 1-2 unique chars → likely onomatopoeia/mimetic. Gate on 副詞
+            # (adverb) POS: mimetic words (ドキドキ, ふわふわ) are adverbs;
+            # 2-char katakana NOUNS (ビル, バス, ドア) are loanwords and must
+            # fall through to should_include's ≥2-char acceptance floor.
             if pos1 == "副詞" and len(unique_chars) <= 2 and len(surface) <= 4:
                 return False
-
-            # If ends in small tsu and is short, likely sound effect
+            # Short katakana ending in small tsu → likely sound effect.
             if surface.endswith("ッ") and len(surface) <= 3:
                 return False
 
-            # Must be at least 2 chars to be valid katakana word
+        return True
+
+    def should_include(self, word_token) -> bool:
+        """Whether a token is a mineable content word.
+
+        Applies the POS/subtype/script inclusion gate. Only surface forms
+        containing kanji (or valid katakana loanwords) are mined; pure-hiragana
+        content words are rejected because MeCab can't reliably tell a real kana
+        word from a grammar fragment. (The parser layer recovers a curated,
+        dictionary-attested slice of those at ``_should_include_word``; this
+        rule stays script-only and pure.)
+
+        Args:
+            word_token: MeCab word token
+
+        Returns:
+            True if word should be included, False otherwise
+        """
+        # Every non-script content check lives in content_gate_ok (single source
+        # of truth, reused by the kana-recovery seam); this method layers only
+        # the script gate on top — no check is duplicated here.
+        if not self.content_gate_ok(word_token):
+            return False
+
+        surface = word_token.surface
+        feature = word_token.feature
+        pos1 = feature.pos1
+        has_kanji = any(is_cjk_ideograph(c) for c in surface)
+        is_katakana = all("\u30a0" <= c <= "\u30ff" or c in "ー・" for c in surface if c.strip())
+
+        # Katakana-only words: onomatopoeia already rejected by content_gate_ok,
+        # so accept any remaining ≥2-char loanword (ビル, コンピューター).
+        if is_katakana and not has_kanji:
             return len(surface) >= 2
 
         # Mixed katakana+hiragana loanword verbs/adjectives (サボる, ググる,
         # ディスる, ヤバい): has_kanji is False and is_katakana is False because
         # the hiragana okurigana breaks the all-katakana test, so the script
         # gate below would drop them. Accept when the dictionary form carries
-        # katakana — 動詞/形容詞 only, never pure-hiragana tokens (dropped by
-        # design) or other POS.
+        # katakana — 動詞/形容詞 only, never pure-hiragana tokens (dropped here
+        # by design; recovered at the parser seam) or other POS.
         if pos1 in ("動詞", "形容詞"):
-            orth_base = getattr(word_token.feature, "orthBase", None)
-            dict_form = orth_base if isinstance(orth_base, str) and orth_base else lemma
+            orth_base = getattr(feature, "orthBase", None)
+            dict_form = orth_base if isinstance(orth_base, str) and orth_base else feature.lemma
             if any("゠" <= c <= "ヿ" for c in dict_form):
                 return True
 
