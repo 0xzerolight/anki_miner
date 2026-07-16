@@ -190,7 +190,7 @@ class CardBackfillTab(QWidget):
         self.summary_label.setText("")
         self._refresh_checkbox_gates()
 
-    def iter_close_workers(self) -> Iterator[object]:
+    def iter_close_workers(self) -> Iterator[BackfillScanWorker | BackfillApplyWorker]:
         if self.worker_thread is not None and self.worker_thread.isRunning():
             yield self.worker_thread
 
