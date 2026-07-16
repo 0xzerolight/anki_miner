@@ -40,6 +40,35 @@ class TestTokenizedWord:
         )
         assert word.video_file == video
 
+    def test_resolved_reading_defaults_empty(self):
+        # Pitch-realignment field for the じる/ずる override: empty means "no
+        # override; use lemma_reading". Set only when the resolver diverges the
+        # card front's reading from the lemma's own reading.
+        word = TokenizedWord(
+            surface="感じ",
+            lemma="感ずる",
+            reading="カンジ",
+            sentence="感じた。",
+            start_time=0.0,
+            end_time=1.0,
+            duration=1.0,
+        )
+        assert word.resolved_reading == ""
+
+    def test_resolved_reading_settable(self):
+        word = TokenizedWord(
+            surface="感じ",
+            lemma="感ずる",
+            orth_base="感じる",
+            reading="カンジ",
+            sentence="感じた。",
+            start_time=0.0,
+            end_time=1.0,
+            duration=1.0,
+            resolved_reading="かんじる",
+        )
+        assert word.resolved_reading == "かんじる"
+
     def test_str_shows_lemma_and_reading(self):
         word = TokenizedWord(
             surface="食べた",

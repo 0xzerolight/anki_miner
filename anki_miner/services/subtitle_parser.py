@@ -15,7 +15,7 @@ from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.reading import ReadingUnit
 from anki_miner.models.word import select_mined_form
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, TermLookup
-from anki_miner.services.deinflection import find_highlight_end
+from anki_miner.services.deinflection import find_highlight_end, resolve_dictionary_form
 from anki_miner.services.morphology import (
     ReadingLookup,
     TokenInclusionRule,
@@ -23,6 +23,7 @@ from anki_miner.services.morphology import (
     apply_special_readings,
     attest_merged_readings,
     extract_lemma,
+    extract_orth_base,
     extract_reading,
     iter_token_spans,
     merge_compound_suffixes,
@@ -80,6 +81,13 @@ COMPOUND_MATCHING = True
 # Phase-1 → Phase-2 cross-file reuse pattern for any corpus up to this size.
 _LINE_CACHE_MAX_FILES: int = 256
 
+# Bound for the verb-front resolver memo (_front_cache). Each entry is one tiny
+# resolved-form string keyed by (inflected_surface, orth_base, cType); the set
+# of distinct verb/adjective forms in any corpus is small, but a clear-on-cap
+# keeps a whole-corpus Deck Builder run from growing without limit (mirrors the
+# compound matcher's existence cache).
+_FRONT_CACHE_CAP: int = 200_000
+
 
 class SubtitleParserService:
     """Parse subtitles and extract Japanese vocabulary words (stateless service)."""
@@ -131,6 +139,10 @@ class SubtitleParserService:
         self._compound_matcher: CompoundDictionaryMatcher | None = None
         if term_lookup is not None and COMPOUND_MATCHING:
             self._compound_matcher = CompoundDictionaryMatcher(term_lookup, self._inclusion_rule)
+        # Same injected offline existence probe drives the verb-front resolver
+        # (see _resolve_front / deinflection.resolve_dictionary_form). None ⇒ the
+        # resolver safe-degrades and mining stays byte-identical to pre-resolver.
+        self._term_lookup = term_lookup
         self._filter_pattern: re.Pattern[str] | None = None
         if config.use_subtitle_regex_filter and config.subtitle_regex_filter:
             try:
@@ -170,6 +182,11 @@ class SubtitleParserService:
         # large Deck Builder builds while still caching all files touched in Phase 1
         # for Phase 2 reuse when the corpus fits within the cap.
         self._line_cache: dict[Path, tuple[float, list[tuple[str, list, list, float, float, float]]]] = {}
+        # Verb-front resolver memo (distinct lifetime from the per-parse memos,
+        # like _line_cache): the deinflect + offline existence lookup is
+        # deterministic per (inflected_surface, orth_base, cType), so it survives
+        # across parse_* calls and is bounded by clear-on-cap (_FRONT_CACHE_CAP).
+        self._front_cache: dict[tuple[str, str, str], str] = {}
 
     # ------------------------------------------------------------------
     # Per-parse memoization helpers
@@ -425,6 +442,14 @@ class SubtitleParserService:
         # for verbs/adjectives, surface otherwise (see select_mined_form).
         pos = word_token.feature.pos1
         orth_base = self._mining_base(word_token)
+        # Verb/adjective fronts: rewrite the archaic じる/ずる orthBase (感ずる) to
+        # the modern JMdict headword (感じる) when the deinflected inflected span
+        # attests it. No-op for every other POS, for mining_base folds, and when
+        # no offline dict is wired. resolved_reading (pitch realignment) is set
+        # after ``mined`` below.
+        resolved_front = self._resolve_front(word_token, orth_base, text, tok_start, highlight_end)
+        front_overridden = resolved_front != orth_base
+        orth_base = resolved_front
         mined = select_mined_form(pos, orth_base, lemma, surface)
 
         # Dedup on mined_form, NOT lemma: UniDic collapses kanji-variant
@@ -512,6 +537,14 @@ class SubtitleParserService:
         # recomputes the lemma's reading like the surface-mined case.
         lemma_reading = expression_reading if mined == lemma else self._reading(lemma)
 
+        # Pitch reading realignment: when the resolver diverged the front from
+        # the lemma (感じる card, but archaic lemma 感ずる), pitch must key on the
+        # front's reading (かんじる), not the lemma's own (感ずる→かんずる). Derive
+        # it from the resolved front's kana (== expression_reading on the
+        # overridden verb path). Empty when no override fired ⇒ pitch keeps the
+        # lemma_reading path unchanged.
+        resolved_reading = self._reading(mined) if front_overridden else ""
+
         if self.config.bold_target_in_sentence:
             # Bold the full inflected form (verb/adjective + auxiliary
             # chain), not just the stem morpheme: 蒔いた, not 蒔い.
@@ -533,6 +566,7 @@ class SubtitleParserService:
             expression_furigana=expression_furigana,
             expression_reading=expression_reading,
             lemma_reading=lemma_reading,
+            resolved_reading=resolved_reading,
             sentence_furigana=sentence_furigana,
             sentence_reading=sentence_reading,
             pos=word_token.feature.pos1,
@@ -907,6 +941,42 @@ class SubtitleParserService:
         """Source-orthography dictionary form for mining, with derived
         sub-lemma folding (see morphology.mining_base)."""
         return mining_base(word_token)
+
+    def _resolve_front(self, word_token, orth_base: str, text: str, tok_start: int, highlight_end: int) -> str:
+        """Modern JMdict dictionary form for a verb/adjective card front.
+
+        Returns ``orth_base`` unchanged for every non-verb/adjective token, for
+        ``mining_base`` folds (never un-fold a potential/ra-nuki/ク-form — its
+        orth_base is the parent lemma, not the token's own orthBase), when no
+        offline ``term_lookup`` is wired (safe degrade), and whenever the
+        resolver can't improve on orth_base. Otherwise the archaic じる/ずる
+        orthBase (感ずる) is rewritten to the deinflection-attested modern
+        headword (感じる). See deinflection.resolve_dictionary_form for the
+        algorithm; the deinflect + offline existence lookup is memoized per
+        ``(inflected_surface, orth_base, cType)`` so identical tokens never repeat
+        the work.
+        """
+        feature = getattr(word_token, "feature", None)
+        if getattr(feature, "pos1", None) not in ("動詞", "形容詞"):
+            return orth_base
+        if self._term_lookup is None:
+            return orth_base
+        if orth_base != extract_orth_base(word_token):
+            return orth_base
+        # The inflected span the resolver deinflects: the token surface plus its
+        # rightward highlight extension (感じた), or the bare surface when it did
+        # not extend (感じ before a noun) — run either way, else 感じ-before-a-noun
+        # keeps the archaic 感ずる.
+        inflected_surface = text[tok_start:highlight_end]
+        ctype = getattr(feature, "cType", None)
+        key = (inflected_surface, orth_base, ctype if isinstance(ctype, str) else "")
+        cached = self._front_cache.get(key)
+        if cached is None:
+            cached = resolve_dictionary_form(inflected_surface, orth_base, self._term_lookup)
+            if len(self._front_cache) >= _FRONT_CACHE_CAP:
+                self._front_cache.clear()
+            self._front_cache[key] = cached
+        return cached
 
     def _extract_reading(self, word_token) -> str:
         """Extract kana reading from a token (see morphology.extract_reading)."""

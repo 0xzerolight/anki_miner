@@ -45,6 +45,13 @@ class TokenizedWord:
     expression_furigana: str = ""  # Furigana for expression, e.g. "食べる[たべる]"
     expression_reading: str = ""  # Plain kana reading of expression, e.g. "たべる"
     lemma_reading: str = ""  # Plain kana reading of the lemma, for audio retry
+    # Kana reading of the resolved card front when the JMdict verb-front resolver
+    # overrode ``orth_base`` (感じた: front 感じる / reading かんじる) — see
+    # deinflection.resolve_dictionary_form. Empty when no override fired. Pitch
+    # is otherwise lemma-reading-keyed, but the じる/ずる override diverges the
+    # front's reading (かんじる) from the archaic lemma's own (感ずる→かんずる),
+    # so the pitch sites prefer this field over ``lemma_reading`` when it is set.
+    resolved_reading: str = ""
     sentence_furigana: str = ""  # Furigana for sentence, e.g. "日本語[にほんご]を食べる[たべる]。"
     sentence_reading: str = ""  # Plain kana reading of sentence, e.g. "にほんごをたべる。"
     frequency_rank: int | None = None  # Word frequency rank (1 = most common); = min across sources
@@ -113,7 +120,11 @@ class TokenizedWord:
         the spelling the card shows — 殺る must not get 遣る's "to do"
         definition or 掛ける's rank; only pitch stays lemma-keyed
         (variants share the reading, canonical orthography has the better
-        hit rate in reading-scoped pitch CSVs).
+        hit rate in reading-scoped pitch CSVs). The one exception: when the
+        JMdict verb-front resolver overrides ``orth_base`` (感じた: 感ずる →
+        感じる), the front's reading (かんじる) diverges from the archaic
+        lemma's own (感ずる→かんずる), so ``resolved_reading`` carries the
+        front reading and the pitch sites prefer it over ``lemma_reading``.
         Kana-surface verbs never reach mining (TokenInclusionRule requires
         kanji or katakana), so orthBase-vs-lemma only ever differs on
         kanji-surface variant tokens. Verbs carded before this change
