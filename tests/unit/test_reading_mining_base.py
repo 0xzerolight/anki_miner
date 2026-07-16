@@ -439,3 +439,27 @@ class TestDetectOrReport:
         assert result is None
         text = tab.log_widget.text_edit.toPlainText()
         assert "boom" in text
+
+    def test_explicit_detect_fn_used_instead_of_default(self, tab):
+        refs = [_make_item().source]
+        custom = MagicMock(return_value=refs)
+        with patch(_DETECT) as default_detect:
+            result = tab._detect_or_report(Path("/src/books"), detect_fn=custom)
+        custom.assert_called_once_with(Path("/src/books"))
+        default_detect.assert_not_called()
+        assert result is refs
+
+    def test_explicit_detect_fn_setup_error_surfaced(self, tab):
+        custom = MagicMock(side_effect=SetupError("No .epub or .txt books found"))
+        result = tab._detect_or_report(Path("/src/empty"), detect_fn=custom)
+        assert result is None
+        assert "No .epub or .txt books found" in tab.log_widget.text_edit.toPlainText()
+
+    def test_default_detect_resolves_at_call_time(self, tab):
+        # The default must late-bind to the module attribute so test patches of
+        # _reading_mining_base.detector.detect keep reaching the default path.
+        refs = [_make_item().source]
+        with patch(_DETECT, return_value=refs) as detect:
+            result = tab._detect_or_report(Path("/src/vol"), detect_fn=None)
+        detect.assert_called_once_with(Path("/src/vol"))
+        assert result is refs
