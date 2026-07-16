@@ -509,3 +509,93 @@ def test_title_falls_back_to_ref(tmp_path: Path) -> None:
 
     assert doc.title == "源氏物語"
     assert doc.episode == "源氏物語"
+
+
+# --------------------------------------------------------------------------- #
+# Member-size caps (decompression-bomb guard)
+# --------------------------------------------------------------------------- #
+
+
+def _two_chapter_files(ch1_body: str, ch2_body: str) -> dict[str, bytes | str]:
+    return {
+        "OEBPS/content.opf": _opf(
+            [
+                ("c1", "ch1.xhtml", "application/xhtml+xml", ""),
+                ("c2", "ch2.xhtml", "application/xhtml+xml", ""),
+            ],
+            [("c1", None), ("c2", None)],
+        ),
+        "OEBPS/ch1.xhtml": _xhtml(f"<p>{ch1_body}</p>"),
+        "OEBPS/ch2.xhtml": _xhtml(f"<p>{ch2_body}</p>"),
+    }
+
+
+def test_oversized_spine_member_skipped_with_warning(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from anki_miner.services.reading import epub_source
+
+    monkeypatch.setattr(epub_source, "_MAX_MEMBER_BYTES", 2048)
+    path = _build_epub(tmp_path, _two_chapter_files("あ" * 4000, "短い文です。"))
+
+    doc = load(_ref(path))
+
+    # The oversized chapter is skipped with a warning; the small one still mines.
+    assert any("ch1.xhtml" in w and "oversized" in w.lower() for w in doc.warnings), doc.warnings
+    texts = [u.text for u in doc.units]
+    assert "短い文です。" in texts
+    assert not any("あああ" in t for t in texts)
+
+
+def test_oversized_opf_raises_setup_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from anki_miner.services.reading import epub_source
+
+    # Cap above container.xml (~250 B) but below the OPF: structural member
+    # over the cap must abort, like the DRM gate.
+    monkeypatch.setattr(epub_source, "_MAX_MEMBER_BYTES", 400)
+    path = _build_epub(tmp_path, _two_chapter_files("本文です。", "続きです。"))
+
+    with pytest.raises(SetupError):
+        load(_ref(path))
+
+
+def test_oversized_nav_falls_back_to_spine_labels(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from anki_miner.services.reading import epub_source
+
+    monkeypatch.setattr(epub_source, "_MAX_MEMBER_BYTES", 4096)
+    files = _two_chapter_files("一章の本文です。", "二章の本文です。")
+    files["OEBPS/content.opf"] = _opf(
+        [
+            ("c1", "ch1.xhtml", "application/xhtml+xml", ""),
+            ("c2", "ch2.xhtml", "application/xhtml+xml", ""),
+            ("nv", "nav.xhtml", "application/xhtml+xml", "nav"),
+        ],
+        [("c1", None), ("c2", None)],
+    )
+    # Nav document alone exceeds the cap → chapter labels degrade to spine index.
+    files["OEBPS/nav.xhtml"] = _nav([("ch1.xhtml", "第一章" + "あ" * 5000), ("ch2.xhtml", "第二章")])
+    path = _build_epub(tmp_path, files)
+
+    doc = load(_ref(path))
+
+    labels = {u.location_label for u in doc.units}
+    assert labels == {"ch.0", "ch.1"}, labels
+
+
+def test_read_member_bounded_read_on_underdeclared_size(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A zip whose central directory under-declares a member's size must still
+    be stopped by the bounded read (cap+1), not balloon memory."""
+    import io
+    from types import SimpleNamespace
+
+    from anki_miner.services.reading import epub_source
+
+    monkeypatch.setattr(epub_source, "_MAX_MEMBER_BYTES", 100)
+
+    class _LyingZip:
+        def getinfo(self, entry):
+            return SimpleNamespace(file_size=10)  # claims tiny...
+
+        def open(self, entry):
+            return io.BytesIO(b"x" * 500)  # ...streams big
+
+    with pytest.raises(SetupError):
+        epub_source._read_member(_LyingZip(), "chapter.xhtml", Path("book.epub"))
