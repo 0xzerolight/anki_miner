@@ -424,3 +424,17 @@ def test_archive_unmatched_page_warns(tmp_path):
     assert doc.units[0].image_ref == ImageRef(archive, "aaa.jpg")
     assert doc.units[1].image_ref is None
     assert any("no image matched" in w for w in doc.warnings)
+
+
+def test_load_over_cap_raises_setup_error(tmp_path, monkeypatch):
+    """load() trusts a ref but must still refuse an oversized sidecar (safe standalone)."""
+    import pytest
+
+    from anki_miner.exceptions import SetupError
+    from anki_miner.services.reading import mokuro_source
+
+    ref = _write_ref(tmp_path, _mokuro([_page("001.jpg", [_block(["セリフ"])])]), None)
+    monkeypatch.setattr(mokuro_source, "MAX_MOKURO_JSON_BYTES", 16)
+
+    with pytest.raises(SetupError, match="cap"):
+        load(ref)
