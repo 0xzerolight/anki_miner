@@ -184,6 +184,7 @@ class EpisodeProcessor:
         expression_audio_fetcher: ExpressionAudioFetcher | None = None,
         dictionary_registry: DictionaryRegistry | None = None,
         sentence_audio_fetcher: SentenceAudioFetcher | None = None,
+        owns_lookup_services: bool = True,
     ):
         """Initialize the episode processor.
 
@@ -219,6 +220,14 @@ class EpisodeProcessor:
                 Gated by ``_reading_tts_active``. ``None`` is only valid for
                 test construction; the service factory always provides a
                 (possibly empty-chain) fetcher.
+            owns_lookup_services: When False, this processor was built over a
+                worker-owned :class:`SharedLookupServices` bundle and must NOT
+                close the definition/frequency sqlite handles in ``close()`` /
+                ``release_dictionary_resources()`` — the sharing worker's
+                ``finally`` owns that teardown (frequency providers do NOT
+                lazily reopen after close, so a between-items close would
+                silently kill frequency data for the rest of the run). Default
+                True preserves the per-run ownership of every other caller.
         """
         self.config = config
         self.subtitle_parser = subtitle_parser
@@ -237,6 +246,7 @@ class EpisodeProcessor:
         self.expression_audio_fetcher = expression_audio_fetcher
         self.sentence_audio_fetcher = sentence_audio_fetcher
         self._dictionary_registry = dictionary_registry
+        self.owns_lookup_services = owns_lookup_services
         self._cancelled = False
         # Per-run external cancel source (e.g. a worker's threading.Event
         # ``is_set``), installed/removed by process_episode around each run
@@ -329,7 +339,13 @@ class EpisodeProcessor:
 
         The per-run frequency sources hold their own ``index.sqlite`` handles,
         so they are released here too (idempotent; safe when absent).
+
+        Skipped entirely when the lookup services are worker-owned
+        (``owns_lookup_services=False``): only the owner closes shared handles,
+        in its end-of-run ``finally``.
         """
+        if not self.owns_lookup_services:
+            return
         self.definition_service.close()
         if self.frequency_service is not None:
             self.frequency_service.close()
@@ -352,9 +368,14 @@ class EpisodeProcessor:
         # DEBUG-logged so a Windows reporter can confirm whether close() (vs the
         # subsequent processor build) is where a back-to-back mine blocks.
         logger.debug("closing processor resources")
-        self.definition_service.close()
-        if self.frequency_service is not None:
-            self.frequency_service.close()
+        # Worker-owned shared lookup services are NOT closed here — frequency
+        # providers never reopen after close, so a between-items close would
+        # strip frequency data from every later queue item. The owning worker
+        # closes the bundle once, in its end-of-run finally.
+        if self.owns_lookup_services:
+            self.definition_service.close()
+            if self.frequency_service is not None:
+                self.frequency_service.close()
         if self.expression_audio_fetcher is not None:
             close = getattr(self.expression_audio_fetcher, "close", None)
             if callable(close):
