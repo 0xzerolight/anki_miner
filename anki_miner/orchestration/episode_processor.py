@@ -482,39 +482,58 @@ class EpisodeProcessor:
         # the min rank (frequency_rank) that drives the top-N filter, and the
         # harmonic-mean rank (frequency_harmonic_rank) that drives the sort field.
         if self.frequency_service and self.frequency_service.is_available():
-            for word in all_words:
-                # Keyed on mined_form (the card-front spelling), NOT lemma:
-                # unidic's canonical lemma collapses kanji variants
-                # (懸ける/賭ける/架ける → 掛ける), so lemma-keyed lookups gave
-                # every variant the common spelling's rank. Per-spelling sources
-                # (JPDB) carry distinct rows per orthography — query the spelling
-                # the card actually shows. Reading-scope so homographs stop
-                # inheriting each other's ranks; hiragana-normalize so a katakana
-                # subtitle reading matches a hiragana-stored frequency reading.
-                reading = katakana_to_hiragana(word.expression_reading or word.lemma_reading or word.reading)
-                # One per-source fetch, then derive min + harmonic locally via
-                # the pure min_rank/harmonic_rank helpers. A single lookup_all
-                # feeds both scalars, so the per-source SQL runs once per word
-                # instead of once for each derived rank.
-                sources = self.frequency_service.lookup_all(word.mined_form, reading)
-                # Whole-result miss-only lemma fallback (mirrors the JPod101
-                # audio retry ladder): fires only when NO source attests the
-                # variant spelling, so a ranked breakdown is always uniformly
-                # keyed — all spelling-true or all lemma. Deliberately NOT
-                # per-source: a per-source cascade would re-inject the lemma
-                # rank from any source lacking the per-spelling row, and since
-                # frequency_rank = min_rank(sources) gates the top-N filter,
-                # that low lemma rank would keep a rare variant above the
-                # max_frequency_rank cutoff it should now fall past. Known
-                # edge: a variant attested ONLY by a categorical source (JLPT
-                # band, CATEGORICAL_RANK sentinel) counts as attested and
-                # suppresses the numeric lemma fallback — accepted for
-                # breakdown uniformity; unreachable for per-spelling numeric
-                # sources.
-                if not sources and word.lemma and word.lemma != word.mined_form:
-                    sources = self.frequency_service.lookup_all(
-                        word.lemma, katakana_to_hiragana(word.lemma_reading or word.reading)
+            # Keyed on mined_form (the card-front spelling), NOT lemma:
+            # unidic's canonical lemma collapses kanji variants
+            # (懸ける/賭ける/架ける → 掛ける), so lemma-keyed lookups gave
+            # every variant the common spelling's rank. Per-spelling sources
+            # (JPDB) carry distinct rows per orthography — query the spelling
+            # the card actually shows. Reading-scope so homographs stop
+            # inheriting each other's ranks; hiragana-normalize so a katakana
+            # subtitle reading matches a hiragana-stored frequency reading.
+            # One batched per-source fetch for the whole word list (an
+            # IN-clause query per source instead of one query per word), then
+            # derive min + harmonic locally via the pure min_rank/harmonic_rank
+            # helpers — a single lookup_all_many feeds both scalars.
+            pairs: list[tuple[str, str | None]] = [
+                (
+                    word.mined_form,
+                    katakana_to_hiragana(word.expression_reading or word.lemma_reading or word.reading),
+                )
+                for word in all_words
+            ]
+            all_sources = self.frequency_service.lookup_all_many(pairs)
+            # Whole-result miss-only lemma fallback (mirrors the JPod101
+            # audio retry ladder): fires only when NO source attests the
+            # variant spelling, so a ranked breakdown is always uniformly
+            # keyed — all spelling-true or all lemma. Deliberately NOT
+            # per-source: a per-source cascade would re-inject the lemma
+            # rank from any source lacking the per-spelling row, and since
+            # frequency_rank = min_rank(sources) gates the top-N filter,
+            # that low lemma rank would keep a rare variant above the
+            # max_frequency_rank cutoff it should now fall past. Known
+            # edge: a variant attested ONLY by a categorical source (JLPT
+            # band, CATEGORICAL_RANK sentinel) counts as attested and
+            # suppresses the numeric lemma fallback — accepted for
+            # breakdown uniformity; unreachable for per-spelling numeric
+            # sources.
+            fallback_indexes = [
+                i
+                for i, (word, sources) in enumerate(zip(all_words, all_sources, strict=True))
+                if not sources and word.lemma and word.lemma != word.mined_form
+            ]
+            if fallback_indexes:
+                fallback_pairs: list[tuple[str, str | None]] = [
+                    (
+                        all_words[i].lemma,
+                        katakana_to_hiragana(all_words[i].lemma_reading or all_words[i].reading),
                     )
+                    for i in fallback_indexes
+                ]
+                for i, sources in zip(
+                    fallback_indexes, self.frequency_service.lookup_all_many(fallback_pairs), strict=True
+                ):
+                    all_sources[i] = sources
+            for word, sources in zip(all_words, all_sources, strict=True):
                 word.frequency_sources = sources
                 word.frequency_rank = min_rank(sources)
                 word.frequency_harmonic_rank = harmonic_rank(sources)
