@@ -20,7 +20,6 @@ under a temp dir at import). It pins two things:
    finalized nominal-suffix corpus, AND does not regress the guard categories
    that were already correct under (a).
 
-Long-compound is provisional/dict-dependent (Task 6) — not gated here.
 Aux-context pins the 非自立可能 kana-recovery reject: its fixtures deliberately
 attest いる/ある/くれる/おく/しまう so the floor can only be green because the
 pos2 reject fires, never via a fixture-dict miss (the false-safe class this
@@ -182,7 +181,16 @@ def test_counter_category_is_clean() -> None:
     assert junk_rate(b_ct) == 0.0, f"strategy (b) counter junk_rate {junk_rate(b_ct)} above 0.0"
 
 
-# NOTE: jiru-zuru (Task 3), kana-written (Task 4), nominal-suffix (Task 5) and
-# colloquial/counter (A2) floors are gated above; long-compound stays provisional
-# (Task 6), aux-context activates with the 非自立可能 reject (A1), and
-# linebreak-split is scoreboard-only.
+def test_anchor_meets_long_compound_floor() -> None:
+    results = _scored()
+    b_lc = results["b-lite-anchor"].by_category["long-compound"]
+    # Task 6 (Q2): attested 2-token compounds merge whole — including the
+    # 13-char katakana case only the 16-char span cap admits — while the
+    # deliberately-attested 14-char greeting still fragments on the 5-token cap.
+    assert recall(b_lc) == 1.0, f"strategy (b) long-compound recall {recall(b_lc)} below 1.0"
+    assert junk_rate(b_lc) == 0.0, f"strategy (b) long-compound junk_rate {junk_rate(b_lc)} above 0.0"
+
+
+# NOTE: jiru-zuru (Task 3), kana-written (Task 4), nominal-suffix (Task 5),
+# colloquial/counter (A2), aux-context (A1) and long-compound (Task 6/Q2)
+# floors are gated above; linebreak-split is scoreboard-only.

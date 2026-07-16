@@ -183,6 +183,17 @@ class TestSpanConstraints:
         out = _matcher({"一二三四"}, max_span_tokens=3).merge_line("一二三四", tokens)
         assert [t.surface for t in out] == ["一", "二", "三", "四"]
 
+    def test_two_token_katakana_compound_merges_at_16_cap(self):
+        # Q2: the beneficiary class of the 12→16 char-cap raise — 13-16 char
+        # 2-token katakana tech compounds JMdict attests.
+        tokens = [
+            _tok("アプリケーション", "名詞", "普通名詞", kana="アプリケーション"),
+            _tok("プログラム", "名詞", "普通名詞", kana="プログラム"),
+        ]
+        joined = "アプリケーションプログラム"
+        out = _matcher({joined}).merge_line(joined, tokens)
+        assert [t.surface for t in out] == [joined]
+
     def test_char_cap_respected(self):
         long_a = "美" * (_MAX_SPAN_CHARS - 1)
         tokens = [

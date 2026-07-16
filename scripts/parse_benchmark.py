@@ -313,6 +313,14 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "しまう",
     # attested collocation for the long-compound swallow-by-design fixture
     "気がする",
+    # long-compound (Task 6): the 2-token attested compounds the matcher must
+    # keep whole — 応急処置 (attestation-only) and the 13-char katakana compound
+    # the 16-char span cap exists for. The 14-char greeting is DELIBERATELY
+    # attested: it must still NOT merge (7 tokens > the 5-token cap) — the
+    # adversarial proof the token cap holds even for attested long phrases.
+    "応急処置",
+    "アプリケーションプログラム",
+    "お誕生日おめでとうございます",
 )
 
 _ANCHOR_DICT_ID = "anchor-fixture"
