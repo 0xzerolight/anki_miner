@@ -1,0 +1,3 @@
+{"id":"pr01","sentence":"帰れる","expected":["帰れる"],"category":"potential-ranuki"}
+{"id":"pr02","sentence":"見れる","expected":["見れる"],"category":"potential-ranuki","note":"ra-nuki kept"}
+{"id":"pr03","sentence":"保てる","expected":["保てる"],"category":"potential-ranuki"}

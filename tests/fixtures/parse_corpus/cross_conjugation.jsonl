@@ -1,0 +1,3 @@
+{"id":"cc01","sentence":"立った","expected":["立つ"],"category":"cross-conjugation"}
+{"id":"cc02","sentence":"待った","expected":["待つ"],"category":"cross-conjugation"}
+{"id":"cc03","sentence":"言った","expected":["言う"],"category":"cross-conjugation"}
