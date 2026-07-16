@@ -3254,8 +3254,8 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation>Локальные известные слова</translation>
     </message>
     <message>
-        <source>Words you added from the Word Curator — ignored on every run, kept across cache rebuilds, exportable for re-import into jiten.moe.</source>
-        <translation>Слова, добавленные вами через Куратор слов, — игнорируются при каждом запуске, сохраняются при пересборке кэша, экспортируются для повторного импорта в jiten.moe.</translation>
+        <source>Words you added from the Word Curator — ignored on every run, kept across cache rebuilds, exportable for re-import into jiten.moe. Import accepts jpdb, Migaku and AnkiMorphs exports or plain word lists.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Filter…</source>
@@ -3264,6 +3264,10 @@ This cannot be undone. You would need to re-import to use this source again.</so
     <message>
         <source>Remove Selected</source>
         <translation>Удалить выбранные</translation>
+    </message>
+    <message>
+        <source>Import…</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Export…</source>
@@ -3280,6 +3284,79 @@ This cannot be undone. You would need to re-import to use this source again.</so
     <message>
         <source>%1 user word(s) · %2 cached from Anki</source>
         <translation>%1 пользовательских слов · %2 в кэше из Anki</translation>
+    </message>
+    <message>
+        <source>jpdb review export</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Migaku word export</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Migaku legacy add-on backup</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>AnkiMorphs known morphs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Migaku word export (CSV)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>plain word list</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Known Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Known word lists (*.csv *.txt *.json);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Detected: %1 — this file has no known/learning status; all %2 entries will be imported.
+
+Add %3 word(s) to your known list?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Detected: %1 — %2 entries, %3 qualify as known.
+
+Add %3 word(s) to your known list?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Complete</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Added %1 word(s) to your list. %2 were already in it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Detected: %1 — but no entries in this file qualify as known.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The file could not be read.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), plain word lists (one word per line).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import Failed</source>
+        <translation type="unfinished">Сбой импорта</translation>
+    </message>
+    <message>
+        <source>Unexpected error while reading the file:
+%1</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Export Known Words</source>
