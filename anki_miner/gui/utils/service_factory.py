@@ -350,7 +350,17 @@ def create_services(
         # gated ONLY on an indexed dict being present — the morphology merges it
         # corrects (noun-suffix/prefix/nominalizer) run regardless.
         reading_lookup = definition_service.offline_term_readings if has_indexed_dict else None
-        subtitle_parser = SubtitleParserService(config, term_lookup=term_lookup, reading_lookup=reading_lookup)
+        # Reading-capable existence probe for pure-hiragana kana recovery (WS2):
+        # term-OR-reading (has_offline_definitions), NOT the term-only
+        # offline_terms_exist above — きれい is attested only as 綺麗's reading.
+        # None ⇒ no offline dict ⇒ no recovery (safe degrade, pre-WS2 behavior).
+        kana_attest_lookup = definition_service.has_offline_definitions if has_indexed_dict else None
+        subtitle_parser = SubtitleParserService(
+            config,
+            term_lookup=term_lookup,
+            reading_lookup=reading_lookup,
+            kana_attest_lookup=kana_attest_lookup,
+        )
     # Share the parser's tagger with the word filter so i+1 swap can
     # rebuild bolded sentence fields without spinning up a second tagger
     # (fugashi.Tagger initialization is non-trivial).

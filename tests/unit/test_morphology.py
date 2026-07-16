@@ -38,6 +38,22 @@ def _noun_token(surface, kana):
     )
 
 
+def _prefix_token(surface, kana):
+    """Whitelisted 接頭辞 token (like 不/無/超), pos2='*' as UniDic emits."""
+    return SimpleNamespace(
+        surface=surface,
+        feature=SimpleNamespace(pos1="接頭辞", pos2="*", lemma=surface, kana=kana),
+    )
+
+
+def _keijoushi_token(surface, kana):
+    """形状詞 root token (e.g. 可能) — a valid prefix-merge root, never a noun-suffix head."""
+    return SimpleNamespace(
+        surface=surface,
+        feature=SimpleNamespace(pos1="形状詞", pos2="一般", lemma=surface, kana=kana),
+    )
+
+
 _ALLOWED_POS = frozenset({"名詞", "動詞", "形容詞", "副詞", "形状詞", "代名詞"})
 _EXCLUDED_SUBTYPES = frozenset({"非自立", "数詞", "接尾", "助動詞", "接頭", "固有名詞"})
 
@@ -222,6 +238,105 @@ class TestMixedKatakanaLoanwordVerbs:
         assert self._rule().should_include(token) is True
 
 
+def _token_pos2(surface, pos1, pos2, lemma=None, orth_base=None):
+    """Token with an explicit pos2 (the ``_token`` helper hardcodes 一般)."""
+    lemma = lemma if lemma is not None else surface
+    return SimpleNamespace(
+        surface=surface,
+        feature=SimpleNamespace(
+            pos1=pos1,
+            pos2=pos2,
+            lemma=lemma,
+            kana=surface,
+            orthBase=orth_base if orth_base is not None else lemma,
+            lForm=None,
+            kanaBase=None,
+        ),
+    )
+
+
+class TestContentGateOk:
+    """content_gate_ok = everything should_include checks EXCEPT the final
+    pure-hiragana script gate (and the katakana ≥2-char / mixed-loanword
+    ACCEPTANCE, which should_include applies afterward). It is the reuse seam
+    the parser's kana-recovery path leans on, so a pure-hiragana content word
+    that should_include drops must still pass content_gate_ok, while every
+    junk-POS/subtype rejection stays shared with should_include."""
+
+    def _rule(self):
+        return TokenInclusionRule(allowed_pos=_ALLOWED_POS, excluded_subtypes=_EXCLUDED_SUBTYPES)
+
+    def test_accepts_pure_hiragana_verb_that_should_include_rejects(self):
+        # すべる: real kana verb dropped by the script gate — should_include
+        # False but content_gate_ok True (the whole point of the split).
+        token = _token("すべる", "動詞", "すべる", "すべる")
+        rule = self._rule()
+        assert rule.should_include(token) is False
+        assert rule.content_gate_ok(token) is True
+
+    def test_accepts_pure_hiragana_keiyoushi_adjective(self):
+        token = _token("すごい", "形容詞", "凄い", "すごい")
+        rule = self._rule()
+        assert rule.should_include(token) is False
+        assert rule.content_gate_ok(token) is True
+
+    def test_accepts_pure_hiragana_keijoushi(self):
+        # 形状詞 きれい: mined as surface, dropped by the script gate today.
+        token = _token("きれい", "形状詞", "奇麗", "きれい")
+        rule = self._rule()
+        assert rule.should_include(token) is False
+        assert rule.content_gate_ok(token) is True
+
+    def test_accepts_pure_hiragana_formal_noun(self):
+        # content_gate_ok alone does NOT reject 名詞 formal nouns (こと/もの);
+        # the parser's POS backstop {動詞,形容詞,形状詞} is what drops them.
+        token = _token("こと", "名詞", "事", "こと")
+        assert self._rule().content_gate_ok(token) is True
+
+    @pytest.mark.parametrize("pos1", ["助詞", "助動詞", "記号", "補助記号", "感動詞", "フィラー"])
+    def test_rejects_non_content_pos(self, pos1):
+        token = _token("って", pos1, "って", "って")
+        assert self._rule().content_gate_ok(token) is False
+
+    def test_rejects_pos_not_in_allowed(self):
+        token = _token("けど", "接続詞", "けれど", "けど")
+        assert self._rule().content_gate_ok(token) is False
+
+    @pytest.mark.parametrize("pos2", ["非自立", "数詞", "接尾", "助動詞", "接頭", "固有名詞"])
+    def test_rejects_excluded_pos2(self, pos2):
+        token = _token_pos2("物事", "名詞", pos2, lemma="物事")
+        assert self._rule().content_gate_ok(token) is False
+
+    def test_rejects_empty_surface(self):
+        token = _token("", "名詞", "")
+        assert self._rule().content_gate_ok(token) is False
+
+    def test_rejects_missing_lemma(self):
+        token = _token("何か", "名詞", "何か")
+        token.feature.lemma = None
+        assert self._rule().content_gate_ok(token) is False
+
+    def test_rejects_katakana_onomatopoeia_adverb(self):
+        # 副詞 mimetic (≤2 unique, ≤4 chars) is junk — rejected inside
+        # content_gate_ok, exactly as should_include rejects it.
+        token = _token_pos2("ドキドキ", "副詞", "一般", lemma="ドキドキ")
+        rule = self._rule()
+        assert rule.content_gate_ok(token) is False
+        assert rule.should_include(token) is False
+
+    def test_rejects_short_katakana_ending_small_tsu(self):
+        token = _token_pos2("バッ", "副詞", "一般", lemma="バッ")
+        assert self._rule().content_gate_ok(token) is False
+
+    def test_valid_katakana_loanword_passes_content_gate(self):
+        # The ≥2-char ACCEPTANCE lives in should_include, but the token is not
+        # onomatopoeia, so content_gate_ok returns True and should_include True.
+        token = _token_pos2("コンピューター", "名詞", "一般", lemma="コンピューター")
+        rule = self._rule()
+        assert rule.content_gate_ok(token) is True
+        assert rule.should_include(token) is True
+
+
 class TestResolveSpecialReading:
     """Honorific-kinship head reading override (兄/姉/父/母 + ちゃん/さん/さま/様)."""
 
@@ -288,6 +403,149 @@ class TestMergeNounSuffixesSpecialReading:
         # No suffix chain → 兄 keeps its isolated アニ reading.
         merged = merge_compound_suffixes([_noun_token("兄", "アニ")])
         assert merged[0].feature.kana == "アニ"
+
+
+class TestMergeCompoundSuffixesAttestGate:
+    """Attested-or-bail gating of the noun-suffix and prefix merge passes.
+
+    Injecting an ``attest`` predicate turns the gate ON: unattested synthetic
+    compounds bail to their bare components (head + suffix/prefix re-exposed as
+    raw tokens), attested compounds mint as before, and curated kinship
+    compounds mint even though the dictionary never attests them. ``attest=None``
+    (the default) leaves every pass ungated — byte-identical to the pre-gate
+    behavior. ``_merge_verb_nominalizers`` is NEVER gated.
+    """
+
+    @staticmethod
+    def _attest(dictionary):
+        """Fake AttestLookup: returns the attested subset of the queried surfaces."""
+        wanted = set(dictionary)
+        return lambda terms: {t for t in terms if t in wanted}
+
+    # --- noun-suffix pass: bail vs mint -----------------------------------
+
+    def test_noun_suffix_bails_when_unattested(self):
+        merged = merge_compound_suffixes(
+            [_noun_token("状況", "ジョウキョウ"), _suffix_token("的", "テキ")],
+            attest=self._attest(set()),
+        )
+        # Full chain bailed to its raw components (NOT a synthetic).
+        assert [t.surface for t in merged] == ["状況", "的"]
+        assert not any(isinstance(t, SyntheticToken) for t in merged)
+
+    def test_noun_suffix_mints_when_attested(self):
+        merged = merge_compound_suffixes(
+            [_noun_token("刑務", "ケイム"), _suffix_token("所", "ショ")],
+            attest=self._attest({"刑務所"}),
+        )
+        assert len(merged) == 1
+        assert merged[0].surface == "刑務所"
+        assert isinstance(merged[0], SyntheticToken)
+
+    def test_attested_chain_stays_whole(self):
+        merged = merge_compound_suffixes(
+            [_noun_token("入院", "ニュウイン"), _suffix_token("中", "チュウ")],
+            attest=self._attest({"入院中"}),
+        )
+        assert [t.surface for t in merged] == ["入院中"]
+
+    # --- prefix pass: bail vs mint ----------------------------------------
+
+    def test_prefix_bails_when_unattested(self):
+        merged = merge_compound_suffixes(
+            [_prefix_token("超", "チョウ"), _noun_token("反応", "ハンノウ")],
+            attest=self._attest(set()),
+        )
+        # 接頭辞 head kept (dropped later by the inclusion gate); root re-exposed.
+        assert [t.surface for t in merged] == ["超", "反応"]
+        assert not any(isinstance(t, SyntheticToken) for t in merged)
+
+    def test_prefix_mints_when_attested_keijoushi_root(self):
+        merged = merge_compound_suffixes(
+            [_prefix_token("不", "フ"), _keijoushi_token("可能", "カノウ")],
+            attest=self._attest({"不可能"}),
+        )
+        assert len(merged) == 1
+        assert merged[0].surface == "不可能"
+        assert merged[0].feature.pos1 == "名詞"
+
+    def test_prefix_mints_when_attested_noun_root(self):
+        merged = merge_compound_suffixes(
+            [_prefix_token("無", "ム"), _noun_token("関係", "カンケイ")],
+            attest=self._attest({"無関係"}),
+        )
+        assert len(merged) == 1
+        assert merged[0].surface == "無関係"
+
+    # --- kinship carve-out: mint even when unattested ---------------------
+
+    def test_kinship_compound_mints_even_when_unattested(self):
+        merged = merge_compound_suffixes(
+            [_noun_token("兄", "アニ"), _suffix_token("ちゃん", "チャン")],
+            attest=self._attest(set()),  # 兄ちゃん NOT attested
+        )
+        assert len(merged) == 1
+        assert merged[0].surface == "兄ちゃん"
+        assert merged[0].feature.kana == "ニイチャン"
+        assert getattr(merged[0].feature, "kana_special", False) is True
+
+    # --- verb nominalizer is NEVER gated ----------------------------------
+
+    def test_verb_nominalizer_is_ungated(self):
+        # 言い方 mints even with an empty dictionary — the {方,手,様} whitelist
+        # is productive and never gated.
+        verb = SimpleNamespace(
+            surface="言い",
+            feature=SimpleNamespace(pos1="動詞", pos2="一般", lemma="言う", kana="イイ", orthBase="言う"),
+        )
+        merged = merge_compound_suffixes([verb, _suffix_token("方", "カタ")], attest=self._attest(set()))
+        assert len(merged) == 1
+        assert merged[0].surface == "言い方"
+
+    # --- one batched probe per pass ---------------------------------------
+
+    def test_single_batched_probe_per_pass(self):
+        calls = []
+
+        def attest(terms):
+            calls.append(sorted(terms))
+            return set()
+
+        merge_compound_suffixes(
+            [
+                _noun_token("会議", "カイギ"),
+                _suffix_token("中", "チュウ"),
+                _noun_token("状況", "ジョウキョウ"),
+                _suffix_token("的", "テキ"),
+            ],
+            attest=attest,
+        )
+        # Exactly ONE noun-suffix batched probe covering both candidates; the
+        # prefix pass has no candidates on this line, so it issues no probe.
+        assert calls == [["会議中", "状況的"]]
+
+    def test_no_candidates_issues_no_probe(self):
+        calls = []
+
+        def attest(terms):
+            calls.append(list(terms))
+            return set()
+
+        # Two bare nouns, no suffix/prefix → neither pass has a candidate.
+        merge_compound_suffixes([_noun_token("学校", "ガッコウ"), _noun_token("生活", "セイカツ")], attest=attest)
+        assert calls == []
+
+    # --- attest=None is ungated / byte-identical --------------------------
+
+    def test_none_attest_mints_unattested_junk_unchanged(self):
+        # The safe-degrade contract: with no dict the junk compound is minted
+        # exactly as pre-gate (状況的 stays whole).
+        merged = merge_compound_suffixes(
+            [_noun_token("状況", "ジョウキョウ"), _suffix_token("的", "テキ")],
+            attest=None,
+        )
+        assert len(merged) == 1
+        assert merged[0].surface == "状況的"
 
 
 class TestApplySpecialReadings:

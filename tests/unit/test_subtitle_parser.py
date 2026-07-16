@@ -8,6 +8,7 @@ import pytest
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import LineLemmas, TokenizedWord
+from anki_miner.models.reading import ReadingUnit
 from anki_miner.services.compound_matcher import CompoundSyntheticToken
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils import generate_furigana, generate_reading
@@ -1055,6 +1056,234 @@ class TestShouldIncludeWord:
         """ドキドキ (副詞) must still be excluded by the POS-gated heuristic."""
         token = _make_token("ドキドキ", "副詞", lemma="ドキドキ")
         assert service._should_include_word(token) is False
+
+
+def _attest_lookup(*attested):
+    """Spy term-OR-reading existence probe (has_offline_definitions shape).
+
+    Returns a callable ``list[str] -> dict[str, bool]`` that reports each input
+    True iff it is in ``attested``, and records every call on ``.calls`` so
+    tests can assert the lookup was (or was not) invoked and how often.
+    """
+    aset = set(attested)
+    calls: list[list[str]] = []
+
+    def lookup(words):
+        calls.append(list(words))
+        return {w: (w in aset) for w in words}
+
+    lookup.calls = calls  # type: ignore[attr-defined]
+    return lookup
+
+
+class TestKanaWordRecovery:
+    """Parser-seam recovery of pure-hiragana content words the script gate drops.
+
+    _should_include_word admits a token should_include rejects when ALL hold:
+    POS ∈ {動詞,形容詞,形状詞} (never 名詞), content_gate_ok passes, the surface
+    is pure hiragana, and its mined-form card front is attested via the injected
+    term-OR-reading existence probe. No probe wired ⇒ today's behavior.
+    """
+
+    def _service(self, test_config, lookup):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            return SubtitleParserService(test_config, kana_attest_lookup=lookup)
+
+    def test_recovers_keijoushi_surface_front(self, test_config):
+        # 形状詞 きれい: mined_form is the surface (きれい); attested as 綺麗's
+        # reading in real JMdict, so a term-OR-reading probe finds it.
+        lookup = _attest_lookup("きれい")
+        service = self._service(test_config, lookup)
+        token = _make_token("きれい", "形状詞", pos2="一般", lemma="奇麗", orth_base="きれい")
+        assert service._should_include_word(token) is True
+        assert lookup.calls == [["きれい"]]  # probed the mined-form card front
+
+    @pytest.mark.parametrize(
+        ("context", "surface", "lemma", "orth_base"),
+        [
+            ("見ている", "いる", "居る", "いる"),
+            ("そこにある", "ある", "有る", "ある"),
+            ("買ってくれる", "くれる", "呉れる", "くれる"),
+            ("書いておく", "おく", "置く", "おく"),
+            ("読んでしまう", "しまう", "仕舞う", "しまう"),
+        ],
+    )
+    def test_does_not_recover_auxiliary_capable_verb(self, test_config, context, surface, lemma, orth_base):
+        # 動詞 pos2=非自立可能 (real unidic tag for いる/ある/くれる/おく/しまう —
+        # in AUX context and standalone alike, the tokens are byte-identical).
+        # Attested on purpose: the pos2 backstop, not a dict miss, must drop them,
+        # or every ている line mints an いる card. Standalone main-verb uses are
+        # the accepted casualty (see _KANA_RECOVER_REJECT_POS2).
+        lookup = _attest_lookup(surface)
+        service = self._service(test_config, lookup)
+        token = _make_token(surface, "動詞", pos2="非自立可能", lemma=lemma, orth_base=orth_base)
+        assert service._should_include_word(token) is False, context
+        assert lookup.calls == []  # pos2 gate short-circuits before the lookup
+
+    @pytest.mark.parametrize(
+        ("surface", "lemma"),
+        [("すごい", "凄い"), ("かわいい", "可愛い"), ("あざとい", "あざとい"), ("しがない", "しがない")],
+    )
+    def test_recovers_pure_hiragana_adjectives(self, test_config, surface, lemma):
+        lookup = _attest_lookup(surface)
+        service = self._service(test_config, lookup)
+        token = _make_token(surface, "形容詞", pos2="一般", lemma=lemma, orth_base=surface)
+        assert service._should_include_word(token) is True
+
+    @pytest.mark.parametrize(("surface", "lemma"), [("こと", "事"), ("もの", "物"), ("ため", "為")])
+    def test_does_not_recover_formal_noun(self, test_config, surface, lemma):
+        # 名詞 formal nouns pass content_gate_ok but are blocked by the POS
+        # backstop {動詞,形容詞,形状詞}; the probe must not even be consulted.
+        lookup = _attest_lookup(surface)  # attested — proves the POS gate, not the dict, drops it
+        service = self._service(test_config, lookup)
+        token = _make_token(surface, "名詞", pos2="普通名詞", lemma=lemma, orth_base=surface)
+        assert service._should_include_word(token) is False
+        assert lookup.calls == []  # POS gate short-circuits before the lookup
+
+    @pytest.mark.parametrize(
+        ("surface", "pos1", "lemma"),
+        [("って", "助詞", "って"), ("の", "助詞", "の"), ("けど", "接続詞", "けれど")],
+    )
+    def test_does_not_recover_grammar_fragments(self, test_config, surface, pos1, lemma):
+        # 助詞 fails content_gate_ok; 接続詞 fails the POS backstop. Either way
+        # not recovered and the probe is never consulted.
+        lookup = _attest_lookup(surface)
+        service = self._service(test_config, lookup)
+        token = _make_token(surface, pos1, pos2="*", lemma=lemma, orth_base=surface)
+        assert service._should_include_word(token) is False
+        assert lookup.calls == []
+
+    @pytest.mark.parametrize(
+        ("construction", "surface", "lemma", "orth_base"),
+        [
+            ("ようだ", "よう", "様", "よう"),
+            ("みたいな", "みたい", "みたい", "みたい"),
+            ("みたいだ", "みたい", "みたい", "みたい"),
+        ],
+    )
+    def test_does_not_recover_auxiliary_stem_keijoushi(self, test_config, construction, surface, lemma, orth_base):
+        # 形状詞 pos2=助動詞語幹 auxiliaries (よう in ようだ, みたい in みたいな/みたいだ)
+        # pass {動詞,形容詞,形状詞} + content_gate_ok and are JMdict-attested, but
+        # are grammar not vocabulary. The pos2 backstop drops them before the probe.
+        lookup = _attest_lookup(surface)  # attested — proves pos2 gate, not the dict, drops it
+        service = self._service(test_config, lookup)
+        token = _make_token(surface, "形状詞", pos2="助動詞語幹", lemma=lemma, orth_base=orth_base)
+        assert service._should_include_word(token) is False, construction
+        assert lookup.calls == []  # pos2 gate short-circuits before the lookup
+
+    def test_recovers_pure_hiragana_verb_ta_inflection(self, test_config):
+        # わかった → わかっ token deinflects to orthBase わかる (the mined card front),
+        # a sanctioned 動詞 一般 recovery that must survive the auxiliary-stem gate.
+        lookup = _attest_lookup("わかる")
+        service = self._service(test_config, lookup)
+        token = _make_token("わかっ", "動詞", pos2="一般", lemma="分かる", orth_base="わかる")
+        assert service._should_include_word(token) is True
+        assert lookup.calls == [["わかる"]]
+
+    def test_does_not_recover_non_attested_kana(self, test_config):
+        # A pure-hiragana verb the dictionary does NOT attest stays dropped.
+        lookup = _attest_lookup()  # attests nothing
+        service = self._service(test_config, lookup)
+        token = _make_token("ぬるぽ", "動詞", pos2="一般", lemma="ぬるぽ", orth_base="ぬるぽ")
+        assert service._should_include_word(token) is False
+        assert lookup.calls == [["ぬるぽ"]]  # probed, missed
+
+    def test_no_dict_does_not_recover(self, test_config):
+        # No probe wired ⇒ safe degrade to today's behavior (kana dropped).
+        service = self._service(test_config, None)
+        token = _make_token("きれい", "形状詞", pos2="一般", lemma="奇麗", orth_base="きれい")
+        assert service._should_include_word(token) is False
+
+    def test_accepted_token_never_probes(self, test_config):
+        # A normal kanji verb is admitted by should_include; the recovery branch
+        # (and its lookup) must not run for already-accepted tokens.
+        lookup = _attest_lookup("食べる")
+        service = self._service(test_config, lookup)
+        token = _make_token("食べる", "動詞", pos2="一般", lemma="食べる", orth_base="食べる")
+        assert service._should_include_word(token) is True
+        assert lookup.calls == []
+
+    def test_lookup_memoized_per_distinct_surface_pos1(self, test_config):
+        # Perf budget (deterministic, not wall-clock): the attestation lookup
+        # runs at most once per distinct (surface, pos1) across many repeats.
+        lookup = _attest_lookup("きれい", "すごい")
+        service = self._service(test_config, lookup)
+        for _ in range(50):
+            t = _make_token("きれい", "形状詞", pos2="一般", lemma="奇麗", orth_base="きれい")
+            assert service._should_include_word(t) is True
+        assert len(lookup.calls) == 1  # 50 きれい occurrences → one probe
+        for _ in range(50):
+            t = _make_token("すごい", "形容詞", pos2="一般", lemma="凄い", orth_base="すごい")
+            assert service._should_include_word(t) is True
+        assert len(lookup.calls) == 2  # +1 for the distinct すごい
+
+    def test_negative_result_is_also_memoized(self, test_config):
+        # A miss must be cached too, or repeated non-attested tokens re-probe.
+        lookup = _attest_lookup()
+        service = self._service(test_config, lookup)
+        for _ in range(20):
+            t = _make_token("ぬるぽ", "動詞", pos2="一般", lemma="ぬるぽ", orth_base="ぬるぽ")
+            assert service._should_include_word(t) is False
+        assert len(lookup.calls) == 1
+
+    def test_count_and_mine_both_reject_aux_identically(self, test_config, tmp_path):
+        # count==mine parity for the REJECT side: a ている line must yield no
+        # いる in either count_lemmas or the mined set, even with いる attested.
+        sub_file = tmp_path / "aux.ass"
+        sub_file.write_text("x", encoding="utf-8")
+        mock_line = MagicMock()
+        mock_line.text = "見ている"
+        mock_line.start = 0
+        mock_line.end = 1000
+        mock_line.is_comment = False
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+        tokens = [
+            _make_token("見", "動詞", pos2="非自立可能", lemma="見る", kana="ミ", orth_base="見る"),
+            _make_token("て", "助詞", pos2="接続助詞", lemma="て", kana="テ", orth_base="て"),
+            _make_token("いる", "動詞", pos2="非自立可能", lemma="居る", kana="イル", orth_base="いる"),
+        ]
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = tokens
+        lookup = _attest_lookup("いる")
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config, kana_attest_lookup=lookup)
+            counts = service.count_lemmas(sub_file)
+            words = service.parse_subtitle_file(sub_file)
+        assert "居る" not in counts  # count side rejected the aux
+        assert "いる" not in {w.mined_form for w in words}  # mine side too
+        assert counts.get("見る") == 1  # kanji 非自立可能 verb is untouched
+        assert "見る" in {w.mined_form for w in words}
+        assert lookup.calls == []  # pos2 reject fired before any probe
+
+    def test_count_and_mine_both_recover_identically(self, test_config, tmp_path):
+        # count==mine parity (T-38): count_lemmas and parse_subtitle_file both
+        # route through _should_include_word, so both recover the kana word.
+        sub_file = tmp_path / "t.ass"
+        sub_file.write_text("x", encoding="utf-8")
+        mock_line = MagicMock()
+        mock_line.text = "きれい"
+        mock_line.start = 0
+        mock_line.end = 1000
+        mock_line.is_comment = False
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+        token = _make_token("きれい", "形状詞", pos2="一般", lemma="奇麗", kana="キレイ", orth_base="きれい")
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [token]
+        lookup = _attest_lookup("きれい")
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config, kana_attest_lookup=lookup)
+            counts = service.count_lemmas(sub_file)
+            words = service.parse_subtitle_file(sub_file)
+        assert counts.get("奇麗") == 1  # count_lemmas recovered (lemma-keyed count)
+        assert "きれい" in {w.mined_form for w in words}  # mining recovered same token
 
 
 class TestExtractLemma:
@@ -2601,19 +2830,50 @@ class TestSurfaceOffsetsAndBolding:
         assert m.group(1).startswith(word.surface[0])
 
     def test_hiragana_benefactive_not_mined_separately(self, tmp_path):
-        """くれ (呉れる) has a pure-hiragana surface: the pre-existing
-        has_kanji gate drops it, so 買ってくれた mines only 買う (and 本)."""
+        """くれ (呉れる, 非自立可能) must not be mined from 買ってくれた even with
+        the kana recovery active AND くれる attested — the pos2 reject, not a
+        dict miss, drops it. (Without the wired lookup this test was false-safe:
+        recovery short-circuited before the gate under test ever ran.)"""
         srt_file = tmp_path / "benefactive.srt"
         srt_file.write_text(
             "1\n00:00:01,000 --> 00:00:05,000\n本を買ってくれた\n",
             encoding="utf-8",
         )
         config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
-        service = SubtitleParserService(config)
+        lookup = _attest_lookup("くれる", "いる", "ある")
+        service = SubtitleParserService(config, kana_attest_lookup=lookup)
         words = service.parse_subtitle_file(srt_file)
         lemmas = {w.lemma for w in words}
         assert "買う" in lemmas
         assert not any("くれ" in lemma for lemma in lemmas)
+
+    @pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+    @pytest.mark.parametrize(
+        ("line", "wanted", "aux_front"),
+        [
+            ("猫を見ている", {"猫", "見る"}, "いる"),
+            ("本を読んでしまった", {"本", "読む"}, "しまう"),
+            ("手紙を書いておく", {"手紙", "書く"}, "おく"),
+            ("犬を飼ってくれる", {"犬", "飼う"}, "くれる"),
+            ("そこにある", set(), "ある"),
+        ],
+    )
+    def test_real_fugashi_aux_context_mints_no_aux_card(self, tmp_path, line, wanted, aux_front):
+        """End-to-end 非自立可能 guard through real fugashi: the aux headword is
+        deliberately attested, and still no aux card is minted (aux-context
+        benchmark category pins the same through the fixture dict)."""
+        srt_file = tmp_path / "aux.srt"
+        srt_file.write_text(
+            f"1\n00:00:01,000 --> 00:00:05,000\n{line}\n",
+            encoding="utf-8",
+        )
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        lookup = _attest_lookup("いる", "ある", "くれる", "おく", "しまう")
+        service = SubtitleParserService(config, kana_attest_lookup=lookup)
+        words = service.parse_subtitle_file(srt_file)
+        fronts = {w.mined_form for w in words}
+        assert aux_front not in fronts, line
+        assert wanted <= fronts, line
 
 
 # ---------------------------------------------------------------------------
@@ -3742,12 +4002,21 @@ class TestCompoundMatchingRealFugashi:
         assert "結論" not in by_lemma
         assert "出す" not in by_lemma
 
-    def test_no_dictionary_hits_keeps_current_behavior(self, tmp_path):
+    def test_term_lookup_none_keeps_current_behavior(self, tmp_path):
+        """The safe-degrade guarantee is ``term_lookup=None`` == pre-feature output.
+
+        (NOT "empty dict == None": an empty-but-present dict now activates the
+        attested-or-bail merge gate and bails every unattested synthetic. The
+        equality below holds only because this fixture line mints no morphology
+        synthetic — 走り出す is a matcher span, which the empty dict also can't
+        attest — so the gate is inert here. The load-bearing case is the None
+        one, which the assertion pins.)
+        """
         srt_file = _write_srt(tmp_path, "plain.srt", "彼は急に走り出した。")
         config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
-        with_lookup = SubtitleParserService(config, term_lookup=_lookup_for(set()))
-        without = SubtitleParserService(config)
-        assert with_lookup.parse_subtitle_file(srt_file) == without.parse_subtitle_file(srt_file)
+        with_empty_dict = SubtitleParserService(config, term_lookup=_lookup_for(set()))
+        none_case = SubtitleParserService(config)
+        assert with_empty_dict.parse_subtitle_file(srt_file) == none_case.parse_subtitle_file(srt_file)
 
 
 class TestKinshipHonorificReadings:
@@ -4022,3 +4291,242 @@ class TestParseRelevantConfigFields:
         source = inspect.getsource(subtitle_parser)
         for field in PARSE_RELEVANT_CONFIG_FIELDS:
             assert field in source, f"{field} not referenced in subtitle_parser module"
+
+
+# Modern JMdict headwords attested by the fake offline term_lookup for the
+# verb-front resolver tests. Covers every verb/adjective exercised below plus
+# the archaic 〜ずる siblings and the potential/ra-nuki base forms — so the
+# resolver runs its full ranking (not a degenerate empty-attestation degrade)
+# and only the じる/ずる cases actually override.
+_RESOLVER_ATTESTED_HEADWORDS = {
+    "感じる",
+    "感ずる",
+    "論じる",
+    "論ずる",
+    "信じる",
+    "信ずる",
+    "生じる",
+    "生ずる",
+    "乞う",
+    "彷徨う",
+    "出逢う",
+    "立つ",
+    "待つ",
+    "言う",
+    "帰れる",
+    "帰る",
+    "見る",
+    "保つ",
+    "剛腕",
+}
+
+
+def _resolver_term_lookup(terms):
+    return {t for t in terms if t in _RESOLVER_ATTESTED_HEADWORDS}
+
+
+class TestVerbFrontResolver:
+    """End-to-end: the parser rewrites archaic じる/ずる verb fronts to the
+    modern JMdict headword via the real tagger + injected offline term_lookup.
+    """
+
+    def _mine(self, sentence, term_lookup=_resolver_term_lookup):
+        service = SubtitleParserService(AnkiMinerConfig(), term_lookup=term_lookup)
+        unit = ReadingUnit(text=sentence, index=0, location_label="t")
+        words, _index, _counts = service.parse_text_units([unit], want_line_index=False)
+        return words
+
+    def _one(self, sentence, **kw):
+        words = self._mine(sentence, **kw)
+        assert len(words) == 1, [w.mined_form for w in words]
+        return words[0]
+
+    # --- Produces the modern form (asserts PRODUCED, not just no false override). ---
+
+    def test_kanjita_produces_kanjiru(self):
+        word = self._one("感じた")
+        assert word.mined_form == "感じる"
+        assert word.orth_base == "感じる"
+        # Lemma is left as the token lemma (the archaic 感ずる) — it is the i+1 /
+        # occurrence / cross-episode correlation key and must NOT be folded.
+        assert word.lemma == "感ずる"
+
+    def test_ronjita_produces_ronjiru(self):
+        assert self._one("論じた").mined_form == "論じる"
+
+    def test_shinjirarenai_produces_shinjiru(self):
+        assert self._one("信じられない").mined_form == "信じる"
+
+    def test_shojita_produces_shojiru(self):
+        assert self._one("生じた").mined_form == "生じる"
+
+    # --- Reading realignment: the card-front reading follows the modern form. ---
+
+    def test_kanjita_resolved_reading_is_modern_kana(self):
+        word = self._one("感じた")
+        assert word.resolved_reading == "かんじる"
+        # Expression reading (the card front's own reading) matches too.
+        assert word.expression_reading == "かんじる"
+        # lemma_reading stays the archaic lemma's own reading for the audio retry.
+        assert word.lemma_reading == "かんずる"
+
+    # --- Regression guards: no false override. ---
+
+    def test_kou_unchanged(self):
+        word = self._one("乞う")
+        assert word.mined_form == "乞う"
+        assert word.resolved_reading == ""
+
+    def test_samayotta_unchanged(self):
+        assert self._one("彷徨った").mined_form == "彷徨う"
+
+    def test_deatta_unchanged(self):
+        assert self._one("出逢った").mined_form == "出逢う"
+
+    def test_noun_never_resolves(self):
+        # 剛腕 is a noun: the resolver never runs, mined_form stays the surface.
+        word = self._one("剛腕")
+        assert word.mined_form == "剛腕"
+        assert word.resolved_reading == ""
+
+    def test_kaereru_unchanged(self):
+        # 帰れる does NOT fold (lemma 返る is a kanji swap), so it is resolver-
+        # eligible — but its own orthBase 帰れる is already the longest prefix,
+        # so no override fires.
+        word = self._one("帰れる")
+        assert word.mined_form == "帰れる"
+        assert word.resolved_reading == ""
+
+    # --- Fold guard: mining_base folds win; the resolver never un-folds. ---
+
+    def test_mireru_folds_to_base_not_unfolded(self):
+        word = self._one("見れる")
+        assert word.mined_form == "見る"
+        assert word.resolved_reading == ""
+
+    def test_motereru_folds_to_base(self):
+        word = self._one("保てる")
+        assert word.mined_form == "保つ"
+        assert word.resolved_reading == ""
+
+    # --- Cross-conjugation: attested inflected surface must not win. ---
+
+    def test_tatta_resolves_to_tatsu(self):
+        assert self._one("立った").mined_form == "立つ"
+
+    def test_matta_resolves_to_matsu_not_matta(self):
+        # 待った is itself an attested JMdict headword ("matta!") but is the
+        # inflected surface — it must not become the card front.
+        assert self._one("待った").mined_form == "待つ"
+
+    def test_itta_resolves_to_iu(self):
+        assert self._one("言った").mined_form == "言う"
+
+    # --- Safe degrade: no offline lookup → today's archaic orthBase, no crash. ---
+
+    def test_no_term_lookup_keeps_archaic_orthbase(self):
+        word = self._one("感じた", term_lookup=None)
+        assert word.mined_form == "感ずる"
+        assert word.resolved_reading == ""
+
+
+def _gate_term_lookup(dictionary):
+    """Fake TermLookup: attests exactly the given headword set (subset semantics)."""
+    wanted = set(dictionary)
+    return lambda terms: {t for t in terms if t in wanted}
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestCompoundMergeAttestGate:
+    """Attested-or-bail gating end-to-end through the real parse pipeline
+    (morphology merge → matcher → emit). A wired term_lookup gates the
+    junk-prone noun-suffix + prefix passes; ``term_lookup=None`` safe-degrades
+    to the pre-gate output byte-for-byte.
+    """
+
+    def _mine(self, sentence, dictionary=None):
+        term_lookup = _gate_term_lookup(dictionary) if dictionary is not None else None
+        service = SubtitleParserService(AnkiMinerConfig(), term_lookup=term_lookup)
+        unit = ReadingUnit(text=sentence, index=0, location_label="t")
+        words, _index, _counts = service.parse_text_units([unit], want_line_index=False)
+        return {w.mined_form for w in words}
+
+    # --- unattested compounds bail to the bare noun/root ------------------
+
+    @pytest.mark.parametrize(
+        "sentence,expected",
+        [
+            ("状況的", {"状況"}),  # noun-suffix bail (drop 的)
+            ("会議中", {"会議"}),  # noun-suffix bail (drop 中)
+            ("超反応", {"反応"}),  # prefix bail (drop 超)
+        ],
+    )
+    def test_unattested_compound_bails_to_bare_noun(self, sentence, expected):
+        assert self._mine(sentence, dictionary=set()) == expected
+
+    # --- attested compounds stay whole -----------------------------------
+
+    @pytest.mark.parametrize(
+        "sentence,dictionary,expected",
+        [
+            ("刑務所", {"刑務所"}, {"刑務所"}),  # noun-suffix mint
+            ("不可能", {"不可能"}, {"不可能"}),  # prefix mint (形状詞 root)
+            ("無関係", {"無関係"}, {"無関係"}),  # prefix mint (名詞 root)
+            ("入院中", {"入院中"}, {"入院中"}),  # noun-suffix mint
+            ("可能性", {"可能性"}, {"可能性"}),  # matcher via the 形状詞 head
+        ],
+    )
+    def test_attested_compound_stays_whole(self, sentence, dictionary, expected):
+        assert self._mine(sentence, dictionary=dictionary) == expected
+
+    def test_matcher_recovers_subspan_from_bailed_chain(self):
+        # 入院中的: the full chain 入院中的 is unattested → the noun-suffix pass
+        # bails to [入院, 中, 的]; the matcher then recovers the attested 入院中
+        # and 的 is dropped by the inclusion gate.
+        assert self._mine("入院中的", dictionary={"入院中"}) == {"入院中"}
+
+    def test_verb_nominalizer_never_gated(self):
+        # 言い方 (方 nominalizer) mints even with an empty dictionary AND with no
+        # dictionary — the verb-nominalizer pass is never gated.
+        assert self._mine("言い方", dictionary=set()) == {"言い方"}
+        assert self._mine("言い方", dictionary=None) == {"言い方"}
+
+    def test_kinship_reading_preserved_though_unattested(self):
+        # The curated kinship carve-out survives the gate: 兄ちゃん is not
+        # dictionary-attested, but mints (with its にい reading) anyway.
+        service = SubtitleParserService(AnkiMinerConfig(), term_lookup=_gate_term_lookup(set()))
+        unit = ReadingUnit(text="お兄ちゃん", index=0, location_label="t")
+        words, _index, _counts = service.parse_text_units([unit], want_line_index=False)
+        word = next(w for w in words if w.mined_form == "兄ちゃん")
+        assert word.expression_reading == "にいちゃん"
+
+    # --- no-dict safe degrade: term_lookup=None == pre-gate output --------
+
+    @pytest.mark.parametrize(
+        "sentence,expected",
+        [
+            ("刑務所", {"刑務所"}),
+            ("不可能", {"不可能"}),
+            ("会議中", {"会議中"}),  # junk minted, exactly as pre-gate
+            ("状況的", {"状況的"}),  # junk minted, exactly as pre-gate
+            ("言い方", {"言い方"}),
+        ],
+    )
+    def test_no_dict_safe_degrade_matches_pregate(self, sentence, expected):
+        assert self._mine(sentence, dictionary=None) == expected
+
+    def test_attest_probed_once_per_surface_across_repeated_corpus(self):
+        # Perf discipline: the memoized attest probes each distinct surface
+        # through the underlying dictionary at most once across a repeated
+        # corpus. 会議中 bails on every one of 12 lines, but is probed once.
+        calls: list[str] = []
+
+        def spy(terms):
+            calls.extend(terms)
+            return set()  # attest nothing → 会議中 bails each line
+
+        service = SubtitleParserService(AnkiMinerConfig(), term_lookup=spy)
+        units = [ReadingUnit(text="会議中", index=i, location_label="t") for i in range(12)]
+        words, _index, _counts = service.parse_text_units(units, want_line_index=False)
+        assert {w.mined_form for w in words} == {"会議"}
+        assert calls.count("会議中") == 1, calls

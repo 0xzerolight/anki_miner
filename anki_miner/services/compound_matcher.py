@@ -49,9 +49,15 @@ _INFLECTABLE_POS1 = frozenset({"動詞", "形容詞"})
 _NON_CONTENT_POS1 = frozenset({"助詞", "助動詞", "記号", "補助記号", "空白"})
 
 # Over-merge guards. Deliberately module constants, not config: the char cap is
-# the real safety bound (Yomitan's point-scan default is 10 chars) and should
-# not be a user footgun; the token cap bounds candidate generation.
-_MAX_SPAN_CHARS = 12
+# a safety bound and should not be a user footgun; the token cap bounds
+# candidate generation. 16 chars (was 12; Yomitan's point-scan default is 10)
+# admits the 2-token katakana tech compounds JMdict attests at 13-16 chars
+# (アプリケーションプログラム) that 12 rejected. The junk classes 13-16 chars
+# would otherwise admit are carried by the OTHER guards, fixture-proven: 13+
+# char attested phrases/proverbs run >=6 tokens (お誕生日おめでとうございます is
+# 7) and die on the 5-token cap even when attested; inflected-phrase headwords
+# die on the end-on-content rule; everything else dies on attestation.
+_MAX_SPAN_CHARS = 16
 _MAX_SPAN_TOKENS = 5
 
 # Existence-cache bound (positive AND negative results). Clear-on-cap keeps

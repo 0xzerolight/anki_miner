@@ -1291,6 +1291,86 @@ class TestPitchLemmaReading:
         assert lemma == "食べる"
         assert reading == "タベル", f"Expected surface reading 'タベル' as fallback, got '{reading}'"
 
+    @staticmethod
+    def _overridden_word() -> TokenizedWord:
+        # As the parser emits 感じた after the じる/ずる resolver override: front
+        # 感じる, but the lemma stays the archaic 感ずる. Pitch is lemma-keyed, so
+        # keying on the lemma's own reading (かんずる) would resolve the wrong
+        # accent word; resolved_reading (かんじる) realigns it to the front.
+        return TokenizedWord(
+            surface="感じ",
+            lemma="感ずる",
+            orth_base="感じる",
+            reading="カンジ",
+            sentence="そう感じたのテスト",
+            start_time=1.0,
+            end_time=3.0,
+            duration=2.0,
+            pos="動詞",
+            expression_reading="かんじる",
+            lemma_reading="かんずる",
+            resolved_reading="かんじる",
+        )
+
+    def test_resolved_reading_preferred_in_batch_lookup(self, test_config, mock_services, tmp_path):
+        """Site 1: the batch pitch lookup keys on resolved_reading over lemma_reading."""
+        word = self._overridden_word()
+
+        mock_pitch = MagicMock()
+        mock_pitch.is_available.return_value = True
+        mock_pitch.lookup_batch_detailed.return_value = [("0", "平板")]
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to feel"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        processor = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            pitch_accent_service=mock_pitch,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        lemma, reading, pos = mock_pitch.lookup_batch_detailed.call_args[0][0][0]
+        assert lemma == "感ずる"  # lemma NOT folded — correlation key
+        assert reading == "かんじる", f"Expected resolved_reading 'かんじる', got '{reading}'"
+
+    def test_resolved_reading_preferred_in_pitch_entry_lookup(self, test_config, mock_services, tmp_path):
+        """Site 2: the pitch-graph/text entry lookup keys on resolved_reading too."""
+        from dataclasses import replace
+
+        word = self._overridden_word()
+
+        mock_pitch = MagicMock()
+        mock_pitch.is_available.return_value = True
+        mock_pitch.lookup_batch_detailed.return_value = [("0", "平板")]
+        mock_pitch.lookup_entry.return_value = PitchEntry("0", nasal=(), devoice=())
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to feel"]
+        mock_services["anki_service"].create_cards_batch.return_value = 1
+
+        config = replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "pitch_graph": "PitchGraph", "pitch_text": "PitchText"},
+        )
+        processor = build_processor(
+            config=config,
+            presenter=NullPresenter(),
+            pitch_accent_service=mock_pitch,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_pitch.lookup_entry.assert_called_once_with("感ずる", "かんじる")
+
 
 class TestKnownWordDBIntegration:
     """Tests for EpisodeProcessor with known_word_db."""
