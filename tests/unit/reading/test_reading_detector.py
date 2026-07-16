@@ -21,6 +21,7 @@ _LOADER_MODULES = {
     "epub": "anki_miner.services.reading.epub_source",
     "txt": "anki_miner.services.reading.aozora_source",
     "subtitle": "anki_miner.services.reading.subtitle_source",
+    "text": "anki_miner.services.reading.text_source",
 }
 
 
@@ -402,19 +403,24 @@ def test_mokuro_missing_file_errors(tmp_path):
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.parametrize("kind", ["mokuro", "epub", "txt", "subtitle"])
+@pytest.mark.parametrize("kind", ["mokuro", "epub", "txt", "subtitle", "text"])
 def test_load_dispatches_to_source_module(kind: str, monkeypatch: pytest.MonkeyPatch) -> None:
     # ``detector.load`` does ``from . import <loader>`` then ``<loader>.load(ref)``.
     # The loaders really exist post-integration, so patch the real seam: monkeypatch
     # the imported module's ``load`` attribute (faking sys.modules can't win once the
     # real module is imported — ``from . import`` resolves through the package attr).
-    ref = ReadingSourceRef(
-        kind=kind,  # type: ignore[arg-type]
-        path=Path("whatever"),
-        image_root=None,
-        title="T",
-        volume=None,
-    )
+    # kind="text" refs are pathless by contract, so build them that way here to
+    # prove the dispatch path works without a path.
+    if kind == "text":
+        ref = ReadingSourceRef(kind="text", title="Text", text="x")
+    else:
+        ref = ReadingSourceRef(
+            kind=kind,  # type: ignore[arg-type]
+            path=Path("whatever"),
+            image_root=None,
+            title="T",
+            volume=None,
+        )
     module = importlib.import_module(_LOADER_MODULES[kind])
     sentinel = object()
     fake_load = MagicMock(return_value=sentinel)
