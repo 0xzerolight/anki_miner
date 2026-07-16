@@ -11,13 +11,15 @@ This test parses ~30 short corpus sentences through real fugashi/unidic (no
 network, no full UniDic, no user ``~/.anki_miner`` — the fixture index is built
 under a temp dir at import). It pins two things:
 
-1. The load-bearing assertion: (b) jiru-zuru recall is STRICTLY GREATER than
-   (a)'s. Equality would mean the resolver is dead.
-2. Absolute floors: (b) clears the jiru-zuru recall floor AND does not regress
-   the guard categories that were already correct under (a).
+1. The load-bearing assertions: (b) jiru-zuru recall AND (b) kana-written recall
+   are each STRICTLY GREATER than (a)'s. Equality would mean the resolver /
+   kana recovery is dead (dict-free strategy (a) recovers neither).
+2. Absolute floors: (b) clears the jiru-zuru recall floor, clears the
+   kana-written recall floor, AND does not regress the guard categories that
+   were already correct under (a).
 
-The kana-written floor lands in Task 4 (kana recovery); nominal-suffix and
-long-compound are provisional/dict-dependent (Tasks 5/6) — none is gated here.
+Nominal-suffix and long-compound are provisional/dict-dependent (Tasks 5/6) —
+neither is gated here.
 """
 
 from __future__ import annotations
@@ -89,6 +91,22 @@ def test_anchor_meets_jiru_zuru_recall_floor() -> None:
     assert b_jz >= 6 / 7, f"strategy (b) jiru-zuru recall {b_jz} below floor 6/7"
 
 
+def test_anchor_strictly_beats_orthbase_on_kana_written() -> None:
+    results = _scored()
+    a_kw = recall(results["a-lite-orthbase"].by_category["kana-written"])
+    b_kw = recall(results["b-lite-anchor"].by_category["kana-written"])
+    # Load-bearing (WS2): the script gate drops ALL pure-hiragana content words
+    # dict-free, so (a) recovers none. (b) must actually recover the category.
+    assert b_kw > a_kw, f"strategy (b) kana-written recall {b_kw} did not beat (a) {a_kw}"
+
+
+def test_anchor_meets_kana_written_recall_floor() -> None:
+    results = _scored()
+    b_kw = recall(results["b-lite-anchor"].by_category["kana-written"])
+    # 5 kana-written records (きれい/すごい/かわいい/あざとい/しがない); allow one straggler.
+    assert b_kw >= 4 / 5, f"strategy (b) kana-written recall {b_kw} below floor 4/5"
+
+
 def test_anchor_does_not_regress_guard_categories() -> None:
     results = _scored()
     b = results["b-lite-anchor"]
@@ -98,6 +116,6 @@ def test_anchor_does_not_regress_guard_categories() -> None:
         assert junk_rate(counts) == 0.0, f"strategy (b) introduced junk on {category}: {junk_rate(counts)}"
 
 
-# NOTE: the kana-written recall floor lands in Task 4 (kana recovery); the
-# nominal-suffix / long-compound compound categories are provisional (Tasks
-# 5/6). None is gated here.
+# NOTE: jiru-zuru (Task 3) and kana-written (Task 4) recall floors are gated
+# above; the nominal-suffix / long-compound compound categories are provisional
+# (Tasks 5/6) and not gated here.
