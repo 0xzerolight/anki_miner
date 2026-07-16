@@ -56,8 +56,20 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from anki_miner.config.config import AnkiMinerConfig  # noqa: E402
+import tempfile  # noqa: E402
+from dataclasses import replace  # noqa: E402
+
+from anki_miner.config.config import AnkiMinerConfig, ChainEntry  # noqa: E402
 from anki_miner.models.reading import ReadingUnit  # noqa: E402
+from anki_miner.services.definition_service import DefinitionService  # noqa: E402
+from anki_miner.services.dictionary.registry import DictionaryRegistry  # noqa: E402
+from anki_miner.services.dictionary.storage import (  # noqa: E402
+    SCHEMA_VERSION,
+    DictRow,
+    bulk_insert,
+    create_index,
+    write_meta,
+)
 from anki_miner.services.subtitle_parser import SubtitleParserService  # noqa: E402
 
 Strategy = Callable[[str], set[str]]
@@ -225,8 +237,136 @@ def mine_lite_orthbase(sentence: str) -> set[str]:
     return {w.mined_form for w in words}
 
 
+# ---------------------------------------------------------------------------
+# Strategy (b) — the REAL app pipeline WITH the resolver active
+# ---------------------------------------------------------------------------
+
+# Headwords the deterministic fixture dictionary attests. The resolver
+# (``resolve_dictionary_form``) gates purely on term EXISTENCE — it never reads
+# glosses or scores — so a bare ``term`` per line is all the fix needs. The set
+# covers every corpus target a 動詞/形容詞 resolver or compound-existence probe
+# can key on: the seven modern じる headwords the fix must recover, plus the
+# guard forms whose orthBase is ALREADY the correct headword (乞う, 立つ, 見る,
+# …) so a strictly-greater override can never fire, plus the kana/kanji
+# adjective pairs and nominal-suffix headword for a fair (b) table. Reading is
+# irrelevant to ``offline_terms_exist`` (exact-term match only), so it is left
+# empty. This list is the single source of truth for the fixture index and is
+# committed here — the index itself is rebuilt from it at benchmark start (no
+# binary blob in git, fully reproducible, network-free).
+_ANCHOR_HEADWORDS: tuple[str, ...] = (
+    # jiru-zuru modern headwords (the fix's targets)
+    "感じる",
+    "論じる",
+    "信じる",
+    "生じる",
+    "演じる",
+    "通じる",
+    "準じる",
+    # archaic-lemma / kanji-variant / cross-conjugation / potential guards
+    "乞う",
+    "彷徨う",
+    "出逢う",
+    "報いる",
+    "帰れる",
+    "見る",
+    "保つ",
+    "立つ",
+    "待つ",
+    "言う",
+    # katakana loanword verb
+    "サボる",
+    # kana / kanji adjective pairs + non-priority adjectives
+    "きれい",
+    "綺麗",
+    "すごい",
+    "凄い",
+    "かわいい",
+    "可愛い",
+    "あざとい",
+    "しがない",
+    # nominal-suffix headword
+    "重要性",
+)
+
+_ANCHOR_DICT_ID = "anchor-fixture"
+_anchor_service: SubtitleParserService | None = None
+
+
+def build_anchor_index(dicts_root: Path, dict_id: str = _ANCHOR_DICT_ID) -> Path:
+    """Seed a deterministic offline index of ``_ANCHOR_HEADWORDS`` under ``dicts_root``.
+
+    Reuses the production storage primitives (``create_index`` / ``bulk_insert``
+    / ``write_meta`` — the exact path a real Yomitan/JMdict import writes), so
+    the fixture can never diverge from a real index's schema. Returns the
+    ``index.sqlite`` path. Pure disk write under the caller-owned ``dicts_root``;
+    no network, no ``~/.anki_miner``.
+    """
+    folder = dicts_root / dict_id
+    folder.mkdir(parents=True, exist_ok=True)
+    db = folder / "index.sqlite"
+    create_index(db)
+    rows = [
+        DictRow(term=term, reading=None, content=f'<li class="gloss-item">{term}</li>', sequence=i)
+        for i, term in enumerate(_ANCHOR_HEADWORDS, start=1)
+    ]
+    bulk_insert(db, rows)
+    write_meta(
+        db,
+        {
+            "schema_version": str(SCHEMA_VERSION),
+            "source_name": dict_id,
+            "format": "yomitan",
+            "entry_count": str(len(rows)),
+        },
+    )
+    return db
+
+
+def _get_anchor_service() -> SubtitleParserService:
+    """Lazily build one ``SubtitleParserService`` wired to the fixture index.
+
+    Builds the deterministic index under a fresh temp dir (isolated from the
+    user's ``~/.anki_miner``), assembles the real provider chain via
+    ``DictionaryRegistry`` + ``DefinitionService``, and injects
+    ``offline_terms_exist`` as the parser's ``term_lookup`` — the identical
+    wiring production uses — so ``resolve_dictionary_form`` fires. Same real
+    parse path as strategy (a); the ONLY difference is the live term_lookup.
+    """
+    global _anchor_service
+    if _anchor_service is None:
+        root = Path(tempfile.mkdtemp(prefix="parse_benchmark_anchor_"))
+        build_anchor_index(root)
+        config = replace(
+            AnkiMinerConfig(),
+            dicts_root=root,
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id=_ANCHOR_DICT_ID, enabled=True),),
+            media_temp_folder=root / "media",
+        )
+        registry = DictionaryRegistry(config.dicts_root)
+        registry.load()
+        definition_service = DefinitionService(config, providers=registry.build_provider_chain(config))
+        _anchor_service = SubtitleParserService(config, term_lookup=definition_service.offline_terms_exist)
+    return _anchor_service
+
+
+def mine_lite_anchor(sentence: str) -> set[str]:
+    """Strategy (b): the real pipeline WITH the JMdict-anchored resolver active.
+
+    Identical to ``mine_lite_orthbase`` — same real
+    ``SubtitleParserService.parse_text_units`` path, same ``_emit_word`` /
+    ``mining_base`` — except the service carries an offline ``term_lookup``
+    backed by the fixture index, so archaic じる/ずる orthBases (感ずる) are
+    rewritten to the deinflection-attested modern headword (感じる).
+    """
+    service = _get_anchor_service()
+    unit = ReadingUnit(text=sentence, index=0, location_label="benchmark")
+    words, _index, _counts = service.parse_text_units([unit], want_line_index=False)
+    return {w.mined_form for w in words}
+
+
 STRATEGIES: dict[str, Strategy] = {
     "a-lite-orthbase": mine_lite_orthbase,
+    "b-lite-anchor": mine_lite_anchor,
 }
 
 
