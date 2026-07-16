@@ -296,6 +296,23 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "重要性",
     "刑務所",
     "不可能",
+    # colloquial orthBase targets (kana recovery mines these from すげえ/やべえ/
+    # うめえ/わかんない; the expected form is the orthBase, never the kanji lemma)
+    "やばい",
+    "うまい",
+    "わかる",
+    # auxiliary verbs, DELIBERATELY attested: the aux-context category must fail
+    # on attestation-PASS + pos2-reject, not on a fixture-dict miss — otherwise
+    # the floor stays green even if the 非自立可能 reject is reverted (the same
+    # false-safe the wired-lookup unit tests exist to prevent). する is NOT
+    # anchored (しちゃった must stay unminted via miss either way).
+    "いる",
+    "ある",
+    "くれる",
+    "おく",
+    "しまう",
+    # attested collocation for the long-compound swallow-by-design fixture
+    "気がする",
 )
 
 _ANCHOR_DICT_ID = "anchor-fixture"

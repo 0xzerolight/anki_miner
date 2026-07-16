@@ -1,0 +1,6 @@
+{"id":"co01","sentence":"すげえ","expected":["すごい"],"category":"colloquial","note":"unidic-lite orthBase is ALREADY the modern kana form (lemma 凄い is NOT the card front)"}
+{"id":"co02","sentence":"やべえ","expected":["やばい"],"category":"colloquial","note":"orthBase やばい, recovered via kana attestation"}
+{"id":"co03","sentence":"うめえ","expected":["うまい"],"category":"colloquial","note":"orthBase うまい, recovered via kana attestation"}
+{"id":"co04","sentence":"わかんない","expected":["わかる"],"category":"colloquial","note":"contracted negative: stem わかん carries orthBase わかる (動詞-一般)"}
+{"id":"co05","sentence":"食ってる","expected":["食う"],"category":"colloquial","note":"kanji stem mines directly; てる tags 助動詞 and is POS-excluded"}
+{"id":"co06","sentence":"しちゃった","expected":[],"category":"colloquial","note":"し stem is 動詞-非自立可能 — deliberate reject casualty, する is not minted"}

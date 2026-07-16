@@ -1,1 +1,2 @@
 {"id":"lc01","sentence":"応急処置","expected":["応急処置"],"category":"long-compound","note":"PROVISIONAL - finalized Task 6"}
+{"id":"lc02","sentence":"気がする","expected":["気がする"],"category":"long-compound","note":"collocation-swallow BY DESIGN (G5): the attested span is minted whole; component 気 is not separately mined"}
