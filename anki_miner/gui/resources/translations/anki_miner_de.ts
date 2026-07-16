@@ -1182,6 +1182,14 @@ Insgesamt erstellte Karten: %2</translation>
         <translation>Vokabeln aus Romanen und anderem Text sammeln (EPUB, Aozora, reiner Text).</translation>
     </message>
     <message>
+        <source>Mine pasted text</source>
+        <translation>Eingefügten Text sammeln</translation>
+    </message>
+    <message>
+        <source>Paste any Japanese text and mine it straight into Anki cards.</source>
+        <translation>Fügen Sie beliebigen japanischen Text ein und sammeln Sie daraus direkt Anki-Karten.</translation>
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation>Untertitel aus Audio erzeugen</translation>
     </message>
@@ -3244,7 +3252,7 @@ Dies kann nicht rückgängig gemacht werden. Sie müssten erneut importieren, um
     </message>
     <message>
         <source>Words you added from the Word Curator — ignored on every run, kept across cache rebuilds, exportable for re-import into jiten.moe. Import accepts jpdb, Migaku and AnkiMorphs exports or plain word lists.</source>
-        <translation type="unfinished" />
+        <translation>Wörter, die Sie über den Wort-Kurator hinzugefügt haben — werden bei jedem Lauf ignoriert, bleiben bei Cache-Neuaufbauten erhalten und lassen sich für den Re-Import in jiten.moe exportieren. Der Import akzeptiert jpdb-, Migaku- und AnkiMorphs-Exporte oder einfache Wortlisten.</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -3256,7 +3264,7 @@ Dies kann nicht rückgängig gemacht werden. Sie müssten erneut importieren, um
     </message>
     <message>
         <source>Import…</source>
-        <translation type="unfinished" />
+        <translation>Importieren…</translation>
     </message>
     <message>
         <source>Export…</source>
@@ -3276,76 +3284,81 @@ Dies kann nicht rückgängig gemacht werden. Sie müssten erneut importieren, um
     </message>
     <message>
         <source>jpdb review export</source>
-        <translation type="unfinished" />
+        <translation>jpdb-Review-Export</translation>
     </message>
     <message>
         <source>Migaku word export</source>
-        <translation type="unfinished" />
+        <translation>Migaku-Wortexport</translation>
     </message>
     <message>
         <source>Migaku legacy add-on backup</source>
-        <translation type="unfinished" />
+        <translation>Backup des alten Migaku-Add-ons</translation>
     </message>
     <message>
         <source>AnkiMorphs known morphs</source>
-        <translation type="unfinished" />
+        <translation>Bekannte Morpheme aus AnkiMorphs</translation>
     </message>
     <message>
         <source>Migaku word export (CSV)</source>
-        <translation type="unfinished" />
+        <translation>Migaku-Wortexport (CSV)</translation>
     </message>
     <message>
         <source>plain word list</source>
-        <translation type="unfinished" />
+        <translation>einfache Wortliste</translation>
     </message>
     <message>
         <source>Import Known Words</source>
-        <translation type="unfinished" />
+        <translation>Bekannte Wörter importieren</translation>
     </message>
     <message>
         <source>Known word lists (*.csv *.txt *.json);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Listen bekannter Wörter (*.csv *.txt *.json);;Alle Dateien (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — this file has no known/learning status; all %2 entries will be imported.
 
 Add %3 word(s) to your known list?</source>
-        <translation type="unfinished" />
+        <translation>Erkannt: %1 — diese Datei enthält keinen Bekannt-/Lernstatus; alle %2 Einträge werden importiert.
+
+%3 Wort/Wörter zu Ihrer Liste bekannter Wörter hinzufügen?</translation>
     </message>
     <message>
         <source>Detected: %1 — %2 entries, %3 qualify as known.
 
 Add %3 word(s) to your known list?</source>
-        <translation type="unfinished" />
+        <translation>Erkannt: %1 — %2 Einträge, davon gelten %3 als bekannt.
+
+%3 Wort/Wörter zu Ihrer Liste bekannter Wörter hinzufügen?</translation>
     </message>
     <message>
         <source>Import Complete</source>
-        <translation type="unfinished" />
+        <translation>Import abgeschlossen</translation>
     </message>
     <message>
         <source>Added %1 word(s) to your list. %2 were already in it.</source>
-        <translation type="unfinished" />
+        <translation>%1 Wort/Wörter zu Ihrer Liste hinzugefügt. %2 waren bereits enthalten.</translation>
     </message>
     <message>
         <source>Detected: %1 — but no entries in this file qualify as known.</source>
-        <translation type="unfinished" />
+        <translation>Erkannt: %1 — aber keine Einträge in dieser Datei gelten als bekannt.</translation>
     </message>
     <message>
         <source>The file could not be read.</source>
-        <translation type="unfinished" />
+        <translation>Die Datei konnte nicht gelesen werden.</translation>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>Dateiformat nicht erkannt. Unterstützt: jpdb-Review-Export (JSON), Migaku-Wortexport (JSON/CSV), bekannte Morpheme aus AnkiMorphs (CSV), einfache Wortlisten (ein Wort pro Zeile).</translation>
     </message>
     <message>
         <source>Import Failed</source>
-        <translation type="unfinished">Import fehlgeschlagen</translation>
+        <translation>Import fehlgeschlagen</translation>
     </message>
     <message>
         <source>Unexpected error while reading the file:
 %1</source>
-        <translation type="unfinished" />
+        <translation>Unerwarteter Fehler beim Lesen der Datei:
+%1</translation>
     </message>
     <message>
         <source>Export Known Words</source>
@@ -3616,6 +3629,10 @@ Fortfahren?</translation>
     <message>
         <source>Subtitles</source>
         <translation>Untertitel</translation>
+    </message>
+    <message>
+        <source>Text</source>
+        <translation>Text</translation>
     </message>
     <message>
         <source>Generate</source>
@@ -4404,6 +4421,72 @@ Sie können dies später unter Einstellungen → Anki verfeinern.</translation>
     <message>
         <source>Complete — %1 cards created</source>
         <translation>Abgeschlossen — %1 Karten erstellt</translation>
+    </message>
+</context><context>
+    <name>ReadingTextTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation>Wörter vor dem Sammeln prüfen</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation>Das Wortauswahl-Popup vor dem Erstellen von Karten anzeigen.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Fortschritt</translation>
+    </message>
+    <message>
+        <source>Pasted Text</source>
+        <translation>Eingefügter Text</translation>
+    </message>
+    <message>
+        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
+        <translation>Fügen Sie japanischen Text ein und sammeln Sie daraus Anki-Karten — ohne Screenshots oder Audio.</translation>
+    </message>
+    <message>
+        <source>Paste text here…</source>
+        <translation>Text hier einfügen…</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Sammeln</translation>
+    </message>
+    <message>
+        <source>Mine the pasted text into Anki cards.</source>
+        <translation>Aus dem eingefügten Text Anki-Karten sammeln.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Abbrechen</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Den aktiven Lauf abbrechen.</translation>
+    </message>
+    <message>
+        <source>Paste some text first.</source>
+        <translation>Fügen Sie zuerst Text ein.</translation>
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation>Wird gestartet…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Wird abgebrochen…</translation>
+    </message>
+    <message>
+        <source>Mining pasted text…</source>
+        <translation>Eingefügter Text wird gesammelt…</translation>
+    </message>
+    <message>
+        <source>Mined %1 cards.</source>
+        <translation>%1 Karten gesammelt.</translation>
+    </message>
+    <message>
+        <source>Failed: %1.</source>
+        <translation>Fehlgeschlagen: %1.</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>
