@@ -27,6 +27,11 @@ from anki_miner.utils.text_utils import katakana_to_hiragana
 
 logger = logging.getLogger(__name__)
 
+# One IN-clause bind per unique term in lookup_detail_many. SQLITE_MAX_VARIABLE_NUMBER
+# is 999 on older SQLite builds, so stay under it with headroom (the dictionary-side
+# batch, dictionary/storage.py's _BIND_CHUNK, binds 2 vars per term and uses 450).
+_BIND_CHUNK = 900
+
 
 # Ported semantics from Yomitan Translator (ext/js/language/translator.js, the
 # ``freq`` case of the term-meta loop, upstream commit e2ed450): a frequency row
@@ -172,6 +177,54 @@ class IndexedFreqProvider:
         if row is None:
             return None
         return int(row[1]), row[2]
+
+    def lookup_detail_many(self, pairs: list[tuple[str, str | None]]) -> list[tuple[int, str | None] | None]:
+        """Batch :meth:`lookup_detail`; ``result[i]`` is byte-identical to ``lookup_detail(*pairs[i])``.
+
+        One IN-clause query per ``_BIND_CHUNK`` unique terms gathers the candidate
+        rows, then every requested ``(term, reading)`` pair is resolved
+        independently via :func:`_select_scoped_row` — duplicate terms with
+        distinct readings each get their own scoped resolution (a parallel list,
+        never a dict collapse).
+
+        ``sqlite3.DatabaseError`` granularity is per chunk: a failing chunk logs
+        one warning and resolves all of its pairs to None while the other chunks
+        proceed. For a persistently broken index that is outcome-identical to
+        repeated ``lookup_detail`` calls (each would return None); a transient
+        mid-batch error misses one chunk of terms instead of one term.
+        """
+        if self._conn is None:
+            return [None] * len(pairs)
+        display_col = "display_value" if self._has_display_value else "NULL"
+        unique = list(dict.fromkeys(term for term, _reading in pairs))
+        by_term: dict[str, list[tuple]] = {}
+        for start in range(0, len(unique), _BIND_CHUNK):
+            chunk = unique[start : start + _BIND_CHUNK]
+            placeholders = ",".join("?" * len(chunk))
+            try:
+                rows = self._conn.execute(
+                    f"SELECT term, reading, rank, {display_col} FROM entries WHERE term IN ({placeholders})",
+                    chunk,
+                ).fetchall()
+            except sqlite3.DatabaseError as e:
+                logger.warning(
+                    "Frequency source '%s' (%s) raised DatabaseError during lookup_detail_many; "
+                    "treating %d term(s) as misses: %s",
+                    self.source_id,
+                    self._db_path,
+                    len(chunk),
+                    e,
+                )
+                continue
+            for term, reading, rank, display in rows:
+                # Same row shape _select_scoped_row sees from lookup_detail:
+                # (stored_reading, rank, display_value).
+                by_term.setdefault(term, []).append((reading, rank, display))
+        results: list[tuple[int, str | None] | None] = []
+        for term, reading in pairs:
+            row = _select_scoped_row(by_term.get(term, []), reading)
+            results.append(None if row is None else (int(row[1]), row[2]))
+        return results
 
     def close(self) -> None:
         if self._conn is not None:

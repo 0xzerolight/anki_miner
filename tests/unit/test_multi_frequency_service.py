@@ -336,3 +336,79 @@ class TestHasNumericSource:
         # A numeric source that failed to load must not count as usable.
         svc = MultiFrequencyService([_FakeProvider("Freq", {"猫": 1}, available=False)])
         assert svc.has_numeric_source() is False
+
+
+# ---------------------------------------------------------------------------
+# lookup_all_many (batched aggregation)
+# ---------------------------------------------------------------------------
+
+
+class _FakeBatchProvider(_FakeProvider):
+    """_FakeProvider plus the lookup_detail_many batch surface."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.batch_calls = 0
+
+    def lookup_detail_many(self, pairs: list[tuple[str, str | None]]) -> list[tuple[int, str | None] | None]:
+        self.batch_calls += 1
+        return [self.lookup_detail(t, r) for t, r in pairs]
+
+
+def test_lookup_all_many_matches_lookup_all_per_pair():
+    svc = MultiFrequencyService(
+        [
+            _FakeBatchProvider("JPDB", {"猫": 100, "犬": 200}, displays={"猫": "100/72000"}),
+            _FakeBatchProvider("BCCWJ", {"犬": 40}),
+        ]
+    )
+    pairs: list[tuple[str, str | None]] = [("猫", "ねこ"), ("犬", None), ("鳥", None)]
+    assert svc.lookup_all_many(pairs) == [svc.lookup_all(t, r) for t, r in pairs]
+
+
+def test_lookup_all_many_chain_order_and_miss_omission():
+    svc = MultiFrequencyService(
+        [
+            _FakeBatchProvider("JPDB", {"猫": 100}),
+            _FakeBatchProvider("BCCWJ", {}),  # never hits -> omitted per pair
+            _FakeBatchProvider("Novel", {"猫": 42, "犬": 7}),
+        ]
+    )
+    assert svc.lookup_all_many([("猫", None), ("犬", None), ("鳥", None)]) == [
+        [("JPDB", 100, None), ("Novel", 42, None)],
+        [("Novel", 7, None)],
+        [],
+    ]
+
+
+def test_lookup_all_many_one_batch_call_per_provider():
+    p1 = _FakeBatchProvider("JPDB", {"猫": 100})
+    p2 = _FakeBatchProvider("Novel", {"犬": 7})
+    svc = MultiFrequencyService([p1, p2])
+    svc.lookup_all_many([("猫", None), ("犬", None), ("鳥", None)])
+    assert p1.batch_calls == 1
+    assert p2.batch_calls == 1
+
+
+def test_lookup_all_many_empty_pairs_and_no_providers():
+    assert MultiFrequencyService([]).lookup_all_many([("猫", None)]) == [[]]
+    svc = MultiFrequencyService([_FakeBatchProvider("JPDB", {"猫": 100})])
+    assert svc.lookup_all_many([]) == []
+
+
+def test_lookup_all_many_real_provider_equivalence(tmp_path):
+    from anki_miner.services.frequency.providers.indexed_freq_provider import (
+        IndexedFreqProvider,
+    )
+    from tests.unit.test_indexed_freq_provider import _build_source
+
+    db = _build_source(
+        tmp_path,
+        "jpdb",
+        [("方", "かた", 2000, "2000㋕"), ("方", "ほう", 30, "30㋕"), ("生", "せい", 80)],
+    )
+    provider = IndexedFreqProvider("jpdb", db, "JPDB")
+    assert provider.load() is True
+    svc = MultiFrequencyService([provider])
+    pairs: list[tuple[str, str | None]] = [("方", "かた"), ("方", "ほう"), ("生", "せい"), ("無", None)]
+    assert svc.lookup_all_many(pairs) == [svc.lookup_all(t, r) for t, r in pairs]
