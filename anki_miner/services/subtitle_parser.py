@@ -17,6 +17,7 @@ from anki_miner.models.word import select_mined_form
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, TermLookup
 from anki_miner.services.deinflection import _is_pure_hiragana, find_highlight_end, resolve_dictionary_form
 from anki_miner.services.morphology import (
+    AttestLookup,
     ReadingLookup,
     TokenInclusionRule,
     _edit_distance,
@@ -159,17 +160,27 @@ class SubtitleParserService:
             allowed_pos=frozenset(config.allowed_pos),
             excluded_subtypes=frozenset(config.excluded_subtypes),
         )
-        # Dictionary-attested compound matching (see services/compound_matcher.py).
-        # Built only when a term lookup is injected (COMPOUND_MATCHING is always
-        # on); the matcher reuses the inclusion rule so spans start only at
-        # mineable tokens.
-        self._compound_matcher: CompoundDictionaryMatcher | None = None
-        if term_lookup is not None and COMPOUND_MATCHING:
-            self._compound_matcher = CompoundDictionaryMatcher(term_lookup, self._inclusion_rule)
         # Same injected offline existence probe drives the verb-front resolver
         # (see _resolve_front / deinflection.resolve_dictionary_form). None ⇒ the
         # resolver safe-degrades and mining stays byte-identical to pre-resolver.
         self._term_lookup = term_lookup
+        # Per-instance MEMOIZED existence probe shared by the compound-merge gate
+        # (morphology.merge_compound_suffixes) AND the compound matcher: caches
+        # existence per surface so a repeated corpus (count_lemmas / Deck Builder
+        # coverage hot path) probes each distinct surface through the underlying
+        # offline dictionary at most once. None when no dict is wired — the merge
+        # passes then run UNGATED, so the no-dict output is byte-identical to the
+        # pre-gate behavior (exactly like the matcher's term_lookup gating).
+        self._exist_memo: dict[str, bool] = {}
+        self._attest: AttestLookup | None = self._memoized_attest if term_lookup is not None else None
+        # Dictionary-attested compound matching (see services/compound_matcher.py).
+        # Built only when a term lookup is injected (COMPOUND_MATCHING is always
+        # on); the matcher reuses the inclusion rule so spans start only at
+        # mineable tokens, and the SAME memoized probe so a surface's existence is
+        # looked up once across the merge gate and the matcher.
+        self._compound_matcher: CompoundDictionaryMatcher | None = None
+        if self._attest is not None and COMPOUND_MATCHING:
+            self._compound_matcher = CompoundDictionaryMatcher(self._attest, self._inclusion_rule)
         # Reading-capable offline existence probe for kana recovery
         # (see _recover_kana_content_word). None ⇒ no recovery, safe degrade.
         self._kana_attest_lookup = kana_attest_lookup
@@ -965,9 +976,36 @@ class SubtitleParserService:
     # seams stable for tests and patch-based callers.
     # ------------------------------------------------------------------
 
+    def _memoized_attest(self, surfaces: list[str]) -> set[str]:
+        """Per-instance memoized offline-existence probe (see __init__).
+
+        Wraps ``self._term_lookup``, caching each surface's existence in
+        ``self._exist_memo`` so a repeated corpus probes each distinct surface at
+        most once, and returns the attested subset of ``surfaces``. Shared by the
+        morphology compound-merge gate and the compound matcher. Clear-on-cap
+        bounds the memo on whole-corpus Deck Builder runs (mirrors _front_cache /
+        the matcher's existence cache). Only bound to ``self._attest`` when a
+        ``term_lookup`` exists; the ``None`` guard is defensive.
+        """
+        if self._term_lookup is None:
+            return set()
+        unknown = [s for s in dict.fromkeys(surfaces) if s not in self._exist_memo]
+        if unknown:
+            if len(self._exist_memo) + len(unknown) > _FRONT_CACHE_CAP:
+                self._exist_memo.clear()
+            hits = self._term_lookup(unknown)
+            for s in unknown:
+                self._exist_memo[s] = s in hits
+        return {s for s in surfaces if self._exist_memo.get(s)}
+
     def _merge_compound_suffixes(self, tokens: list) -> list:
-        """Run all compound-merge passes (see morphology.merge_compound_suffixes)."""
-        return merge_compound_suffixes(tokens)
+        """Run all compound-merge passes (see morphology.merge_compound_suffixes).
+
+        Threads the per-instance memoized attest probe: with an offline dict the
+        junk-prone noun-suffix/prefix passes are attested-or-bail gated; ``None``
+        (no dict) leaves them ungated — output byte-identical to pre-gate.
+        """
+        return merge_compound_suffixes(tokens, attest=self._attest)
 
     def _extract_lemma(self, word_token) -> str:
         """Extract lemma (dictionary form) from a token (see morphology.extract_lemma)."""

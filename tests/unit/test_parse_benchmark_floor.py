@@ -11,15 +11,16 @@ This test parses ~30 short corpus sentences through real fugashi/unidic (no
 network, no full UniDic, no user ``~/.anki_miner`` — the fixture index is built
 under a temp dir at import). It pins two things:
 
-1. The load-bearing assertions: (b) jiru-zuru recall AND (b) kana-written recall
-   are each STRICTLY GREATER than (a)'s. Equality would mean the resolver /
-   kana recovery is dead (dict-free strategy (a) recovers neither).
+1. The load-bearing assertions: (b) jiru-zuru recall, (b) kana-written recall
+   AND (b) nominal-suffix f1 are each STRICTLY GREATER than (a)'s. Equality
+   would mean the resolver / kana recovery / attested-or-bail merge gate is
+   dead (dict-free strategy (a) fires none of them).
 2. Absolute floors: (b) clears the jiru-zuru recall floor, clears the
-   kana-written recall floor, AND does not regress the guard categories that
-   were already correct under (a).
+   kana-written recall floor, is perfect (recall 1.0 / junk 0.0) on the
+   finalized nominal-suffix corpus, AND does not regress the guard categories
+   that were already correct under (a).
 
-Nominal-suffix and long-compound are provisional/dict-dependent (Tasks 5/6) —
-neither is gated here.
+Long-compound is provisional/dict-dependent (Task 6) — not gated here.
 """
 
 from __future__ import annotations
@@ -48,6 +49,7 @@ pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic
 
 from scripts.parse_benchmark import (  # noqa: E402
     DEFAULT_CORPUS_DIR,
+    f1,
     junk_rate,
     load_corpus,
     mine_lite_anchor,
@@ -116,6 +118,26 @@ def test_anchor_does_not_regress_guard_categories() -> None:
         assert junk_rate(counts) == 0.0, f"strategy (b) introduced junk on {category}: {junk_rate(counts)}"
 
 
-# NOTE: jiru-zuru (Task 3) and kana-written (Task 4) recall floors are gated
-# above; the nominal-suffix / long-compound compound categories are provisional
-# (Tasks 5/6) and not gated here.
+def test_anchor_strictly_beats_orthbase_on_nominal_suffix() -> None:
+    results = _scored()
+    a_ns = f1(results["a-lite-orthbase"].by_category["nominal-suffix"])
+    b_ns = f1(results["b-lite-anchor"].by_category["nominal-suffix"])
+    # Load-bearing (Task 5): the attested-or-bail gate is dict-only, so dict-free
+    # strategy (a) keeps the junk compounds (状況的/会議中/超反応/重要). Equality
+    # would mean the gate never fired.
+    assert b_ns > a_ns, f"strategy (b) nominal-suffix f1 {b_ns} did not beat (a) {a_ns}"
+
+
+def test_anchor_meets_nominal_suffix_floor() -> None:
+    results = _scored()
+    b_ns = results["b-lite-anchor"].by_category["nominal-suffix"]
+    # The gate must be perfect on the finalized nominal-suffix corpus: every
+    # attested compound stays whole (刑務所/不可能/重要性) and every unattested one
+    # bails to exactly its bare noun (状況/会議/反応) — no misses, no junk.
+    assert recall(b_ns) == 1.0, f"strategy (b) nominal-suffix recall {recall(b_ns)} below 1.0"
+    assert junk_rate(b_ns) == 0.0, f"strategy (b) nominal-suffix junk_rate {junk_rate(b_ns)} above 0.0"
+
+
+# NOTE: jiru-zuru (Task 3), kana-written (Task 4) and nominal-suffix (Task 5)
+# floors are gated above; the long-compound category is provisional (Task 6)
+# and not gated here.
