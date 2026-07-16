@@ -1098,13 +1098,27 @@ class TestKanaWordRecovery:
         assert service._should_include_word(token) is True
         assert lookup.calls == [["きれい"]]  # probed the mined-form card front
 
-    def test_recovers_pure_hiragana_verb_orthbase_front(self, test_config):
-        # 動詞 ある: mined_form is the orthBase dictionary form (ある).
-        lookup = _attest_lookup("ある")
+    @pytest.mark.parametrize(
+        ("context", "surface", "lemma", "orth_base"),
+        [
+            ("見ている", "いる", "居る", "いる"),
+            ("そこにある", "ある", "有る", "ある"),
+            ("買ってくれる", "くれる", "呉れる", "くれる"),
+            ("書いておく", "おく", "置く", "おく"),
+            ("読んでしまう", "しまう", "仕舞う", "しまう"),
+        ],
+    )
+    def test_does_not_recover_auxiliary_capable_verb(self, test_config, context, surface, lemma, orth_base):
+        # 動詞 pos2=非自立可能 (real unidic tag for いる/ある/くれる/おく/しまう —
+        # in AUX context and standalone alike, the tokens are byte-identical).
+        # Attested on purpose: the pos2 backstop, not a dict miss, must drop them,
+        # or every ている line mints an いる card. Standalone main-verb uses are
+        # the accepted casualty (see _KANA_RECOVER_REJECT_POS2).
+        lookup = _attest_lookup(surface)
         service = self._service(test_config, lookup)
-        token = _make_token("ある", "動詞", pos2="一般", lemma="有る", orth_base="ある")
-        assert service._should_include_word(token) is True
-        assert lookup.calls == [["ある"]]
+        token = _make_token(surface, "動詞", pos2="非自立可能", lemma=lemma, orth_base=orth_base)
+        assert service._should_include_word(token) is False, context
+        assert lookup.calls == []  # pos2 gate short-circuits before the lookup
 
     @pytest.mark.parametrize(
         ("surface", "lemma"),
@@ -1211,6 +1225,39 @@ class TestKanaWordRecovery:
             t = _make_token("ぬるぽ", "動詞", pos2="一般", lemma="ぬるぽ", orth_base="ぬるぽ")
             assert service._should_include_word(t) is False
         assert len(lookup.calls) == 1
+
+    def test_count_and_mine_both_reject_aux_identically(self, test_config, tmp_path):
+        # count==mine parity for the REJECT side: a ている line must yield no
+        # いる in either count_lemmas or the mined set, even with いる attested.
+        sub_file = tmp_path / "aux.ass"
+        sub_file.write_text("x", encoding="utf-8")
+        mock_line = MagicMock()
+        mock_line.text = "見ている"
+        mock_line.start = 0
+        mock_line.end = 1000
+        mock_line.is_comment = False
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+        tokens = [
+            _make_token("見", "動詞", pos2="非自立可能", lemma="見る", kana="ミ", orth_base="見る"),
+            _make_token("て", "助詞", pos2="接続助詞", lemma="て", kana="テ", orth_base="て"),
+            _make_token("いる", "動詞", pos2="非自立可能", lemma="居る", kana="イル", orth_base="いる"),
+        ]
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = tokens
+        lookup = _attest_lookup("いる")
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config, kana_attest_lookup=lookup)
+            counts = service.count_lemmas(sub_file)
+            words = service.parse_subtitle_file(sub_file)
+        assert "居る" not in counts  # count side rejected the aux
+        assert "いる" not in {w.mined_form for w in words}  # mine side too
+        assert counts.get("見る") == 1  # kanji 非自立可能 verb is untouched
+        assert "見る" in {w.mined_form for w in words}
+        assert lookup.calls == []  # pos2 reject fired before any probe
 
     def test_count_and_mine_both_recover_identically(self, test_config, tmp_path):
         # count==mine parity (T-38): count_lemmas and parse_subtitle_file both
@@ -2783,19 +2830,50 @@ class TestSurfaceOffsetsAndBolding:
         assert m.group(1).startswith(word.surface[0])
 
     def test_hiragana_benefactive_not_mined_separately(self, tmp_path):
-        """くれ (呉れる) has a pure-hiragana surface: the pre-existing
-        has_kanji gate drops it, so 買ってくれた mines only 買う (and 本)."""
+        """くれ (呉れる, 非自立可能) must not be mined from 買ってくれた even with
+        the kana recovery active AND くれる attested — the pos2 reject, not a
+        dict miss, drops it. (Without the wired lookup this test was false-safe:
+        recovery short-circuited before the gate under test ever ran.)"""
         srt_file = tmp_path / "benefactive.srt"
         srt_file.write_text(
             "1\n00:00:01,000 --> 00:00:05,000\n本を買ってくれた\n",
             encoding="utf-8",
         )
         config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
-        service = SubtitleParserService(config)
+        lookup = _attest_lookup("くれる", "いる", "ある")
+        service = SubtitleParserService(config, kana_attest_lookup=lookup)
         words = service.parse_subtitle_file(srt_file)
         lemmas = {w.lemma for w in words}
         assert "買う" in lemmas
         assert not any("くれ" in lemma for lemma in lemmas)
+
+    @pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+    @pytest.mark.parametrize(
+        ("line", "wanted", "aux_front"),
+        [
+            ("猫を見ている", {"猫", "見る"}, "いる"),
+            ("本を読んでしまった", {"本", "読む"}, "しまう"),
+            ("手紙を書いておく", {"手紙", "書く"}, "おく"),
+            ("犬を飼ってくれる", {"犬", "飼う"}, "くれる"),
+            ("そこにある", set(), "ある"),
+        ],
+    )
+    def test_real_fugashi_aux_context_mints_no_aux_card(self, tmp_path, line, wanted, aux_front):
+        """End-to-end 非自立可能 guard through real fugashi: the aux headword is
+        deliberately attested, and still no aux card is minted (aux-context
+        benchmark category pins the same through the fixture dict)."""
+        srt_file = tmp_path / "aux.srt"
+        srt_file.write_text(
+            f"1\n00:00:01,000 --> 00:00:05,000\n{line}\n",
+            encoding="utf-8",
+        )
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        lookup = _attest_lookup("いる", "ある", "くれる", "おく", "しまう")
+        service = SubtitleParserService(config, kana_attest_lookup=lookup)
+        words = service.parse_subtitle_file(srt_file)
+        fronts = {w.mined_form for w in words}
+        assert aux_front not in fronts, line
+        assert wanted <= fronts, line
 
 
 # ---------------------------------------------------------------------------
