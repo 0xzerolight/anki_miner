@@ -310,8 +310,11 @@ jobs:
             FFPROBE_SHA256="399b93f0b9862f69767afa343e90c2f48d7e7958cadbb6deb76a012d0e3b7ce3"
           fi
           mkdir -p vendor/ffmpeg
-          curl -fL "$FFMPEG_URL" -o ffmpeg.zip
-          curl -fL "$FFPROBE_URL" -o ffprobe.zip
+          # --retry-all-errors: osxexperts.net intermittently resets transfers
+          # mid-stream (curl exit 18, partial file), which plain --retry does not
+          # consider transient. Integrity still rests on the shasum check below.
+          curl -fL --retry 5 --retry-delay 2 --retry-all-errors "$FFMPEG_URL" -o ffmpeg.zip
+          curl -fL --retry 5 --retry-delay 2 --retry-all-errors "$FFPROBE_URL" -o ffprobe.zip
           echo "${FFMPEG_SHA256}  ffmpeg.zip" | shasum -a 256 -c -
           echo "${FFPROBE_SHA256}  ffprobe.zip" | shasum -a 256 -c -
           unzip -oj ffmpeg.zip ffmpeg -d vendor/ffmpeg
