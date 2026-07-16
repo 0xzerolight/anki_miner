@@ -139,13 +139,17 @@ _EXPECTED_CATEGORIES = {
     "katakana",
     "nominal-suffix",
     "long-compound",
+    "aux-context",
+    "colloquial",
+    "counter",
+    "linebreak-split",
 }
 
 
 def test_load_corpus_parses_every_fixture() -> None:
     records = load_corpus(DEFAULT_CORPUS_DIR)
-    # 9 fixture files, 28 curated records at authoring time; never fewer.
-    assert len(records) >= 28
+    # 13 fixture files, 50 curated records at authoring time; never fewer.
+    assert len(records) >= 50
     categories = set()
     ids = set()
     for rec in records:

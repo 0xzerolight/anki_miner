@@ -1,0 +1,7 @@
+{"id":"ac01","sentence":"猫を見ている","expected":["猫","見る"],"category":"aux-context","note":"ている progressive: いる (非自立可能, fixture-attested) must NOT be minted"}
+{"id":"ac02","sentence":"本を読んでしまった","expected":["本","読む"],"category":"aux-context","note":"でしまう completive: しまう (非自立可能, attested) must NOT be minted"}
+{"id":"ac03","sentence":"手紙を書いておく","expected":["手紙","書く"],"category":"aux-context","note":"ておく preparatory: おく (非自立可能, attested) must NOT be minted"}
+{"id":"ac04","sentence":"犬を飼ってくれる","expected":["犬","飼う"],"category":"aux-context","note":"てくれる benefactive: くれる (非自立可能, attested) must NOT be minted"}
+{"id":"ac05","sentence":"朝ごはんを食べちゃった","expected":["朝ごはん","食べる"],"category":"aux-context","note":"ちゃう contraction tags 助動詞 — pre-excluded by the POS gate, pins that"}
+{"id":"ac06","sentence":"3人いた","expected":[],"category":"aux-context","note":"standalone main-verb いる: accepted 非自立可能-reject casualty, stays unmined; 3人 is 数詞-excluded"}
+{"id":"ac07","sentence":"そこにある","expected":[],"category":"aux-context","note":"standalone main-verb ある: accepted 非自立可能-reject casualty, stays unmined"}

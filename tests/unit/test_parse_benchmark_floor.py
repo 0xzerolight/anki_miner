@@ -21,6 +21,10 @@ under a temp dir at import). It pins two things:
    that were already correct under (a).
 
 Long-compound is provisional/dict-dependent (Task 6) — not gated here.
+Aux-context is gated only once the 非自立可能 kana-recovery reject lands (its
+fixtures deliberately attest いる/ある/くれる/おく/しまう so the category is red
+until the reject fires — see the fixture-dict comment in parse_benchmark.py).
+Linebreak-split is scoreboard-only (G4 incidence measurement, no fix shipped).
 """
 
 from __future__ import annotations
@@ -138,6 +142,35 @@ def test_anchor_meets_nominal_suffix_floor() -> None:
     assert junk_rate(b_ns) == 0.0, f"strategy (b) nominal-suffix junk_rate {junk_rate(b_ns)} above 0.0"
 
 
-# NOTE: jiru-zuru (Task 3), kana-written (Task 4) and nominal-suffix (Task 5)
-# floors are gated above; the long-compound category is provisional (Task 6)
-# and not gated here.
+def test_anchor_strictly_beats_orthbase_on_colloquial() -> None:
+    results = _scored()
+    a_co = recall(results["a-lite-orthbase"].by_category["colloquial"])
+    b_co = recall(results["b-lite-anchor"].by_category["colloquial"])
+    # Load-bearing: すげえ/やべえ/うめえ/わかんない are pure-kana orthBases only
+    # the attested kana recovery can mine; dict-free (a) gets 食う alone.
+    assert b_co > a_co, f"strategy (b) colloquial recall {b_co} did not beat (a) {a_co}"
+
+
+def test_anchor_meets_colloquial_floor() -> None:
+    results = _scored()
+    b_co = results["b-lite-anchor"].by_category["colloquial"]
+    # Tripwire, not a fix: unidic-lite's orthBase is ALREADY modern for these
+    # (すげえ→すごい). Perfect score pins that; junk would mean a wrong form
+    # (e.g. the kanji lemma 凄い) or a reject regression (する from しちゃった).
+    assert recall(b_co) == 1.0, f"strategy (b) colloquial recall {recall(b_co)} below 1.0"
+    assert junk_rate(b_co) == 0.0, f"strategy (b) colloquial junk_rate {junk_rate(b_co)} above 0.0"
+
+
+def test_counter_category_is_clean() -> None:
+    results = _scored()
+    b_ct = results["b-lite-anchor"].by_category["counter"]
+    # Number+counter chains die on the inherited 数詞 subtype exclusion whether
+    # the merge gate fires or not; only the real verb survives.
+    assert recall(b_ct) == 1.0, f"strategy (b) counter recall {recall(b_ct)} below 1.0"
+    assert junk_rate(b_ct) == 0.0, f"strategy (b) counter junk_rate {junk_rate(b_ct)} above 0.0"
+
+
+# NOTE: jiru-zuru (Task 3), kana-written (Task 4), nominal-suffix (Task 5) and
+# colloquial/counter (A2) floors are gated above; long-compound stays provisional
+# (Task 6), aux-context activates with the 非自立可能 reject (A1), and
+# linebreak-split is scoreboard-only.
