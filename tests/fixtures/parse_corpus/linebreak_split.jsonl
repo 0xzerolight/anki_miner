@@ -1,0 +1,2 @@
+{"id":"lb01","sentence":"勉 強した","expected":["勉強"],"category":"linebreak-split","note":"MEASURE-ONLY (G4): mid-word \\N wrap arrives as a space; 勉(固有名詞)+強(接尾辞) both excluded — documented miss, no floor"}
+{"id":"lb02","sentence":"頑張 って","expected":["頑張る"],"category":"linebreak-split","note":"MEASURE-ONLY (G4): 頑(名詞)+張(接尾辞) form a junk-prone noun-suffix chain across the seam — documented miss, no floor"}

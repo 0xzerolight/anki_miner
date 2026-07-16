@@ -1,0 +1,4 @@
+{"id":"lc01","sentence":"応急処置","expected":["応急処置"],"category":"long-compound","note":"attested 2-token noun compound kept whole by the matcher"}
+{"id":"lc02","sentence":"気がする","expected":["気がする"],"category":"long-compound","note":"collocation-swallow BY DESIGN (G5): the attested span is minted whole; component 気 is not separately mined"}
+{"id":"lc03","sentence":"アプリケーションプログラム","expected":["アプリケーションプログラム"],"category":"long-compound","note":"13 chars, 2 tokens — the case the 16-char span cap (Q2) admits; 12 rejected it"}
+{"id":"lc04","sentence":"お誕生日おめでとうございます","expected":["誕生","日"],"category":"long-compound","note":"MUST-NOT-MERGE adversarial: attested 14-char greeting is 7 tokens — the 5-token cap holds even at the 16-char cap"}

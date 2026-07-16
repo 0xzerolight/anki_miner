@@ -1186,3 +1186,66 @@ class TestCompoundInteractions:
         result = service.filter_i_plus_one([compound], [line], all_unknown_lemmas={"走り出す", "応急処置"})
 
         assert result == []
+
+
+class TestOverriddenVerbLemmaCorrelation:
+    """The じる/ずる resolver overrides only ``orth_base``/``mined_form`` — it
+    leaves ``word.lemma`` at the token lemma (感ずる), which is the correlation
+    key for every downstream filter. If the lemma were folded to the resolved
+    front, the word would miss its own line and be dropped / zeroed.
+    """
+
+    @staticmethod
+    def _overridden_word() -> TokenizedWord:
+        # As produced by the parser for 感じた after the resolver override:
+        # front = 感じる, but lemma stays the archaic token lemma 感ずる.
+        return TokenizedWord(
+            surface="感じ",
+            lemma="感ずる",
+            orth_base="感じる",
+            reading="カンジ",
+            sentence="そう感じた。",
+            start_time=0.0,
+            end_time=1.0,
+            duration=1.0,
+            pos="動詞",
+            resolved_reading="かんじる",
+            expression_reading="かんじる",
+            lemma_reading="かんずる",
+        )
+
+    def test_mined_form_diverges_from_lemma(self, test_config):
+        word = self._overridden_word()
+        assert word.mined_form == "感じる"
+        assert word.lemma == "感ずる"
+
+    def test_matches_its_i_plus_one_line_on_lemma(self, test_config):
+        service = WordFilterService(test_config)
+        word = self._overridden_word()
+        # The line index is lemma-keyed (built from line.lemmas), so it carries
+        # the token lemma 感ずる, not the resolved front.
+        line = LineLemmas(
+            line_text="別の感じた文",
+            lemmas=frozenset({"感ずる"}),
+            start_time=10.0,
+            end_time=12.0,
+            duration=2.0,
+        )
+        result = service.filter_i_plus_one([word], [line])
+        assert len(result) == 1
+        assert result[0].sentence == "別の感じた文"
+        # The override survives the swap (front unchanged, lemma unchanged).
+        assert result[0].mined_form == "感じる"
+        assert result[0].lemma == "感ずる"
+
+    def test_gets_nonzero_occurrence_count_on_lemma(self, test_config):
+        service = WordFilterService(test_config)
+        word = self._overridden_word()
+        service.attach_occurrence_counts([word], {"感ずる": 3})
+        assert word.occurrence_count == 3
+
+    def test_survives_cross_episode_filter_on_lemma(self, test_config):
+        service = WordFilterService(test_config)
+        word = self._overridden_word()
+        kept = service.filter_by_episode_count([word], {"感ずる": 2}, min_appearances=2)
+        assert kept == [word]

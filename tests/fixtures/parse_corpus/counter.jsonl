@@ -1,0 +1,2 @@
+{"id":"ct01","sentence":"一つ買った","expected":["買う"],"category":"counter","note":"一(数詞)+つ merges then dies on the inherited 数詞 subtype exclusion (gated OR ungated)"}
+{"id":"ct02","sentence":"3人来た","expected":["来る"],"category":"counter","note":"arabic numeral + counter excluded; kanji verb 来る mines normally"}

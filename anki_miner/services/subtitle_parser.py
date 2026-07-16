@@ -3,7 +3,7 @@
 import collections
 import logging
 import re
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -15,14 +15,16 @@ from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.reading import ReadingUnit
 from anki_miner.models.word import select_mined_form
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, TermLookup
-from anki_miner.services.deinflection import find_highlight_end
+from anki_miner.services.deinflection import _is_pure_hiragana, find_highlight_end, resolve_dictionary_form
 from anki_miner.services.morphology import (
+    AttestLookup,
     ReadingLookup,
     TokenInclusionRule,
     _edit_distance,
     apply_special_readings,
     attest_merged_readings,
     extract_lemma,
+    extract_orth_base,
     extract_reading,
     iter_token_spans,
     merge_compound_suffixes,
@@ -80,6 +82,39 @@ COMPOUND_MATCHING = True
 # Phase-1 → Phase-2 cross-file reuse pattern for any corpus up to this size.
 _LINE_CACHE_MAX_FILES: int = 256
 
+# Bound for the verb-front resolver memo (_front_cache). Each entry is one tiny
+# resolved-form string keyed by (inflected_surface, orth_base, cType); the set
+# of distinct verb/adjective forms in any corpus is small, but a clear-on-cap
+# keeps a whole-corpus Deck Builder run from growing without limit (mirrors the
+# compound matcher's existence cache).
+_FRONT_CACHE_CAP: int = 200_000
+
+# Term-OR-reading offline existence probe (DefinitionService.has_offline_definitions:
+# lookup_many runs ``WHERE term IN (...) OR reading IN (...)``). Reading-capable on
+# purpose — きれい is attested only as 綺麗's READING, so a term-only probe misses it.
+# Maps each queried card front to whether any offline dictionary attests it.
+KanaAttestLookup = Callable[[list[str]], dict[str, bool]]
+
+# POS backstop for kana recovery: only inflectional content words are recovered
+# from the pure-hiragana script gate. Deliberately EXCLUDES 名詞 — formal nouns
+# こと/もの/ため clear content_gate_ok but are grammar noise as bare kana — and
+# 副詞/代名詞 (kana adverbs/pronouns are overwhelmingly fragments).
+_KANA_RECOVER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "形状詞"})
+
+# Auxiliary pos2 subtypes rejected even inside _KANA_RECOVER_POS1. Both classes
+# pass the POS set + content_gate_ok as pure-hiragana, JMdict-attested forms:
+# - 助動詞語幹: grammaticalized 形状詞 auxiliaries (よう in ようだ, みたい in
+#   みたいな/みたいだ, そう in そうだ) — copular/hearsay grammar, not vocabulary.
+# - 非自立可能: auxiliary-capable verbs (いる/ある/くれる/おく/しまう). The tag is
+#   lexical, so 見ている's いる and 猫がいる's いる are byte-identical tokens — no
+#   token-local rule can split aux from main-verb use, and recovering the class
+#   would mint an いる card from every ている line (the dominant kana-recovery
+#   junk source). Rejecting wholesale is the deliberate precision-over-recall
+#   call: standalone kana いる/ある are N5 basics that were never mined pre-WS2
+#   either. Kanji-spelled 非自立可能 tokens (見る, 来る) are untouched — they pass
+#   should_include and never reach this path.
+_KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非自立可能"})
+
 
 class SubtitleParserService:
     """Parse subtitles and extract Japanese vocabulary words (stateless service)."""
@@ -89,11 +124,19 @@ class SubtitleParserService:
         config: AnkiMinerConfig,
         term_lookup: TermLookup | None = None,
         reading_lookup: ReadingLookup | None = None,
+        kana_attest_lookup: KanaAttestLookup | None = None,
     ):
         """Initialize the subtitle parser.
 
         Args:
             config: Configuration for parsing
+            kana_attest_lookup: Optional term-OR-reading offline existence probe
+                (``DefinitionService.has_offline_definitions``). When provided,
+                pure-hiragana content words the script gate would drop (きれい,
+                ある, すごい) are recovered iff their mined-form card front is an
+                attested dictionary headword (by term OR reading — きれい is only
+                a reading). ``None`` (no offline dict) safe-degrades to the
+                pre-recovery behavior: all pure-hiragana content words dropped.
             term_lookup: Optional batch headword-existence probe
                 (``DefinitionService.offline_terms_exist``). When provided,
                 dictionary-attested multi-token spans are merged into single
@@ -124,13 +167,30 @@ class SubtitleParserService:
             allowed_pos=frozenset(config.allowed_pos),
             excluded_subtypes=frozenset(config.excluded_subtypes),
         )
+        # Same injected offline existence probe drives the verb-front resolver
+        # (see _resolve_front / deinflection.resolve_dictionary_form). None ⇒ the
+        # resolver safe-degrades and mining stays byte-identical to pre-resolver.
+        self._term_lookup = term_lookup
+        # Per-instance MEMOIZED existence probe shared by the compound-merge gate
+        # (morphology.merge_compound_suffixes) AND the compound matcher: caches
+        # existence per surface so a repeated corpus (count_lemmas / Deck Builder
+        # coverage hot path) probes each distinct surface through the underlying
+        # offline dictionary at most once. None when no dict is wired — the merge
+        # passes then run UNGATED, so the no-dict output is byte-identical to the
+        # pre-gate behavior (exactly like the matcher's term_lookup gating).
+        self._exist_memo: dict[str, bool] = {}
+        self._attest: AttestLookup | None = self._memoized_attest if term_lookup is not None else None
         # Dictionary-attested compound matching (see services/compound_matcher.py).
         # Built only when a term lookup is injected (COMPOUND_MATCHING is always
         # on); the matcher reuses the inclusion rule so spans start only at
-        # mineable tokens.
+        # mineable tokens, and the SAME memoized probe so a surface's existence is
+        # looked up once across the merge gate and the matcher.
         self._compound_matcher: CompoundDictionaryMatcher | None = None
-        if term_lookup is not None and COMPOUND_MATCHING:
-            self._compound_matcher = CompoundDictionaryMatcher(term_lookup, self._inclusion_rule)
+        if self._attest is not None and COMPOUND_MATCHING:
+            self._compound_matcher = CompoundDictionaryMatcher(self._attest, self._inclusion_rule)
+        # Reading-capable offline existence probe for kana recovery
+        # (see _recover_kana_content_word). None ⇒ no recovery, safe degrade.
+        self._kana_attest_lookup = kana_attest_lookup
         self._filter_pattern: re.Pattern[str] | None = None
         if config.use_subtitle_regex_filter and config.subtitle_regex_filter:
             try:
@@ -170,6 +230,17 @@ class SubtitleParserService:
         # large Deck Builder builds while still caching all files touched in Phase 1
         # for Phase 2 reuse when the corpus fits within the cap.
         self._line_cache: dict[Path, tuple[float, list[tuple[str, list, list, float, float, float]]]] = {}
+        # Verb-front resolver memo (distinct lifetime from the per-parse memos,
+        # like _line_cache): the deinflect + offline existence lookup is
+        # deterministic per (inflected_surface, orth_base, cType), so it survives
+        # across parse_* calls and is bounded by clear-on-cap (_FRONT_CACHE_CAP).
+        self._front_cache: dict[tuple[str, str, str], str] = {}
+        # Kana-recovery memo (same lifetime/bounding rationale as _front_cache):
+        # the recovery decision — content_gate_ok + the SQLite existence probe —
+        # is deterministic per (surface, pos1), so _should_include_word runs it
+        # once per distinct token instead of once per occurrence (count_lemmas is
+        # a hot path: tens of thousands of tokens). Caches misses too.
+        self._kana_recover_cache: dict[tuple[str, str], bool] = {}
 
     # ------------------------------------------------------------------
     # Per-parse memoization helpers
@@ -425,6 +496,14 @@ class SubtitleParserService:
         # for verbs/adjectives, surface otherwise (see select_mined_form).
         pos = word_token.feature.pos1
         orth_base = self._mining_base(word_token)
+        # Verb/adjective fronts: rewrite the archaic じる/ずる orthBase (感ずる) to
+        # the modern JMdict headword (感じる) when the deinflected inflected span
+        # attests it. No-op for every other POS, for mining_base folds, and when
+        # no offline dict is wired. resolved_reading (pitch realignment) is set
+        # after ``mined`` below.
+        resolved_front = self._resolve_front(word_token, orth_base, text, tok_start, highlight_end)
+        front_overridden = resolved_front != orth_base
+        orth_base = resolved_front
         mined = select_mined_form(pos, orth_base, lemma, surface)
 
         # Dedup on mined_form, NOT lemma: UniDic collapses kanji-variant
@@ -512,6 +591,14 @@ class SubtitleParserService:
         # recomputes the lemma's reading like the surface-mined case.
         lemma_reading = expression_reading if mined == lemma else self._reading(lemma)
 
+        # Pitch reading realignment: when the resolver diverged the front from
+        # the lemma (感じる card, but archaic lemma 感ずる), pitch must key on the
+        # front's reading (かんじる), not the lemma's own (感ずる→かんずる). Derive
+        # it from the resolved front's kana (== expression_reading on the
+        # overridden verb path). Empty when no override fired ⇒ pitch keeps the
+        # lemma_reading path unchanged.
+        resolved_reading = self._reading(mined) if front_overridden else ""
+
         if self.config.bold_target_in_sentence:
             # Bold the full inflected form (verb/adjective + auxiliary
             # chain), not just the stem morpheme: 蒔いた, not 蒔い.
@@ -533,6 +620,7 @@ class SubtitleParserService:
             expression_furigana=expression_furigana,
             expression_reading=expression_reading,
             lemma_reading=lemma_reading,
+            resolved_reading=resolved_reading,
             sentence_furigana=sentence_furigana,
             sentence_reading=sentence_reading,
             pos=word_token.feature.pos1,
@@ -895,9 +983,36 @@ class SubtitleParserService:
     # seams stable for tests and patch-based callers.
     # ------------------------------------------------------------------
 
+    def _memoized_attest(self, surfaces: list[str]) -> set[str]:
+        """Per-instance memoized offline-existence probe (see __init__).
+
+        Wraps ``self._term_lookup``, caching each surface's existence in
+        ``self._exist_memo`` so a repeated corpus probes each distinct surface at
+        most once, and returns the attested subset of ``surfaces``. Shared by the
+        morphology compound-merge gate and the compound matcher. Clear-on-cap
+        bounds the memo on whole-corpus Deck Builder runs (mirrors _front_cache /
+        the matcher's existence cache). Only bound to ``self._attest`` when a
+        ``term_lookup`` exists; the ``None`` guard is defensive.
+        """
+        if self._term_lookup is None:
+            return set()
+        unknown = [s for s in dict.fromkeys(surfaces) if s not in self._exist_memo]
+        if unknown:
+            if len(self._exist_memo) + len(unknown) > _FRONT_CACHE_CAP:
+                self._exist_memo.clear()
+            hits = self._term_lookup(unknown)
+            for s in unknown:
+                self._exist_memo[s] = s in hits
+        return {s for s in surfaces if self._exist_memo.get(s)}
+
     def _merge_compound_suffixes(self, tokens: list) -> list:
-        """Run all compound-merge passes (see morphology.merge_compound_suffixes)."""
-        return merge_compound_suffixes(tokens)
+        """Run all compound-merge passes (see morphology.merge_compound_suffixes).
+
+        Threads the per-instance memoized attest probe: with an offline dict the
+        junk-prone noun-suffix/prefix passes are attested-or-bail gated; ``None``
+        (no dict) leaves them ungated — output byte-identical to pre-gate.
+        """
+        return merge_compound_suffixes(tokens, attest=self._attest)
 
     def _extract_lemma(self, word_token) -> str:
         """Extract lemma (dictionary form) from a token (see morphology.extract_lemma)."""
@@ -908,10 +1023,117 @@ class SubtitleParserService:
         sub-lemma folding (see morphology.mining_base)."""
         return mining_base(word_token)
 
+    def _resolve_front(self, word_token, orth_base: str, text: str, tok_start: int, highlight_end: int) -> str:
+        """Modern JMdict dictionary form for a verb/adjective card front.
+
+        Returns ``orth_base`` unchanged for every non-verb/adjective token, for
+        ``mining_base`` folds (never un-fold a potential/ra-nuki/ク-form — its
+        orth_base is the parent lemma, not the token's own orthBase), when no
+        offline ``term_lookup`` is wired (safe degrade), and whenever the
+        resolver can't improve on orth_base. Otherwise the archaic じる/ずる
+        orthBase (感ずる) is rewritten to the deinflection-attested modern
+        headword (感じる). See deinflection.resolve_dictionary_form for the
+        algorithm; the deinflect + offline existence lookup is memoized per
+        ``(inflected_surface, orth_base, cType)`` so identical tokens never repeat
+        the work.
+        """
+        feature = getattr(word_token, "feature", None)
+        if getattr(feature, "pos1", None) not in ("動詞", "形容詞"):
+            return orth_base
+        if self._term_lookup is None:
+            return orth_base
+        if orth_base != extract_orth_base(word_token):
+            return orth_base
+        # The inflected span the resolver deinflects: the token surface plus its
+        # rightward highlight extension (感じた), or the bare surface when it did
+        # not extend (感じ before a noun) — run either way, else 感じ-before-a-noun
+        # keeps the archaic 感ずる.
+        inflected_surface = text[tok_start:highlight_end]
+        ctype = getattr(feature, "cType", None)
+        key = (inflected_surface, orth_base, ctype if isinstance(ctype, str) else "")
+        cached = self._front_cache.get(key)
+        if cached is None:
+            cached = resolve_dictionary_form(inflected_surface, orth_base, self._term_lookup)
+            if len(self._front_cache) >= _FRONT_CACHE_CAP:
+                self._front_cache.clear()
+            self._front_cache[key] = cached
+        return cached
+
     def _extract_reading(self, word_token) -> str:
         """Extract kana reading from a token (see morphology.extract_reading)."""
         return extract_reading(word_token)
 
     def _should_include_word(self, word_token) -> bool:
-        """POS/subtype/script inclusion gate (see morphology.TokenInclusionRule.should_include)."""
-        return self._inclusion_rule.should_include(word_token)
+        """POS/subtype/script inclusion gate, plus JMdict-attested kana recovery.
+
+        Tokens the pure morphology rule accepts (kanji / katakana loanwords) pass
+        straight through. Anything it rejects gets ONE more chance:
+        ``_recover_kana_content_word`` re-admits a pure-hiragana 動詞/形容詞/形状詞
+        whose mined-form card front is an attested dictionary headword — recovering
+        real kana vocabulary (きれい, すごい, わかる) that the script gate drops by
+        default. count_lemmas and both mining passes call this method, so the
+        recovery is identical across count and mine (the T-38 parity guard).
+        """
+        if self._inclusion_rule.should_include(word_token):
+            return True
+        return self._recover_kana_content_word(word_token)
+
+    def _recover_kana_content_word(self, word_token) -> bool:
+        """Whether an otherwise-rejected pure-hiragana content word is recoverable.
+
+        Gate (ALL must hold; cheap checks first so the SQLite probe is the last
+        resort and only distinct tokens ever reach it):
+
+        1. A reading-capable offline probe is wired — else safe-degrade to no
+           recovery (``None`` ⇒ today's behavior).
+        2. ``pos1 ∈ {動詞, 形容詞, 形状詞}`` and ``pos2 ∉ {助動詞語幹, 非自立可能}``
+           — the junk backstop that excludes 名詞 formal nouns (こと/もの/ため),
+           grammaticalized 形状詞 auxiliaries (よう/みたい in ようだ/みたいな) and
+           auxiliary-capable verbs (いる/ある/くれる in ている/てくれる)
+           content_gate_ok alone would let through.
+        3. The surface is pure hiragana — the only class the script gate dropped;
+           everything else was already decided by ``should_include``.
+        4. ``content_gate_ok`` passes and the mined-form card front is attested
+           (memoized per ``(surface, pos1)`` — steps 4+ run once per distinct
+           token, never per occurrence).
+        """
+        if self._kana_attest_lookup is None:
+            return False
+        feature = getattr(word_token, "feature", None)
+        pos1 = getattr(feature, "pos1", None)
+        if pos1 not in _KANA_RECOVER_POS1:
+            return False
+        if getattr(feature, "pos2", None) in _KANA_RECOVER_REJECT_POS2:
+            # ようだ/みたいな stems + いる/ある-class auxiliary-capable verbs —
+            # grammar, not vocabulary. See constant for the full rationale.
+            return False
+        surface = word_token.surface
+        if not isinstance(surface, str) or not _is_pure_hiragana(surface):
+            return False
+        key = (surface, pos1)
+        if key not in self._kana_recover_cache:
+            if len(self._kana_recover_cache) >= _FRONT_CACHE_CAP:
+                self._kana_recover_cache.clear()
+            self._kana_recover_cache[key] = self._probe_kana_recovery(word_token, pos1, surface)
+        return self._kana_recover_cache[key]
+
+    def _probe_kana_recovery(self, word_token, pos1: str, surface: str) -> bool:
+        """content_gate_ok + term-OR-reading attestation of the mined-form front.
+
+        The form probed is the exact card front ``_emit_word`` would mint
+        (``select_mined_form``): the surface for 形状詞 (きれい), the orthBase
+        dictionary form for 動詞/形容詞 (わかった's わかっ token → わかる, since
+        unidic's orthBase is already deinflected). Existence-gated only — the
+        probe never reads ``entries.score`` (uniformly 0 on the bundled dict).
+        """
+        lookup = self._kana_attest_lookup
+        if lookup is None:  # unreachable via _recover_kana_content_word; narrows for mypy
+            return False
+        if not self._inclusion_rule.content_gate_ok(word_token):
+            return False
+        orth_base = self._mining_base(word_token)
+        lemma = self._extract_lemma(word_token)
+        form = select_mined_form(pos1, orth_base, lemma, surface)
+        if not form:
+            return False
+        return bool(lookup([form]).get(form))

@@ -1106,11 +1106,15 @@ class EpisodeProcessor:
         # property of (accent word, reading), kanji variants of one lemma share
         # the reading, and the canonical lemma orthography has the better hit
         # rate in reading-scoped pitch CSVs. Re-keying buys nothing and risks
-        # misses.
+        # misses. The READING, however, prefers ``resolved_reading`` when set:
+        # the じる/ずる verb-front resolver diverges the front (感じる/かんじる)
+        # from the archaic lemma (感ずる/かんずる), so the lemma's own reading
+        # would resolve the wrong accent word — ``resolved_reading`` (かんじる)
+        # realigns it while the lemma stays the correlation key. Empty otherwise.
         pitch_data: list[tuple[str | None, str | None]] = [(None, None)] * len(words_with_media)
         if self.pitch_accent_service and self.pitch_accent_service.is_available():
             pitch_data = self.pitch_accent_service.lookup_batch_detailed(
-                [(w.lemma, w.lemma_reading or w.reading, w.pos) for w in words_with_media],
+                [(w.lemma, w.resolved_reading or w.lemma_reading or w.reading, w.pos) for w in words_with_media],
                 fmt=self.config.pitch_category_format,
             )
             found_count = sum(1 for pos, _ in pitch_data if pos)
@@ -1182,7 +1186,10 @@ class EpisodeProcessor:
                 want_graph = bool(self.config.anki_fields.get("pitch_graph"))
                 want_text = bool(self.config.anki_fields.get("pitch_text"))
                 if (want_graph or want_text) and self.pitch_accent_service:
-                    reading = word.lemma_reading or word.reading
+                    # Same reading the batch lookup used (resolved_reading first —
+                    # かんじる for a じる/ずる override — else lemma_reading, else
+                    # surface) so the graph/overline morae match the pitch entry.
+                    reading = word.resolved_reading or word.lemma_reading or word.reading
                     entry = self.pitch_accent_service.lookup_entry(word.lemma, reading)
                     nasal = entry.nasal if entry else ()
                     devoice = entry.devoice if entry else ()

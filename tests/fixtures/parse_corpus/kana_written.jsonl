@@ -1,0 +1,5 @@
+{"id":"kw01","sentence":"きれい","expected":["きれい"],"category":"kana-written"}
+{"id":"kw02","sentence":"すごい","expected":["すごい"],"category":"kana-written"}
+{"id":"kw03","sentence":"かわいい","expected":["かわいい"],"category":"kana-written"}
+{"id":"kw04","sentence":"あざとい","expected":["あざとい"],"category":"kana-written","note":"non-priority"}
+{"id":"kw05","sentence":"しがない","expected":["しがない"],"category":"kana-written","note":"non-priority"}

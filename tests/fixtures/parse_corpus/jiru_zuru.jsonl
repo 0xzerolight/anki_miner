@@ -1,0 +1,7 @@
+{"id":"jz01","sentence":"感じた","expected":["感じる"],"category":"jiru-zuru"}
+{"id":"jz02","sentence":"論じた","expected":["論じる"],"category":"jiru-zuru"}
+{"id":"jz03","sentence":"信じられない","expected":["信じる"],"category":"jiru-zuru"}
+{"id":"jz04","sentence":"生じた","expected":["生じる"],"category":"jiru-zuru"}
+{"id":"jz05","sentence":"演じた","expected":["演じる"],"category":"jiru-zuru"}
+{"id":"jz06","sentence":"通じて","expected":["通じる"],"category":"jiru-zuru"}
+{"id":"jz07","sentence":"準じて","expected":["準じる"],"category":"jiru-zuru"}
