@@ -45,6 +45,7 @@ from anki_miner.services.pitch_accent.render import (
 from anki_miner.services.reading.images import prepare_card_image
 from anki_miner.utils import ensure_directory, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.timing import timed_phase
 
 logger = logging.getLogger(__name__)
 
@@ -1568,7 +1569,8 @@ class EpisodeProcessor:
             # the line index (all lines each lemma appears on). Build it for that
             # path too — not just the i+1 filter.
             want_line_index = curation_callback is not None
-            all_words, line_index = self._phase1_parse(ctx, subtitle_file, want_line_index=want_line_index)
+            with timed_phase("parse", logger):
+                all_words, line_index = self._phase1_parse(ctx, subtitle_file, want_line_index=want_line_index)
             if not all_words:
                 self.presenter.show_warning(
                     QCoreApplication.translate("EpisodeProcessor", "No words found in subtitles")
@@ -1577,7 +1579,8 @@ class EpisodeProcessor:
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
-            unknown_words = self._phase2_filter(ctx, all_words, line_index, cross_episode_counts)
+            with timed_phase("filter", logger):
+                unknown_words = self._phase2_filter(ctx, all_words, line_index, cross_episode_counts)
             if not unknown_words:
                 self._report_no_mineable_words(ctx)
                 return ctx.build_result(new_words_found=0)
@@ -1615,15 +1618,16 @@ class EpisodeProcessor:
                 stage_weights.append(0.25)  # cards
                 stage_progress = StageWeightedProgress(progress_callback, stage_weights)
 
-            media_results = self._phase3_extract(
-                ctx,
-                video_file,
-                unknown_words,
-                stage_progress,
-                run_temp_folder,
-                audio_track_override,
-                audio_only=audio_only,
-            )
+            with timed_phase("extract", logger):
+                media_results = self._phase3_extract(
+                    ctx,
+                    video_file,
+                    unknown_words,
+                    stage_progress,
+                    run_temp_folder,
+                    audio_track_override,
+                    audio_only=audio_only,
+                )
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
             if not media_results:
@@ -1635,13 +1639,15 @@ class EpisodeProcessor:
                 QCoreApplication.translate("EpisodeProcessor", "Extracted media for %n word(s)", "", len(media_results))
             )
 
-            definitions, glossaries, pitch_data = self._phase4_lookup(ctx, media_results, stage_progress)
+            with timed_phase("lookup", logger):
+                definitions, glossaries, pitch_data = self._phase4_lookup(ctx, media_results, stage_progress)
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
-            cards_created, created_note_ids, mined_forms = self._phase5_create(
-                ctx, media_results, definitions, glossaries, pitch_data, stage_progress
-            )
+            with timed_phase("cards", logger):
+                cards_created, created_note_ids, mined_forms = self._phase5_create(
+                    ctx, media_results, definitions, glossaries, pitch_data, stage_progress
+                )
             if isinstance(stage_progress, StageWeightedProgress):
                 stage_progress.finish()
             result = ctx.build_result(
@@ -1901,7 +1907,8 @@ class EpisodeProcessor:
                     document.title,
                 )
             )
-            all_words, line_index, counts = self.subtitle_parser.parse_text_units(document.units, want_line_index)
+            with timed_phase("parse", logger):
+                all_words, line_index, counts = self.subtitle_parser.parse_text_units(document.units, want_line_index)
             self.presenter.show_success(
                 QCoreApplication.translate("EpisodeProcessor", "Found %n unique word(s)", "", len(all_words))
             )
@@ -1914,7 +1921,8 @@ class EpisodeProcessor:
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
-            unknown_words = self._phase2_filter(ctx, all_words, line_index, None)
+            with timed_phase("filter", logger):
+                unknown_words = self._phase2_filter(ctx, all_words, line_index, None)
             # Reading-specific in-document occurrence floor (reuses the
             # cross-episode filter's <=1 early-return). counts is the parse
             # Counter — replaces the episode path's count_lemmas(subtitle_file).
@@ -1956,17 +1964,22 @@ class EpisodeProcessor:
                 stage_weights.append(0.25)  # cards
                 stage_progress = StageWeightedProgress(progress_callback, stage_weights)
 
-            media_results = self._phase3_reading_media(ctx, document, unknown_words, stage_progress, run_temp_folder)
+            with timed_phase("reading-media", logger):
+                media_results = self._phase3_reading_media(
+                    ctx, document, unknown_words, stage_progress, run_temp_folder
+                )
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
-            definitions, glossaries, pitch_data = self._phase4_lookup(ctx, media_results, stage_progress)
+            with timed_phase("lookup", logger):
+                definitions, glossaries, pitch_data = self._phase4_lookup(ctx, media_results, stage_progress)
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
-            cards_created, created_note_ids, mined_forms = self._phase5_create(
-                ctx, media_results, definitions, glossaries, pitch_data, stage_progress
-            )
+            with timed_phase("cards", logger):
+                cards_created, created_note_ids, mined_forms = self._phase5_create(
+                    ctx, media_results, definitions, glossaries, pitch_data, stage_progress
+                )
             if isinstance(stage_progress, StageWeightedProgress):
                 stage_progress.finish()
             result = ctx.build_result(
@@ -2117,14 +2130,15 @@ class EpisodeProcessor:
         # verbatim and the post-fetch check below polls it); the mining stage
         # gets it via process_episode's cancel_event keyword, which installs
         # and removes the per-run self._external_cancel bridge itself.
-        fetched = self._youtube_fetcher.fetch_video(
-            url,
-            video_id,
-            workspace,
-            sub_mode,
-            progress_cb=fetch_progress_cb,
-            cancel_event=cancel_event,
-        )
+        with timed_phase("youtube-fetch", logger):
+            fetched = self._youtube_fetcher.fetch_video(
+                url,
+                video_id,
+                workspace,
+                sub_mode,
+                progress_cb=fetch_progress_cb,
+                cancel_event=cancel_event,
+            )
 
         if on_fetched is not None:
             on_fetched(fetched)
