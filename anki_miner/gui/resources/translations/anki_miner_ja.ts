@@ -4110,6 +4110,26 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>選択した書籍を Anki カードにマイニングします。</translation>
     </message>
     <message>
+        <source>Book Folder</source>
+        <translation>書籍フォルダ</translation>
+    </message>
+    <message>
+        <source>Folder:</source>
+        <translation>フォルダ:</translation>
+    </message>
+    <message>
+        <source>A folder of .epub or .txt books; each book is mined separately.</source>
+        <translation>.epub または .txt の書籍が入ったフォルダ。各書籍は個別にマイニングされます。</translation>
+    </message>
+    <message>
+        <source>Mine Folder</source>
+        <translation>フォルダをマイニング</translation>
+    </message>
+    <message>
+        <source>Mine every book in the selected folder, one after another.</source>
+        <translation>選択したフォルダ内のすべての書籍を順番にマイニングします。</translation>
+    </message>
+    <message>
         <source>Cancel</source>
         <translation>キャンセル</translation>
     </message>
@@ -4130,12 +4150,20 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>先に有効な .epub または .txt の書籍を選択してください。</translation>
     </message>
     <message>
+        <source>Select a folder containing .epub or .txt books first.</source>
+        <translation>先に .epub または .txt の書籍が入ったフォルダを選択してください。</translation>
+    </message>
+    <message>
         <source>Starting…</source>
         <translation>開始しています…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
         <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Book %1/%2: %3</source>
+        <translation>書籍 %1/%2: %3</translation>
     </message>
     <message>
         <source>Mining: %1</source>
@@ -4148,6 +4176,10 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Failed %1: %2.</source>
         <translation>%1 が失敗しました: %2。</translation>
+    </message>
+    <message>
+        <source>Done: %1 succeeded, %2 failed.</source>
+        <translation>完了: %1 件成功、%2 件失敗。</translation>
     </message>
 </context><context>
     <name>ReadingSubtitlesTab</name>

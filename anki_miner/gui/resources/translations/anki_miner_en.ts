@@ -4071,6 +4071,26 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Book Folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A folder of .epub or .txt books; each book is mined separately.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine Folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine every book in the selected folder, one after another.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Cancel</source>
         <translation type="unfinished" />
     </message>
@@ -4091,11 +4111,19 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Select a folder containing .epub or .txt books first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Starting…</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Book %1/%2: %3</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4108,6 +4136,10 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Failed %1: %2.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done: %1 succeeded, %2 failed.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
