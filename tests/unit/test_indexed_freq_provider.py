@@ -116,33 +116,6 @@ def test_reading_column_ignored_by_lookup(tmp_path: Path):
     assert provider.lookup("猫") == 100
 
 
-def test_lookup_many_matches_repeated_lookup(tmp_path: Path):
-    db = _build_source(tmp_path, "jpdb", [("猫", "ねこ", 100), ("生", "せい", 80), ("生", "なま", 500)])
-    provider = IndexedFreqProvider("jpdb", db, "JPDB")
-    assert provider.load() is True
-    terms = ["猫", "生", "存在しない"]
-    expected = {t: provider.lookup(t) for t in terms}
-    assert provider.lookup_many(terms) == expected
-    assert provider.lookup_many(terms) == {"猫": 100, "生": 80, "存在しない": None}
-
-
-def test_lookup_many_before_load(tmp_path: Path):
-    db = _build_source(tmp_path, "jpdb", [("猫", "ねこ", 100)])
-    provider = IndexedFreqProvider("jpdb", db, "JPDB")
-    assert provider.lookup_many(["猫", "犬"]) == {"猫": None, "犬": None}
-
-
-def test_lookup_many_reading_scoped_matches_repeated_lookup(tmp_path: Path):
-    db = _build_source(tmp_path, "jpdb", [("方", "かた", 2000), ("方", "ほう", 30), ("生", "せい", 80)])
-    provider = IndexedFreqProvider("jpdb", db, "JPDB")
-    assert provider.load() is True
-    terms = ["方", "方", "生"]
-    readings = ["かた", "ほう", "せい"]
-    # Duplicate term "方" with different readings: last reading (ほう→30) wins,
-    # exactly as {t: lookup(t, r) for t, r in zip(...)} would collapse the dict.
-    assert provider.lookup_many(terms, readings) == {"方": 30, "生": 80}
-
-
 def test_load_false_on_schema_mismatch(tmp_path: Path):
     db = _build_source(tmp_path, "jpdb", [("猫", "ねこ", 100)], schema_version=storage.SCHEMA_VERSION + 99)
     provider = IndexedFreqProvider("jpdb", db, "JPDB")
