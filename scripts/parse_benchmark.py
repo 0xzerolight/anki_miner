@@ -241,18 +241,22 @@ def mine_lite_orthbase(sentence: str) -> set[str]:
 # Strategy (b) — the REAL app pipeline WITH the resolver active
 # ---------------------------------------------------------------------------
 
-# Headwords the deterministic fixture dictionary attests. The resolver
-# (``resolve_dictionary_form``) gates purely on term EXISTENCE — it never reads
-# glosses or scores — so a bare ``term`` per line is all the fix needs. The set
-# covers every corpus target a 動詞/形容詞 resolver or compound-existence probe
-# can key on: the seven modern じる headwords the fix must recover, plus the
-# guard forms whose orthBase is ALREADY the correct headword (乞う, 立つ, 見る,
-# …) so a strictly-greater override can never fire, plus the kana/kanji
-# adjective pairs and nominal-suffix headword for a fair (b) table. Reading is
-# irrelevant to ``offline_terms_exist`` (exact-term match only), so it is left
-# empty. This list is the single source of truth for the fixture index and is
-# committed here — the index itself is rebuilt from it at benchmark start (no
-# binary blob in git, fully reproducible, network-free).
+# Headwords the deterministic fixture dictionary attests. Both consumers gate on
+# EXISTENCE — the resolver (``resolve_dictionary_form``) and the WS2 kana
+# recovery (``has_offline_definitions``) never read glosses or scores — so a bare
+# ``term`` per line is all either fix needs. The set covers every corpus target a
+# 動詞/形容詞 resolver, compound-existence probe, or kana-recovery probe can key
+# on: the seven modern じる headwords the resolver must recover, plus the guard
+# forms whose orthBase is ALREADY the correct headword (乞う, 立つ, 見る, …) so a
+# strictly-greater override can never fire, plus the kana/kanji adjective pairs
+# and kana 形状詞/形容詞 the recovery attests (きれい, すごい, かわいい, あざとい,
+# しがない) and the nominal-suffix headword for a fair (b) table. The kana forms
+# are stored as ``term`` (not ``reading``), so the term-OR-reading probe finds
+# them by term and ``reading`` stays empty — production's real JMdict attests the
+# same kana as a READING, which the same probe also matches. This list is the
+# single source of truth for the fixture index and is committed here — the index
+# itself is rebuilt from it at benchmark start (no binary blob in git, fully
+# reproducible, network-free).
 _ANCHOR_HEADWORDS: tuple[str, ...] = (
     # jiru-zuru modern headwords (the fix's targets)
     "感じる",
@@ -327,10 +331,11 @@ def _get_anchor_service() -> SubtitleParserService:
 
     Builds the deterministic index under a fresh temp dir (isolated from the
     user's ``~/.anki_miner``), assembles the real provider chain via
-    ``DictionaryRegistry`` + ``DefinitionService``, and injects
-    ``offline_terms_exist`` as the parser's ``term_lookup`` — the identical
-    wiring production uses — so ``resolve_dictionary_form`` fires. Same real
-    parse path as strategy (a); the ONLY difference is the live term_lookup.
+    ``DictionaryRegistry`` + ``DefinitionService``, and injects the SAME probes
+    production wires: ``offline_terms_exist`` as ``term_lookup`` (so
+    ``resolve_dictionary_form`` fires) and ``has_offline_definitions`` as
+    ``kana_attest_lookup`` (so the WS2 pure-hiragana kana recovery fires). Same
+    real parse path as strategy (a); the ONLY difference is the live probes.
     """
     global _anchor_service
     if _anchor_service is None:
@@ -345,18 +350,24 @@ def _get_anchor_service() -> SubtitleParserService:
         registry = DictionaryRegistry(config.dicts_root)
         registry.load()
         definition_service = DefinitionService(config, providers=registry.build_provider_chain(config))
-        _anchor_service = SubtitleParserService(config, term_lookup=definition_service.offline_terms_exist)
+        _anchor_service = SubtitleParserService(
+            config,
+            term_lookup=definition_service.offline_terms_exist,
+            kana_attest_lookup=definition_service.has_offline_definitions,
+        )
     return _anchor_service
 
 
 def mine_lite_anchor(sentence: str) -> set[str]:
-    """Strategy (b): the real pipeline WITH the JMdict-anchored resolver active.
+    """Strategy (b): the real pipeline WITH the JMdict-anchored dict active.
 
     Identical to ``mine_lite_orthbase`` — same real
     ``SubtitleParserService.parse_text_units`` path, same ``_emit_word`` /
-    ``mining_base`` — except the service carries an offline ``term_lookup``
-    backed by the fixture index, so archaic じる/ずる orthBases (感ずる) are
-    rewritten to the deinflection-attested modern headword (感じる).
+    ``mining_base`` — except the service carries offline probes backed by the
+    fixture index: the ``term_lookup`` rewrites archaic じる/ずる orthBases
+    (感ずる → 感じる), and the ``kana_attest_lookup`` recovers pure-hiragana
+    content words the script gate drops (きれい, すごい, かわいい) when the
+    fixture attests them (WS2).
     """
     service = _get_anchor_service()
     unit = ReadingUnit(text=sentence, index=0, location_label="benchmark")
