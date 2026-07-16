@@ -3924,12 +3924,21 @@ class TestCompoundMatchingRealFugashi:
         assert "結論" not in by_lemma
         assert "出す" not in by_lemma
 
-    def test_no_dictionary_hits_keeps_current_behavior(self, tmp_path):
+    def test_term_lookup_none_keeps_current_behavior(self, tmp_path):
+        """The safe-degrade guarantee is ``term_lookup=None`` == pre-feature output.
+
+        (NOT "empty dict == None": an empty-but-present dict now activates the
+        attested-or-bail merge gate and bails every unattested synthetic. The
+        equality below holds only because this fixture line mints no morphology
+        synthetic — 走り出す is a matcher span, which the empty dict also can't
+        attest — so the gate is inert here. The load-bearing case is the None
+        one, which the assertion pins.)
+        """
         srt_file = _write_srt(tmp_path, "plain.srt", "彼は急に走り出した。")
         config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
-        with_lookup = SubtitleParserService(config, term_lookup=_lookup_for(set()))
-        without = SubtitleParserService(config)
-        assert with_lookup.parse_subtitle_file(srt_file) == without.parse_subtitle_file(srt_file)
+        with_empty_dict = SubtitleParserService(config, term_lookup=_lookup_for(set()))
+        none_case = SubtitleParserService(config)
+        assert with_empty_dict.parse_subtitle_file(srt_file) == none_case.parse_subtitle_file(srt_file)
 
 
 class TestKinshipHonorificReadings:
@@ -4341,3 +4350,105 @@ class TestVerbFrontResolver:
         word = self._one("感じた", term_lookup=None)
         assert word.mined_form == "感ずる"
         assert word.resolved_reading == ""
+
+
+def _gate_term_lookup(dictionary):
+    """Fake TermLookup: attests exactly the given headword set (subset semantics)."""
+    wanted = set(dictionary)
+    return lambda terms: {t for t in terms if t in wanted}
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestCompoundMergeAttestGate:
+    """Attested-or-bail gating end-to-end through the real parse pipeline
+    (morphology merge → matcher → emit). A wired term_lookup gates the
+    junk-prone noun-suffix + prefix passes; ``term_lookup=None`` safe-degrades
+    to the pre-gate output byte-for-byte.
+    """
+
+    def _mine(self, sentence, dictionary=None):
+        term_lookup = _gate_term_lookup(dictionary) if dictionary is not None else None
+        service = SubtitleParserService(AnkiMinerConfig(), term_lookup=term_lookup)
+        unit = ReadingUnit(text=sentence, index=0, location_label="t")
+        words, _index, _counts = service.parse_text_units([unit], want_line_index=False)
+        return {w.mined_form for w in words}
+
+    # --- unattested compounds bail to the bare noun/root ------------------
+
+    @pytest.mark.parametrize(
+        "sentence,expected",
+        [
+            ("状況的", {"状況"}),  # noun-suffix bail (drop 的)
+            ("会議中", {"会議"}),  # noun-suffix bail (drop 中)
+            ("超反応", {"反応"}),  # prefix bail (drop 超)
+        ],
+    )
+    def test_unattested_compound_bails_to_bare_noun(self, sentence, expected):
+        assert self._mine(sentence, dictionary=set()) == expected
+
+    # --- attested compounds stay whole -----------------------------------
+
+    @pytest.mark.parametrize(
+        "sentence,dictionary,expected",
+        [
+            ("刑務所", {"刑務所"}, {"刑務所"}),  # noun-suffix mint
+            ("不可能", {"不可能"}, {"不可能"}),  # prefix mint (形状詞 root)
+            ("無関係", {"無関係"}, {"無関係"}),  # prefix mint (名詞 root)
+            ("入院中", {"入院中"}, {"入院中"}),  # noun-suffix mint
+            ("可能性", {"可能性"}, {"可能性"}),  # matcher via the 形状詞 head
+        ],
+    )
+    def test_attested_compound_stays_whole(self, sentence, dictionary, expected):
+        assert self._mine(sentence, dictionary=dictionary) == expected
+
+    def test_matcher_recovers_subspan_from_bailed_chain(self):
+        # 入院中的: the full chain 入院中的 is unattested → the noun-suffix pass
+        # bails to [入院, 中, 的]; the matcher then recovers the attested 入院中
+        # and 的 is dropped by the inclusion gate.
+        assert self._mine("入院中的", dictionary={"入院中"}) == {"入院中"}
+
+    def test_verb_nominalizer_never_gated(self):
+        # 言い方 (方 nominalizer) mints even with an empty dictionary AND with no
+        # dictionary — the verb-nominalizer pass is never gated.
+        assert self._mine("言い方", dictionary=set()) == {"言い方"}
+        assert self._mine("言い方", dictionary=None) == {"言い方"}
+
+    def test_kinship_reading_preserved_though_unattested(self):
+        # The curated kinship carve-out survives the gate: 兄ちゃん is not
+        # dictionary-attested, but mints (with its にい reading) anyway.
+        service = SubtitleParserService(AnkiMinerConfig(), term_lookup=_gate_term_lookup(set()))
+        unit = ReadingUnit(text="お兄ちゃん", index=0, location_label="t")
+        words, _index, _counts = service.parse_text_units([unit], want_line_index=False)
+        word = next(w for w in words if w.mined_form == "兄ちゃん")
+        assert word.expression_reading == "にいちゃん"
+
+    # --- no-dict safe degrade: term_lookup=None == pre-gate output --------
+
+    @pytest.mark.parametrize(
+        "sentence,expected",
+        [
+            ("刑務所", {"刑務所"}),
+            ("不可能", {"不可能"}),
+            ("会議中", {"会議中"}),  # junk minted, exactly as pre-gate
+            ("状況的", {"状況的"}),  # junk minted, exactly as pre-gate
+            ("言い方", {"言い方"}),
+        ],
+    )
+    def test_no_dict_safe_degrade_matches_pregate(self, sentence, expected):
+        assert self._mine(sentence, dictionary=None) == expected
+
+    def test_attest_probed_once_per_surface_across_repeated_corpus(self):
+        # Perf discipline: the memoized attest probes each distinct surface
+        # through the underlying dictionary at most once across a repeated
+        # corpus. 会議中 bails on every one of 12 lines, but is probed once.
+        calls: list[str] = []
+
+        def spy(terms):
+            calls.extend(terms)
+            return set()  # attest nothing → 会議中 bails each line
+
+        service = SubtitleParserService(AnkiMinerConfig(), term_lookup=spy)
+        units = [ReadingUnit(text="会議中", index=i, location_label="t") for i in range(12)]
+        words, _index, _counts = service.parse_text_units(units, want_line_index=False)
+        assert {w.mined_form for w in words} == {"会議"}
+        assert calls.count("会議中") == 1, calls

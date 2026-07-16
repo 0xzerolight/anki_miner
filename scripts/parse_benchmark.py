@@ -250,8 +250,10 @@ def mine_lite_orthbase(sentence: str) -> set[str]:
 # forms whose orthBase is ALREADY the correct headword (乞う, 立つ, 見る, …) so a
 # strictly-greater override can never fire, plus the kana/kanji adjective pairs
 # and kana 形状詞/形容詞 the recovery attests (きれい, すごい, かわいい, あざとい,
-# しがない) and the nominal-suffix headword for a fair (b) table. The kana forms
-# are stored as ``term`` (not ``reading``), so the term-OR-reading probe finds
+# しがない) and the nominal-suffix / prefix compound headwords the attested-or-bail
+# merge gate must keep whole (重要性, 刑務所, 不可能) for a fair (b) table — while
+# 状況的/会議中/超反応 are deliberately absent so the gate bails them to bare nouns.
+# The kana forms are stored as ``term`` (not ``reading``), so the term-OR-reading probe finds
 # them by term and ``reading`` stays empty — production's real JMdict attests the
 # same kana as a READING, which the same probe also matches. This list is the
 # single source of truth for the fixture index and is committed here — the index
@@ -288,8 +290,12 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "可愛い",
     "あざとい",
     "しがない",
-    # nominal-suffix headword
+    # nominal-suffix / prefix compound headwords the gate must keep whole
+    # (刑務所/不可能 are attested; 状況的/会議中/超反応 are deliberately ABSENT so
+    # the attested-or-bail gate bails them to their bare nouns).
     "重要性",
+    "刑務所",
+    "不可能",
 )
 
 _ANCHOR_DICT_ID = "anchor-fixture"

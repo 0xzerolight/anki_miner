@@ -1,2 +1,6 @@
-{"id":"ns01","sentence":"重要性","expected":["重要性"],"category":"nominal-suffix","note":"JMdict headword"}
-{"id":"ns02","sentence":"状況的","expected":["状況"],"category":"nominal-suffix","note":"PROVISIONAL - finalized Task 5"}
+{"id":"ns01","sentence":"重要性","expected":["重要性"],"category":"nominal-suffix","note":"attested compound kept whole (matcher, 形状詞 head)"}
+{"id":"ns02","sentence":"状況的","expected":["状況"],"category":"nominal-suffix","note":"unattested 名詞+的 bails to the bare noun"}
+{"id":"ns03","sentence":"会議中","expected":["会議"],"category":"nominal-suffix","note":"unattested 名詞+中 bails to the bare noun"}
+{"id":"ns04","sentence":"超反応","expected":["反応"],"category":"nominal-suffix","note":"unattested 接頭辞+名詞 prefix bails to the bare root"}
+{"id":"ns05","sentence":"刑務所","expected":["刑務所"],"category":"nominal-suffix","note":"attested 名詞+接尾辞 compound kept whole"}
+{"id":"ns06","sentence":"不可能","expected":["不可能"],"category":"nominal-suffix","note":"attested 接頭辞+形状詞 prefix compound kept whole"}
