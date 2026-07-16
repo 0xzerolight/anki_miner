@@ -24,6 +24,8 @@ not.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from anki_miner.services.asr import _engine, transcriber
@@ -53,6 +55,37 @@ def _synthesize_voiced_clip():
     return (sig * envelope * 0.3).astype(np.float32)
 
 
+_GGML_MAGIC = b"lmgg"  # uint32 0x67676d6c little-endian at offset 0 of every ggml .bin
+_MIN_TINY_BYTES = 1_000_000  # real ggml-tiny.bin is ~78 MB; an HTML error page is <1 KB
+
+
+def _tiny_model_file_is_valid() -> bool:
+    """True if the cached ggml-tiny.bin exists and looks like a real ggml model.
+
+    pywhispercpp's downloader does not check the HTTP status (no
+    ``raise_for_status``), so a Hugging Face 5xx writes the HTML error page to
+    the cache as ggml-tiny.bin — which then SEGFAULTS whisper.cpp's native
+    loader, killing the xdist worker (three consecutive CI reds, 2026-07-16).
+    A skip guard in Python is the only place to catch it: validate magic+size
+    before any native code sees the file, and purge garbage so the next run
+    re-downloads.
+    """
+    from pywhispercpp.constants import MODELS_DIR
+
+    path = Path(MODELS_DIR) / "ggml-tiny.bin"
+    if not path.is_file():
+        return False
+    try:
+        with open(path, "rb") as fh:
+            magic = fh.read(4)
+        if magic == _GGML_MAGIC and path.stat().st_size >= _MIN_TINY_BYTES:
+            return True
+        path.unlink(missing_ok=True)  # corrupt download — purge so a later run retries
+    except OSError:
+        return False
+    return False
+
+
 def _load_tiny_model():
     """Construct a real pywhispercpp ``Model("tiny")`` or skip if unobtainable."""
     try:
@@ -60,7 +93,17 @@ def _load_tiny_model():
     except ImportError as exc:  # pragma: no cover — pywhispercpp absent
         pytest.skip(f"pywhispercpp not installed: {exc}")
     try:
-        # "tiny" is a known alias pywhispercpp auto-downloads into its cache.
+        from pywhispercpp.utils import download_model
+
+        # Download explicitly (a no-op when cached) so the file can be validated
+        # BEFORE model construction hands it to native code.
+        download_model("tiny")
+    except Exception as exc:  # noqa: BLE001 — offline / download failure → skip, not fail
+        pytest.skip(f"tiny whisper.cpp model could not be obtained: {exc}")
+    if not _tiny_model_file_is_valid():
+        pytest.skip("cached ggml-tiny.bin is missing or corrupt (bad download purged)")
+    try:
+        # "tiny" resolves to the validated cache file.
         return model_cls("tiny")
     except Exception as exc:  # noqa: BLE001 — offline / download failure → skip, not fail
         pytest.skip(f"tiny whisper.cpp model could not be obtained: {exc}")
