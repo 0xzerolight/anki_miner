@@ -3,7 +3,7 @@
 import collections
 import logging
 import re
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +15,7 @@ from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.reading import ReadingUnit
 from anki_miner.models.word import select_mined_form
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, TermLookup
-from anki_miner.services.deinflection import find_highlight_end, resolve_dictionary_form
+from anki_miner.services.deinflection import _is_pure_hiragana, find_highlight_end, resolve_dictionary_form
 from anki_miner.services.morphology import (
     ReadingLookup,
     TokenInclusionRule,
@@ -88,6 +88,18 @@ _LINE_CACHE_MAX_FILES: int = 256
 # compound matcher's existence cache).
 _FRONT_CACHE_CAP: int = 200_000
 
+# Term-OR-reading offline existence probe (DefinitionService.has_offline_definitions:
+# lookup_many runs ``WHERE term IN (...) OR reading IN (...)``). Reading-capable on
+# purpose — きれい is attested only as 綺麗's READING, so a term-only probe misses it.
+# Maps each queried card front to whether any offline dictionary attests it.
+KanaAttestLookup = Callable[[list[str]], dict[str, bool]]
+
+# POS backstop for kana recovery: only inflectional content words are recovered
+# from the pure-hiragana script gate. Deliberately EXCLUDES 名詞 — formal nouns
+# こと/もの/ため clear content_gate_ok but are grammar noise as bare kana — and
+# 副詞/代名詞 (kana adverbs/pronouns are overwhelmingly fragments).
+_KANA_RECOVER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "形状詞"})
+
 
 class SubtitleParserService:
     """Parse subtitles and extract Japanese vocabulary words (stateless service)."""
@@ -97,11 +109,19 @@ class SubtitleParserService:
         config: AnkiMinerConfig,
         term_lookup: TermLookup | None = None,
         reading_lookup: ReadingLookup | None = None,
+        kana_attest_lookup: KanaAttestLookup | None = None,
     ):
         """Initialize the subtitle parser.
 
         Args:
             config: Configuration for parsing
+            kana_attest_lookup: Optional term-OR-reading offline existence probe
+                (``DefinitionService.has_offline_definitions``). When provided,
+                pure-hiragana content words the script gate would drop (きれい,
+                ある, すごい) are recovered iff their mined-form card front is an
+                attested dictionary headword (by term OR reading — きれい is only
+                a reading). ``None`` (no offline dict) safe-degrades to the
+                pre-recovery behavior: all pure-hiragana content words dropped.
             term_lookup: Optional batch headword-existence probe
                 (``DefinitionService.offline_terms_exist``). When provided,
                 dictionary-attested multi-token spans are merged into single
@@ -143,6 +163,9 @@ class SubtitleParserService:
         # (see _resolve_front / deinflection.resolve_dictionary_form). None ⇒ the
         # resolver safe-degrades and mining stays byte-identical to pre-resolver.
         self._term_lookup = term_lookup
+        # Reading-capable offline existence probe for kana recovery
+        # (see _recover_kana_content_word). None ⇒ no recovery, safe degrade.
+        self._kana_attest_lookup = kana_attest_lookup
         self._filter_pattern: re.Pattern[str] | None = None
         if config.use_subtitle_regex_filter and config.subtitle_regex_filter:
             try:
@@ -187,6 +210,12 @@ class SubtitleParserService:
         # deterministic per (inflected_surface, orth_base, cType), so it survives
         # across parse_* calls and is bounded by clear-on-cap (_FRONT_CACHE_CAP).
         self._front_cache: dict[tuple[str, str, str], str] = {}
+        # Kana-recovery memo (same lifetime/bounding rationale as _front_cache):
+        # the recovery decision — content_gate_ok + the SQLite existence probe —
+        # is deterministic per (surface, pos1), so _should_include_word runs it
+        # once per distinct token instead of once per occurrence (count_lemmas is
+        # a hot path: tens of thousands of tokens). Caches misses too.
+        self._kana_recover_cache: dict[tuple[str, str], bool] = {}
 
     # ------------------------------------------------------------------
     # Per-parse memoization helpers
@@ -983,5 +1012,69 @@ class SubtitleParserService:
         return extract_reading(word_token)
 
     def _should_include_word(self, word_token) -> bool:
-        """POS/subtype/script inclusion gate (see morphology.TokenInclusionRule.should_include)."""
-        return self._inclusion_rule.should_include(word_token)
+        """POS/subtype/script inclusion gate, plus JMdict-attested kana recovery.
+
+        Tokens the pure morphology rule accepts (kanji / katakana loanwords) pass
+        straight through. Anything it rejects gets ONE more chance:
+        ``_recover_kana_content_word`` re-admits a pure-hiragana 動詞/形容詞/形状詞
+        whose mined-form card front is an attested dictionary headword — recovering
+        real kana vocabulary (きれい, ある, すごい) that the script gate drops by
+        default. count_lemmas and both mining passes call this method, so the
+        recovery is identical across count and mine (the T-38 parity guard).
+        """
+        if self._inclusion_rule.should_include(word_token):
+            return True
+        return self._recover_kana_content_word(word_token)
+
+    def _recover_kana_content_word(self, word_token) -> bool:
+        """Whether an otherwise-rejected pure-hiragana content word is recoverable.
+
+        Gate (ALL must hold; cheap checks first so the SQLite probe is the last
+        resort and only distinct tokens ever reach it):
+
+        1. A reading-capable offline probe is wired — else safe-degrade to no
+           recovery (``None`` ⇒ today's behavior).
+        2. ``pos1 ∈ {動詞, 形容詞, 形状詞}`` — the junk backstop that excludes 名詞
+           formal nouns (こと/もの/ため) content_gate_ok alone would let through.
+        3. The surface is pure hiragana — the only class the script gate dropped;
+           everything else was already decided by ``should_include``.
+        4. ``content_gate_ok`` passes and the mined-form card front is attested
+           (memoized per ``(surface, pos1)`` — steps 4+ run once per distinct
+           token, never per occurrence).
+        """
+        if self._kana_attest_lookup is None:
+            return False
+        feature = getattr(word_token, "feature", None)
+        pos1 = getattr(feature, "pos1", None)
+        if pos1 not in _KANA_RECOVER_POS1:
+            return False
+        surface = word_token.surface
+        if not isinstance(surface, str) or not _is_pure_hiragana(surface):
+            return False
+        key = (surface, pos1)
+        if key not in self._kana_recover_cache:
+            if len(self._kana_recover_cache) >= _FRONT_CACHE_CAP:
+                self._kana_recover_cache.clear()
+            self._kana_recover_cache[key] = self._probe_kana_recovery(word_token, pos1, surface)
+        return self._kana_recover_cache[key]
+
+    def _probe_kana_recovery(self, word_token, pos1: str, surface: str) -> bool:
+        """content_gate_ok + term-OR-reading attestation of the mined-form front.
+
+        The form probed is the exact card front ``_emit_word`` would mint
+        (``select_mined_form``): the surface for 形状詞 (きれい), the orthBase
+        dictionary form for 動詞/形容詞 (わかった's わかっ token → わかる, since
+        unidic's orthBase is already deinflected). Existence-gated only — the
+        probe never reads ``entries.score`` (uniformly 0 on the bundled dict).
+        """
+        lookup = self._kana_attest_lookup
+        if lookup is None:  # unreachable via _recover_kana_content_word; narrows for mypy
+            return False
+        if not self._inclusion_rule.content_gate_ok(word_token):
+            return False
+        orth_base = self._mining_base(word_token)
+        lemma = self._extract_lemma(word_token)
+        form = select_mined_form(pos1, orth_base, lemma, surface)
+        if not form:
+            return False
+        return bool(lookup([form]).get(form))

@@ -1058,6 +1058,160 @@ class TestShouldIncludeWord:
         assert service._should_include_word(token) is False
 
 
+def _attest_lookup(*attested):
+    """Spy term-OR-reading existence probe (has_offline_definitions shape).
+
+    Returns a callable ``list[str] -> dict[str, bool]`` that reports each input
+    True iff it is in ``attested``, and records every call on ``.calls`` so
+    tests can assert the lookup was (or was not) invoked and how often.
+    """
+    aset = set(attested)
+    calls: list[list[str]] = []
+
+    def lookup(words):
+        calls.append(list(words))
+        return {w: (w in aset) for w in words}
+
+    lookup.calls = calls  # type: ignore[attr-defined]
+    return lookup
+
+
+class TestKanaWordRecovery:
+    """Parser-seam recovery of pure-hiragana content words the script gate drops.
+
+    _should_include_word admits a token should_include rejects when ALL hold:
+    POS ∈ {動詞,形容詞,形状詞} (never 名詞), content_gate_ok passes, the surface
+    is pure hiragana, and its mined-form card front is attested via the injected
+    term-OR-reading existence probe. No probe wired ⇒ today's behavior.
+    """
+
+    def _service(self, test_config, lookup):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            return SubtitleParserService(test_config, kana_attest_lookup=lookup)
+
+    def test_recovers_keijoushi_surface_front(self, test_config):
+        # 形状詞 きれい: mined_form is the surface (きれい); attested as 綺麗's
+        # reading in real JMdict, so a term-OR-reading probe finds it.
+        lookup = _attest_lookup("きれい")
+        service = self._service(test_config, lookup)
+        token = _make_token("きれい", "形状詞", pos2="一般", lemma="奇麗", orth_base="きれい")
+        assert service._should_include_word(token) is True
+        assert lookup.calls == [["きれい"]]  # probed the mined-form card front
+
+    def test_recovers_pure_hiragana_verb_orthbase_front(self, test_config):
+        # 動詞 ある: mined_form is the orthBase dictionary form (ある).
+        lookup = _attest_lookup("ある")
+        service = self._service(test_config, lookup)
+        token = _make_token("ある", "動詞", pos2="一般", lemma="有る", orth_base="ある")
+        assert service._should_include_word(token) is True
+        assert lookup.calls == [["ある"]]
+
+    @pytest.mark.parametrize(
+        ("surface", "lemma"),
+        [("すごい", "凄い"), ("かわいい", "可愛い"), ("あざとい", "あざとい"), ("しがない", "しがない")],
+    )
+    def test_recovers_pure_hiragana_adjectives(self, test_config, surface, lemma):
+        lookup = _attest_lookup(surface)
+        service = self._service(test_config, lookup)
+        token = _make_token(surface, "形容詞", pos2="一般", lemma=lemma, orth_base=surface)
+        assert service._should_include_word(token) is True
+
+    @pytest.mark.parametrize(("surface", "lemma"), [("こと", "事"), ("もの", "物"), ("ため", "為")])
+    def test_does_not_recover_formal_noun(self, test_config, surface, lemma):
+        # 名詞 formal nouns pass content_gate_ok but are blocked by the POS
+        # backstop {動詞,形容詞,形状詞}; the probe must not even be consulted.
+        lookup = _attest_lookup(surface)  # attested — proves the POS gate, not the dict, drops it
+        service = self._service(test_config, lookup)
+        token = _make_token(surface, "名詞", pos2="普通名詞", lemma=lemma, orth_base=surface)
+        assert service._should_include_word(token) is False
+        assert lookup.calls == []  # POS gate short-circuits before the lookup
+
+    @pytest.mark.parametrize(
+        ("surface", "pos1", "lemma"),
+        [("って", "助詞", "って"), ("の", "助詞", "の"), ("けど", "接続詞", "けれど")],
+    )
+    def test_does_not_recover_grammar_fragments(self, test_config, surface, pos1, lemma):
+        # 助詞 fails content_gate_ok; 接続詞 fails the POS backstop. Either way
+        # not recovered and the probe is never consulted.
+        lookup = _attest_lookup(surface)
+        service = self._service(test_config, lookup)
+        token = _make_token(surface, pos1, pos2="*", lemma=lemma, orth_base=surface)
+        assert service._should_include_word(token) is False
+        assert lookup.calls == []
+
+    def test_does_not_recover_non_attested_kana(self, test_config):
+        # A pure-hiragana verb the dictionary does NOT attest stays dropped.
+        lookup = _attest_lookup()  # attests nothing
+        service = self._service(test_config, lookup)
+        token = _make_token("ぬるぽ", "動詞", pos2="一般", lemma="ぬるぽ", orth_base="ぬるぽ")
+        assert service._should_include_word(token) is False
+        assert lookup.calls == [["ぬるぽ"]]  # probed, missed
+
+    def test_no_dict_does_not_recover(self, test_config):
+        # No probe wired ⇒ safe degrade to today's behavior (kana dropped).
+        service = self._service(test_config, None)
+        token = _make_token("きれい", "形状詞", pos2="一般", lemma="奇麗", orth_base="きれい")
+        assert service._should_include_word(token) is False
+
+    def test_accepted_token_never_probes(self, test_config):
+        # A normal kanji verb is admitted by should_include; the recovery branch
+        # (and its lookup) must not run for already-accepted tokens.
+        lookup = _attest_lookup("食べる")
+        service = self._service(test_config, lookup)
+        token = _make_token("食べる", "動詞", pos2="一般", lemma="食べる", orth_base="食べる")
+        assert service._should_include_word(token) is True
+        assert lookup.calls == []
+
+    def test_lookup_memoized_per_distinct_surface_pos1(self, test_config):
+        # Perf budget (deterministic, not wall-clock): the attestation lookup
+        # runs at most once per distinct (surface, pos1) across many repeats.
+        lookup = _attest_lookup("きれい", "すごい")
+        service = self._service(test_config, lookup)
+        for _ in range(50):
+            t = _make_token("きれい", "形状詞", pos2="一般", lemma="奇麗", orth_base="きれい")
+            assert service._should_include_word(t) is True
+        assert len(lookup.calls) == 1  # 50 きれい occurrences → one probe
+        for _ in range(50):
+            t = _make_token("すごい", "形容詞", pos2="一般", lemma="凄い", orth_base="すごい")
+            assert service._should_include_word(t) is True
+        assert len(lookup.calls) == 2  # +1 for the distinct すごい
+
+    def test_negative_result_is_also_memoized(self, test_config):
+        # A miss must be cached too, or repeated non-attested tokens re-probe.
+        lookup = _attest_lookup()
+        service = self._service(test_config, lookup)
+        for _ in range(20):
+            t = _make_token("ぬるぽ", "動詞", pos2="一般", lemma="ぬるぽ", orth_base="ぬるぽ")
+            assert service._should_include_word(t) is False
+        assert len(lookup.calls) == 1
+
+    def test_count_and_mine_both_recover_identically(self, test_config, tmp_path):
+        # count==mine parity (T-38): count_lemmas and parse_subtitle_file both
+        # route through _should_include_word, so both recover the kana word.
+        sub_file = tmp_path / "t.ass"
+        sub_file.write_text("x", encoding="utf-8")
+        mock_line = MagicMock()
+        mock_line.text = "きれい"
+        mock_line.start = 0
+        mock_line.end = 1000
+        mock_line.is_comment = False
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+        token = _make_token("きれい", "形状詞", pos2="一般", lemma="奇麗", kana="キレイ", orth_base="きれい")
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [token]
+        lookup = _attest_lookup("きれい")
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config, kana_attest_lookup=lookup)
+            counts = service.count_lemmas(sub_file)
+            words = service.parse_subtitle_file(sub_file)
+        assert counts.get("奇麗") == 1  # count_lemmas recovered (lemma-keyed count)
+        assert "きれい" in {w.mined_form for w in words}  # mining recovered same token
+
+
 class TestExtractLemma:
     """Tests for _extract_lemma method."""
 
