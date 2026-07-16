@@ -99,6 +99,32 @@ def test_reading_source_ref_book_shape():
     assert ref.volume is None
 
 
+def test_reading_source_ref_text_shape_is_pathless():
+    ref = ReadingSourceRef(kind="text", title="Text", text="本文")
+    assert ref.path is None
+    assert ref.image_root is None
+    assert ref.volume is None
+    assert ref.text == "本文"
+
+
+def test_reading_source_ref_text_shape_stays_frozen_and_hashable():
+    ref = ReadingSourceRef(kind="text", title="Text", text="本文")
+    with pytest.raises(dataclasses.FrozenInstanceError):
+        ref.text = "x"  # type: ignore[misc]
+    hash(ref)  # must not raise
+
+
+def test_reading_source_ref_text_defaults_none_for_file_kinds():
+    ref = ReadingSourceRef(
+        kind="txt",
+        path=Path("novel.txt"),
+        image_root=None,
+        title="novel",
+        volume=None,
+    )
+    assert ref.text is None
+
+
 def test_reading_document_is_mutable():
     doc = ReadingDocument(title="T", kind="book", series="Books", episode="T")
     assert doc.units == []

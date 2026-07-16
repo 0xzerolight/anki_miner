@@ -306,6 +306,8 @@ def _emit_units(body_lines: list[str], aozora: bool = True) -> list[ReadingUnit]
 
 def load(ref: ReadingSourceRef) -> ReadingDocument:
     """Load an Aozora or plain-text novel into a book ``ReadingDocument``."""
+    # Per-kind ref contract: file-backed kinds always carry a path.
+    assert ref.path is not None
     text = _decode(ref.path.read_bytes())
     lines = _cut_footer(_splitlines(text))
 

@@ -100,6 +100,8 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
     soft problems (unreadable cover, gaiji images) become ``warnings`` and the
     book still mines.
     """
+    # Per-kind ref contract: file-backed kinds always carry a path.
+    assert ref.path is not None
     epub_path = ref.path
     with zipfile.ZipFile(epub_path) as zf:
         names = set(zf.namelist())
