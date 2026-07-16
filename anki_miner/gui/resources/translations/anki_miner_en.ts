@@ -1169,6 +1169,14 @@ Total cards created: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Mine pasted text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Paste any Japanese text and mine it straight into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation type="unfinished" />
     </message>
@@ -3569,6 +3577,10 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Generate</source>
         <translation type="unfinished" />
     </message>
@@ -4353,6 +4365,72 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ReadingTextTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pasted Text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Paste text here…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine the pasted text into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Paste some text first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining pasted text…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mined %1 cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed: %1.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
