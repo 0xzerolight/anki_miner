@@ -7,12 +7,17 @@ from types import SimpleNamespace
 
 import pytest
 
+from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.services.card_backfiller import (
     BACKFILL_TAG,
     BackfillOptions,
     BackfillPlan,
+    BackfillResult,
+    FieldChange,
+    NotePlan,
     _is_empty,
     _reading_from_furigana,
+    apply_backfill,
     scan_backfill,
 )
 from anki_miner.services.morphology import SyntheticToken
@@ -537,3 +542,133 @@ class TestScanProgressCancel:
         plan = scan_backfill(anki, backfill_config, _services(freq=freq), _options({"frequency", "frequency_sort"}))
         assert plan.total_field_changes == 2
         assert BACKFILL_TAG == "anki-miner::backfill"
+
+
+# ---------------------------------------------------------------------------
+# apply_backfill
+# ---------------------------------------------------------------------------
+
+
+class RecordingAnkiService(FakeAnkiService):
+    """FakeAnkiService that also records writes and tag calls."""
+
+    def __init__(self, notes=None, fail_tags: bool = False):
+        super().__init__(notes)
+        self.updates: list[list[tuple[int, dict[str, str]]]] = []
+        self.tag_calls: list[tuple[list[int], str]] = []
+        self.fail_tags = fail_tags
+
+    def update_notes_fields(self, updates):
+        self.updates.append(list(updates))
+        return len(updates)
+
+    def add_tags(self, note_ids, tags):
+        if self.fail_tags:
+            raise AnkiConnectionError("tags down")
+        self.tag_calls.append((list(note_ids), tags))
+
+
+def _plan(notes, overwrite=False):
+    return BackfillPlan(
+        options=_options({"frequency"}, overwrite=overwrite),
+        notes=tuple(notes),
+        scanned=len(notes),
+        skipped_no_identity=0,
+        unavailable_fields=(),
+        sentinel_only_sorts=0,
+    )
+
+
+def _note_plan(note_id, changes):
+    return NotePlan(note_id, f"word{note_id}", tuple(FieldChange(*c) for c in changes))
+
+
+class TestApplyBackfill:
+    def test_groups_multi_field_changes_per_note(self):
+        anki = RecordingAnkiService({1: _note(1, Frequency="", FrequencySort="")})
+        plan = _plan(
+            [
+                _note_plan(
+                    1, [("frequency", "Frequency", "", "<ul>f</ul>"), ("frequency_sort", "FrequencySort", "", "42")]
+                )
+            ]
+        )
+        result = apply_backfill(anki, plan)
+        assert anki.updates == [[(1, {"Frequency": "<ul>f</ul>", "FrequencySort": "42"})]]
+        assert result.notes_updated == 1
+        assert result.fields_filled == 2
+        assert result.skipped_stale == 0
+
+    def test_recheck_drops_no_longer_empty_in_fill_mode(self):
+        anki = RecordingAnkiService({1: _note(1, Frequency="user filled this meanwhile")})
+        plan = _plan([_note_plan(1, [("frequency", "Frequency", "", "<ul>f</ul>")])])
+        result = apply_backfill(anki, plan)
+        assert anki.updates == []
+        assert result.skipped_stale == 1
+        assert result.notes_updated == 0
+
+    def test_overwrite_mode_writes_over_filled_target(self):
+        anki = RecordingAnkiService({1: _note(1, Frequency="old")})
+        plan = _plan([_note_plan(1, [("frequency", "Frequency", "old", "<ul>f</ul>")])], overwrite=True)
+        result = apply_backfill(anki, plan)
+        assert anki.updates == [[(1, {"Frequency": "<ul>f</ul>"})]]
+        assert result.skipped_stale == 0
+
+    def test_deleted_note_dropped_and_counted(self):
+        anki = RecordingAnkiService({})  # notes_info -> {}
+        plan = _plan([_note_plan(1, [("frequency", "Frequency", "", "<ul>f</ul>")])], overwrite=True)
+        result = apply_backfill(anki, plan)
+        assert anki.updates == []
+        assert result.skipped_stale == 1
+
+    def test_tags_attempted_ids_after_update(self):
+        anki = RecordingAnkiService({1: _note(1, Frequency=""), 2: _note(2, Frequency="")})
+        plan = _plan(
+            [
+                _note_plan(1, [("frequency", "Frequency", "", "a")]),
+                _note_plan(2, [("frequency", "Frequency", "", "b")]),
+            ]
+        )
+        result = apply_backfill(anki, plan)
+        assert anki.tag_calls == [([1, 2], BACKFILL_TAG)]
+        assert result.tagged == 2
+
+    def test_custom_tag_passed_through(self):
+        anki = RecordingAnkiService({1: _note(1, Frequency="")})
+        plan = _plan([_note_plan(1, [("frequency", "Frequency", "", "a")])])
+        apply_backfill(anki, plan, tag="custom::tag")
+        assert anki.tag_calls == [([1], "custom::tag")]
+
+    def test_tag_failure_logged_not_fatal(self):
+        anki = RecordingAnkiService({1: _note(1, Frequency="")}, fail_tags=True)
+        plan = _plan([_note_plan(1, [("frequency", "Frequency", "", "a")])])
+        result = apply_backfill(anki, plan)
+        assert result.notes_updated == 1
+        assert result.tagged == 0
+
+    def test_cancellation_between_chunks_keeps_committed(self, monkeypatch):
+        monkeypatch.setattr("anki_miner.services.card_backfiller._CHUNK", 1)
+        anki = RecordingAnkiService({1: _note(1, Frequency=""), 2: _note(2, Frequency="")})
+        plan = _plan(
+            [
+                _note_plan(1, [("frequency", "Frequency", "", "a")]),
+                _note_plan(2, [("frequency", "Frequency", "", "b")]),
+            ]
+        )
+        calls = iter([False, True])
+        result = apply_backfill(anki, plan, is_cancelled=lambda: next(calls))
+        assert len(anki.updates) == 1
+        assert result.notes_updated == 1
+
+    def test_empty_plan_no_calls(self):
+        anki = RecordingAnkiService()
+        result = apply_backfill(anki, _plan([]))
+        assert anki.updates == [] and anki.tag_calls == []
+        assert result == BackfillResult(0, 0, 0, 0)
+
+    def test_progress_reported(self):
+        anki = RecordingAnkiService({1: _note(1, Frequency="")})
+        plan = _plan([_note_plan(1, [("frequency", "Frequency", "", "a")])])
+        seen = []
+        apply_backfill(anki, plan, progress=lambda done, total: seen.append((done, total)))
+        assert seen[-1] == (1, 1)
