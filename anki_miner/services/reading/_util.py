@@ -8,6 +8,27 @@ and the module path is a stable test surface; do not rename it.
 from __future__ import annotations
 
 import re
+from pathlib import Path
+
+from anki_miner.exceptions import SetupError
+
+# Cap on a ``.mokuro`` sidecar JSON read. A whole-volume OCR sidecar is a few
+# MB in practice; 64 MiB is far above any real volume while still bounding a
+# hostile multi-GB file (mirrors the Yomitan importer's capped index.json peek).
+MAX_MOKURO_JSON_BYTES = 64 * 1024 * 1024
+
+
+def read_text_capped(path: Path, cap: int, description: str) -> str:
+    """UTF-8 ``read_text`` with a stat-before-read size gate.
+
+    Raises :class:`SetupError` when the on-disk size exceeds ``cap``; ``OSError``
+    from ``stat``/``read_text`` propagates for the caller's existing wrapping.
+    """
+    size = path.stat().st_size
+    if size > cap:
+        raise SetupError(f"{description} '{path.name}' is {size:,} bytes (cap {cap:,}); refusing to load.")
+    return path.read_text(encoding="utf-8")
+
 
 # Listings junk dropped from both directory walks and archive namelists so the
 # two paths filter identically (see is_junk_path). __MACOSX and $RECYCLE.BIN are
