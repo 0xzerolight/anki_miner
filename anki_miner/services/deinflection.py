@@ -46,7 +46,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Callable, Iterable, Mapping, Sequence
+
+# Batch offline existence probe: the subset of the input strings attested as
+# exact dictionary headwords (``DefinitionService.offline_terms_exist`` /
+# ``compound_matcher.TermLookup``). Redeclared here (rather than imported) so
+# this module stays free of the compound-matcher import edge.
+TermLookup = Callable[[list[str]], set[str]]
 
 _MAX_CONDITION_FLAGS = 32
 _MAX_RESULTS = 4096
@@ -341,6 +347,71 @@ def conditions_match_mask(result_conditions: int, target_mask: int) -> bool:
     ``result_conditions == 0`` acceptor — it would defeat the gate exactly
     in the terminal case."""
     return target_mask == 0 or (result_conditions & target_mask) != 0
+
+
+def common_prefix_len(a: str, b: str) -> int:
+    """Number of leading characters ``a`` and ``b`` share."""
+    n = 0
+    for ca, cb in zip(a, b, strict=False):  # stop at the shorter string
+        if ca != cb:
+            break
+        n += 1
+    return n
+
+
+def resolve_dictionary_form(
+    inflected_surface: str,
+    orth_base: str,
+    term_lookup: TermLookup | None,
+) -> str:
+    """Best modern JMdict-attested dictionary form for a 動詞/形容詞 card front.
+
+    unidic tags the inflected stem of a じる/ずる verb (感じ, 論じ, 信じ) as
+    サ行変格, so its ``orthBase`` is the archaic 〜ずる (感ずる) even though the
+    modern, dictionary-attested headword is 〜じる (感じる). This deinflects the
+    verb's actual inflected span and picks the modern headword by longest common
+    prefix, falling back to ``orth_base`` whenever it cannot improve on it.
+
+    Invariants (each hardened against an adversarial-review draft — do not relax):
+
+    * **Candidates are the UNMASKED ``transform`` results.** The source token's
+      cType mask is deliberately NOT applied: unidic tags 感じ サ変 (vs|vz) while
+      the target 感じる carries v1, and ``v1 & (vs|vz) == 0`` — masking would
+      delete the exact form the fix must pick. The cType mask stays only on the
+      highlight-END computation (``find_highlight_end``), a separate concern.
+    * **The inflected surface itself is discarded** from the candidate set. A
+      deinflection never keeps the surface, and JMdict attests many inflected /
+      stem strings (待った "matta!", 通じて, the noun 感じ) that would otherwise
+      win the strictly-greater override and ship an inflected/stem card front.
+    * **Gate on EXISTENCE, never ``entries.score``** — score is a uniform-0
+      priority marker on the bundled jmdict-english, so a score gate would no-op
+      the whole fix. ``term_lookup`` returns the attested subset (existence).
+    * **Override only on a STRICTLY GREATER common prefix** than ``orth_base``'s
+      own — self-limiting so a verb whose orthBase is already the longest prefix
+      (乞う, 彷徨った, 帰れる, 立った) is kept unchanged.
+
+    Safe degrade: ``term_lookup is None`` (no offline dictionary) or an empty
+    input returns ``orth_base`` unchanged — the fix never hard-depends on a dict.
+    """
+    if term_lookup is None or not inflected_surface or not orth_base:
+        return orth_base
+    deinflector = get_japanese_deinflector()
+    candidates = {result.text for result in deinflector.transform(inflected_surface)}
+    candidates.discard(inflected_surface)
+    if not candidates:
+        return orth_base
+    attested = term_lookup(sorted(candidates))
+    if not attested:
+        return orth_base
+    # Rank: longest common prefix with the surface, then prefer the shorter
+    # form, then lexicographic (a stable total order regardless of set order).
+    winner = min(
+        attested,
+        key=lambda cand: (-common_prefix_len(cand, inflected_surface), len(cand), cand),
+    )
+    if common_prefix_len(winner, inflected_surface) > common_prefix_len(orth_base, inflected_surface):
+        return winner
+    return orth_base
 
 
 # Ported from Yomitan (upstream e2ed450c2f11a591922822e77f008e70a87daf0c),
