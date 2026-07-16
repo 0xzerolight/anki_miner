@@ -291,7 +291,7 @@ def scan_backfill(
             break
 
         contexts: list[_NoteContext] = []
-        for info in anki_service.notes_info(chunk):
+        for info in anki_service.notes_info(list(chunk)):
             note_id = info.get("noteId")
             fields = info.get("fields")
             if not isinstance(note_id, int) or not isinstance(fields, dict):
