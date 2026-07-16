@@ -4187,6 +4187,26 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation>Mining buku yang dipilih menjadi kartu Anki.</translation>
     </message>
     <message>
+        <source>Book Folder</source>
+        <translation>Folder Buku</translation>
+    </message>
+    <message>
+        <source>Folder:</source>
+        <translation>Folder:</translation>
+    </message>
+    <message>
+        <source>A folder of .epub or .txt books; each book is mined separately.</source>
+        <translation>Folder berisi buku .epub atau .txt; setiap buku di-mining secara terpisah.</translation>
+    </message>
+    <message>
+        <source>Mine Folder</source>
+        <translation>Mining Folder</translation>
+    </message>
+    <message>
+        <source>Mine every book in the selected folder, one after another.</source>
+        <translation>Mining setiap buku dalam folder yang dipilih, satu per satu.</translation>
+    </message>
+    <message>
         <source>Cancel</source>
         <translation>Batal</translation>
     </message>
@@ -4207,12 +4227,20 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation>Pilih buku .epub atau .txt yang valid terlebih dahulu.</translation>
     </message>
     <message>
+        <source>Select a folder containing .epub or .txt books first.</source>
+        <translation>Pilih folder berisi buku .epub atau .txt terlebih dahulu.</translation>
+    </message>
+    <message>
         <source>Starting…</source>
         <translation>Memulai…</translation>
     </message>
     <message>
         <source>Cancelling…</source>
         <translation>Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Book %1/%2: %3</source>
+        <translation>Buku %1/%2: %3</translation>
     </message>
     <message>
         <source>Mining: %1</source>
@@ -4225,6 +4253,10 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     <message>
         <source>Failed %1: %2.</source>
         <translation>Gagal %1: %2.</translation>
+    </message>
+    <message>
+        <source>Done: %1 succeeded, %2 failed.</source>
+        <translation>Selesai: %1 berhasil, %2 gagal.</translation>
     </message>
 </context><context>
     <name>ReadingSubtitlesTab</name>
