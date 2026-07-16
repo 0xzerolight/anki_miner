@@ -109,6 +109,22 @@ class MultiFrequencyService:
                 results.append((provider.name, rank, display_value))
         return results
 
+    def lookup_all_many(self, pairs: list[tuple[str, str | None]]) -> list[FreqSources]:
+        """Per-pair :meth:`lookup_all` results; ``results[i]`` is byte-identical
+        to ``lookup_all(*pairs[i])`` (chain order, misses omitted).
+
+        Batch fast-path for the orchestrator's frequency-attachment phase: one
+        IN-clause query per provider per chunk (see
+        :meth:`IndexedFreqProvider.lookup_detail_many`) instead of one query per
+        (word, provider).
+        """
+        results: list[FreqSources] = [[] for _ in pairs]
+        for provider in self._providers:
+            for i, detail in enumerate(provider.lookup_detail_many(pairs)):
+                if detail is not None:
+                    results[i].append((provider.name, detail[0], detail[1]))
+        return results
+
     def close(self) -> None:
         """Close every wrapped provider's sqlite handle.
 

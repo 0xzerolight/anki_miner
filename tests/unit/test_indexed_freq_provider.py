@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import logging
+import sqlite3
 from pathlib import Path
 
+import pytest
+
 from anki_miner.services.frequency import storage
+from anki_miner.services.frequency.providers import indexed_freq_provider as ifp_module
 from anki_miner.services.frequency.providers.indexed_freq_provider import (
     IndexedFreqProvider,
 )
@@ -184,3 +189,129 @@ def test_v1_index_loads_and_reads_with_absent_display(tmp_path: Path):
     assert provider.lookup("猫") == 100
     assert provider.lookup("生", "なま") == 500  # reading-scoping still works on v1
     assert provider.lookup_detail("猫") == (100, None)  # display absent on v1
+
+
+# ---------------------------------------------------------------------------
+# lookup_detail_many (batched detail lookups)
+# ---------------------------------------------------------------------------
+
+
+class _FlakyConn:
+    """Delegates to a real connection, raising DatabaseError on chosen execute calls."""
+
+    def __init__(self, real: sqlite3.Connection, fail_on: set[int]):
+        self._real = real
+        self._fail_on = fail_on
+        self._calls = 0
+
+    def execute(self, *args, **kwargs):
+        self._calls += 1
+        if self._calls in self._fail_on:
+            raise sqlite3.DatabaseError("chunk boom")
+        return self._real.execute(*args, **kwargs)
+
+
+def test_lookup_detail_many_matches_repeated_lookup_detail(tmp_path: Path):
+    db = _build_source(
+        tmp_path,
+        "jpdb",
+        [
+            ("猫", "ねこ", 1099, "1099/72000"),
+            ("生", "せい", 80),
+            ("生", "なま", 500),
+            ("犬", None, 200),
+        ],
+    )
+    provider = IndexedFreqProvider("jpdb", db, "JPDB")
+    assert provider.load() is True
+    pairs = [
+        ("猫", "ねこ"),
+        ("生", "せい"),
+        ("生", "なま"),
+        ("犬", "いぬ"),
+        ("存在しない", None),
+        ("猫", None),
+    ]
+    assert provider.lookup_detail_many(pairs) == [provider.lookup_detail(t, r) for t, r in pairs]
+
+
+def test_lookup_detail_many_duplicate_term_distinct_readings(tmp_path: Path):
+    # The dict-keyed lookup_many collapsed duplicate terms (last reading won);
+    # the parallel-list API must resolve each pair independently.
+    db = _build_source(tmp_path, "jpdb", [("方", "かた", 2000), ("方", "ほう", 30)])
+    provider = IndexedFreqProvider("jpdb", db, "JPDB")
+    assert provider.load() is True
+    assert provider.lookup_detail_many([("方", "かた"), ("方", "ほう")]) == [(2000, None), (30, None)]
+
+
+def test_lookup_detail_many_reading_cascade_tiers(tmp_path: Path):
+    # Per pair: exact-reading row → bare row → term-only MIN, same as lookup_detail.
+    db = _build_source(
+        tmp_path,
+        "mix",
+        [("term", "よみ", 50), ("term", None, 200), ("生", "なま", 500), ("生", "せい", 80)],
+    )
+    provider = IndexedFreqProvider("mix", db, "MIX")
+    assert provider.load() is True
+    pairs = [("term", "よみ"), ("term", "ちがう"), ("term", None), ("生", "き")]
+    assert provider.lookup_detail_many(pairs) == [(50, None), (200, None), (50, None), (80, None)]
+
+
+def test_lookup_detail_many_katakana_normalized_both_sides(tmp_path: Path):
+    db = _build_source(tmp_path, "bccwj", [("生", "ナマ", 500), ("生", "せい", 80)])
+    provider = IndexedFreqProvider("bccwj", db, "BCCWJ")
+    assert provider.load() is True
+    pairs = [("生", "なま"), ("生", "ナマ"), ("生", "セイ")]
+    assert provider.lookup_detail_many(pairs) == [(500, None), (500, None), (80, None)]
+
+
+def test_lookup_detail_many_before_load_all_none(tmp_path: Path):
+    db = _build_source(tmp_path, "jpdb", [("猫", "ねこ", 100)])
+    provider = IndexedFreqProvider("jpdb", db, "JPDB")
+    assert provider.lookup_detail_many([("猫", None), ("犬", None)]) == [None, None]
+
+
+def test_lookup_detail_many_empty_pairs(tmp_path: Path):
+    db = _build_source(tmp_path, "jpdb", [("猫", "ねこ", 100)])
+    provider = IndexedFreqProvider("jpdb", db, "JPDB")
+    assert provider.load() is True
+    assert provider.lookup_detail_many([]) == []
+
+
+def test_lookup_detail_many_v1_index_display_none(tmp_path: Path):
+    db = tmp_path / "legacy" / "index.sqlite"
+    build_v1_index(db, [("猫", "ねこ", 100), ("生", "せい", 80)])
+    provider = IndexedFreqProvider("legacy", db, "Legacy")
+    assert provider.load() is True
+    assert provider.lookup_detail_many([("猫", "ねこ"), ("生", "せい")]) == [(100, None), (80, None)]
+
+
+def test_lookup_detail_many_chunking_equivalence(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    rows = [(f"語{i}", f"よみ{i}", 10 * (i + 1)) for i in range(5)]
+    db = _build_source(tmp_path, "jpdb", rows)
+    provider = IndexedFreqProvider("jpdb", db, "JPDB")
+    assert provider.load() is True
+    monkeypatch.setattr(ifp_module, "_BIND_CHUNK", 2)
+    pairs = [(t, r) for t, r, _rank in rows] + [("存在しない", None)]
+    assert provider.lookup_detail_many(pairs) == [provider.lookup_detail(t, r) for t, r in pairs]
+
+
+def test_lookup_detail_many_database_error_per_chunk(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+):
+    # 5 unique terms at _BIND_CHUNK=2 → chunks [t0,t1] [t2,t3] [t4]; fail the
+    # SECOND chunk's query only: its pairs resolve None, other chunks intact.
+    rows = [(f"語{i}", f"よみ{i}", 10 * (i + 1)) for i in range(5)]
+    db = _build_source(tmp_path, "jpdb", rows)
+    provider = IndexedFreqProvider("jpdb", db, "JPDB")
+    assert provider.load() is True
+    monkeypatch.setattr(ifp_module, "_BIND_CHUNK", 2)
+    assert provider._conn is not None
+    provider._conn = _FlakyConn(provider._conn, fail_on={2})  # type: ignore[assignment]
+    pairs = [(t, r) for t, r, _rank in rows]
+    with caplog.at_level(logging.WARNING):
+        result = provider.lookup_detail_many(pairs)
+    assert result == [(10, None), (20, None), None, None, (50, None)]
+    warnings = [r for r in caplog.records if "lookup_detail_many" in r.getMessage()]
+    assert len(warnings) == 1
+    assert "jpdb" in warnings[0].getMessage()
