@@ -16,6 +16,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from PyQt6.QtWidgets import QApplication, QMenu
 
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
     CurationMediaContext,
@@ -206,3 +207,53 @@ class TestPlayPauseShortcut:
         dlg = _dialog_with_stub_player(mixed_words, tmp_path)
         qtbot.addWidget(dlg)
         assert self._has_space_play_pause(dlg.player_widget)
+
+
+class TestContextMenuCopy:
+    """Right-click "Copy sentence" must copy the sentence the user picked in the
+    Sentences box, not the primary/first one (Issue #95)."""
+
+    @staticmethod
+    def _copy_sentence_via_menu(dlg: WordCurationDialog, idx: int) -> None:
+        """Drive the real context-menu handler and click "Copy sentence".
+
+        Patches ``QMenu.exec`` to return the 2nd action (Copy sentence), and
+        points the handler at the word's row via its item rect centre.
+        """
+        row = dlg._visual_row_for_index(idx)
+        assert row is not None
+        rect = dlg.table.visualItemRect(dlg.table.item(row, 0))
+        with patch.object(QMenu, "exec", lambda self, _pos: self.actions()[1]):
+            dlg._on_table_context_menu(rect.center())
+
+    def test_copy_sentence_uses_selected_alternate(self, qtbot, mixed_words):
+        dlg = WordCurationDialog(mixed_words)
+        qtbot.addWidget(dlg)
+        _select_and_fire(dlg, 0)
+        dlg.sentence_list.setCurrentRow(1)  # user picks the 2nd sentence
+
+        self._copy_sentence_via_menu(dlg, 0)
+
+        assert QApplication.clipboard().text() == "パンを食べる"
+
+    def test_copy_sentence_default_when_no_pick(self, qtbot, mixed_words):
+        dlg = WordCurationDialog(mixed_words)
+        qtbot.addWidget(dlg)
+        # Never open the picker — the default (primary) sentence flows through.
+        self._copy_sentence_via_menu(dlg, 0)
+
+        assert QApplication.clipboard().text() == "朝ごはんを食べる"
+
+    def test_copy_lemma_unaffected_by_pick(self, qtbot, mixed_words):
+        dlg = WordCurationDialog(mixed_words)
+        qtbot.addWidget(dlg)
+        _select_and_fire(dlg, 0)
+        dlg.sentence_list.setCurrentRow(2)
+
+        row = dlg._visual_row_for_index(0)
+        assert row is not None
+        rect = dlg.table.visualItemRect(dlg.table.item(row, 0))
+        with patch.object(QMenu, "exec", lambda self, _pos: self.actions()[0]):
+            dlg._on_table_context_menu(rect.center())
+
+        assert QApplication.clipboard().text() == "食べる"
