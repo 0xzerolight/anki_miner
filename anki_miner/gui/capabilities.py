@@ -40,7 +40,7 @@ SETTINGS_SUBTABS: frozenset[str] = frozenset(
 SUBTAB_KEYS: dict[str, frozenset[str]] = {
     "settings": SETTINGS_SUBTABS,
     "video": frozenset({"single", "batch", "youtube"}),
-    "reading": frozenset({"manga", "novels", "subtitles"}),
+    "reading": frozenset({"manga", "novels", "subtitles", "text"}),
     "subtitles": frozenset({"generate", "retime", "condense"}),
 }
 
@@ -158,6 +158,14 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("reading", "novels"),
         keywords=("novel", "epub", "text", "book", "reading", "aozora", "ln", "light novel"),
+    ),
+    Capability(
+        id="text-mining",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Mine pasted text"),
+        description=QT_TRANSLATE_NOOP("Capabilities", "Paste any Japanese text and mine it straight into Anki cards."),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("reading", "text"),
+        keywords=("paste", "text", "clipboard", "copy paste", "raw text", "snippet", "article"),
     ),
     Capability(
         id="subtitle-generate",
