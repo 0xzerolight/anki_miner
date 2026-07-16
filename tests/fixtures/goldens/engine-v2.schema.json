@@ -1,0 +1,918 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anki-miner.invalid/schemas/engine-goldens-v2.schema.json",
+  "title": "Anki Miner engine goldens v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "provenance",
+    "unidic_feature_fields",
+    "section_status",
+    "cases"
+  ],
+  "properties": {
+    "schema_version": {"const": 2},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "unidic_feature_fields": {
+      "const": [
+        "pos1",
+        "pos2",
+        "pos3",
+        "pos4",
+        "cType",
+        "cForm",
+        "lForm",
+        "lemma",
+        "orth",
+        "pron",
+        "orthBase",
+        "pronBase",
+        "goshu",
+        "iType",
+        "iForm",
+        "fType",
+        "fForm",
+        "kana",
+        "kanaBase",
+        "form",
+        "formBase",
+        "iConType",
+        "fConType",
+        "aType",
+        "aConType",
+        "aModeType"
+      ]
+    },
+    "section_status": {"$ref": "#/$defs/sectionStatus"},
+    "cases": {"$ref": "#/$defs/cases"}
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "opaqueId": {
+      "type": "string",
+      "pattern": "^(run|anki|note|asset)_[0-9a-f]{32}$"
+    },
+    "implemented": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "properties": {"state": {"const": "implemented"}}
+    },
+    "sectionStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tokenization",
+        "morphology",
+        "filtering",
+        "deinflection",
+        "compounds",
+        "dictionaries",
+        "frequency",
+        "pitch",
+        "cards"
+      ],
+      "properties": {
+        "tokenization": {"$ref": "#/$defs/implemented"},
+        "morphology": {"$ref": "#/$defs/implemented"},
+        "filtering": {"$ref": "#/$defs/implemented"},
+        "deinflection": {"$ref": "#/$defs/implemented"},
+        "compounds": {"$ref": "#/$defs/implemented"},
+        "dictionaries": {"$ref": "#/$defs/implemented"},
+        "frequency": {"$ref": "#/$defs/implemented"},
+        "pitch": {"$ref": "#/$defs/implemented"},
+        "cards": {"$ref": "#/$defs/implemented"}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engine", "tool", "runtime", "data"],
+      "properties": {
+        "engine": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["revision", "tree_sha256"],
+          "properties": {
+            "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+            "tree_sha256": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "tool": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "version", "files_sha256", "sha256"],
+          "properties": {
+            "name": {"const": "anki-miner-engine-golden-dumper"},
+            "version": {"const": "2"},
+            "files_sha256": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "dump_engine_goldens.py",
+                "engine_golden_contract_v2.py",
+                "prepare_golden_unidic.py"
+              ],
+              "properties": {
+                "dump_engine_goldens.py": {"$ref": "#/$defs/sha256"},
+                "engine_golden_contract_v2.py": {"$ref": "#/$defs/sha256"},
+                "prepare_golden_unidic.py": {"$ref": "#/$defs/sha256"}
+              }
+            },
+            "sha256": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "runtime": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "python_implementation",
+            "python_version",
+            "platform",
+            "dependencies",
+            "sha256"
+          ],
+          "properties": {
+            "python_implementation": {"type": "string", "minLength": 1},
+            "python_version": {"type": "string", "minLength": 1},
+            "platform": {"type": "string", "minLength": 1},
+            "dependencies": {
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["version", "content_sha256"],
+                "properties": {
+                  "version": {"type": "string", "minLength": 1},
+                  "content_sha256": {"$ref": "#/$defs/sha256"}
+                }
+              }
+            },
+            "sha256": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tokenizer_corpus_sha256",
+            "contract_input_sha256",
+            "schema_sha256",
+            "assets_sha256",
+            "unidic",
+            "sha256"
+          ],
+          "properties": {
+            "tokenizer_corpus_sha256": {"$ref": "#/$defs/sha256"},
+            "contract_input_sha256": {"$ref": "#/$defs/sha256"},
+            "schema_sha256": {"$ref": "#/$defs/sha256"},
+            "assets_sha256": {
+              "type": "object",
+              "additionalProperties": {"$ref": "#/$defs/sha256"}
+            },
+            "unidic": {"$ref": "#/$defs/unidic"},
+            "sha256": {"$ref": "#/$defs/sha256"}
+          }
+        }
+      }
+    },
+    "unidic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resource_id", "archive", "tree"],
+      "properties": {
+        "resource_id": {"const": "unidic-lite-1.0.8"},
+        "archive": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["url", "sha256", "size_bytes", "dicdir_prefix"],
+          "properties": {
+            "url": {"type": "string", "pattern": "^https://files\\.pythonhosted\\.org/"},
+            "sha256": {"$ref": "#/$defs/sha256"},
+            "size_bytes": {"const": 47356746},
+            "dicdir_prefix": {"const": "unidic-lite-1.0.8/unidic_lite/dicdir"}
+          }
+        },
+        "tree": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sha256", "file_count", "size_bytes"],
+          "properties": {
+            "sha256": {"const": "bd942f1b395aa7c56fe20321dc7f021930e29107f6b2949a49f5c56caab55ea7"},
+            "file_count": {"const": 19},
+            "size_bytes": {"const": 260467176}
+          }
+        }
+      }
+    },
+    "tokenFeatures": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pos1", "pos2", "pos3", "pos4", "cType", "cForm", "lForm",
+        "lemma", "orth", "pron", "orthBase", "pronBase", "goshu", "iType",
+        "iForm", "fType", "fForm", "kana", "kanaBase", "form", "formBase",
+        "iConType", "fConType", "aType", "aConType", "aModeType"
+      ],
+      "properties": {
+        "pos1": {"type": ["string", "null"]},
+        "pos2": {"type": ["string", "null"]},
+        "pos3": {"type": ["string", "null"]},
+        "pos4": {"type": ["string", "null"]},
+        "cType": {"type": ["string", "null"]},
+        "cForm": {"type": ["string", "null"]},
+        "lForm": {"type": ["string", "null"]},
+        "lemma": {"type": ["string", "null"]},
+        "orth": {"type": ["string", "null"]},
+        "pron": {"type": ["string", "null"]},
+        "orthBase": {"type": ["string", "null"]},
+        "pronBase": {"type": ["string", "null"]},
+        "goshu": {"type": ["string", "null"]},
+        "iType": {"type": ["string", "null"]},
+        "iForm": {"type": ["string", "null"]},
+        "fType": {"type": ["string", "null"]},
+        "fForm": {"type": ["string", "null"]},
+        "kana": {"type": ["string", "null"]},
+        "kanaBase": {"type": ["string", "null"]},
+        "form": {"type": ["string", "null"]},
+        "formBase": {"type": ["string", "null"]},
+        "iConType": {"type": ["string", "null"]},
+        "fConType": {"type": ["string", "null"]},
+        "aType": {"type": ["string", "null"]},
+        "aConType": {"type": ["string", "null"]},
+        "aModeType": {"type": ["string", "null"]}
+      }
+    },
+    "tokenizationCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text", "tokens"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$"},
+        "text": {"type": "string", "minLength": 1},
+        "tokens": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["surface", "is_unknown", "features", "offsets"],
+            "properties": {
+              "surface": {"type": "string", "minLength": 1},
+              "is_unknown": {"type": "boolean"},
+              "features": {"$ref": "#/$defs/tokenFeatures"},
+              "offsets": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["codepoint_start", "codepoint_end", "utf16_start", "utf16_end"],
+                "properties": {
+                  "codepoint_start": {"type": "integer", "minimum": 0},
+                  "codepoint_end": {"type": "integer", "minimum": 1},
+                  "utf16_start": {"type": "integer", "minimum": 0},
+                  "utf16_end": {"type": "integer", "minimum": 1}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "wordRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface", "lemma", "orth_base", "mined_form", "reading", "pos",
+        "sentence", "surface_start", "surface_end", "highlight_end",
+        "expression_furigana", "expression_reading", "sentence_furigana",
+        "sentence_reading"
+      ],
+      "properties": {
+        "surface": {"type": "string", "minLength": 1},
+        "lemma": {"type": "string", "minLength": 1},
+        "orth_base": {"type": "string", "minLength": 1},
+        "mined_form": {"type": "string", "minLength": 1},
+        "reading": {"type": "string", "minLength": 1},
+        "pos": {"type": "string", "minLength": 1},
+        "sentence": {"type": "string", "minLength": 1},
+        "surface_start": {"type": "integer", "minimum": 0},
+        "surface_end": {"type": "integer", "minimum": 1},
+        "highlight_end": {"type": "integer", "minimum": 1},
+        "expression_furigana": {"type": "string", "minLength": 1},
+        "expression_reading": {"type": "string", "minLength": 1},
+        "sentence_furigana": {"type": "string", "minLength": 1},
+        "sentence_reading": {"type": "string", "minLength": 1}
+      }
+    },
+    "morphologyCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "input", "output"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$"},
+        "input": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["text"],
+          "properties": {"text": {"type": "string", "minLength": 1}}
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["words"],
+          "properties": {
+            "words": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/wordRecord"}}
+          }
+        }
+      }
+    },
+    "compoundCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "input", "output"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$"},
+        "input": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["text", "dictionary_terms"],
+          "properties": {
+            "text": {"type": "string", "minLength": 1},
+            "dictionary_terms": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["words"],
+          "properties": {
+            "words": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/wordRecord"}}
+          }
+        }
+      }
+    },
+    "frequencyTuple": {
+      "type": "array",
+      "prefixItems": [
+        {"type": "string", "minLength": 1},
+        {"type": "integer", "minimum": 1},
+        {"type": ["string", "null"]}
+      ],
+      "items": false,
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "filterResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allow_duplicate_cards", "candidate_words_found", "new_words_found",
+        "comprehension_percentage", "normalized_existing_first_fields", "events",
+        "survivor_ids", "survivors"
+      ],
+      "properties": {
+        "allow_duplicate_cards": {"type": "boolean"},
+        "candidate_words_found": {"type": "integer", "minimum": 0},
+        "new_words_found": {"type": "integer", "minimum": 0},
+        "comprehension_percentage": {"type": "number", "minimum": 0, "maximum": 100},
+        "normalized_existing_first_fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["raw", "normalized"],
+            "properties": {
+              "raw": {"type": "string"},
+              "normalized": {"type": "string"}
+            }
+          }
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["level", "message"],
+            "properties": {
+              "level": {"type": "string", "minLength": 1},
+              "message": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        "survivor_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "survivors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "mined_form", "frequency_rank", "frequency_harmonic_rank", "frequency_sources"],
+            "properties": {
+              "id": {"type": "string", "minLength": 1},
+              "mined_form": {"type": "string", "minLength": 1},
+              "frequency_rank": {"type": "integer", "minimum": 1},
+              "frequency_harmonic_rank": {"type": "integer", "minimum": 1},
+              "frequency_sources": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/frequencyTuple"}}
+            }
+          }
+        }
+      }
+    },
+    "filteringCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "input", "output"],
+      "properties": {
+        "id": {"const": "phase2-known-and-within-run-duplicates"},
+        "input": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["existing_first_fields", "words"],
+          "properties": {
+            "existing_first_fields": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+            "words": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "surface", "lemma", "orth_base", "reading", "expression_reading", "pos", "sentence", "start_time"],
+                "properties": {
+                  "id": {"type": "string", "minLength": 1},
+                  "surface": {"type": "string", "minLength": 1},
+                  "lemma": {"type": "string", "minLength": 1},
+                  "lemma_reading": {"type": "string", "minLength": 1},
+                  "orth_base": {"type": "string", "minLength": 1},
+                  "reading": {"type": "string", "minLength": 1},
+                  "expression_reading": {"type": "string", "minLength": 1},
+                  "pos": {"type": "string", "minLength": 1},
+                  "sentence": {"type": "string", "minLength": 1},
+                  "start_time": {"type": "number", "minimum": 0}
+                }
+              }
+            }
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["normal", "allow_duplicates"],
+          "properties": {
+            "normal": {"$ref": "#/$defs/filterResult"},
+            "allow_duplicates": {"$ref": "#/$defs/filterResult"}
+          }
+        }
+      }
+    },
+    "dictionaryCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entry_identity", "queries"],
+      "properties": {
+        "entry_identity": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["provider", "row_id", "term", "reading", "rules", "score", "sequence"],
+            "properties": {
+              "provider": {"type": "string", "minLength": 1},
+              "row_id": {"type": "integer", "minimum": 1},
+              "term": {"type": "string", "minLength": 1},
+              "reading": {"type": "string", "minLength": 1},
+              "rules": {"type": "string", "minLength": 1},
+              "score": {"type": "integer"},
+              "sequence": {"type": "integer", "minimum": 1}
+            }
+          }
+        },
+        "queries": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "input", "output"],
+            "properties": {
+              "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$"},
+              "input": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["term", "reading", "fallback_orth_base", "fallback_ctype"],
+                "properties": {
+                  "term": {"type": "string", "minLength": 1},
+                  "reading": {"type": "string", "minLength": 1},
+                  "fallback_orth_base": {"type": ["string", "null"]},
+                  "fallback_ctype": {"type": ["string", "null"]}
+                }
+              },
+              "output": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["offline_hits", "first_hit", "first_hit_resolution", "glossary"],
+                "properties": {
+                  "offline_hits": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["provider", "html"],
+                      "properties": {
+                        "provider": {"type": "string", "minLength": 1},
+                        "html": {"type": "string", "minLength": 1}
+                      }
+                    }
+                  },
+                  "first_hit": {"type": "string", "minLength": 1},
+                  "first_hit_resolution": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["provider", "candidate", "mode"],
+                    "properties": {
+                      "provider": {"type": "string", "minLength": 1},
+                      "candidate": {"type": "string", "minLength": 1},
+                      "mode": {"enum": ["exact", "deinflection", "fallback"]},
+                      "conditions": {"type": "integer", "minimum": 0}
+                    }
+                  },
+                  "glossary": {"type": ["string", "null"]}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "frequencyCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "input", "output"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$"},
+        "input": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["term", "reading"],
+          "properties": {
+            "term": {"type": "string", "minLength": 1},
+            "reading": {"type": "string", "minLength": 1}
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sources", "minimum_rank", "harmonic_rank"],
+          "properties": {
+            "sources": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/frequencyTuple"}},
+            "minimum_rank": {"type": "integer", "minimum": 1},
+            "harmonic_rank": {"type": "integer", "minimum": 1}
+          }
+        }
+      }
+    },
+    "pitchCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "input", "output"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$"},
+        "input": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["term", "reading", "pos"],
+          "properties": {
+            "term": {"type": "string", "minLength": 1},
+            "reading": {"type": "string", "minLength": 1},
+            "pos": {"type": "string", "minLength": 1}
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pattern", "category", "devoiced_morae", "nasal_morae", "graph_html", "text_html"],
+          "properties": {
+            "pattern": {"type": "string", "minLength": 1},
+            "category": {"type": "string", "minLength": 1},
+            "devoiced_morae": {"type": "array", "items": {"type": "integer", "minimum": 1}},
+            "nasal_morae": {"type": "array", "items": {"type": "integer", "minimum": 1}},
+            "graph_html": {"type": "string", "minLength": 1},
+            "text_html": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
+    "deinflectionCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "input", "output"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$"},
+        "input": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source", "target"],
+          "properties": {
+            "source": {"type": "string", "minLength": 1},
+            "target": {"type": "string", "minLength": 1}
+          }
+        },
+        "output": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "text",
+              "conditions",
+              "trace_surface_first",
+              "inflection_rules_attachment_order"
+            ],
+            "properties": {
+              "text": {"type": "string", "minLength": 1},
+              "conditions": {"type": "integer", "minimum": 0},
+              "trace_surface_first": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["transform_id", "rule_index", "source_text"],
+                  "properties": {
+                    "transform_id": {"type": "string", "minLength": 1},
+                    "rule_index": {"type": "integer", "minimum": 0},
+                    "source_text": {"type": "string", "minLength": 1}
+                  }
+                }
+              },
+              "inflection_rules_attachment_order": {
+                "type": "array",
+                "minItems": 1,
+                "items": {"type": "string", "minLength": 1}
+              }
+            }
+          }
+        }
+      }
+    },
+    "mediaAsset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "asset_id",
+        "source_fixture",
+        "purpose",
+        "media_kind",
+        "original_filename",
+        "requested_filename",
+        "actual_filename",
+        "size_bytes",
+        "sha256"
+      ],
+      "properties": {
+        "asset_id": {"$ref": "#/$defs/opaqueId"},
+        "source_fixture": {"enum": ["card_audio", "card_image", "dictionary_image"]},
+        "purpose": {"enum": ["card", "dictionary"]},
+        "media_kind": {"enum": ["audio", "image"]},
+        "original_filename": {"type": "string", "minLength": 1},
+        "requested_filename": {"type": "string", "minLength": 1},
+        "actual_filename": {"type": "string", "minLength": 1},
+        "size_bytes": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "value"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "value": {"type": "string"}
+      }
+    },
+    "mediaBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assetId", "actualFilename"],
+      "properties": {
+        "assetId": {"$ref": "#/$defs/opaqueId"},
+        "actualFilename": {"type": "string", "minLength": 1}
+      }
+    },
+    "cardCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "input", "output"],
+      "properties": {
+        "id": {"const": "desktop-note-and-android-transport"},
+        "input": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "word_id",
+            "unrewritten_definition",
+            "unrewritten_glossary",
+            "media_store_request",
+            "media_store_result"
+          ],
+          "properties": {
+            "word_id": {"type": "string", "minLength": 1},
+            "unrewritten_definition": {"type": "string", "minLength": 1},
+            "unrewritten_glossary": {"type": "string", "minLength": 1},
+            "media_store_request": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["runId", "requestId", "assets"],
+              "properties": {
+                "runId": {"$ref": "#/$defs/opaqueId"},
+                "requestId": {"$ref": "#/$defs/opaqueId"},
+                "assets": {
+                  "type": "array",
+                  "minItems": 3,
+                  "items": {"$ref": "#/$defs/mediaAsset"}
+                }
+              }
+            },
+            "media_store_result": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["runId", "requestId", "results"],
+              "properties": {
+                "runId": {"$ref": "#/$defs/opaqueId"},
+                "requestId": {"$ref": "#/$defs/opaqueId"},
+                "results": {
+                  "type": "array",
+                  "minItems": 3,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["assetId", "status", "actualFilename"],
+                    "properties": {
+                      "assetId": {"$ref": "#/$defs/opaqueId"},
+                      "status": {"const": "stored"},
+                      "actualFilename": {"type": "string", "minLength": 1}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "rewritten_definition",
+            "rewritten_glossary",
+            "route",
+            "normal_duplicate_options",
+            "allow_duplicate_options",
+            "create_notes_request",
+            "create_notes_result"
+          ],
+          "properties": {
+            "rewritten_definition": {"type": "string", "minLength": 1},
+            "rewritten_glossary": {"type": "string", "minLength": 1},
+            "route": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["deck_name", "model_name", "tags", "card_type", "card_type_field"],
+              "properties": {
+                "deck_name": {"type": "string", "minLength": 1},
+                "model_name": {"type": "string", "minLength": 1},
+                "tags": {"type": "array", "items": {"type": "string", "minLength": 1}},
+                "card_type": {"type": "string", "minLength": 1},
+                "card_type_field": {"type": "string", "minLength": 1}
+              }
+            },
+            "normal_duplicate_options": {"type": "null"},
+            "allow_duplicate_options": {
+              "const": {"allowDuplicate": true, "duplicateScope": "deck"}
+            },
+            "create_notes_request": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "runId",
+                "requestId",
+                "deckName",
+                "modelName",
+                "firstFieldName",
+                "notes"
+              ],
+              "properties": {
+                "runId": {"$ref": "#/$defs/opaqueId"},
+                "requestId": {"$ref": "#/$defs/opaqueId"},
+                "deckName": {"type": "string", "minLength": 1},
+                "modelName": {"type": "string", "minLength": 1},
+                "firstFieldName": {"type": "string", "minLength": 1},
+                "notes": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "clientNoteId",
+                      "fieldOrder",
+                      "fields",
+                      "tags",
+                      "mediaBindings",
+                      "duplicateCandidate"
+                    ],
+                    "properties": {
+                      "clientNoteId": {"$ref": "#/$defs/opaqueId"},
+                      "fieldOrder": {
+                        "type": "array",
+                        "minItems": 1,
+                        "uniqueItems": true,
+                        "items": {"type": "string", "minLength": 1}
+                      },
+                      "fields": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {"$ref": "#/$defs/field"}
+                      },
+                      "tags": {"type": "array", "items": {"type": "string", "minLength": 1}},
+                      "mediaBindings": {
+                        "type": "array",
+                        "minItems": 3,
+                        "items": {"$ref": "#/$defs/mediaBinding"}
+                      },
+                      "duplicateCandidate": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["key", "firstField", "occurrence"],
+                        "properties": {
+                          "key": {"type": "string", "minLength": 1},
+                          "firstField": {"type": "string", "minLength": 1},
+                          "occurrence": {"type": "integer", "minimum": 0}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "create_notes_result": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["runId", "requestId", "results"],
+              "properties": {
+                "runId": {"$ref": "#/$defs/opaqueId"},
+                "requestId": {"$ref": "#/$defs/opaqueId"},
+                "results": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["clientNoteId", "status", "noteId"],
+                    "properties": {
+                      "clientNoteId": {"$ref": "#/$defs/opaqueId"},
+                      "status": {"const": "created"},
+                      "noteId": {"type": "integer", "minimum": 1}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "cases": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tokenization",
+        "morphology",
+        "filtering",
+        "deinflection",
+        "compounds",
+        "dictionaries",
+        "frequency",
+        "pitch",
+        "cards"
+      ],
+      "properties": {
+        "tokenization": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/tokenizationCase"}},
+        "morphology": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/morphologyCase"}},
+        "filtering": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"$ref": "#/$defs/filteringCase"}},
+        "deinflection": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/deinflectionCase"}},
+        "compounds": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/compoundCase"}},
+        "dictionaries": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"$ref": "#/$defs/dictionaryCase"}},
+        "frequency": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/frequencyCase"}},
+        "pitch": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/pitchCase"}},
+        "cards": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"$ref": "#/$defs/cardCase"}}
+      }
+    }
+  }
+}
