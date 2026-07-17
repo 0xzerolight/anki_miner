@@ -50,7 +50,7 @@ class ReadingUnit:
 
 @dataclass(frozen=True)
 class ReadingSourceRef:
-    """A detected, loadable source: one manga volume or one novel file.
+    """A detected, loadable source: one manga volume, novel file, or pasted text.
 
     Per-kind population contract:
 
@@ -62,13 +62,21 @@ class ReadingSourceRef:
       ``path.stem`` (a provisional label for queue rows only), ``volume`` =
       None and ``image_root`` = None; the loader is authoritative for the
       final ``ReadingDocument`` metadata.
+    * kind="text": built directly by the Text sub-tab, never by the detector —
+      ``text`` holds the pasted content, ``title`` = "Text", and ``path`` /
+      ``image_root`` / ``volume`` are None. Distinct from kind="txt", which is
+      a ``.txt`` *file* on disk (aozora loader).
+
+    ``path`` is always set for the file-backed kinds (their loaders assert
+    this) and only None for kind="text".
     """
 
-    kind: Literal["mokuro", "epub", "txt", "subtitle"]
-    path: Path
-    image_root: Path | None
-    title: str
-    volume: str | None
+    kind: Literal["mokuro", "epub", "txt", "subtitle", "text"]
+    path: Path | None = None
+    image_root: Path | None = None
+    title: str = ""
+    volume: str | None = None
+    text: str | None = None
 
 
 @dataclass

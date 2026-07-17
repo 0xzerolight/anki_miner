@@ -1182,6 +1182,14 @@ Total cards created: %2</source>
         <translation>从小说和其他文本（EPUB、青空文库、纯文本）中挖取词汇。</translation>
     </message>
     <message>
+        <source>Mine pasted text</source>
+        <translation>从粘贴文本中挖词</translation>
+    </message>
+    <message>
+        <source>Paste any Japanese text and mine it straight into Anki cards.</source>
+        <translation>粘贴任意日语文本，直接挖词生成 Anki 卡片。</translation>
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation>从音频生成字幕</translation>
     </message>
@@ -3233,7 +3241,7 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Words you added from the Word Curator — ignored on every run, kept across cache rebuilds, exportable for re-import into jiten.moe. Import accepts jpdb, Migaku and AnkiMorphs exports or plain word lists.</source>
-        <translation type="unfinished" />
+        <translation>你从单词整理器添加的单词——每次运行时都会被忽略，缓存重建后仍会保留，并可导出以重新导入 jiten.moe。导入支持 jpdb、Migaku 和 AnkiMorphs 的导出文件或纯文本单词列表。</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -3245,7 +3253,7 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Import…</source>
-        <translation type="unfinished" />
+        <translation>导入…</translation>
     </message>
     <message>
         <source>Export…</source>
@@ -3265,76 +3273,81 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>jpdb review export</source>
-        <translation type="unfinished" />
+        <translation>jpdb 复习导出</translation>
     </message>
     <message>
         <source>Migaku word export</source>
-        <translation type="unfinished" />
+        <translation>Migaku 单词导出</translation>
     </message>
     <message>
         <source>Migaku legacy add-on backup</source>
-        <translation type="unfinished" />
+        <translation>Migaku 旧版插件备份</translation>
     </message>
     <message>
         <source>AnkiMorphs known morphs</source>
-        <translation type="unfinished" />
+        <translation>AnkiMorphs 已知词素</translation>
     </message>
     <message>
         <source>Migaku word export (CSV)</source>
-        <translation type="unfinished" />
+        <translation>Migaku 单词导出（CSV）</translation>
     </message>
     <message>
         <source>plain word list</source>
-        <translation type="unfinished" />
+        <translation>纯文本单词列表</translation>
     </message>
     <message>
         <source>Import Known Words</source>
-        <translation type="unfinished" />
+        <translation>导入已知单词</translation>
     </message>
     <message>
         <source>Known word lists (*.csv *.txt *.json);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>已知单词列表 (*.csv *.txt *.json);;所有文件 (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — this file has no known/learning status; all %2 entries will be imported.
 
 Add %3 word(s) to your known list?</source>
-        <translation type="unfinished" />
+        <translation>检测到：%1——该文件不含已知/学习中状态；将导入全部 %2 个条目。
+
+要将 %3 个单词添加到你的已知列表吗？</translation>
     </message>
     <message>
         <source>Detected: %1 — %2 entries, %3 qualify as known.
 
 Add %3 word(s) to your known list?</source>
-        <translation type="unfinished" />
+        <translation>检测到：%1——共 %2 个条目，其中 %3 个符合已知条件。
+
+要将 %3 个单词添加到你的已知列表吗？</translation>
     </message>
     <message>
         <source>Import Complete</source>
-        <translation type="unfinished" />
+        <translation>导入完成</translation>
     </message>
     <message>
         <source>Added %1 word(s) to your list. %2 were already in it.</source>
-        <translation type="unfinished" />
+        <translation>已将 %1 个单词添加到你的列表，另有 %2 个已在列表中。</translation>
     </message>
     <message>
         <source>Detected: %1 — but no entries in this file qualify as known.</source>
-        <translation type="unfinished" />
+        <translation>检测到：%1——但该文件中没有符合已知条件的条目。</translation>
     </message>
     <message>
         <source>The file could not be read.</source>
-        <translation type="unfinished" />
+        <translation>无法读取该文件。</translation>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>无法识别文件格式。支持：jpdb 复习导出（JSON）、Migaku 单词导出（JSON/CSV）、AnkiMorphs 已知词素（CSV）、纯文本单词列表（每行一个单词）。</translation>
     </message>
     <message>
         <source>Import Failed</source>
-        <translation type="unfinished">导入失败</translation>
+        <translation>导入失败</translation>
     </message>
     <message>
         <source>Unexpected error while reading the file:
 %1</source>
-        <translation type="unfinished" />
+        <translation>读取文件时发生意外错误：
+%1</translation>
     </message>
     <message>
         <source>Export Known Words</source>
@@ -3605,6 +3618,10 @@ Continue?</source>
     <message>
         <source>Subtitles</source>
         <translation>字幕</translation>
+    </message>
+    <message>
+        <source>Text</source>
+        <translation>文本</translation>
     </message>
     <message>
         <source>Generate</source>
@@ -4393,6 +4410,72 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Complete — %1 cards created</source>
         <translation>完成——已创建 %1 张卡片</translation>
+    </message>
+</context><context>
+    <name>ReadingTextTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation>挖词前先审阅单词</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation>在创建卡片前显示单词选择弹窗。</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>进度</translation>
+    </message>
+    <message>
+        <source>Pasted Text</source>
+        <translation>粘贴文本</translation>
+    </message>
+    <message>
+        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
+        <translation>粘贴日语文本并挖词生成 Anki 卡片——不含截图和音频。</translation>
+    </message>
+    <message>
+        <source>Paste text here…</source>
+        <translation>在此粘贴文本…</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>挖词</translation>
+    </message>
+    <message>
+        <source>Mine the pasted text into Anki cards.</source>
+        <translation>将粘贴的文本挖词生成 Anki 卡片。</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>取消正在进行的运行。</translation>
+    </message>
+    <message>
+        <source>Paste some text first.</source>
+        <translation>请先粘贴文本。</translation>
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation>正在启动…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
+    </message>
+    <message>
+        <source>Mining pasted text…</source>
+        <translation>正在从粘贴文本中挖词…</translation>
+    </message>
+    <message>
+        <source>Mined %1 cards.</source>
+        <translation>已挖出 %1 张卡片。</translation>
+    </message>
+    <message>
+        <source>Failed: %1.</source>
+        <translation>失败：%1。</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>

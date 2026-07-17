@@ -2,13 +2,14 @@
 
 The former flat ``ReadingTab`` was split into sub-tabs
 (:class:`ReadingMangaTab` / :class:`ReadingNovelsTab` /
-:class:`ReadingSubtitlesTab`) behind a thin container. The old flat-tab
+:class:`ReadingSubtitlesTab` / :class:`ReadingTextTab`) behind a thin
+container. The old flat-tab
 behaviour now lives in ``test_reading_mining_base.py`` (shared
 worker/processor lifecycle) and the per-sub-tab test modules; this module
 covers only the container:
 
-- Inner ``QTabWidget`` has exactly three tabs: "Manga" (index 0), "Novels" (1),
-  "Subtitles" (2).
+- Inner ``QTabWidget`` has exactly four tabs: "Manga" (index 0), "Novels" (1),
+  "Subtitles" (2), "Text" (3).
 - Children are the real sub-tab classes, constructed with the shared presenter /
   stats_service and ``processor=None``.
 - ``update_config`` stores config and fans out to every child.
@@ -36,10 +37,12 @@ from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
 from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
 from anki_miner.gui.widgets.reading_tab import ReadingTab
+from anki_miner.gui.widgets.reading_text_tab import ReadingTextTab
 
 _MANGA_CLS = "anki_miner.gui.widgets.reading_tab.ReadingMangaTab"
 _NOVELS_CLS = "anki_miner.gui.widgets.reading_tab.ReadingNovelsTab"
 _SUBTITLES_CLS = "anki_miner.gui.widgets.reading_tab.ReadingSubtitlesTab"
+_TEXT_CLS = "anki_miner.gui.widgets.reading_tab.ReadingTextTab"
 
 
 @pytest.fixture
@@ -50,12 +53,13 @@ def tab(qtbot, test_config: AnkiMinerConfig) -> ReadingTab:
     return widget
 
 
-def _mock_children(tab) -> tuple[MagicMock, MagicMock, MagicMock]:
-    """Replace all three children with MagicMocks and return them."""
+def _mock_children(tab) -> tuple[MagicMock, MagicMock, MagicMock, MagicMock]:
+    """Replace all four children with MagicMocks and return them."""
     tab.manga_tab = MagicMock(name="manga")
     tab.novels_tab = MagicMock(name="novels")
     tab.subtitles_tab = MagicMock(name="subtitles")
-    return tab.manga_tab, tab.novels_tab, tab.subtitles_tab
+    tab.text_tab = MagicMock(name="text")
+    return tab.manga_tab, tab.novels_tab, tab.subtitles_tab, tab.text_tab
 
 
 # ---------------------------------------------------------------------------
@@ -65,12 +69,13 @@ def _mock_children(tab) -> tuple[MagicMock, MagicMock, MagicMock]:
 
 class TestInnerTabs:
     def test_inner_tab_count(self, tab):
-        assert tab._inner_tabs.count() == 3
+        assert tab._inner_tabs.count() == 4
 
     def test_inner_tab_labels(self, tab):
         assert tab._inner_tabs.tabText(0) == "Manga"
         assert tab._inner_tabs.tabText(1) == "Novels"
         assert tab._inner_tabs.tabText(2) == "Subtitles"
+        assert tab._inner_tabs.tabText(3) == "Text"
 
     def test_manga_tab_is_first(self, tab):
         assert tab._inner_tabs.widget(0) is tab.manga_tab
@@ -81,10 +86,14 @@ class TestInnerTabs:
     def test_subtitles_tab_is_third(self, tab):
         assert tab._inner_tabs.widget(2) is tab.subtitles_tab
 
+    def test_text_tab_is_fourth(self, tab):
+        assert tab._inner_tabs.widget(3) is tab.text_tab
+
     def test_children_are_real_classes(self, tab):
         assert isinstance(tab.manga_tab, ReadingMangaTab)
         assert isinstance(tab.novels_tab, ReadingNovelsTab)
         assert isinstance(tab.subtitles_tab, ReadingSubtitlesTab)
+        assert isinstance(tab.text_tab, ReadingTextTab)
 
 
 # ---------------------------------------------------------------------------
@@ -98,11 +107,13 @@ class TestConstruction:
         # presenter signals into their logs).
         assert tab.manga_tab._presenter is tab.novels_tab._presenter is not None
         assert tab.subtitles_tab._presenter is tab.manga_tab._presenter
+        assert tab.text_tab._presenter is tab.manga_tab._presenter
 
     def test_children_built_with_none_processor(self, tab):
         assert tab.manga_tab._processor is None
         assert tab.novels_tab._processor is None
         assert tab.subtitles_tab._processor is None
+        assert tab.text_tab._processor is None
 
     def test_ctor_args_forwarded_to_children(self, qtbot, test_config):
         """config, processor=None, shared presenter + stats_service reach all."""
@@ -116,11 +127,12 @@ class TestConstruction:
             patch(_MANGA_CLS, return_value=QWidget()) as manga_cls,
             patch(_NOVELS_CLS, return_value=QWidget()) as novels_cls,
             patch(_SUBTITLES_CLS, return_value=QWidget()) as subtitles_cls,
+            patch(_TEXT_CLS, return_value=QWidget()) as text_cls,
         ):
             widget = ReadingTab(config=test_config, presenter=presenter, stats_service=stats)
             qtbot.addWidget(widget)
 
-            for cls in (manga_cls, novels_cls, subtitles_cls):
+            for cls in (manga_cls, novels_cls, subtitles_cls, text_cls):
                 assert cls.call_count == 1
                 args, kwargs = cls.call_args
                 assert args[0] is test_config
@@ -137,7 +149,7 @@ class TestConstruction:
 class TestOpenSubtab:
     @pytest.mark.parametrize(
         ("key", "expected_index"),
-        [("manga", 0), ("novels", 1), ("subtitles", 2)],
+        [("manga", 0), ("novels", 1), ("subtitles", 2), ("text", 3)],
     )
     def test_switches_inner_tab(self, tab, key, expected_index):
         tab._inner_tabs.setCurrentIndex(1 if expected_index == 0 else 0)
@@ -165,18 +177,21 @@ class TestUpdateConfig:
         tab.manga_tab.update_config = MagicMock()
         tab.novels_tab.update_config = MagicMock()
         tab.subtitles_tab.update_config = MagicMock()
+        tab.text_tab.update_config = MagicMock()
 
         tab.update_config(new_config)
 
         tab.manga_tab.update_config.assert_called_once_with(new_config)
         tab.novels_tab.update_config.assert_called_once_with(new_config)
         tab.subtitles_tab.update_config.assert_called_once_with(new_config)
+        tab.text_tab.update_config.assert_called_once_with(new_config)
 
     def test_stores_config(self, tab, test_config):
         new_config = replace(test_config, subtitle_offset=2.5)
         tab.manga_tab.update_config = MagicMock()
         tab.novels_tab.update_config = MagicMock()
         tab.subtitles_tab.update_config = MagicMock()
+        tab.text_tab.update_config = MagicMock()
 
         tab.update_config(new_config)
 
@@ -190,17 +205,18 @@ class TestUpdateConfig:
 
 class TestShutdown:
     def test_fans_out_to_all_children(self, tab):
-        manga, novels, subtitles = _mock_children(tab)
+        manga, novels, subtitles, text = _mock_children(tab)
 
         tab.shutdown()
 
         manga.shutdown.assert_called_once_with()
         novels.shutdown.assert_called_once_with()
         subtitles.shutdown.assert_called_once_with()
+        text.shutdown.assert_called_once_with()
 
     def test_first_child_raising_does_not_strand_the_rest(self, tab):
         """An exception stopping the first child must not skip the others."""
-        manga, novels, subtitles = _mock_children(tab)
+        manga, novels, subtitles, text = _mock_children(tab)
         manga.shutdown.side_effect = RuntimeError("boom")
 
         tab.shutdown()  # must not raise
@@ -208,6 +224,7 @@ class TestShutdown:
         manga.shutdown.assert_called_once_with()
         novels.shutdown.assert_called_once_with()
         subtitles.shutdown.assert_called_once_with()
+        text.shutdown.assert_called_once_with()
 
 
 # ---------------------------------------------------------------------------
@@ -217,30 +234,33 @@ class TestShutdown:
 
 class TestReleaseDictionaryResources:
     @pytest.mark.parametrize(
-        ("manga_ret", "novels_ret", "subtitles_ret"),
+        ("manga_ret", "novels_ret", "subtitles_ret", "text_ret"),
         [
-            (True, True, True),
-            (False, True, True),
-            (True, False, True),
-            (True, True, False),
-            (False, False, False),
+            (True, True, True, True),
+            (False, True, True, True),
+            (True, False, True, True),
+            (True, True, False, True),
+            (True, True, True, False),
+            (False, False, False, False),
         ],
     )
-    def test_truth_table(self, tab, manga_ret, novels_ret, subtitles_ret):
-        manga, novels, subtitles = _mock_children(tab)
+    def test_truth_table(self, tab, manga_ret, novels_ret, subtitles_ret, text_ret):
+        manga, novels, subtitles, text = _mock_children(tab)
         manga.release_dictionary_resources.return_value = manga_ret
         novels.release_dictionary_resources.return_value = novels_ret
         subtitles.release_dictionary_resources.return_value = subtitles_ret
+        text.release_dictionary_resources.return_value = text_ret
 
-        expected = manga_ret and novels_ret and subtitles_ret
+        expected = manga_ret and novels_ret and subtitles_ret and text_ret
         assert tab.release_dictionary_resources() is expected
 
     def test_all_children_evaluated_even_when_first_refuses(self, tab):
         """No short-circuit: later children are released even if the first said no."""
-        manga, novels, subtitles = _mock_children(tab)
+        manga, novels, subtitles, text = _mock_children(tab)
         manga.release_dictionary_resources.return_value = False
         novels.release_dictionary_resources.return_value = True
         subtitles.release_dictionary_resources.return_value = True
+        text.release_dictionary_resources.return_value = True
 
         result = tab.release_dictionary_resources()
 
@@ -248,6 +268,7 @@ class TestReleaseDictionaryResources:
         manga.release_dictionary_resources.assert_called_once_with()
         novels.release_dictionary_resources.assert_called_once_with()
         subtitles.release_dictionary_resources.assert_called_once_with()
+        text.release_dictionary_resources.assert_called_once_with()
 
 
 # ---------------------------------------------------------------------------

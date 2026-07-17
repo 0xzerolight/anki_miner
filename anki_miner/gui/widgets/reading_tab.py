@@ -1,9 +1,10 @@
-"""Reading container tab — nests Manga, Novels, and Subtitles as inner tabs.
+"""Reading container tab — nests Manga, Novels, Subtitles, and Text inner tabs.
 
 Wraps :class:`~anki_miner.gui.widgets.reading_manga_tab.ReadingMangaTab` (Manga),
 :class:`~anki_miner.gui.widgets.reading_novels_tab.ReadingNovelsTab` (Novels),
-and :class:`~anki_miner.gui.widgets.reading_subtitles_tab.ReadingSubtitlesTab`
-(Subtitles) inside a single top-level tab so the main tab bar stays uncluttered.
+:class:`~anki_miner.gui.widgets.reading_subtitles_tab.ReadingSubtitlesTab`
+(Subtitles), and :class:`~anki_miner.gui.widgets.reading_text_tab.ReadingTextTab`
+(Text) inside a single top-level tab so the main tab bar stays uncluttered.
 Each child owns its own
 :class:`~anki_miner.gui.workers.reading_queue_worker.ReadingQueueWorker`
 / :class:`~anki_miner.orchestration.episode_processor.EpisodeProcessor` lifecycle
@@ -16,7 +17,7 @@ Close contract:
   exception raised while stopping one child must not strand another child's
   still-running worker at app close (the same service-all principle as the
   release fan-out). Each child's ``shutdown`` bounded-joins its worker at
-  ``_SHUTDOWN_WAIT_MS`` (30s), so the container's worst-case close is ~3x30s.
+  ``_SHUTDOWN_WAIT_MS`` (30s), so the container's worst-case close is ~4x30s.
 - NO ``worker_thread`` attribute and NO ``iter_close_workers`` method.
   :class:`~anki_miner.gui.controllers.background_tasks.BackgroundTaskController`
   calls ``tab.shutdown()`` FIRST, which joins (or abandons-with-warning and
@@ -38,6 +39,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
 from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
+from anki_miner.gui.widgets.reading_text_tab import ReadingTextTab
 
 if TYPE_CHECKING:
     from anki_miner.interfaces.presenter import PresenterProtocol
@@ -46,7 +48,7 @@ logger = logging.getLogger(__name__)
 
 
 class ReadingTab(QWidget):
-    """Container tab holding Manga, Novels, and Subtitles as inner tabs.
+    """Container tab holding Manga, Novels, Subtitles, and Text as inner tabs.
 
     The class name is load-bearing: ``main_window._MAIN_TAB_CLASSES["reading"]``
     resolves this tab by type name, so it must stay ``ReadingTab``.
@@ -60,7 +62,7 @@ class ReadingTab(QWidget):
     ``shutdown()`` but deliberately provides neither a ``worker_thread``
     attribute nor an ``iter_close_workers`` method. The controller calls
     ``shutdown()`` first, which bounded-joins each child's worker (30s each →
-    ~3x30s worst case); a later ``worker_thread`` / ``iter_close_workers`` probe
+    ~4x30s worst case); a later ``worker_thread`` / ``iter_close_workers`` probe
     would be vestigial.
 
     Args:
@@ -101,6 +103,12 @@ class ReadingTab(QWidget):
             presenter=presenter,
             stats_service=stats_service,
         )
+        self.text_tab = ReadingTextTab(
+            config,
+            processor=None,
+            presenter=presenter,
+            stats_service=stats_service,
+        )
 
         self._inner_tabs = QTabWidget()
         self._inner_tabs.addTab(
@@ -115,9 +123,13 @@ class ReadingTab(QWidget):
             self.subtitles_tab,
             QCoreApplication.translate("MainWindow", "Subtitles"),
         )
+        self._inner_tabs.addTab(
+            self.text_tab,
+            QCoreApplication.translate("MainWindow", "Text"),
+        )
 
         # Stable sub-tab keys for reveal_capability (see capabilities.SUBTAB_KEYS).
-        self._subtab_index = {"manga": 0, "novels": 1, "subtitles": 2}
+        self._subtab_index = {"manga": 0, "novels": 1, "subtitles": 2, "text": 3}
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -150,6 +162,7 @@ class ReadingTab(QWidget):
         self.manga_tab.update_config(config)
         self.novels_tab.update_config(config)
         self.subtitles_tab.update_config(config)
+        self.text_tab.update_config(config)
 
     # ------------------------------------------------------------------
     # Close contract
@@ -162,9 +175,9 @@ class ReadingTab(QWidget):
         still-running worker at app close, so each child's ``shutdown`` runs in
         its own ``try``/``except`` (the failure is logged). Each child
         bounded-joins its worker at ``_SHUTDOWN_WAIT_MS`` (30s), so the
-        container's worst-case close is ~3x30s.
+        container's worst-case close is ~4x30s.
         """
-        for child in (self.manga_tab, self.novels_tab, self.subtitles_tab):
+        for child in (self.manga_tab, self.novels_tab, self.subtitles_tab, self.text_tab):
             try:
                 child.shutdown()
             except Exception:  # noqa: BLE001 - one child must not strand the others
@@ -182,4 +195,5 @@ class ReadingTab(QWidget):
         manga_released = self.manga_tab.release_dictionary_resources()
         novels_released = self.novels_tab.release_dictionary_resources()
         subtitles_released = self.subtitles_tab.release_dictionary_resources()
-        return manga_released and novels_released and subtitles_released
+        text_released = self.text_tab.release_dictionary_resources()
+        return manga_released and novels_released and subtitles_released and text_released

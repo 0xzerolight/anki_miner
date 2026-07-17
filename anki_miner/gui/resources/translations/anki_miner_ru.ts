@@ -1182,6 +1182,14 @@ Total cards created: %2</source>
         <translation>Майнить лексику из романов и другого текста (EPUB, Aozora, обычный текст).</translation>
     </message>
     <message>
+        <source>Mine pasted text</source>
+        <translation>Майнинг вставленного текста</translation>
+    </message>
+    <message>
+        <source>Paste any Japanese text and mine it straight into Anki cards.</source>
+        <translation>Вставьте любой японский текст и майните его прямо в карточки Anki.</translation>
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation>Генерировать субтитры из аудио</translation>
     </message>
@@ -3255,7 +3263,7 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Words you added from the Word Curator — ignored on every run, kept across cache rebuilds, exportable for re-import into jiten.moe. Import accepts jpdb, Migaku and AnkiMorphs exports or plain word lists.</source>
-        <translation type="unfinished" />
+        <translation>Слова, добавленные вами из Куратора слов, — игнорируются при каждом запуске, сохраняются при перестроении кэша и могут быть экспортированы для повторного импорта в jiten.moe. Импорт принимает экспорты jpdb, Migaku и AnkiMorphs, а также обычные списки слов.</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -3267,7 +3275,7 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Import…</source>
-        <translation type="unfinished" />
+        <translation>Импорт…</translation>
     </message>
     <message>
         <source>Export…</source>
@@ -3287,76 +3295,81 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>jpdb review export</source>
-        <translation type="unfinished" />
+        <translation>экспорт повторений jpdb</translation>
     </message>
     <message>
         <source>Migaku word export</source>
-        <translation type="unfinished" />
+        <translation>экспорт слов Migaku</translation>
     </message>
     <message>
         <source>Migaku legacy add-on backup</source>
-        <translation type="unfinished" />
+        <translation>резервная копия устаревшего дополнения Migaku</translation>
     </message>
     <message>
         <source>AnkiMorphs known morphs</source>
-        <translation type="unfinished" />
+        <translation>известные морфы AnkiMorphs</translation>
     </message>
     <message>
         <source>Migaku word export (CSV)</source>
-        <translation type="unfinished" />
+        <translation>экспорт слов Migaku (CSV)</translation>
     </message>
     <message>
         <source>plain word list</source>
-        <translation type="unfinished" />
+        <translation>обычный список слов</translation>
     </message>
     <message>
         <source>Import Known Words</source>
-        <translation type="unfinished" />
+        <translation>Импорт известных слов</translation>
     </message>
     <message>
         <source>Known word lists (*.csv *.txt *.json);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Списки известных слов (*.csv *.txt *.json);;Все файлы (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — this file has no known/learning status; all %2 entries will be imported.
 
 Add %3 word(s) to your known list?</source>
-        <translation type="unfinished" />
+        <translation>Обнаружено: %1 — в этом файле нет статуса «известно/изучается»; будут импортированы все записи (%2).
+
+Добавить слова (%3) в ваш список известных?</translation>
     </message>
     <message>
         <source>Detected: %1 — %2 entries, %3 qualify as known.
 
 Add %3 word(s) to your known list?</source>
-        <translation type="unfinished" />
+        <translation>Обнаружено: %1 — записей: %2, из них считаются известными: %3.
+
+Добавить слова (%3) в ваш список известных?</translation>
     </message>
     <message>
         <source>Import Complete</source>
-        <translation type="unfinished" />
+        <translation>Импорт завершён</translation>
     </message>
     <message>
         <source>Added %1 word(s) to your list. %2 were already in it.</source>
-        <translation type="unfinished" />
+        <translation>В ваш список добавлено слов: %1. Уже присутствовало: %2.</translation>
     </message>
     <message>
         <source>Detected: %1 — but no entries in this file qualify as known.</source>
-        <translation type="unfinished" />
+        <translation>Обнаружено: %1 — но ни одна запись в этом файле не считается известной.</translation>
     </message>
     <message>
         <source>The file could not be read.</source>
-        <translation type="unfinished" />
+        <translation>Не удалось прочитать файл.</translation>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>Формат файла не распознан. Поддерживаются: экспорт повторений jpdb (JSON), экспорт слов Migaku (JSON/CSV), известные морфы AnkiMorphs (CSV), обычные списки слов (одно слово в строке).</translation>
     </message>
     <message>
         <source>Import Failed</source>
-        <translation type="unfinished">Сбой импорта</translation>
+        <translation>Ошибка импорта</translation>
     </message>
     <message>
         <source>Unexpected error while reading the file:
 %1</source>
-        <translation type="unfinished" />
+        <translation>Непредвиденная ошибка при чтении файла:
+%1</translation>
     </message>
     <message>
         <source>Export Known Words</source>
@@ -3627,6 +3640,10 @@ Continue?</source>
     <message>
         <source>Subtitles</source>
         <translation>Субтитры</translation>
+    </message>
+    <message>
+        <source>Text</source>
+        <translation>Текст</translation>
     </message>
     <message>
         <source>Generate</source>
@@ -4415,6 +4432,72 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Complete — %1 cards created</source>
         <translation>Завершено — создано карточек: %1</translation>
+    </message>
+</context><context>
+    <name>ReadingTextTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation>Проверять слова перед майнингом</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation>Показывать окно выбора слов перед созданием карточек.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Прогресс</translation>
+    </message>
+    <message>
+        <source>Pasted Text</source>
+        <translation>Вставленный текст</translation>
+    </message>
+    <message>
+        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
+        <translation>Вставьте японский текст и майните его в карточки Anki — без скриншотов и аудио.</translation>
+    </message>
+    <message>
+        <source>Paste text here…</source>
+        <translation>Вставьте текст сюда…</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Майнить</translation>
+    </message>
+    <message>
+        <source>Mine the pasted text into Anki cards.</source>
+        <translation>Майнить вставленный текст в карточки Anki.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Отмена</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Отменить активный запуск.</translation>
+    </message>
+    <message>
+        <source>Paste some text first.</source>
+        <translation>Сначала вставьте текст.</translation>
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation>Запуск…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Отмена…</translation>
+    </message>
+    <message>
+        <source>Mining pasted text…</source>
+        <translation>Майнинг вставленного текста…</translation>
+    </message>
+    <message>
+        <source>Mined %1 cards.</source>
+        <translation>Намайнено карточек: %1.</translation>
+    </message>
+    <message>
+        <source>Failed: %1.</source>
+        <translation>Ошибка: %1.</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>
