@@ -357,6 +357,17 @@ class TestItemSlots:
         tab._on_item_finished(0, None, "boom", 1)
         assert "boom" in tab.log_widget.text_edit.toPlainText()
 
+    def test_item_finished_cancel_logs_info_not_success(self, tab, tmp_path):
+        from anki_miner.models import CANCELLED_ERROR
+
+        _mine(tab, [_sub_file(tmp_path)])
+        result = MagicMock(cards_created=0, errors=[CANCELLED_ERROR])
+        tab._on_item_finished(0, result, None, 1)
+        log = tab.log_widget.text_edit.toPlainText()
+        assert "Cancelled" in log
+        assert "Mined" not in log
+        tab._presenter.show_processing_result.assert_not_called()
+
     def test_item_finished_does_not_write_state(self, tab, tmp_path):
         _mine(tab, [_sub_file(tmp_path)])
         item = tab._run_items[0]
