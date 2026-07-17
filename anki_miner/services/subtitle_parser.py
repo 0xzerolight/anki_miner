@@ -37,6 +37,7 @@ from anki_miner.utils import (
     generate_furigana,
     generate_reading,
     katakana_to_hiragana,
+    strip_inline_annotations,
     wrap_target_plain,
 )
 from anki_miner.utils.ja_normalize import (
@@ -65,6 +66,7 @@ PARSE_RELEVANT_CONFIG_FIELDS = (
     "use_subtitle_regex_filter",
     "subtitle_regex_filter",
     "subtitle_regex_replacement",
+    "strip_subtitle_annotations",
 )
 
 # Dictionary-attested compound matching (Yomitan longest-match principle):
@@ -315,6 +317,23 @@ class SubtitleParserService:
         filtered = self._filter_pattern.sub(self.config.subtitle_regex_replacement, text)
         return " ".join(filtered.split())
 
+    def _clean_line_text(self, raw_text: str) -> str:
+        """Full per-line text pipeline shared by the mining and display paths.
+
+        Order: ``clean_subtitle_text`` (markup strip + JP normalization) →
+        ``strip_inline_annotations`` (structural SFX-caption / speaker-tag /
+        inline-furigana strip, gated on ``config.strip_subtitle_annotations``,
+        default ON) → ``_apply_text_filter`` (the user regex, which composes on
+        top of the strip). Applied identically by ``_iter_parsed_lines`` (mining)
+        and ``parse_raw_entries`` (display) so the shown cue text matches what
+        mining tokenizes. A line that collapses to empty is skipped by each
+        caller's existing ``if not text: continue`` guard.
+        """
+        cleaned = clean_subtitle_text(raw_text)
+        if self.config.strip_subtitle_annotations:
+            cleaned = strip_inline_annotations(cleaned)
+        return self._apply_text_filter(cleaned)
+
     def _load_subs(self, subtitle_file: Path):
         """Load a subtitle file via pysubs2 with normalized error wrapping.
 
@@ -390,7 +409,7 @@ class SubtitleParserService:
             # whose auto-created attr is a truthy non-bool) never triggers the skip.
             if getattr(line, "is_comment", None) is True:
                 continue
-            text = self._apply_text_filter(clean_subtitle_text(line.text))
+            text = self._clean_line_text(line.text)
             if not text:
                 continue
 
@@ -748,7 +767,7 @@ class SubtitleParserService:
             # Skip ASS/SSA Comment events (same guard as _iter_parsed_lines).
             if getattr(line, "is_comment", None) is True:
                 continue
-            text = self._apply_text_filter(clean_subtitle_text(line.text))
+            text = self._clean_line_text(line.text)
             if not text:
                 continue
 

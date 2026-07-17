@@ -2426,6 +2426,9 @@ class TestSubtitleRegexFilter:
             subtitle_regex_filter=r"\([^)]*\)",
             subtitle_regex_replacement="",
             use_subtitle_regex_filter=False,
+            # Isolate the regex filter from the default-ON structural strip (U1),
+            # which would otherwise peel the leading (田中) speaker tag itself.
+            strip_subtitle_annotations=False,
         )
         sub_file, mock_subs = self._patch_subs(tmp_path, [("(田中) 今日はいい天気", 0, 2000)])
         with (
@@ -2489,6 +2492,9 @@ class TestSubtitleRegexFilter:
             subtitle_regex_filter=r"\((.*?)\)",
             subtitle_regex_replacement=r"\1",
             use_subtitle_regex_filter=True,
+            # Isolate the regex backref path from the default-ON structural strip
+            # (U1), which would peel the leading (田中) before the regex runs.
+            strip_subtitle_annotations=False,
         )
         sub_file, mock_subs = self._patch_subs(tmp_path, [("(田中) こんにちは", 0, 2000)])
         with (
@@ -4530,3 +4536,192 @@ class TestCompoundMergeAttestGate:
         words, _index, _counts = service.parse_text_units(units, want_line_index=False)
         assert {w.mined_form for w in words} == {"会議"}
         assert calls.count("会議中") == 1, calls
+
+
+# ---------------------------------------------------------------------------
+# Structural subtitle-annotation stripping (Task U1)
+# ---------------------------------------------------------------------------
+
+
+class TestAnnotationStripping:
+    """Default-ON structural strip of SFX captions / speaker tags / inline
+    furigana at the parser choke point (config.strip_subtitle_annotations)."""
+
+    @staticmethod
+    def _keyed_tagger():
+        """Fake tagger returning tokens by exact input text.
+
+        Covers both the stripped form the tagger sees when stripping is ON and
+        the raw annotation form it sees when stripping is OFF, so the two runs
+        exercise the same tagger.
+        """
+
+        def tokenize(text):
+            table = {
+                # Legit dialogue line (never altered by the strip).
+                "本を読む": [
+                    _make_token("本", "名詞", pos2="普通名詞", lemma="本", kana="ホン"),
+                    _make_token("を", "助詞"),
+                    _make_token("読む", "動詞", lemma="読む", kana="ヨム"),
+                ],
+                # Annotation line, STRIPPED form (stripping ON): only the filler
+                # ん… survives, which is not mineable.
+                "ん…": [
+                    _make_token("ん", "感動詞", lemma="ん", kana="ン"),
+                    _make_token("…", "補助記号"),
+                ],
+                # Annotation line, RAW form (stripping OFF): the speaker-tag
+                # name 旬 tokenizes as a mineable 名詞 — the junk we kill.
+                "（水篠(みずしの) 旬(しゅん)）ん…": [
+                    _make_token("水篠", "名詞", pos2="固有名詞", lemma="水篠", kana="ミズシノ"),
+                    _make_token("みずしの", "名詞", pos2="普通名詞", lemma="みずしの", kana="ミズシノ"),
+                    _make_token("旬", "名詞", pos2="普通名詞", lemma="旬", kana="シュン"),
+                    _make_token("しゅん", "名詞", pos2="普通名詞", lemma="しゅん", kana="シュン"),
+                    _make_token("ん", "感動詞", lemma="ん", kana="ン"),
+                    _make_token("…", "補助記号"),
+                ],
+                # Inline-furigana line, STRIPPED form: 瀕死 kept, ひんし gone.
+                "瀕死の重傷": [
+                    _make_token("瀕死", "名詞", pos2="普通名詞", lemma="瀕死", kana="ヒンシ"),
+                    _make_token("の", "助詞"),
+                    _make_token("重傷", "名詞", pos2="普通名詞", lemma="重傷", kana="ジュウショウ"),
+                ],
+            }
+            return table.get(text, [])
+
+        tagger = MagicMock()
+        tagger.side_effect = tokenize
+        return tagger
+
+    @staticmethod
+    def _subs(*texts):
+        """Mock subs whose __iter__ yields a FRESH line iterator each call, so a
+        test may run both parse_subtitle_file and parse_raw_entries on it."""
+        lines = []
+        for txt in texts:
+            ln = MagicMock()
+            ln.text = txt
+            ln.start = 1000
+            ln.end = 3000
+            lines.append(ln)
+        subs = MagicMock()
+        subs.__iter__ = MagicMock(side_effect=lambda: iter(lines))
+        return subs
+
+    def _make_service(self, config, tagger, subs):
+        """Construct the service and return it with the pysubs2.load patch as a
+        live context manager the caller keeps open across parse calls."""
+        cm = patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=subs)
+        cm.start()
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=tagger):
+            service = SubtitleParserService(config)
+        return service, cm
+
+    def test_speaker_tag_word_stripped_default_on(self, test_config, tmp_path):
+        """Default-ON: the speaker-tag name 旬 never reaches emitted words; the
+        legit dialogue word survives."""
+        sub_file = tmp_path / "t.ass"
+        sub_file.write_text("x", encoding="utf-8")
+
+        subs = self._subs("（水篠(みずしの) 旬(しゅん)）ん…", "本を読む")
+        service, cm = self._make_service(test_config, self._keyed_tagger(), subs)
+        try:
+            words = service.parse_subtitle_file(sub_file)
+        finally:
+            cm.stop()
+
+        surfaces = {w.surface for w in words}
+        lemmas = {w.lemma for w in words}
+        readings = {w.reading for w in words} | {w.expression_reading for w in words}
+        assert "旬" not in surfaces and "旬" not in lemmas
+        assert "しゅん" not in readings and "ずし" not in readings
+        assert "読む" in lemmas  # legit dialogue survives
+
+    def test_config_off_is_byte_identical_old_behavior(self, tmp_path):
+        """Stripping OFF: the raw annotation line reaches the tagger unchanged,
+        so 旬 IS mined — proving the strip (not something else) removes it."""
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            strip_subtitle_annotations=False,
+        )
+        sub_file = tmp_path / "t.ass"
+        sub_file.write_text("x", encoding="utf-8")
+
+        subs = self._subs("（水篠(みずしの) 旬(しゅん)）ん…")
+        service, cm = self._make_service(config, self._keyed_tagger(), subs)
+        try:
+            words = service.parse_subtitle_file(sub_file)
+        finally:
+            cm.stop()
+
+        assert "旬" in {w.surface for w in words}
+
+    def test_emitted_sentence_is_the_stripped_text(self, test_config, tmp_path):
+        """The Sentence stored on the card is the STRIPPED line, with the inline
+        furigana gone (no leftover (ひんし))."""
+        sub_file = tmp_path / "t.ass"
+        sub_file.write_text("x", encoding="utf-8")
+
+        subs = self._subs("瀕死(ひんし)の重傷")
+        service, cm = self._make_service(test_config, self._keyed_tagger(), subs)
+        try:
+            words = service.parse_subtitle_file(sub_file)
+        finally:
+            cm.stop()
+
+        hinshi = next(w for w in words if w.surface == "瀕死")
+        assert hinshi.sentence == "瀕死の重傷"
+        assert "(ひんし)" not in hinshi.sentence
+        assert "ひんし" not in hinshi.sentence
+
+    def test_parse_raw_entries_display_strips_when_on(self, test_config, tmp_path):
+        """Display path (curation player / timing viewer) strips too so the shown
+        cue text matches what mining sees."""
+        sub_file = tmp_path / "t.ass"
+        sub_file.write_text("x", encoding="utf-8")
+
+        subs = self._subs("瀕死(ひんし)の重傷")
+        service, cm = self._make_service(test_config, self._keyed_tagger(), subs)
+        try:
+            entries = service.parse_raw_entries(sub_file)
+        finally:
+            cm.stop()
+
+        assert len(entries) == 1
+        assert entries[0][2] == "瀕死の重傷"
+
+    def test_parse_raw_entries_no_strip_when_off(self, tmp_path):
+        """Display path leaves the annotation intact when stripping is OFF."""
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            strip_subtitle_annotations=False,
+        )
+        sub_file = tmp_path / "t.ass"
+        sub_file.write_text("x", encoding="utf-8")
+
+        subs = self._subs("瀕死(ひんし)の重傷")
+        service, cm = self._make_service(config, self._keyed_tagger(), subs)
+        try:
+            entries = service.parse_raw_entries(sub_file)
+        finally:
+            cm.stop()
+
+        assert len(entries) == 1
+        assert entries[0][2] == "瀕死(ひんし)の重傷"
+
+    def test_whole_line_caption_yields_no_words(self, test_config, tmp_path):
+        """A pure SFX caption line strips to empty and is skipped entirely on
+        both the mining and display paths."""
+        sub_file = tmp_path / "t.ass"
+        sub_file.write_text("x", encoding="utf-8")
+
+        subs = self._subs("（スマホのバイブ音）")
+        service, cm = self._make_service(test_config, self._keyed_tagger(), subs)
+        try:
+            words = service.parse_subtitle_file(sub_file)
+            entries = service.parse_raw_entries(sub_file)
+        finally:
+            cm.stop()
+
+        assert words == []
+        assert entries == []
