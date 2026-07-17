@@ -47,6 +47,11 @@ _JPDB_EXCLUDED_GRADES = frozenset({"nothing", "something", "fail", "unknown"})
 _MIGAKU_CSV_HEADER = ("word", "reading", "language", "status")
 _ANKIMORPHS_LEMMA_HEADER = "morph-lemma"
 
+# Known-word exports are tiny (a jpdb/AnkiMorphs dump is well under a MB); the
+# "All Files (*)" dialog filter lets a user mis-pick a large file, so cap the
+# read rather than buffer+decode an arbitrary blob off-thread.
+_MAX_IMPORT_BYTES = 50 * 1024 * 1024
+
 
 class KnownWordsImportError(Exception):
     """Raised when a file yields no importable known words.
@@ -71,7 +76,6 @@ class KnownWordsImportResult:
     format_key: str
     words: frozenset[str]
     total_entries: int
-    is_generic: bool
 
 
 def parse_known_words_file(path: Path) -> KnownWordsImportResult:
@@ -81,13 +85,17 @@ def parse_known_words_file(path: Path) -> KnownWordsImportResult:
     signature raises ``unrecognized`` rather than falling through to the line
     reader (which would ingest syntax fragments as words). ``.json`` files
     are never read as generic word lists for the same reason.
+
+    Bytes are decoded utf-8-sig first (BOM-stripping), then cp932 — the
+    Japanese Windows/Excel default for hand-made lists — before giving up.
     """
     try:
-        # utf-8-sig: Windows/Excel exports often carry a BOM that would break
-        # json.loads and defeat the exact first-cell header matches below.
-        text = path.read_text(encoding="utf-8-sig")
-    except (OSError, UnicodeDecodeError) as exc:
+        if path.stat().st_size > _MAX_IMPORT_BYTES:
+            raise KnownWordsImportError("unreadable")
+        raw = path.read_bytes()
+    except OSError as exc:
         raise KnownWordsImportError("unreadable") from exc
+    text = _decode(raw)
 
     try:
         data = json.loads(text)
@@ -105,7 +113,6 @@ def _result(format_key: str, words: set[str], total: int) -> KnownWordsImportRes
         format_key=format_key,
         words=frozenset(words),
         total_entries=total,
-        is_generic=format_key == "generic",
     )
 
 
@@ -120,7 +127,7 @@ def _parse_json(data: Any) -> KnownWordsImportResult:
     if isinstance(data, dict) and isinstance(data.get("words"), list):
         entries = [w for w in data["words"] if isinstance(w, dict) and "word" in w and "status" in w]
         if entries:
-            words = {w["word"] for w in entries if w["status"] == "KNOWN" and _clean(w["word"])}
+            words = {_clean(w["word"]) for w in entries if w["status"] == "KNOWN" and _clean(w["word"])}
             return _result("migaku_json", words, len(entries))
     if (
         isinstance(data, list)
@@ -147,7 +154,7 @@ def _parse_jpdb(cards: list[Any]) -> KnownWordsImportResult:
             continue
         latest = max(reviews, key=lambda r: r.get("timestamp", 0))
         if latest["grade"] not in _JPDB_EXCLUDED_GRADES:
-            words.add(card["spelling"])
+            words.add(_clean(card["spelling"]))
     return _result("jpdb", words, total)
 
 
@@ -191,6 +198,18 @@ def _parse_generic(text: str) -> KnownWordsImportResult:
         total += 1
         words.add(stripped)
     return _result("generic", words, total)
+
+
+def _decode(raw: bytes) -> str:
+    # utf-8-sig strips a Windows/Excel BOM that would otherwise break json.loads
+    # and the exact first-cell header matches; cp932 covers Shift-JIS lists
+    # exported from Japanese Notepad/Excel. Both failing ⇒ truly unreadable.
+    for encoding in ("utf-8-sig", "cp932"):
+        try:
+            return raw.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    raise KnownWordsImportError("unreadable")
 
 
 def _clean(value: Any) -> str:

@@ -148,7 +148,6 @@ def _import_result(words, *, format_key="generic", total=None):
         format_key=format_key,
         words=frozenset(words),
         total_entries=total if total is not None else len(words),
-        is_generic=format_key == "generic",
     )
 
 
