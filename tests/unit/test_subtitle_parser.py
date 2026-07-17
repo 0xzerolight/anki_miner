@@ -1286,6 +1286,252 @@ class TestKanaWordRecovery:
         assert "きれい" in {w.mined_form for w in words}  # mining recovered same token
 
 
+class TestKanaRecoveryLexicalizedWindow:
+    """U4: reject kana-RECOVERY acceptances that sit inside an attested expression.
+
+    A pure-hiragana content-word fragment (すみ from すみません, しれ from
+    かもしれない) the script gate drops but recovery would re-admit is suppressed
+    when joining it with contiguous FUNCTIONAL neighbors (pos1 ∈ {助詞, 助動詞},
+    ≤3/side) forms a string the term-OR-reading probe attests. Functional-only:
+    a content neighbor (ものすごい's もの) never joins, so real vocabulary abutting
+    a lexicalized homograph is never suppressed.
+    """
+
+    def _service(self, test_config, lookup):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            return SubtitleParserService(test_config, kana_attest_lookup=lookup)
+
+    def _mine(self, service, tokens, idx):
+        # Dummy span: recovery candidates are pure hiragana, so the should_include
+        # branch (the only one consulting the katakana span guard) is never taken.
+        cand = tokens[idx]
+        return service._mine_token(cand, cand.surface, 0, len(cand.surface), tokens)
+
+    # --- 1. すみません: すむ recovery rejected via the attested full window. ---
+
+    def test_rejects_sumimasen_fragment(self, test_config):
+        # attest {すむ, すみません}: the bare-verb attestation proves recovery WOULD
+        # fire; the window すみ+ませ+ん = すみません proves the window reject is what
+        # drops it (for the designed reason, not a dict miss).
+        lookup = _attest_lookup("すむ", "すみません")
+        service = self._service(test_config, lookup)
+        tokens = [
+            _make_token("すみ", "動詞", pos2="一般", lemma="済む", orth_base="すむ"),
+            _make_token("ませ", "助動詞", pos2="*", lemma="ます", orth_base="ます"),
+            _make_token("ん", "助動詞", pos2="*", lemma="ぬ", orth_base="ん"),
+        ]
+        assert self._mine(service, tokens, 0) is False
+        assert ["すむ"] in lookup.calls  # recovery probed the bare front
+        assert any("すみません" in call for call in lookup.calls)  # window probed
+
+    # --- 2. Same surface, no attested window → recovery still works. ---
+
+    def test_recovers_when_window_not_attested(self, test_config):
+        # attest {すむ} only: すみ+ます = すみます is NOT attested, so recovery holds.
+        lookup = _attest_lookup("すむ")
+        service = self._service(test_config, lookup)
+        tokens = [
+            _make_token("すみ", "動詞", pos2="一般", lemma="済む", orth_base="すむ"),
+            _make_token("ます", "助動詞", pos2="*", lemma="ます", orth_base="ます"),
+        ]
+        assert self._mine(service, tokens, 0) is True
+
+    # --- 3. かもしれない: しれる recovery rejected. ---
+
+    def test_rejects_kamoshirenai_fragment(self, test_config):
+        lookup = _attest_lookup("しれる", "かもしれない")
+        service = self._service(test_config, lookup)
+        tokens = [
+            _make_token("弱い", "形容詞", pos2="一般", lemma="弱い", orth_base="弱い"),
+            _make_token("か", "助詞", pos2="副助詞", lemma="か", orth_base="か"),
+            _make_token("も", "助詞", pos2="係助詞", lemma="も", orth_base="も"),
+            _make_token("しれ", "動詞", pos2="一般", lemma="知れる", orth_base="しれる"),
+            _make_token("ない", "助動詞", pos2="*", lemma="ない", orth_base="ない"),
+        ]
+        assert self._mine(service, tokens, 3) is False
+        assert any("かもしれない" in call for call in lookup.calls)
+
+    # --- 4. ものすごい: content neighbor もの blocks the join → すごい recovered. ---
+
+    def test_content_neighbor_does_not_block_recovery(self, test_config):
+        # ものすごい IS attested, yet すごい must STILL recover: もの is a 名詞 (content
+        # noun), not 助詞/助動詞, so the window ものすごく never forms and is never
+        # probed. The functional-only false-positive guard.
+        lookup = _attest_lookup("すごい", "ものすごい")
+        service = self._service(test_config, lookup)
+        tokens = [
+            _make_token("もの", "名詞", pos2="普通名詞", lemma="物", orth_base="もの"),
+            _make_token("すごく", "形容詞", pos2="一般", lemma="凄い", orth_base="すごい"),
+            _make_token("愛想", "名詞", pos2="普通名詞", lemma="愛想", orth_base="愛想"),
+        ]
+        assert self._mine(service, tokens, 1) is True
+        assert lookup.calls == [["すごい"]]  # only the bare recovery probe; no window
+        assert all("ものすごい" not in call for call in lookup.calls)
+
+    # --- 5. Window cap: a functional run > 3/side probes only within-cap windows. ---
+
+    def test_window_cap_three_per_side(self, test_config):
+        lookup = _attest_lookup("みる")  # recovery attested; no window attested
+        service = self._service(test_config, lookup)
+        tokens = [
+            _make_token("Ａ", "助詞", pos2="*", lemma="Ａ", orth_base="Ａ"),  # idx0: beyond left cap
+            _make_token("Ｂ", "助詞", pos2="*", lemma="Ｂ", orth_base="Ｂ"),  # idx1
+            _make_token("Ｃ", "助詞", pos2="*", lemma="Ｃ", orth_base="Ｃ"),  # idx2
+            _make_token("Ｄ", "助詞", pos2="*", lemma="Ｄ", orth_base="Ｄ"),  # idx3
+            _make_token("みつ", "動詞", pos2="一般", lemma="見る", orth_base="みる"),  # idx4 candidate
+            _make_token("Ｅ", "助動詞", pos2="*", lemma="Ｅ", orth_base="Ｅ"),  # idx5
+            _make_token("Ｆ", "助動詞", pos2="*", lemma="Ｆ", orth_base="Ｆ"),  # idx6
+            _make_token("Ｇ", "助動詞", pos2="*", lemma="Ｇ", orth_base="Ｇ"),  # idx7
+            _make_token("Ｈ", "助動詞", pos2="*", lemma="Ｈ", orth_base="Ｈ"),  # idx8: beyond right cap
+        ]
+        assert self._mine(service, tokens, 4) is True  # nothing attested → recovered
+        # calls[0] is the bare recovery probe (["みる"]); calls[1] is the batched
+        # window probe. Windows reach at most 3 functional tokens per side, so the
+        # farthest neighbors Ａ (idx0) and Ｈ (idx8) never appear in any window.
+        assert lookup.calls[0] == ["みる"]
+        window_probe = "".join(lookup.calls[1])
+        assert "Ａ" not in window_probe and "Ｈ" not in window_probe
+        assert "Ｂ" in window_probe and "Ｇ" in window_probe  # idx1 / idx7 within cap
+        assert len(lookup.calls) == 2  # one batched window call, not per-string
+
+    # --- 6. T-38 count==mine parity: the reject fires identically at all four sites. ---
+
+    def test_count_equals_mine_all_sites_reject(self, test_config, tmp_path):
+        text = "本当にすみません"
+
+        def tokens():
+            return [
+                _make_token("本当", "名詞", "普通名詞", lemma="本当", kana="ホントウ", orth_base="本当"),
+                _make_token("に", "助詞", "格助詞", lemma="に", kana="ニ", orth_base="に"),
+                _make_token("すみ", "動詞", "一般", lemma="済む", kana="スミ", orth_base="すむ"),
+                _make_token("ませ", "助動詞", "*", lemma="ます", kana="マセ", orth_base="ます"),
+                _make_token("ん", "助動詞", "*", lemma="ぬ", kana="ン", orth_base="ん"),
+            ]
+
+        def invoke(fn):
+            sub_file = tmp_path / "reject.ass"
+            sub_file.write_text("x", encoding="utf-8")
+            mock_line = MagicMock()
+            mock_line.text = text
+            mock_line.start = 0
+            mock_line.end = 1000
+            mock_line.is_comment = False
+            mock_subs = MagicMock()
+            mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+            mock_tagger = MagicMock()
+            mock_tagger.return_value = tokens()
+            with (
+                patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+                patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+            ):
+                service = SubtitleParserService(test_config, kana_attest_lookup=_attest_lookup("すむ", "すみません"))
+                return fn(service, sub_file)
+
+        mine = invoke(lambda s, f: s.parse_subtitle_file(f))
+        idx_words, idx_lines = invoke(lambda s, f: s.parse_subtitle_file_with_index(f))
+        counts = invoke(lambda s, f: s.count_lemmas(f))
+
+        def parse_units(s, _f):
+            return s.parse_text_units([ReadingUnit(text=text, index=0, location_label="t")], want_line_index=True)
+
+        pt_words, pt_index, pt_counts = invoke(parse_units)
+
+        # 本当 mined everywhere; the すむ fragment rejected everywhere.
+        assert {w.lemma for w in mine} == {"本当"}
+        assert {w.lemma for w in idx_words} == {"本当"}
+        assert {lm for line in idx_lines for lm in line.lemmas} == {"本当"}
+        assert set(counts) == {"本当"}
+        assert {w.lemma for w in pt_words} == {"本当"}
+        assert {lm for line in pt_index for lm in line.lemmas} == {"本当"}
+        assert set(pt_counts) == {"本当"}
+
+    # --- 7. No probe wired → recovery (and the window layer) is byte-identical off. ---
+
+    def test_no_lookup_wired_window_layer_inert(self, test_config):
+        # Without a kana_attest_lookup, recovery never fires, so the window layer
+        # is unreachable and cannot raise or alter behavior: the pure-hiragana
+        # fragment is dropped exactly as pre-recovery, the kanji noun still mined.
+        service = self._service(test_config, None)
+        tokens = [
+            _make_token("すみ", "動詞", pos2="一般", lemma="済む", orth_base="すむ"),
+            _make_token("ませ", "助動詞", pos2="*", lemma="ます", orth_base="ます"),
+            _make_token("ん", "助動詞", pos2="*", lemma="ぬ", orth_base="ん"),
+        ]
+        assert self._mine(service, tokens, 0) is False
+        kanji = _make_token("食べる", "動詞", pos2="一般", lemma="食べる", orth_base="食べる")
+        assert self._mine(service, [kanji], 0) is True
+
+    # --- 8. Memo correctness: same surface, two contexts, no (surface,pos1) poison. ---
+
+    def test_same_surface_two_contexts_differ(self, test_config):
+        lookup = _attest_lookup("すむ", "すみません")
+
+        def reject_ctx():
+            return [
+                _make_token("すみ", "動詞", pos2="一般", lemma="済む", orth_base="すむ"),
+                _make_token("ませ", "助動詞", pos2="*", lemma="ます", orth_base="ます"),
+                _make_token("ん", "助動詞", pos2="*", lemma="ぬ", orth_base="ん"),
+            ]
+
+        def recover_ctx():
+            return [
+                _make_token("すみ", "動詞", pos2="一般", lemma="済む", orth_base="すむ"),
+                _make_token("ます", "助動詞", pos2="*", lemma="ます", orth_base="ます"),
+            ]
+
+        # Reject-then-recover on one instance: the (surface,pos1) recover cache is
+        # shared (すむ attested once), but the window verdict is keyed on the joined
+        # window string, so すみません → reject while すみます → recover.
+        service = self._service(test_config, lookup)
+        assert self._mine(service, reject_ctx(), 0) is False
+        assert self._mine(service, recover_ctx(), 0) is True
+        # Reverse order on a fresh instance → same outcomes (order-independent memo).
+        service2 = self._service(test_config, lookup)
+        assert self._mine(service2, recover_ctx(), 0) is True
+        assert self._mine(service2, reject_ctx(), 0) is False
+
+    # --- 9. Real fugashi: あさって misparse (漁る) suppressed end-to-end. ---
+
+    def test_asatte_misparse_rejected_real_fugashi(self, test_config, tmp_path):
+        # 再測定はあさって tokenizes あさっ(漁る/あさる) + て(助詞); the window あさって
+        # is attested (明後日's kana reading) → the 漁る junk card is suppressed.
+        # Differential control (attributes the reject to the WINDOW, not a dict
+        # miss): with ONLY the bare front あさる attested — the window あさって NOT
+        # attested — recovery fires and the 漁る/あさる junk card WOULD survive.
+        srt = _write_srt(tmp_path, "asatte.srt", "再測定はあさって")
+
+        no_window = _attest_lookup("あさる")  # bare front only, window not attested
+        recovered = SubtitleParserService(test_config, kana_attest_lookup=no_window).parse_subtitle_file(srt)
+        assert "漁る" in {w.lemma for w in recovered}  # recovery would fire...
+        assert any("あさって" in call for call in no_window.calls)  # ...and the window WAS probed
+
+        with_window = _attest_lookup("あさる", "あさって")  # window now attested → reject
+        words = SubtitleParserService(test_config, kana_attest_lookup=with_window).parse_subtitle_file(srt)
+        assert "漁る" not in {w.lemma for w in words}
+        assert "あさる" not in {w.mined_form for w in words}
+        assert any("あさって" in call for call in with_window.calls)  # window path drove the reject
+
+    # --- 10. Cap-clear must not evict a pre-cached window this candidate needs. ---
+
+    def test_cap_clear_preserves_precached_window_verdict(self, test_config, monkeypatch):
+        # Regression: the shorter window すみませ is cached from a prior candidate,
+        # so this call's ``uncached`` is only [すみません]. Driving the cap below the
+        # combined size triggers the clear-on-cap, wiping すみませ. The per-call
+        # verdict must come from a local snapshot, not a re-read of the (now empty)
+        # shared cache — else ``cache["すみませ"]`` raises KeyError and aborts the run.
+        lookup = _attest_lookup("すむ", "すみません")  # すみません attested; すみませ not
+        service = self._service(test_config, lookup)
+        service._kana_window_cache["すみませ"] = False  # pre-cached shorter window
+        monkeypatch.setattr("anki_miner.services.subtitle_parser._FRONT_CACHE_CAP", 1)
+        tokens = [
+            _make_token("すみ", "動詞", pos2="一般", lemma="済む", orth_base="すむ"),
+            _make_token("ませ", "助動詞", pos2="*", lemma="ます", orth_base="ます"),
+            _make_token("ん", "助動詞", pos2="*", lemma="ぬ", orth_base="ん"),
+        ]
+        # No KeyError, and the attested すみません window still rejects recovery.
+        assert self._mine(service, tokens, 0) is False
+
+
 class TestExtractLemma:
     """Tests for _extract_lemma method."""
 
