@@ -178,6 +178,31 @@ def _is_all_katakana(surface: str) -> bool:
     return bool(non_ws) and all(_is_katakana_surface_char(c) for c in non_ws)
 
 
+def _differs_by_okurigana_only(orth_base: str, lemma: str) -> bool:
+    """Whether ``orth_base`` is ``lemma`` with only its trailing okurigana changed.
+
+    True iff the two share a common leading prefix and BOTH differing tails are
+    pure hiragana — so every kanji sits in the shared stem (呼ばる/呼ぶ → stem 呼,
+    tails ばる/ぶ; 抜る/抜く → stem 抜). A kanji difference pushes a kanji into a
+    tail and fails (帰れる/返る → stems 帰≠返; 治せる/直す → 治≠直; 殺る/遣る → 殺≠遣).
+
+    This is the load-bearing safety gate for the U3 attest-or-remap guard: unidic's
+    canonical ``lemma`` silently collapses kanji-variant homographs (殺る→遣る,
+    賭ける→掛ける, 帰れる→返る) onto a DIFFERENT-meaning or different-orthography
+    headword. Remapping a card front onto such a lemma would ship the wrong
+    homograph's spelling/definition — the exact bug Issues #19/#5 fix at the
+    lookup layer by keying on ``mined_form``. Requiring an okurigana-only
+    derivation confines the remap to genuine same-kanji suffix collapses (the
+    classical passive 呼ばる, not covered by ``morphology._FOLD_SUFFIX_PAIRS``),
+    where the base spelling is unambiguous.
+    """
+    i = 0
+    limit = min(len(orth_base), len(lemma))
+    while i < limit and orth_base[i] == lemma[i]:
+        i += 1
+    return _is_pure_hiragana(orth_base[i:]) and _is_pure_hiragana(lemma[i:])
+
+
 class SubtitleParserService:
     """Parse subtitles and extract Japanese vocabulary words (stateless service)."""
 
@@ -1128,6 +1153,12 @@ class SubtitleParserService:
         algorithm; the deinflect + offline existence lookup is memoized per
         ``(inflected_surface, orth_base, cType)`` so identical tokens never repeat
         the work.
+
+        Second seam (U3 attest-or-remap): when the deinflection resolver leaves
+        orth_base unchanged AND that orth_base matches no dictionary headword,
+        ``_attest_or_remap_front`` remaps it to the attested lemma — but only
+        when the lemma/orthBase readings diverge, guarding the #19/#5
+        same-reading-variant contract. See that method for the full gate.
         """
         feature = getattr(word_token, "feature", None)
         if getattr(feature, "pos1", None) not in ("動詞", "形容詞"):
@@ -1146,10 +1177,78 @@ class SubtitleParserService:
         cached = self._front_cache.get(key)
         if cached is None:
             cached = resolve_dictionary_form(inflected_surface, orth_base, self._term_lookup)
+            # The deinflection resolver only rewrites じる/ずる (and leaves every
+            # other form == orth_base). Where it made no change, run the
+            # garbage-orthBase net so a same-kanji derived front the dictionary
+            # does not attest (呼ばる → 呼ぶ) collapses onto its attested lemma. A
+            # resolver override (感じる) is dictionary-attested by construction,
+            # so skip it.
+            if cached == orth_base:
+                cached = self._attest_or_remap_front(word_token, orth_base)
             if len(self._front_cache) >= _FRONT_CACHE_CAP:
                 self._front_cache.clear()
             self._front_cache[key] = cached
         return cached
+
+    def _attest_or_remap_front(self, word_token, orth_base: str) -> str:
+        """Remap a non-attested derived 動詞/形容詞 front to its attested lemma.
+
+        Live-audit net for garbage/derived card fronts that match no dictionary
+        headword — e.g. 呼ばる minted from the classical passive 呼ばれる (its ばる/ぶ
+        suffix is outside ``morphology._FOLD_SUFFIX_PAIRS``). Such fronts miss the
+        exact-term definition/frequency lookup and split dedup/known-word/audio
+        identity from the base verb's card.
+
+        Remaps ``orth_base`` → ``lemma`` iff ALL hold:
+
+        * the lemma/orthBase readings DIVERGE (``lForm`` vs ``kanaBase``,
+          hiragana-folded). LOAD-BEARING: okurigana spelling variants that read the
+          same (変る/変わる, 表す/表わす — both readings equal) must NEVER remap, or
+          the card front stops preserving the source orthography (Issue #19/#5).
+          Mirrors ``mining_base``'s fold trigger, so an equal-reading token is left
+          untouched.
+        * ``orth_base`` differs from ``lemma`` by TRAILING OKURIGANA ONLY
+          (``_differs_by_okurigana_only`` — same kanji stem). LOAD-BEARING: unidic's
+          ``lemma`` canonicalizes kanji-variant homographs onto a different-kanji
+          headword (帰れる→返る "can go home" vs "revert", 殺る→遣る, 混ぜる→交ぜる).
+          Remapping onto such a lemma would ship the wrong homograph — so a kanji
+          change blocks the remap and the source spelling is kept (its correct
+          definition still arrives via the mined-form→lemma miss fallback).
+        * the offline dictionary does NOT attest ``orth_base`` as a term (exact
+          headword, no kana folding) — an attested front is a real word and is
+          always KEPT; attestation, not a fold table, decides.
+        * the dictionary DOES attest ``lemma`` — never remap onto an unattested
+          target; keep the source spelling when there is nothing better.
+
+        Reached only for a wired ``term_lookup`` and a token whose ``mining_base``
+        did not fold (``orth_base`` is the token's own orthBase). Missing / ``*`` /
+        non-string readings (synthetic compounds, OOV, MagicMock fakes) cannot
+        prove divergence, so the front is conservatively kept. Attestation is
+        memoized via the shared ``_memoized_attest`` probe.
+        """
+        lemma = extract_lemma(word_token)
+        if not lemma or lemma == orth_base:
+            return orth_base
+        feature = getattr(word_token, "feature", None)
+        l_form = getattr(feature, "lForm", None)
+        kana_base = getattr(feature, "kanaBase", None)
+        if not isinstance(l_form, str) or not isinstance(kana_base, str):
+            return orth_base
+        if l_form in ("", "*") or kana_base in ("", "*"):
+            return orth_base
+        if katakana_to_hiragana(l_form) == katakana_to_hiragana(kana_base):
+            # Equal-reading okurigana variant: preserve the source orthography.
+            return orth_base
+        if not _differs_by_okurigana_only(orth_base, lemma):
+            # Kanji differs ⇒ unidic lemma canonicalization onto a homograph
+            # (帰れる→返る, 殺る→遣る): never let it swap the card front's kanji.
+            return orth_base
+        attested = self._memoized_attest([orth_base, lemma])
+        if orth_base in attested:
+            return orth_base  # a real headword — attestation decides, keep it
+        if lemma not in attested:
+            return orth_base  # no attested target to remap onto
+        return lemma
 
     def _extract_reading(self, word_token) -> str:
         """Extract kana reading from a token (see morphology.extract_reading)."""
