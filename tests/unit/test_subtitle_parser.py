@@ -4785,6 +4785,145 @@ class TestVerbFrontResolver:
         assert word.resolved_reading == ""
 
 
+class TestMinedFormAttestOrRemap:
+    """U3: a derived/garbage verb-adjective front that matches no dictionary
+    headword remaps to its attested lemma — but ONLY when the lemma/orthBase
+    readings diverge. The readings-diverge precondition is load-bearing: it
+    protects the Issue #19/#5 same-reading-variant contract (乞う/請う,
+    怖れる/恐れる keep the source orthography, never remap). Attestation
+    decides: a front the dictionary DOES attest is always kept.
+
+    These are attest-pattern tests — the fake dictionary attests specific
+    forms so each decision is provably taken for the designed reason.
+    """
+
+    @staticmethod
+    def _dict(*attested):
+        """Fake TermLookup attesting exactly the given headwords (subset)."""
+        wanted = set(attested)
+        return lambda terms: {t for t in terms if t in wanted}
+
+    @staticmethod
+    def _front(service, token):
+        """Drive _resolve_front with the token's own orthBase as the
+        (uninflected) span — resolve_dictionary_form is a no-op here, so the
+        attest-or-remap guard is the sole decider."""
+        ob = token.feature.orthBase
+        return service._resolve_front(token, ob, ob, 0, len(ob))
+
+    def _service(self, test_config, term_lookup):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            return SubtitleParserService(test_config, term_lookup=term_lookup)
+
+    def test_unattested_derived_front_remaps_to_lemma(self, test_config):
+        # orthBase 呼ばる (garbage classical-passive derivation) is NOT attested;
+        # lemma 呼ぶ IS; readings diverge (よばる vs よぶ) → remap to 呼ぶ.
+        service = self._service(test_config, self._dict("呼ぶ"))
+        token = _make_token("呼ばる", "動詞", lemma="呼ぶ", orth_base="呼ばる", l_form="ヨブ", kana_base="ヨバル")
+        assert self._front(service, token) == "呼ぶ"
+
+    def test_attested_front_is_kept(self, test_config):
+        # Same token, but the dictionary ALSO attests 呼ばる → attestation
+        # decides: the front is a real headword, so KEEP it.
+        service = self._service(test_config, self._dict("呼ぶ", "呼ばる"))
+        token = _make_token("呼ばる", "動詞", lemma="呼ぶ", orth_base="呼ばる", l_form="ヨブ", kana_base="ヨバル")
+        assert self._front(service, token) == "呼ばる"
+
+    def test_same_reading_variant_never_remaps(self, test_config):
+        # orthBase 怖れる, lemma 恐れる, readings EQUAL (both おそれる). Even though
+        # only 恐れる is attested, the #19/#5 contract preserves the source
+        # spelling 怖れる — the readings-diverge precondition is not met.
+        service = self._service(test_config, self._dict("恐れる"))
+        token = _make_token(
+            "怖れる", "動詞", lemma="恐れる", orth_base="怖れる", l_form="オソレル", kana_base="オソレル"
+        )
+        assert self._front(service, token) == "怖れる"
+
+    def test_equal_reading_okurigana_variant_blocked_by_reading_gate(self, test_config):
+        # Same-kanji okurigana variant that reads the same (変る/変わる, both かわる):
+        # it PASSES the kanji-stem gate (stem 変), so ONLY the readings-diverge
+        # gate keeps it — proving that gate is still load-bearing (#19/#5).
+        service = self._service(test_config, self._dict("変わる"))
+        token = _make_token("変る", "動詞", lemma="変わる", orth_base="変る", l_form="カワル", kana_base="カワル")
+        assert self._front(service, token) == "変る"
+
+    def test_wrong_homograph_lemma_blocked_by_kanji_gate(self, test_config):
+        # 帰れる (potential "can go home") has unidic lemma 返る ("revert") — a
+        # DIFFERENT-kanji homograph. Readings diverge (かえれる vs かえる), so only the
+        # okurigana-only (kanji-stem) gate stops the remap. Remapping to 返る would
+        # ship the wrong verb; the source spelling 帰れる is kept.
+        service = self._service(test_config, self._dict("返る"))
+        token = _make_token("帰れる", "動詞", lemma="返る", orth_base="帰れる", l_form="カエル", kana_base="カエレル")
+        assert self._front(service, token) == "帰れる"
+
+    def test_no_term_lookup_unchanged(self, test_config):
+        # Safe-degrade: no offline dict wired → front untouched.
+        service = self._service(test_config, None)
+        token = _make_token("呼ばる", "動詞", lemma="呼ぶ", orth_base="呼ばる", l_form="ヨブ", kana_base="ヨバル")
+        assert self._front(service, token) == "呼ばる"
+
+    def test_lemma_not_attested_keeps_front(self, test_config):
+        # Neither front nor lemma attested → no attested target to remap onto,
+        # so the source spelling is kept (never remap onto an unattested lemma).
+        service = self._service(test_config, self._dict("無関係な語"))
+        token = _make_token("呼ばる", "動詞", lemma="呼ぶ", orth_base="呼ばる", l_form="ヨブ", kana_base="ヨバル")
+        assert self._front(service, token) == "呼ばる"
+
+    def test_noun_never_remaps(self, test_config):
+        # Non-verb/adjective: _resolve_front returns orth_base untouched, so the
+        # guard can never touch a noun front.
+        service = self._service(test_config, self._dict("呼ぶ"))
+        token = _make_token("呼ばる", "名詞", lemma="呼ぶ", orth_base="呼ばる", l_form="ヨブ", kana_base="ヨバル")
+        assert self._front(service, token) == "呼ばる"
+
+    def test_missing_readings_do_not_remap(self, test_config):
+        # No lForm/kanaBase (synthetic/OOV token): cannot prove readings diverge,
+        # so the guard conservatively keeps the front (mirrors mining_base).
+        service = self._service(test_config, self._dict("呼ぶ"))
+        token = _make_token("呼ばる", "動詞", lemma="呼ぶ", orth_base="呼ばる")
+        assert self._front(service, token) == "呼ばる"
+
+    @pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+    def test_chiseru_kept_kanji_stem_differs_end_to_end(self, test_config):
+        # Real unidic-lite token: 治せる parses as orthBase 治せる, lemma 直す
+        # (readings なおせる vs なおす). The 治≠直 kanji difference means the lemma is
+        # a canonicalized variant, so the kanji-stem gate BLOCKS the remap even
+        # though only 直す is attested — the source spelling 治せる is kept (its
+        # definition still resolves via the mined-form→lemma miss fallback).
+        service = SubtitleParserService(test_config, term_lookup=self._dict("直す"))
+        unit = ReadingUnit(text="治せる", index=0, location_label="t")
+        words, _index, _counts = service.parse_text_units([unit], want_line_index=False)
+        assert [w.mined_form for w in words] == ["治せる"]
+
+    @pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+    def test_real_verb_unaffected_end_to_end(self, test_config):
+        # A plain conjugated verb (見せた → orthBase 見せる, its own lemma) is
+        # untouched by the guard when the dictionary attests it.
+        service = SubtitleParserService(test_config, term_lookup=self._dict("見せる"))
+        unit = ReadingUnit(text="見せた", index=0, location_label="t")
+        words, _index, _counts = service.parse_text_units([unit], want_line_index=False)
+        assert [w.mined_form for w in words] == ["見せる"]
+
+
+@pytest.mark.parametrize(
+    ("orth_base", "lemma", "expected"),
+    [
+        ("呼ばる", "呼ぶ", True),  # same kanji stem 呼, okurigana ばる→ぶ
+        ("抜る", "抜く", True),  # same kanji stem 抜
+        ("変る", "変わる", True),  # same kanji stem 変 (okurigana variant)
+        ("帰れる", "返る", False),  # kanji differs 帰≠返 (lemma canonicalization)
+        ("治せる", "直す", False),  # kanji differs 治≠直
+        ("殺る", "遣る", False),  # kanji differs 殺≠遣 (#19/#5 homograph)
+        ("きれる", "切る", False),  # a kanji appears only in the lemma tail
+        ("食べる", "食べる", False),  # identical → no differing okurigana (guard early-returns upstream)
+    ],
+)
+def test_differs_by_okurigana_only(orth_base, lemma, expected):
+    from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
+
+    assert _differs_by_okurigana_only(orth_base, lemma) is expected
+
+
 def _gate_term_lookup(dictionary):
     """Fake TermLookup: attests exactly the given headword set (subset semantics)."""
     wanted = set(dictionary)
