@@ -132,6 +132,27 @@ _KANA_RECOVER_WINDOW_FUNCTIONAL_POS1: frozenset[str] = frozenset({"助詞", "助
 # recovery candidate; grammaticalized sequences are short (にとって, かもしれない).
 _KANA_RECOVER_WINDOW_MAX_SIDE: int = 3
 
+# U8 ellipsis truncation-fragment reject. Fansub/CC lines cut a word off
+# mid-utterance at an ellipsis (欲し…, 合…, タ… イガ…) and the tokenizer strands
+# the severed head as a full content word. Applied on BOTH _mine_token branches
+# and DICT-FREE (unlike U4/U5), so the video path benefits too. A token qualifies
+# only when it DIRECTLY abuts an ellipsis char, tested by SET membership
+# (``ch in _ELLIPSIS_CHARS``) — never the substring form ``ch in "…‥"``: the
+# line-edge sentinel "" is a substring of every string, so the substring form
+# would falsely mark every line-initial token adjacent and reject it.
+_ELLIPSIS_CHARS: frozenset[str] = frozenset({"…", "‥"})
+# (a) Cut conjugation: a 動詞/形容詞 stranded in a stem/連用/未然/仮定 form is a
+# severed inflection (欲し…→欲する). Match the cForm PREFIX — unidic emits
+# hyphenated values (連用形-一般, 連用形-促音便), so bare equality would never fire.
+_ELLIPSIS_CUT_POS1: frozenset[str] = frozenset({"動詞", "形容詞"})
+_ELLIPSIS_CUT_CFORM: frozenset[str] = frozenset({"連用形", "未然形", "語幹", "仮定形"})
+# (b) Short fragment (all-katakana or single-char surface) inside a STUTTER line
+# of ≥2 ellipsis GROUPS, where a group is a maximal ellipsis run: ``……`` (the
+# standard fansub double-marker) collapses to ONE group, so a lone trailing 夢……
+# survives while タ… イガ… stays two groups.
+_ELLIPSIS_GROUP_RE = re.compile(r"[…‥]+")
+_ELLIPSIS_STUTTER_MIN_GROUPS: int = 2
+
 
 def _is_katakana_surface_char(ch: str) -> bool:
     """True for any char in the katakana Unicode block U+30A0–U+30FF.
@@ -1307,7 +1328,9 @@ class SubtitleParserService:
         full per-line ``merged_tokens`` list) so the recovery path can inspect the
         candidate's functional neighbors.
 
-        Two disjoint acceptance paths, each with its own reject layer:
+        Two disjoint acceptance paths, each with its own reject layer, plus the
+        dict-free U8 ellipsis truncation-fragment reject
+        (``_is_ellipsis_truncation_fragment``) applied on BOTH:
 
         - ``should_include`` accepts (kanji / katakana loanword): apply ONLY the
           U5 katakana run-fragment guard (``_is_katakana_run_fragment``). The U4
@@ -1323,10 +1346,14 @@ class SubtitleParserService:
         ``should_include``-then-recover order so the two never diverge.
         """
         if self._inclusion_rule.should_include(word_token):
-            return not self._is_katakana_run_fragment(word_token, text, tok_start, tok_end)
+            if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
+                return False
+            return not self._is_ellipsis_truncation_fragment(word_token, text, tok_start, tok_end)
         if not self._recover_kana_content_word(word_token):
             return False
-        return not self._rejected_by_lexicalized_window(word_token, tokens)
+        if self._rejected_by_lexicalized_window(word_token, tokens):
+            return False
+        return not self._is_ellipsis_truncation_fragment(word_token, text, tok_start, tok_end)
 
     def _rejected_by_lexicalized_window(self, word_token, tokens: list) -> bool:
         """Whether a recovered kana fragment sits inside an attested lexicalized expression.
@@ -1453,6 +1480,48 @@ class SubtitleParserService:
         left = text[tok_start - 1] if tok_start > 0 else ""
         right = text[tok_end] if tok_end < len(text) else ""
         return _continues_katakana_run(left) or _continues_katakana_run(right)
+
+    def _is_ellipsis_truncation_fragment(self, word_token, text: str, tok_start: int, tok_end: int) -> bool:
+        """Whether an accepted token is a word cut off mid-utterance at an ellipsis.
+
+        Post-acceptance REJECT layer shared by BOTH ``_mine_token`` branches and,
+        unlike the U4/U5 rejects, DICT-FREE (positional + POS/cForm only) so it
+        fires on the video path too. Rejects only a token DIRECTLY abutting an
+        ellipsis char (``…``/``‥``) that also matches one truncation signal:
+
+        (a) a 動詞/形容詞 stranded in a cut conjugation — its ``cForm`` PREFIX is
+            one of 連用形/未然形/語幹/仮定形 (欲し…→欲する). unidic emits hyphenated
+            cForms (連用形-一般), so the prefix split is load-bearing. A verb
+            buffered from the ellipsis by a 助詞/接尾辞 (待って…, 続いて…) never
+            abuts, so it survives; 意志推量形 (行こう…) is not a cut form, so it
+            survives too.
+        (b) a short fragment (all-katakana or single-char surface) in a STUTTER
+            line of ≥2 ellipsis groups (合…/タ… イガ…). ``……`` is one group, so a
+            single trailing 夢…… survives.
+
+        Adjacency is SET membership; the line-edge sentinel "" (a token at a line
+        boundary) is not a member, so a boundary token is never falsely adjacent.
+        Deliberate recall loss (plan ledger): trailing 連用中止法 (飲み…→飲む) and
+        single-char content nouns in ≥2-group lines (声, 年) — all common words
+        mined elsewhere.
+        """
+        left = text[tok_start - 1] if tok_start > 0 else ""
+        right = text[tok_end] if tok_end < len(text) else ""
+        if left not in _ELLIPSIS_CHARS and right not in _ELLIPSIS_CHARS:
+            return False
+        feature = getattr(word_token, "feature", None)
+        # (a) severed inflectional tail of a verb/adjective.
+        if getattr(feature, "pos1", None) in _ELLIPSIS_CUT_POS1:
+            c_form = getattr(feature, "cForm", None)
+            if isinstance(c_form, str) and c_form.split("-", 1)[0] in _ELLIPSIS_CUT_CFORM:
+                return True
+        # (b) short fragment in a stutter line (≥2 ellipsis groups).
+        surface = getattr(word_token, "surface", None)
+        return (
+            isinstance(surface, str)
+            and (len(surface) == 1 or _is_all_katakana(surface))
+            and len(_ELLIPSIS_GROUP_RE.findall(text)) >= _ELLIPSIS_STUTTER_MIN_GROUPS
+        )
 
     def _recover_kana_content_word(self, word_token) -> bool:
         """Whether an otherwise-rejected pure-hiragana content word is recoverable.

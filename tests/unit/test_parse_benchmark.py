@@ -144,6 +144,7 @@ _EXPECTED_CATEGORIES = {
     "colloquial",
     "counter",
     "linebreak-split",
+    "ellipsis-truncation",
 }
 
 

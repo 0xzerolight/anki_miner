@@ -5427,3 +5427,141 @@ class TestKatakanaFragmentGuard:
         without_dict = self._mine(tmp_path, test_config, "猫と犬", tokens(), None)
         assert with_dict == without_dict
         assert [w.surface for w in with_dict] == ["猫", "犬"]
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestEllipsisTruncationGuard:
+    """Dict-free reject of words cut off mid-utterance at an ellipsis (U8).
+
+    Real fugashi/unidic on live fansub-style lines. The three reject targets are
+    ATTESTED in a fixture dict (合わせ/欲する/イガ) so the test proves an
+    otherwise-mineable, dictionary-real word is dropped BY THIS guard, not by a
+    tokenizer miss: every reject case first asserts ``should_include`` accepts the
+    token, then that ``_is_ellipsis_truncation_fragment`` is what rejects it. The
+    keep-cases (buffered verbs, single-group nouns, 意志推量形, the line-initial
+    sentinel) prove the guard does not over-fire.
+    """
+
+    _ATTESTED = ("合わせ", "欲する", "イガ", "合", "夢", "声", "年")
+
+    def _service(self):
+        return SubtitleParserService(
+            AnkiMinerConfig(),
+            term_lookup=_lookup_for(set(self._ATTESTED)),
+            kana_attest_lookup=_attest_lookup(*self._ATTESTED),
+        )
+
+    @staticmethod
+    def _spans(service, sentence):
+        """Reproduce the mining loop's normalize → build → locate for one line."""
+        from anki_miner.services.morphology import iter_token_spans
+        from anki_miner.utils.ja_normalize import (
+            normalize_for_tokenization,
+            standardize_kanji_variants,
+        )
+
+        text = standardize_kanji_variants(normalize_for_tokenization(sentence))
+        text, _raw, merged, *_ = service._build_line_state(text, 0.0, 0.0)
+        return text, list(iter_token_spans(text, merged))
+
+    def _find(self, spans, surface):
+        return next((tok, s, e) for tok, s, e in spans if tok.surface == surface)
+
+    def _mine(self, sentence):
+        service = self._service()
+        words, _idx, _counts = service.parse_text_units(
+            [ReadingUnit(text=sentence, index=0, location_label="t")], want_line_index=False
+        )
+        return {w.mined_form for w in words}
+
+    # --- Reject (a): cut-conjugation verb/adjective severed at the ellipsis. ---
+
+    def test_cut_conjugation_verb_rejected(self):
+        service = self._service()
+        text, spans = self._spans(service, "何が欲し…")
+        tok, start, end = self._find(spans, "欲し")
+        # unidic tags 欲し 動詞/連用形-一般 and its orthBase 欲する is attested, so it
+        # is otherwise mineable — the guard is what drops it.
+        assert service._inclusion_rule.should_include(tok) is True
+        assert service._memoized_attest(["欲する"]) == {"欲する"}
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is True
+        assert self._mine("何が欲し…") == {"何"}  # 何 (1 group, not abutting) survives
+
+    # --- Reject (b): single-char fragment in a >=2-group stutter line. ---
+
+    def test_single_char_fragment_rejected(self):
+        service = self._service()
+        text, spans = self._spans(service, "合… せ…")
+        tok, start, end = self._find(spans, "合")
+        assert service._inclusion_rule.should_include(tok) is True
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is True
+        assert self._mine("合… せ…") == set()
+
+    def test_single_char_noun_ledger_loss_rejected(self):
+        # Ledger loss: 声 is a single-char content noun in a 2-group line; dropped
+        # here (mined elsewhere). お前 (not abutting, not single-char) survives.
+        service = self._service()
+        text, spans = self._spans(service, "その声… お前 まさか…")
+        tok, start, end = self._find(spans, "声")
+        assert service._inclusion_rule.should_include(tok) is True
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is True
+        assert self._mine("その声… お前 まさか…") == {"お前"}
+
+    # --- Reject (b): all-katakana fragment in a >=2-group stutter line. ---
+
+    def test_katakana_fragment_rejected(self):
+        service = self._service()
+        text, spans = self._spans(service, "タ… イガ… さん")
+        tok, start, end = self._find(spans, "イガ")
+        assert service._inclusion_rule.should_include(tok) is True
+        assert service._memoized_attest(["イガ"]) == {"イガ"}
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is True
+        assert self._mine("タ… イガ… さん") == set()
+
+    # --- Keep: a verb buffered from the ellipsis by 助詞/接尾辞 never abuts. ---
+
+    def test_buffered_verb_survives(self):
+        service = self._service()
+        text, spans = self._spans(service, "ここで待って…")
+        tok, start, end = self._find(spans, "待っ")
+        # 待っ is 連用形-促音便 (a cut form) but て sits between it and the ellipsis.
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is False
+        assert self._mine("ここで待って…") == {"待つ"}
+
+    # --- Keep: 意志推量形 is not a cut form even when it abuts the ellipsis. ---
+
+    def test_non_cut_conjugation_survives(self):
+        service = self._service()
+        text, spans = self._spans(service, "行こう…")
+        tok, start, end = self._find(spans, "行こう")
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is False
+        assert self._mine("行こう…") == {"行く"}
+
+    # --- Keep: a single trailing ellipsis (or the fansub …… double-marker). ---
+
+    def test_single_group_noun_survives(self):
+        service = self._service()
+        text, spans = self._spans(service, "夢……")
+        tok, start, end = self._find(spans, "夢")
+        # …… is one maximal ellipsis run → one group → below the >=2 stutter floor.
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is False
+        assert self._mine("夢…") == {"夢"}
+        assert self._mine("夢……") == {"夢"}
+
+    # --- Keep: 副詞 abutting an ellipsis is not mined, and no junk appears. ---
+
+    def test_adverb_line_introduces_no_junk(self):
+        assert self._mine("先ほど ようやく…") == {"先ほど"}
+
+    # --- Keep: line-initial cut-conjugation verb is NOT falsely adjacent. ---
+
+    def test_line_initial_verb_not_falsely_adjacent(self):
+        # 飲み (動詞/連用形-一般) sits at index 0, so its left neighbor is the ""
+        # line-edge sentinel. Set membership keeps "" out, so the substring trap
+        # (`"" in "…‥"` is True) cannot reject every line-initial 連用形 verb here.
+        service = self._service()
+        text, spans = self._spans(service, "飲みたい…")
+        tok, start, end = self._find(spans, "飲み")
+        assert start == 0
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is False
+        assert "飲む" in self._mine("飲みたい…")

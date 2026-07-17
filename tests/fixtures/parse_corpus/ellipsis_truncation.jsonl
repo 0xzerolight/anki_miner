@@ -1,0 +1,11 @@
+{"id":"el01","sentence":"何が欲し…","expected":["何"],"category":"ellipsis-truncation","note":"(a) cut conjugation: 欲し(連用形-一般) abuts … → 欲する rejected; 何 (not abutting, 1 group) survives"}
+{"id":"el02","sentence":"合… せ…","expected":[],"category":"ellipsis-truncation","note":"(b) single-char 合 in a 2-group stutter line, abuts … → rejected; せ(助動詞) never mined"}
+{"id":"el03","sentence":"その声… お前 まさか…","expected":["お前"],"category":"ellipsis-truncation","note":"(b) single-char 声 in a 2-group line, abuts … → rejected (ledger loss, 声 mined elsewhere); お前 kept"}
+{"id":"el04","sentence":"タ… イガ… さん","expected":[],"category":"ellipsis-truncation","note":"(b) all-katakana イガ in a 2-group line, abuts … → rejected; タ(1-char)/さん(接尾辞) not mined"}
+{"id":"el05","sentence":"夢…","expected":["夢"],"category":"ellipsis-truncation","note":"KEEP: single-char noun 夢 but only 1 ellipsis group → survives"}
+{"id":"el06","sentence":"夢……","expected":["夢"],"category":"ellipsis-truncation","note":"KEEP: …… is one fansub double-marker (1 group) → 夢 survives"}
+{"id":"el07","sentence":"ここで待って…","expected":["待つ"],"category":"ellipsis-truncation","note":"KEEP: 待っ(連用形-促音便) is buffered from … by て → never abuts → survives"}
+{"id":"el08","sentence":"続いて…","expected":["続く"],"category":"ellipsis-truncation","note":"KEEP: 続い(連用形-イ音便) buffered by て → not abutting → survives"}
+{"id":"el09","sentence":"行こう…","expected":["行く"],"category":"ellipsis-truncation","note":"KEEP: 行こう(意志推量形) abuts … but 意志推量形 is not a cut form → survives"}
+{"id":"el10","sentence":"先ほど ようやく…","expected":["先ほど"],"category":"ellipsis-truncation","note":"KEEP: 副詞 ようやく (never mined) abuts …; 先ほど survives, no junk introduced"}
+{"id":"el11","sentence":"４年… ４年も…","expected":["年"],"category":"ellipsis-truncation","note":"KEEP: first 年 abuts … (rejected) but the second 年 is buffered by も → 年 stays mined"}

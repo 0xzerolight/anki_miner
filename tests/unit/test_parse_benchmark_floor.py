@@ -202,6 +202,20 @@ def test_anchor_meets_long_compound_floor() -> None:
     assert junk_rate(b_lc) == 0.0, f"strategy (b) long-compound junk_rate {junk_rate(b_lc)} above 0.0"
 
 
+def test_anchor_meets_ellipsis_floor() -> None:
+    results = _scored()
+    b_el = results["b-lite-anchor"].by_category["ellipsis-truncation"]
+    # U8: the ellipsis truncation-fragment reject is DICT-FREE, so it fires the
+    # same on (a) and (b) — no strict-beat is available. This is a regression
+    # tripwire instead: every reject fixture (合…/タ… イガ…/欲し…/声…) mines its
+    # fragment as junk PRE-guard (proven by the pre-guard probe and the wired
+    # TestEllipsisTruncationGuard unit tests), so a revert makes junk_rate>0.
+    # recall==1.0 pins that no keep-case (夢…/夢……/待って…/行こう…) was over-rejected.
+    assert junk_rate(b_el) == 0.0, f"strategy (b) ellipsis-truncation junk_rate {junk_rate(b_el)} above 0.0"
+    assert recall(b_el) == 1.0, f"strategy (b) ellipsis-truncation recall {recall(b_el)} below 1.0"
+
+
 # NOTE: jiru-zuru (Task 3), kana-written (Task 4), nominal-suffix (Task 5),
-# colloquial/counter (A2), aux-context (A1) and long-compound (Task 6/Q2)
-# floors are gated above; linebreak-split is scoreboard-only.
+# colloquial/counter (A2), aux-context (A1), long-compound (Task 6/Q2) and
+# ellipsis-truncation (U8) floors are gated above; linebreak-split is
+# scoreboard-only.
