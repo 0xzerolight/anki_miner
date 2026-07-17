@@ -172,6 +172,17 @@ def test_anchor_meets_aux_context_floor() -> None:
     assert junk_rate(b_ac) == 0.0, f"strategy (b) aux-context junk_rate {junk_rate(b_ac)} above 0.0"
 
 
+def test_anchor_meets_aux_keijoushi_floor() -> None:
+    results = _scored()
+    b_ak = results["b-lite-anchor"].by_category["aux-keijoushi"]
+    # Load-bearing: よう/みたい/そう are JMdict-attested pure hiragana, so absent
+    # the 助動詞語幹 pos2 reject the kana-recovery pass would mint them as junk
+    # content words. This is the real-tagger floor the sibling 非自立可能 reject
+    # already had (aux-context) but 助動詞語幹 previously only had a mock test.
+    assert recall(b_ak) == 1.0, f"strategy (b) aux-keijoushi recall {recall(b_ak)} below 1.0"
+    assert junk_rate(b_ak) == 0.0, f"strategy (b) aux-keijoushi junk_rate {junk_rate(b_ak)} above 0.0"
+
+
 def test_counter_category_is_clean() -> None:
     results = _scored()
     b_ct = results["b-lite-anchor"].by_category["counter"]

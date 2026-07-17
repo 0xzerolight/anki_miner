@@ -514,6 +514,17 @@ def test_book_folder_mixes_epub_and_txt(tmp_path):
     assert [(r.title, r.kind) for r in refs] == [("a", "epub"), ("b", "txt")]
 
 
+def test_book_folder_skips_appledouble_sidecars(tmp_path):
+    # A USB/exFAT copy pairs every book with a ._ AppleDouble; it must not
+    # become its own (failing) queue item.
+    (tmp_path / "Vol1.epub").write_bytes(b"PK")
+    (tmp_path / "._Vol1.epub").write_bytes(b"\x00\x05\x16\x07")
+
+    refs = detector.detect_book_folder(tmp_path)
+
+    assert [r.title for r in refs] == ["Vol1"]
+
+
 def test_book_folder_extension_case_insensitive(tmp_path):
     (tmp_path / "loud.EPUB").write_bytes(b"PK")
     (tmp_path / "shout.TXT").write_text("x", encoding="utf-8")

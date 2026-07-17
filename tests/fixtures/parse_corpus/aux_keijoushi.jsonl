@@ -1,0 +1,4 @@
+{"id":"ak01","sentence":"彼は元気なようだ","expected":["彼","元気"],"category":"aux-keijoushi","note":"ようだ: よう (助動詞語幹) must NOT be minted from kana recovery"}
+{"id":"ak02","sentence":"元気みたいな人だ","expected":["元気","人"],"category":"aux-keijoushi","note":"みたいな: みたい (助動詞語幹) must NOT be minted"}
+{"id":"ak03","sentence":"楽しそうな顔をした","expected":["楽しい","顔"],"category":"aux-keijoushi","note":"そうな: そう (助動詞語幹) must NOT be minted"}
+{"id":"ak04","sentence":"子供みたいに笑う","expected":["子供","笑う"],"category":"aux-keijoushi","note":"みたいに: みたい (助動詞語幹) must NOT be minted"}

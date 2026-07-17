@@ -190,9 +190,14 @@ class CardBackfillTab(QWidget):
         self.summary_label.setText("")
         self._refresh_checkbox_gates()
 
-    def iter_close_workers(self) -> Iterator[BackfillScanWorker | BackfillApplyWorker]:
+    def iter_close_workers(self) -> Iterator[BackfillScanWorker | BackfillApplyWorker | SingleCallWorker]:
         if self.worker_thread is not None and self.worker_thread.isRunning():
             yield self.worker_thread
+        # The lazy deck-fetch QThread runs a blocking get_deck_names (timeout 15s);
+        # abandoning it to Qt teardown aborts with "QThread: Destroyed while
+        # thread is still running", so surface it for the close-join policy too.
+        if self._deck_worker is not None and self._deck_worker.isRunning():
+            yield self._deck_worker
 
     # ------------------------------------------------------------------
     # Deck dropdown (lazy fetch on first show)
@@ -266,6 +271,10 @@ class CardBackfillTab(QWidget):
         for row, (expression, change) in enumerate(rows):
             for col, text in enumerate((expression, change.field_name, change.old_display, change.new_value)):
                 display = self._strip_cell(text)
+                if not display and text:
+                    # Markup with no text nodes (a pitch-accent SVG) strips to
+                    # empty; show a marker so the cell isn't blank in the preview.
+                    display = self.tr("(formatted content)")
                 item = QTableWidgetItem(display[:_CELL_ELIDE] + "…" if len(display) > _CELL_ELIDE else display)
                 item.setToolTip(display)
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)

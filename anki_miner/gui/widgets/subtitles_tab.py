@@ -1,8 +1,9 @@
-"""Subtitles container tab — nests Generate, Retime, and Condense as inner tabs.
+"""Subtitles container tab — nests Generate, Retime, Condense, Card Backfill.
 
 Wraps :class:`~anki_miner.gui.widgets.subtitle_creation_tab.SubtitleCreationTab`
 (Generate), :class:`~anki_miner.gui.widgets.subtitle_retime_tab.SubtitleRetimeTab`
-(Retime), and :class:`~anki_miner.gui.widgets.condense_tab.CondenseTab` (Condense)
+(Retime), :class:`~anki_miner.gui.widgets.condense_tab.CondenseTab` (Condense),
+and :class:`~anki_miner.gui.widgets.backfill_tab.CardBackfillTab` (Card Backfill)
 inside a single top-level tab so the main tab bar stays uncluttered.
 
 Close contract:
@@ -34,7 +35,7 @@ if TYPE_CHECKING:
 
 
 class SubtitlesTab(QWidget):
-    """Container tab holding Generate, Retime, and Condense as inner tabs.
+    """Container tab holding Generate, Retime, Condense, Card Backfill inner tabs.
 
     Args:
         config: Frozen application configuration.
@@ -85,8 +86,8 @@ class SubtitlesTab(QWidget):
 
         ``key`` is a stable identifier from
         :data:`anki_miner.gui.capabilities.SUBTAB_KEYS` (``"generate"``,
-        ``"retime"``, ``"condense"``). Unknown keys are ignored so a stale
-        caller can't crash the UI.
+        ``"retime"``, ``"condense"``, ``"backfill"``). Unknown keys are ignored
+        so a stale caller can't crash the UI.
         """
         index = self._subtab_index.get(key)
         if index is not None:
