@@ -4828,3 +4828,188 @@ class TestAnnotationStripping:
 
         assert words == []
         assert entries == []
+
+
+class TestKatakanaFragmentGuard:
+    """Post-acceptance reject of all-katakana tokenizer-fragments of unmerged runs.
+
+    Live-audit 2026-07: unknown katakana names/compounds (アイスベア → アイス|ベア,
+    アンデット → アン|デット, レッドゲート, ヒヒッ, ウオオッ) short-unit segment into
+    dictionary-matching fragments (ベア, レッド, ヒヒ are real JMdict headwords)
+    that pass ``should_include``'s >=2-char katakana floor and mine as junk cards
+    ("increase in basic salary" for ベア). Attestation cannot catch them; the ONLY
+    signal is positional — the token sits INSIDE a longer unmerged katakana run —
+    so the guard rejects an all-katakana token whose raw-text neighbor (either
+    side) continues the katakana run. Active ONLY with an offline dict wired
+    (gated on the compound matcher): without one, legit full runs can never be
+    merged upstream, so the rule would reject both halves of every real compound.
+    """
+
+    def _invoke(self, tmp_path, test_config, text, tokens, dictionary, fn):
+        """Build the service under a mocked tagger+subs and run ``fn(service, file)``.
+
+        ``dictionary`` is ``None`` → no ``term_lookup`` wired (compound matcher
+        None, guard inactive); a set → an offline dict attesting exactly those
+        headwords (guard active). ``tokens`` is the mock tagger's return for any
+        input line — callers control the katakana split directly.
+        """
+        sub_file = tmp_path / "kata.srt"
+        sub_file.write_text("stub", encoding="utf-8")
+        mock_line = MagicMock()
+        mock_line.text = text
+        mock_line.start = 1000
+        mock_line.end = 3000
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = tokens
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            kwargs = {} if dictionary is None else {"term_lookup": _lookup_for(dictionary)}
+            service = SubtitleParserService(test_config, **kwargs)
+            return fn(service, sub_file)
+
+    def _mine(self, tmp_path, test_config, text, tokens, dictionary):
+        return self._invoke(tmp_path, test_config, text, tokens, dictionary, lambda s, f: s.parse_subtitle_file(f))
+
+    # --- 1. Fragment of an unmerged run: both halves rejected (positional). ---
+
+    def test_both_fragments_of_unmerged_run_rejected(self, tmp_path, test_config):
+        # アイスベア splits アイス|ベア; the full run is NOT a headword, so nothing
+        # merges. ベア is attested standalone in the fake dict yet STILL rejected —
+        # proving the reject is positional, not attestation-driven.
+        tokens = [
+            _make_token("アイス", "名詞", "普通名詞", lemma="アイス", kana="アイス"),
+            _make_token("ベア", "名詞", "普通名詞", lemma="ベア", kana="ベア"),
+        ]
+        words = self._mine(tmp_path, test_config, "アイスベア", tokens, {"ベア"})
+        assert words == []  # both fragments dropped
+
+    # --- 2. Full run IS a headword → merged; the synthetic is never rejected. ---
+
+    def test_attested_full_run_merges_and_survives(self, tmp_path, test_config):
+        tokens = [
+            _make_token("アン", "名詞", "普通名詞", lemma="アン", kana="アン"),
+            _make_token("デッド", "名詞", "普通名詞", lemma="デッド", kana="デッド"),
+        ]
+        words = self._mine(tmp_path, test_config, "アンデッド", tokens, {"アンデッド"})
+        assert [w.lemma for w in words] == ["アンデッド"]
+        assert words[0].mined_form == "アンデッド"
+
+    def test_compound_synthetic_with_katakana_neighbor_never_rejected(self, tmp_path, test_config):
+        # アンデッド is attested (merges) but the trailing ゾンビ is a separate,
+        # unmerged token: the merged synthetic's span [0,5) abuts katakana ゾ on
+        # its right, yet the CompoundSyntheticToken is EXEMPT. The residual ゾンビ
+        # is the accepted precision-over-recall loss (its left neighbor ド is
+        # katakana).
+        tokens = [
+            _make_token("アン", "名詞", "普通名詞", lemma="アン", kana="アン"),
+            _make_token("デッド", "名詞", "普通名詞", lemma="デッド", kana="デッド"),
+            _make_token("ゾンビ", "名詞", "普通名詞", lemma="ゾンビ", kana="ゾンビ"),
+        ]
+        words = self._mine(tmp_path, test_config, "アンデッドゾンビ", tokens, {"アンデッド"})
+        assert [w.lemma for w in words] == ["アンデッド"]  # synthetic kept, ゾンビ dropped
+
+    # --- 3. Standalone katakana (no adjacent katakana) is kept. ---
+
+    def test_standalone_katakana_loanword_kept(self, tmp_path, test_config):
+        # Guard active (empty dict wired) but バス has no katakana neighbor.
+        tokens = [_make_token("バス", "名詞", "普通名詞", lemma="バス", kana="バス")]
+        words = self._mine(tmp_path, test_config, "バス", tokens, set())
+        assert [w.surface for w in words] == ["バス"]
+
+    # --- 4. Onomatopoeia-run fragments (adjacent ー/ッ continue the run). ---
+
+    @pytest.mark.parametrize(
+        ("text", "fragment", "trailer"),
+        [
+            ("ヒヒッ", "ヒヒ", "ッ"),  # ヒヒ + small-tsu trailer → ヒヒ rejected
+            ("ウオオッ", "ウオ", "オッ"),  # ウオ + オッ → ウオ rejected (right neighbor オ)
+        ],
+    )
+    def test_onomatopoeia_run_fragment_rejected(self, tmp_path, test_config, text, fragment, trailer):
+        tokens = [
+            _make_token(fragment, "名詞", "普通名詞", lemma=fragment, kana=fragment),
+            _make_token(trailer, "補助記号", "*", lemma=trailer, kana=trailer),
+        ]
+        words = self._mine(tmp_path, test_config, text, tokens, set())
+        assert words == []
+
+    # --- 5. No dict wired → guard inactive → byte-identical old behavior. ---
+
+    def test_no_dict_guard_inactive_byte_identical(self, tmp_path, test_config):
+        tokens = [
+            _make_token("アイス", "名詞", "普通名詞", lemma="アイス", kana="アイス"),
+            _make_token("ベア", "名詞", "普通名詞", lemma="ベア", kana="ベア"),
+        ]
+        words = self._mine(tmp_path, test_config, "アイスベア", tokens, None)
+        # Pin the exact pre-guard emitted set: both fragments still mined.
+        assert [w.surface for w in words] == ["アイス", "ベア"]
+
+    # --- 6. T-38 count==mine parity across all four span-iterating call sites. ---
+
+    def test_count_equals_mine_at_all_sites(self, tmp_path, test_config):
+        text = "猫アイスベア"
+
+        def tokens():
+            return [
+                _make_token("猫", "名詞", "普通名詞", lemma="猫", kana="ネコ"),
+                _make_token("アイス", "名詞", "普通名詞", lemma="アイス", kana="アイス"),
+                _make_token("ベア", "名詞", "普通名詞", lemma="ベア", kana="ベア"),
+            ]
+
+        mine = self._invoke(tmp_path, test_config, text, tokens(), set(), lambda s, f: s.parse_subtitle_file(f))
+        idx_words, idx_lines = self._invoke(
+            tmp_path, test_config, text, tokens(), set(), lambda s, f: s.parse_subtitle_file_with_index(f)
+        )
+        counts = self._invoke(tmp_path, test_config, text, tokens(), set(), lambda s, f: s.count_lemmas(f))
+
+        def parse_units(s, _f):
+            unit = ReadingUnit(text=text, index=0, location_label="t")
+            return s.parse_text_units([unit], want_line_index=True)
+
+        pt_words, pt_index, pt_counts = self._invoke(tmp_path, test_config, text, tokens(), set(), parse_units)
+
+        expected = {"猫"}  # both katakana fragments dropped at every site
+        assert {w.lemma for w in mine} == expected
+        assert {w.lemma for w in idx_words} == expected
+        assert {lm for line in idx_lines for lm in line.lemmas} == expected
+        assert set(counts) == expected
+        assert {w.lemma for w in pt_words} == expected
+        assert {lm for line in pt_index for lm in line.lemmas} == expected
+        assert set(pt_counts) == expected
+
+    # --- 7. Katakana-dense line: documented accepted-loss budget (exact set). ---
+
+    def test_katakana_dense_accepted_loss_budget(self, tmp_path, test_config):
+        # スマホ|ケース|と|バッグ. スマホ and ケース are both legit loanwords, but
+        # their full run スマホケース is no headword, so BOTH are dropped (the
+        # accepted precision-over-recall loss: 2 legit tokens). バッグ survives
+        # because the hiragana particle と separates it from the katakana run —
+        # whitespace/non-katakana does NOT continue a run. If a future change
+        # alters this budget, this exact-set assertion surfaces it.
+        tokens = [
+            _make_token("スマホ", "名詞", "普通名詞", lemma="スマホ", kana="スマホ"),
+            _make_token("ケース", "名詞", "普通名詞", lemma="ケース", kana="ケース"),
+            _make_token("と", "助詞", "格助詞", lemma="と", kana="ト"),
+            _make_token("バッグ", "名詞", "普通名詞", lemma="バッグ", kana="バッグ"),
+        ]
+        words = self._mine(tmp_path, test_config, "スマホケースとバッグ", tokens, set())
+        assert [w.surface for w in words] == ["バッグ"]
+
+    # --- 8. A line with no katakana runs is byte-identical with/without a dict. ---
+
+    def test_no_katakana_line_byte_parity(self, tmp_path, test_config):
+        def tokens():
+            return [
+                _make_token("猫", "名詞", "普通名詞", lemma="猫", kana="ネコ"),
+                _make_token("と", "助詞", "格助詞", lemma="と", kana="ト"),
+                _make_token("犬", "名詞", "普通名詞", lemma="犬", kana="イヌ"),
+            ]
+
+        with_dict = self._mine(tmp_path, test_config, "猫と犬", tokens(), set())
+        without_dict = self._mine(tmp_path, test_config, "猫と犬", tokens(), None)
+        assert with_dict == without_dict
+        assert [w.surface for w in with_dict] == ["猫", "犬"]
