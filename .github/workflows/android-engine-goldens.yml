@@ -1,10 +1,28 @@
 name: Android engine goldens
 
+# This workflow serves the future anki-miner-android port, NOT the desktop app.
+# It is paths-scoped so it never runs on ordinary desktop PRs (which never touch
+# these files); it only fires when the golden contract itself changes, plus manual
+# dispatch. The path list below must stay == the derived-bytes closure: the 3
+# exporter scripts + the runtime lock + this workflow file (holds
+# ANDROID_ENGINE_REVISION/SOURCE_DATE_EPOCH) + everything under
+# tests/fixtures/goldens/ (the 3 inputs and the committed cmp target). If a new
+# derivation input is added, append it here.
+# NEVER register this workflow as a required status check: paths/dispatch-only +
+# required check would permanently block PRs that don't touch these paths.
 on:
   push:
     branches: [main]
+    paths: &golden-paths
+      - .github/workflows/android-engine-goldens.yml
+      - scripts/dump_engine_goldens.py
+      - scripts/engine_golden_contract_v2.py
+      - scripts/prepare_golden_unidic.py
+      - scripts/golden-runtime-requirements.txt
+      - tests/fixtures/goldens/**
   pull_request:
     branches: [main]
+    paths: *golden-paths
   workflow_dispatch:
     inputs:
       engine_revision:
@@ -142,6 +160,14 @@ jobs:
           print(hashlib.sha256(artifact.read_bytes()).hexdigest())
           PY
           sha256sum artifacts/engine-goldens.json > artifacts/engine-goldens.json.sha256
+
+      # Contract drift net: the freshly-derived artifact must byte-match the
+      # committed fixture. This is the automated check the desktop CI no longer
+      # runs (golden tests are deselected there); it mirrors the byte-exact
+      # assertion in test_dump_engine_goldens.py, dep-free, inside the frozen
+      # runtime that is the only environment where the bytes reproduce.
+      - name: Verify derived goldens match the committed contract
+        run: cmp artifacts/engine-goldens.json tool/tests/fixtures/goldens/engine-v2.json
 
       - name: Upload versioned goldens
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

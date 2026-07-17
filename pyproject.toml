@@ -169,6 +169,7 @@ markers = [
     "soak: multi-session soak tests",
     "asr: requires faster-whisper and a downloaded ASR model",
     "network: genuinely needs real network; suppresses the socket tripwire (tests/_network_tripwire.py)",
+    "golden: Android-port engine parity contract; excluded from the default gate (runs on-demand + in android-engine-goldens.yml)",
 ]
 
 [tool.black]
