@@ -14,6 +14,13 @@ from types import SimpleNamespace
 import pytest
 import unidic_lite
 
+# Android-port engine parity contract: derives from a pinned desktop commit for a
+# separate, not-yet-started repo. Deselected from the desktop CI/health gate (see
+# `and not golden` in ci.yml + scripts/health.sh); exercised on-demand locally and
+# by the paths-scoped android-engine-goldens.yml workflow. See models/word.py and
+# the plan in docs/ for rationale.
+pytestmark = pytest.mark.golden
+
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = REPOSITORY_ROOT / "scripts" / "dump_engine_goldens.py"
 CORPUS_PATH = REPOSITORY_ROOT / "tests" / "fixtures" / "goldens" / "tokenizer-v1.json"
