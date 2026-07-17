@@ -1495,12 +1495,41 @@ class TestKanaRecoveryLexicalizedWindow:
     def test_asatte_misparse_rejected_real_fugashi(self, test_config, tmp_path):
         # 再測定はあさって tokenizes あさっ(漁る/あさる) + て(助詞); the window あさって
         # is attested (明後日's kana reading) → the 漁る junk card is suppressed.
+        # Differential control (attributes the reject to the WINDOW, not a dict
+        # miss): with ONLY the bare front あさる attested — the window あさって NOT
+        # attested — recovery fires and the 漁る/あさる junk card WOULD survive.
         srt = _write_srt(tmp_path, "asatte.srt", "再測定はあさって")
-        lookup = _attest_lookup("あさる", "あさって")
-        service = SubtitleParserService(test_config, kana_attest_lookup=lookup)
-        words = service.parse_subtitle_file(srt)
+
+        no_window = _attest_lookup("あさる")  # bare front only, window not attested
+        recovered = SubtitleParserService(test_config, kana_attest_lookup=no_window).parse_subtitle_file(srt)
+        assert "漁る" in {w.lemma for w in recovered}  # recovery would fire...
+        assert any("あさって" in call for call in no_window.calls)  # ...and the window WAS probed
+
+        with_window = _attest_lookup("あさる", "あさって")  # window now attested → reject
+        words = SubtitleParserService(test_config, kana_attest_lookup=with_window).parse_subtitle_file(srt)
         assert "漁る" not in {w.lemma for w in words}
         assert "あさる" not in {w.mined_form for w in words}
+        assert any("あさって" in call for call in with_window.calls)  # window path drove the reject
+
+    # --- 10. Cap-clear must not evict a pre-cached window this candidate needs. ---
+
+    def test_cap_clear_preserves_precached_window_verdict(self, test_config, monkeypatch):
+        # Regression: the shorter window すみませ is cached from a prior candidate,
+        # so this call's ``uncached`` is only [すみません]. Driving the cap below the
+        # combined size triggers the clear-on-cap, wiping すみませ. The per-call
+        # verdict must come from a local snapshot, not a re-read of the (now empty)
+        # shared cache — else ``cache["すみませ"]`` raises KeyError and aborts the run.
+        lookup = _attest_lookup("すむ", "すみません")  # すみません attested; すみませ not
+        service = self._service(test_config, lookup)
+        service._kana_window_cache["すみませ"] = False  # pre-cached shorter window
+        monkeypatch.setattr("anki_miner.services.subtitle_parser._FRONT_CACHE_CAP", 1)
+        tokens = [
+            _make_token("すみ", "動詞", pos2="一般", lemma="済む", orth_base="すむ"),
+            _make_token("ませ", "助動詞", pos2="*", lemma="ます", orth_base="ます"),
+            _make_token("ん", "助動詞", pos2="*", lemma="ぬ", orth_base="ん"),
+        ]
+        # No KeyError, and the attested すみません window still rejects recovery.
+        assert self._mine(service, tokens, 0) is False
 
 
 class TestExtractLemma:

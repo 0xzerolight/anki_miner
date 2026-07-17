@@ -1227,13 +1227,20 @@ class SubtitleParserService:
         if not windows:
             return False
         uncached = [w for w in windows if w not in self._kana_window_cache]
+        # Snapshot the already-cached verdicts BEFORE the clear-on-cap below can
+        # evict a window this candidate still needs: the shared cache may be wiped
+        # mid-call, so the per-call answer is read from this local dict — never
+        # re-read from the (possibly emptied) cache, which would KeyError on an
+        # evicted pre-cached window. Mirrors _memoized_attest's memoize-then-decide
+        # shape, but keeps a local verdict so eviction can't drop an attested hit.
+        verdicts = {w: self._kana_window_cache[w] for w in windows if w not in uncached}
         if uncached:
             if len(self._kana_window_cache) + len(uncached) > _FRONT_CACHE_CAP:
                 self._kana_window_cache.clear()
             hits = lookup(uncached)
             for w in uncached:
-                self._kana_window_cache[w] = bool(hits.get(w))
-        return any(self._kana_window_cache[w] for w in windows)
+                verdicts[w] = self._kana_window_cache[w] = bool(hits.get(w))
+        return any(verdicts[w] for w in windows)
 
     def _lexicalized_window_surfaces(self, tokens: list, idx: int) -> list[str]:
         """Joined surfaces of every functional-neighbor window strictly containing ``tokens[idx]``.
