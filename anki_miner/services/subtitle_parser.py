@@ -983,20 +983,30 @@ class SubtitleParserService:
         self,
         units: Sequence[ReadingUnit],
         want_line_index: bool,
+        *,
+        subtitle_cleanup: bool = False,
     ) -> tuple[list[TokenizedWord], list[LineLemmas] | None, collections.Counter[str]]:
         """Parse reading-tab text units into mining words, index, and lemma counts.
 
-        The reading pipeline (manga volumes / novels) hands mined text as
-        ``ReadingUnit``s — one paragraph or manga text block each — instead of a
-        subtitle file. Each unit's ``text`` is normalized for tokenization (the
-        same ``normalize_for_tokenization`` + ``standardize_kanji_variants`` the
-        subtitle path applies via ``clean_subtitle_text`` — mokuro OCR emits
-        Kangxi radicals and halfwidth katakana that otherwise mis-tokenize), and
-        that normalized form becomes the card sentence: there is no re-windowing,
-        no markup strip, no regex filter, no pysubs2 and no per-file line cache
-        on this path. ``unit.index`` (document order) doubles as the dummy start
-        AND end time, so ``duration`` is ``0.0`` and every duration-based
-        optional filter is inert by design.
+        The reading pipeline (manga volumes / novels / per-cue subtitles) hands
+        mined text as ``ReadingUnit``s — one paragraph, manga text block, or
+        subtitle cue each — instead of a subtitle file. Each unit's ``text`` is
+        normalized for tokenization (the same ``normalize_for_tokenization`` +
+        ``standardize_kanji_variants`` the subtitle path applies via
+        ``clean_subtitle_text`` — mokuro OCR emits Kangxi radicals and halfwidth
+        katakana that otherwise mis-tokenize), and that normalized form becomes
+        the card sentence. There is no re-windowing, no pysubs2 and no per-file
+        line cache on this path. ``unit.index`` (document order) doubles as the
+        dummy start AND end time, so ``duration`` is ``0.0`` and every
+        duration-based optional filter is inert by design.
+
+        When ``subtitle_cleanup`` is set (the Reading→Subtitles per-cue path),
+        each normalized unit additionally gets the subtitle-only annotation strip
+        + user regex filter the video path applies via ``_clean_line_text``
+        (:423–426), config-gated and order-identical; a cue that collapses to
+        empty is skipped, so a whole-line SFX caption produces no word, no count,
+        and no line-index entry. Manga/OCR and book units leave it ``False`` and
+        are byte-identical to before.
 
         One tokenize pass per unit: ``_build_line_state`` tokenizes once and both
         the returned Counter and the emitted words reuse its ``merged_tokens``.
@@ -1012,6 +1022,10 @@ class SubtitleParserService:
             want_line_index: When True, build the per-unit ``LineLemmas`` index
                 (i+1 filter input) alongside the words; when False the index
                 element of the returned tuple is ``None``.
+            subtitle_cleanup: When True (Reading→Subtitles cue kind), apply the
+                subtitle-only annotation strip + user regex after normalization,
+                mirroring the video path's ``_clean_line_text``; a cue that
+                collapses to empty is dropped. Default ``False`` (manga/book).
 
         Returns:
             ``(words, line_index, counts)``. ``words`` is mined_form-deduped
@@ -1038,8 +1052,21 @@ class SubtitleParserService:
             # stored as the card sentence, so the displayed sentence matches what
             # was mined (as on the subtitle path). Order mirrors clean_subtitle_text
             # (normalize_for_tokenization then standardize_kanji_variants); the
-            # markup strip / regex filter it also runs are subtitle-only.
+            # markup strip / regex filter it also runs are applied just below,
+            # subtitle-cue kind only (subtitle_cleanup).
             text = standardize_kanji_variants(normalize_for_tokenization(unit.text))
+            if subtitle_cleanup:
+                # Reading→Subtitles per-cue kind: the video path's subtitle-only
+                # cleanup (annotation strip + user regex) the loader can't run
+                # (it is config-free). Order mirrors _clean_line_text (:423–426);
+                # a cue that collapses to empty is skipped, so its (empty) text
+                # never reaches _build_line_state and contributes no count or
+                # line-index entry — content-free lines are already skipped below.
+                if self.config.strip_subtitle_annotations:
+                    text = strip_inline_annotations(text)
+                text = self._apply_text_filter(text)
+                if not text:
+                    continue
             # Dummy timing: the index is both start and end (duration 0.0). No
             # re-windowing exists — the normalized unit text is the card sentence.
             line_state = self._build_line_state(text, float(unit.index), float(unit.index))

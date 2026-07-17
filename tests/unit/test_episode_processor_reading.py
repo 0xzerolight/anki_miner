@@ -170,14 +170,18 @@ class _RecordingProgress:
 
 
 def _parse_returning(words, line_index, counts):
-    """A parse_text_units side_effect that records the want_line_index arg."""
+    """A parse_text_units side_effect recording the want_line_index +
+    subtitle_cleanup args."""
     calls: list[bool] = []
+    cleanup_calls: list[bool] = []
 
-    def _parse(units, want_line_index):
+    def _parse(units, want_line_index, *, subtitle_cleanup=False):
         calls.append(want_line_index)
+        cleanup_calls.append(subtitle_cleanup)
         return (list(words), line_index, counts)
 
     _parse.calls = calls  # type: ignore[attr-defined]
+    _parse.cleanup_calls = cleanup_calls  # type: ignore[attr-defined]
     return _parse
 
 
@@ -233,6 +237,23 @@ def test_d4_line_index_fused_for_iplus_one(test_config):
 
     assert parse.calls == [True]  # want_line_index fused True from i+1 alone
     assert result.cards_created > 0
+
+
+@pytest.mark.parametrize("kind,expected", [("subtitle", True), ("manga", False), ("book", False)])
+def test_subtitle_kind_enables_cleanup(test_config, kind, expected):
+    """Only the per-cue subtitle kind passes subtitle_cleanup=True into
+    parse_text_units; manga/OCR and book documents pass False (U7 wiring)."""
+    words = [_word("犬", 0)]
+    counts = collections.Counter({"犬": 1})
+    sp = MagicMock()
+    parse = _parse_returning(words, None, counts)
+    sp.parse_text_units.side_effect = parse
+    proc = _make_processor(test_config, subtitle_parser=sp)
+
+    with patch(_IMG):
+        proc.process_reading(_document([_unit(0)], kind=kind, series="S", episode="E", title="E"))
+
+    assert parse.cleanup_calls == [expected]
 
 
 def test_min_occurrence_filters_singletons(test_config):
@@ -679,7 +700,7 @@ def test_warnings_emitted_before_phase1(test_config):
     order: list[str] = []
     sp = MagicMock()
 
-    def _parse(units, want_line_index):
+    def _parse(units, want_line_index, *, subtitle_cleanup=False):
         order.append("parse")
         return (list(words), None, counts)
 

@@ -7,11 +7,13 @@ skip → ``clean_subtitle_text`` → drop empties) deliberately duplicates
 ``SubtitleParserService.parse_raw_entries``: reusing it would couple this
 config-free loader to a config/MeCab-bound service.
 
-v1 limitations vs the video path: ``config.subtitle_regex_filter`` and
-``subtitle_offset`` do NOT apply here (reading loaders are config-free; an
-offset is meaningless without media). Encoding handling is *broader* — the
-video path is utf-8-only via ``pysubs2.load``, while this loader sniffs
-BOM/utf-8/cp932/euc_jp like the aozora loader.
+Config-free by design: the annotation strip + ``config.subtitle_regex_filter``
+the video path applies are NOT run in this loader — they run downstream in
+``SubtitleParserService.parse_text_units`` (``subtitle_cleanup=True``), the one
+config/MeCab-bound seam. ``subtitle_offset`` never applies here (an offset is
+meaningless without media). Encoding handling is *broader* — the video path is
+utf-8-only via ``pysubs2.load``, while this loader sniffs BOM/utf-8/cp932/euc_jp
+like the aozora loader.
 
 MicroDVD ``.sub`` is unsupported: it is frame-based and pysubs2 raises
 ``UnknownFPSError`` without a media-derived fps.
