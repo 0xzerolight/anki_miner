@@ -142,17 +142,22 @@ class IndexedDictProvider:
             )
             return None
 
-    def lookup_many(self, pairs: list[tuple[str, str | None]]) -> dict[str, str | None]:
+    def lookup_many(self, pairs: list[tuple[str, str | None]], scope_homographs: bool = True) -> dict[str, str | None]:
         """Batch lookup over ``(word, reading | None)`` pairs. Each word's
         contextual reading boosts that word's own ranking (``None`` = wildcard).
         Runs one IN-clause query per dictionary (chunked), then renders each
         word's HTML through the SAME ``_render`` path as :meth:`lookup`, so single
         and batch results are byte-identical. Keyed by word (duplicate words
-        collapse)."""
+        collapse).
+
+        ``scope_homographs`` forwards to :func:`storage.lookup_many`: ``True``
+        (default) applies the render-path Rule A/B homograph scope; ``False`` keeps
+        the unfiltered term-OR-reading semantics for the existence/attestation
+        probes (see ``DefinitionService.has_offline_definitions``)."""
         if self._conn is None:
             return {w: None for w, _ in pairs}
         try:
-            rows_by_word = storage_lookup_many(self._conn, pairs)
+            rows_by_word = storage_lookup_many(self._conn, pairs, scope_homographs=scope_homographs)
         except sqlite3.DatabaseError as e:
             logger.warning(
                 "Dictionary '%s' (%s) raised DatabaseError during lookup_many; treating as all-miss: %s",

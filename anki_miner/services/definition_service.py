@@ -368,7 +368,12 @@ class DefinitionService:
             if callable(batch_fn):
                 try:
                     # Existence probe: no reading boost needed, so wildcard pairs.
-                    hits = batch_fn([(w, None) for w in remaining])
+                    # scope_homographs=False keeps the unfiltered term-OR-reading
+                    # semantics — this is the gate AND the kana-recovery attest path
+                    # (service_factory wires kana_attest_lookup to THIS method), so a
+                    # kana-front word attested only via a kana-term reading row must
+                    # survive; the render-path Rule A/B scope would drop it.
+                    hits = batch_fn([(w, None) for w in remaining], scope_homographs=False)
                 except Exception as e:
                     logger.warning(
                         "Provider '%s' raised during lookup_many; skipping: %s",

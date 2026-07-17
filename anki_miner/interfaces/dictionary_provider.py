@@ -58,13 +58,16 @@ class DictionaryProvider(Protocol):
     # back to per-word ``lookup`` when absent. An implementer's contract:
     #
     #     def lookup_many(
-    #         self, pairs: list[tuple[str, str | None]]
+    #         self, pairs: list[tuple[str, str | None]], scope_homographs: bool = True
     #     ) -> dict[str, str | None]:
     #         """Batch variant of ``lookup``. ``pairs`` is a list of
     #         ``(word, reading | None)`` — the reading is a per-word ranking BOOST
-    #         (None = wildcard, no boost). The result for every word MUST be
-    #         byte-identical to ``lookup(word)`` with that word's boost applied.
-    #         Returns a dict keyed by every requested word; a miss maps to None."""
+    #         (None = wildcard, no boost). With ``scope_homographs=True`` (default)
+    #         the result for every word MUST be byte-identical to ``lookup(word)``
+    #         with that word's boost applied (render-path homograph scoping ON);
+    #         ``False`` keeps the unfiltered term-OR-reading semantics for the
+    #         existence/attestation probes. Returns a dict keyed by every requested
+    #         word; a miss maps to None."""
     #
     # NOTE: ``has_terms`` is a second OPTIONAL method (compound matching). Only
     # offline providers with an exact-headword index implement it; consumers

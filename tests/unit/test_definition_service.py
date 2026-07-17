@@ -314,7 +314,7 @@ def make_batch_provider(name="Batch", available=True, table=None):
     p.is_available.return_value = available
     p.load.return_value = True
     p.lookup.side_effect = lambda w: table.get(w)
-    p.lookup_many.side_effect = lambda pairs: {w: table.get(w) for w, _ in pairs}
+    p.lookup_many.side_effect = lambda pairs, scope_homographs=True: {w: table.get(w) for w, _ in pairs}
     return p
 
 
@@ -463,7 +463,7 @@ def make_batch_offline_provider(name="BatchOff", available=True, table=None):
     p.is_available.return_value = available
     p.load.return_value = True
     p.lookup.side_effect = lambda w: table.get(w)
-    p.lookup_many.side_effect = lambda pairs: {w: table.get(w) for w, _ in pairs}
+    p.lookup_many.side_effect = lambda pairs, scope_homographs=True: {w: table.get(w) for w, _ in pairs}
     return p
 
 
@@ -932,6 +932,45 @@ class TestHasOfflineDefinitions:
         service = DefinitionService(test_config, providers=[p])
 
         assert service.has_offline_definitions([]) == {}
+
+
+class TestHomographScopeGateParity:
+    """U2 gate parity: a kana-front word attested ONLY via a kana-term reading
+    match must survive the existence gate AND the kana-recovery attest path.
+
+    service_factory wires ``kana_attest_lookup = definition_service.has_offline_
+    definitions``, so the two probes are the SAME callable. It must run with
+    ``scope_homographs=False`` — the render-path Rule B would legitimately drop the
+    kana-term row (no kanji), and if the probe scoped too, the word would vanish
+    before curation. Uses a REAL IndexedDictProvider so the scoping runs through
+    storage end-to-end."""
+
+    def _kana_only_dict(self, tmp_path: Path) -> IndexedDictProvider:
+        db = tmp_path / "kana.sqlite"
+        create_index(db)
+        # Yomitan-style kana headword, NO kanji homograph in the index — the only
+        # way しゃべる is findable is the kana-term reading row.
+        bulk_insert(
+            db,
+            [DictRow(term="シャベル", reading="しゃべる", content='<li class="gloss-item">shovel</li>', sequence=1)],
+        )
+        write_meta(db, {"schema_version": str(SCHEMA_VERSION), "source_name": "Kana"})
+        provider = IndexedDictProvider("kana-dict", db, display_name="Kana")
+        provider.load()
+        return provider
+
+    def test_existence_gate_and_attest_path_keep_kana_front(self, test_config, tmp_path: Path):
+        provider = self._kana_only_dict(tmp_path)
+        service = DefinitionService(test_config, providers=[provider])
+        # has_offline_definitions IS the kana-recovery attest callable (unscoped).
+        assert service.has_offline_definitions(["しゃべる"]) == {"しゃべる": True}
+
+    def test_render_path_scopes_the_same_word_away(self, test_config, tmp_path: Path):
+        provider = self._kana_only_dict(tmp_path)
+        service = DefinitionService(test_config, providers=[provider])
+        # The render path is scoped (Rule B, kana query, no kanji term) → dropped.
+        # This is precisely why the gate above must NOT scope.
+        assert service.get_definitions_batch([("しゃべる", None)]) == [None]
 
 
 def make_has_terms_provider(name="HT", table=None, available=True, online=False):
