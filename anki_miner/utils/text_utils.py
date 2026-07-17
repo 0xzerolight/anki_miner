@@ -69,6 +69,148 @@ def clean_subtitle_text(text: str) -> str:
     return text.strip()
 
 
+# Structural subtitle-annotation stripping (Task U1). ``strip_inline_annotations``
+# is the parser choke-point stripper for the largest batch-mining junk class found
+# in the 816-card audit: parenthetical SFX captions, leading speaker tags, and
+# inline furigana tokenized as dialogue. Handles BOTH fullwidth （） and halfwidth
+# () parens; mixed nesting occurs in real data (（水篠(みずしの) 旬(しゅん)）).
+_ANNOTATION_OPEN = "（("
+_ANNOTATION_CLOSE = "）)"
+# One *innermost* balanced paren group (content has no nested parens), either
+# width. Group 1 = fullwidth content, group 2 = halfwidth content.
+_INNERMOST_PAREN_GROUP_RE = re.compile(r"（([^（）()]*)）|\(([^（）()]*)\)")
+# Furigana cap: a kana paren group after a kanji is furigana only when short.
+# A longer kana parenthetical after a kanji word is likely a real aside, so it
+# is left intact (precision over recall).
+_FURIGANA_MAX_KANA = 10
+
+
+def _is_furigana_content(content: str) -> bool:
+    """True iff *content* is a non-blank run of kana + whitespace within the cap.
+
+    Kana = hiragana/katakana plus the kana marks :func:`_is_kana_only` accepts
+    (ー・ and iteration marks); interspersed whitespace is allowed
+    (``みず しの``). Blank or all-whitespace content is not furigana.
+    """
+    if not (0 < len(content) <= _FURIGANA_MAX_KANA) or not content.strip():
+        return False
+    return all(_is_kana_only(ch) or ch.isspace() for ch in content)
+
+
+def _strip_furigana_match(match: re.Match[str]) -> str:
+    """Delete an inline-furigana paren group, keeping its preceding kanji.
+
+    Fires only when the group sits *immediately* after a kanji and its content
+    is short kana-only furigana (瀕死(ひんし) → 瀕死). Every other group is
+    returned verbatim so the pass is a no-op on non-furigana parentheticals.
+    """
+    start = match.start()
+    if start == 0 or not _is_kanji(match.string[start - 1]):
+        return match.group(0)
+    content = match.group(1) if match.group(1) is not None else match.group(2)
+    if not _is_furigana_content(content):
+        return match.group(0)
+    return ""
+
+
+def _match_balanced_group(text: str, start: int) -> int | None:
+    """Index just past the paren group opening at ``text[start]``, or ``None``.
+
+    Depth-counts across both paren widths (so mixed-width nesting like
+    ``（水篠(みずしの)）`` matches), returning the offset one past the close that
+    balances the opener. Returns ``None`` when ``text[start]`` is not an opener
+    or the group is never balanced (malformed input — the caller then leaves the
+    text unchanged, never throwing).
+    """
+    if start >= len(text) or text[start] not in _ANNOTATION_OPEN:
+        return None
+    depth = 0
+    for i in range(start, len(text)):
+        ch = text[i]
+        if ch in _ANNOTATION_OPEN:
+            depth += 1
+        elif ch in _ANNOTATION_CLOSE:
+            depth -= 1
+            if depth == 0:
+                return i + 1
+    return None
+
+
+def _is_whole_line_caption(text: str) -> bool:
+    """True iff *text* is solely balanced paren group(s) + whitespace.
+
+    Whole-line SFX captions (（スマホのバイブ音）, （笑い声） （拍手）) carry no
+    dialogue, so the caller returns an empty line. Any non-space character
+    outside a group — or an unbalanced group — makes this ``False`` so genuine
+    dialogue (and speaker-tag-plus-line cases) survives for pass 3.
+    """
+    i = 0
+    n = len(text)
+    found_group = False
+    while i < n:
+        ch = text[i]
+        if ch.isspace():
+            i += 1
+            continue
+        if ch in _ANNOTATION_OPEN:
+            end = _match_balanced_group(text, i)
+            if end is None:
+                return False
+            found_group = True
+            i = end
+            continue
+        return False
+    return found_group
+
+
+def strip_inline_annotations(text: str) -> str:
+    """Structurally strip subtitle annotations that mine into junk cards.
+
+    Three ordered, config-free passes, each handling both fullwidth （） and
+    halfwidth () parens:
+
+    1. **Inline furigana** — a kanji-run immediately followed by a short
+       (≤10-char) kana-only paren group has that group deleted, keeping the
+       kanji: ``瀕死(ひんし)`` → ``瀕死``; innermost groups resolve first so
+       ``（水篠(みずしの) 旬(しゅん)）`` → ``（水篠 旬）``.
+    2. **Whole-line caption** — if what remains is solely paren group(s) +
+       whitespace, the whole line is an SFX caption and becomes ``""``
+       (``（スマホのバイブ音）`` → ``""``).
+    3. **Leading speaker tag** — any balanced paren group at the line start is
+       peeled (with following whitespace), repeatedly, so
+       ``（旬: 小声で）余計な…`` → ``余計な…``. Deliberately broader than names.
+
+    Mid-line paren groups containing kanji are left untouched (conservative).
+    Balanced-paren matching only: malformed/unbalanced parens leave the text
+    unchanged. Pure function — no I/O, no config; the caller gates it.
+    """
+    # Pass 1: inline furigana. Re-run until stable so adjacent groups whose
+    # kanji-adjacency only appears after an earlier deletion also resolve
+    # (漢(あ)(い) → 漢). Each successful sub strictly shrinks the string, so
+    # this terminates.
+    while True:
+        stripped = _INNERMOST_PAREN_GROUP_RE.sub(_strip_furigana_match, text)
+        if stripped == text:
+            break
+        text = stripped
+
+    # Pass 2: whole-line SFX caption.
+    if _is_whole_line_caption(text):
+        return ""
+
+    # Pass 3: leading speaker/SFX tag(s).
+    while True:
+        lead = len(text) - len(text.lstrip())
+        if lead >= len(text) or text[lead] not in _ANNOTATION_OPEN:
+            break
+        end = _match_balanced_group(text, lead)
+        if end is None:
+            break
+        text = text[end:].lstrip()
+
+    return text
+
+
 def katakana_to_hiragana(text: str) -> str:
     """Convert katakana characters to hiragana.
 

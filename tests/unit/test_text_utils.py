@@ -17,6 +17,7 @@ from anki_miner.utils.text_utils import (
     is_hiragana_only,
     is_katakana_only,
     katakana_to_hiragana,
+    strip_inline_annotations,
     strip_subtitle_markup,
 )
 
@@ -629,3 +630,113 @@ class TestTokenSeparatorSpaceRule:
             _make_mock_token("王国", kana="オウコク"),
         ]
         assert generate_furigana_from_tokens(tokens) == "は 王国[おうこく]"
+
+
+class TestStripInlineAnnotations:
+    """Tests for strip_inline_annotations — the structural subtitle-annotation
+    stripper (SFX captions, speaker tags, inline furigana). Cases use the REAL
+    lines from the 816-card batch-mining audit, both paren widths."""
+
+    # --- Pass 1: inline furigana (kanji-run + kana-only paren group ≤10) ---
+
+    def test_inline_furigana_halfwidth_kept_kanji(self):
+        # 瀕死(ひんし) → 瀕死: the furigana kana ひんし otherwise tokenizes to
+        # the junk verb ひんする (audit).
+        assert strip_inline_annotations("何度も瀕死(ひんし)の重傷を…") == "何度も瀕死の重傷を…"
+
+    def test_inline_furigana_fullwidth(self):
+        assert strip_inline_annotations("何度も瀕死（ひんし）の重傷を…") == "何度も瀕死の重傷を…"
+
+    def test_inline_furigana_moronishi_building(self):
+        # 諸菱(もろびし)建設 → 諸菱建設: kana もろびし tokenizes to junk もろい.
+        assert strip_inline_annotations("諸菱(もろびし)建設") == "諸菱建設"
+
+    def test_inline_furigana_nested_mixed_widths(self):
+        # （水篠(みずしの) 旬(しゅん)）ん…: pass 1 removes the inner halfwidth
+        # furigana groups (→ （水篠 旬）ん…), then pass 3 removes the leading
+        # fullwidth speaker tag → ん…
+        assert strip_inline_annotations("（水篠(みずしの) 旬(しゅん)）ん…") == "ん…"
+
+    def test_inline_furigana_only_after_kanji(self):
+        # A kana paren group NOT preceded by kanji is not furigana; it is
+        # left for pass 2/3 (here it is mid-line, so untouched).
+        assert strip_inline_annotations("これは(ひんし)テスト") == "これは(ひんし)テスト"
+
+    def test_kana_run_over_ten_chars_not_stripped(self):
+        # 11 kana in the group → over the ≤10 furigana cap → left intact.
+        long_kana = "あいうえおかきくけこさ"  # 11 chars
+        assert len(long_kana) == 11
+        text = f"漢字（{long_kana}）"
+        assert strip_inline_annotations(text) == text
+
+    def test_kana_run_exactly_ten_chars_stripped(self):
+        # Boundary: exactly 10 kana after a kanji is still treated as furigana.
+        ten_kana = "あいうえおかきくけこ"  # 10 chars
+        assert len(ten_kana) == 10
+        assert strip_inline_annotations(f"漢字（{ten_kana}）だ") == "漢字だ"
+
+    # --- Pass 2: whole-line caption → empty string ---
+
+    def test_whole_line_sfx_caption_fullwidth(self):
+        assert strip_inline_annotations("（スマホのバイブ音）") == ""
+
+    def test_whole_line_captions_various(self):
+        assert strip_inline_annotations("（笑い声）") == ""
+        assert strip_inline_annotations("（斬撃音）") == ""
+        assert strip_inline_annotations("（サイレン）") == ""
+        assert strip_inline_annotations("（咆哮）") == ""
+
+    def test_whole_line_caption_halfwidth(self):
+        assert strip_inline_annotations("(咆哮)") == ""
+
+    def test_whole_line_multiple_adjacent_groups(self):
+        # Solely paren groups + whitespace → whole-line → empty.
+        assert strip_inline_annotations("（笑い声） （拍手）") == ""
+
+    def test_adjacent_groups_with_trailing_text_not_whole_line(self):
+        # （ブザー） （石田）… has trailing text, so it is NOT whole-line;
+        # the leading speaker/SFX tags are peeled by pass 3 instead.
+        result = strip_inline_annotations("（ブザー） （石田）…")
+        assert "ブザー" not in result
+        assert "石田" not in result
+        assert result == "…"
+
+    # --- Pass 3: leading speaker tag → stripped ---
+
+    def test_leading_speaker_style_tag_fullwidth(self):
+        assert strip_inline_annotations("（旬: 小声で）余計なことはすんなよ") == "余計なことはすんなよ"
+
+    def test_leading_speaker_tag_halfwidth(self):
+        assert strip_inline_annotations("(旬)余計なことはすんなよ") == "余計なことはすんなよ"
+
+    def test_leading_tag_followed_by_whitespace(self):
+        assert strip_inline_annotations("（田中） 勉強する") == "勉強する"
+
+    # --- Conservative negatives ---
+
+    def test_mid_line_kanji_paren_group_untouched(self):
+        # A mid-line paren group containing kanji is left alone (conservative).
+        assert strip_inline_annotations("これは（重要）です") == "これは（重要）です"
+
+    def test_text_after_paren_group_kept_when_not_leading(self):
+        assert strip_inline_annotations("これは（メモ）本文") == "これは（メモ）本文"
+
+    def test_unbalanced_parens_unchanged(self):
+        assert strip_inline_annotations("瀕死(ひんし") == "瀕死(ひんし"
+        assert strip_inline_annotations("(未完了 の文") == "(未完了 の文"
+
+    def test_ascii_parens_in_latin_text_untouched_by_pass1(self):
+        # No kanji before the group and mid-line → pass 1/3 leave it; only a
+        # whole-line group would be emptied by pass 2.
+        assert strip_inline_annotations("hello (world) foo") == "hello (world) foo"
+
+    def test_no_parens_unchanged(self):
+        assert strip_inline_annotations("普通の日本語の文です") == "普通の日本語の文です"
+
+    def test_empty_string(self):
+        assert strip_inline_annotations("") == ""
+
+    def test_never_raises_on_weird_input(self):
+        # Pure function must never throw on malformed/adversarial paren soup.
+        for weird in ("）（", "(((", ")))", "（（あ）", "あ）（い", "()()()"):
+            strip_inline_annotations(weird)
