@@ -1182,6 +1182,14 @@ Total kartu dibuat: %2</translation>
         <translation>Mining kosakata dari novel dan teks lain (EPUB, Aozora, teks biasa).</translation>
     </message>
     <message>
+        <source>Mine pasted text</source>
+        <translation>Mining teks yang ditempel</translation>
+    </message>
+    <message>
+        <source>Paste any Japanese text and mine it straight into Anki cards.</source>
+        <translation>Tempelkan teks bahasa Jepang apa pun dan lakukan mining langsung menjadi kartu Anki.</translation>
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation>Buat subtitel dari audio</translation>
     </message>
@@ -3233,7 +3241,7 @@ Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang untuk menggunakan sumber 
     </message>
     <message>
         <source>Words you added from the Word Curator — ignored on every run, kept across cache rebuilds, exportable for re-import into jiten.moe. Import accepts jpdb, Migaku and AnkiMorphs exports or plain word lists.</source>
-        <translation type="unfinished" />
+        <translation>Kata yang Anda tambahkan dari Kurator Kata — diabaikan di setiap proses mining, tetap tersimpan saat cache dibangun ulang, dan dapat diekspor untuk diimpor kembali ke jiten.moe. Impor menerima ekspor jpdb, Migaku, dan AnkiMorphs atau daftar kata biasa.</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -3245,7 +3253,7 @@ Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang untuk menggunakan sumber 
     </message>
     <message>
         <source>Import…</source>
-        <translation type="unfinished" />
+        <translation>Impor…</translation>
     </message>
     <message>
         <source>Export…</source>
@@ -3265,76 +3273,81 @@ Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang untuk menggunakan sumber 
     </message>
     <message>
         <source>jpdb review export</source>
-        <translation type="unfinished" />
+        <translation>ekspor ulasan jpdb</translation>
     </message>
     <message>
         <source>Migaku word export</source>
-        <translation type="unfinished" />
+        <translation>ekspor kata Migaku</translation>
     </message>
     <message>
         <source>Migaku legacy add-on backup</source>
-        <translation type="unfinished" />
+        <translation>cadangan add-on lawas Migaku</translation>
     </message>
     <message>
         <source>AnkiMorphs known morphs</source>
-        <translation type="unfinished" />
+        <translation>morf yang dikenal AnkiMorphs</translation>
     </message>
     <message>
         <source>Migaku word export (CSV)</source>
-        <translation type="unfinished" />
+        <translation>ekspor kata Migaku (CSV)</translation>
     </message>
     <message>
         <source>plain word list</source>
-        <translation type="unfinished" />
+        <translation>daftar kata biasa</translation>
     </message>
     <message>
         <source>Import Known Words</source>
-        <translation type="unfinished" />
+        <translation>Impor Kata yang Dikenal</translation>
     </message>
     <message>
         <source>Known word lists (*.csv *.txt *.json);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Daftar kata yang dikenal (*.csv *.txt *.json);;Semua Berkas (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — this file has no known/learning status; all %2 entries will be imported.
 
 Add %3 word(s) to your known list?</source>
-        <translation type="unfinished" />
+        <translation>Terdeteksi: %1 — berkas ini tidak memiliki status dikenal/sedang dipelajari; semua %2 entri akan diimpor.
+
+Tambahkan %3 kata ke daftar kata yang dikenal Anda?</translation>
     </message>
     <message>
         <source>Detected: %1 — %2 entries, %3 qualify as known.
 
 Add %3 word(s) to your known list?</source>
-        <translation type="unfinished" />
+        <translation>Terdeteksi: %1 — %2 entri, %3 memenuhi syarat sebagai dikenal.
+
+Tambahkan %3 kata ke daftar kata yang dikenal Anda?</translation>
     </message>
     <message>
         <source>Import Complete</source>
-        <translation type="unfinished" />
+        <translation>Impor Selesai</translation>
     </message>
     <message>
         <source>Added %1 word(s) to your list. %2 were already in it.</source>
-        <translation type="unfinished" />
+        <translation>Menambahkan %1 kata ke daftar Anda. %2 sudah ada di dalamnya.</translation>
     </message>
     <message>
         <source>Detected: %1 — but no entries in this file qualify as known.</source>
-        <translation type="unfinished" />
+        <translation>Terdeteksi: %1 — tetapi tidak ada entri dalam berkas ini yang memenuhi syarat sebagai dikenal.</translation>
     </message>
     <message>
         <source>The file could not be read.</source>
-        <translation type="unfinished" />
+        <translation>Berkas tidak dapat dibaca.</translation>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>Format berkas tidak dikenali. Yang didukung: ekspor ulasan jpdb (JSON), ekspor kata Migaku (JSON/CSV), morf yang dikenal AnkiMorphs (CSV), daftar kata biasa (satu kata per baris).</translation>
     </message>
     <message>
         <source>Import Failed</source>
-        <translation type="unfinished">Impor Gagal</translation>
+        <translation>Impor Gagal</translation>
     </message>
     <message>
         <source>Unexpected error while reading the file:
 %1</source>
-        <translation type="unfinished" />
+        <translation>Terjadi kesalahan tak terduga saat membaca berkas:
+%1</translation>
     </message>
     <message>
         <source>Export Known Words</source>
@@ -3605,6 +3618,10 @@ Lanjutkan?</translation>
     <message>
         <source>Subtitles</source>
         <translation>Subtitel</translation>
+    </message>
+    <message>
+        <source>Text</source>
+        <translation>Teks</translation>
     </message>
     <message>
         <source>Generate</source>
@@ -4393,6 +4410,72 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     <message>
         <source>Complete — %1 cards created</source>
         <translation>Selesai — %1 kartu dibuat</translation>
+    </message>
+</context><context>
+    <name>ReadingTextTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation>Tinjau kata sebelum mining</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation>Tampilkan popup pemilihan kata sebelum membuat kartu.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Progres</translation>
+    </message>
+    <message>
+        <source>Pasted Text</source>
+        <translation>Teks yang Ditempel</translation>
+    </message>
+    <message>
+        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
+        <translation>Tempelkan teks bahasa Jepang dan lakukan mining menjadi kartu Anki — tanpa tangkapan layar atau audio.</translation>
+    </message>
+    <message>
+        <source>Paste text here…</source>
+        <translation>Tempel teks di sini…</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Mining</translation>
+    </message>
+    <message>
+        <source>Mine the pasted text into Anki cards.</source>
+        <translation>Lakukan mining teks yang ditempel menjadi kartu Anki.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Batal</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Batalkan proses mining yang sedang berjalan.</translation>
+    </message>
+    <message>
+        <source>Paste some text first.</source>
+        <translation>Tempel teks terlebih dahulu.</translation>
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation>Memulai…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Mining pasted text…</source>
+        <translation>Melakukan mining teks yang ditempel…</translation>
+    </message>
+    <message>
+        <source>Mined %1 cards.</source>
+        <translation>Berhasil mining %1 kartu.</translation>
+    </message>
+    <message>
+        <source>Failed: %1.</source>
+        <translation>Gagal: %1.</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>

@@ -1182,6 +1182,14 @@ Total cards created: %2</source>
         <translation>小説やその他のテキスト（EPUB、青空文庫、プレーンテキスト）から語彙をマイニングします。</translation>
     </message>
     <message>
+        <source>Mine pasted text</source>
+        <translation>貼り付けたテキストをマイニング</translation>
+    </message>
+    <message>
+        <source>Paste any Japanese text and mine it straight into Anki cards.</source>
+        <translation>任意の日本語テキストを貼り付けて、そのまま Anki カードにマイニングできます。</translation>
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation>音声から字幕を生成</translation>
     </message>
@@ -3233,7 +3241,7 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Words you added from the Word Curator — ignored on every run, kept across cache rebuilds, exportable for re-import into jiten.moe. Import accepts jpdb, Migaku and AnkiMorphs exports or plain word lists.</source>
-        <translation type="unfinished" />
+        <translation>単語キュレーターから追加した単語です。毎回の実行で無視され、キャッシュ再構築後も保持され、jiten.moe への再インポート用にエクスポートできます。インポートは jpdb、Migaku、AnkiMorphs のエクスポートまたはプレーンな単語リストに対応しています。</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -3245,7 +3253,7 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Import…</source>
-        <translation type="unfinished" />
+        <translation>インポート…</translation>
     </message>
     <message>
         <source>Export…</source>
@@ -3265,76 +3273,81 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>jpdb review export</source>
-        <translation type="unfinished" />
+        <translation>jpdb レビューエクスポート</translation>
     </message>
     <message>
         <source>Migaku word export</source>
-        <translation type="unfinished" />
+        <translation>Migaku 単語エクスポート</translation>
     </message>
     <message>
         <source>Migaku legacy add-on backup</source>
-        <translation type="unfinished" />
+        <translation>Migaku 旧アドオンのバックアップ</translation>
     </message>
     <message>
         <source>AnkiMorphs known morphs</source>
-        <translation type="unfinished" />
+        <translation>AnkiMorphs 既知形態素</translation>
     </message>
     <message>
         <source>Migaku word export (CSV)</source>
-        <translation type="unfinished" />
+        <translation>Migaku 単語エクスポート（CSV）</translation>
     </message>
     <message>
         <source>plain word list</source>
-        <translation type="unfinished" />
+        <translation>プレーン単語リスト</translation>
     </message>
     <message>
         <source>Import Known Words</source>
-        <translation type="unfinished" />
+        <translation>既知単語のインポート</translation>
     </message>
     <message>
         <source>Known word lists (*.csv *.txt *.json);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>既知単語リスト (*.csv *.txt *.json);;すべてのファイル (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — this file has no known/learning status; all %2 entries will be imported.
 
 Add %3 word(s) to your known list?</source>
-        <translation type="unfinished" />
+        <translation>検出: %1 — このファイルには既知/学習中のステータスがないため、%2 件のエントリすべてがインポートされます。
+
+%3 語を既知リストに追加しますか？</translation>
     </message>
     <message>
         <source>Detected: %1 — %2 entries, %3 qualify as known.
 
 Add %3 word(s) to your known list?</source>
-        <translation type="unfinished" />
+        <translation>検出: %1 — %2 件のエントリ中、%3 件が既知に該当します。
+
+%3 語を既知リストに追加しますか？</translation>
     </message>
     <message>
         <source>Import Complete</source>
-        <translation type="unfinished" />
+        <translation>インポート完了</translation>
     </message>
     <message>
         <source>Added %1 word(s) to your list. %2 were already in it.</source>
-        <translation type="unfinished" />
+        <translation>%1 語をリストに追加しました。%2 語はすでに登録済みでした。</translation>
     </message>
     <message>
         <source>Detected: %1 — but no entries in this file qualify as known.</source>
-        <translation type="unfinished" />
+        <translation>検出: %1 — ただし、このファイルに既知に該当するエントリはありません。</translation>
     </message>
     <message>
         <source>The file could not be read.</source>
-        <translation type="unfinished" />
+        <translation>ファイルを読み取れませんでした。</translation>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>ファイル形式を認識できませんでした。対応形式: jpdb レビューエクスポート（JSON）、Migaku 単語エクスポート（JSON/CSV）、AnkiMorphs 既知形態素（CSV）、プレーン単語リスト（1 行 1 語）。</translation>
     </message>
     <message>
         <source>Import Failed</source>
-        <translation type="unfinished">インポート失敗</translation>
+        <translation>インポート失敗</translation>
     </message>
     <message>
         <source>Unexpected error while reading the file:
 %1</source>
-        <translation type="unfinished" />
+        <translation>ファイルの読み取り中に予期しないエラーが発生しました:
+%1</translation>
     </message>
     <message>
         <source>Export Known Words</source>
@@ -3605,6 +3618,10 @@ Continue?</source>
     <message>
         <source>Subtitles</source>
         <translation>字幕</translation>
+    </message>
+    <message>
+        <source>Text</source>
+        <translation>テキスト</translation>
     </message>
     <message>
         <source>Generate</source>
@@ -4393,6 +4410,72 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Complete — %1 cards created</source>
         <translation>完了 — %1 枚のカードを作成しました</translation>
+    </message>
+</context><context>
+    <name>ReadingTextTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation>マイニング前に単語を確認</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation>カードを作成する前に単語選択ポップアップを表示します。</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>進捗</translation>
+    </message>
+    <message>
+        <source>Pasted Text</source>
+        <translation>貼り付けテキスト</translation>
+    </message>
+    <message>
+        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
+        <translation>日本語テキストを貼り付けて Anki カードにマイニングします（スクリーンショット・音声なし）。</translation>
+    </message>
+    <message>
+        <source>Paste text here…</source>
+        <translation>ここにテキストを貼り付け…</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>マイニング</translation>
+    </message>
+    <message>
+        <source>Mine the pasted text into Anki cards.</source>
+        <translation>貼り付けたテキストを Anki カードにマイニングします。</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>実行中の処理をキャンセルします。</translation>
+    </message>
+    <message>
+        <source>Paste some text first.</source>
+        <translation>先にテキストを貼り付けてください。</translation>
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation>開始しています…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Mining pasted text…</source>
+        <translation>貼り付けたテキストをマイニング中…</translation>
+    </message>
+    <message>
+        <source>Mined %1 cards.</source>
+        <translation>%1 枚のカードをマイニングしました。</translation>
+    </message>
+    <message>
+        <source>Failed: %1.</source>
+        <translation>失敗: %1。</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>

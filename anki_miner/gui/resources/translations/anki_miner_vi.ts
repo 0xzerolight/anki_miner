@@ -1182,6 +1182,14 @@ Tổng số thẻ đã tạo: %2</translation>
         <translation>Khai thác từ vựng từ tiểu thuyết và văn bản khác (EPUB, Aozora, văn bản thuần túy).</translation>
     </message>
     <message>
+        <source>Mine pasted text</source>
+        <translation>Khai thác văn bản đã dán</translation>
+    </message>
+    <message>
+        <source>Paste any Japanese text and mine it straight into Anki cards.</source>
+        <translation>Dán bất kỳ văn bản tiếng Nhật nào và khai thác trực tiếp thành thẻ Anki.</translation>
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation>Tạo phụ đề từ âm thanh</translation>
     </message>
@@ -3233,7 +3241,7 @@ Không thể hoàn tác. Bạn sẽ cần nhập lại để dùng nguồn này 
     </message>
     <message>
         <source>Words you added from the Word Curator — ignored on every run, kept across cache rebuilds, exportable for re-import into jiten.moe. Import accepts jpdb, Migaku and AnkiMorphs exports or plain word lists.</source>
-        <translation type="unfinished" />
+        <translation>Các từ đã thêm từ Word Curator — bị bỏ qua trong mọi lần chạy, được giữ lại khi xây dựng lại bộ nhớ đệm, có thể xuất để nhập lại vào jiten.moe. Chức năng nhập chấp nhận tệp xuất từ jpdb, Migaku và AnkiMorphs hoặc danh sách từ thuần túy.</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -3245,7 +3253,7 @@ Không thể hoàn tác. Bạn sẽ cần nhập lại để dùng nguồn này 
     </message>
     <message>
         <source>Import…</source>
-        <translation type="unfinished" />
+        <translation>Nhập…</translation>
     </message>
     <message>
         <source>Export…</source>
@@ -3265,76 +3273,81 @@ Không thể hoàn tác. Bạn sẽ cần nhập lại để dùng nguồn này 
     </message>
     <message>
         <source>jpdb review export</source>
-        <translation type="unfinished" />
+        <translation>tệp xuất ôn tập jpdb</translation>
     </message>
     <message>
         <source>Migaku word export</source>
-        <translation type="unfinished" />
+        <translation>tệp xuất từ vựng Migaku</translation>
     </message>
     <message>
         <source>Migaku legacy add-on backup</source>
-        <translation type="unfinished" />
+        <translation>bản sao lưu add-on cũ của Migaku</translation>
     </message>
     <message>
         <source>AnkiMorphs known morphs</source>
-        <translation type="unfinished" />
+        <translation>hình vị đã biết của AnkiMorphs</translation>
     </message>
     <message>
         <source>Migaku word export (CSV)</source>
-        <translation type="unfinished" />
+        <translation>tệp xuất từ vựng Migaku (CSV)</translation>
     </message>
     <message>
         <source>plain word list</source>
-        <translation type="unfinished" />
+        <translation>danh sách từ thuần túy</translation>
     </message>
     <message>
         <source>Import Known Words</source>
-        <translation type="unfinished" />
+        <translation>Nhập từ đã biết</translation>
     </message>
     <message>
         <source>Known word lists (*.csv *.txt *.json);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>Danh sách từ đã biết (*.csv *.txt *.json);;Tất cả tệp (*)</translation>
     </message>
     <message>
         <source>Detected: %1 — this file has no known/learning status; all %2 entries will be imported.
 
 Add %3 word(s) to your known list?</source>
-        <translation type="unfinished" />
+        <translation>Đã phát hiện: %1 — tệp này không có trạng thái đã biết/đang học; toàn bộ %2 mục sẽ được nhập.
+
+Thêm %3 từ vào danh sách từ đã biết?</translation>
     </message>
     <message>
         <source>Detected: %1 — %2 entries, %3 qualify as known.
 
 Add %3 word(s) to your known list?</source>
-        <translation type="unfinished" />
+        <translation>Đã phát hiện: %1 — %2 mục, trong đó %3 đủ điều kiện là đã biết.
+
+Thêm %3 từ vào danh sách từ đã biết?</translation>
     </message>
     <message>
         <source>Import Complete</source>
-        <translation type="unfinished" />
+        <translation>Nhập hoàn tất</translation>
     </message>
     <message>
         <source>Added %1 word(s) to your list. %2 were already in it.</source>
-        <translation type="unfinished" />
+        <translation>Đã thêm %1 từ vào danh sách. %2 từ đã có sẵn trong danh sách.</translation>
     </message>
     <message>
         <source>Detected: %1 — but no entries in this file qualify as known.</source>
-        <translation type="unfinished" />
+        <translation>Đã phát hiện: %1 — nhưng không có mục nào trong tệp này đủ điều kiện là đã biết.</translation>
     </message>
     <message>
         <source>The file could not be read.</source>
-        <translation type="unfinished" />
+        <translation>Không thể đọc tệp.</translation>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), plain word lists (one word per line).</source>
-        <translation type="unfinished" />
+        <translation>Không nhận dạng được định dạng tệp. Hỗ trợ: tệp xuất ôn tập jpdb (JSON), tệp xuất từ vựng Migaku (JSON/CSV), hình vị đã biết của AnkiMorphs (CSV), danh sách từ thuần túy (mỗi dòng một từ).</translation>
     </message>
     <message>
         <source>Import Failed</source>
-        <translation type="unfinished">Nhập thất bại</translation>
+        <translation>Nhập thất bại</translation>
     </message>
     <message>
         <source>Unexpected error while reading the file:
 %1</source>
-        <translation type="unfinished" />
+        <translation>Lỗi không mong muốn khi đọc tệp:
+%1</translation>
     </message>
     <message>
         <source>Export Known Words</source>
@@ -3605,6 +3618,10 @@ Tiếp tục?</translation>
     <message>
         <source>Subtitles</source>
         <translation>Phụ đề</translation>
+    </message>
+    <message>
+        <source>Text</source>
+        <translation>Văn bản</translation>
     </message>
     <message>
         <source>Generate</source>
@@ -4393,6 +4410,72 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     <message>
         <source>Complete — %1 cards created</source>
         <translation>Hoàn tất — đã tạo %1 thẻ</translation>
+    </message>
+</context><context>
+    <name>ReadingTextTab</name>
+    <message>
+        <source>Review words before mining</source>
+        <translation>Xem lại từ trước khi khai thác</translation>
+    </message>
+    <message>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation>Hiển thị cửa sổ chọn từ trước khi tạo thẻ.</translation>
+    </message>
+    <message>
+        <source>Progress</source>
+        <translation>Tiến độ</translation>
+    </message>
+    <message>
+        <source>Pasted Text</source>
+        <translation>Văn bản đã dán</translation>
+    </message>
+    <message>
+        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
+        <translation>Dán văn bản tiếng Nhật và khai thác thành thẻ Anki — không có ảnh chụp màn hình hay âm thanh.</translation>
+    </message>
+    <message>
+        <source>Paste text here…</source>
+        <translation>Dán văn bản vào đây…</translation>
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Khai thác</translation>
+    </message>
+    <message>
+        <source>Mine the pasted text into Anki cards.</source>
+        <translation>Khai thác văn bản đã dán thành thẻ Anki.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Hủy</translation>
+    </message>
+    <message>
+        <source>Cancel the active run.</source>
+        <translation>Hủy lần chạy đang hoạt động.</translation>
+    </message>
+    <message>
+        <source>Paste some text first.</source>
+        <translation>Hãy dán văn bản trước.</translation>
+    </message>
+    <message>
+        <source>Starting…</source>
+        <translation>Đang bắt đầu…</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Mining pasted text…</source>
+        <translation>Đang khai thác văn bản đã dán…</translation>
+    </message>
+    <message>
+        <source>Mined %1 cards.</source>
+        <translation>Đã khai thác %1 thẻ.</translation>
+    </message>
+    <message>
+        <source>Failed: %1.</source>
+        <translation>Thất bại: %1.</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>

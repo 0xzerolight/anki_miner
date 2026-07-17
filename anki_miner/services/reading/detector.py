@@ -92,6 +92,8 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
 
     Imports the per-kind loader lazily inside the branch so importing this
     module stays cheap and a broken/absent loader can't fail unrelated kinds.
+    ``kind="text"`` refs are pathless (built by the Text sub-tab, never by
+    :func:`detect`) and carry their content in ``ref.text``.
     """
     if ref.kind == "mokuro":
         from . import mokuro_source
@@ -109,6 +111,10 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
         from . import subtitle_source
 
         return subtitle_source.load(ref)
+    if ref.kind == "text":
+        from . import text_source
+
+        return text_source.load(ref)
 
     raise SetupError(f"Unknown reading source kind: {ref.kind!r}")
 

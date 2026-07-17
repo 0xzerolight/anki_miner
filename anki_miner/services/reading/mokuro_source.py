@@ -66,6 +66,8 @@ class _ImageRecord:
 
 def load(ref: ReadingSourceRef) -> ReadingDocument:
     """Load one mokuro volume into a ``ReadingDocument``. See module docstring."""
+    # Per-kind ref contract: file-backed kinds always carry a path.
+    assert ref.path is not None
     # Size-capped even though the detector normally gates first: load() trusts
     # a ref, so it must be safe standalone against a hostile multi-GB sidecar.
     data = json.loads(read_text_capped(ref.path, MAX_MOKURO_JSON_BYTES, ".mokuro file"))
