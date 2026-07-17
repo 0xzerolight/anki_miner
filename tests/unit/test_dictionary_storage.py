@@ -1159,3 +1159,215 @@ class TestTermsReadings:
             assert terms_readings(conn, []) == {}
         finally:
             conn.close()
+
+
+# ---------------------------------------------------------------------------
+# U2: render-path homograph scoping (Rule A / Rule B)
+# ---------------------------------------------------------------------------
+
+
+class TestHomographScoping:
+    """Render-path Rule A/B filters strip wrong-homograph reading matches.
+
+    Rule A: a term-exact row exists ⇒ drop rows that surfaced only via the folded
+    reading (レイド keeps its own senses, drops 零度). Rule B: kana-only query with
+    NO term-exact row ⇒ keep only reading matches whose term carries kanji
+    (しゃべる keeps 喋る, drops シャベル). ``lookup`` is always scoped;
+    ``lookup_many`` scopes only when ``scope_homographs=True`` (the default) so the
+    existence/attestation probes can opt out with ``scope_homographs=False``.
+
+    Note: JPDB kana-usage ㋕ markers are a FREQUENCY-side concern (freqs/ chain,
+    IndexedFreqProvider) and are untouched by this dictionary-side scoping.
+    """
+
+    def _seed_raid(self, db_path: Path) -> None:
+        # レイド (raid, 2 senses) shares the folded reading れいど with 零度.
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                DictRow(term="レイド", reading="れいど", content="<div>raid A</div>", sequence=1),
+                DictRow(term="レイド", reading="れいど", content="<div>raid B</div>", sequence=2),
+                DictRow(term="零度", reading="れいど", content="<div>zero degrees</div>", sequence=3),
+            ],
+        )
+
+    def test_rule_a_drops_reading_only_homograph(self, tmp_path: Path):
+        db_path = tmp_path / "raid.sqlite"
+        self._seed_raid(db_path)
+        conn = open_readonly(db_path)
+        try:
+            scoped = lookup(conn, "レイド")
+            assert scoped == [
+                ("<div>raid A</div>", "", 1),
+                ("<div>raid B</div>", "", 2),
+            ]
+            # 零度 (reading-only) is gone from the scoped render path.
+            assert "<div>zero degrees</div>" not in [c for c, _, _ in scoped]
+        finally:
+            conn.close()
+
+    def test_rule_a_unscoped_keeps_all_rows(self, tmp_path: Path):
+        """scope_homographs=False is byte-identical to pre-U2 behavior (all rows,
+        term-match first)."""
+        db_path = tmp_path / "raid.sqlite"
+        self._seed_raid(db_path)
+        conn = open_readonly(db_path)
+        try:
+            unscoped = lookup_many(conn, [("レイド", None)], scope_homographs=False)["レイド"]
+            assert unscoped == [
+                ("<div>raid A</div>", "", 1),
+                ("<div>raid B</div>", "", 2),
+                ("<div>zero degrees</div>", "", 3),
+            ]
+        finally:
+            conn.close()
+
+    def test_rule_b_kana_query_keeps_only_kanji_terms(self, tmp_path: Path):
+        db_path = tmp_path / "shaberu.sqlite"
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                DictRow(term="喋る", reading="しゃべる", content="<div>to chat</div>", sequence=1),
+                DictRow(term="シャベル", reading="しゃべる", content="<div>shovel</div>", sequence=2),
+            ],
+        )
+        conn = open_readonly(db_path)
+        try:
+            # No term=="しゃべる" row; kana query keeps only the kanji-term row.
+            assert lookup(conn, "しゃべる") == [("<div>to chat</div>", "", 1)]
+        finally:
+            conn.close()
+
+    def test_rule_b_kirei_keeps_kanji_term(self, tmp_path: Path):
+        db_path = tmp_path / "kirei.sqlite"
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                DictRow(term="綺麗", reading="きれい", content="<div>pretty</div>", sequence=1),
+                DictRow(term="キレイ", reading="きれい", content="<div>kana pretty</div>", sequence=2),
+            ],
+        )
+        conn = open_readonly(db_path)
+        try:
+            assert lookup(conn, "きれい") == [("<div>pretty</div>", "", 1)]
+        finally:
+            conn.close()
+
+    def test_rule_a_kana_term_row_wins_over_reading_only(self, tmp_path: Path):
+        """Yomitan-style kana headword (term=ケガ) is term-exact, so Rule A keeps it
+        and drops the 怪我 reading-only row — the surviving gloss is the ケガ row's."""
+        db_path = tmp_path / "kega.sqlite"
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                DictRow(term="ケガ", reading="けが", content="<div>injury kana</div>", sequence=1),
+                DictRow(term="怪我", reading="けが", content="<div>injury kanji</div>", sequence=2),
+            ],
+        )
+        conn = open_readonly(db_path)
+        try:
+            scoped = lookup(conn, "ケガ")
+            assert scoped == [("<div>injury kana</div>", "", 1)]
+        finally:
+            conn.close()
+
+    def test_scoped_lookup_matches_lookup_many(self, tmp_path: Path):
+        """lookup↔lookup_many parity holds WITHIN the scoped mode for every
+        homograph shape (Rule A term-exact, Rule A kana-term, Rule B kana query)."""
+        db_path = tmp_path / "parity.sqlite"
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                DictRow(term="レイド", reading="れいど", content="<div>raid A</div>", sequence=1),
+                DictRow(term="レイド", reading="れいど", content="<div>raid B</div>", sequence=2),
+                DictRow(term="零度", reading="れいど", content="<div>zero degrees</div>", sequence=3),
+                DictRow(term="喋る", reading="しゃべる", content="<div>to chat</div>", sequence=4),
+                DictRow(term="シャベル", reading="しゃべる", content="<div>shovel</div>", sequence=5),
+                DictRow(term="ケガ", reading="けが", content="<div>injury kana</div>", sequence=6),
+                DictRow(term="怪我", reading="けが", content="<div>injury kanji</div>", sequence=7),
+            ],
+        )
+        conn = open_readonly(db_path)
+        try:
+            for word in ("レイド", "零度", "しゃべる", "ケガ", "怪我"):
+                assert lookup_many(conn, [(word, None)])[word] == lookup(conn, word), word
+        finally:
+            conn.close()
+
+    def test_boost_orders_survivors_after_scoping(self, tmp_path: Path):
+        """The contextual reading boost still orders the rows that survive Rule A."""
+        db_path = tmp_path / "boost.sqlite"
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                DictRow(term="打つ", reading="うつ", content="<div>hit</div>", sequence=1),
+                DictRow(term="打つ", reading="ぶつ", content="<div>bump</div>", sequence=2),
+            ],
+        )
+        conn = open_readonly(db_path)
+        try:
+            # Both rows are term-exact (kept). Boost うつ leads its reading first.
+            boosted = lookup(conn, "打つ", "うつ")
+            assert boosted == [("<div>hit</div>", "", 1), ("<div>bump</div>", "", 2)]
+            assert lookup_many(conn, [("打つ", "うつ")])["打つ"] == boosted
+            # No boost: sequence order governs (still both survive).
+            assert lookup(conn, "打つ") == [("<div>hit</div>", "", 1), ("<div>bump</div>", "", 2)]
+        finally:
+            conn.close()
+
+    def test_rule_a_keeps_same_content_double_keyed_row(self, tmp_path: Path):
+        """Rule A's content carve-out: a dictionary that double-keys ONE entry
+        under a kanji term (日本語/にほんご) AND the bare kana term (にほんご) keeps
+        BOTH rows on a kana query — the reading-only 日本語 row is the SAME gloss,
+        so it survives to union its tags (OVH-026 dedup-before-cap), unlike a true
+        wrong-homograph (零度) whose distinct gloss is dropped."""
+        db_path = tmp_path / "double.sqlite"
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                DictRow(term="日本語", reading="にほんご", content="<div>Japanese</div>", tags="n lang", sequence=1),
+                DictRow(term="にほんご", reading=None, content="<div>Japanese</div>", tags="common", sequence=2),
+                DictRow(term="二本後", reading="にほんご", content="<div>after two sticks</div>", sequence=3),
+            ],
+        )
+        conn = open_readonly(db_path)
+        try:
+            scoped = lookup(conn, "にほんご")
+            contents = [c for c, _, _ in scoped]
+            # Both same-content copies survive (tags union downstream in _render);
+            # the distinct-gloss homograph 二本後 is dropped as reading-only noise.
+            assert contents.count("<div>Japanese</div>") == 2
+            assert "<div>after two sticks</div>" not in contents
+            # Parity holds for the content carve-out too.
+            assert lookup_many(conn, [("にほんご", None)])["にほんご"] == scoped
+        finally:
+            conn.close()
+
+    def test_rule_b_empties_pure_kana_junk(self, tmp_path: Path):
+        """Rule B may legitimately empty the set for a kana front with no kanji
+        headword (accepted); the UNSCOPED probe path still finds the kana row."""
+        db_path = tmp_path / "junk.sqlite"
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [DictRow(term="シャベル", reading="しゃべる", content="<div>shovel</div>", sequence=1)],
+        )
+        conn = open_readonly(db_path)
+        try:
+            # Scoped render path drops the kana-only match (Rule B, no kanji term).
+            assert lookup(conn, "しゃべる") == []
+            assert lookup_many(conn, [("しゃべる", None)])["しゃべる"] == []
+            # Unscoped (existence/attestation probe) keeps it — the word is still
+            # attested via the kana-term reading row.
+            assert lookup_many(conn, [("しゃべる", None)], scope_homographs=False)["しゃべる"] == [
+                ("<div>shovel</div>", "", 1)
+            ]
+        finally:
+            conn.close()

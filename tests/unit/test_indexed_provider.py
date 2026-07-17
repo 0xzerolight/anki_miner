@@ -356,6 +356,43 @@ class TestIndexedDictProviderLookupMany:
         assert provider.lookup_many([]) == {}
 
 
+class TestIndexedDictProviderHomographScope:
+    """lookup_many forwards ``scope_homographs`` to storage: the default scoped
+    render drops wrong-homograph reading matches; scope_homographs=False keeps the
+    unfiltered probe semantics."""
+
+    def _seed(self, db_path: Path):
+        _seed_db(
+            db_path,
+            [
+                DictRow(term="レイド", reading="れいど", content='<li class="gloss-item">raid</li>', sequence=1),
+                DictRow(term="零度", reading="れいど", content='<li class="gloss-item">zero degrees</li>', sequence=2),
+            ],
+        )
+
+    def test_scoped_render_drops_reading_only_homograph(self, tmp_path: Path):
+        db = tmp_path / "raid.sqlite"
+        self._seed(db)
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+        html = provider.lookup_many([("レイド", None)])["レイド"]
+        assert html is not None
+        assert "raid" in html
+        assert "zero degrees" not in html
+        # Single-word lookup is always scoped and byte-identical.
+        assert provider.lookup("レイド") == html
+
+    def test_unscoped_probe_keeps_reading_only_homograph(self, tmp_path: Path):
+        db = tmp_path / "raid.sqlite"
+        self._seed(db)
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+        html = provider.lookup_many([("レイド", None)], scope_homographs=False)["レイド"]
+        assert html is not None
+        assert "raid" in html
+        assert "zero degrees" in html
+
+
 def test_indexed_provider_is_offline(tmp_path):
     db_path = tmp_path / "dummy.sqlite"
     provider = IndexedDictProvider(dict_id="x", db_path=db_path)
