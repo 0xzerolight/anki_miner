@@ -99,6 +99,30 @@ def test_reading_min_occurrence_load_and_collect_round_trip(qtbot):
     assert result.reading_min_occurrence == 4
 
 
+def test_strip_subtitle_annotations_defaults_on_and_round_trips(qtbot):
+    """The Task U1 checkbox defaults ON (config default True) and its state
+    survives load_from_config → contribute."""
+    from dataclasses import replace
+
+    from anki_miner.config import AnkiMinerConfig
+
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+
+    # Default config → checkbox checked.
+    panel.load_from_config(AnkiMinerConfig())
+    assert panel.strip_subtitle_annotations_checkbox.isChecked() is True
+
+    # Unchecking round-trips through contribute().
+    panel.load_from_config(replace(AnkiMinerConfig(), strip_subtitle_annotations=False))
+    assert panel.strip_subtitle_annotations_checkbox.isChecked() is False
+    assert panel.contribute(AnkiMinerConfig()).strip_subtitle_annotations is False
+
+    # Re-checking round-trips too.
+    panel.set_strip_subtitle_annotations(True)
+    assert panel.contribute(AnkiMinerConfig()).strip_subtitle_annotations is True
+
+
 def test_max_frequency_warning_shown_only_when_cutoff_without_source(qtbot):
     """A Max Frequency Rank cutoff with no enabled frequency source is inert (the
     mining pipeline skips it), so the panel warns in that state and hides the
