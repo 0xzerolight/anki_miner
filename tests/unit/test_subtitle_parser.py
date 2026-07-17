@@ -4281,6 +4281,109 @@ class TestInflectedCompoundHeadwordReading:
         assert "早[ばや]" in word.expression_furigana
 
 
+class TestKindACompoundKanaAttestedLeak:
+    """Kind-A compound whose INFLECTED surface is itself an attested headword
+    (絶え間なく is a JMdict adverb entry; 行き過ぎ a noun) stamps kana_attested on
+    the span, and the pre-U6 ``compound and kana_attested`` expression branch
+    then applied the span's inflected concat kana (たえまなく) to the expression
+    fields even though the mined card front is the deinflected headword
+    (絶え間ない → たえまない). Audit evidence: 絶え間ない/たえまなく,
+    行き過ぎる/いきすぎ, 行ってくる/いってき. The fix gates that branch on
+    ``mined == surface`` so inflected kind-A spans fall through to the
+    headword-attestation elif.
+
+    Fed a pre-built ``CompoundSyntheticToken`` via a mock tagger so the span's
+    kind and kana are pinned exactly; the real attestation pass
+    (``attest_merged_readings``) stamps ``kana_attested`` from the surface-keyed
+    reading_lookup, faithful to the production leak."""
+
+    def _parse(self, tmp_path, token, line, reading_lookup):
+        sub_file = tmp_path / "kindA_leak.srt"
+        sub_file.write_text("stub", encoding="utf-8")
+        mock_line = MagicMock()
+        mock_line.text = line
+        mock_line.start = 1000
+        mock_line.end = 3000
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [token]
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(
+                AnkiMinerConfig(media_temp_folder=tmp_path / "media"),
+                reading_lookup=reading_lookup,
+            )
+            return service.parse_subtitle_file(sub_file)
+
+    def test_inflected_kindA_expression_takes_headword_reading(self, tmp_path):
+        # 絶え間なく (inflected surface, itself an attested adverb headword) →
+        # mined headword 絶え間ない. Expression fields must show the HEADWORD's
+        # reading たえまない, NOT the span's attested inflected kana たえまなく.
+        token = CompoundSyntheticToken(
+            surface="絶え間なく",
+            pos1="形容詞",
+            pos2="一般",
+            lemma="絶え間ない",
+            kana="タエマナク",
+        )
+        lookup = lambda ts: {  # noqa: E731
+            k: v for k, v in {"絶え間なく": ["たえまなく"], "絶え間ない": ["たえまない"]}.items() if k in ts
+        }
+        words = self._parse(tmp_path, token, "絶え間なく続く", lookup)
+        word = next(w for w in words if w.mined_form == "絶え間ない")
+        # The span WAS stamped kana_attested (the leak's precondition).
+        assert getattr(token.feature, "kana_attested", False) is True
+        # Expression fields track the deinflected headword.
+        assert word.expression_reading == "たえまない"
+        assert word.expression_furigana == "絶[た]え 間[ま]ない"
+        # The sentence-level .reading may keep the span's attested inflected kana
+        # (declared residual for sentence ruby only — spec U6).
+        assert word.reading == "たえまなく"
+
+    def test_kindB_kana_attested_byte_identical(self, tmp_path):
+        # Kind-B (surface == headword == mined, tail uninflected): the attested
+        # compound branch still applies the dictionary-corrected kana verbatim.
+        # 折り紙 attests おりがみ (rendaku overrides the オリカミ concat) — pin
+        # the exact post-fix values; the fix must not touch this path.
+        token = CompoundSyntheticToken(
+            surface="折り紙",
+            pos1="名詞",
+            pos2="普通名詞",
+            lemma="折り紙",
+            kana="オリカミ",
+        )
+        lookup = lambda ts: {"折り紙": ["おりがみ"]} if "折り紙" in ts else {}  # noqa: E731
+        words = self._parse(tmp_path, token, "折り紙を折る", lookup)
+        word = next(w for w in words if w.mined_form == "折り紙")
+        assert getattr(token.feature, "kana_attested", False) is True
+        assert word.expression_reading == "おりがみ"
+        assert word.expression_furigana == "折[お]り 紙[がみ]"
+        assert word.reading == "おりがみ"
+
+    def test_uninflected_kindA_attested_stays_on_kana_attested_branch(self, tmp_path):
+        # Edge case (judge-mandated): a kind-A-POS compound appearing UNINFLECTED
+        # (surface == headword == mined 飛び込む) keeps mined == surface, so it
+        # stays on the kana_attested branch; its attested kana IS the headword
+        # reading, so behavior must not change.
+        token = CompoundSyntheticToken(
+            surface="飛び込む",
+            pos1="動詞",
+            pos2="一般",
+            lemma="飛び込む",
+            kana="トビコム",
+        )
+        lookup = lambda ts: {"飛び込む": ["とびこむ"]} if "飛び込む" in ts else {}  # noqa: E731
+        words = self._parse(tmp_path, token, "海に飛び込む", lookup)
+        word = next(w for w in words if w.mined_form == "飛び込む")
+        assert getattr(token.feature, "kana_attested", False) is True
+        assert word.expression_reading == "とびこむ"
+        assert word.expression_furigana == "飛[と]び 込[こ]む"
+        assert word.reading == "とびこむ"
+
+
 class TestParseRelevantConfigFields:
     """Drift tripwire: every name in PARSE_RELEVANT_CONFIG_FIELDS must remain a
     real symbol the parser module references, so the Deck Builder cache-reuse
