@@ -382,6 +382,17 @@ class TestPerItemSignalsReadOnly:
         assert "SetupError: DRM" in tab.log_widget.text_edit.toPlainText()
         tab._presenter.show_processing_result.assert_not_called()
 
+    def test_item_finished_cancel_logs_info_not_success(self, tab):
+        from anki_miner.models import CANCELLED_ERROR
+
+        _mine(tab, [_make_ref("mokuro", "Solo Vol")])
+        result = MagicMock(cards_created=0, errors=[CANCELLED_ERROR])
+        tab._on_item_finished(0, result, None, 1)
+        log = tab.log_widget.text_edit.toPlainText()
+        assert "Cancelled" in log
+        assert "Mined" not in log
+        tab._presenter.show_processing_result.assert_not_called()
+
     def test_item_finished_presenter_error_swallowed(self, tab):
         _mine(tab, [_make_ref()])
         tab._presenter.show_processing_result.side_effect = RuntimeError("presenter blew up")
