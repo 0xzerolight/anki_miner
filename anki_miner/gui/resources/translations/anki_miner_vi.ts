@@ -2812,6 +2812,14 @@ Hành động này không thể hoàn tác. Bạn sẽ cần nhập lại từ z
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
+        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Word Frequency</source>
         <translation>Tần suất từ</translation>
     </message>

@@ -19,6 +19,7 @@ from .text_utils import (
     is_hiragana_only,
     is_katakana_only,
     katakana_to_hiragana,
+    strip_inline_annotations,
     wrap_target_furigana,
     wrap_target_plain,
 )
@@ -40,6 +41,7 @@ __all__ = [
     "katakana_to_hiragana",
     "list_audio_streams",
     "list_subtitle_streams",
+    "strip_inline_annotations",
     "SubtitleStream",
     "wrap_target_furigana",
     "wrap_target_plain",
