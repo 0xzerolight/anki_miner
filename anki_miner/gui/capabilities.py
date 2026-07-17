@@ -41,7 +41,7 @@ SUBTAB_KEYS: dict[str, frozenset[str]] = {
     "settings": SETTINGS_SUBTABS,
     "video": frozenset({"single", "batch", "youtube"}),
     "reading": frozenset({"manga", "novels", "subtitles", "text"}),
-    "subtitles": frozenset({"generate", "retime", "condense"}),
+    "subtitles": frozenset({"generate", "retime", "condense", "backfill"}),
 }
 
 # Display categories (deduped; translated at display time).
@@ -196,6 +196,17 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("subtitles", "condense"),
         keywords=("condense", "condensed audio", "dialogue only", "immersion", "passive listening", "standalone"),
+    ),
+    Capability(
+        id="card-backfill",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Backfill fields on existing cards"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Fill missing pitch, frequency, definition and reading fields on already-mined cards.",
+        ),
+        category=_CAT_SOURCES,
+        target=CapabilityTarget("subtitles", "backfill"),
+        keywords=("backfill", "fill fields", "pitch", "frequency", "existing cards", "bulk update", "old cards"),
     ),
     Capability(
         id="analytics",

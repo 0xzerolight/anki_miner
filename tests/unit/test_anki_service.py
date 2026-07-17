@@ -3756,3 +3756,41 @@ class TestNoteFieldPrimitives:
         # One tiny per-note POST per note in the failed chunk.
         assert pa.call_count == 2
         assert all(call[0][1] == "updateNoteFields" for call in pa.call_args_list)
+
+
+class TestAddTags:
+    """add_tags (AnkiConnect ``addTags``, used by the Card Backfill tool)."""
+
+    def test_add_tags_payload_shape(self, test_config):
+        service = AnkiService(test_config)
+        with patch("anki_miner.services.anki_service.post_action", return_value=None) as pa:
+            service.add_tags([1, 2], "anki-miner::backfill")
+        assert pa.call_count == 1
+        assert pa.call_args[0][1] == "addTags"
+        assert pa.call_args[1]["params"] == {"notes": [1, 2], "tags": "anki-miner::backfill"}
+
+    def test_add_tags_chunks_at_500(self, test_config):
+        service = AnkiService(test_config)
+        ids = list(range(1001))
+        with patch("anki_miner.services.anki_service.post_action", return_value=None) as pa:
+            service.add_tags(ids, "t")
+        assert pa.call_count == 3
+        sizes = [len(call[1]["params"]["notes"]) for call in pa.call_args_list]
+        assert sizes == [500, 500, 1]
+
+    def test_add_tags_empty_short_circuits(self, test_config):
+        service = AnkiService(test_config)
+        with patch("anki_miner.services.anki_service.post_action") as pa:
+            service.add_tags([], "t")
+        pa.assert_not_called()
+
+    def test_add_tags_propagates_connection_error(self, test_config):
+        service = AnkiService(test_config)
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=AnkiConnectionError("down"),
+            ),
+            pytest.raises(AnkiConnectionError),
+        ):
+            service.add_tags([1], "t")

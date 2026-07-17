@@ -24,6 +24,7 @@ from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
@@ -61,9 +62,14 @@ class SubtitlesTab(QWidget):
             self.condense_tab,
             QCoreApplication.translate("MainWindow", "Condense"),
         )
+        self.backfill_tab = CardBackfillTab(config)
+        self._inner_tabs.addTab(
+            self.backfill_tab,
+            QCoreApplication.translate("MainWindow", "Card Backfill"),
+        )
 
         # Stable sub-tab keys for reveal_capability (see capabilities.SUBTAB_KEYS).
-        self._subtab_index = {"generate": 0, "retime": 1, "condense": 2}
+        self._subtab_index = {"generate": 0, "retime": 1, "condense": 2, "backfill": 3}
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -96,6 +102,7 @@ class SubtitlesTab(QWidget):
         self.generate_tab.update_config(config)
         self.retime_tab.update_config(config)
         self.condense_tab.update_config(config)
+        self.backfill_tab.update_config(config)
 
     # ------------------------------------------------------------------
     # Close contract
@@ -106,3 +113,4 @@ class SubtitlesTab(QWidget):
         yield from self.generate_tab.iter_close_workers()
         yield from self.retime_tab.iter_close_workers()
         yield from self.condense_tab.iter_close_workers()
+        yield from self.backfill_tab.iter_close_workers()
