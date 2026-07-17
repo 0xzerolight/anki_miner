@@ -22,7 +22,7 @@ from typing import Iterable
 import anki_miner.services._sqlite_index as _sqlite_index
 from anki_miner.services._sqlite_index import open_readonly as open_readonly
 from anki_miner.services._sqlite_index import read_meta as read_meta
-from anki_miner.utils.text_utils import katakana_to_hiragana
+from anki_miner.utils.text_utils import _is_kana_only, _is_kanji, katakana_to_hiragana
 
 # v4: no table change — bumped to force a one-time reimport that re-runs the
 # fixed Yomitan tag split (multi-word nbsp tag names were shattered on import).
@@ -87,6 +87,12 @@ CREATE TABLE IF NOT EXISTS meta (
 # homograph senses can no longer consume display slots ahead of dedup — the
 # "dedup before cap" invariant (plan item 5.1). The provider caps the *rendered*
 # senses; storage only bounds the pool.
+#
+# The pool cap is applied in PYTHON (``[:_LOOKUP_LIMIT]``) AFTER the render-path
+# homograph scope (Rule A/B, U2) filters rows, in both ``lookup`` and
+# ``lookup_many``. Capping in SQL (``LIMIT``) would truncate before scoping and
+# could hide a survivor ranked past the cap — breaking the lookup↔lookup_many
+# parity property (both fetch the full ordered candidate set, scope, THEN cap).
 _LOOKUP_LIMIT = 20
 
 # Reading-boost ranking. Ported from Yomitan
@@ -107,22 +113,24 @@ _LOOKUP_LIMIT = 20
 # in unspecified query-plan order). This is what the batch ``lookup_many`` path
 # reproduces with its final ``row_id`` sort, so keeping the tiebreak here
 # guarantees ``lookup`` and ``lookup_many`` agree.
+# ``term`` is projected (last column) so the render-path homograph scope (Rule
+# A/B, U2) can classify each row term-exact vs reading-only in Python. No SQL
+# LIMIT: the pool cap moves to Python AFTER scoping (see _LOOKUP_LIMIT note).
 _LOOKUP_SQL = (
-    "SELECT content, tags, sequence FROM entries "
+    "SELECT content, tags, sequence, term FROM entries "
     "WHERE term = ? OR reading = ? "
-    "ORDER BY (term = ?) DESC, (reading = ?) DESC, score DESC, sequence, id "
-    f"LIMIT {_LOOKUP_LIMIT}"
+    "ORDER BY (term = ?) DESC, (reading = ?) DESC, score DESC, sequence, id"
 )
 
 # Same shape as _LOOKUP_SQL but also returns the ``rules`` column and takes no
 # reading boost (fallback candidates carry no contextual reading). The lookup-miss
 # fallback (plan item 5.2) needs each candidate row's rules to run Yomitan's POS
 # check before rendering, so this is the schema-v3 ``rules`` column's first reader.
+# ``term`` trails ``rules`` for the same U2 homograph-scope classification.
 _LOOKUP_RULES_SQL = (
-    "SELECT content, tags, sequence, rules FROM entries "
+    "SELECT content, tags, sequence, rules, term FROM entries "
     "WHERE term = ? OR reading = ? "
-    "ORDER BY (term = ?) DESC, score DESC, sequence, id "
-    f"LIMIT {_LOOKUP_LIMIT}"
+    "ORDER BY (term = ?) DESC, score DESC, sequence, id"
 )
 
 
@@ -167,6 +175,42 @@ def _fold_reading(reading: str | None) -> str | None:
     match (schema v3, plan item 5.1 match-by-kana invariant).
     """
     return katakana_to_hiragana(reading) if reading is not None else None
+
+
+def _homograph_keep_mask(word: str, rows: list[tuple[str, str]]) -> list[bool]:
+    """Render-path homograph scope (U2): a keep-mask aligned to ``rows``.
+
+    ``rows`` are ``(term, content)`` pairs for the rows a lookup fetched for
+    ``word`` (each already matched ``term = word`` OR the folded reading), so a
+    row is *term-exact* iff its term equals ``word`` and *reading-only* otherwise.
+    Two rules drop wrong-homograph reading matches from the RENDERED definition
+    (existence/attestation probes bypass this — see ``lookup_many``'s
+    ``scope_homographs`` flag):
+
+    * **Rule A** — at least one term-exact row exists ⇒ keep the term-exact rows
+      and drop reading-only homographs whose gloss (``content``) is NOT already
+      contributed by a term-exact row (レイド keeps its raid senses and drops 零度
+      "zero degrees"). The content carve-out preserves the dedup-before-cap tag
+      union (OVH-026): a dictionary that double-keys ONE entry under both a kanji
+      term (日本語, reading にほんご) and the bare kana term (にほんご) still unions
+      both rows' tags on a kana query — that reading-only row is the SAME gloss,
+      not a wrong homograph. Monotone-safe: term-exact rows always survive, so a
+      word with one can never be emptied.
+    * **Rule B** — kana-only query with NO term-exact row ⇒ keep only reading
+      matches whose term carries at least one kanji (しゃべる keeps 喋る, drops the
+      kana-term シャベル). May legitimately empty a junk kana front (accepted).
+      Same-script kanji-vs-kanji ordering (汁 vs 知る) is out of scope.
+
+    Any other case (kanji query with no term-exact row — reading matches against a
+    kanji query are impossible) leaves the set intact.
+    """
+    term_exact = [term == word for term, _ in rows]
+    if any(term_exact):
+        exact_contents = {content for (_, content), ex in zip(rows, term_exact, strict=True) if ex}
+        return [ex or content in exact_contents for (_, content), ex in zip(rows, term_exact, strict=True)]
+    if _is_kana_only(word):
+        return [any(_is_kanji(c) for c in term) for term, _ in rows]
+    return [True] * len(rows)
 
 
 def create_index(db_path: Path) -> None:
@@ -313,7 +357,12 @@ def lookup(conn: sqlite3.Connection, word: str, reading: str | None = None) -> l
     folded_word = katakana_to_hiragana(word)
     folded_boost = katakana_to_hiragana(reading) if reading is not None else None
     rows = conn.execute(_LOOKUP_SQL, (word, folded_word, word, folded_boost)).fetchall()
-    return [(row[0], row[1], row[2]) for row in rows]
+    # rows: (content, tags, sequence, term). Scope homographs (Rule A/B) over the
+    # ORDER BY-sorted candidate set, THEN apply the pool cap — matching the
+    # filter-before-cap order ``lookup_many`` uses so both stay row-for-row equal.
+    keep = _homograph_keep_mask(word, [(row[3], row[0]) for row in rows])
+    kept = [row for row, k in zip(rows, keep, strict=True) if k]
+    return [(row[0], row[1], row[2]) for row in kept[:_LOOKUP_LIMIT]]
 
 
 def lookup_with_rules(conn: sqlite3.Connection, word: str) -> list[tuple[str, str, int | None, str]]:
@@ -328,7 +377,11 @@ def lookup_with_rules(conn: sqlite3.Connection, word: str) -> list[tuple[str, st
     """
     folded_word = katakana_to_hiragana(word)
     rows = conn.execute(_LOOKUP_RULES_SQL, (word, folded_word, word)).fetchall()
-    return [(row[0], row[1], row[2], row[3] if row[3] is not None else "") for row in rows]
+    # rows: (content, tags, sequence, rules, term). Render-side, so scope
+    # homographs (Rule A/B) then apply the pool cap, mirroring ``lookup``.
+    keep = _homograph_keep_mask(word, [(row[4], row[0]) for row in rows])
+    kept = [row for row, k in zip(rows, keep, strict=True) if k]
+    return [(row[0], row[1], row[2], row[3] if row[3] is not None else "") for row in kept[:_LOOKUP_LIMIT]]
 
 
 # sqlite's default SQLITE_MAX_VARIABLE_NUMBER is 999. lookup_many binds each
@@ -338,7 +391,7 @@ _BIND_CHUNK = 450
 
 
 def lookup_many(
-    conn: sqlite3.Connection, pairs: list[tuple[str, str | None]]
+    conn: sqlite3.Connection, pairs: list[tuple[str, str | None]], scope_homographs: bool = True
 ) -> dict[str, list[tuple[str, str, int | None]]]:
     """Batch variant of :func:`lookup`.
 
@@ -346,8 +399,16 @@ def lookup_many(
     reading boosts *that word's own bucket* (``None`` = wildcard, no boost).
     Runs ONE query per chunk (``WHERE term IN (...) OR reading IN (...)``)
     instead of one query per word, then reproduces ``_LOOKUP_SQL``'s reading
-    boost, ordering, and ``LIMIT`` in Python so each per-word result is
+    boost, ordering, and pool cap in Python so each per-word result is
     byte-identical, row-for-row, to ``lookup(conn, word, reading)``.
+
+    ``scope_homographs`` (default ``True``) applies the render-path Rule A/B
+    homograph scope (:func:`_homograph_keep_mask`) per word before the sort/cap,
+    matching ``lookup``. Set it ``False`` for the existence/attestation probes
+    (``has_offline_definitions`` and the kana-recovery attest path) that must keep
+    the historical unfiltered term-OR-reading semantics — otherwise a kana-front
+    card attested only via a kana-term reading row would silently vanish. With it
+    ``False`` this function is byte-identical to its pre-U2 behavior.
 
     Returns a dict keyed by every requested word (duplicate words collapse to the
     first reading seen). A word with no matches maps to ``[]``, mirroring
@@ -410,7 +471,11 @@ def lookup_many(
         reading_reverse: dict[str, list[str]] = {}
         for w, wf in zip(chunk, folded_chunk, strict=True):
             reading_reverse.setdefault(wf, []).append(w)
-        buckets: dict[str, list[tuple[int, int, tuple[int, int], tuple[int, int], int, str, str, int | None]]] = {
+        # ``term`` (index 5) is carried on each entry so the U2 homograph scope
+        # can classify term-exact vs reading-only per word before the cap; the
+        # sort key stays the first five fields and the result unpack still takes
+        # the trailing (content, tags, sequence).
+        buckets: dict[str, list[tuple[int, int, tuple[int, int], tuple[int, int], int, str, str, str, int | None]]] = {
             w: [] for w in chunk
         }
         for row_id, term, reading, content, tags, score, sequence in rows:
@@ -431,10 +496,16 @@ def lookup_many(
             for w, term_priority in matched.items():
                 reading_priority = _reading_priority(folded_reading, boost_by_word[w])
                 buckets[w].append(
-                    (term_priority, reading_priority, score_key, seq_key, row_id, content, tags_val, sequence)
+                    (term_priority, reading_priority, score_key, seq_key, row_id, term, content, tags_val, sequence)
                 )
 
         for w, entries in buckets.items():
+            if scope_homographs:
+                # Filter BEFORE sort/cap: order-independent per-row predicate, so
+                # scoping then sorting equals ``lookup``'s scope-the-sorted-set.
+                # e[5]=term, e[6]=content (see the entry tuple above).
+                keep = _homograph_keep_mask(w, [(e[5], e[6]) for e in entries])
+                entries = [e for e, k in zip(entries, keep, strict=True) if k]
             entries.sort(key=lambda e: (e[0], e[1], e[2], e[3], e[4]))
             result[w] = [(content, tags, seq) for *_keys, content, tags, seq in entries[:_LOOKUP_LIMIT]]
 
