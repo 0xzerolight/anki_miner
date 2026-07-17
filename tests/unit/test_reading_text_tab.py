@@ -183,6 +183,27 @@ class TestItemSlots:
         tab._on_item_finished(0, None, "boom", 1)
         assert "boom" in tab.log_widget.text_edit.toPlainText()
 
+    def test_item_finished_cancel_logs_info_not_success(self, tab):
+        # A cancel mid-mine returns error=None with CANCELLED_ERROR in the
+        # result; it must not be logged as a green "Mined 0 cards." success.
+        from anki_miner.models import CANCELLED_ERROR
+
+        _mine(tab)
+        result = MagicMock(cards_created=0, errors=[CANCELLED_ERROR])
+        tab._on_item_finished(0, result, None, 1)
+        log = tab.log_widget.text_edit.toPlainText()
+        assert "Cancelled" in log
+        assert "Mined" not in log
+        tab._presenter.show_processing_result.assert_not_called()
+
+    def test_item_finished_result_carried_failure_logged(self, tab):
+        _mine(tab)
+        result = MagicMock(cards_created=0, errors=["disk full"])
+        tab._on_item_finished(0, result, None, 1)
+        log = tab.log_widget.text_edit.toPlainText()
+        assert "Failed" in log
+        assert "Mined" not in log
+
     def test_item_finished_does_not_write_state(self, tab):
         _mine(tab)
         item = tab._run_items[0]

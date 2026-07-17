@@ -43,6 +43,7 @@ from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
+from anki_miner.models import MiningOutcome, classify_result, result_error_text
 from anki_miner.models.reading import ReadingSourceRef
 from anki_miner.models.reading_queue import ReadingQueueItem
 from anki_miner.utils.i18n import tr_format
@@ -256,7 +257,12 @@ class ReadingTextTab(_ReadingMiningTabBase):
         """
         if self._item_at(idx) is None:
             return
-        if error is None:
+        # A worker exception arrives as a non-None error string; a non-raising
+        # return (success, failure, or a cancel mid-mine) arrives as error=None
+        # with the verdict inside the result. Classify both so a cancelled run
+        # isn't logged as a green "Mined 0 cards." success.
+        outcome = MiningOutcome.FAILED if error is not None else classify_result(result)
+        if outcome is MiningOutcome.SUCCESS:
             cards = int(getattr(result, "cards_created", 0) or 0)
             self._record_item_result(result)
             self.log_widget.append_success(tr_format(self.tr("Mined %1 cards."), cards))
@@ -266,8 +272,11 @@ class ReadingTextTab(_ReadingMiningTabBase):
                 # down the run.
                 with contextlib.suppress(Exception):
                     self._presenter.show_processing_result(result)  # type: ignore[arg-type]
+        elif outcome is MiningOutcome.CANCELLED:
+            self.log_widget.append_info(self.tr("Cancelled."))
         else:
-            self.log_widget.append_error(tr_format(self.tr("Failed: %1."), error))
+            message = str(error) if error is not None else result_error_text(result)
+            self.log_widget.append_error(tr_format(self.tr("Failed: %1."), message))
 
     def _on_queue_finished(self) -> None:
         """Single-item runs are already logged by ``_on_item_finished``."""
