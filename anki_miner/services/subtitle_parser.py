@@ -117,6 +117,21 @@ _KANA_RECOVER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "形状�
 #   should_include and never reach this path.
 _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非自立可能"})
 
+# U4 lexicalized-expression reject. A kana-recovery candidate that IS an attested
+# headword on its own (すむ, しれる) is still junk when it is really a fragment of
+# a longer grammaticalized sequence (すみません, かもしれない). The signal: joining
+# the candidate's surface with the contiguous FUNCTIONAL particles/auxiliaries
+# around it reproduces a form the dictionary attests (as a term OR a reading —
+# かもしれない is attested only as the reading of かも知れない). Restricting the join
+# to 助詞/助動詞 is the false-positive guard: a content neighbor (ものすごい's もの)
+# never joins, so real vocabulary (すごい) abutting a lexicalized homograph is
+# never suppressed.
+_KANA_RECOVER_WINDOW_FUNCTIONAL_POS1: frozenset[str] = frozenset({"助詞", "助動詞"})
+# Max contiguous functional neighbors joined on EACH side of the candidate. Bounds
+# the window enumeration (and the attestation probe) to O(side^2) joins per rare
+# recovery candidate; grammaticalized sequences are short (にとって, かもしれない).
+_KANA_RECOVER_WINDOW_MAX_SIDE: int = 3
+
 
 def _is_katakana_surface_char(ch: str) -> bool:
     """True for any char in the katakana Unicode block U+30A0–U+30FF.
@@ -288,6 +303,12 @@ class SubtitleParserService:
         # once per distinct token instead of once per occurrence (count_lemmas is
         # a hot path: tens of thousands of tokens). Caches misses too.
         self._kana_recover_cache: dict[tuple[str, str], bool] = {}
+        # U4 lexicalized-window attestation memo (see _rejected_by_lexicalized_window).
+        # Keyed on the JOINED WINDOW STRING, never on (surface, pos1): the window
+        # verdict is context-dependent, so the same recovery candidate can be
+        # rejected in one line (すみません) and recovered in another (すみます). Same
+        # clear-on-cap bounding as the caches above.
+        self._kana_window_cache: dict[str, bool] = {}
 
     # ------------------------------------------------------------------
     # Per-parse memoization helpers
@@ -737,7 +758,7 @@ class SubtitleParserService:
         # Spans come from the shared locator — same offset and drop rule as
         # parse_subtitle_file (Issue #20 / T-38, see _iter_token_spans).
         for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-            if not self._mine_token(word_token, text, tok_start, tok_end):
+            if not self._mine_token(word_token, text, tok_start, tok_end, merged_tokens):
                 continue
             lemma_here = self._extract_lemma(word_token)
             line_lemmas.add(lemma_here)
@@ -868,7 +889,7 @@ class SubtitleParserService:
             # Spans come from the shared locator (Issue #20 / T-38 — see
             # _iter_token_spans for the cursor+find and drop-rule rationale).
             for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-                if not self._mine_token(word_token, text, tok_start, tok_end):
+                if not self._mine_token(word_token, text, tok_start, tok_end, merged_tokens):
                     continue
 
                 highlight_end = self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
@@ -1004,7 +1025,7 @@ class SubtitleParserService:
             # nowhere it is not mined, or the preview over-promises (T-38 — see
             # _iter_token_spans for the drop-rule rationale).
             for token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-                if self._mine_token(token, text, tok_start, tok_end):
+                if self._mine_token(token, text, tok_start, tok_end, merged_tokens):
                     counts[self._extract_lemma(token)] += 1
 
             line_words, line_lemmas_entry = self._emit_line_words_and_index(
@@ -1042,7 +1063,7 @@ class SubtitleParserService:
             # drop-rule rationale lives on _iter_token_spans; do not inline a
             # divergent copy here.
             for token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-                if self._mine_token(token, text, tok_start, tok_end):
+                if self._mine_token(token, text, tok_start, tok_end, merged_tokens):
                     counts[self._extract_lemma(token)] += 1
         return counts
 
@@ -1149,22 +1170,118 @@ class SubtitleParserService:
             return True
         return self._recover_kana_content_word(word_token)
 
-    def _mine_token(self, word_token, text: str, tok_start: int, tok_end: int) -> bool:
-        """Span-aware mining acceptance: content-word inclusion minus katakana fragments.
+    def _mine_token(self, word_token, text: str, tok_start: int, tok_end: int, tokens: list) -> bool:
+        """Context-aware mining acceptance: inclusion, minus fragment reject layers.
 
         The SINGLE acceptance seam every token-span call site routes through —
         both mining passes (``parse_subtitle_file`` /
         ``_emit_line_words_and_index``), ``count_lemmas`` and
         ``parse_text_units``' count loop — so a token counted is a token mined and
-        the T-38 count==mine parity can never break. Returns True when
-        ``_should_include_word`` accepts the token AND it is not a katakana
-        run-fragment (see ``_is_katakana_run_fragment``). ``_should_include_word``
-        stays the token-only, span-free gate that unit tests and non-span callers
-        use directly.
+        the T-38 count==mine parity can never break. All four pass ``tokens`` (the
+        full per-line ``merged_tokens`` list) so the recovery path can inspect the
+        candidate's functional neighbors.
+
+        Two disjoint acceptance paths, each with its own reject layer:
+
+        - ``should_include`` accepts (kanji / katakana loanword): apply ONLY the
+          U5 katakana run-fragment guard (``_is_katakana_run_fragment``). The U4
+          window reject never touches a morphology-accepted token.
+        - ``should_include`` rejects → last-chance ``_recover_kana_content_word``
+          (pure-hiragana content word attested as its own front). On a recovery
+          acceptance, apply the U4 lexicalized-window reject
+          (``_rejected_by_lexicalized_window``). Recovery surfaces are pure
+          hiragana, so the katakana guard can never fire on this branch.
+
+        ``_should_include_word`` stays the token-only, span-free gate that unit
+        tests and non-span callers use directly; this method reproduces its
+        ``should_include``-then-recover order so the two never diverge.
         """
-        return self._should_include_word(word_token) and not self._is_katakana_run_fragment(
-            word_token, text, tok_start, tok_end
-        )
+        if self._inclusion_rule.should_include(word_token):
+            return not self._is_katakana_run_fragment(word_token, text, tok_start, tok_end)
+        if not self._recover_kana_content_word(word_token):
+            return False
+        return not self._rejected_by_lexicalized_window(word_token, tokens)
+
+    def _rejected_by_lexicalized_window(self, word_token, tokens: list) -> bool:
+        """Whether a recovered kana fragment sits inside an attested lexicalized expression.
+
+        Runs ONLY on a kana-recovery acceptance (see ``_mine_token``). Locates the
+        candidate in ``tokens`` by identity — it is an element of that list (yielded
+        from ``iter_token_spans`` over it) — then joins its surface with the
+        contiguous functional neighbors (``_lexicalized_window_surfaces``) into every
+        window that strictly contains it. If ANY joined window is attested via the
+        term-OR-reading probe, the recovery is a lexicalized fragment → reject.
+
+        Attestation is memoized on the joined WINDOW STRING (``_kana_window_cache``),
+        never on ``(surface, pos1)``: the verdict is context-dependent. The uncached
+        windows for one candidate are batched into a SINGLE probe call. No probe
+        wired ⇒ unreachable (recovery already returned False) but guarded for safety.
+        """
+        lookup = self._kana_attest_lookup
+        if lookup is None:  # unreachable via _mine_token (recovery gates on the probe)
+            return False
+        idx = next((i for i, tok in enumerate(tokens) if tok is word_token), None)
+        if idx is None:  # defensive: candidate not in the list ⇒ no context to judge
+            return False
+        windows = self._lexicalized_window_surfaces(tokens, idx)
+        if not windows:
+            return False
+        uncached = [w for w in windows if w not in self._kana_window_cache]
+        # Snapshot the already-cached verdicts BEFORE the clear-on-cap below can
+        # evict a window this candidate still needs: the shared cache may be wiped
+        # mid-call, so the per-call answer is read from this local dict — never
+        # re-read from the (possibly emptied) cache, which would KeyError on an
+        # evicted pre-cached window. Mirrors _memoized_attest's memoize-then-decide
+        # shape, but keeps a local verdict so eviction can't drop an attested hit.
+        verdicts = {w: self._kana_window_cache[w] for w in windows if w not in uncached}
+        if uncached:
+            if len(self._kana_window_cache) + len(uncached) > _FRONT_CACHE_CAP:
+                self._kana_window_cache.clear()
+            hits = lookup(uncached)
+            for w in uncached:
+                verdicts[w] = self._kana_window_cache[w] = bool(hits.get(w))
+        return any(verdicts[w] for w in windows)
+
+    def _lexicalized_window_surfaces(self, tokens: list, idx: int) -> list[str]:
+        """Joined surfaces of every functional-neighbor window strictly containing ``tokens[idx]``.
+
+        Walks up to ``_KANA_RECOVER_WINDOW_MAX_SIDE`` contiguous FUNCTIONAL neighbors
+        (``pos1 ∈ _KANA_RECOVER_WINDOW_FUNCTIONAL_POS1``) on each side, stopping at
+        the first non-functional token or the line edge, then enumerates every
+        contiguous ``[left, right]`` span with ``left ≤ idx ≤ right`` and
+        ``(left, right) != (idx, idx)`` — i.e. windows that keep the candidate but
+        add at least one neighbor. Returns the joined token surfaces, order-preserving
+        de-duplicated. Empty when the candidate has no functional neighbor (ものすごい:
+        the content-noun もの is not functional, so no window forms and すごい survives).
+        """
+        left = idx
+        while (
+            left - 1 >= 0
+            and idx - (left - 1) <= _KANA_RECOVER_WINDOW_MAX_SIDE
+            and self._is_functional_token(tokens[left - 1])
+        ):
+            left -= 1
+        right = idx
+        last = len(tokens) - 1
+        while (
+            right + 1 <= last
+            and (right + 1) - idx <= _KANA_RECOVER_WINDOW_MAX_SIDE
+            and self._is_functional_token(tokens[right + 1])
+        ):
+            right += 1
+        windows: list[str] = []
+        for start in range(left, idx + 1):
+            for end in range(idx, right + 1):
+                if start == idx and end == idx:
+                    continue
+                windows.append("".join(tokens[i].surface for i in range(start, end + 1)))
+        return list(dict.fromkeys(windows))
+
+    @staticmethod
+    def _is_functional_token(token) -> bool:
+        """True when ``token`` is a functional particle/auxiliary (pos1 ∈ 助詞/助動詞)."""
+        pos1 = getattr(getattr(token, "feature", None), "pos1", None)
+        return pos1 in _KANA_RECOVER_WINDOW_FUNCTIONAL_POS1
 
     def _is_katakana_run_fragment(self, word_token, text: str, tok_start: int, tok_end: int) -> bool:
         """Whether an accepted all-katakana token is a fragment of a longer katakana run.
