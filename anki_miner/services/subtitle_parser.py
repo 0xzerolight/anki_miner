@@ -118,14 +118,35 @@ _KANA_RECOVER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "形状�
 _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非自立可能"})
 
 
-def _is_katakana_char(ch: str) -> bool:
+def _is_katakana_surface_char(ch: str) -> bool:
     """True for any char in the katakana Unicode block U+30A0–U+30FF.
 
-    The block already contains the prolonged-sound mark ー (U+30FC), small tsu
-    ッ (U+30C3) and middle dot ・ (U+30FB), so a char in this range both belongs
-    to a katakana surface AND continues a katakana run for the fragment guard.
+    Whether a char can belong to a katakana *surface* — used by
+    ``_is_all_katakana``. The block spans the phonetic kana plus the
+    prolonged-sound mark ー (U+30FC) and small tsu ッ (U+30C3), but also the
+    non-phonetic separators ゠ (U+30A0) and ・ (U+30FB). Belonging to a surface
+    is a broader test than *continuing a run* (``_continues_katakana_run``),
+    which excludes those two separators.
     """
     return "゠" <= ch <= "ヿ"
+
+
+# Non-phonetic katakana-block chars that are author-inserted SEPARATORS, not
+# unmerged-run glue: ・ (U+30FB middle dot) and ゠ (U+30A0 double hyphen). A run
+# broken by one of these (アイス・ベア, メリット・デメリット) is two intended words,
+# not a tokenizer-fragmented compound — so they must not extend a run for the
+# fragment guard even though they sit inside the katakana surface block.
+_KATAKANA_RUN_SEPARATORS: frozenset[str] = frozenset({"・", "゠"})
+
+
+def _continues_katakana_run(ch: str) -> bool:
+    """True when ``ch`` extends a katakana run for the fragment-guard adjacency test.
+
+    A katakana-block char (``_is_katakana_surface_char``) EXCEPT the author-inserted
+    separators ・/゠ (``_KATAKANA_RUN_SEPARATORS``): those mark a deliberate word
+    boundary, so a token abutting one is NOT a fragment of a longer run.
+    """
+    return _is_katakana_surface_char(ch) and ch not in _KATAKANA_RUN_SEPARATORS
 
 
 def _is_all_katakana(surface: str) -> bool:
@@ -134,10 +155,12 @@ def _is_all_katakana(surface: str) -> bool:
     Mirrors the katakana-loanword branch of ``TokenInclusionRule.should_include``
     (all-katakana ⇒ no kanji): the fragment guard only ever reasons about tokens
     that branch already accepted, and deliberately ignores mixed loanword verbs
-    (サボる, ヤバい) whose hiragana okurigana makes them not all-katakana.
+    (サボる, ヤバい) whose hiragana okurigana makes them not all-katakana. Uses the
+    broad surface-char test (``_is_katakana_surface_char``), NOT the run-continuation
+    test — a ・/゠ inside a surface still counts toward all-katakana.
     """
-    non_ws = [c for c in surface if c.strip()]
-    return bool(non_ws) and all(_is_katakana_char(c) for c in non_ws)
+    non_ws = [c for c in surface if not c.isspace()]
+    return bool(non_ws) and all(_is_katakana_surface_char(c) for c in non_ws)
 
 
 class SubtitleParserService:
@@ -1168,13 +1191,14 @@ class SubtitleParserService:
         (アンデッド|ゾンビ — the synthetic survives, the residual ゾンビ is dropped).
 
         Rejects when the surface is all-katakana AND the raw-text char immediately
-        adjacent on either side continues the katakana run (adjacent char in the
-        katakana block U+30A0–U+30FF, which covers ー and ッ). Whitespace / any
-        non-katakana between katakana does NOT continue a run (アイ ウォン stays two
-        tokens; スマホ|と|バッグ keeps バッグ). Deliberate precision-over-recall
-        (plan-decided): an attested word abutting unmerged katakana (アイス|ベア) is
-        rejected, and legit adjacent loanword bigrams whose full run is no headword
-        lose both halves — no independent-attestation carve-out.
+        adjacent on either side CONTINUES the katakana run (``_continues_katakana_run``:
+        a katakana-block char covering ー/ッ, but NOT the author-inserted separators
+        ・/゠). Whitespace, ・, ゠ or any non-katakana between katakana does NOT
+        continue a run — アイ ウォン stays two tokens, アイス・ベア keeps both halves,
+        スマホ|と|バッグ keeps バッグ. Deliberate precision-over-recall (plan-decided):
+        an attested word abutting an unbroken katakana run (アイス|ベア) is rejected,
+        and legit adjacent loanword bigrams whose full run is no headword lose both
+        halves — no independent-attestation carve-out.
         """
         if self._compound_matcher is None:
             return False
@@ -1185,7 +1209,7 @@ class SubtitleParserService:
             return False
         left = text[tok_start - 1] if tok_start > 0 else ""
         right = text[tok_end] if tok_end < len(text) else ""
-        return (bool(left) and _is_katakana_char(left)) or (bool(right) and _is_katakana_char(right))
+        return _continues_katakana_run(left) or _continues_katakana_run(right)
 
     def _recover_kana_content_word(self, word_token) -> bool:
         """Whether an otherwise-rejected pure-hiragana content word is recoverable.

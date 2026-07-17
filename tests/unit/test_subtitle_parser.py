@@ -4999,7 +4999,36 @@ class TestKatakanaFragmentGuard:
         words = self._mine(tmp_path, test_config, "スマホケースとバッグ", tokens, set())
         assert [w.surface for w in words] == ["バッグ"]
 
-    # --- 8. A line with no katakana runs is byte-identical with/without a dict. ---
+    # --- 8. Author-inserted ・ separator: NOT a run — both halves survive. ---
+
+    def test_nakaguro_separated_pair_both_kept(self, tmp_path, test_config):
+        # アイス・ベア: the middle dot ・ (U+30FB) is an author-inserted SEPARATOR,
+        # not an unmerged run. Both アイス and ベア are attested katakana headwords
+        # and MUST survive (アイス・ベア / メリット・デメリット / オン・オフ class).
+        # The ・ token itself is 補助記号 → dropped by should_include.
+        tokens = [
+            _make_token("アイス", "名詞", "普通名詞", lemma="アイス", kana="アイス"),
+            _make_token("・", "補助記号", "*", lemma="・", kana="・"),
+            _make_token("ベア", "名詞", "普通名詞", lemma="ベア", kana="ベア"),
+        ]
+        words = self._mine(tmp_path, test_config, "アイス・ベア", tokens, {"アイス", "ベア"})
+        assert [w.surface for w in words] == ["アイス", "ベア"]
+
+    # --- 9. Literal whitespace separator: NOT a run — both halves survive. ---
+
+    def test_whitespace_separated_pair_both_kept(self, tmp_path, test_config):
+        # アイ ウォン: a literal space between two katakana tokens does NOT continue
+        # a run (space-separated transliteration is out of scope). Both survive —
+        # pins the exact constraint the brief named (existing dense test used a
+        # hiragana particle と, not a space).
+        tokens = [
+            _make_token("アイ", "名詞", "普通名詞", lemma="アイ", kana="アイ"),
+            _make_token("ウォン", "名詞", "普通名詞", lemma="ウォン", kana="ウォン"),
+        ]
+        words = self._mine(tmp_path, test_config, "アイ ウォン", tokens, {"アイ", "ウォン"})
+        assert [w.surface for w in words] == ["アイ", "ウォン"]
+
+    # --- 10. A line with no katakana runs is byte-identical with/without a dict. ---
 
     def test_no_katakana_line_byte_parity(self, tmp_path, test_config):
         def tokens():
