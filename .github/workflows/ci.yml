@@ -44,10 +44,6 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          # Golden-exporter tests clone this checkout and exercise the pinned
-          # Android engine revision, so its commit must exist locally.
-          fetch-depth: 0
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -56,7 +52,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libegl1 libpulse0 libxkbcommon0
       - run: pip install -e ".[dev]"
-      - run: pytest -m "not youtube and not e2e and not asr"
+      # `golden` = the Android-port engine parity contract; it's a separate
+      # project's concern and its byte-exact leg only reproduces under the frozen
+      # runtime, so it runs in android-engine-goldens.yml, not here. Excluding it
+      # is also why this checkout no longer needs fetch-depth: 0.
+      - run: pytest -m "not youtube and not e2e and not asr and not golden"
         env:
           QT_QPA_PLATFORM: offscreen
 
