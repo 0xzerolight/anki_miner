@@ -51,9 +51,11 @@ def is_junk_path(name: str) -> bool:
     """True when any path component is OS/archive listing junk.
 
     Accepts a bare name or a ``/``- (or ``\\``-) separated path; matches junk
-    in nested components too, e.g. ``foo/__MACOSX/bar.jpg``.
+    in nested components too, e.g. ``foo/__MACOSX/bar.jpg``. Also drops macOS
+    AppleDouble sidecars (``._Book.epub``), which mirror every file on a
+    non-HFS volume and would otherwise spawn a failing per-book queue item.
     """
-    return any(part in JUNK_NAMES for part in name.replace("\\", "/").split("/") if part)
+    return any(part in JUNK_NAMES or part.startswith("._") for part in name.replace("\\", "/").split("/") if part)
 
 
 # --- decoding (shared by the aozora and subtitle loaders) ------------------

@@ -140,6 +140,7 @@ _EXPECTED_CATEGORIES = {
     "nominal-suffix",
     "long-compound",
     "aux-context",
+    "aux-keijoushi",
     "colloquial",
     "counter",
     "linebreak-split",
@@ -148,7 +149,7 @@ _EXPECTED_CATEGORIES = {
 
 def test_load_corpus_parses_every_fixture() -> None:
     records = load_corpus(DEFAULT_CORPUS_DIR)
-    # 13 fixture files, 50 curated records at authoring time; never fewer.
+    # 14 fixture files, 54 curated records at authoring time; never fewer.
     assert len(records) >= 50
     categories = set()
     ids = set()

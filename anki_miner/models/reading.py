@@ -78,6 +78,14 @@ class ReadingSourceRef:
     volume: str | None = None
     text: str | None = None
 
+    def __post_init__(self) -> None:
+        # Every field defaults so kind="text" can be built positionally, but the
+        # file-backed kinds must carry a path — their loaders assert it, and that
+        # assert is stripped under `python -O`. Enforce the invariant at
+        # construction so a malformed ref fails loudly at its source instead.
+        if self.kind != "text" and self.path is None:
+            raise ValueError(f"ReadingSourceRef(kind={self.kind!r}) requires a path")
+
 
 @dataclass
 class ReadingDocument:

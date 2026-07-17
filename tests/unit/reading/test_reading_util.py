@@ -33,6 +33,8 @@ def test_is_junk_path_positive():
     assert is_junk_path("foo/__MACOSX/bar.jpg")  # nested component
     assert is_junk_path("pages/.DS_Store")
     assert is_junk_path("$RECYCLE.BIN/x")
+    assert is_junk_path("._Book.epub")  # macOS AppleDouble sidecar
+    assert is_junk_path("folder/._Vol1.epub")
 
 
 def test_is_junk_path_negative():

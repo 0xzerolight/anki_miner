@@ -48,7 +48,6 @@ class TestJpdb:
         assert result.format_key == "jpdb"
         assert result.words == frozenset({"一", "二", "三", "四", "五"})
         assert result.total_entries == 5
-        assert result.is_generic is False
 
     def test_negative_last_grades_excluded(self, tmp_path):
         cards = [
@@ -126,7 +125,6 @@ class TestMigakuCsv:
         assert result.format_key == "migaku_csv"
         assert result.words == frozenset({"食べる"})
         assert result.total_entries == 2
-        assert result.is_generic is False
 
     def test_header_match_is_case_insensitive(self, tmp_path):
         text = "word,reading,language,status\n食べる,たべる,ja,known\n"
@@ -162,7 +160,6 @@ class TestGenericFallback:
         text = "食べる\n\n# comment line\n犬\n"
         result = parse_known_words_file(_write(tmp_path, "words.txt", text))
         assert result.format_key == "generic"
-        assert result.is_generic is True
         assert result.words == frozenset({"食べる", "犬"})
         assert result.total_entries == 2
 
@@ -214,6 +211,29 @@ class TestErrors:
             parse_known_words_file(_write(tmp_path, "words.csv", text))
         assert exc.value.reason == "no_known_words"
         assert exc.value.format_key == "migaku_csv"
+
+
+class TestEncodingAndSize:
+    def test_shift_jis_generic_list_decodes(self, tmp_path):
+        # Japanese Notepad/Excel default; utf-8 fails, cp932 fallback recovers it.
+        path = tmp_path / "sjis.txt"
+        path.write_bytes("食べる\n犬\n".encode("cp932"))
+        result = parse_known_words_file(path)
+        assert result.words == frozenset({"食べる", "犬"})
+
+    def test_oversized_file_is_unreadable(self, tmp_path, monkeypatch):
+        import anki_miner.services.known_words_import as kwi
+
+        monkeypatch.setattr(kwi, "_MAX_IMPORT_BYTES", 8)
+        with pytest.raises(KnownWordsImportError) as exc:
+            parse_known_words_file(_write(tmp_path, "big.txt", "食べる\n犬\n猫\n"))
+        assert exc.value.reason == "unreadable"
+
+    def test_json_word_is_stripped(self, tmp_path):
+        # A padded JSON word must be stored stripped so it can match a card front.
+        data = {"words": [{"word": "  食べる  ", "status": "KNOWN"}]}
+        result = parse_known_words_file(_write(tmp_path, "migaku.json", json.dumps(data)))
+        assert result.words == frozenset({"食べる"})
 
 
 class TestContract:
