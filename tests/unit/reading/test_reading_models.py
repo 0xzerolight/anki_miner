@@ -125,6 +125,14 @@ def test_reading_source_ref_text_defaults_none_for_file_kinds():
     assert ref.text is None
 
 
+def test_reading_source_ref_file_kind_requires_path():
+    # The loader assert is stripped under `python -O`; the invariant is enforced
+    # at construction instead.
+    for kind in ("mokuro", "epub", "txt", "subtitle"):
+        with pytest.raises(ValueError, match="requires a path"):
+            ReadingSourceRef(kind=kind)  # type: ignore[arg-type]
+
+
 def test_reading_document_is_mutable():
     doc = ReadingDocument(title="T", kind="book", series="Books", episode="T")
     assert doc.units == []
