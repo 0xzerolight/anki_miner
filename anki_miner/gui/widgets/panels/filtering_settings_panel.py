@@ -218,6 +218,21 @@ class FilteringSettingsPanel(FormPanel):
         # Subtitle Text Filtering section (Issue #8)
         self.add_section(self.tr("Subtitle Text Filtering"))
 
+        # Structural annotation strip (Task U1, default ON). Runs before the
+        # user regex below; kills SFX captions, speaker tags and inline furigana.
+        self.strip_subtitle_annotations_checkbox = QCheckBox(
+            self.tr("Strip subtitle annotations (SFX captions, speaker tags, inline furigana)")
+        )
+        self.add_field(
+            "",
+            self.strip_subtitle_annotations_checkbox,
+            helper=self.tr(
+                "Remove non-dialogue subtitle annotations before mining: full-line sound "
+                "effects like (電話), leading speaker tags like (Tanaka), and inline furigana "
+                "like 瀕死(ひんし). On by default; the regex filter below still composes on top."
+            ),
+        )
+
         self.subtitle_regex_edit = QLineEdit()
         self.subtitle_regex_edit.setPlaceholderText(r"e.g. \([^)]*\)|\[[^\]]*\]")
         self.add_field(
@@ -545,6 +560,14 @@ class FilteringSettingsPanel(FormPanel):
         """Set the subtitle regex filter checkbox."""
         self.use_subtitle_regex_checkbox.setChecked(value)
 
+    def get_strip_subtitle_annotations(self) -> bool:
+        """Return whether structural annotation stripping is enabled."""
+        return self.strip_subtitle_annotations_checkbox.isChecked()
+
+    def set_strip_subtitle_annotations(self, value: bool) -> None:
+        """Set the strip-subtitle-annotations checkbox."""
+        self.strip_subtitle_annotations_checkbox.setChecked(value)
+
     # --- Deduplication ---
 
     def get_deduplicate_sentences(self) -> bool:
@@ -664,6 +687,7 @@ class FilteringSettingsPanel(FormPanel):
         self.set_subtitle_regex_filter(config.subtitle_regex_filter)
         self.set_subtitle_regex_replacement(config.subtitle_regex_replacement)
         self.set_use_subtitle_regex_filter(config.use_subtitle_regex_filter)
+        self.set_strip_subtitle_annotations(config.strip_subtitle_annotations)
         self.set_deduplicate_sentences(config.deduplicate_sentences)
         self.set_exclude_hiragana_only_words(config.exclude_hiragana_only_words)
         self.set_exclude_katakana_only_words(config.exclude_katakana_only_words)
@@ -698,6 +722,7 @@ class FilteringSettingsPanel(FormPanel):
             subtitle_regex_filter=self.get_subtitle_regex_filter(),
             subtitle_regex_replacement=self.get_subtitle_regex_replacement(),
             use_subtitle_regex_filter=self.get_use_subtitle_regex_filter(),
+            strip_subtitle_annotations=self.get_strip_subtitle_annotations(),
             deduplicate_sentences=self.get_deduplicate_sentences(),
             exclude_hiragana_only_words=self.get_exclude_hiragana_only_words(),
             exclude_katakana_only_words=self.get_exclude_katakana_only_words(),
