@@ -343,6 +343,22 @@ class AnkiService:
                 logger.warning("Failed to update note %s individually: %s", nid, e)
         return updated
 
+    def add_tags(self, note_ids: list[int], tags: str) -> None:
+        """Add ``tags`` to notes (AnkiConnect ``addTags``); no-op for empty input.
+
+        Used by the Card Backfill tool to mark touched notes so users can find
+        (and revert) them in Anki's browser. ``addTags`` returns null, so there
+        is nothing to parse; chunked to keep request bodies small.
+        """
+        for start in range(0, len(note_ids), 500):
+            chunk = note_ids[start : start + 500]
+            post_action(
+                self.config.ankiconnect_url,
+                "addTags",
+                params={"notes": chunk, "tags": tags},
+                timeout=60,
+            )
+
     def get_existing_vocabulary(self) -> set[str]:
         """Get all Japanese vocabulary words already in Anki.
 

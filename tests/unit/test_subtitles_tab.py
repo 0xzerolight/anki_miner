@@ -1,7 +1,7 @@
 """Tests for SubtitlesTab container.
 
 Covers:
-- Inner QTabWidget has exactly three tabs: "Generate" (0), "Retime" (1), "Condense" (2).
+- Inner QTabWidget has exactly four tabs: "Generate" (0), "Retime" (1), "Condense" (2), "Card Backfill" (3).
 - update_config fans out to all child tabs.
 - iter_close_workers yields workers from all children.
 - SubtitlesTab has no worker_thread attribute (or it is None-safe via getattr).
@@ -53,9 +53,9 @@ def _make_tab(config: AnkiMinerConfig, qtbot) -> SubtitlesTab:
 
 
 def test_inner_tab_count(qtbot, tmp_path):
-    """Inner QTabWidget must have exactly three tabs."""
+    """Inner QTabWidget must have exactly four tabs."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab._inner_tabs.count() == 3
+    assert tab._inner_tabs.count() == 4
 
 
 def test_inner_tab_labels(qtbot, tmp_path):
@@ -64,6 +64,7 @@ def test_inner_tab_labels(qtbot, tmp_path):
     assert tab._inner_tabs.tabText(0) == "Generate"
     assert tab._inner_tabs.tabText(1) == "Retime"
     assert tab._inner_tabs.tabText(2) == "Condense"
+    assert tab._inner_tabs.tabText(3) == "Card Backfill"
 
 
 def test_generate_tab_is_first(qtbot, tmp_path):
@@ -84,12 +85,18 @@ def test_condense_tab_is_third(qtbot, tmp_path):
     assert tab._inner_tabs.widget(2) is tab.condense_tab
 
 
+def test_backfill_tab_is_fourth(qtbot, tmp_path):
+    """backfill_tab is the widget at index 3."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    assert tab._inner_tabs.widget(3) is tab.backfill_tab
+
+
 # ---------------------------------------------------------------------------
 # open_subtab
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize(("key", "expected_index"), [("generate", 0), ("retime", 1)])
+@pytest.mark.parametrize(("key", "expected_index"), [("generate", 0), ("retime", 1), ("backfill", 3)])
 def test_open_subtab_switches_inner_tab(qtbot, tmp_path, key, expected_index):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     tab._inner_tabs.setCurrentIndex(1 if expected_index == 0 else 0)
@@ -124,6 +131,7 @@ def test_update_config_propagates_to_generate_tab(qtbot, tmp_path):
     tab.generate_tab.update_config = MagicMock()
     tab.retime_tab.update_config = MagicMock()
     tab.condense_tab.update_config = MagicMock()
+    tab.backfill_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -141,6 +149,7 @@ def test_update_config_propagates_to_retime_tab(qtbot, tmp_path):
     tab.generate_tab.update_config = MagicMock()
     tab.retime_tab.update_config = MagicMock()
     tab.condense_tab.update_config = MagicMock()
+    tab.backfill_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -158,10 +167,29 @@ def test_update_config_propagates_to_condense_tab(qtbot, tmp_path):
     tab.generate_tab.update_config = MagicMock()
     tab.retime_tab.update_config = MagicMock()
     tab.condense_tab.update_config = MagicMock()
+    tab.backfill_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
     tab.condense_tab.update_config.assert_called_once_with(new_config)
+
+
+def test_update_config_propagates_to_backfill_tab(qtbot, tmp_path):
+    """update_config must call backfill_tab.update_config with the new config."""
+    import dataclasses
+
+    config = _make_config(tmp_path)
+    tab = _make_tab(config, qtbot)
+
+    new_config = dataclasses.replace(config, asr_model="small")
+    tab.generate_tab.update_config = MagicMock()
+    tab.retime_tab.update_config = MagicMock()
+    tab.condense_tab.update_config = MagicMock()
+    tab.backfill_tab.update_config = MagicMock()
+
+    tab.update_config(new_config)
+
+    tab.backfill_tab.update_config.assert_called_once_with(new_config)
 
 
 def test_update_config_stores_config(qtbot, tmp_path):
@@ -197,6 +225,7 @@ def test_iter_close_workers_yields_generate_worker(qtbot, tmp_path):
     tab.generate_tab.iter_close_workers = MagicMock(return_value=iter([fake_gen_worker]))
     tab.retime_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.condense_tab.iter_close_workers = MagicMock(return_value=iter([]))
+    tab.backfill_tab.iter_close_workers = MagicMock(return_value=iter([]))
 
     workers = list(tab.iter_close_workers())
     assert fake_gen_worker in workers
@@ -210,6 +239,7 @@ def test_iter_close_workers_yields_retime_worker(qtbot, tmp_path):
     tab.generate_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.retime_tab.iter_close_workers = MagicMock(return_value=iter([fake_retime_worker]))
     tab.condense_tab.iter_close_workers = MagicMock(return_value=iter([]))
+    tab.backfill_tab.iter_close_workers = MagicMock(return_value=iter([]))
 
     workers = list(tab.iter_close_workers())
     assert fake_retime_worker in workers
@@ -223,6 +253,7 @@ def test_iter_close_workers_yields_condense_worker(qtbot, tmp_path):
     tab.generate_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.retime_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.condense_tab.iter_close_workers = MagicMock(return_value=iter([fake_condense_worker]))
+    tab.backfill_tab.iter_close_workers = MagicMock(return_value=iter([]))
 
     workers = list(tab.iter_close_workers())
     assert fake_condense_worker in workers
@@ -235,15 +266,18 @@ def test_iter_close_workers_yields_all_when_all_active(qtbot, tmp_path):
     fake_gen_worker = MagicMock(name="gen_worker")
     fake_retime_worker = MagicMock(name="retime_worker")
     fake_condense_worker = MagicMock(name="condense_worker")
+    fake_backfill_worker = MagicMock(name="backfill_worker")
     tab.generate_tab.iter_close_workers = MagicMock(return_value=iter([fake_gen_worker]))
     tab.retime_tab.iter_close_workers = MagicMock(return_value=iter([fake_retime_worker]))
     tab.condense_tab.iter_close_workers = MagicMock(return_value=iter([fake_condense_worker]))
+    tab.backfill_tab.iter_close_workers = MagicMock(return_value=iter([fake_backfill_worker]))
 
     workers = list(tab.iter_close_workers())
     assert fake_gen_worker in workers
     assert fake_retime_worker in workers
     assert fake_condense_worker in workers
-    assert len(workers) == 3
+    assert fake_backfill_worker in workers
+    assert len(workers) == 4
 
 
 # ---------------------------------------------------------------------------
