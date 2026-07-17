@@ -199,7 +199,7 @@ class KnownWordsManagerDialog(QDialog):
             return
         if not isinstance(outcome, KnownWordsImportResult):  # pragma: no cover - defensive
             return
-        if outcome.is_generic:
+        if outcome.format_key == "generic":
             prompt = tr_format(
                 self.tr(
                     "Detected: %1 — this file has no known/learning status; "
