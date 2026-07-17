@@ -311,6 +311,13 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "くれる",
     "おく",
     "しまう",
+    # 形状詞/助動詞語幹 stems (ようだ/みたいな/そうな), DELIBERATELY attested for the
+    # same reason as the 非自立可能 verbs above: pos1=形状詞 passes the recovery
+    # POS gate and the kana is JMdict-attested, so ONLY the 助動詞語幹 pos2-reject
+    # keeps them unmined — the aux-keijoushi floor stays green iff that reject holds.
+    "よう",
+    "みたい",
+    "そう",
     # attested collocation for the long-compound swallow-by-design fixture
     "気がする",
     # long-compound (Task 6): the 2-token attested compounds the matcher must
