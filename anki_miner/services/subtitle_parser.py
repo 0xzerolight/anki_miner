@@ -118,6 +118,28 @@ _KANA_RECOVER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "形状�
 _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非自立可能"})
 
 
+def _is_katakana_char(ch: str) -> bool:
+    """True for any char in the katakana Unicode block U+30A0–U+30FF.
+
+    The block already contains the prolonged-sound mark ー (U+30FC), small tsu
+    ッ (U+30C3) and middle dot ・ (U+30FB), so a char in this range both belongs
+    to a katakana surface AND continues a katakana run for the fragment guard.
+    """
+    return "゠" <= ch <= "ヿ"
+
+
+def _is_all_katakana(surface: str) -> bool:
+    """True when every non-whitespace char of ``surface`` is katakana (>=1 char).
+
+    Mirrors the katakana-loanword branch of ``TokenInclusionRule.should_include``
+    (all-katakana ⇒ no kanji): the fragment guard only ever reasons about tokens
+    that branch already accepted, and deliberately ignores mixed loanword verbs
+    (サボる, ヤバい) whose hiragana okurigana makes them not all-katakana.
+    """
+    non_ws = [c for c in surface if c.strip()]
+    return bool(non_ws) and all(_is_katakana_char(c) for c in non_ws)
+
+
 class SubtitleParserService:
     """Parse subtitles and extract Japanese vocabulary words (stateless service)."""
 
@@ -692,7 +714,7 @@ class SubtitleParserService:
         # Spans come from the shared locator — same offset and drop rule as
         # parse_subtitle_file (Issue #20 / T-38, see _iter_token_spans).
         for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-            if not self._should_include_word(word_token):
+            if not self._mine_token(word_token, text, tok_start, tok_end):
                 continue
             lemma_here = self._extract_lemma(word_token)
             line_lemmas.add(lemma_here)
@@ -823,7 +845,7 @@ class SubtitleParserService:
             # Spans come from the shared locator (Issue #20 / T-38 — see
             # _iter_token_spans for the cursor+find and drop-rule rationale).
             for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-                if not self._should_include_word(word_token):
+                if not self._mine_token(word_token, text, tok_start, tok_end):
                     continue
 
                 highlight_end = self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
@@ -958,8 +980,8 @@ class SubtitleParserService:
             # count_lemmas): a token mining drops (find == -1) is counted
             # nowhere it is not mined, or the preview over-promises (T-38 — see
             # _iter_token_spans for the drop-rule rationale).
-            for token, _tok_start, _tok_end in self._iter_token_spans(text, merged_tokens):
-                if self._should_include_word(token):
+            for token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
+                if self._mine_token(token, text, tok_start, tok_end):
                     counts[self._extract_lemma(token)] += 1
 
             line_words, line_lemmas_entry = self._emit_line_words_and_index(
@@ -996,8 +1018,8 @@ class SubtitleParserService:
             # Deck Builder preview over-promises (T-38). The cursor+find and
             # drop-rule rationale lives on _iter_token_spans; do not inline a
             # divergent copy here.
-            for token, _tok_start, _tok_end in self._iter_token_spans(text, merged_tokens):
-                if self._should_include_word(token):
+            for token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
+                if self._mine_token(token, text, tok_start, tok_end):
                     counts[self._extract_lemma(token)] += 1
         return counts
 
@@ -1103,6 +1125,67 @@ class SubtitleParserService:
         if self._inclusion_rule.should_include(word_token):
             return True
         return self._recover_kana_content_word(word_token)
+
+    def _mine_token(self, word_token, text: str, tok_start: int, tok_end: int) -> bool:
+        """Span-aware mining acceptance: content-word inclusion minus katakana fragments.
+
+        The SINGLE acceptance seam every token-span call site routes through —
+        both mining passes (``parse_subtitle_file`` /
+        ``_emit_line_words_and_index``), ``count_lemmas`` and
+        ``parse_text_units``' count loop — so a token counted is a token mined and
+        the T-38 count==mine parity can never break. Returns True when
+        ``_should_include_word`` accepts the token AND it is not a katakana
+        run-fragment (see ``_is_katakana_run_fragment``). ``_should_include_word``
+        stays the token-only, span-free gate that unit tests and non-span callers
+        use directly.
+        """
+        return self._should_include_word(word_token) and not self._is_katakana_run_fragment(
+            word_token, text, tok_start, tok_end
+        )
+
+    def _is_katakana_run_fragment(self, word_token, text: str, tok_start: int, tok_end: int) -> bool:
+        """Whether an accepted all-katakana token is a fragment of a longer katakana run.
+
+        Post-acceptance REJECT layer (runs AFTER ``_should_include_word`` accepts)
+        closing the katakana tokenizer-fragment junk class (デット←アンデット,
+        ベア←アイスベア glossed "increase in basic salary", live-audit 2026-07):
+        when an unknown katakana name/compound is short-unit segmented, its
+        dictionary-matching pieces (ベア, レッド, ヒヒ are real JMdict headwords)
+        clear ``should_include``'s >=2-char katakana floor. Attestation cannot
+        catch them — the only signal is positional: the token sits INSIDE a longer
+        unmerged katakana run in the raw line.
+
+        Active ONLY with an offline dictionary wired, gated on the compound matcher
+        (the seam that is ``None`` without a dict). Rationale: without a dict the
+        matcher (see ``compound_matcher.merge_line``) can never merge a legit full
+        run (スマホケース-class) into one synthetic upstream, so this positional
+        rule would then reject BOTH halves of every real unspaced compound. No
+        dict ⇒ returns ``False`` ⇒ mining is byte-identical to pre-guard behavior.
+
+        A ``CompoundSyntheticToken`` is never a fragment: its span IS the merged
+        full run (the matcher ran in ``_build_line_state`` before this guard), so
+        it is exempt even when an unmerged katakana neighbor abuts it
+        (アンデッド|ゾンビ — the synthetic survives, the residual ゾンビ is dropped).
+
+        Rejects when the surface is all-katakana AND the raw-text char immediately
+        adjacent on either side continues the katakana run (adjacent char in the
+        katakana block U+30A0–U+30FF, which covers ー and ッ). Whitespace / any
+        non-katakana between katakana does NOT continue a run (アイ ウォン stays two
+        tokens; スマホ|と|バッグ keeps バッグ). Deliberate precision-over-recall
+        (plan-decided): an attested word abutting unmerged katakana (アイス|ベア) is
+        rejected, and legit adjacent loanword bigrams whose full run is no headword
+        lose both halves — no independent-attestation carve-out.
+        """
+        if self._compound_matcher is None:
+            return False
+        if getattr(word_token, "compound", False) is True:
+            return False
+        surface = getattr(word_token, "surface", None)
+        if not isinstance(surface, str) or not _is_all_katakana(surface):
+            return False
+        left = text[tok_start - 1] if tok_start > 0 else ""
+        right = text[tok_end] if tok_end < len(text) else ""
+        return (bool(left) and _is_katakana_char(left)) or (bool(right) and _is_katakana_char(right))
 
     def _recover_kana_content_word(self, word_token) -> bool:
         """Whether an otherwise-rejected pure-hiragana content word is recoverable.
