@@ -578,12 +578,19 @@ class SubtitleParserService:
             # the headword-regenerated reading.
             expression_reading = katakana_to_hiragana(reading)
             expression_furigana = generate_furigana_from_tokens([word_token])
-        elif getattr(word_token, "compound", False) is True and kana_attested:
-            # Attested compound (mined == lemma == the attested headword for
-            # kind-B spans): the dictionary-corrected kana IS the expression
-            # reading — re-tokenizing ``mined`` would re-concatenate per-token
-            # kana and resurrect the rendaku bug (audit F2). ``reading`` was
-            # folded to hiragana in the compound branch above.
+        elif getattr(word_token, "compound", False) is True and kana_attested and mined == surface:
+            # Attested compound whose card front IS the span surface (kind-B, or
+            # a kind-A span appearing UNINFLECTED): the dictionary-corrected kana
+            # IS the expression reading — re-tokenizing ``mined`` would
+            # re-concatenate per-token kana and resurrect the rendaku bug (audit
+            # F2). ``reading`` was folded to hiragana in the compound branch
+            # above. The ``mined == surface`` guard (U6) is load-bearing: an
+            # INFLECTED kind-A span (surface 絶え間なく, mined headword 絶え間ない)
+            # can itself be an attested headword (絶え間なく is a JMdict adverb),
+            # stamping kana_attested on the span — but its attested kana is the
+            # INFLECTED reading (たえまなく), not the headword reading the card
+            # front shows. Such spans (mined != surface) fall through to the
+            # headword-attestation elif below, which yields たえまない.
             expression_reading = reading
             expression_furigana = _format_furigana(mined, expression_reading)
         elif (
