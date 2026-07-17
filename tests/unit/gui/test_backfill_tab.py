@@ -168,6 +168,13 @@ class TestPreviewTable:
         assert "2" in tab.summary_label.text()  # note count
         assert tab.apply_button.isEnabled()
 
+    def test_text_free_markup_shows_placeholder(self, tab):
+        # A pitch-accent SVG strips to empty text; the New cell must not be blank.
+        svg = "<svg viewBox='0 0 1 1'><path d='M0 0'/></svg>"
+        plan = _plan([NotePlan(1, "w", (FieldChange("pitch_graph", "Pitch", "", svg),))])
+        tab._on_scan_finished(plan)
+        assert tab.preview_table.item(0, 3).text() == "(formatted content)"
+
     def test_row_cap(self, tab):
         plan = _plan([_note_plan(i) for i in range(1, _PREVIEW_ROW_CAP + 50)])
         tab._on_scan_finished(plan)
@@ -252,6 +259,15 @@ class TestConfigAndLifecycle:
         running.isRunning.return_value = True
         tab.worker_thread = running
         assert list(tab.iter_close_workers()) == [running]
+
+    def test_iter_close_workers_yields_running_deck_worker(self, tab):
+        # A deck fetch in flight at close must be joined, not abandoned to Qt.
+        deck_worker = MagicMock()
+        deck_worker.isRunning.return_value = True
+        tab._deck_worker = deck_worker
+        assert list(tab.iter_close_workers()) == [deck_worker]
+        deck_worker.isRunning.return_value = False
+        assert list(tab.iter_close_workers()) == []
 
     def test_error_sets_status(self, tab):
         tab._set_running(True)
