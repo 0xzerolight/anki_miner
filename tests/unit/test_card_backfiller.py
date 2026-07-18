@@ -30,6 +30,12 @@ from anki_miner.services.morphology import SyntheticToken
 # emptiness would misread it as empty (the judge-panel round-1 catch).
 _SVG_GRAPH = '<svg viewBox="0 0 100 40"><circle cx="5" cy="5" r="4"/><path d="M0 0"/></svg>'
 
+# Realistic miner-markup proposal for the style-attach tests: the attach guard
+# requires the yomitan-glossary + data-count fingerprint, and the per-field
+# dict-CSS filter keys on the data-dictionary envelope title ("D" matches the
+# stubbed collect_dictionary_css_entries below).
+_GLOSS_HTML = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="D">gloss</li></ol></div>'
+
 
 class FakeAnkiService:
     """Records find_notes queries; serves canned notesInfo dicts."""
@@ -144,12 +150,8 @@ def _stub_tagger_and_style(monkeypatch):
         lambda: fake_tagger,
     )
     monkeypatch.setattr(
-        "anki_miner.services.card_backfiller.collect_dictionary_css",
-        lambda config: "DICTCSS",
-    )
-    monkeypatch.setattr(
-        "anki_miner.services.card_backfiller.build_card_style_block",
-        lambda *, dict_css, card_html: "<style>ol[data-count]{}</style>",
+        "anki_miner.services.card_backfiller.collect_dictionary_css_entries",
+        lambda config: [("D", "DICTCSS")],
     )
 
 
@@ -370,15 +372,22 @@ class TestScanDefinitionGlossary:
         plan = scan_backfill(anki, backfill_config, _services(defs=defs), _options({"definition"}))
         assert "<p>cat</p>" in _changes_by_key(plan, 1)["definition"]
 
-    def test_glossary_carrier_gets_style_block(self, backfill_config):
+    def test_glossary_proposal_gets_trailing_style_block(self, backfill_config):
         anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", Glossary="", definition="")})
-        defs = FakeDefinitionService(glossaries={"猫": "<div>gloss</div>"})
+        defs = FakeDefinitionService(glossaries={"猫": _GLOSS_HTML})
         plan = scan_backfill(anki, backfill_config, _services(defs=defs), _options({"glossary"}))
         value = _changes_by_key(plan, 1)["glossary"]
-        assert value.startswith("<style>ol[data-count]{}</style>")
-        assert value.endswith("<div>gloss</div>")
+        # Trailing, never leading (leading is head-hoisted by DOMParser on JS
+        # note types); dict CSS filtered to the dict present in the field.
+        assert value.startswith(_GLOSS_HTML)
+        assert value.endswith("</style>")
+        assert value.count("<style>") == 1
+        assert "DICTCSS" in value
 
-    def test_no_style_block_when_other_field_already_styled(self, backfill_config):
+    def test_block_attached_even_when_other_field_already_styled(self, backfill_config):
+        # Per-field self-containment: the OLD cross-field gate ("other field
+        # already holds the base sheet") is gone — a styled definition field
+        # never styles the glossary field on field-isolating note types.
         anki = FakeAnkiService(
             {
                 1: _note(
@@ -386,12 +395,14 @@ class TestScanDefinitionGlossary:
                 )
             }
         )
-        defs = FakeDefinitionService(glossaries={"猫": "<div>gloss</div>"})
+        defs = FakeDefinitionService(glossaries={"猫": _GLOSS_HTML})
         plan = scan_backfill(anki, backfill_config, _services(defs=defs), _options({"glossary"}))
-        assert _changes_by_key(plan, 1)["glossary"] == "<div>gloss</div>"
+        value = _changes_by_key(plan, 1)["glossary"]
+        assert value.startswith(_GLOSS_HTML)
+        assert value.endswith("</style>")
 
     def test_overwrite_of_styled_carrier_reattaches_single_fresh_block(self, backfill_config):
-        """Overwrite replaces a styled carrier: fresh block re-attached, no double sheet."""
+        """Overwrite replaces a styled field: one fresh trailing block, no double sheet."""
         anki = FakeAnkiService(
             {
                 1: _note(
@@ -403,18 +414,43 @@ class TestScanDefinitionGlossary:
                 )
             }
         )
-        defs = FakeDefinitionService(glossaries={"猫": "<div>new</div>"})
+        defs = FakeDefinitionService(glossaries={"猫": _GLOSS_HTML})
         plan = scan_backfill(anki, backfill_config, _services(defs=defs), _options({"glossary"}, overwrite=True))
         value = _changes_by_key(plan, 1)["glossary"]
-        assert value == "<style>ol[data-count]{}</style><div>new</div>"
+        assert value.startswith(_GLOSS_HTML)
+        assert value.count("<style>") == 1
+        assert value.endswith("</style>")
 
-    def test_definition_is_carrier_when_glossary_unmapped(self, backfill_config):
+    def test_definition_proposal_styled_when_glossary_unmapped(self, backfill_config):
+        config = replace(backfill_config, anki_fields={**backfill_config.anki_fields, "glossary": ""})
+        anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", definition="")})
+        defs = FakeDefinitionService(defs={"猫": _GLOSS_HTML})
+        plan = scan_backfill(anki, config, _services(defs=defs), _options({"definition"}))
+        value = _changes_by_key(plan, 1)["definition"]
+        assert value.startswith(_GLOSS_HTML)
+        assert value.endswith("</style>")
+
+    def test_both_proposed_fields_each_get_their_own_block(self, backfill_config):
+        # Backfill bytes must equal fresh-mine bytes: with both miner fields
+        # proposed, EACH carries its own trailing block.
+        anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", Glossary="", definition="")})
+        defs = FakeDefinitionService(defs={"猫": _GLOSS_HTML}, glossaries={"猫": _GLOSS_HTML})
+        plan = scan_backfill(anki, backfill_config, _services(defs=defs), _options({"definition", "glossary"}))
+        changes = _changes_by_key(plan, 1)
+        for key in ("definition", "glossary"):
+            assert changes[key].startswith(_GLOSS_HTML)
+            assert changes[key].endswith("</style>")
+            assert changes[key].count("<style>") == 1
+
+    def test_markupless_definition_gets_no_block(self, backfill_config):
+        # A plain-text proposal (no miner markup) is written verbatim — a block
+        # on it would be field-LEADING after an empty body, and there is nothing
+        # for the CSS to style anyway.
         config = replace(backfill_config, anki_fields={**backfill_config.anki_fields, "glossary": ""})
         anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", definition="")})
         defs = FakeDefinitionService(defs={"猫": "<p>cat</p>"})
         plan = scan_backfill(anki, config, _services(defs=defs), _options({"definition"}))
-        value = _changes_by_key(plan, 1)["definition"]
-        assert value.startswith("<style>ol[data-count]{}</style>")
+        assert _changes_by_key(plan, 1)["definition"] == "<p>cat</p>"
 
     def test_glossary_lemma_retry_on_miss(self, backfill_config):
         anki = FakeAnkiService({1: _note(1, word="食べた", ExpressionReading="たべた", Glossary="", definition="x")})
