@@ -492,6 +492,102 @@ class DefinitionService:
 
         return found
 
+    def _available_offline_providers(self) -> list[DictionaryProvider]:
+        """Available, offline providers in chain order (commonness/quality probes)."""
+        return [p for p in self._providers if not p.is_online and p.is_available()]
+
+    @staticmethod
+    def _provider_commonness_aware(provider: DictionaryProvider) -> bool:
+        """Whether ``provider`` exposes a truthy ``commonness_aware`` property.
+
+        Optional surface (like ``lookup_many`` / ``has_terms``): a provider
+        lacking it — online Jisho, legacy dicts — is not aware. Never raises: a
+        property that throws degrades to False."""
+        try:
+            return bool(getattr(provider, "commonness_aware", False))
+        except Exception as e:  # pragma: no cover - defensive
+            logger.warning("Provider '%s' raised reading commonness_aware; treating as unaware: %s", provider.name, e)
+            return False
+
+    @staticmethod
+    def _provider_attest_quality(
+        provider: DictionaryProvider, words: list[str], include_readings: bool
+    ) -> dict[str, dict[str, frozenset[str]]]:
+        """Call ``provider.attest_quality`` under the never-raises boundary.
+
+        Providers without the optional method (or that raise) contribute nothing
+        (empty map), so a single buggy provider can never abort the probe."""
+        fn = getattr(provider, "attest_quality", None)
+        if not callable(fn):
+            return {}
+        try:
+            return fn(words, include_readings)  # type: ignore[no-any-return]
+        except Exception as e:
+            logger.warning("Provider '%s' raised during attest_quality; skipping: %s", provider.name, e)
+            return {}
+
+    def offline_term_commonness(self, terms: list[str]) -> dict[str, bool] | None:
+        """Whether each term is a COMMON headword in a commonness-aware offline dict.
+
+        Foundation probe for the dict-commonness units (U10 infra). Returns
+        ``None`` iff NO available offline provider is commonness-aware — the
+        monolingual-only case, where the caller has no commonness signal and must
+        stay byte-identical to pre-U10 behavior. Otherwise returns a dict keyed by
+        the deduped terms: ``True`` iff some commonness-AWARE provider attests the
+        term with a term-exact common row (``attest_quality`` ``common_rules``
+        non-empty on the term-only, ``include_readings=False`` probe). Unaware
+        providers are ignored; never raises (provider boundary)."""
+        self.ensure_loaded()
+        aware = [p for p in self._available_offline_providers() if self._provider_commonness_aware(p)]
+        if not aware:
+            return None
+        deduped = list(dict.fromkeys(terms))
+        result: dict[str, bool] = dict.fromkeys(deduped, False)
+        for provider in aware:
+            quality = self._provider_attest_quality(provider, deduped, include_readings=False)
+            for term in deduped:
+                if result[term]:
+                    continue
+                wq = quality.get(term)
+                if wq and wq["common_rules"]:
+                    result[term] = True
+        return result
+
+    def offline_kana_attest_quality(self, words: list[str]) -> dict[str, dict[str, frozenset[str]]] | None:
+        """Term/common rule sets per word across offline dicts (kana-recovery quality).
+
+        Foundation probe for the kana-recovery quality gate (U10 infra), run with
+        the reading arm ON (``include_readings=True``). Returns ``None`` iff NO
+        available offline provider is commonness-aware. Otherwise, per deduped
+        word:
+
+        * ``term_rules`` — union of ``attest_quality`` ``term_rules`` over ALL
+          available offline providers (aware or not: term attestation does not
+          need commonness tags).
+        * ``common_rules`` — union of ``common_rules`` over commonness-AWARE
+          providers only (an unaware dict's ``common_rules`` is empty regardless).
+
+        Never raises (provider boundary)."""
+        self.ensure_loaded()
+        offline = self._available_offline_providers()
+        aware = {id(p): self._provider_commonness_aware(p) for p in offline}
+        if not any(aware.values()):
+            return None
+        deduped = list(dict.fromkeys(words))
+        term_acc: dict[str, set[str]] = {w: set() for w in deduped}
+        common_acc: dict[str, set[str]] = {w: set() for w in deduped}
+        for provider in offline:
+            quality = self._provider_attest_quality(provider, deduped, include_readings=True)
+            provider_aware = aware[id(provider)]
+            for word in deduped:
+                wq = quality.get(word)
+                if not wq:
+                    continue
+                term_acc[word].update(wq["term_rules"])
+                if provider_aware:
+                    common_acc[word].update(wq["common_rules"])
+        return {w: {"term_rules": frozenset(term_acc[w]), "common_rules": frozenset(common_acc[w])} for w in deduped}
+
     def get_glossaries_batch(
         self,
         words: list[tuple[str, str | None]],
