@@ -1076,6 +1076,31 @@ def _attest_lookup(*attested):
     return lookup
 
 
+def _quality_lookup(mapping, *, unaware=False):
+    """Spy offline_kana_attest_quality: ``{form: (term_rules, common_rules)}``.
+
+    Returns each queried form's rule sets (empty frozensets when absent), or
+    ``None`` when ``unaware`` — the monolingual-only chain that makes the parser
+    fall back to the existence probe. Records every call on ``.calls``.
+    """
+    calls: list[list[str]] = []
+
+    def lookup(words):
+        calls.append(list(words))
+        if unaware:
+            return None
+        return {
+            w: {
+                "term_rules": frozenset(mapping.get(w, ((), ()))[0]),
+                "common_rules": frozenset(mapping.get(w, ((), ()))[1]),
+            }
+            for w in words
+        }
+
+    lookup.calls = calls  # type: ignore[attr-defined]
+    return lookup
+
+
 class TestKanaWordRecovery:
     """Parser-seam recovery of pure-hiragana content words the script gate drops.
 
@@ -1085,9 +1110,9 @@ class TestKanaWordRecovery:
     term-OR-reading existence probe. No probe wired ⇒ today's behavior.
     """
 
-    def _service(self, test_config, lookup):
+    def _service(self, test_config, lookup, quality=None):
         with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
-            return SubtitleParserService(test_config, kana_attest_lookup=lookup)
+            return SubtitleParserService(test_config, kana_attest_lookup=lookup, kana_quality_lookup=quality)
 
     def test_recovers_keijoushi_surface_front(self, test_config):
         # 形状詞 きれい: mined_form is the surface (きれい); attested as 綺麗's
@@ -1284,6 +1309,86 @@ class TestKanaWordRecovery:
             words = service.parse_subtitle_file(sub_file)
         assert counts.get("奇麗") == 1  # count_lemmas recovered (lemma-keyed count)
         assert "きれい" in {w.mined_form for w in words}  # mining recovered same token
+
+    # --- U12 quality gate: token-level branching over a stub quality probe. ---
+
+    def test_quality_unaware_falls_back_to_existence(self, test_config):
+        # Quality probe returns None (no commonness-aware dict) ⇒ recovery stays on
+        # the existence probe, byte-identical to pre-U12: きれい is admitted.
+        attest = _attest_lookup("きれい")
+        quality = _quality_lookup({}, unaware=True)
+        service = self._service(test_config, attest, quality)
+        token = _make_token("きれい", "形状詞", pos2="一般", lemma="奇麗", orth_base="きれい")
+        assert service._should_include_word(token) is True
+        assert quality.calls == [["きれい"]]  # probed, returned None
+        assert attest.calls == [["きれい"]]  # fell back to the existence gate
+
+    def test_quality_gate_rejects_pos_incompatible_common_row(self, test_config):
+        # 以降-shape: the 動詞 front いこう is attested (existence) and has a COMMON
+        # row, but only with rules='' (a noun) ⇒ POS-incompatible ⇒ rejected.
+        attest = _attest_lookup("いこう")
+        quality = _quality_lookup({"いこう": ((), {""})})  # common noun row, no verb rule
+        service = self._service(test_config, attest, quality)
+        token = _make_token("いこう", "動詞", pos2="一般", lemma="以降", orth_base="いこう")
+        assert service._should_include_word(token) is False
+        assert quality.calls == [["いこう"]]  # the quality probe decided, not existence
+
+    def test_quality_gate_admits_pos_compatible_common_row(self, test_config):
+        # A POS-compatible common verb row (rules v5u) admits the 動詞 front.
+        attest = _attest_lookup("いこう")
+        quality = _quality_lookup({"いこう": ((), {"v5u"})})
+        service = self._service(test_config, attest, quality)
+        token = _make_token("いこう", "動詞", pos2="一般", lemma="憩う", orth_base="いこう")
+        assert service._should_include_word(token) is True
+
+    def test_quality_gate_admits_pos_compatible_term_exact_row(self, test_config):
+        # あざとい: NOT common, but a POS-compatible term-exact adj-i row admits it.
+        attest = _attest_lookup("あざとい")
+        quality = _quality_lookup({"あざとい": ({"adj-i"}, ())})
+        service = self._service(test_config, attest, quality)
+        token = _make_token("あざとい", "形容詞", pos2="一般", lemma="あざとい", orth_base="あざとい")
+        assert service._should_include_word(token) is True
+
+    def test_quality_lookup_memoized_once_per_surface_pos1(self, test_config):
+        # The quality probe rides the (surface, pos1) recovery cache: one call for
+        # 50 repeats of the same token (no separate memo needed).
+        attest = _attest_lookup("わかる")
+        quality = _quality_lookup({"わかる": ((), {"v5k"})})
+        service = self._service(test_config, attest, quality)
+        for _ in range(50):
+            t = _make_token("わかっ", "動詞", pos2="一般", lemma="分かる", orth_base="わかる")
+            assert service._should_include_word(t) is True
+        assert len(quality.calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("pos1", "rules_set", "expected"),
+    [
+        # 動詞 → any rule token starting with 'v'; a multi-token string counts.
+        ("動詞", {"v5k"}, True),
+        ("動詞", {"v1"}, True),
+        ("動詞", {"v5 vt"}, True),
+        ("動詞", {""}, False),  # noun-only row (以降-shape false-attest)
+        ("動詞", {"adj-i"}, False),  # adjective rules do not satisfy 動詞
+        ("動詞", set(), False),
+        # 形容詞 → an adj-i / adj-ix token.
+        ("形容詞", {"adj-i"}, True),
+        ("形容詞", {"adj-ix"}, True),
+        ("形容詞", {"v5"}, False),
+        ("形容詞", {""}, False),
+        ("形容詞", set(), False),
+        # 形状詞 → unconstrained: ANY row (even rules='') qualifies; empty ⇒ reject.
+        ("形状詞", {""}, True),
+        ("形状詞", {"v1"}, True),
+        ("形状詞", set(), False),
+        # Unsupported pos1 never matches.
+        ("名詞", {"v5"}, False),
+    ],
+)
+def test_rules_pos_compatible(pos1, rules_set, expected):
+    from anki_miner.services.subtitle_parser import _rules_pos_compatible
+
+    assert _rules_pos_compatible(pos1, frozenset(rules_set)) is expected
 
 
 class TestKanaRecoveryLexicalizedWindow:
@@ -4896,6 +5001,194 @@ def _build_commonness_service(root):
     provider = IndexedDictProvider("commonness-fix", db, display_name="Commonness Fix")
     provider.load()
     return DefinitionService(AnkiMinerConfig(), providers=[provider])
+
+
+def _build_kana_quality_service(root, rows, *, aware=True, name="kana-quality-fix"):
+    """Real DefinitionService over a tagged+ruled fixture index (U10/U12 patterns).
+
+    ``rows`` is ``[(term, reading, rules, common)]`` — ``rules`` is the raw Yomitan
+    ``rules``-column string (``'v5k'``/``'adj-i'``/``''``) and ``common`` marks a
+    frequent headword. A 'pop' tag (category 'popular') both flags the common rows
+    AND — its presence in the tags table — makes the provider commonness-aware, so
+    ``offline_kana_attest_quality`` returns real rule sets (not ``None``).
+
+    ``aware=False`` drops the 'pop' tag entirely: the tags table is partOfSpeech-
+    only, the provider reports unaware, and the quality probe returns ``None`` — the
+    monolingual-only fallback where recovery stays on ``has_offline_definitions``.
+    """
+    from anki_miner.services.definition_service import DefinitionService
+    from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
+    from anki_miner.services.dictionary.storage import (
+        SCHEMA_VERSION,
+        DictRow,
+        TagMeta,
+        bulk_insert,
+        create_index,
+        write_meta,
+        write_tags,
+    )
+
+    folder = root / name
+    folder.mkdir(parents=True, exist_ok=True)
+    db = folder / "index.sqlite"
+    create_index(db)
+    bulk_insert(
+        db,
+        [
+            DictRow(
+                term=t,
+                reading=r,
+                content=f"<div>{t}</div>",
+                tags="pop" if (common and aware) else "n",
+                rules=rules,
+                sequence=i + 1,
+            )
+            for i, (t, r, rules, common) in enumerate(rows)
+        ],
+    )
+    tags = [TagMeta(name="n", category="partOfSpeech", ord=0, notes="noun", score=0.0)]
+    if aware:
+        tags.append(TagMeta(name="pop", category="popular", ord=0, notes="", score=0.0))
+    write_tags(db, tags)
+    write_meta(db, {"schema_version": str(SCHEMA_VERSION), "source_name": name})
+    provider = IndexedDictProvider(name, db, display_name=name)
+    provider.load()
+    return DefinitionService(AnkiMinerConfig(), providers=[provider])
+
+
+# Aware fixture for the U12 quality gate: keeps (via common reading rows or
+# term-exact kana headwords) alongside the rare-reading collisions the OLD
+# existence probe admitted (凍てる/言える — attested only as NON-common readings).
+_KANA_QUALITY_ROWS = [
+    ("分かる", "わかる", "v5k", True),  # keep わかる — common reading (path ii)
+    ("綺麗", "きれい", "", True),  # keep きれい — 形状詞 via common reading (path ii)
+    ("凄い", "すごい", "adj-i", True),  # keep すごい — common adj-i reading (path ii)
+    ("あざとい", "あざとい", "adj-i", False),  # keep — term-exact adj-i, NOT common (path i)
+    ("しがない", "しがない", "adj-i", False),  # keep — term-exact adj-i, NOT common (path i)
+    ("憩う", "いこう", "v5u", True),  # いこう residual keep — common v5 reading (path ii)
+    ("凍てる", "いてる", "v1", False),  # REJECT いてる — non-common reading, no term-exact
+    ("言える", "いえる", "v1", False),  # REJECT いえる — non-common reading, no term-exact
+]
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestKanaRecoveryQualityGate:
+    """U12 end-to-end: the commonness/rules-aware kana-recovery gate. Real fugashi
+    mints the pure-hiragana content token; a real IndexedDictProvider/DefinitionService
+    supplies BOTH the existence probe (``has_offline_definitions``) and the quality
+    probe (``offline_kana_attest_quality``). With an aware dict the recovery tightens
+    from existence to a POS-compatible term-exact OR common row; an unaware chain
+    (quality → ``None``) degrades byte-identically to the pre-U12 existence gate.
+
+    Every reject test ATTESTS the rejected form: ``quality=False`` (existence-only)
+    proves ``has_offline_definitions`` WOULD have admitted it, so the new gate — not
+    a dict miss — is what drops it.
+    """
+
+    def _mine(self, service, line, *, quality=True):
+        parser = SubtitleParserService(
+            AnkiMinerConfig(),
+            kana_attest_lookup=service.has_offline_definitions,
+            kana_quality_lookup=service.offline_kana_attest_quality if quality else None,
+        )
+        unit = ReadingUnit(text=line, index=0, location_label="t")
+        words, _index, _counts = parser.parse_text_units([unit], want_line_index=False)
+        return {w.mined_form for w in words}
+
+    # --- Rejects (rare-reading collisions), each attesting the degrade. ---
+
+    def test_rejects_iteru_non_common_reading(self, tmp_path):
+        # いてててて → いて (動詞, orthBase いてる). 凍てる attests いてる only as a
+        # NON-common reading; no term-exact いてる row ⇒ both gate paths fail.
+        service = _build_kana_quality_service(tmp_path, _KANA_QUALITY_ROWS)
+        assert "いてる" not in self._mine(service, "いてててて")
+        # Attest: the existence probe alone WOULD admit it (reading match).
+        assert "いてる" in self._mine(service, "いてててて", quality=False)
+
+    def test_rejects_ieru_non_common_reading(self, tmp_path):
+        # いえる (動詞, orthBase いえる). 言える attests いえる only as a NON-common
+        # reading; no term-exact いえる row ⇒ rejected, but existence-admitted.
+        service = _build_kana_quality_service(tmp_path, _KANA_QUALITY_ROWS)
+        assert "いえる" not in self._mine(service, "いえる")
+        assert "いえる" in self._mine(service, "いえる", quality=False)
+
+    # --- Keeps: common reading rows (path ii). ---
+
+    def test_keeps_wakaru_common_verb_reading(self, tmp_path):
+        # わかった → わかっ (動詞, orthBase わかる). 分かる's わかる reading is common,
+        # rules v5k ⇒ POS-compatible common row (path ii).
+        service = _build_kana_quality_service(tmp_path, _KANA_QUALITY_ROWS)
+        assert "わかる" in self._mine(service, "わかった")
+
+    def test_keeps_kirei_keijoushi_common_reading(self, tmp_path):
+        # きれい (形状詞, mined as surface). 綺麗's きれい reading is common with
+        # rules='' — 形状詞 is unconstrained, so a common row is enough (path ii).
+        service = _build_kana_quality_service(tmp_path, _KANA_QUALITY_ROWS)
+        assert "きれい" in self._mine(service, "きれい")
+
+    def test_keeps_sugoi_common_adj_i_reading(self, tmp_path):
+        # すごい (形容詞). 凄い's すごい reading is common with rules adj-i (path ii).
+        service = _build_kana_quality_service(tmp_path, _KANA_QUALITY_ROWS)
+        assert "すごい" in self._mine(service, "すごい")
+
+    # --- Keeps: term-exact kana headwords, NOT common (path i). ---
+
+    def test_keeps_term_exact_kana_adjectives(self, tmp_path):
+        # あざとい / しがない are kana adj-i HEADWORDS (term-exact), NOT common — so
+        # only path (i), the POS-compatible term-exact row, admits them.
+        service = _build_kana_quality_service(tmp_path, _KANA_QUALITY_ROWS)
+        assert "あざとい" in self._mine(service, "あざとい")
+        assert "しがない" in self._mine(service, "しがない")
+
+    # --- Pinned residual: いこう survives via the common verb 憩う. ---
+
+    def test_ikou_residual_via_common_iku_verb(self, tmp_path):
+        # In-context いこう is 動詞/一般 lemma 憩う, orthBase いこう (round-2 judge's
+        # isolated-word probe gave 非自立可能 — context matters, so the full corpus
+        # line is load-bearing). 憩う's いこう reading is common v5 ⇒ admitted. A
+        # documented residual: the gate cannot tell it from the homograph noun 以降.
+        service = _build_kana_quality_service(tmp_path, _KANA_QUALITY_ROWS)
+        assert "いこう" in self._mine(service, "（旬）試運転といこうか")
+
+    # --- POS-mismatch reject: 動詞 front colliding with a noun-only common row. ---
+
+    def test_rejects_verb_front_with_noun_only_common_row(self, tmp_path):
+        # 以降-shape: the 動詞 token いこう's front collides with the COMMON noun 以降
+        # (reading いこう, rules=''). rules='' carries no verb token, so neither gate
+        # path matches ⇒ rejected — yet the existence probe admits (reading match).
+        rows = [("以降", "いこう", "", True)]
+        service = _build_kana_quality_service(tmp_path, rows)
+        assert "いこう" not in self._mine(service, "（旬）試運転といこうか")
+        assert "いこう" in self._mine(service, "（旬）試運転といこうか", quality=False)
+
+    # --- 形状詞 adversarial pair (the documented unconstrained looseness). ---
+
+    def test_keijoushi_admitted_off_unrelated_common_reading(self, tmp_path):
+        # そっくり (形状詞) is admitted purely because SOME common row carries its
+        # reading — here a synthetic COMMON verb (rules v1), semantically unrelated.
+        # 形状詞 is unconstrained, so the verb rules do not disqualify it; this is
+        # the accepted looseness (still needs a COMMON hit — U13 replay is the net).
+        rows = [("類する", "そっくり", "v1", True)]
+        service = _build_kana_quality_service(tmp_path, rows)
+        assert "そっくり" in self._mine(service, "そっくり")
+
+    def test_keijoushi_rejected_with_no_qualifying_row(self, tmp_path):
+        # じみ (形状詞) attested ONLY via a NON-common reading (地味): no term-exact
+        # row, no common row ⇒ zero qualifying rows ⇒ rejected, existence-admitted.
+        rows = [("地味", "じみ", "", False)]
+        service = _build_kana_quality_service(tmp_path, rows)
+        assert "じみ" not in self._mine(service, "じみ")
+        assert "じみ" in self._mine(service, "じみ", quality=False)
+
+    # --- Unaware chain: quality probe returns None ⇒ byte-identical old behavior. ---
+
+    def test_unaware_chain_degrades_to_existence_gate(self, tmp_path):
+        # A partOfSpeech-only tags table ⇒ commonness-unaware ⇒ the quality probe
+        # returns None, so recovery falls back to has_offline_definitions. かえる
+        # (動詞, 返る reading) is re-admitted exactly as pre-U12 — attests the degrade.
+        service = _build_kana_quality_service(tmp_path, [("返る", "かえる", "v5r", True)], aware=False)
+        assert service.offline_kana_attest_quality(["かえる"]) is None
+        assert "かえる" in self._mine(service, "うちにかえる")
 
 
 @pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")

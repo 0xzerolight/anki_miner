@@ -12,7 +12,7 @@ For every subtitle file in a directory (sorted), it loads per-cue units through
 the READING loader (``services/reading/subtitle_source.load`` — the same cue
 granularity the video pipeline mines, and explicitly NOT
 ``parse_subtitle_file``), runs them through a production
-``SubtitleParserService`` wired (read-only) to the same three offline probes
+``SubtitleParserService`` wired (read-only) to the same offline probes
 ``gui/utils/service_factory`` injects, but over EVERY installed
 ``~/.anki_miner`` dictionary rather than the user's configured chain (the replay
 wants maximum attestation; the GUI chain is user-config, not relevant to
@@ -116,9 +116,11 @@ def build_parser(config: AnkiMinerConfig) -> SubtitleParserService:
     ``resolve_dictionary_form``), ``offline_term_readings`` as ``reading_lookup``
     (drives the merged-compound reading attestation, audit F2),
     ``has_offline_definitions`` as ``kana_attest_lookup`` (drives the WS2 kana
-    recovery), and ``offline_term_commonness`` as ``term_common_lookup`` (drives
-    the U11 verb-front resolver, narrowing the deinflection override pool to
-    headwords a commonness-aware dict tags common). All four probes lazily load
+    recovery), ``offline_term_commonness`` as ``term_common_lookup`` (drives the
+    U11 verb-front resolver, narrowing the deinflection override pool to headwords
+    a commonness-aware dict tags common), and ``offline_kana_attest_quality`` as
+    ``kana_quality_lookup`` (drives the U12 kana-recovery quality gate — the corpus
+    gate goes blind to that unit's rejects without it). All five probes lazily load
     the chain, so no explicit ``ensure_loaded`` is needed; with an empty
     ``dicts_root`` they attest nothing (the offline-free replay path).
 
@@ -137,6 +139,7 @@ def build_parser(config: AnkiMinerConfig) -> SubtitleParserService:
         reading_lookup=definition_service.offline_term_readings,
         kana_attest_lookup=definition_service.has_offline_definitions,
         term_common_lookup=definition_service.offline_term_commonness,
+        kana_quality_lookup=definition_service.offline_kana_attest_quality,
     )
 
 
