@@ -5,6 +5,12 @@ from pathlib import Path
 
 from anki_miner.models.media import MediaData
 
+# Colloquial vowel-elongation tail characters a 名詞 surface can carry over its
+# lemma (手ぇ, 気い, 目ー): small kana vowels, full kana vowels and the long-vowel
+# mark. Restricted to these so only a genuine drawn-out reading folds — an ordinary
+# okurigana/compound tail (パン→パンダ) never matches.
+_VOWEL_ELONGATION_TAIL = frozenset("ぁぃぅぇぉあいうえおー")
+
 
 def select_mined_form(pos: str | None, orth_base: str, lemma: str, surface: str) -> str:
     """Single selection rule for the card-front form.
@@ -14,9 +20,21 @@ def select_mined_form(pos: str | None, orth_base: str, lemma: str, surface: str)
     expression furigana/reading). Keep it the only place this rule lives —
     a drifted copy silently splits the Expression field from the
     dedup/known-words/audio identity.
+
+    Nouns whose surface is the lemma plus a 1-2 char colloquial vowel-elongation
+    tail (手ぇ→手, 気い→気) fold to the lemma so the card dedups against the plain
+    form. String-only: the ``surface.startswith(lemma)`` guard keeps Issue #5
+    homographs (豪腕/剛腕, surface does not start with the variant lemma) on the
+    surface, and only ``_VOWEL_ELONGATION_TAIL`` chars qualify. コーヒー is
+    unaffected (its gloss-stripped lemma equals the surface). Any ``known_words``
+    rows keyed on the old 手ぇ front go dead — benign, no migration.
     """
     if pos in ("動詞", "形容詞"):
         return orth_base or lemma
+    if pos == "名詞" and lemma and surface != lemma and surface.startswith(lemma):
+        tail = surface[len(lemma) :]
+        if 1 <= len(tail) <= 2 and all(c in _VOWEL_ELONGATION_TAIL for c in tail):
+            return lemma
     return surface
 
 
@@ -150,7 +168,10 @@ class TokenizedWord:
         Nouns and other non-conjugating POS keep the surface form: unidic
         sometimes maps homograph-like nouns to a different headword
         (``豪腕`` → ``剛腕``); preserving surface for nouns avoids that
-        regression (Issue #5).
+        regression (Issue #5). The one carve-out: a 名詞 surface that is the
+        lemma plus a short colloquial vowel-elongation tail (``手ぇ`` → ``手``,
+        ``気い`` → ``気``) folds to the lemma — see ``select_mined_form`` for the
+        string-only rule and its guards.
         """
         return select_mined_form(self.pos, self.orth_base, self.lemma, self.surface)
 

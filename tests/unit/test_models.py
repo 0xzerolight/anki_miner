@@ -196,6 +196,59 @@ class TestTokenizedWord:
         assert select_mined_form(None, "テスト", "テスト", "テスト") == "テスト"
 
 
+class TestVowelElongationNounFold:
+    """名詞 whose surface is the lemma plus a colloquial vowel-elongation tail
+    (手ぇ, 気い) mines the bare lemma so it dedups against the plain-form card."""
+
+    @pytest.mark.parametrize(
+        ("lemma", "surface"),
+        [
+            ("手", "手ぇ"),  # small-え elongation
+            ("目", "目ぇ"),
+            ("気", "気い"),  # full-vowel elongation
+            ("血", "血ぃ"),
+            ("手", "手ええ"),  # 2-char tail
+            ("手", "手ー"),  # long-vowel mark tail
+        ],
+    )
+    def test_folds_vowel_elongated_noun_to_lemma(self, lemma, surface):
+        assert select_mined_form("名詞", surface, lemma, surface) == lemma
+
+    @pytest.mark.parametrize(
+        ("pos", "orth_base", "lemma", "surface", "expected"),
+        [
+            # コーヒー: surface == lemma (gloss stripped) → no fold, keep surface.
+            ("名詞", "コーヒー", "コーヒー", "コーヒー", "コーヒー"),
+            # Loanword whose tail is NOT a vowel/elongation char.
+            ("名詞", "パン", "パン", "パンダ", "パンダ"),
+            # Issue #5 homograph: surface does not start with the variant lemma.
+            ("名詞", "剛腕", "剛腕", "豪腕", "豪腕"),
+            # 3-char tail is out of the 1-2 window.
+            ("名詞", "手", "手", "手ぇぇぇ", "手ぇぇぇ"),
+            # Only 名詞 folds — 代名詞 keeps surface.
+            ("代名詞", "俺", "俺", "俺え", "俺え"),
+            # Verb path is unaffected (returns orth_base).
+            ("動詞", "見る", "見る", "見え", "見る"),
+        ],
+    )
+    def test_does_not_overfold(self, pos, orth_base, lemma, surface, expected):
+        assert select_mined_form(pos, orth_base, lemma, surface) == expected
+
+    def test_mined_form_property_folds_vowel_noun(self):
+        word = TokenizedWord(
+            surface="手ぇ",
+            lemma="手",
+            reading="テエ",
+            sentence="",
+            start_time=0,
+            end_time=0,
+            duration=0,
+            pos="名詞",
+            orth_base="手ぇ",
+        )
+        assert word.mined_form == "手"
+
+
 class TestLineLemmas:
     """Tests for LineLemmas dataclass."""
 

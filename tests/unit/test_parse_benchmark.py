@@ -146,6 +146,7 @@ _EXPECTED_CATEGORIES = {
     "linebreak-split",
     "ellipsis-truncation",
     "classical-adjective",
+    "vowel-elongation",
 }
 
 

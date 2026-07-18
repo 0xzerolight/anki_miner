@@ -233,6 +233,17 @@ def test_anchor_meets_classical_adjective_floor() -> None:
     assert junk_rate(b_ca) == 0.0, f"strategy (b) classical-adjective junk_rate {junk_rate(b_ca)} above 0.0"
 
 
+def test_anchor_meets_vowel_elongation_floor() -> None:
+    results = _scored()
+    b_ve = results["b-lite-anchor"].by_category["vowel-elongation"]
+    # V5: the vowel-elongation 名詞 fold (手ぇ→手) lives in select_mined_form and is
+    # DICT-FREE (string-only), so it fires the same on (a) and (b) — a regression
+    # tripwire. A revert mines the elongated surface 手ぇ (junk) and misses 手, so
+    # both recall<1 and junk>0; コーヒー/スーパー stay on the surface (no fold).
+    assert recall(b_ve) == 1.0, f"strategy (b) vowel-elongation recall {recall(b_ve)} below 1.0"
+    assert junk_rate(b_ve) == 0.0, f"strategy (b) vowel-elongation junk_rate {junk_rate(b_ve)} above 0.0"
+
+
 # NOTE: jiru-zuru (Task 3), kana-written (Task 4), nominal-suffix (Task 5),
 # colloquial/counter (A2), aux-context (A1), long-compound (Task 6/Q2) and
 # ellipsis-truncation (U8) floors are gated above; linebreak-split is
