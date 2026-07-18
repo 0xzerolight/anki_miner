@@ -121,8 +121,12 @@
 
 /* @am-endgroup */
 
-/* Sense list: numbered, comfortable rhythm. */
+/* Sense list: numbered, comfortable rhythm. `display: block` is declared (not
+ * left to the ul default) so a host "Format Definitions" rule that forces
+ * `display: inline` on our lists (see the cohabitation defense below) cannot
+ * strip the sense ordinals — our (0,3,2) out-specifies the host's (0,2,1). */
 .yomitan-glossary ol[data-count] ul.gloss-list {
+  display: block;
   margin: 0.2em 0 0;
   padding-left: 1.35em;
   list-style-type: decimal;
@@ -136,6 +140,7 @@
 }
 
 .yomitan-glossary ol[data-count] li.gloss-item {
+  display: list-item;
   margin: 0.25em 0;
 }
 
@@ -149,13 +154,25 @@
 
 /* @am-endgroup */
 
-/* Cohabitation defense: some note types ship an unscoped list-item separator
- * (e.g. `li:not(:first-child)::before { content: " | " }`) that would otherwise
- * inject a stray marker between our senses. Neutralize generated content on our
- * own structural sense items — the inner glossary list keeps its own ::before
- * separators (higher specificity), so only the host's bleed-through is removed. */
+/* Cohabitation defense: note types built for native Yomitan/Jitendex JMdict
+ * exports ship a "Format Definitions" rule that flattens the definition lists to
+ * an inline " | "-separated run — e.g. Lapis:
+ *   ul[data-sc-content="glossary"], [data-dictionary^="JMdict"] ul:not([data-sc-content]) {
+ *     display:inline; list-style:none; padding-left:0!important;
+ *     > li:not(:first-child)::before { content:" | " } }
+ * Our synthesized plain-dict markup carries the same data-sc-content="glossary" /
+ * data-dictionary^="JMdict" hooks, so those rules match and inject a stray
+ * separator before BOTH our sense items (li.gloss-item) and our gloss items
+ * (li.gloss-sc-li). Neutralize generated content on both. The `li` type keeps
+ * these at (0,3,3) — tying the host's nested `& > li::before` (also (0,3,3)) and
+ * winning by source order (our trailing <style> sits later in <body> than the
+ * note type's <head> CSS). Display/indent flattening is defended separately by
+ * the structural `display` declarations above and the gated !important padding
+ * below. */
 .yomitan-glossary ol[data-count] li.gloss-item::before,
-.yomitan-glossary ol[data-count] li.gloss-item::after {
+.yomitan-glossary ol[data-count] li.gloss-item::after,
+.yomitan-glossary ol[data-count] li.gloss-sc-li::before,
+.yomitan-glossary ol[data-count] li.gloss-sc-li::after {
   content: none;
 }
 
@@ -167,12 +184,42 @@
 
 /* Structured-content lists (from dictionaries): one controlled indent per level.
  * Nested ordered lists switch marker style so they don't read as the outer
- * decimal sense numbering. */
+ * decimal sense numbering. `display: block` is declared so a host that forces
+ * `display: inline` on our gloss list (cohabitation defense above) cannot strip
+ * the gloss bullets. */
 .yomitan-glossary ol[data-count] .gloss-sc-ul,
 .yomitan-glossary ol[data-count] .gloss-sc-ol {
+  display: block;
   margin: 0.2em 0;
   padding-left: 1.2em;
 }
+
+/* Gloss items keep list-item display for the same reason (the disc/circle marker
+ * comes from the ul's inline list-style-type, which is restored once display is
+ * block again). */
+.yomitan-glossary ol[data-count] li.gloss-sc-li {
+  display: list-item;
+}
+
+/* @am-group: unstyled-chrome */
+
+/* Indent defense (unstyled dicts only): the host "Format Definitions" rule zeroes
+ * our list indentation with `padding-left: 0 !important` — the one property it
+ * wins via !important. Restore it with !important (our higher specificity wins
+ * the !important-vs-!important tiebreak). Gated to :not([data-has-styles]) so it
+ * never overrides a styled dictionary's own list padding — such a dict governs
+ * its own indent via its embedded styles.css (Yomitan parity). Placed after the
+ * ungated core gloss-list rule so that rule stays the first `ul.gloss-list`
+ * occurrence (TestGapFillerGate.test_structural_rules_stay_ungated). */
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) ul.gloss-list {
+  padding-left: 1.35em !important;
+}
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) .gloss-sc-ul,
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) .gloss-sc-ol {
+  padding-left: 1.2em !important;
+}
+
+/* @am-endgroup */
 
 .yomitan-glossary ol[data-count] .gloss-sc-ol .gloss-sc-ol {
   list-style-type: lower-alpha;

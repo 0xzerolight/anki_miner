@@ -85,15 +85,26 @@ class TestLoadGlossaryCss:
         # guard invariant).
         assert "ol[data-count] .gloss-tag" in css
 
-    def test_neutralizes_host_generated_content_on_sense_items(self):
-        # Cohabitation defense: a host note type's unscoped li::before separator
-        # must not bleed into our sense list. The reset targets only the outer
-        # gloss-item (the inner glossary list keeps its own ::before separators).
+    def test_neutralizes_host_generated_content_on_sense_and_gloss_items(self):
+        # Cohabitation defense: a host note type's " | " list-item separator (e.g.
+        # Lapis's "Format Definitions" rule) must not bleed into our lists. The
+        # reset covers BOTH structural levels — the sense items (li.gloss-item)
+        # and the gloss items (li.gloss-sc-li) — since the host matches both via
+        # data-dictionary^="JMdict" and data-sc-content="glossary".
         css = _no_comments(load_glossary_css())
-        assert "li.gloss-item::before" in css
-        assert "li.gloss-item::after" in css
+        for subject in (
+            "li.gloss-item::before",
+            "li.gloss-item::after",
+            "li.gloss-sc-li::before",
+            "li.gloss-sc-li::after",
+        ):
+            assert subject in css, f"missing separator neutralizer for {subject}"
         reset = css[css.index("li.gloss-item::before") :]
         assert "content: none" in reset[: reset.index("}")]
+        # The `li` type is load-bearing: it lifts the neutralizer to (0,3,3) so it
+        # ties the host's nested `& > li::before` and wins by source order. A bare
+        # `.gloss-sc-li::before` (0,3,2) would lose and leave the " | " in place.
+        assert ".gloss-sc-li::before" not in css.replace("li.gloss-sc-li::before", "")
 
 
 class TestGlossaryYomitanLeak:
@@ -299,6 +310,83 @@ class TestGlossaryListYomitanDefault:
     def test_structural_disc_block_still_present(self):
         css = _no_comments(load_glossary_css())
         assert ".gloss-sc-ul" in css, "structural glossary-list rule (disc block) must remain"
+
+
+class TestHostListFlattenDefense:
+    """A note type built for native Yomitan/Jitendex JMdict (Lapis-class) ships a
+    "Format Definitions" rule that flattens our definition lists to an inline
+    " | "-separated run: `display:inline; list-style:none; padding-left:0!important;
+    > li:not(:first-child)::before { content:" | " }`, matching our markup via
+    `data-sc-content="glossary"` and `data-dictionary^="JMdict"`. The base sheet
+    must re-assert block layout so the numbered senses + bulleted glosses survive.
+
+    Defense split (by cascade cost):
+      * DISPLAY is restored ungated in core — our (0,3,x) out-specifies the host's
+        (0,1,1)/(0,2,x) so no !important is needed, and it fixes styled dicts too;
+      * PADDING needs !important to beat the host's `padding-left:0!important`, and
+        is gated to unstyled dicts so it can never clobber a styled dict's own
+        padding (Yomitan parity);
+      * the " | " neutralizer is covered by
+        TestLoadGlossaryCss.test_neutralizes_host_generated_content_on_sense_and_gloss_items.
+    """
+
+    _GATE = "li[data-dictionary]:not([data-has-styles])"
+
+    def _decls_for(self, subject_selector: str) -> str:
+        """The declaration block of the first rule whose selector ends with
+        `subject_selector` (ungated core rules only — the gate is tested separately)."""
+        for grp, decl in _iter_rules(load_glossary_css()):
+            for sel in grp.split(","):
+                sel = sel.strip()
+                if sel.endswith(subject_selector) and self._GATE not in sel:
+                    return decl
+        raise AssertionError(f"no ungated rule with subject {subject_selector!r}")
+
+    def test_structural_lists_declare_block_display(self):
+        # display must be explicit (not left to the ul/li default) so a host
+        # display:inline cannot strip the markers. Ungated so styled dicts benefit.
+        assert "display: block" in self._decls_for("ul.gloss-list")
+        assert "display: block" in self._decls_for(".gloss-sc-ul")
+        assert "display: block" in self._decls_for(".gloss-sc-ol")
+        assert "display: list-item" in self._decls_for("li.gloss-item")
+        assert "display: list-item" in self._decls_for("li.gloss-sc-li")
+
+    def test_indent_defense_is_gated_and_important(self):
+        # padding-left !important, gated to unstyled dicts, on both list levels.
+        seen = {"ul.gloss-list": False, ".gloss-sc-ul": False}
+        for grp, decl in _iter_rules(load_glossary_css()):
+            if "padding-left: 1.35em !important" not in decl and "padding-left: 1.2em !important" not in decl:
+                continue
+            for sel in grp.split(","):
+                sel = sel.strip()
+                assert self._GATE in sel, f"indent-defense rule must be gated to unstyled dicts: {sel!r}"
+                if sel.endswith("ul.gloss-list"):
+                    seen["ul.gloss-list"] = True
+                if sel.endswith(".gloss-sc-ul"):
+                    seen[".gloss-sc-ul"] = True
+        assert all(seen.values()), f"missing gated !important padding for {[k for k, v in seen.items() if not v]}"
+
+    def test_defense_ships_in_the_plain_jmdict_tree_shaken_variant(self):
+        # Fail-if-wrong: the declarations must survive the per-card tree-shake a
+        # real unstamped plain-JMdict card gets — not merely exist in the sheet.
+        from anki_miner.services.dictionary.card_style_block import base_css_variant, css_witnesses
+
+        body = (
+            '<div class="yomitan-glossary"><ol data-count="1">'
+            '<li data-dictionary="JMdict [2026-06-28]">'
+            '<ul class="gloss-list" data-count="2"><li class="gloss-item"><div class="gloss-content">'
+            '<ul class="gloss-sc-ul" data-sc-content="glossary" style="list-style-type: circle">'
+            '<li class="gloss-sc-li">x</li></ul></div></li></ul></li></ol></div>'
+        )
+        witnesses = css_witnesses([body])
+        assert "unstyled-chrome" in witnesses, "unstamped plain-JMdict must witness unstyled-chrome"
+        variant = base_css_variant(witnesses)
+        assert "ul.gloss-list{display: block" in variant
+        assert "li.gloss-item{display: list-item" in variant
+        assert "li.gloss-sc-li{display: list-item" in variant
+        assert "li.gloss-sc-li::after{content: none" in variant
+        assert "padding-left: 1.35em !important" in variant
+        assert "padding-left: 1.2em !important" in variant
 
 
 class TestGroupPlacement:
