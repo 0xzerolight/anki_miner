@@ -102,17 +102,6 @@ _FRONT_CACHE_CAP: int = 200_000
 # Maps each queried card front to whether any offline dictionary attests it.
 KanaAttestLookup = Callable[[list[str]], dict[str, bool]]
 
-# Kana-recovery QUALITY probe (DefinitionService.offline_kana_attest_quality): per
-# queried card front, the raw ``rules``-column strings of its TERM-EXACT rows
-# (``term_rules``) and of its COMMON rows over commonness-aware providers
-# (``common_rules``). ``None`` when NO offline provider is commonness-aware — the
-# gate then plays no part and recovery falls back to the existence probe above
-# (byte-identical to pre-U12). Rules strings are RAW Yomitan values that may hold
-# several space-separated tokens (``'v5 vt'``) and include ``''`` (a noun / na-adj
-# term row); POS compatibility is decided per split token, never on the whole
-# string (``_rules_pos_compatible``).
-KanaQualityLookup = Callable[[list[str]], dict[str, dict[str, frozenset[str]]] | None]
-
 # POS backstop for kana recovery: only inflectional content words are recovered
 # from the pure-hiragana script gate. Deliberately EXCLUDES 名詞 — formal nouns
 # こと/もの/ため clear content_gate_ok but are grammar noise as bare kana — and
@@ -132,15 +121,6 @@ _KANA_RECOVER_POS1: frozenset[str] = frozenset({"動詞", "形容詞", "形状�
 #   either. Kanji-spelled 非自立可能 tokens (見る, 来る) are untouched — they pass
 #   should_include and never reach this path.
 _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非自立可能"})
-
-# U12 kana-recovery quality gate. When a commonness-aware offline dict is wired the
-# recovery admits a pure-hiragana front only via a row whose deinflection ``rules``
-# MATCH the token's POS — killing the 以降-shape false-attest where a 動詞 token's
-# kana front collides with an unrelated noun headword (rules=''). 形状詞 is
-# unconstrained (na-adjective rows store '', so no rule token can gate them): the
-# accepted looseness is that a pure-kana na-adj colliding with ANY common reading
-# is admitted (U13 replay is the tripwire).
-_KANA_QUALITY_ADJ_RULES: frozenset[str] = frozenset({"adj-i", "adj-ix"})
 
 # U4 lexicalized-expression reject. A kana-recovery candidate that IS an attested
 # headword on its own (すむ, しれる) is still junk when it is really a fragment of
@@ -251,27 +231,6 @@ def _differs_by_okurigana_only(orth_base: str, lemma: str) -> bool:
     return _is_pure_hiragana(orth_base[i:]) and _is_pure_hiragana(lemma[i:])
 
 
-def _rules_pos_compatible(pos1: str, rules_set: frozenset[str]) -> bool:
-    """Whether any raw ``rules`` string in ``rules_set`` matches ``pos1`` (U12 gate).
-
-    - 動詞 → a rule token starting with ``v`` (``v5``/``v1``/``v5u``/``v5k-s``...).
-    - 形容詞 → an ``adj-i``/``adj-ix`` token (``_KANA_QUALITY_ADJ_RULES``).
-    - 形状詞 → any row at all: na-adjective rows store ``''`` so no rule token can
-      gate them, and set membership is the only signal (the accepted looseness).
-
-    Each rules string may carry several space-separated tokens (``'v5 vt'``), so
-    the check splits before matching — ``''`` splits to no tokens, so a bare noun /
-    na-adj row never satisfies the 動詞/形容詞 arms.
-    """
-    if pos1 == "形状詞":
-        return bool(rules_set)
-    if pos1 == "動詞":
-        return any(tok.startswith("v") for rules in rules_set for tok in rules.split())
-    if pos1 == "形容詞":
-        return any(tok in _KANA_QUALITY_ADJ_RULES for rules in rules_set for tok in rules.split())
-    return False
-
-
 class SubtitleParserService:
     """Parse subtitles and extract Japanese vocabulary words (stateless service)."""
 
@@ -282,21 +241,11 @@ class SubtitleParserService:
         reading_lookup: ReadingLookup | None = None,
         kana_attest_lookup: KanaAttestLookup | None = None,
         term_common_lookup: TermCommonLookup | None = None,
-        kana_quality_lookup: KanaQualityLookup | None = None,
     ):
         """Initialize the subtitle parser.
 
         Args:
             config: Configuration for parsing
-            kana_quality_lookup: Optional per-front rule-set probe
-                (``DefinitionService.offline_kana_attest_quality``). When it
-                returns a map (a commonness-aware offline dict is wired), the
-                kana-recovery gate TIGHTENS from mere existence to a POS-compatible
-                term-exact OR common row — rejecting rare-reading collisions the
-                existence probe admitted (いてる via non-common 凍てる, いえる via
-                言える) while keeping わかる/きれい/すごい and the term-exact kana
-                headwords あざとい/しがない. ``None`` (not wired) or a ``None`` return
-                (no commonness-aware dict) keeps the existence gate byte-identical.
             term_common_lookup: Optional batch commonness probe
                 (``DefinitionService.offline_term_commonness``). When provided,
                 the verb-front resolver narrows its deinflection override pool to
@@ -373,13 +322,6 @@ class SubtitleParserService:
         # Reading-capable offline existence probe for kana recovery
         # (see _recover_kana_content_word). None ⇒ no recovery, safe degrade.
         self._kana_attest_lookup = kana_attest_lookup
-        # Commonness/rules quality probe that TIGHTENS kana recovery when a
-        # commonness-aware offline dict is wired (U12; see _probe_kana_recovery).
-        # None (not wired) or a None return (unaware chain) ⇒ the existence probe
-        # above stays the gate, byte-identical to pre-U12. Called once per distinct
-        # (surface, pos1) — _probe_kana_recovery runs under _kana_recover_cache, so
-        # this needs no memo of its own.
-        self._kana_quality_lookup = kana_quality_lookup
         self._filter_pattern: re.Pattern[str] | None = None
         if config.use_subtitle_regex_filter and config.subtitle_regex_filter:
             try:
@@ -1679,24 +1621,13 @@ class SubtitleParserService:
         return self._kana_recover_cache[key]
 
     def _probe_kana_recovery(self, word_token, pos1: str, surface: str) -> bool:
-        """content_gate_ok + attestation of the mined-form card front.
+        """content_gate_ok + term-OR-reading attestation of the mined-form front.
 
         The form probed is the exact card front ``_emit_word`` would mint
         (``select_mined_form``): the surface for 形状詞 (きれい), the orthBase
         dictionary form for 動詞/形容詞 (わかった's わかっ token → わかる, since
-        unidic's orthBase is already deinflected).
-
-        Existence-gated (``has_offline_definitions``, term-OR-reading) by default.
-        When a commonness-aware offline dict is wired — ``_kana_quality_lookup``
-        returns a map, not ``None`` — the gate TIGHTENS (U12): the front is admitted
-        only when the dict attests it with a POS-compatible TERM-EXACT row (path i —
-        non-priority kana headwords あざとい/しがない) OR a POS-compatible COMMON row
-        (path ii — 分かる's common わかる reading, 綺麗's きれい, 凄い's すごい). This
-        rejects the rare-reading collisions the existence probe admitted (いてる via
-        non-common 凍てる, いえる via 言える, the 以降-shape noun front for a 動詞
-        token). A monolingual / unaware chain (lookup ``None``) keeps the existence
-        gate byte-identical. Neither probe reads ``entries.score`` (uniformly 0 on
-        the bundled dict).
+        unidic's orthBase is already deinflected). Existence-gated only — the
+        probe never reads ``entries.score`` (uniformly 0 on the bundled dict).
         """
         lookup = self._kana_attest_lookup
         if lookup is None:  # unreachable via _recover_kana_content_word; narrows for mypy
@@ -1708,12 +1639,4 @@ class SubtitleParserService:
         form = select_mined_form(pos1, orth_base, lemma, surface)
         if not form:
             return False
-        if self._kana_quality_lookup is None:
-            return bool(lookup([form]).get(form))
-        quality = self._kana_quality_lookup([form])
-        if quality is None:  # no commonness-aware dict ⇒ byte-identical existence gate
-            return bool(lookup([form]).get(form))
-        entry = quality.get(form)
-        if not entry:
-            return False
-        return _rules_pos_compatible(pos1, entry["term_rules"]) or _rules_pos_compatible(pos1, entry["common_rules"])
+        return bool(lookup([form]).get(form))

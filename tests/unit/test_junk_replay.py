@@ -198,26 +198,6 @@ def test_build_parser_wires_term_common_lookup_when_commonness_aware(tmp_path: P
     assert result.get("猫") is True
 
 
-def test_build_parser_wires_kana_quality_lookup_when_commonness_aware(tmp_path: Path) -> None:
-    """build_parser injects the U12 quality probe (parity with service_factory).
-
-    The replay corpus gate goes blind to the U12 rejects unless build_parser wires
-    ``offline_kana_attest_quality`` — so the parser must receive a non-None probe
-    that returns real rule sets (not the monolingual-only ``None``).
-    """
-    config = _empty_chain_config(tmp_path)
-    _install_commonness_aware_dict(config.dicts_root, "jitendex-org-2026")
-
-    parser = build_parser(config)
-
-    # Ctor received the bound offline_kana_attest_quality probe.
-    assert parser._kana_quality_lookup is not None
-    # And the wired probe reflects real commonness awareness from the index.
-    result = parser._kana_quality_lookup(["猫"])
-    assert result is not None
-    assert result["猫"]["common_rules"]  # 猫 carries the frequent tag ⇒ a common row
-
-
 def test_all_installed_dicts_config_skips_schema_stale(tmp_path: Path) -> None:
     """A schema-stale index is dropped from the replay chain (schema_ok respected)."""
     config = _empty_chain_config(tmp_path)

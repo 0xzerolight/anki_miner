@@ -500,18 +500,12 @@ def create_services(
         # tags common. Gated the same way as the sibling probes; the probe itself
         # returns None when no chain member is commonness-aware (degrade).
         term_common_lookup = definition_service.offline_term_commonness if has_indexed_dict else None
-        # Kana-recovery quality gate (U12): tightens the pure-hiragana recovery from
-        # existence to a POS-compatible term-exact/common row when a commonness-aware
-        # dict is present. Gated like the sibling probes; the probe itself returns
-        # None (existence fallback) when no chain member is commonness-aware.
-        kana_quality_lookup = definition_service.offline_kana_attest_quality if has_indexed_dict else None
         subtitle_parser = SubtitleParserService(
             config,
             term_lookup=term_lookup,
             reading_lookup=reading_lookup,
             kana_attest_lookup=kana_attest_lookup,
             term_common_lookup=term_common_lookup,
-            kana_quality_lookup=kana_quality_lookup,
         )
     # Share the parser's tagger with the word filter so i+1 swap can
     # rebuild bolded sentence fields without spinning up a second tagger
