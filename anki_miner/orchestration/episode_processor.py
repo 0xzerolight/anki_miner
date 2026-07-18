@@ -1908,7 +1908,11 @@ class EpisodeProcessor:
                 )
             )
             with timed_phase("parse", logger):
-                all_words, line_index, counts = self.subtitle_parser.parse_text_units(document.units, want_line_index)
+                # Only the per-cue subtitle kind gets the video path's annotation
+                # strip + regex filter; manga/OCR and book text pass it through.
+                all_words, line_index, counts = self.subtitle_parser.parse_text_units(
+                    document.units, want_line_index, subtitle_cleanup=document.kind == "subtitle"
+                )
             self.presenter.show_success(
                 QCoreApplication.translate("EpisodeProcessor", "Found %n unique word(s)", "", len(all_words))
             )

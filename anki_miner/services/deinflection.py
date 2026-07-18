@@ -54,6 +54,12 @@ from typing import Any, Callable, Iterable, Mapping, Sequence
 # this module stays free of the compound-matcher import edge.
 TermLookup = Callable[[list[str]], set[str]]
 
+# Batch offline commonness probe (``DefinitionService.offline_term_commonness``):
+# maps each input string to whether a commonness-AWARE offline dict tags it common
+# (jitendex 'popular'/'frequent'). ``None`` iff NO available offline provider is
+# commonness-aware — the caller then keeps pre-commonness behavior byte-identical.
+TermCommonLookup = Callable[[list[str]], dict[str, bool] | None]
+
 _MAX_CONDITION_FLAGS = 32
 _MAX_RESULTS = 4096
 
@@ -363,6 +369,7 @@ def resolve_dictionary_form(
     inflected_surface: str,
     orth_base: str,
     term_lookup: TermLookup | None,
+    term_common_lookup: TermCommonLookup | None = None,
 ) -> str:
     """Best modern JMdict-attested dictionary form for a 動詞/形容詞 card front.
 
@@ -386,6 +393,19 @@ def resolve_dictionary_form(
     * **Gate on EXISTENCE, never ``entries.score``** — score is a uniform-0
       priority marker on the bundled jmdict-english, so a score gate would no-op
       the whole fix. ``term_lookup`` returns the attested subset (existence).
+    * **Commonness-filter the override pool** (``term_common_lookup``, U11). Bare
+      existence lets an archaic/rare LONGER-prefix deinflection outrank the
+      orthBase and ship junk: 呼ばれる deinflects to both 呼ぶ AND the classical
+      呼ばる (both JMdict-attested), and 呼ばる shares the longer prefix. When a
+      commonness-aware offline dict is present, the pool is narrowed to the
+      candidates it tags common (jitendex 'popular'/'frequent'), so 呼ばる (rare,
+      untagged) drops out and 呼ぶ's own-prefix rule keeps the orthBase. An
+      all-uncommon attested set (a rare-but-correct じる verb 詠じる/散じる whose
+      only headword is untagged) falls back to the FULL attested set so its
+      strictly-greater override still fires — the filter only prunes, never
+      empties. ``term_common_lookup is None`` OR its returning ``None`` (no aware
+      dict) leaves the pool = the full attested set: pre-commonness behavior,
+      byte-identical.
     * **Override only on a STRICTLY GREATER common prefix** than ``orth_base``'s
       own — self-limiting so a verb whose orthBase is already the longest prefix
       (乞う, 彷徨った, 帰れる, 立った) is kept unchanged.
@@ -403,10 +423,19 @@ def resolve_dictionary_form(
     attested = term_lookup(sorted(candidates))
     if not attested:
         return orth_base
+    attested_sorted = sorted(attested)
+    # Commonness filter: keep only common candidates in the override pool, but
+    # never empty it (all-uncommon → the full attested set). None (no aware dict)
+    # ⇒ the full attested set, pre-commonness behavior.
+    common = term_common_lookup(attested_sorted) if term_common_lookup is not None else None
+    if common is not None:
+        pool: list[str] = [c for c in attested_sorted if common.get(c)] or attested_sorted
+    else:
+        pool = attested_sorted
     # Rank: longest common prefix with the surface, then prefer the shorter
     # form, then lexicographic (a stable total order regardless of set order).
     winner = min(
-        attested,
+        pool,
         key=lambda cand: (-common_prefix_len(cand, inflected_surface), len(cand), cand),
     )
     if common_prefix_len(winner, inflected_surface) > common_prefix_len(orth_base, inflected_surface):

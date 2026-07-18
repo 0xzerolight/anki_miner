@@ -10,11 +10,16 @@ from pathlib import Path
 
 from anki_miner.services.dictionary.dict_css_scope import scope_dict_css
 from anki_miner.services.dictionary.storage import (
+    COMMON_TAG_CATEGORIES,
     SCHEMA_VERSION,
     TagMeta,
     open_readonly,
     read_meta,
     read_tags,
+    row_is_common,
+)
+from anki_miner.services.dictionary.storage import (
+    attest_detail as storage_attest_detail,
 )
 from anki_miner.services.dictionary.storage import (
     lookup as storage_lookup,
@@ -249,6 +254,66 @@ class IndexedDictProvider:
                 e,
             )
             return {}
+
+    @property
+    def commonness_aware(self) -> bool:
+        """True iff this dictionary's ``tags`` table defines at least one tag in
+        :data:`COMMON_TAG_CATEGORIES` — the precondition for ``attest_quality``'s
+        ``common_rules`` to carry meaning (U10 infra).
+
+        Category-based, NOT table-presence: a jmdict-style tags table
+        ('partOfSpeech'/'name'/'') and an empty monolingual tags table both stay
+        unaware. Reads through the lazy :meth:`_tag_meta` cache, which degrades a
+        read failure to an empty map — so this never raises and an
+        unloaded/corrupt index reports unaware.
+        """
+        return any(m.category in COMMON_TAG_CATEGORIES for m in self._tag_meta().values())
+
+    def attest_quality(self, words: list[str], include_readings: bool) -> dict[str, dict[str, frozenset[str]]]:
+        """Per-word attestation quality for the commonness/deinflection probes
+        (U10 infra; no reader lands in this unit).
+
+        Returns ``{word: {"term_rules": frozenset, "common_rules": frozenset}}``:
+
+        * ``term_rules`` — the ``rules`` column values of the word's term-exact
+          rows (a term-attested noun contributes ``""``; a non-empty set thus
+          means "attested as a headword", the raw string means "with these POS
+          rules").
+        * ``common_rules`` — the ``rules`` values of the word's COMMON rows
+          (:func:`row_is_common`) within the queried scope (term rows always;
+          reading rows when ``include_readings``). Non-empty ⇒ a common row
+          exists; empty on an unaware dict (no commonness tags).
+
+        Every requested word is present (deduped; empty frozensets when
+        unattested). Never raises: an unloaded/corrupt index degrades to
+        all-empty, like :meth:`has_terms`.
+        """
+        deduped = list(dict.fromkeys(words))
+        empty = {"term_rules": frozenset[str](), "common_rules": frozenset[str]()}
+        if self._conn is None:
+            return {w: dict(empty) for w in deduped}
+        try:
+            detail = storage_attest_detail(self._conn, deduped, include_readings)
+        except sqlite3.DatabaseError as e:
+            logger.warning(
+                "Dictionary '%s' (%s) raised DatabaseError during attest_quality; treating as all-miss: %s",
+                self.dict_id,
+                self._db_path,
+                e,
+            )
+            return {w: dict(empty) for w in deduped}
+        tag_meta = self._tag_meta()
+        result: dict[str, dict[str, frozenset[str]]] = {}
+        for w in deduped:
+            term_rules: set[str] = set()
+            common_rules: set[str] = set()
+            for row in detail.get(w, []):
+                if row.match_kind == "term":
+                    term_rules.add(row.rules)
+                if row_is_common(row.tags, tag_meta):
+                    common_rules.add(row.rules)
+            result[w] = {"term_rules": frozenset(term_rules), "common_rules": frozenset(common_rules)}
+        return result
 
     def _tag_meta(self) -> dict[str, TagMeta]:
         """Lazily load and cache this dictionary's ``tags`` table.

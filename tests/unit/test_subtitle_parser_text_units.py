@@ -199,6 +199,110 @@ class TestParseTextUnits:
         assert counter == Counter()
 
 
+class TestParseTextUnitsSubtitleCleanup:
+    """subtitle_cleanup=True (Reading→Subtitles cue kind) runs the video path's
+    annotation strip + user regex; default False leaves manga/book units alone.
+
+    Real fugashi throughout (the guards must fire against attested tokenization,
+    not stubbed tokens): the strip changes what MeCab actually tokenizes.
+    """
+
+    def test_inline_furigana_stripped_fixes_misparse(self, tmp_path):
+        """瀕死(ひんし)の腑抜(ふぬ)け: without cleanup the kana furigana splits
+        腑抜け into 腑 + 抜ける and leaks into the sentence; cleanup=True strips it
+        so the compound tokenizes whole and the sentence is clean."""
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        units = [ReadingUnit(text="瀕死(ひんし)の腑抜(ふぬ)け", index=0, location_label="0:01")]
+
+        off_words, _oi, off_counts = service.parse_text_units(units, want_line_index=False)
+        # Attest the misparse the strip fixes: furigana splits 腑抜け and leaks.
+        assert "腑抜け" not in off_counts
+        assert "腑" in off_counts and "抜ける" in off_counts
+        assert all("(" in w.sentence for w in off_words)
+
+        on_words, _i, on_counts = service.parse_text_units(units, want_line_index=False, subtitle_cleanup=True)
+        assert "腑抜け" in on_counts  # compound recovered
+        assert "腑" not in on_counts and "抜ける" not in on_counts
+        assert {w.sentence for w in on_words} == {"瀕死の腑抜け"}
+
+    def test_caption_cue_skipped_no_count_no_index(self, tmp_path):
+        """A whole-line SFX caption cue collapses to empty → no word, no count,
+        no LineLemmas entry, and cannot misalign the following cue's i+1 index."""
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        units = [
+            ReadingUnit(text="（スマホのバイブ音）", index=0, location_label="0:01"),
+            ReadingUnit(text="猫が魚を食べる", index=1, location_label="0:05"),
+        ]
+        words, index, counts = service.parse_text_units(units, want_line_index=True, subtitle_cleanup=True)
+
+        # The caption contributed nothing; only the real cue mined.
+        assert "音" not in counts and "スマホ" not in counts
+        assert counts == Counter({"猫": 1, "魚": 1, "食べる": 1})
+        assert all(w.sentence == "猫が魚を食べる" for w in words)
+        # Exactly one index entry (the caption cue produced none) → no misalign.
+        assert index is not None
+        assert [e.line_text for e in index] == ["猫が魚を食べる"]
+        assert [e.start_time for e in index] == [1.0]  # index=1 of the real cue
+
+    def test_leading_speaker_tag_peeled(self, tmp_path):
+        """（旬）… leading speaker tag is peeled under cleanup."""
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        units = [ReadingUnit(text="（旬）猫が魚を食べる", index=0, location_label="0:01")]
+        words, _i, _c = service.parse_text_units(units, want_line_index=False, subtitle_cleanup=True)
+        assert {w.sentence for w in words} == {"猫が魚を食べる"}
+        assert all("旬" not in w.sentence for w in words)
+
+    def test_strip_off_switch_leaves_annotations(self, tmp_path):
+        """strip_subtitle_annotations=False disables the strip even under cleanup
+        (the existing off-switch is the escape hatch — no new gate)."""
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media", strip_subtitle_annotations=False)
+        service = SubtitleParserService(config)
+        units = [ReadingUnit(text="（旬）猫が魚を食べる", index=0, location_label="0:01")]
+        words, _i, _c = service.parse_text_units(units, want_line_index=False, subtitle_cleanup=True)
+        assert any("旬" in w.sentence for w in words)  # tag NOT peeled
+
+    def test_regex_filter_double_gated(self, tmp_path):
+        """The user regex applies only when use_subtitle_regex_filter AND a
+        non-empty pattern are both set (mirrors the video path's double gate)."""
+        text = "猫が魚を食べるよ"
+        units = [ReadingUnit(text=text, index=0, location_label="0:01")]
+        base = {
+            "media_temp_folder": tmp_path / "media",
+            "subtitle_regex_filter": "よ$",
+            "subtitle_regex_replacement": "",
+        }
+
+        on = SubtitleParserService(AnkiMinerConfig(**base, use_subtitle_regex_filter=True))
+        on_words, _i, _c = on.parse_text_units(units, want_line_index=False, subtitle_cleanup=True)
+        assert {w.sentence for w in on_words} == {"猫が魚を食べる"}  # trailing よ removed
+
+        off = SubtitleParserService(AnkiMinerConfig(**base, use_subtitle_regex_filter=False))
+        off_words, _i2, _c2 = off.parse_text_units(units, want_line_index=False, subtitle_cleanup=True)
+        assert all(w.sentence == text for w in off_words)  # master switch off → unchanged
+
+        empty = {"media_temp_folder": tmp_path / "media", "subtitle_regex_filter": "", "subtitle_regex_replacement": ""}
+        blank = SubtitleParserService(AnkiMinerConfig(**empty, use_subtitle_regex_filter=True))
+        blank_words, _i3, _c3 = blank.parse_text_units(units, want_line_index=False, subtitle_cleanup=True)
+        assert all(w.sentence == text for w in blank_words)  # empty pattern → no filter
+
+    def test_default_false_leaves_book_units_byte_identical(self, tmp_path):
+        """subtitle_cleanup defaults False: a book paragraph with parenthetical
+        kana is NOT stripped, and the words match the explicit-False call exactly."""
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        units = [ReadingUnit(text="瀕死(ひんし)の状態", index=0, location_label="p.1")]
+
+        default_words, _di, _dc = service.parse_text_units(units, want_line_index=False)
+        explicit_words, _ei, _ec = service.parse_text_units(units, want_line_index=False, subtitle_cleanup=False)
+
+        assert [_strip_timing(w) for w in default_words] == [_strip_timing(w) for w in explicit_words]
+        # The paren furigana survives on the book path (no subtitle cleanup).
+        assert all("(" in w.sentence for w in default_words)
+
+
 class TestReadingPathDecorationStrip:
     """Reading/OCR units share the decoration strip via normalize_for_tokenization
     (F4, 2026-07 audit); other interior whitespace is stored verbatim."""

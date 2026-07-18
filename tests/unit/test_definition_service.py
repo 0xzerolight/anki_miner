@@ -10,9 +10,11 @@ from anki_miner.services.dictionary.providers.indexed_provider import IndexedDic
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
     DictRow,
+    TagMeta,
     bulk_insert,
     create_index,
     write_meta,
+    write_tags,
 )
 
 
@@ -1259,3 +1261,253 @@ class TestOfflineTermReadings:
         good = make_terms_readings_provider("Good", {"体じゅう": ["からだじゅう"]})
         service = DefinitionService(test_config, providers=[bad, good])
         assert service.offline_term_readings(["体じゅう"]) == {"体じゅう": ["からだじゅう"]}
+
+
+# ---------------------------------------------------------------------------
+# U10: commonness/kana-quality service probes (foundation, zero behavior change)
+# ---------------------------------------------------------------------------
+
+
+def _seed_tagged_provider(root: Path, dict_id: str, name: str, rows, tags) -> IndexedDictProvider:
+    """Seed a real index with rows + a tags table, return a loaded provider."""
+    folder = root / dict_id
+    folder.mkdir(parents=True, exist_ok=True)
+    db = folder / "index.sqlite"
+    create_index(db)
+    bulk_insert(db, rows)
+    if tags:
+        write_tags(db, tags)
+    write_meta(db, {"schema_version": str(SCHEMA_VERSION), "source_name": name})
+    p = IndexedDictProvider(dict_id, db, display_name=name)
+    p.load()
+    return p
+
+
+_JITENDEX_TAGS = [
+    TagMeta(name="popular", category="popular", ord=0, notes="", score=0.0),
+    TagMeta(name="frequent", category="frequent", ord=0, notes="", score=0.0),
+    TagMeta(name="n", category="partOfSpeech", ord=0, notes="noun", score=0.0),
+]
+_JMDICT_TAGS = [TagMeta(name="n", category="partOfSpeech", ord=0, notes="noun", score=0.0)]
+
+
+class TestOfflineTermCommonness:
+    """``offline_term_commonness`` — None unless a commonness-aware offline dict."""
+
+    def test_none_when_no_aware_provider(self, test_config, tmp_path: Path):
+        # jmdict-like (partOfSpeech only) is UNAWARE → monolingual-only chain.
+        p = _seed_tagged_provider(
+            tmp_path,
+            "jm",
+            "JMdict",
+            [DictRow(term="日本", reading="にほん", content="<div>x</div>", tags="n", rules="", sequence=1)],
+            _JMDICT_TAGS,
+        )
+        service = DefinitionService(test_config, providers=[p])
+        assert service.offline_term_commonness(["日本"]) is None
+
+    def test_none_when_no_providers(self, test_config):
+        service = DefinitionService(test_config, providers=[])
+        assert service.offline_term_commonness(["日本"]) is None
+
+    def test_common_and_non_common_terms(self, test_config, tmp_path: Path):
+        p = _seed_tagged_provider(
+            tmp_path,
+            "jit",
+            "Jitendex",
+            [
+                DictRow(term="有る", reading="ある", content="<div>be</div>", tags="popular", rules="v5", sequence=1),
+                DictRow(term="見る", reading="みる", content="<div>see</div>", tags="n", rules="v1", sequence=2),
+            ],
+            _JITENDEX_TAGS,
+        )
+        service = DefinitionService(test_config, providers=[p])
+        assert service.offline_term_commonness(["有る", "見る", "無い語"]) == {
+            "有る": True,
+            "見る": False,
+            "無い語": False,
+        }
+
+    def test_common_empty_rules_noun_detected(self, test_config, tmp_path: Path):
+        """A common noun with rules='' is still reported common (common_rules holds
+        '' → non-empty). The empty-rules trap."""
+        p = _seed_tagged_provider(
+            tmp_path,
+            "jit",
+            "Jitendex",
+            [DictRow(term="日本", reading="にほん", content="<div>x</div>", tags="frequent", rules="", sequence=1)],
+            _JITENDEX_TAGS,
+        )
+        service = DefinitionService(test_config, providers=[p])
+        assert service.offline_term_commonness(["日本"]) == {"日本": True}
+
+    def test_reading_only_match_not_counted(self, test_config, tmp_path: Path):
+        """Term-only probe (include_readings=False): a common row reachable only by
+        reading does NOT make the kana query common."""
+        p = _seed_tagged_provider(
+            tmp_path,
+            "jit",
+            "Jitendex",
+            [DictRow(term="開く", reading="あく", content="<div>open</div>", tags="popular", rules="v5", sequence=1)],
+            _JITENDEX_TAGS,
+        )
+        service = DefinitionService(test_config, providers=[p])
+        assert service.offline_term_commonness(["あく"]) == {"あく": False}
+
+    def test_mixed_aware_and_unaware_providers(self, test_config, tmp_path: Path):
+        """Aware presence flips None→dict; only the aware provider's common rows
+        count."""
+        unaware = _seed_tagged_provider(
+            tmp_path,
+            "jm",
+            "JMdict",
+            [DictRow(term="卓袱台", reading="ちゃぶだい", content="<div>t</div>", tags="n", rules="", sequence=1)],
+            _JMDICT_TAGS,
+        )
+        aware = _seed_tagged_provider(
+            tmp_path,
+            "jit",
+            "Jitendex",
+            [DictRow(term="有る", reading="ある", content="<div>be</div>", tags="popular", rules="v5", sequence=1)],
+            _JITENDEX_TAGS,
+        )
+        service = DefinitionService(test_config, providers=[unaware, aware])
+        # 卓袱台 exists only in the UNAWARE dict → not common; 有る common via aware.
+        assert service.offline_term_commonness(["有る", "卓袱台"]) == {"有る": True, "卓袱台": False}
+
+    def test_dedupes_keys(self, test_config, tmp_path: Path):
+        p = _seed_tagged_provider(
+            tmp_path,
+            "jit",
+            "Jitendex",
+            [DictRow(term="有る", reading="ある", content="<div>be</div>", tags="popular", rules="v5", sequence=1)],
+            _JITENDEX_TAGS,
+        )
+        service = DefinitionService(test_config, providers=[p])
+        assert service.offline_term_commonness(["有る", "有る"]) == {"有る": True}
+
+    def test_online_aware_like_provider_ignored(self, test_config, tmp_path: Path):
+        """An online provider is never consulted, even if it claimed awareness."""
+        aware = _seed_tagged_provider(
+            tmp_path,
+            "jit",
+            "Jitendex",
+            [DictRow(term="有る", reading="ある", content="<div>be</div>", tags="popular", rules="v5", sequence=1)],
+            _JITENDEX_TAGS,
+        )
+        online = MagicMock(spec=["name", "is_online", "is_available", "commonness_aware", "attest_quality", "load"])
+        online.name = "Jisho"
+        online.is_online = True
+        online.is_available.return_value = True
+        online.commonness_aware = True
+        service = DefinitionService(test_config, providers=[online, aware])
+        assert service.offline_term_commonness(["有る"]) == {"有る": True}
+        online.attest_quality.assert_not_called()
+
+
+class TestOfflineKanaAttestQuality:
+    """``offline_kana_attest_quality`` — reading-arm ON; term_rules over ALL
+    offline, common_rules over aware only."""
+
+    def test_none_when_no_aware_provider(self, test_config, tmp_path: Path):
+        p = _seed_tagged_provider(
+            tmp_path,
+            "jm",
+            "JMdict",
+            [DictRow(term="日本", reading="にほん", content="<div>x</div>", tags="n", rules="", sequence=1)],
+            _JMDICT_TAGS,
+        )
+        service = DefinitionService(test_config, providers=[p])
+        assert service.offline_kana_attest_quality(["日本"]) is None
+
+    def test_reading_arm_on(self, test_config, tmp_path: Path):
+        """A kana query attests via the reading row (include_readings=True)."""
+        p = _seed_tagged_provider(
+            tmp_path,
+            "jit",
+            "Jitendex",
+            [DictRow(term="開く", reading="あく", content="<div>open</div>", tags="popular", rules="v5", sequence=1)],
+            _JITENDEX_TAGS,
+        )
+        service = DefinitionService(test_config, providers=[p])
+        q = service.offline_kana_attest_quality(["あく"])
+        assert q is not None
+        # reading-only match → no term_rules, but common row → common_rules.
+        assert q["あく"]["term_rules"] == frozenset()
+        assert q["あく"]["common_rules"] == frozenset({"v5"})
+
+    def test_term_rules_union_over_all_offline_common_over_aware_only(self, test_config, tmp_path: Path):
+        """term_rules unions ALL offline providers (aware + unaware); common_rules
+        only the aware one."""
+        unaware = _seed_tagged_provider(
+            tmp_path,
+            "jm",
+            "JMdict",
+            # same headword ruled v1 here, but UNAWARE dict marks nothing common
+            [DictRow(term="開ける", reading="あける", content="<div>o</div>", tags="n", rules="v1", sequence=1)],
+            _JMDICT_TAGS,
+        )
+        aware = _seed_tagged_provider(
+            tmp_path,
+            "jit",
+            "Jitendex",
+            [DictRow(term="開ける", reading="あける", content="<div>o</div>", tags="popular", rules="v5", sequence=1)],
+            _JITENDEX_TAGS,
+        )
+        service = DefinitionService(test_config, providers=[unaware, aware])
+        q = service.offline_kana_attest_quality(["開ける"])
+        assert q is not None
+        # term_rules unions v1 (unaware) + v5 (aware).
+        assert q["開ける"]["term_rules"] == frozenset({"v1", "v5"})
+        # common_rules only from the aware provider (unaware contributes nothing).
+        assert q["開ける"]["common_rules"] == frozenset({"v5"})
+
+    def test_miss_present_with_empty_sets(self, test_config, tmp_path: Path):
+        p = _seed_tagged_provider(
+            tmp_path,
+            "jit",
+            "Jitendex",
+            [DictRow(term="有る", reading="ある", content="<div>be</div>", tags="popular", rules="v5", sequence=1)],
+            _JITENDEX_TAGS,
+        )
+        service = DefinitionService(test_config, providers=[p])
+        q = service.offline_kana_attest_quality(["無い語"])
+        assert q == {"無い語": {"term_rules": frozenset(), "common_rules": frozenset()}}
+
+    def test_raising_provider_degrades_to_miss(self, test_config, tmp_path: Path):
+        """A provider raising in attest_quality contributes nothing; the aware
+        provider's presence still yields a dict (not None)."""
+        aware = _seed_tagged_provider(
+            tmp_path,
+            "jit",
+            "Jitendex",
+            [DictRow(term="有る", reading="ある", content="<div>be</div>", tags="popular", rules="v5", sequence=1)],
+            _JITENDEX_TAGS,
+        )
+        boom = MagicMock(spec=["name", "is_online", "is_available", "commonness_aware", "attest_quality", "load"])
+        boom.name = "Boom"
+        boom.is_online = False
+        boom.is_available.return_value = True
+        boom.commonness_aware = False
+        boom.attest_quality.side_effect = RuntimeError("boom")
+        service = DefinitionService(test_config, providers=[boom, aware])
+        q = service.offline_kana_attest_quality(["有る"])
+        assert q is not None
+        assert q["有る"]["term_rules"] == frozenset({"v5"})
+        assert q["有る"]["common_rules"] == frozenset({"v5"})
+
+    def test_provider_without_attest_quality_contributes_nothing(self, test_config, tmp_path: Path):
+        """A legacy offline provider lacking attest_quality is skipped, but an
+        aware provider still drives the result."""
+        aware = _seed_tagged_provider(
+            tmp_path,
+            "jit",
+            "Jitendex",
+            [DictRow(term="有る", reading="ある", content="<div>be</div>", tags="popular", rules="v5", sequence=1)],
+            _JITENDEX_TAGS,
+        )
+        legacy = make_provider("Legacy", return_value="<div>hit</div>")  # no attest_quality/commonness_aware
+        service = DefinitionService(test_config, providers=[legacy, aware])
+        q = service.offline_kana_attest_quality(["有る"])
+        assert q is not None
+        assert q["有る"]["term_rules"] == frozenset({"v5"})

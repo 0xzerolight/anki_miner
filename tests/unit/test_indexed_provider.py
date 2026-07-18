@@ -1057,3 +1057,225 @@ class TestTermsReadings:
     def test_unloaded_provider_returns_empty(self, tmp_path):
         p = IndexedDictProvider("d", tmp_path / "missing.sqlite")
         assert p.terms_readings(["バカ力"]) == {}
+
+
+# ---------------------------------------------------------------------------
+# U10: commonness_aware + attest_quality (foundation, zero behavior change)
+# ---------------------------------------------------------------------------
+
+
+def _seed_tagged(db_path: Path, rows, tags):
+    create_index(db_path)
+    bulk_insert(db_path, rows)
+    if tags:
+        write_tags(db_path, tags)
+    write_meta(db_path, {"schema_version": str(SCHEMA_VERSION), "source_name": "Test"})
+
+
+class TestCommonnessAware:
+    """``commonness_aware`` is category-based: any tag in {frequent, popular}."""
+
+    def test_jitendex_like_is_aware(self, tmp_path: Path):
+        db = tmp_path / "jit.sqlite"
+        _seed_tagged(
+            db,
+            [DictRow(term="有る", reading="ある", content="<div>be</div>", tags="popular", rules="v5", sequence=1)],
+            [
+                TagMeta(name="popular", category="popular", ord=0, notes="", score=0.0),
+                TagMeta(name="frequent", category="frequent", ord=0, notes="", score=0.0),
+                TagMeta(name="expression", category="expression", ord=0, notes="", score=0.0),
+            ],
+        )
+        p = IndexedDictProvider("jit", db, display_name="Jitendex")
+        assert p.load() is True
+        assert p.commonness_aware is True
+
+    def test_jmdict_like_partofspeech_only_is_unaware(self, tmp_path: Path):
+        """jmdict tags are 'partOfSpeech'/'name'/'' — no commonness category, so
+        a partOfSpeech-only tags table stays UNAWARE (judge-blocking: NOT
+        table-presence)."""
+        db = tmp_path / "jm.sqlite"
+        _seed_tagged(
+            db,
+            [DictRow(term="日本", reading="にほん", content="<div>Japan</div>", tags="n", rules="", sequence=1)],
+            [
+                TagMeta(name="n", category="partOfSpeech", ord=0, notes="noun", score=0.0),
+                TagMeta(name="place", category="name", ord=0, notes="", score=0.0),
+                TagMeta(name="blank", category="", ord=0, notes="", score=0.0),
+            ],
+        )
+        p = IndexedDictProvider("jm", db, display_name="JMdict")
+        assert p.load() is True
+        assert p.commonness_aware is False
+
+    def test_empty_tags_table_is_unaware(self, tmp_path: Path):
+        """A monolingual dict (oukoku11) with an EMPTY tags table is unaware."""
+        db = tmp_path / "mono.sqlite"
+        _seed_tagged(
+            db,
+            [DictRow(term="漢語", reading="かんご", content="<div>x</div>", tags="", rules="", sequence=1)],
+            [],
+        )
+        p = IndexedDictProvider("mono", db, display_name="Mono")
+        assert p.load() is True
+        assert p.commonness_aware is False
+
+    def test_unloaded_provider_is_unaware(self, tmp_path: Path):
+        p = IndexedDictProvider("x", tmp_path / "missing.sqlite", display_name="X")
+        assert p.commonness_aware is False
+
+
+class TestAttestQuality:
+    """``attest_quality`` reduces attest_detail rows to term_rules/common_rules."""
+
+    def _seed_jitendex(self, db_path: Path) -> None:
+        _seed_tagged(
+            db_path,
+            [
+                # verb, term-exact, common (popular), rules v5
+                DictRow(term="有る", reading="ある", content="<div>be</div>", tags="popular", rules="v5", sequence=1),
+                # kanji headword reachable by reading あく; common, rules v5
+                DictRow(
+                    term="開く", reading="あく", content="<div>open</div>", tags="frequent", rules="v5", sequence=2
+                ),
+                # noun, term-exact, common, EMPTY rules
+                DictRow(
+                    term="日本", reading="にほん", content="<div>Japan</div>", tags="popular", rules="", sequence=3
+                ),
+                # verb, term-exact, NOT common (only a POS tag), rules v1
+                DictRow(term="見る", reading="みる", content="<div>see</div>", tags="n", rules="v1", sequence=4),
+            ],
+            [
+                TagMeta(name="popular", category="popular", ord=0, notes="", score=0.0),
+                TagMeta(name="frequent", category="frequent", ord=0, notes="", score=0.0),
+                TagMeta(name="n", category="partOfSpeech", ord=0, notes="noun", score=0.0),
+            ],
+        )
+
+    def test_term_rules_are_raw_rules_strings(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed_jitendex(db)
+        p = IndexedDictProvider("d", db, display_name="D")
+        p.load()
+        q = p.attest_quality(["有る"], include_readings=False)
+        assert q["有る"]["term_rules"] == frozenset({"v5"})
+        assert q["有る"]["common_rules"] == frozenset({"v5"})
+
+    def test_common_noun_empty_rules_yields_empty_string_token(self, tmp_path: Path):
+        """A common noun with rules='' still marks common_rules non-empty (holds
+        ''), so the service can detect 'has a common term row' for empty-rules
+        rows."""
+        db = tmp_path / "t.sqlite"
+        self._seed_jitendex(db)
+        p = IndexedDictProvider("d", db, display_name="D")
+        p.load()
+        q = p.attest_quality(["日本"], include_readings=False)
+        assert q["日本"]["term_rules"] == frozenset({""})
+        assert q["日本"]["common_rules"] == frozenset({""})
+
+    def test_non_common_term_has_empty_common_rules(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed_jitendex(db)
+        p = IndexedDictProvider("d", db, display_name="D")
+        p.load()
+        q = p.attest_quality(["見る"], include_readings=False)
+        assert q["見る"]["term_rules"] == frozenset({"v1"})
+        assert q["見る"]["common_rules"] == frozenset()
+
+    def test_reading_arm_off_gives_no_term_rules_for_reading_only_match(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed_jitendex(db)
+        p = IndexedDictProvider("d", db, display_name="D")
+        p.load()
+        # あく is only a reading (term is 開く); readings off → nothing attested.
+        q = p.attest_quality(["あく"], include_readings=False)
+        assert q["あく"] == {"term_rules": frozenset(), "common_rules": frozenset()}
+
+    def test_reading_arm_on_attests_reading_row_common(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed_jitendex(db)
+        p = IndexedDictProvider("d", db, display_name="D")
+        p.load()
+        q = p.attest_quality(["あく"], include_readings=True)
+        # reading-only match → term_rules empty, but the row is common → common_rules.
+        assert q["あく"]["term_rules"] == frozenset()
+        assert q["あく"]["common_rules"] == frozenset({"v5"})
+
+    def test_unaware_dict_has_empty_common_rules(self, tmp_path: Path):
+        """An unaware dict (partOfSpeech-only tags) never marks a row common, so
+        common_rules is always empty even for a term-exact hit."""
+        db = tmp_path / "jm.sqlite"
+        _seed_tagged(
+            db,
+            [DictRow(term="日本", reading="にほん", content="<div>Japan</div>", tags="n", rules="", sequence=1)],
+            [TagMeta(name="n", category="partOfSpeech", ord=0, notes="noun", score=0.0)],
+        )
+        p = IndexedDictProvider("jm", db, display_name="JMdict")
+        p.load()
+        q = p.attest_quality(["日本"], include_readings=True)
+        assert q["日本"]["term_rules"] == frozenset({""})
+        assert q["日本"]["common_rules"] == frozenset()
+
+    def test_nbsp_tag_name_marks_common(self, tmp_path: Path):
+        """A common tag whose NAME contains an internal NBSP is matched whole."""
+        db = tmp_path / "t.sqlite"
+        _seed_tagged(
+            db,
+            [
+                DictRow(
+                    term="語",
+                    reading="ご",
+                    content="<div>x</div>",
+                    tags="priority form",
+                    rules="v5",
+                    sequence=1,
+                )
+            ],
+            [TagMeta(name="priority form", category="popular", ord=0, notes="", score=0.0)],
+        )
+        p = IndexedDictProvider("d", db, display_name="D")
+        p.load()
+        assert p.commonness_aware is True
+        q = p.attest_quality(["語"], include_readings=False)
+        assert q["語"]["common_rules"] == frozenset({"v5"})
+
+    def test_miss_present_with_empty_sets(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed_jitendex(db)
+        p = IndexedDictProvider("d", db, display_name="D")
+        p.load()
+        q = p.attest_quality(["有る", "無い語"], include_readings=False)
+        assert q["無い語"] == {"term_rules": frozenset(), "common_rules": frozenset()}
+
+    def test_duplicate_words_collapse(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed_jitendex(db)
+        p = IndexedDictProvider("d", db, display_name="D")
+        p.load()
+        q = p.attest_quality(["有る", "有る"], include_readings=False)
+        assert list(q.keys()) == ["有る"]
+
+    def test_unloaded_provider_all_miss(self, tmp_path: Path):
+        p = IndexedDictProvider("x", tmp_path / "missing.sqlite", display_name="X")
+        q = p.attest_quality(["有る", "見る"], include_readings=True)
+        assert q == {
+            "有る": {"term_rules": frozenset(), "common_rules": frozenset()},
+            "見る": {"term_rules": frozenset(), "common_rules": frozenset()},
+        }
+
+    def test_database_error_degrades_to_all_miss(self, tmp_path: Path, caplog):
+        db = tmp_path / "t.sqlite"
+        self._seed_jitendex(db)
+        p = IndexedDictProvider("boom-dict", db, display_name="D")
+        p.load()
+        with patch(
+            "anki_miner.services.dictionary.providers.indexed_provider.storage_attest_detail",
+            side_effect=sqlite3.DatabaseError("database disk image is malformed"),
+        ):
+            caplog.set_level(logging.WARNING)
+            q = p.attest_quality(["有る", "日本"], include_readings=True)
+        assert q == {
+            "有る": {"term_rules": frozenset(), "common_rules": frozenset()},
+            "日本": {"term_rules": frozenset(), "common_rules": frozenset()},
+        }
+        assert "boom-dict" in caplog.text

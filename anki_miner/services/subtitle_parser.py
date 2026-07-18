@@ -15,7 +15,12 @@ from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.reading import ReadingUnit
 from anki_miner.models.word import select_mined_form
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, TermLookup
-from anki_miner.services.deinflection import _is_pure_hiragana, find_highlight_end, resolve_dictionary_form
+from anki_miner.services.deinflection import (
+    TermCommonLookup,
+    _is_pure_hiragana,
+    find_highlight_end,
+    resolve_dictionary_form,
+)
 from anki_miner.services.morphology import (
     AttestLookup,
     ReadingLookup,
@@ -122,15 +127,38 @@ _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非�
 # a longer grammaticalized sequence (すみません, かもしれない). The signal: joining
 # the candidate's surface with the contiguous FUNCTIONAL particles/auxiliaries
 # around it reproduces a form the dictionary attests (as a term OR a reading —
-# かもしれない is attested only as the reading of かも知れない). Restricting the join
-# to 助詞/助動詞 is the false-positive guard: a content neighbor (ものすごい's もの)
-# never joins, so real vocabulary (すごい) abutting a lexicalized homograph is
-# never suppressed.
-_KANA_RECOVER_WINDOW_FUNCTIONAL_POS1: frozenset[str] = frozenset({"助詞", "助動詞"})
+# かもしれない is attested only as the reading of かも知れない). 接頭辞 joins too:
+# おかえりなさい = お(接頭辞)+かえり(→かえる)+なさい, and the window おかえり attests
+# via お帰り's reading, so the bare かえる recovery is suppressed. Restricting the
+# join to 助詞/助動詞/接頭辞 is the false-positive guard: a content neighbor
+# (ものすごい's 名詞 もの) never joins, so real vocabulary (すごい) abutting a
+# lexicalized homograph is never suppressed.
+_KANA_RECOVER_WINDOW_FUNCTIONAL_POS1: frozenset[str] = frozenset({"助詞", "助動詞", "接頭辞"})
 # Max contiguous functional neighbors joined on EACH side of the candidate. Bounds
 # the window enumeration (and the attestation probe) to O(side^2) joins per rare
 # recovery candidate; grammaticalized sequences are short (にとって, かもしれない).
 _KANA_RECOVER_WINDOW_MAX_SIDE: int = 3
+
+# U8 ellipsis truncation-fragment reject. Fansub/CC lines cut a word off
+# mid-utterance at an ellipsis (欲し…, 合…, タ… イガ…) and the tokenizer strands
+# the severed head as a full content word. Applied on BOTH _mine_token branches
+# and DICT-FREE (unlike U4/U5), so the video path benefits too. A token qualifies
+# only when it DIRECTLY abuts an ellipsis char, tested by SET membership
+# (``ch in _ELLIPSIS_CHARS``) — never the substring form ``ch in "…‥"``: the
+# line-edge sentinel "" is a substring of every string, so the substring form
+# would falsely mark every line-initial token adjacent and reject it.
+_ELLIPSIS_CHARS: frozenset[str] = frozenset({"…", "‥"})
+# (a) Cut conjugation: a 動詞/形容詞 stranded in a stem/連用/未然/仮定 form is a
+# severed inflection (欲し…→欲する). Match the cForm PREFIX — unidic emits
+# hyphenated values (連用形-一般, 連用形-促音便), so bare equality would never fire.
+_ELLIPSIS_CUT_POS1: frozenset[str] = frozenset({"動詞", "形容詞"})
+_ELLIPSIS_CUT_CFORM: frozenset[str] = frozenset({"連用形", "未然形", "語幹", "仮定形"})
+# (b) Short fragment (all-katakana or single-char surface) inside a STUTTER line
+# of ≥2 ellipsis GROUPS, where a group is a maximal ellipsis run: ``……`` (the
+# standard fansub double-marker) collapses to ONE group, so a lone trailing 夢……
+# survives while タ… イガ… stays two groups.
+_ELLIPSIS_GROUP_RE = re.compile(r"[…‥]+")
+_ELLIPSIS_STUTTER_MIN_GROUPS: int = 2
 
 
 def _is_katakana_surface_char(ch: str) -> bool:
@@ -212,11 +240,19 @@ class SubtitleParserService:
         term_lookup: TermLookup | None = None,
         reading_lookup: ReadingLookup | None = None,
         kana_attest_lookup: KanaAttestLookup | None = None,
+        term_common_lookup: TermCommonLookup | None = None,
     ):
         """Initialize the subtitle parser.
 
         Args:
             config: Configuration for parsing
+            term_common_lookup: Optional batch commonness probe
+                (``DefinitionService.offline_term_commonness``). When provided,
+                the verb-front resolver narrows its deinflection override pool to
+                headwords a commonness-aware offline dict tags common, so an
+                archaic/rare longer-prefix candidate (呼ばる from 呼ばれる) can't
+                displace the unidic orthBase. ``None`` (or a chain with no aware
+                dict) keeps the resolver byte-identical to pre-commonness.
             kana_attest_lookup: Optional term-OR-reading offline existence probe
                 (``DefinitionService.has_offline_definitions``). When provided,
                 pure-hiragana content words the script gate would drop (きれい,
@@ -267,6 +303,14 @@ class SubtitleParserService:
         # pre-gate behavior (exactly like the matcher's term_lookup gating).
         self._exist_memo: dict[str, bool] = {}
         self._attest: AttestLookup | None = self._memoized_attest if term_lookup is not None else None
+        # Commonness probe for the verb-front resolver (see _memoized_term_common /
+        # _resolve_front). None ⇒ the resolver keeps its full attested override
+        # pool (pre-commonness behavior). _common_memo caches per-surface verdicts;
+        # _common_aware caches the chain-level "is any offline dict commonness-
+        # aware" answer (None = not yet probed, False = unaware → always degrade).
+        self._term_common_lookup = term_common_lookup
+        self._common_memo: dict[str, bool] = {}
+        self._common_aware: bool | None = None
         # Dictionary-attested compound matching (see services/compound_matcher.py).
         # Built only when a term lookup is injected (COMPOUND_MATCHING is always
         # on); the matcher reuses the inclusion rule so spans start only at
@@ -983,20 +1027,30 @@ class SubtitleParserService:
         self,
         units: Sequence[ReadingUnit],
         want_line_index: bool,
+        *,
+        subtitle_cleanup: bool = False,
     ) -> tuple[list[TokenizedWord], list[LineLemmas] | None, collections.Counter[str]]:
         """Parse reading-tab text units into mining words, index, and lemma counts.
 
-        The reading pipeline (manga volumes / novels) hands mined text as
-        ``ReadingUnit``s — one paragraph or manga text block each — instead of a
-        subtitle file. Each unit's ``text`` is normalized for tokenization (the
-        same ``normalize_for_tokenization`` + ``standardize_kanji_variants`` the
-        subtitle path applies via ``clean_subtitle_text`` — mokuro OCR emits
-        Kangxi radicals and halfwidth katakana that otherwise mis-tokenize), and
-        that normalized form becomes the card sentence: there is no re-windowing,
-        no markup strip, no regex filter, no pysubs2 and no per-file line cache
-        on this path. ``unit.index`` (document order) doubles as the dummy start
-        AND end time, so ``duration`` is ``0.0`` and every duration-based
-        optional filter is inert by design.
+        The reading pipeline (manga volumes / novels / per-cue subtitles) hands
+        mined text as ``ReadingUnit``s — one paragraph, manga text block, or
+        subtitle cue each — instead of a subtitle file. Each unit's ``text`` is
+        normalized for tokenization (the same ``normalize_for_tokenization`` +
+        ``standardize_kanji_variants`` the subtitle path applies via
+        ``clean_subtitle_text`` — mokuro OCR emits Kangxi radicals and halfwidth
+        katakana that otherwise mis-tokenize), and that normalized form becomes
+        the card sentence. There is no re-windowing, no pysubs2 and no per-file
+        line cache on this path. ``unit.index`` (document order) doubles as the
+        dummy start AND end time, so ``duration`` is ``0.0`` and every
+        duration-based optional filter is inert by design.
+
+        When ``subtitle_cleanup`` is set (the Reading→Subtitles per-cue path),
+        each normalized unit additionally gets the subtitle-only annotation strip
+        + user regex filter the video path applies via ``_clean_line_text``
+        (:423–426), config-gated and order-identical; a cue that collapses to
+        empty is skipped, so a whole-line SFX caption produces no word, no count,
+        and no line-index entry. Manga/OCR and book units leave it ``False`` and
+        are byte-identical to before.
 
         One tokenize pass per unit: ``_build_line_state`` tokenizes once and both
         the returned Counter and the emitted words reuse its ``merged_tokens``.
@@ -1012,6 +1066,10 @@ class SubtitleParserService:
             want_line_index: When True, build the per-unit ``LineLemmas`` index
                 (i+1 filter input) alongside the words; when False the index
                 element of the returned tuple is ``None``.
+            subtitle_cleanup: When True (Reading→Subtitles cue kind), apply the
+                subtitle-only annotation strip + user regex after normalization,
+                mirroring the video path's ``_clean_line_text``; a cue that
+                collapses to empty is dropped. Default ``False`` (manga/book).
 
         Returns:
             ``(words, line_index, counts)``. ``words`` is mined_form-deduped
@@ -1038,8 +1096,21 @@ class SubtitleParserService:
             # stored as the card sentence, so the displayed sentence matches what
             # was mined (as on the subtitle path). Order mirrors clean_subtitle_text
             # (normalize_for_tokenization then standardize_kanji_variants); the
-            # markup strip / regex filter it also runs are subtitle-only.
+            # markup strip / regex filter it also runs are applied just below,
+            # subtitle-cue kind only (subtitle_cleanup).
             text = standardize_kanji_variants(normalize_for_tokenization(unit.text))
+            if subtitle_cleanup:
+                # Reading→Subtitles per-cue kind: the video path's subtitle-only
+                # cleanup (annotation strip + user regex) the loader can't run
+                # (it is config-free). Order mirrors _clean_line_text (:423–426);
+                # a cue that collapses to empty is skipped, so its (empty) text
+                # never reaches _build_line_state and contributes no count or
+                # line-index entry — content-free lines are already skipped below.
+                if self.config.strip_subtitle_annotations:
+                    text = strip_inline_annotations(text)
+                text = self._apply_text_filter(text)
+                if not text:
+                    continue
             # Dummy timing: the index is both start and end (duration 0.0). No
             # re-windowing exists — the normalized unit text is the card sentence.
             line_state = self._build_line_state(text, float(unit.index), float(unit.index))
@@ -1122,6 +1193,39 @@ class SubtitleParserService:
                 self._exist_memo[s] = s in hits
         return {s for s in surfaces if self._exist_memo.get(s)}
 
+    def _memoized_term_common(self, surfaces: list[str]) -> dict[str, bool] | None:
+        """Per-instance memoized commonness probe (see _resolve_front).
+
+        Wraps ``self._term_common_lookup`` (``offline_term_commonness``), caching
+        each surface's common/not-common verdict in ``self._common_memo`` so a
+        repeated corpus probes each distinct surface once. The underlying probe
+        returns ``None`` when NO offline provider is commonness-aware — a static
+        chain property cached in ``self._common_aware`` so later calls
+        short-circuit to ``None`` without re-probing (degrade byte-identical).
+
+        Returns ``{surface: bool}`` over the queried surfaces, or ``None``. Reads
+        the per-call answer from a local ``verdicts`` snapshot, NEVER by
+        re-subscripting the shared cache after the clear-on-cap below (an
+        eviction of a key populated earlier this call would KeyError — the same
+        cap-clear class the kana-window cache guards against, commit 27a7671).
+        """
+        if self._term_common_lookup is None or self._common_aware is False:
+            return None
+        deduped = list(dict.fromkeys(surfaces))
+        uncached = [s for s in deduped if s not in self._common_memo]
+        verdicts = {s: self._common_memo[s] for s in deduped if s not in uncached}
+        if uncached:
+            result = self._term_common_lookup(uncached)
+            if result is None:
+                self._common_aware = False
+                return None
+            self._common_aware = True
+            if len(self._common_memo) + len(uncached) > _FRONT_CACHE_CAP:
+                self._common_memo.clear()
+            for s in uncached:
+                verdicts[s] = self._common_memo[s] = bool(result.get(s))
+        return verdicts
+
     def _merge_compound_suffixes(self, tokens: list) -> list:
         """Run all compound-merge passes (see morphology.merge_compound_suffixes).
 
@@ -1176,7 +1280,9 @@ class SubtitleParserService:
         key = (inflected_surface, orth_base, ctype if isinstance(ctype, str) else "")
         cached = self._front_cache.get(key)
         if cached is None:
-            cached = resolve_dictionary_form(inflected_surface, orth_base, self._term_lookup)
+            cached = resolve_dictionary_form(
+                inflected_surface, orth_base, self._term_lookup, self._memoized_term_common
+            )
             # The deinflection resolver only rewrites じる/ずる (and leaves every
             # other form == orth_base). Where it made no change, run the
             # garbage-orthBase net so a same-kanji derived front the dictionary
@@ -1280,7 +1386,9 @@ class SubtitleParserService:
         full per-line ``merged_tokens`` list) so the recovery path can inspect the
         candidate's functional neighbors.
 
-        Two disjoint acceptance paths, each with its own reject layer:
+        Two disjoint acceptance paths, each with its own reject layer, plus the
+        dict-free U8 ellipsis truncation-fragment reject
+        (``_is_ellipsis_truncation_fragment``) applied on BOTH:
 
         - ``should_include`` accepts (kanji / katakana loanword): apply ONLY the
           U5 katakana run-fragment guard (``_is_katakana_run_fragment``). The U4
@@ -1296,10 +1404,14 @@ class SubtitleParserService:
         ``should_include``-then-recover order so the two never diverge.
         """
         if self._inclusion_rule.should_include(word_token):
-            return not self._is_katakana_run_fragment(word_token, text, tok_start, tok_end)
+            if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
+                return False
+            return not self._is_ellipsis_truncation_fragment(word_token, text, tok_start, tok_end)
         if not self._recover_kana_content_word(word_token):
             return False
-        return not self._rejected_by_lexicalized_window(word_token, tokens)
+        if self._rejected_by_lexicalized_window(word_token, tokens):
+            return False
+        return not self._is_ellipsis_truncation_fragment(word_token, text, tok_start, tok_end)
 
     def _rejected_by_lexicalized_window(self, word_token, tokens: list) -> bool:
         """Whether a recovered kana fragment sits inside an attested lexicalized expression.
@@ -1378,7 +1490,7 @@ class SubtitleParserService:
 
     @staticmethod
     def _is_functional_token(token) -> bool:
-        """True when ``token`` is a functional particle/auxiliary (pos1 ∈ 助詞/助動詞)."""
+        """True when ``token`` is a functional particle/auxiliary/prefix (pos1 ∈ 助詞/助動詞/接頭辞)."""
         pos1 = getattr(getattr(token, "feature", None), "pos1", None)
         return pos1 in _KANA_RECOVER_WINDOW_FUNCTIONAL_POS1
 
@@ -1426,6 +1538,48 @@ class SubtitleParserService:
         left = text[tok_start - 1] if tok_start > 0 else ""
         right = text[tok_end] if tok_end < len(text) else ""
         return _continues_katakana_run(left) or _continues_katakana_run(right)
+
+    def _is_ellipsis_truncation_fragment(self, word_token, text: str, tok_start: int, tok_end: int) -> bool:
+        """Whether an accepted token is a word cut off mid-utterance at an ellipsis.
+
+        Post-acceptance REJECT layer shared by BOTH ``_mine_token`` branches and,
+        unlike the U4/U5 rejects, DICT-FREE (positional + POS/cForm only) so it
+        fires on the video path too. Rejects only a token DIRECTLY abutting an
+        ellipsis char (``…``/``‥``) that also matches one truncation signal:
+
+        (a) a 動詞/形容詞 stranded in a cut conjugation — its ``cForm`` PREFIX is
+            one of 連用形/未然形/語幹/仮定形 (欲し…→欲する). unidic emits hyphenated
+            cForms (連用形-一般), so the prefix split is load-bearing. A verb
+            buffered from the ellipsis by a 助詞/接尾辞 (待って…, 続いて…) never
+            abuts, so it survives; 意志推量形 (行こう…) is not a cut form, so it
+            survives too.
+        (b) a short fragment (all-katakana or single-char surface) in a STUTTER
+            line of ≥2 ellipsis groups (合…/タ… イガ…). ``……`` is one group, so a
+            single trailing 夢…… survives.
+
+        Adjacency is SET membership; the line-edge sentinel "" (a token at a line
+        boundary) is not a member, so a boundary token is never falsely adjacent.
+        Deliberate recall loss (plan ledger): trailing 連用中止法 (飲み…→飲む) and
+        single-char content nouns in ≥2-group lines (声, 年) — all common words
+        mined elsewhere.
+        """
+        left = text[tok_start - 1] if tok_start > 0 else ""
+        right = text[tok_end] if tok_end < len(text) else ""
+        if left not in _ELLIPSIS_CHARS and right not in _ELLIPSIS_CHARS:
+            return False
+        feature = getattr(word_token, "feature", None)
+        # (a) severed inflectional tail of a verb/adjective.
+        if getattr(feature, "pos1", None) in _ELLIPSIS_CUT_POS1:
+            c_form = getattr(feature, "cForm", None)
+            if isinstance(c_form, str) and c_form.split("-", 1)[0] in _ELLIPSIS_CUT_CFORM:
+                return True
+        # (b) short fragment in a stutter line (≥2 ellipsis groups).
+        surface = getattr(word_token, "surface", None)
+        return (
+            isinstance(surface, str)
+            and (len(surface) == 1 or _is_all_katakana(surface))
+            and len(_ELLIPSIS_GROUP_RE.findall(text)) >= _ELLIPSIS_STUTTER_MIN_GROUPS
+        )
 
     def _recover_kana_content_word(self, word_token) -> bool:
         """Whether an otherwise-rejected pure-hiragana content word is recoverable.

@@ -1291,8 +1291,8 @@ class TestKanaRecoveryLexicalizedWindow:
 
     A pure-hiragana content-word fragment (すみ from すみません, しれ from
     かもしれない) the script gate drops but recovery would re-admit is suppressed
-    when joining it with contiguous FUNCTIONAL neighbors (pos1 ∈ {助詞, 助動詞},
-    ≤3/side) forms a string the term-OR-reading probe attests. Functional-only:
+    when joining it with contiguous FUNCTIONAL neighbors (pos1 ∈ {助詞, 助動詞,
+    接頭辞}, ≤3/side) forms a string the term-OR-reading probe attests. Functional-only:
     a content neighbor (ものすごい's もの) never joins, so real vocabulary abutting
     a lexicalized homograph is never suppressed.
     """
@@ -1530,6 +1530,54 @@ class TestKanaRecoveryLexicalizedWindow:
         ]
         # No KeyError, and the attested すみません window still rejects recovery.
         assert self._mine(service, tokens, 0) is False
+
+    # --- 11. 接頭辞 window: おかえりなさい → かえる recovery rejected (real fugashi). ---
+
+    def test_okaeri_prefix_window_rejected_real_fugashi(self, test_config, tmp_path):
+        # おかえりなさい tokenizes お(接頭辞)+かえり(動詞→かえる)+なさい(非自立可能);
+        # with 接頭辞 in the functional-window class the join お+かえり=おかえり is
+        # probed and attests via お帰り's reading → the かえる/返る recovery is
+        # suppressed. Differential control (attributes the reject to the WINDOW,
+        # not a dict miss): with ONLY the bare front かえる attested — window
+        # おかえり NOT attested — recovery fires and the 返る junk card WOULD survive.
+        srt = _write_srt(tmp_path, "okaeri.srt", "おかえりなさい")
+
+        no_window = _attest_lookup("かえる")  # bare front only, window not attested
+        recovered = SubtitleParserService(test_config, kana_attest_lookup=no_window).parse_subtitle_file(srt)
+        assert "返る" in {w.lemma for w in recovered}  # recovery would fire...
+        assert any("おかえり" in call for call in no_window.calls)  # ...and the window WAS probed
+
+        with_window = _attest_lookup("かえる", "おかえり")  # window attested → reject
+        words = SubtitleParserService(test_config, kana_attest_lookup=with_window).parse_subtitle_file(srt)
+        assert "返る" not in {w.lemma for w in words}
+        assert "かえる" not in {w.mined_form for w in words}
+        assert any("おかえり" in call for call in with_window.calls)  # window path drove the reject
+
+    # --- 12. Widened class must not over-reject: unattested 接頭辞 windows survive. ---
+
+    def test_prefix_window_unattested_o_recovers(self, test_config):
+        # お(接頭辞)+わかり(動詞→わかる): the widened class forms & PROBES the window
+        # おわかり, but it is unattested → the bare わかる recovery survives.
+        lookup = _attest_lookup("わかる")  # bare front only; window おわかり not attested
+        service = self._service(test_config, lookup)
+        tokens = [
+            _make_token("お", "接頭辞", pos2="*", lemma="御", orth_base="お"),
+            _make_token("わかり", "動詞", pos2="一般", lemma="分かる", orth_base="わかる"),
+        ]
+        assert self._mine(service, tokens, 1) is True
+        assert any("おわかり" in call for call in lookup.calls)  # widened class probed the window
+
+    def test_prefix_window_unattested_non_o_recovers(self, test_config):
+        # 超(接頭辞)+かわいい(形容詞): a non-お 接頭辞 also joins the window; 超かわいい
+        # is unattested → the かわいい recovery survives.
+        lookup = _attest_lookup("かわいい")  # bare front only; window 超かわいい not attested
+        service = self._service(test_config, lookup)
+        tokens = [
+            _make_token("超", "接頭辞", pos2="*", lemma="超", orth_base="超"),
+            _make_token("かわいい", "形容詞", pos2="一般", lemma="可愛い", orth_base="かわいい"),
+        ]
+        assert self._mine(service, tokens, 1) is True
+        assert any("超かわいい" in call for call in lookup.calls)  # non-お 接頭辞 joined the window
 
 
 class TestExtractLemma:
@@ -4785,6 +4833,178 @@ class TestVerbFrontResolver:
         assert word.resolved_reading == ""
 
 
+# Production-primitive commonness fixture (U11): a real IndexedDictProvider whose
+# tags table marks the base verbs 'popular' and their archaic/rare longer-prefix
+# deinflections merely present (non-common). Each row is (term, reading, common?).
+_COMMONNESS_ROWS = [
+    ("呼ぶ", "よぶ", True),
+    ("呼ばる", "よばる", False),  # classical passive stem — attested but rare
+    ("立つ", "たつ", True),
+    ("立たす", "たたす", False),  # archaic causative — attested but rare
+    ("行く", "いく", True),
+    ("行ける", "いける", False),  # potential — attested but not the base verb
+    ("感じる", "かんじる", True),
+    ("感ずる", "かんずる", False),  # archaic サ変 sibling — attested but rare
+]
+
+
+def _build_commonness_service(root):
+    """Real DefinitionService over a tagged fixture index (mirrors U10 patterns).
+
+    A 'popular'/'partOfSpeech' tags table makes the provider commonness-aware, so
+    ``offline_term_commonness`` returns real verdicts (not None) and the whole
+    tags → commonness_aware → attest_quality chain runs end-to-end.
+    """
+    from anki_miner.services.definition_service import DefinitionService
+    from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
+    from anki_miner.services.dictionary.storage import (
+        SCHEMA_VERSION,
+        DictRow,
+        TagMeta,
+        bulk_insert,
+        create_index,
+        write_meta,
+        write_tags,
+    )
+
+    folder = root / "commonness-fix"
+    folder.mkdir(parents=True, exist_ok=True)
+    db = folder / "index.sqlite"
+    create_index(db)
+    bulk_insert(
+        db,
+        [
+            DictRow(
+                term=t,
+                reading=r,
+                content=f"<div>{t}</div>",
+                tags="popular" if common else "n",
+                rules="",
+                sequence=i + 1,
+            )
+            for i, (t, r, common) in enumerate(_COMMONNESS_ROWS)
+        ],
+    )
+    write_tags(
+        db,
+        [
+            TagMeta(name="popular", category="popular", ord=0, notes="", score=0.0),
+            TagMeta(name="n", category="partOfSpeech", ord=0, notes="noun", score=0.0),
+        ],
+    )
+    write_meta(db, {"schema_version": str(SCHEMA_VERSION), "source_name": "commonness-fix"})
+    provider = IndexedDictProvider("commonness-fix", db, display_name="Commonness Fix")
+    provider.load()
+    return DefinitionService(AnkiMinerConfig(), providers=[provider])
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestVerbFrontCommonnessResolver:
+    """U11 end-to-end: the commonness-aware override pool. Real fugashi mints the
+    inflected span; a real IndexedDictProvider/DefinitionService supplies both the
+    existence (``offline_terms_exist``) and commonness (``offline_term_commonness``)
+    probes, so an archaic/rare longer-prefix deinflection can no longer displace
+    the unidic orthBase. Probe-None wiring degrades byte-identically to pre-U11.
+    """
+
+    def _mine(self, service, sentence, *, term_common=True):
+        parser = SubtitleParserService(
+            AnkiMinerConfig(),
+            term_lookup=service.offline_terms_exist,
+            term_common_lookup=service.offline_term_commonness if term_common else None,
+        )
+        unit = ReadingUnit(text=sentence, index=0, location_label="t")
+        words, _index, _counts = parser.parse_text_units([unit], want_line_index=False)
+        return [w.mined_form for w in words]
+
+    def test_yobareru_resolves_to_yobu(self, tmp_path):
+        service = _build_commonness_service(tmp_path)
+        forms = self._mine(service, "“最終兵器”と呼ばれるハンター")
+        assert "呼ぶ" in forms
+        assert "呼ばる" not in forms
+
+    def test_tataseru_resolves_to_tatsu(self, tmp_path):
+        service = _build_commonness_service(tmp_path)
+        forms = self._mine(service, "あいつをまた戦場に立たせることは してほしくありません")
+        assert "立つ" in forms
+        assert "立たす" not in forms
+
+    def test_ike_resolves_to_iku(self, tmp_path):
+        service = _build_commonness_service(tmp_path)
+        forms = self._mine(service, "行け")
+        assert forms == ["行く"]
+
+    def test_kanjite_still_resolves_to_kanjiru(self, tmp_path):
+        # Contract preserved: the common 感じる still overrides the archaic 感ずる.
+        service = _build_commonness_service(tmp_path)
+        assert self._mine(service, "感じて") == ["感じる"]
+
+    def test_probe_none_degrades_to_pre_u11_junk(self, tmp_path):
+        # Same fixture, but term_common_lookup NOT wired → the full attested pool,
+        # so the rare 呼ばる wins the override exactly as pre-U11 (attests the
+        # degrade: the junk longer-prefix front comes back).
+        service = _build_commonness_service(tmp_path)
+        forms = self._mine(service, "“最終兵器”と呼ばれるハンター", term_common=False)
+        assert "呼ばる" in forms
+        assert "呼ぶ" not in forms
+
+
+class TestMemoizedTermCommon:
+    """``_memoized_term_common`` — the per-instance commonness cache used by the
+    verb-front resolver. Verdicts are read from a local snapshot so a clear-on-cap
+    mid-batch can never KeyError (the 27a7671 cap-clear class); an unaware chain
+    (underlying probe returns None) is cached once and thereafter short-circuits.
+    """
+
+    def _service(self, term_common_lookup):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            return SubtitleParserService(
+                AnkiMinerConfig(),
+                term_lookup=lambda terms: set(terms),
+                term_common_lookup=term_common_lookup,
+            )
+
+    def test_returns_none_when_no_lookup(self):
+        service = self._service(None)
+        assert service._memoized_term_common(["呼ぶ"]) is None
+
+    def test_unaware_probe_cached_as_none_and_not_reprobed(self):
+        calls = []
+
+        def probe(terms):
+            calls.append(list(terms))
+            return None  # no commonness-aware dict in the chain
+
+        service = self._service(probe)
+        assert service._memoized_term_common(["呼ぶ"]) is None
+        assert service._memoized_term_common(["立つ"]) is None
+        assert len(calls) == 1  # probed once, then the unaware verdict short-circuits
+
+    def test_memoized_per_distinct_surface(self):
+        calls: list[str] = []
+
+        def probe(terms):
+            calls.extend(terms)
+            return dict.fromkeys(terms, True)
+
+        service = self._service(probe)
+        service._memoized_term_common(["呼ぶ", "立つ"])
+        service._memoized_term_common(["呼ぶ", "行く"])  # 呼ぶ already cached
+        assert calls == ["呼ぶ", "立つ", "行く"]
+
+    def test_cap_clear_preserves_precached_verdict(self, monkeypatch):
+        # A prior call cached 呼ぶ; this call's uncached is only [立つ]. Driving the
+        # cap below the combined size triggers the clear-on-cap, wiping 呼ぶ. The
+        # returned verdict for 呼ぶ must come from the local snapshot, not a re-read
+        # of the emptied shared cache — else _common_memo["呼ぶ"] KeyErrors.
+        service = self._service(lambda terms: dict.fromkeys(terms, True))
+        service._common_memo["呼ぶ"] = True  # pre-cached
+        service._common_aware = True
+        monkeypatch.setattr("anki_miner.services.subtitle_parser._FRONT_CACHE_CAP", 1)
+        result = service._memoized_term_common(["呼ぶ", "立つ"])
+        assert result == {"呼ぶ": True, "立つ": True}
+
+
 class TestMinedFormAttestOrRemap:
     """U3: a derived/garbage verb-adjective front that matches no dictionary
     headword remaps to its attested lemma — but ONLY when the lemma/orthBase
@@ -5427,3 +5647,141 @@ class TestKatakanaFragmentGuard:
         without_dict = self._mine(tmp_path, test_config, "猫と犬", tokens(), None)
         assert with_dict == without_dict
         assert [w.surface for w in with_dict] == ["猫", "犬"]
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestEllipsisTruncationGuard:
+    """Dict-free reject of words cut off mid-utterance at an ellipsis (U8).
+
+    Real fugashi/unidic on live fansub-style lines. The three reject targets are
+    ATTESTED in a fixture dict (合わせ/欲する/イガ) so the test proves an
+    otherwise-mineable, dictionary-real word is dropped BY THIS guard, not by a
+    tokenizer miss: every reject case first asserts ``should_include`` accepts the
+    token, then that ``_is_ellipsis_truncation_fragment`` is what rejects it. The
+    keep-cases (buffered verbs, single-group nouns, 意志推量形, the line-initial
+    sentinel) prove the guard does not over-fire.
+    """
+
+    _ATTESTED = ("合わせ", "欲する", "イガ", "合", "夢", "声", "年")
+
+    def _service(self):
+        return SubtitleParserService(
+            AnkiMinerConfig(),
+            term_lookup=_lookup_for(set(self._ATTESTED)),
+            kana_attest_lookup=_attest_lookup(*self._ATTESTED),
+        )
+
+    @staticmethod
+    def _spans(service, sentence):
+        """Reproduce the mining loop's normalize → build → locate for one line."""
+        from anki_miner.services.morphology import iter_token_spans
+        from anki_miner.utils.ja_normalize import (
+            normalize_for_tokenization,
+            standardize_kanji_variants,
+        )
+
+        text = standardize_kanji_variants(normalize_for_tokenization(sentence))
+        text, _raw, merged, *_ = service._build_line_state(text, 0.0, 0.0)
+        return text, list(iter_token_spans(text, merged))
+
+    def _find(self, spans, surface):
+        return next((tok, s, e) for tok, s, e in spans if tok.surface == surface)
+
+    def _mine(self, sentence):
+        service = self._service()
+        words, _idx, _counts = service.parse_text_units(
+            [ReadingUnit(text=sentence, index=0, location_label="t")], want_line_index=False
+        )
+        return {w.mined_form for w in words}
+
+    # --- Reject (a): cut-conjugation verb/adjective severed at the ellipsis. ---
+
+    def test_cut_conjugation_verb_rejected(self):
+        service = self._service()
+        text, spans = self._spans(service, "何が欲し…")
+        tok, start, end = self._find(spans, "欲し")
+        # unidic tags 欲し 動詞/連用形-一般 and its orthBase 欲する is attested, so it
+        # is otherwise mineable — the guard is what drops it.
+        assert service._inclusion_rule.should_include(tok) is True
+        assert service._memoized_attest(["欲する"]) == {"欲する"}
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is True
+        assert self._mine("何が欲し…") == {"何"}  # 何 (1 group, not abutting) survives
+
+    # --- Reject (b): single-char fragment in a >=2-group stutter line. ---
+
+    def test_single_char_fragment_rejected(self):
+        service = self._service()
+        text, spans = self._spans(service, "合… せ…")
+        tok, start, end = self._find(spans, "合")
+        assert service._inclusion_rule.should_include(tok) is True
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is True
+        assert self._mine("合… せ…") == set()
+
+    def test_single_char_noun_ledger_loss_rejected(self):
+        # Ledger loss: 声 is a single-char content noun in a 2-group line; dropped
+        # here (mined elsewhere). お前 (not abutting, not single-char) survives.
+        service = self._service()
+        text, spans = self._spans(service, "その声… お前 まさか…")
+        tok, start, end = self._find(spans, "声")
+        assert service._inclusion_rule.should_include(tok) is True
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is True
+        assert self._mine("その声… お前 まさか…") == {"お前"}
+
+    # --- Reject (b): all-katakana fragment in a >=2-group stutter line. ---
+
+    def test_katakana_fragment_rejected(self):
+        service = self._service()
+        text, spans = self._spans(service, "タ… イガ… さん")
+        tok, start, end = self._find(spans, "イガ")
+        assert service._inclusion_rule.should_include(tok) is True
+        assert service._memoized_attest(["イガ"]) == {"イガ"}
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is True
+        assert self._mine("タ… イガ… さん") == set()
+
+    # --- Keep: a verb buffered from the ellipsis by 助詞/接尾辞 never abuts. ---
+
+    def test_buffered_verb_survives(self):
+        service = self._service()
+        text, spans = self._spans(service, "ここで待って…")
+        tok, start, end = self._find(spans, "待っ")
+        # 待っ is 連用形-促音便 (a cut form) but て sits between it and the ellipsis.
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is False
+        assert self._mine("ここで待って…") == {"待つ"}
+
+    # --- Keep: 意志推量形 is not a cut form even when it abuts the ellipsis. ---
+
+    def test_non_cut_conjugation_survives(self):
+        service = self._service()
+        text, spans = self._spans(service, "行こう…")
+        tok, start, end = self._find(spans, "行こう")
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is False
+        assert self._mine("行こう…") == {"行く"}
+
+    # --- Keep: a single trailing ellipsis (or the fansub …… double-marker). ---
+
+    def test_single_group_noun_survives(self):
+        service = self._service()
+        text, spans = self._spans(service, "夢……")
+        tok, start, end = self._find(spans, "夢")
+        # …… is one maximal ellipsis run → one group → below the >=2 stutter floor.
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is False
+        assert self._mine("夢…") == {"夢"}
+        assert self._mine("夢……") == {"夢"}
+
+    # --- Keep: 副詞 abutting an ellipsis is not mined, and no junk appears. ---
+
+    def test_adverb_line_introduces_no_junk(self):
+        assert self._mine("先ほど ようやく…") == {"先ほど"}
+
+    # --- Keep: line-initial cut-conjugation verb is NOT falsely adjacent. ---
+
+    def test_line_initial_verb_not_falsely_adjacent(self):
+        # 飲み (動詞/連用形-一般) sits at index 0, so its left neighbor is the ""
+        # line-edge sentinel. Set membership keeps "" out, so the substring trap
+        # (`"" in "…‥"` is True) cannot reject every line-initial 連用形 verb here.
+        service = self._service()
+        text, spans = self._spans(service, "飲みたい…")
+        tok, start, end = self._find(spans, "飲み")
+        assert start == 0
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is False
+        assert "飲む" in self._mine("飲みたい…")

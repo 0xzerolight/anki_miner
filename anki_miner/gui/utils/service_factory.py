@@ -495,11 +495,17 @@ def create_services(
         # offline_terms_exist above — きれい is attested only as 綺麗's reading.
         # None ⇒ no offline dict ⇒ no recovery (safe degrade, pre-WS2 behavior).
         kana_attest_lookup = definition_service.has_offline_definitions if has_indexed_dict else None
+        # Commonness probe for the verb-front resolver (U11): narrows the
+        # deinflection override pool to headwords a commonness-aware offline dict
+        # tags common. Gated the same way as the sibling probes; the probe itself
+        # returns None when no chain member is commonness-aware (degrade).
+        term_common_lookup = definition_service.offline_term_commonness if has_indexed_dict else None
         subtitle_parser = SubtitleParserService(
             config,
             term_lookup=term_lookup,
             reading_lookup=reading_lookup,
             kana_attest_lookup=kana_attest_lookup,
+            term_common_lookup=term_common_lookup,
         )
     # Share the parser's tagger with the word filter so i+1 swap can
     # rebuild bolded sentence fields without spinning up a second tagger

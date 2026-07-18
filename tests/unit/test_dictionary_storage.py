@@ -10,9 +10,12 @@ import pytest
 from anki_miner.services.dictionary.storage import (
     _BIND_CHUNK,
     _LOOKUP_LIMIT,
+    COMMON_TAG_CATEGORIES,
     SCHEMA_VERSION,
+    AttestRow,
     DictRow,
     TagMeta,
+    attest_detail,
     bulk_insert,
     create_index,
     lookup,
@@ -21,6 +24,7 @@ from anki_miner.services.dictionary.storage import (
     read_meta,
     read_meta_cached,
     read_tags,
+    row_is_common,
     terms_exist,
     terms_readings,
     write_meta,
@@ -1371,3 +1375,171 @@ class TestHomographScoping:
             ]
         finally:
             conn.close()
+
+
+# ---------------------------------------------------------------------------
+# U10: commonness/quality attestation infra (foundation, zero behavior change)
+# ---------------------------------------------------------------------------
+
+
+class TestRowIsCommon:
+    """``row_is_common`` splits on ASCII space and matches COMMON_TAG_CATEGORIES."""
+
+    def _meta(self):
+        return {
+            "frequent": TagMeta(name="frequent", category="frequent", ord=0, notes="", score=0.0),
+            "popular": TagMeta(name="popular", category="popular", ord=0, notes="", score=0.0),
+            "n": TagMeta(name="n", category="partOfSpeech", ord=0, notes="", score=0.0),
+            # A multi-word Yomitan tag NAME with an internal NBSP.
+            "priority form": TagMeta(name="priority form", category="popular", ord=0, notes="", score=0.0),
+        }
+
+    def test_common_category_marks_common(self):
+        assert row_is_common("frequent", self._meta()) is True
+        assert row_is_common("popular", self._meta()) is True
+
+    def test_non_common_category_not_common(self):
+        assert row_is_common("n", self._meta()) is False
+
+    def test_empty_tags_not_common(self):
+        assert row_is_common("", self._meta()) is False
+
+    def test_unknown_tag_not_common(self):
+        assert row_is_common("nonexistent", self._meta()) is False
+
+    def test_mixed_tags_any_common_wins(self):
+        assert row_is_common("n popular", self._meta()) is True
+
+    def test_nbsp_tag_name_kept_whole(self):
+        """A tag name with an internal NBSP is looked up whole (ASCII-space split
+        only), so 'priority\\u00a0form' matches its popular-category row."""
+        meta = self._meta()
+        assert row_is_common("priority form", meta) is True
+        # Splitting on NBSP would shatter it into two unknown tokens → miss.
+        assert "priority" not in meta and "form" not in meta
+
+    def test_categories_constant(self):
+        assert "frequent" in COMMON_TAG_CATEGORIES
+        assert "popular" in COMMON_TAG_CATEGORIES
+        assert len(COMMON_TAG_CATEGORIES) == 2
+
+
+class TestAttestDetail:
+    """``attest_detail`` — term-exact always, kana reading arm gated on flag."""
+
+    def _seed(self, db_path: Path) -> None:
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                # verb: term-exact with v5 rules + a common tag
+                DictRow(term="有る", reading="ある", content="<div>be</div>", tags="popular", rules="v5", sequence=1),
+                # kanji headword reachable by its reading あく (kana query)
+                DictRow(term="開く", reading="あく", content="<div>open</div>", tags="", rules="v5", sequence=2),
+                # noun: term-exact, EMPTY rules, common
+                DictRow(
+                    term="日本", reading="にほん", content="<div>Japan</div>", tags="frequent", rules="", sequence=3
+                ),
+            ],
+        )
+
+    def test_term_exact_only_when_readings_off(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed(db)
+        conn = open_readonly(db)
+        try:
+            # あく is only a READING here (term is 開く); readings off → no attest.
+            res = attest_detail(conn, ["有る", "あく"], include_readings=False)
+        finally:
+            conn.close()
+        assert res["有る"] == [AttestRow("term", "v5", "popular")]
+        assert res["あく"] == []
+
+    def test_reading_arm_attests_kana_query(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed(db)
+        conn = open_readonly(db)
+        try:
+            res = attest_detail(conn, ["あく"], include_readings=True)
+        finally:
+            conn.close()
+        assert res["あく"] == [AttestRow("reading", "v5", "")]
+
+    def test_reading_arm_folds_katakana_query(self, tmp_path: Path):
+        """A katakana query folds to the stored (hiragana) reading — same fold as
+        lookup_many's reading arm."""
+        db = tmp_path / "t.sqlite"
+        self._seed(db)
+        conn = open_readonly(db)
+        try:
+            res = attest_detail(conn, ["アク"], include_readings=True)
+        finally:
+            conn.close()
+        assert res["アク"] == [AttestRow("reading", "v5", "")]
+
+    def test_term_wins_over_reading_for_same_row(self, tmp_path: Path):
+        """A kana headword double-keyed (term == reading) is classified 'term'
+        once, not both term and reading."""
+        db = tmp_path / "t.sqlite"
+        create_index(db)
+        bulk_insert(
+            db,
+            [DictRow(term="にほん", reading="にほん", content="<div>x</div>", tags="", rules="", sequence=1)],
+        )
+        conn = open_readonly(db)
+        try:
+            res = attest_detail(conn, ["にほん"], include_readings=True)
+        finally:
+            conn.close()
+        assert res["にほん"] == [AttestRow("term", "", "")]
+
+    def test_empty_rules_and_tags_preserved(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed(db)
+        conn = open_readonly(db)
+        try:
+            res = attest_detail(conn, ["日本"], include_readings=False)
+        finally:
+            conn.close()
+        # Noun: term-exact with EMPTY rules but a common tag — rules carried as "".
+        assert res["日本"] == [AttestRow("term", "", "frequent")]
+
+    def test_every_word_present_and_deduped(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed(db)
+        conn = open_readonly(db)
+        try:
+            res = attest_detail(conn, ["有る", "無い語", "有る"], include_readings=False)
+        finally:
+            conn.close()
+        assert set(res.keys()) == {"有る", "無い語"}
+        assert res["無い語"] == []
+
+    def test_empty_word_list(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed(db)
+        conn = open_readonly(db)
+        try:
+            assert attest_detail(conn, [], include_readings=True) == {}
+        finally:
+            conn.close()
+
+    def test_chunking_over_bind_cap(self, tmp_path: Path):
+        """A word list larger than _BIND_CHUNK still attests every term row."""
+        db = tmp_path / "t.sqlite"
+        create_index(db)
+        n = _BIND_CHUNK * 2 + 5
+        bulk_insert(
+            db,
+            [
+                DictRow(term=f"w{i}", reading=None, content=f"<div>{i}</div>", tags="", rules="", sequence=i)
+                for i in range(n)
+            ],
+        )
+        conn = open_readonly(db)
+        try:
+            words = [f"w{i}" for i in range(n)]
+            res = attest_detail(conn, words, include_readings=True)
+        finally:
+            conn.close()
+        assert all(res[f"w{i}"] == [AttestRow("term", "", "")] for i in range(n))
