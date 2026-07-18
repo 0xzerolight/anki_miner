@@ -122,11 +122,13 @@ _KANA_RECOVER_REJECT_POS2: frozenset[str] = frozenset({"助動詞語幹", "非�
 # a longer grammaticalized sequence (すみません, かもしれない). The signal: joining
 # the candidate's surface with the contiguous FUNCTIONAL particles/auxiliaries
 # around it reproduces a form the dictionary attests (as a term OR a reading —
-# かもしれない is attested only as the reading of かも知れない). Restricting the join
-# to 助詞/助動詞 is the false-positive guard: a content neighbor (ものすごい's もの)
-# never joins, so real vocabulary (すごい) abutting a lexicalized homograph is
-# never suppressed.
-_KANA_RECOVER_WINDOW_FUNCTIONAL_POS1: frozenset[str] = frozenset({"助詞", "助動詞"})
+# かもしれない is attested only as the reading of かも知れない). 接頭辞 joins too:
+# おかえりなさい = お(接頭辞)+かえり(→かえる)+なさい, and the window おかえり attests
+# via お帰り's reading, so the bare かえる recovery is suppressed. Restricting the
+# join to 助詞/助動詞/接頭辞 is the false-positive guard: a content neighbor
+# (ものすごい's 名詞 もの) never joins, so real vocabulary (すごい) abutting a
+# lexicalized homograph is never suppressed.
+_KANA_RECOVER_WINDOW_FUNCTIONAL_POS1: frozenset[str] = frozenset({"助詞", "助動詞", "接頭辞"})
 # Max contiguous functional neighbors joined on EACH side of the candidate. Bounds
 # the window enumeration (and the attestation probe) to O(side^2) joins per rare
 # recovery candidate; grammaticalized sequences are short (にとって, かもしれない).
@@ -1432,7 +1434,7 @@ class SubtitleParserService:
 
     @staticmethod
     def _is_functional_token(token) -> bool:
-        """True when ``token`` is a functional particle/auxiliary (pos1 ∈ 助詞/助動詞)."""
+        """True when ``token`` is a functional particle/auxiliary/prefix (pos1 ∈ 助詞/助動詞/接頭辞)."""
         pos1 = getattr(getattr(token, "feature", None), "pos1", None)
         return pos1 in _KANA_RECOVER_WINDOW_FUNCTIONAL_POS1
 

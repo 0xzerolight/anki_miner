@@ -1291,8 +1291,8 @@ class TestKanaRecoveryLexicalizedWindow:
 
     A pure-hiragana content-word fragment (すみ from すみません, しれ from
     かもしれない) the script gate drops but recovery would re-admit is suppressed
-    when joining it with contiguous FUNCTIONAL neighbors (pos1 ∈ {助詞, 助動詞},
-    ≤3/side) forms a string the term-OR-reading probe attests. Functional-only:
+    when joining it with contiguous FUNCTIONAL neighbors (pos1 ∈ {助詞, 助動詞,
+    接頭辞}, ≤3/side) forms a string the term-OR-reading probe attests. Functional-only:
     a content neighbor (ものすごい's もの) never joins, so real vocabulary abutting
     a lexicalized homograph is never suppressed.
     """
@@ -1530,6 +1530,54 @@ class TestKanaRecoveryLexicalizedWindow:
         ]
         # No KeyError, and the attested すみません window still rejects recovery.
         assert self._mine(service, tokens, 0) is False
+
+    # --- 11. 接頭辞 window: おかえりなさい → かえる recovery rejected (real fugashi). ---
+
+    def test_okaeri_prefix_window_rejected_real_fugashi(self, test_config, tmp_path):
+        # おかえりなさい tokenizes お(接頭辞)+かえり(動詞→かえる)+なさい(非自立可能);
+        # with 接頭辞 in the functional-window class the join お+かえり=おかえり is
+        # probed and attests via お帰り's reading → the かえる/返る recovery is
+        # suppressed. Differential control (attributes the reject to the WINDOW,
+        # not a dict miss): with ONLY the bare front かえる attested — window
+        # おかえり NOT attested — recovery fires and the 返る junk card WOULD survive.
+        srt = _write_srt(tmp_path, "okaeri.srt", "おかえりなさい")
+
+        no_window = _attest_lookup("かえる")  # bare front only, window not attested
+        recovered = SubtitleParserService(test_config, kana_attest_lookup=no_window).parse_subtitle_file(srt)
+        assert "返る" in {w.lemma for w in recovered}  # recovery would fire...
+        assert any("おかえり" in call for call in no_window.calls)  # ...and the window WAS probed
+
+        with_window = _attest_lookup("かえる", "おかえり")  # window attested → reject
+        words = SubtitleParserService(test_config, kana_attest_lookup=with_window).parse_subtitle_file(srt)
+        assert "返る" not in {w.lemma for w in words}
+        assert "かえる" not in {w.mined_form for w in words}
+        assert any("おかえり" in call for call in with_window.calls)  # window path drove the reject
+
+    # --- 12. Widened class must not over-reject: unattested 接頭辞 windows survive. ---
+
+    def test_prefix_window_unattested_o_recovers(self, test_config):
+        # お(接頭辞)+わかり(動詞→わかる): the widened class forms & PROBES the window
+        # おわかり, but it is unattested → the bare わかる recovery survives.
+        lookup = _attest_lookup("わかる")  # bare front only; window おわかり not attested
+        service = self._service(test_config, lookup)
+        tokens = [
+            _make_token("お", "接頭辞", pos2="*", lemma="御", orth_base="お"),
+            _make_token("わかり", "動詞", pos2="一般", lemma="分かる", orth_base="わかる"),
+        ]
+        assert self._mine(service, tokens, 1) is True
+        assert any("おわかり" in call for call in lookup.calls)  # widened class probed the window
+
+    def test_prefix_window_unattested_non_o_recovers(self, test_config):
+        # 超(接頭辞)+かわいい(形容詞): a non-お 接頭辞 also joins the window; 超かわいい
+        # is unattested → the かわいい recovery survives.
+        lookup = _attest_lookup("かわいい")  # bare front only; window 超かわいい not attested
+        service = self._service(test_config, lookup)
+        tokens = [
+            _make_token("超", "接頭辞", pos2="*", lemma="超", orth_base="超"),
+            _make_token("かわいい", "形容詞", pos2="一般", lemma="可愛い", orth_base="かわいい"),
+        ]
+        assert self._mine(service, tokens, 1) is True
+        assert any("超かわいい" in call for call in lookup.calls)  # non-お 接頭辞 joined the window
 
 
 class TestExtractLemma:
