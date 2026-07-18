@@ -262,9 +262,10 @@ _FOLD_SUFFIX_PAIRS = (
 def mining_base(word_token) -> str:
     """orthBase for the card front, folded to lemma for derived sub-lemma entries.
 
-    unidic gives potential verbs (保てる←保つ), ra-nuki forms (見れる←見る) and
-    archaic i-adjective bases (良し←良い) their own orthBase while lemma points
-    at the parent headword. Mining orthBase makes a 保てる card distinct from an
+    unidic gives potential verbs (保てる←保つ), ra-nuki forms (見れる←見る),
+    archaic i-adjective bases (良し←良い) and classical 連体形 ク-stems
+    (美しき: orthBase 美し←美しい) their own orthBase while lemma points at the
+    parent headword. Mining orthBase makes a 保てる card distinct from an
     existing 保つ card; folding to lemma dedupes them. Applies only to 動詞 /
     形容詞 — the only POS whose mined_form reads orth_base (select_mined_form).
 
@@ -308,6 +309,14 @@ def mining_base(word_token) -> str:
     lemma = extract_lemma(word_token)
     if not lemma or not orth_base:
         return orth_base
+    # Classical 形容詞 連体形 ク-stem (美しき: orthBase 美し, lemma 美しい): unidic gives
+    # the ク-stem its own orthBase while lemma is the full い-form. Fold to lemma so a
+    # 美しき card dedups against 美しい. 形容詞-only and append-only (lemma == stem + い)
+    # — the stem is byte-identical to the lemma minus its final い, so no kanji/
+    # okurigana variant can leak (unlike the swap pairs below). 良し-class ク-forms
+    # carry orthBase 良し and fold via the ('し','い') swap pair instead.
+    if getattr(feature, "pos1", None) == "形容詞" and orth_base + "い" == lemma:
+        return lemma
     for derived, base in _FOLD_SUFFIX_PAIRS:
         if orth_base.endswith(derived) and len(orth_base) > len(derived) and orth_base[: -len(derived)] + base == lemma:
             return lemma

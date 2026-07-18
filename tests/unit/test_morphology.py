@@ -15,12 +15,40 @@ from anki_miner.services.morphology import (
     apply_special_readings,
     attest_merged_readings,
     extract_lemma,
+    extract_orth_base,
     merge_compound_suffixes,
     mining_base,
     replace_overridden_spans,
     resolve_reading_override,
     resolve_special_reading,
 )
+
+
+def _fugashi_available() -> bool:
+    try:
+        import fugashi  # noqa: F401
+        import unidic_lite  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+def _real_token(sentence, surface):
+    """Return the REAL fugashi token whose surface is ``surface`` in ``sentence``.
+
+    Guard/fold tests must exercise unidic's actual feature layout (orthBase /
+    lForm / kanaBase / decorated lemma), which SimpleNamespace fakes can only
+    approximate. Raises if the tokenizer does not segment ``surface`` out — a
+    signal the fixture drifted from what unidic-lite emits.
+    """
+    import fugashi
+
+    tagger = fugashi.Tagger()
+    for word in tagger(sentence):
+        if word.surface == surface:
+            return word
+    raise AssertionError(f"{surface!r} not tokenized out of {sentence!r}")
 
 
 def _suffix_token(surface, kana):
@@ -175,6 +203,50 @@ class TestMiningBaseNoTrigger:
         fall back to extract_lemma and never crash."""
         token = SyntheticToken("走り出す", "動詞", "一般", "走り出す", "ハシリダス")
         assert mining_base(token) == "走り出す"
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestMiningBaseClassicalAdjective:
+    """Classical 形容詞 連体形 ク-stem folds to the plain い-adjective.
+
+    unidic-lite gives 美しき (連体形) the bare ク-stem orthBase 美し while lemma is
+    the full form 美しい; append-only fold (``lemma == orthBase + 'い'``) dedups a
+    美しき card against 美しい. 形容詞-only; distinct from the ``('し','い')`` swap
+    pair that handles 良し-class ク-forms (orthBase 良し, not 良)."""
+
+    @pytest.mark.parametrize(
+        ("sentence", "surface", "stem", "lemma"),
+        [
+            ("美しき花", "美しき", "美し", "美しい"),
+            ("疑わしき点", "疑わしき", "疑わし", "疑わしい"),
+            ("悲しき運命", "悲しき", "悲し", "悲しい"),
+        ],
+    )
+    def test_ku_stem_folds_to_i_adjective(self, sentence, surface, stem, lemma):
+        token = _real_token(sentence, surface)
+        assert token.feature.pos1 == "形容詞"
+        # Pre-fix pin: orthBase is the bare ク-stem, distinct from the fold target.
+        assert token.feature.orthBase == stem
+        assert extract_orth_base(token) == stem
+        assert mining_base(token) == lemma
+
+    def test_ku_form_with_own_ku_orthbase_still_folds_via_swap_pair(self):
+        # Judge #11: 良し tokenizes 名詞 in isolation, so exercise it in a 形容詞
+        # context (良き友 → 良き, pos1 形容詞, orthBase 良し). It folds via the
+        # existing ('し','い') swap pair — NOT the append-only classical rule
+        # (良し + い = 良しい ≠ 良い) — proving the two folds stay disjoint.
+        token = _real_token("良き友", "良き")
+        assert token.feature.pos1 == "形容詞"
+        assert token.feature.orthBase == "良し"
+        assert token.feature.orthBase + "い" != "良い"  # append-only rule cannot fire
+        assert mining_base(token) == "良い"
+
+    def test_plain_i_adjective_base_form_never_folds(self):
+        # 美しい base form: orthBase == lemma == 美しい, so orthBase + い ≠ lemma;
+        # the append-only rule must leave it untouched.
+        token = _real_token("美しい花", "美しい")
+        assert token.feature.pos1 == "形容詞"
+        assert mining_base(token) == "美しい"
 
 
 class TestExtractLemmaDisambiguatorStrip:

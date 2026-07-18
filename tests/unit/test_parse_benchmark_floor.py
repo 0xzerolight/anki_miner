@@ -221,6 +221,18 @@ def test_anchor_meets_ellipsis_floor() -> None:
     assert recall(b_el) == 1.0, f"strategy (b) ellipsis-truncation recall {recall(b_el)} below 1.0"
 
 
+def test_anchor_meets_classical_adjective_floor() -> None:
+    results = _scored()
+    b_ca = results["b-lite-anchor"].by_category["classical-adjective"]
+    # V4: the classical 連体形 ク-stem fold (美しき→美しい) lives in mining_base and is
+    # DICT-FREE, so it fires the same on (a) and (b) — a regression tripwire, not a
+    # strict-beat. A revert mines the bare ク-stem 美し (junk) and misses 美しい, so
+    # both recall<1 and junk>0; 良き still folds via the ('し','い') swap pair and
+    # いい stays unfolded.
+    assert recall(b_ca) == 1.0, f"strategy (b) classical-adjective recall {recall(b_ca)} below 1.0"
+    assert junk_rate(b_ca) == 0.0, f"strategy (b) classical-adjective junk_rate {junk_rate(b_ca)} above 0.0"
+
+
 # NOTE: jiru-zuru (Task 3), kana-written (Task 4), nominal-suffix (Task 5),
 # colloquial/counter (A2), aux-context (A1), long-compound (Task 6/Q2) and
 # ellipsis-truncation (U8) floors are gated above; linebreak-split is
