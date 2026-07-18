@@ -1,20 +1,32 @@
 """Re-apply the latest self-contained glossary styling to already-mined cards.
 
-v2.7.8 embeds glossary CSS inside each card at mining time
-(``EpisodeProcessor._phase5_create``). Two cohorts need help once the styling
-changes and re-mining is blocked by known-words dedup:
+Mining embeds glossary CSS inside each styled field as a TRAILING ``<style>``
+block (``EpisodeProcessor._phase5_create`` → ``attach_card_style_block``;
+trailing because a field-leading ``<style>`` is head-hoisted by DOMParser and
+dropped from ``body.innerHTML`` round-trips — see the card_style_block module
+docstring). Cohorts needing help once the styling format changes and re-mining
+is blocked by known-words dedup:
 
 - **Pre-v2.7.8 cards** lack the base stylesheet — either no ``<style>`` at all,
   or (for words matched against a dictionary that shipped a ``styles.css`` in
-  v2.7.0–v2.7.7) only a per-dict ``<style>`` — so they render bare. These are
-  fixed by *prepending* the current self-contained block.
-- **v2.7.8+ cards** already carry a base sheet frozen at their mine/restyle time,
-  so a later ``glossary.css`` change never reaches them. These are fixed by
-  *refreshing the embedded base head in place* (``_refresh_base_sheet``),
-  preserving the card's own ``dict_css`` tail + HTML body byte-for-byte.
+  v2.7.0–v2.7.7) only a per-dict ``<style>`` — so they render bare. Fixed by
+  *appending* a fresh trailing block (after carried-CSS-gated stamping).
+- **v2.7.8+ single-carrier cards** carry a LEADING base sheet on one field only
+  (glossary when mapped, else definition) — lost on JS note types and absent
+  from the other field. Fixed by *migrating* the block to the field tail
+  (preserving the card's own ``dict_css`` tail + HTML body byte-for-byte) and
+  attaching a fresh block to the other carrier field.
+- **Current cards** carry a trailing base sheet per field frozen at their
+  mine/restyle time; a later ``glossary.css`` change refreshes it in place.
 
-Selection is markup-gated and idempotent (see ``restyle_mined_cards``); the write
-never touches note-type styling and never re-collects a card's dictionary CSS.
+Every mapped miner field (glossary AND definition) is a styling carrier and is
+processed independently with field-only witnesses — the same contract as
+mining/backfill, so the three writers converge byte-for-byte and a restyle
+re-run is a no-op. Selection is markup-gated and idempotent (see
+``restyle_mined_cards``); the write never touches note-type styling and never
+re-collects a card's carried dictionary CSS (an uninstalled dict's CSS
+survives in the field that carried it — it cannot be conjured for a field
+that never carried any, which falls back to current-config CSS).
 """
 
 from __future__ import annotations
@@ -25,12 +37,12 @@ from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from anki_miner.services.definition_service import collect_dictionary_css
+from anki_miner.services.definition_service import collect_dictionary_css_entries
 from anki_miner.services.dictionary.card_style_block import (
     UNSTAMPED_ENVELOPE_RE,
     base_css_variant,
-    build_card_style_block,
     css_witnesses,
+    filter_dict_css_entries,
 )
 from anki_miner.services.dictionary.dict_css_scope import css_string_escape
 
@@ -94,58 +106,68 @@ def _stamp_styled_envelopes(value: str, dict_css: str) -> str:
     return _ENVELOPE_RE.sub(_stamp, value)
 
 
-def _refresh_base_sheet(value: str, other_html: str, base_for_html: Callable[[str], str]) -> str | None:
-    """Swap a stale embedded base head for this card's tree-shaken variant in
-    place, preserving the card's OWN ``dict_css`` tail + HTML body byte-for-byte.
+_STYLE_SPAN_RE = re.compile(r"<style>(.*?)</style>", re.DOTALL)
 
-    Returns ``None`` when the field is not a base head we own, is malformed, or is
-    already current (idempotent no-op) — the caller then counts it ``skipped_styled``.
 
-    A card carrying the base sheet (mined/restyled at or after v2.7.8) stores its
-    styling field as ``<style>{base}\\n{dict_css}</style>{body}`` — the base minified
-    (newline-free, carrying ``ol[data-count]``), then the verbatim per-dict
-    ``dict_css`` (may be multi-line), then the HTML body (which, for a card restyled
-    up from a pre-v2.7.8 per-dict card, may carry its own trailing ``<style>``). The
-    minified base is newline-free (pinned in ``card_style_block``), so the FIRST
-    ``\\n`` in the head is exactly the base/``dict_css`` boundary.
+def _restyle_field(value: str, entries: list[tuple[str, str]], current_dict_css: str) -> str | None:
+    """Return the field's target value under the current styling, or ``None``
+    when the field must be left untouched (malformed ``<style>`` structure).
 
-    The new base is per-card since the Issue #93 tree-shaking: ``base_for_html``
-    maps the card's stamped HTML (this field's body + ``other_html``, the note's
-    other miner field) to its witness-selected variant. Stamping MUST precede
-    the variant computation — the unstyled-dict witness keys on the unstamped
-    envelope, so witnessing the pre-stamp body would flip the variant between
-    runs and break idempotency.
+    The caller compares against the input for the idempotent no-op. Two paths:
 
-    ``dict_css`` is preserved VERBATIM from the card — never re-collected — so an
-    uninstalled dictionary keeps its CSS. Envelope stamping is gated on the card's
-    OWN carried CSS, NEVER current config — stamping a config-only-governed
-    envelope would switch the base gap-fillers OFF with no card CSS to replace
-    them, degrading the card. Carried CSS means the head ``dict_css`` tail plus
-    any body ``<style>``: the body is the stamp's value (so its own blocks gate)
-    and ``old_dict_css`` is passed as the membership source (so the head tail
-    gates too — the pre-#93 whole-value stamp saw it via the reassembled head,
-    and the base itself carries no ``[data-dictionary=`` keys, pinned by
-    ``test_minified_base_has_no_data_dictionary_literals``).
+    **Extract/migrate** — the field carries OUR base block somewhere (a
+    ``<style>`` whose inner CSS holds the ``ol[data-count]`` token: that
+    selector token appears only in our minified base — ``<ol data-count=`` in
+    markup is a different string — and never in a legacy per-dict block, so
+    ownership can't false-positive; a pre-v2.7.8-migrated card legitimately
+    carries TWO ``<style>``s, its own per-dict one inside the envelope plus
+    ours). The block is removed from wherever it sits (legacy head or current
+    tail), its ``dict_css`` tail (after the first ``\\n`` — the minified base is
+    newline-free, pinned in ``card_style_block``) is preserved VERBATIM — never
+    re-collected, so an uninstalled dictionary keeps its CSS — and the block is
+    re-emitted at the field TAIL with a freshly witness-selected base. Envelope
+    stamping is gated on the card's OWN carried CSS (body blocks via
+    ``key in value``, the carried tail via the ``dict_css`` membership arg),
+    NEVER current config — stamping a config-only-governed envelope would
+    switch the base gap-fillers OFF with no card CSS to replace them.
+
+    **Fresh-attach** — no block of ours anywhere (pre-v2.7.8 bare or per-dict
+    bodies, or the never-carrier field of a single-carrier card). The body is
+    stamped FIRST with today's legacy-prepend gate (carried per-dict ``<style>``
+    via ``key in value`` OR current config via ``key in dict_css`` — an
+    unstamped body would witness the unstyled-dict groups whose gap-fillers
+    out-specify the dict's own scoped CSS, re-opening Issue #87, and would
+    break rerun convergence), then a trailing block is appended with
+    current-config CSS filtered to the dictionaries present in the stamped
+    body (``filter_dict_css_entries`` — the same per-field filter mining and
+    backfill use, so all three writers converge byte-for-byte). NOT routed
+    through ``attach_card_style_block``: that helper is stampless by contract.
+
+    Both paths witness the STAMPED body of THIS FIELD ONLY — stamping must
+    precede the variant computation (the unstyled-dict witness keys on the
+    unstamped envelope; witnessing pre-stamp would flip the variant between
+    runs), and cross-field witnessing would diverge from mining's per-field
+    blocks and rewrite fresh cards forever.
     """
-    if not value.startswith("<style>"):
-        return None
-    close = value.find("</style>")
-    if close == -1:
-        return None  # truncated/hand-edited head — leave untouched, never raise
-    inner = value[len("<style>") : close]
-    if "ol[data-count]" not in inner:
-        return None  # base token only in a LATER block — this head isn't ours
-    rest = value[close + len("</style>") :]
-    old_dict_css = inner.partition("\n")[2]  # "" when the head had no dict_css tail
-    stamped_rest = _stamp_styled_envelopes(rest, old_dict_css)
-    new_base = base_for_html(stamped_rest + other_html)
+    ours = [m for m in _STYLE_SPAN_RE.finditer(value) if "ol[data-count]" in m.group(1)]
+    if len(ours) > 1:
+        return None  # two base blocks — hand-edited beyond repair, leave untouched
+    if not ours and "ol[data-count]" in value:
+        return None  # ownership token outside a well-formed <style> span — malformed
+    if ours:
+        match = ours[0]
+        body = value[: match.start()] + value[match.end() :]
+        carried_tail = match.group(1).partition("\n")[2]  # "" when no dict_css tail
+        stamped = _stamp_styled_envelopes(body, carried_tail)
+        dict_css = carried_tail
+    else:
+        stamped = _stamp_styled_envelopes(value, current_dict_css)
+        dict_css = filter_dict_css_entries(stamped, entries)
+    new_base = base_css_variant(css_witnesses([stamped]))
     if "\n" in new_base:
         return None  # broken newline invariant — refuse to partition mid-base
-    new_inner = f"{new_base}\n{old_dict_css}" if old_dict_css else new_base
-    new_value = f"<style>{new_inner}</style>{stamped_rest}"
-    if new_value == value:
-        return None  # base current AND body already stamped — idempotent no-op
-    return new_value
+    inner = f"{new_base}\n{dict_css}" if dict_css else new_base
+    return f"{stamped}<style>{inner}</style>"
 
 
 @dataclass(frozen=True)
@@ -153,9 +175,11 @@ class RestyleResult:
     """Outcome of a restyle run. ``scanned`` counts notes examined.
 
     ``restyled`` counts both prepended and in-place-refreshed cards (they share one
-    update batch). ``skipped_styled`` counts cards that already carry the current
-    base sheet (the common re-run no-op) or a non-conforming base head left
-    untouched. ``skipped_no_markup`` counts non-miner cards (no ``data-count``).
+    update batch). Aggregation is PER NOTE so the counters always sum to
+    ``scanned``: a note is ``restyled`` if ANY carrier field changed, else
+    ``skipped_styled`` if any carrier field had miner markup (already current,
+    or a non-conforming ``<style>`` structure left untouched), else
+    ``skipped_no_markup`` (non-miner note).
     """
 
     scanned: int
@@ -182,47 +206,45 @@ def restyle_mined_cards(
     progress: Callable[[int, int], None] | None = None,
     is_cancelled: Callable[[], bool] | None = None,
 ) -> RestyleResult:
-    """Re-apply the current self-contained ``<style>`` block to miner cards.
+    """Re-apply the current self-contained trailing ``<style>`` block to miner
+    cards, on EVERY mapped carrier field independently.
 
-    Operates on a note's styling-carrier field when it carries the miner markup
-    (``yomitan-glossary`` and ``data-count``). The carrier field is the glossary
-    field when mapped, else the definition field — matching where fresh mining
-    attaches the block (``EpisodeProcessor._phase5_create``), so a default-config
-    user (definition mapped, glossary unmapped) is covered. Two paths:
+    Both the glossary and the definition fields are styling carriers when
+    mapped — matching fresh mining, which attaches a per-field trailing block
+    to each (``EpisodeProcessor._phase5_create``). Each carrier field with
+    miner markup (``yomitan-glossary`` and ``data-count``) goes through
+    ``_restyle_field``: our base block (wherever it sits — legacy leading head
+    or current tail) migrates/refreshes to a tail block with the carried
+    ``dict_css`` preserved verbatim, and a field that never carried a block
+    (pre-v2.7.8 bodies, or the non-carrier field of a single-carrier-era card)
+    gets a fresh one from current-config CSS. Changed fields of one note are
+    written in a single ``update_notes_fields`` entry.
 
-    - No base sheet yet (``ol[data-count]`` absent — a CSS-selector token that
-      appears only inside our minified base ``<style>``, never in card markup or a
-      legacy per-dict block): *prepend* the current block.
-    - Base sheet present: *refresh* its base head in place (``_refresh_base_sheet``),
-      preserving the card's own ``dict_css`` tail + HTML body.
+    Idempotent: a re-run recomputes byte-identical values and counts the note
+    ``skipped_styled``. Never removes card content, never writes note-type
+    styling, never re-collects a card's carried dictionary CSS. Genuine
+    Yomitan-exported cards (which lack ``data-count``) are left untouched.
 
-    Idempotent: a re-run finds the base already current and counts it
-    ``skipped_styled``. Never removes card content, never writes note-type styling,
-    never re-collects a card's dictionary CSS. Genuine Yomitan-exported cards (which
-    lack ``data-count``) are left untouched.
-
-    Since the Issue #93 tree-shaking the embedded base is per-card: both paths
-    stamp the body FIRST, then select the variant from the stamped body plus the
-    note's other miner field (the ``<style>`` is card-wide, so witnesses from
-    either field count). This run is also the shrink/migration for pre-shaking
-    cards — their full 9KB head refreshes down to the card's slim variant with
-    the ``dict_css`` tail and body preserved byte-for-byte.
+    This run is the migration path for both prior formats: pre-#93 9KB heads
+    shrink to the field's slim variant, and single-carrier leading blocks move
+    to per-field tails (the Kiku fix — a leading ``<style>`` is head-hoisted
+    and lost in ``body.innerHTML`` round-trips, and a block in one field never
+    styles another field on JS note types).
     """
     glossary_field = config.anki_fields.get("glossary")
     definition_field = config.anki_fields.get("definition")
-    styling_field = glossary_field or definition_field
-    if not styling_field:
-        return RestyleResult(0, 0, 0, 0)
-    other_field = definition_field if styling_field == glossary_field else None
-
-    dict_css = collect_dictionary_css(config)
-    if not build_card_style_block(dict_css=dict_css, card_html="").startswith("<style"):
-        # Defensive: the bundled core is never empty, but an empty block would
-        # otherwise "restyle" every card on every run (no ol[data-count] added).
+    # Ordered, deduped carrier list (both mapped to the SAME field name is a
+    # degenerate config — process it once).
+    carrier_fields = [f for f in (glossary_field, definition_field) if f]
+    carrier_fields = list(dict.fromkeys(carrier_fields))
+    if not carrier_fields:
         return RestyleResult(0, 0, 0, 0)
 
-    def base_for_html(html: str) -> str:
-        return base_css_variant(css_witnesses([html]))
+    entries = collect_dictionary_css_entries(config)
+    current_dict_css = "\n\n".join(css for _, css in entries)
+    # No empty-block guard needed: base_css_variant itself raises if a variant
+    # ever loses the newline-free/ol[data-count] contract (fail-loud beats the
+    # old silent every-run-restyle failure mode).
 
     note_ids = anki_service.find_notes(f'note:"{_escape_note_type(config.anki_note_type)}"')
     scanned = restyled = skipped_styled = skipped_no_markup = 0
@@ -236,34 +258,26 @@ def restyle_mined_cards(
             fields = info.get("fields")
             if not isinstance(note_id, int) or not isinstance(fields, dict):
                 continue  # deleted ({}) / malformed
-            entry = fields.get(styling_field)
-            if not isinstance(entry, dict):
-                scanned += 1
-                continue  # styling field absent on this note type instance
-            value = entry.get("value", "") or ""
             scanned += 1
-            if "yomitan-glossary" not in value or "data-count" not in value:
+            changed: dict[str, str] = {}
+            had_markup = False
+            for field_name in carrier_fields:
+                entry = fields.get(field_name)
+                if not isinstance(entry, dict):
+                    continue  # field absent on this note type instance
+                value = entry.get("value", "") or ""
+                if "yomitan-glossary" not in value or "data-count" not in value:
+                    continue
+                had_markup = True
+                new_value = _restyle_field(value, entries, current_dict_css)
+                if new_value is not None and new_value != value:
+                    changed[field_name] = new_value
+            if changed:
+                updates.append((note_id, changed))
+            elif had_markup:
+                skipped_styled += 1
+            else:
                 skipped_no_markup += 1
-                continue
-            other_entry = fields.get(other_field) if other_field and other_field != styling_field else None
-            other_html = (other_entry.get("value", "") or "") if isinstance(other_entry, dict) else ""
-            if "ol[data-count]" in value:
-                # Already carries a base sheet (mined/restyled at/after v2.7.8):
-                # refresh its base head in place (preserving the card's own dict_css
-                # + body) rather than skipping, so a glossary.css change reaches
-                # existing cards. None = not ours / malformed / already current.
-                refreshed = _refresh_base_sheet(value, other_html, base_for_html)
-                if refreshed is None:
-                    skipped_styled += 1
-                else:
-                    updates.append((note_id, {styling_field: refreshed}))
-                continue
-            # Legacy prepend: stamp first, then tree-shake against the stamped
-            # body — witnessing the unstamped body would over-include the
-            # unstyled-dict groups and never converge with the refresh path.
-            stamped = _stamp_styled_envelopes(value, dict_css)
-            block = build_card_style_block(dict_css=dict_css, card_html=stamped + other_html)
-            updates.append((note_id, {styling_field: block + stamped}))
         if updates:
             restyled += anki_service.update_notes_fields(updates)
         if progress:
