@@ -111,14 +111,16 @@ def build_parser(config: AnkiMinerConfig) -> SubtitleParserService:
     """Build the production parser wired to ``config.dicts_root`` (read-only).
 
     Mirrors ``gui/utils/service_factory``: scan the registry, assemble the
-    provider chain, wrap it in a ``DefinitionService``, and inject the SAME three
+    provider chain, wrap it in a ``DefinitionService``, and inject the SAME four
     probes production wires — ``offline_terms_exist`` as ``term_lookup`` (drives
     ``resolve_dictionary_form``), ``offline_term_readings`` as ``reading_lookup``
-    (drives the merged-compound reading attestation, audit F2), and
+    (drives the merged-compound reading attestation, audit F2),
     ``has_offline_definitions`` as ``kana_attest_lookup`` (drives the WS2 kana
-    recovery). All three probes lazily load the chain, so no explicit
-    ``ensure_loaded`` is needed; with an empty ``dicts_root`` they attest nothing
-    (the offline-free replay path).
+    recovery), and ``offline_term_commonness`` as ``term_common_lookup`` (drives
+    the U11 verb-front resolver, narrowing the deinflection override pool to
+    headwords a commonness-aware dict tags common). All four probes lazily load
+    the chain, so no explicit ``ensure_loaded`` is needed; with an empty
+    ``dicts_root`` they attest nothing (the offline-free replay path).
 
     Unlike the GUI, the chain is assembled from ALL installed dictionaries
     (``_all_installed_dicts_config``), not ``config.dictionary_chain`` — the
@@ -134,6 +136,7 @@ def build_parser(config: AnkiMinerConfig) -> SubtitleParserService:
         term_lookup=definition_service.offline_terms_exist,
         reading_lookup=definition_service.offline_term_readings,
         kana_attest_lookup=definition_service.has_offline_definitions,
+        term_common_lookup=definition_service.offline_term_commonness,
     )
 
 

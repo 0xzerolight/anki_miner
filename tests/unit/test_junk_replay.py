@@ -149,6 +149,55 @@ def test_build_parser_wires_all_installed_dicts_not_config_chain(tmp_path: Path)
     assert parser is not None
 
 
+def _install_commonness_aware_dict(dicts_root: Path, dict_id: str) -> None:
+    """Install a dict whose tags table marks it commonness-aware (U11 probe).
+
+    Same primitives as ``_install_minimal_dict`` plus a ``tags`` row in the
+    ``frequent`` category (see ``storage.COMMON_TAG_CATEGORIES``) and an entry
+    row carrying that tag — so ``offline_term_commonness`` returns a real map
+    (not ``None``) and the parser's wired probe attests the term common.
+    """
+    db_path = dicts_root / dict_id / "index.sqlite"
+    storage.create_index(db_path)
+    storage.bulk_insert(
+        db_path,
+        [storage.DictRow(term="猫", reading="ねこ", content="cat", tags="freq01")],
+    )
+    storage.write_tags(
+        db_path,
+        [storage.TagMeta(name="freq01", category="frequent", ord=0, notes="", score=0.0)],
+    )
+    storage.write_meta(
+        db_path,
+        {
+            "schema_version": str(storage.SCHEMA_VERSION),
+            "source_name": dict_id,
+            "format": "yomitan",
+            "entry_count": "1",
+        },
+    )
+
+
+def test_build_parser_wires_term_common_lookup_when_commonness_aware(tmp_path: Path) -> None:
+    """build_parser injects the U11 commonness probe (parity with service_factory).
+
+    With a commonness-aware dict installed, the parser must receive a non-None
+    ``term_common_lookup``, and the wired bound method must actually attest the
+    common headword (returns a map, not the monolingual-only ``None``).
+    """
+    config = _empty_chain_config(tmp_path)
+    _install_commonness_aware_dict(config.dicts_root, "jitendex-org-2026")
+
+    parser = build_parser(config)
+
+    # Ctor received the bound offline_term_commonness probe.
+    assert parser._term_common_lookup is not None
+    # And the wired probe reflects real commonness awareness from the index.
+    result = parser._term_common_lookup(["猫"])
+    assert result is not None
+    assert result.get("猫") is True
+
+
 def test_all_installed_dicts_config_skips_schema_stale(tmp_path: Path) -> None:
     """A schema-stale index is dropped from the replay chain (schema_ok respected)."""
     config = _empty_chain_config(tmp_path)
