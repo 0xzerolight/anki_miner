@@ -244,6 +244,19 @@ def test_anchor_meets_vowel_elongation_floor() -> None:
     assert junk_rate(b_ve) == 0.0, f"strategy (b) vowel-elongation junk_rate {junk_rate(b_ve)} above 0.0"
 
 
+def test_anchor_meets_katakana_pronoun_floor() -> None:
+    results = _scored()
+    b_kp = results["b-lite-anchor"].by_category["katakana-pronoun"]
+    # V6: the katakana-pronoun fold (ワタシ→私, オマエ→お前) lives in select_mined_form
+    # via a curated 5-entry map and is DICT-FREE (string-only), so it fires the same
+    # on (a) and (b) — a regression tripwire, not a strict-beat. A revert mines the
+    # katakana surface ワタシ/オマエ (junk) and misses the kanji 私/お前, so both
+    # recall<1 and junk>0; アナタ/ワイ are absent from the map and stay on the surface
+    # (membership-only), so a fold that over-reaches to them also trips junk here.
+    assert recall(b_kp) == 1.0, f"strategy (b) katakana-pronoun recall {recall(b_kp)} below 1.0"
+    assert junk_rate(b_kp) == 0.0, f"strategy (b) katakana-pronoun junk_rate {junk_rate(b_kp)} above 0.0"
+
+
 def test_orthbase_meets_kana_runs_floor() -> None:
     results = _scored()
     # V8 pins strategy (a), NOT (b): the merged-token junk (獅子+子 → シシシ, 3-run シ)

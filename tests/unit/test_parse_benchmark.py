@@ -148,6 +148,7 @@ _EXPECTED_CATEGORIES = {
     "classical-adjective",
     "vowel-elongation",
     "kana-runs",
+    "katakana-pronoun",
 }
 
 

@@ -5909,3 +5909,71 @@ class TestCuratedReadingOverride:
         w = self._emit(test_config, "薬を飲み込む")["飲み込む"]
         assert w.expression_reading == "のみこむ"
         assert w.expression_furigana == "飲[の]み 込[こ]む"
+
+
+class TestKatakanaPronounFold:
+    """Katakana 代名詞 folded to a kanji card front via the curated 5-entry map (V6).
+
+    Real fugashi/unidic through ``parse_text_units`` — the reading-tab mining path.
+    Each folded pronoun lands in ``_emit_word``'s else-branch (mined kanji !=
+    katakana surface), where the paired reading from ``_KATAKANA_PRONOUN_FOLDS``
+    overrides ``generate_reading`` (私→わたくし) and rescues ``lemma_reading`` from
+    the UniDic lemma misreading (御前→ごぜん). Non-map pronouns stay on the surface.
+    """
+
+    @staticmethod
+    def _emit(test_config, text):
+        service = SubtitleParserService(test_config)
+        words, _idx, _counts = service.parse_text_units(
+            [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
+        )
+        return {w.mined_form: w for w in words}
+
+    def test_watashi_folds_with_paired_reading(self, test_config):
+        # ワタシ (代名詞, lemma 私) → card front 私. Without the paired reading the
+        # else-branch generate_reading(私) gives わたくし; the map forces わたし.
+        w = self._emit(test_config, "ワタシは学生だ")["私"]
+        assert w.expression_reading == "わたし"  # generate_reading would give わたくし
+        assert w.expression_furigana == "私[わたし]"  # not 私[わたくし]
+        assert w.lemma_reading == "わたし"
+
+    def test_omae_folds_lemma_reading_rescued(self, test_config):
+        # オマエ lemma is 御前 (would read ごぜん); the fold cards お前 and the paired
+        # reading おまえ flows to lemma_reading via the reading_overridden flag.
+        w = self._emit(test_config, "オマエは誰だ")["お前"]
+        assert w.expression_reading == "おまえ"
+        assert w.expression_furigana == "お 前[まえ]"
+        assert w.lemma == "御前"  # UniDic lemma unchanged — only the front/reading fold
+        assert w.lemma_reading == "おまえ"  # rescued from 御前→ごぜん
+
+    def test_boku_folds(self, test_config):
+        w = self._emit(test_config, "ボクは行く")["僕"]
+        assert w.expression_reading == "ぼく"
+        assert w.expression_furigana == "僕[ぼく]"
+        assert w.lemma_reading == "ぼく"
+
+    def test_kisama_folds(self, test_config):
+        w = self._emit(test_config, "キサマを許さない")["貴様"]
+        assert w.expression_reading == "きさま"
+        assert w.expression_furigana == "貴様[きさま]"
+        assert w.lemma_reading == "きさま"
+
+    def test_ware_folds(self, test_config):
+        w = self._emit(test_config, "ワレを忘れるな")["我"]
+        assert w.expression_reading == "われ"
+        assert w.expression_furigana == "我[われ]"
+        assert w.lemma_reading == "われ"
+
+    def test_non_map_katakana_pronoun_unaffected(self, test_config):
+        # アナタ is a 代名詞 but not in the map: its card front stays the katakana
+        # surface — no 貴方 fold, no お前-style rewrite (membership-only).
+        emitted = self._emit(test_config, "アナタは優しい")
+        assert "アナタ" in emitted
+        assert "貴方" not in emitted
+        assert emitted["アナタ"].expression_reading == "あなた"
+
+    def test_folds_dedup_against_natural_kanji_card(self, test_config):
+        # ワタシ folds to 私 and dedups against a natural 私 in the same line — one
+        # 私 card, not two, and no stray ワタシ front.
+        emitted = self._emit(test_config, "ワタシと私は")
+        assert set(emitted) == {"私"}

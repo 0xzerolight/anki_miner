@@ -13,7 +13,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.reading import ReadingUnit
-from anki_miner.models.word import select_mined_form
+from anki_miner.models.word import resolve_pronoun_fold_reading, select_mined_form
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, TermLookup
 from anki_miner.services.deinflection import (
     TermCommonLookup,
@@ -759,12 +759,22 @@ class SubtitleParserService:
             # regenerate from the headword. Both re-derive from ``mined``.
             expression_reading = self._reading(mined)
             override = resolve_reading_override(mined, expression_reading)
+            pronoun_reading = resolve_pronoun_fold_reading(surface, mined)
             if override is not None:
                 # Inflected misread spelling (マズかった→mined マズい→まじい,
                 # 込んだ→mined 込む→ごむ): apply the curated reading and regenerate
                 # ruby from it, mirroring the mined==surface branch above.
                 expression_reading = override
                 expression_furigana = _format_furigana(mined, override)
+                reading_overridden = True
+            elif pronoun_reading is not None:
+                # Katakana 代名詞 folded to kanji by select_mined_form (ワタシ→私,
+                # オマエ→お前): the paired reading is authoritative because
+                # generate_reading gives 私→わたくし and the lemma is 御前→ごぜん.
+                # Regenerate ruby from it, and reading_overridden makes
+                # lemma_reading reuse おまえ instead of the 御前 misreading below.
+                expression_reading = pronoun_reading
+                expression_furigana = _format_furigana(mined, pronoun_reading)
                 reading_overridden = True
             else:
                 expression_furigana = self._furigana(mined)
