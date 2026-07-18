@@ -207,10 +207,16 @@ def test_anchor_meets_ellipsis_floor() -> None:
     b_el = results["b-lite-anchor"].by_category["ellipsis-truncation"]
     # U8: the ellipsis truncation-fragment reject is DICT-FREE, so it fires the
     # same on (a) and (b) — no strict-beat is available. This is a regression
-    # tripwire instead: every reject fixture (合…/タ… イガ…/欲し…/声…) mines its
-    # fragment as junk PRE-guard (proven by the pre-guard probe and the wired
-    # TestEllipsisTruncationGuard unit tests), so a revert makes junk_rate>0.
-    # recall==1.0 pins that no keep-case (夢…/夢……/待って…/行こう…) was over-rejected.
+    # tripwire instead. The reject fixtures cover two DISTINCT removal kinds:
+    # 合…/タ… イガ…/欲し… are fragment junk (truncation debris that is not a real
+    # word), whereas 声… is the intended recall-sacrifice of a legit single-char
+    # noun caught in a stutter line — accepted collateral loss on the junk ledger,
+    # not junk in itself. Every fixture mines its fragment PRE-guard (proven by the
+    # pre-guard probe and the wired TestEllipsisTruncationGuard unit tests), so a
+    # revert makes junk_rate>0. recall==1.0 pins that no keep-case (夢…/夢……/
+    # 待って…/行こう…) was over-rejected. Like the guard it mirrors, this category
+    # floor is intentionally lossy — a change-detector against the reject's own
+    # fixtures, not independent ground truth.
     assert junk_rate(b_el) == 0.0, f"strategy (b) ellipsis-truncation junk_rate {junk_rate(b_el)} above 0.0"
     assert recall(b_el) == 1.0, f"strategy (b) ellipsis-truncation recall {recall(b_el)} below 1.0"
 

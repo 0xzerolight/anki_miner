@@ -12,7 +12,7 @@ For every subtitle file in a directory (sorted), it loads per-cue units through
 the READING loader (``services/reading/subtitle_source.load`` — the same cue
 granularity the video pipeline mines, and explicitly NOT
 ``parse_subtitle_file``), runs them through a production
-``SubtitleParserService`` wired (read-only) to the same three offline probes
+``SubtitleParserService`` wired (read-only) to the same four offline probes
 ``gui/utils/service_factory`` injects, but over EVERY installed
 ``~/.anki_miner`` dictionary rather than the user's configured chain (the replay
 wants maximum attestation; the GUI chain is user-config, not relevant to
