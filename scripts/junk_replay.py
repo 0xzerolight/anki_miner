@@ -12,9 +12,12 @@ For every subtitle file in a directory (sorted), it loads per-cue units through
 the READING loader (``services/reading/subtitle_source.load`` — the same cue
 granularity the video pipeline mines, and explicitly NOT
 ``parse_subtitle_file``), runs them through a production
-``SubtitleParserService`` wired to the real ``~/.anki_miner`` dictionary chain
-(read-only) exactly as ``gui/utils/service_factory`` wires it, and writes one TSV
-row per emitted card front: ``file  mined_form  lemma  reading  sentence``.
+``SubtitleParserService`` wired (read-only) to the same three offline probes
+``gui/utils/service_factory`` injects, but over EVERY installed
+``~/.anki_miner`` dictionary rather than the user's configured chain (the replay
+wants maximum attestation; the GUI chain is user-config, not relevant to
+parser-behavior diffing — see ``build_parser``), and writes one TSV row per
+emitted card front: ``file  mined_form  lemma  reading  sentence``.
 
 Usage
 -----
@@ -50,6 +53,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import dataclasses
 import sys
 from pathlib import Path
 from typing import NamedTuple
@@ -61,7 +65,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from anki_miner.config.config import AnkiMinerConfig  # noqa: E402
+from anki_miner.config.config import AnkiMinerConfig, ChainEntry  # noqa: E402
 from anki_miner.models.reading import ReadingSourceRef  # noqa: E402
 from anki_miner.services.definition_service import DefinitionService  # noqa: E402
 from anki_miner.services.dictionary.registry import DictionaryRegistry  # noqa: E402
@@ -84,23 +88,51 @@ class ReplayRow(NamedTuple):
     sentence: str
 
 
+def _all_installed_dicts_config(config: AnkiMinerConfig, registry: DictionaryRegistry) -> AnkiMinerConfig:
+    """Return ``config`` with its ``dictionary_chain`` replaced by EVERY installed dict.
+
+    The replay wants *maximum attestation* — the parser's kana-recovery and
+    reading probes should see every dictionary on disk so dict-dependent guards
+    are visible to the gate. The GUI's ``config.dictionary_chain`` is a
+    user-config artifact (which dicts are enabled, in what order) and is NOT
+    relevant to diffing parser BEHAVIOR, so it is bypassed here.
+
+    ``registry.unlisted`` against an empty chain returns every on-disk dict with
+    ``schema_ok=True`` (schema-stale indexes are dropped, as they would be by
+    ``build_provider_chain`` anyway), sorted by dict_id for determinism. Read-only.
+    Requires ``registry.load()`` already called.
+    """
+    empty = dataclasses.replace(config, dictionary_chain=())
+    entries = tuple(ChainEntry(kind="indexed", dict_id=meta.dict_id, enabled=True) for meta in registry.unlisted(empty))
+    return dataclasses.replace(config, dictionary_chain=entries)
+
+
 def build_parser(config: AnkiMinerConfig) -> SubtitleParserService:
     """Build the production parser wired to ``config.dicts_root`` (read-only).
 
     Mirrors ``gui/utils/service_factory``: scan the registry, assemble the
-    provider chain, wrap it in a ``DefinitionService``, and inject the SAME two
+    provider chain, wrap it in a ``DefinitionService``, and inject the SAME three
     probes production wires — ``offline_terms_exist`` as ``term_lookup`` (drives
-    ``resolve_dictionary_form``) and ``has_offline_definitions`` as
-    ``kana_attest_lookup`` (drives the WS2 kana recovery). Both probes lazily
-    load the chain, so no explicit ``ensure_loaded`` is needed; with an empty
-    ``dicts_root`` they attest nothing (the offline-free replay path).
+    ``resolve_dictionary_form``), ``offline_term_readings`` as ``reading_lookup``
+    (drives the merged-compound reading attestation, audit F2), and
+    ``has_offline_definitions`` as ``kana_attest_lookup`` (drives the WS2 kana
+    recovery). All three probes lazily load the chain, so no explicit
+    ``ensure_loaded`` is needed; with an empty ``dicts_root`` they attest nothing
+    (the offline-free replay path).
+
+    Unlike the GUI, the chain is assembled from ALL installed dictionaries
+    (``_all_installed_dicts_config``), not ``config.dictionary_chain`` — the
+    replay wants maximum attestation and the user's chain config is irrelevant to
+    diffing parser behavior. See that helper for the rationale.
     """
     registry = DictionaryRegistry(config.dicts_root)
     registry.load()
-    definition_service = DefinitionService(config, providers=registry.build_provider_chain(config))
+    replay_config = _all_installed_dicts_config(config, registry)
+    definition_service = DefinitionService(replay_config, providers=registry.build_provider_chain(replay_config))
     return SubtitleParserService(
-        config,
+        replay_config,
         term_lookup=definition_service.offline_terms_exist,
+        reading_lookup=definition_service.offline_term_readings,
         kana_attest_lookup=definition_service.has_offline_definitions,
     )
 
