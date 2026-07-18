@@ -221,6 +221,70 @@ def test_anchor_meets_ellipsis_floor() -> None:
     assert recall(b_el) == 1.0, f"strategy (b) ellipsis-truncation recall {recall(b_el)} below 1.0"
 
 
+def test_anchor_meets_classical_adjective_floor() -> None:
+    results = _scored()
+    b_ca = results["b-lite-anchor"].by_category["classical-adjective"]
+    # V4: the classical 連体形 ク-stem fold (美しき→美しい) lives in mining_base and is
+    # DICT-FREE, so it fires the same on (a) and (b) — a regression tripwire, not a
+    # strict-beat. A revert mines the bare ク-stem 美し (junk) and misses 美しい, so
+    # both recall<1 and junk>0; 良き still folds via the ('し','い') swap pair and
+    # いい stays unfolded.
+    assert recall(b_ca) == 1.0, f"strategy (b) classical-adjective recall {recall(b_ca)} below 1.0"
+    assert junk_rate(b_ca) == 0.0, f"strategy (b) classical-adjective junk_rate {junk_rate(b_ca)} above 0.0"
+
+
+def test_anchor_meets_vowel_elongation_floor() -> None:
+    results = _scored()
+    b_ve = results["b-lite-anchor"].by_category["vowel-elongation"]
+    # V5: the vowel-elongation 名詞 fold (手ぇ→手) lives in select_mined_form and is
+    # DICT-FREE (string-only), so it fires the same on (a) and (b) — a regression
+    # tripwire. A revert mines the elongated surface 手ぇ (junk) and misses 手, so
+    # both recall<1 and junk>0; コーヒー/スーパー stay on the surface (no fold).
+    assert recall(b_ve) == 1.0, f"strategy (b) vowel-elongation recall {recall(b_ve)} below 1.0"
+    assert junk_rate(b_ve) == 0.0, f"strategy (b) vowel-elongation junk_rate {junk_rate(b_ve)} above 0.0"
+
+
+def test_anchor_meets_katakana_pronoun_floor() -> None:
+    results = _scored()
+    b_kp = results["b-lite-anchor"].by_category["katakana-pronoun"]
+    # V6: the katakana-pronoun fold (ワタシ→私, オマエ→お前) lives in select_mined_form
+    # via a curated 5-entry map and is DICT-FREE (string-only), so it fires the same
+    # on (a) and (b) — a regression tripwire, not a strict-beat. A revert mines the
+    # katakana surface ワタシ/オマエ (junk) and misses the kanji 私/お前, so both
+    # recall<1 and junk>0; アナタ/ワイ are absent from the map and stay on the surface
+    # (membership-only), so a fold that over-reaches to them also trips junk here.
+    assert recall(b_kp) == 1.0, f"strategy (b) katakana-pronoun recall {recall(b_kp)} below 1.0"
+    assert junk_rate(b_kp) == 0.0, f"strategy (b) katakana-pronoun junk_rate {junk_rate(b_kp)} above 0.0"
+
+
+def test_orthbase_meets_kana_runs_floor() -> None:
+    results = _scored()
+    # V8 pins strategy (a), NOT (b): the merged-token junk (獅子+子 → シシシ, 3-run シ)
+    # only survives UNGATED dict-free, so strategy (a) is where content_gate_ok's
+    # ≥3-identical-kana reject actually removes it. Under (b) the attest-or-bail
+    # merge gate decomposes シシシ on its own (獅子子 unattested), which would mask a
+    # revert. A revert re-mints シシシ/メメメ under (a) ⇒ junk_rate>0. recall==1.0 pins
+    # that the reject does not over-reach: バナナ (2-run ナナ), スーパー (excluded ー)
+    # and ヒヒ (2-run 狒々) still mine. The kana-recovery-death case (どおおおおっ→
+    # 覆う) needs an attesting dict absent from the locked anchor, so its kill is
+    # proven in the wired TestRepeatedKanaRunReject unit tests, not here.
+    a_kr = results["a-lite-orthbase"].by_category["kana-runs"]
+    assert junk_rate(a_kr) == 0.0, f"strategy (a) kana-runs junk_rate {junk_rate(a_kr)} above 0.0"
+    assert recall(a_kr) == 1.0, f"strategy (a) kana-runs recall {recall(a_kr)} below 1.0"
+
+
+def test_pos_suffix_lemma_strip_folds_potential() -> None:
+    # V10: 引けいって → 引け carries the decorated lemma 引く-他動詞. Stripping the fine
+    # POS tail (extract_lemma's endswith broadening) unblocks the ('ける','く')
+    # potential fold, so the card front is the base 引く. The line also lives in
+    # potential_ranuki.jsonl (the guard-category floor covers it); this pins the
+    # exact form dict-free AND with the anchor. A revert mines 引ける (fold blocked
+    # by the decorated lemma). 引け occurs in neither replay corpus, so this is the
+    # sole corpus witness.
+    assert mine_lite_orthbase("引けいって") == {"引く"}
+    assert mine_lite_anchor("引けいって") == {"引く"}
+
+
 # NOTE: jiru-zuru (Task 3), kana-written (Task 4), nominal-suffix (Task 5),
 # colloquial/counter (A2), aux-context (A1), long-compound (Task 6/Q2) and
 # ellipsis-truncation (U8) floors are gated above; linebreak-split is

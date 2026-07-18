@@ -1,0 +1,7 @@
+{"id":"kp01","sentence":"オマエは誰だ","expected":["お前","誰"],"category":"katakana-pronoun","note":"オマエ (代名詞, lemma 御前) folds to お前 via select_mined_form; reading おまえ paired, NOT lemma ごぜん"}
+{"id":"kp02","sentence":"ワタシは学生だ","expected":["私","学生"],"category":"katakana-pronoun","note":"ワタシ folds to 私; reading わたし paired (generate_reading gives わたくし)"}
+{"id":"kp03","sentence":"ボクは行く","expected":["僕","行く"],"category":"katakana-pronoun"}
+{"id":"kp04","sentence":"キサマを許さない","expected":["貴様","許す"],"category":"katakana-pronoun"}
+{"id":"kp05","sentence":"ワレを忘れるな","expected":["我","忘れる"],"category":"katakana-pronoun"}
+{"id":"kp06","sentence":"アナタは優しい","expected":["アナタ","優しい"],"category":"katakana-pronoun","note":"KEEP: アナタ not in the map, keeps its katakana surface (membership-only fold)"}
+{"id":"kp07","sentence":"ワイは知らん","expected":["ワイ","知る"],"category":"katakana-pronoun","note":"KEEP: ワイ is the declared residual, unclear lemma, never folds"}

@@ -13,7 +13,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.reading import ReadingUnit
-from anki_miner.models.word import select_mined_form
+from anki_miner.models.word import resolve_pronoun_fold_reading, select_mined_form
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, TermLookup
 from anki_miner.services.deinflection import (
     TermCommonLookup,
@@ -35,6 +35,7 @@ from anki_miner.services.morphology import (
     merge_compound_suffixes,
     mining_base,
     replace_overridden_spans,
+    resolve_reading_override,
 )
 from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.utils import (
@@ -692,6 +693,9 @@ class SubtitleParserService:
         # ExpressionFurigana/Reading match the mined card front (computed above):
         # orthBase for verbs/adjectives, surface for nouns (see
         # TokenizedWord.mined_form / select_mined_form for the trade-off).
+        # Set by the two curated-reading-override branches so lemma_reading below
+        # reuses the corrected value even when the lemma spelling diverges.
+        reading_overridden = False
         if mined == surface and getattr(word_token, "compound", False) is not True:
             # Single source of truth for the target reading (Task 1.2). When the
             # card front IS the surface token, keep the context-disambiguated
@@ -712,7 +716,18 @@ class SubtitleParserService:
             # concatenated component kana, so they take the else branch and keep
             # the headword-regenerated reading.
             expression_reading = katakana_to_hiragana(reading)
-            expression_furigana = generate_furigana_from_tokens([word_token])
+            override = resolve_reading_override(mined, expression_reading)
+            if override is not None:
+                # unidic-lite misreads this spelling in every context (一日→ツイタチ,
+                # 仏→フツ, マズい→マジイ, 込む→ゴム). Take the curated reading and
+                # regenerate ruby from it — a stale per-token furigana would
+                # contradict the corrected reading field (and the corrected value
+                # flows on to lemma_reading/resolved_reading below).
+                expression_reading = override
+                expression_furigana = _format_furigana(mined, override)
+                reading_overridden = True
+            else:
+                expression_furigana = generate_furigana_from_tokens([word_token])
         elif getattr(word_token, "compound", False) is True and kana_attested and mined == surface:
             # Attested compound whose card front IS the span surface (kind-B, or
             # a kind-A span appearing UNINFLECTED): the dictionary-corrected kana
@@ -742,15 +757,36 @@ class SubtitleParserService:
             # Verbs/adjectives mine as orthBase, whose reading is genuinely not
             # the surface token's kana (蒔い→蒔く); compound synthetics
             # regenerate from the headword. Both re-derive from ``mined``.
-            expression_furigana = self._furigana(mined)
             expression_reading = self._reading(mined)
+            override = resolve_reading_override(mined, expression_reading)
+            pronoun_reading = resolve_pronoun_fold_reading(surface, mined)
+            if override is not None:
+                # Inflected misread spelling (マズかった→mined マズい→まじい,
+                # 込んだ→mined 込む→ごむ): apply the curated reading and regenerate
+                # ruby from it, mirroring the mined==surface branch above.
+                expression_reading = override
+                expression_furigana = _format_furigana(mined, override)
+                reading_overridden = True
+            elif pronoun_reading is not None:
+                # Katakana 代名詞 folded to kanji by select_mined_form (ワタシ→私,
+                # オマエ→お前): the paired reading is authoritative because
+                # generate_reading gives 私→わたくし and the lemma is 御前→ごぜん.
+                # Regenerate ruby from it, and reading_overridden makes
+                # lemma_reading reuse おまえ instead of the 御前 misreading below.
+                expression_reading = pronoun_reading
+                expression_furigana = _format_furigana(mined, pronoun_reading)
+                reading_overridden = True
+            else:
+                expression_furigana = self._furigana(mined)
         # Lemma reading for the JPod101 audio retry: when the mined form
         # misses, the loop retries with the lemma kanji and needs the lemma's
         # OWN reading (探す→さがす), not the surface reading (さがし). For
         # most verb/adjective tokens ``mined`` (orthBase) equals the lemma,
         # so reuse the value; a kanji-variant divergence (乞う vs 請う)
-        # recomputes the lemma's reading like the surface-mined case.
-        lemma_reading = expression_reading if mined == lemma else self._reading(lemma)
+        # recomputes the lemma's reading like the surface-mined case. On a curated
+        # reading override the lemma spelling (マズい→不味い) reads the SAME wrong
+        # value in isolation, so reuse the corrected reading rather than recompute.
+        lemma_reading = expression_reading if (mined == lemma or reading_overridden) else self._reading(lemma)
 
         # Pitch reading realignment: when the resolver diverged the front from
         # the lemma (感じる card, but archaic lemma 感ずる), pitch must key on the
@@ -1263,6 +1299,11 @@ class SubtitleParserService:
         ``_attest_or_remap_front`` remaps it to the attested lemma — but only
         when the lemma/orthBase readings diverge, guarding the #19/#5
         same-reading-variant contract. See that method for the full gate.
+
+        Third seam (V7 katakana-verb fold): when both prior seams leave orth_base
+        unchanged AND it is an ALL-katakana verb orthBase the dictionary does not
+        attest (ヤル), ``_fold_katakana_verb_front`` folds it to its common
+        hiragana headword (やる). See that method for the full gate.
         """
         feature = getattr(word_token, "feature", None)
         if getattr(feature, "pos1", None) not in ("動詞", "形容詞"):
@@ -1291,6 +1332,11 @@ class SubtitleParserService:
             # so skip it.
             if cached == orth_base:
                 cached = self._attest_or_remap_front(word_token, orth_base)
+            # Last net: an all-katakana verb orthBase the dictionary leaves
+            # untouched (ヤル) folds to its common hiragana headword (やる) — its
+            # equal lForm/kanaBase readings keep both seams above from firing.
+            if cached == orth_base:
+                cached = self._fold_katakana_verb_front(orth_base)
             if len(self._front_cache) >= _FRONT_CACHE_CAP:
                 self._front_cache.clear()
             self._front_cache[key] = cached
@@ -1355,6 +1401,48 @@ class SubtitleParserService:
         if lemma not in attested:
             return orth_base  # no attested target to remap onto
         return lemma
+
+    def _fold_katakana_verb_front(self, orth_base: str) -> str:
+        """Fold an all-katakana verb orthBase to its common hiragana headword.
+
+        unidic-lite tags a katakana-written verb spelling (ヤル for やる) with its
+        own all-katakana orthBase (ヤル) whose lForm/kanaBase readings are equal
+        (both ヤル), so ``mining_base`` and ``_attest_or_remap_front`` both keep
+        it — the card front ships as ヤル, splitting definition/frequency/dedup/
+        audio from the やる card the learner already has. Reached only after
+        ``resolve_dictionary_form`` and ``_attest_or_remap_front`` both left
+        ``orth_base`` unchanged (a 動詞/形容詞 with a wired ``term_lookup``).
+
+        Folds ``orth_base`` → its hiragana reading iff ALL hold:
+
+        * ``orth_base`` is ALL katakana. LOAD-BEARING: a mixed-script loanword
+          verb (ハメる: katakana stem + hiragana okurigana る) is NOT all-katakana,
+          so the gate never fires — its orthBase is the correct card front and is
+          kept untouched.
+        * the offline dictionary does NOT attest the katakana ``orth_base`` as a
+          term (exact headword, no folding). An attested katakana verb is a real
+          word and is KEPT — attestation, not a fold table, decides.
+        * the dictionary DOES attest the hiragana fold as a term AND a
+          commonness-aware dict tags it common. Never fold onto an unattested or
+          rare/wrong target; a chain with no commonness-aware dict (probe returns
+          ``None``) cannot prove commonness, so the fold safe-degrades to keeping
+          ``orth_base`` (byte-identical to pre-fold — the U11 degrade contract).
+
+        Only ``ヤル`` reaches this gate in both mining corpora (blast radius 1);
+        the guards keep it that way for any future all-katakana verb orthBase.
+        """
+        if not _is_all_katakana(orth_base):
+            return orth_base
+        fold = katakana_to_hiragana(orth_base)
+        if fold == orth_base:
+            return orth_base
+        attested = self._memoized_attest([orth_base, fold])
+        if orth_base in attested or fold not in attested:
+            return orth_base
+        common = self._memoized_term_common([fold])
+        if common is None or not common.get(fold):
+            return orth_base
+        return fold
 
     def _extract_reading(self, word_token) -> str:
         """Extract kana reading from a token (see morphology.extract_reading)."""

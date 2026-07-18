@@ -17,7 +17,13 @@ granularity the video pipeline mines, and explicitly NOT
 ``~/.anki_miner`` dictionary rather than the user's configured chain (the replay
 wants maximum attestation; the GUI chain is user-config, not relevant to
 parser-behavior diffing — see ``build_parser``), and writes one TSV row per
-emitted card front: ``file  mined_form  lemma  reading  sentence``.
+emitted card front:
+``file  mined_form  lemma  reading  expression_reading  sentence``.
+
+``reading`` is the raw token kana straight off fugashi (``TokenizedWord.reading``);
+``expression_reading`` is the plain-kana reading of the card-front expression
+(``TokenizedWord.expression_reading``) — the reading-fix units (V6/V7) correct the
+latter, so both are dumped side by side to keep the correction gate-visible.
 
 Usage
 -----
@@ -40,8 +46,13 @@ then take the SYMMETRIC diff of the mined-front sets:
     class — U8(a) 連用形 removals and U8(b) single-char/katakana removals
     classified SEPARATELY (each confirmed junk against the 785-card audit),
     deinflection-arch sources, and kana misrecoveries.
-  * reading diff on KEPT fronts (present in both): readings MUST be byte-identical
-    — a changed reading on an unchanged front is a silent regression.
+  * raw ``reading`` diff on KEPT fronts (present in both): the raw token-kana
+    column MUST be byte-identical — a changed raw reading on an unchanged front is
+    a silent regression.
+  * ``expression_reading`` assertions apply to KEPT fronts AND fold-added fronts:
+    the V6/V7 corrected readings ride on the added rows a remap contributes, so an
+    expression_reading change is EXPECTED wherever the front itself was added or
+    its reading intentionally corrected, and MUST be byte-identical everywhere else.
   * annotation over-strip tripwire: eyeball a sample of the ~291 sentences that
     carry annotations (the new ``subtitle_cleanup`` input class) for content the
     strip ate.
@@ -75,7 +86,7 @@ from anki_miner.services.subtitle_parser import SubtitleParserService  # noqa: E
 # Suffixes the reading subtitle loader accepts (see subtitle_source docstring).
 SUBTITLE_SUFFIXES = frozenset({".srt", ".ass", ".ssa", ".vtt"})
 
-_TSV_COLUMNS = ("file", "mined_form", "lemma", "reading", "sentence")
+_TSV_COLUMNS = ("file", "mined_form", "lemma", "reading", "expression_reading", "sentence")
 
 
 class ReplayRow(NamedTuple):
@@ -84,7 +95,8 @@ class ReplayRow(NamedTuple):
     file: str
     mined_form: str
     lemma: str
-    reading: str
+    reading: str  # Raw token kana (TokenizedWord.reading)
+    expression_reading: str  # Plain-kana reading of the card front (V6/V7 correct this)
     sentence: str
 
 
@@ -159,6 +171,7 @@ def replay_file(parser: SubtitleParserService, path: Path) -> list[ReplayRow]:
             mined_form=w.mined_form,
             lemma=w.lemma,
             reading=w.reading,
+            expression_reading=w.expression_reading,
             sentence=w.sentence,
         )
         for w in words

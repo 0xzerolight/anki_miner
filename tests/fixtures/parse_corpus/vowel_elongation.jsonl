@@ -1,0 +1,5 @@
+{"id":"ve01","sentence":"手ぇを出せ","expected":["手","出す"],"category":"vowel-elongation","note":"手ぇ (名詞, lemma 手 + small-え tail) folds to 手 via select_mined_form"}
+{"id":"ve02","sentence":"気いつけて","expected":["気"],"category":"vowel-elongation","note":"気い folds to 気; つける is pure-hiragana verb, not mined dict-free"}
+{"id":"ve03","sentence":"目ぇ開けろ","expected":["目","開ける"],"category":"vowel-elongation"}
+{"id":"ve04","sentence":"コーヒーを飲む","expected":["コーヒー","飲む"],"category":"vowel-elongation","note":"KEEP: コーヒー surface == gloss-stripped lemma, no fold"}
+{"id":"ve05","sentence":"スーパーに行く","expected":["スーパー","行く"],"category":"vowel-elongation","note":"KEEP: スーパー surface == lemma, no fold"}

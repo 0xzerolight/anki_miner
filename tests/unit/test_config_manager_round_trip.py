@@ -82,7 +82,8 @@ class TestExcludedWordsetsRoundTrip:
         # JSON stores a list; __post_init__ coerces it back to a tuple.
         assert loaded.excluded_wordsets == ("surnames", "place-names")
 
-    def test_default_is_empty_tuple(self, isolated_config_file):
+    def test_default_round_trips_all_wordsets(self, isolated_config_file):
+        """Default-ON (junk-reduction r3): the bundled sets survive save→load."""
         GUIConfigManager.save_config(create_default_config())
         loaded = GUIConfigManager.load_config()
-        assert loaded.excluded_wordsets == ()
+        assert loaded.excluded_wordsets == ("surnames", "given-names", "place-names", "org-product")

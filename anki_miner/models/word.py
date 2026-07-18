@@ -5,6 +5,43 @@ from pathlib import Path
 
 from anki_miner.models.media import MediaData
 
+# Colloquial vowel-elongation tail characters a 名詞 surface can carry over its
+# lemma (手ぇ, 気い, 目ー): small kana vowels, full kana vowels and the long-vowel
+# mark. Restricted to these so only a genuine drawn-out reading folds — an ordinary
+# okurigana/compound tail (パン→パンダ) never matches.
+_VOWEL_ELONGATION_TAIL = frozenset("ぁぃぅぇぉあいうえおー")
+
+# Curated katakana pronoun spellings unidic-lite emits as their own 代名詞 token,
+# paired with the conventional kanji card front AND its hiragana reading. Explicit
+# membership — NOT lemma-trust — is the fold gate on two counts the judges pinned:
+# オマエ's UniDic lemma is 御前 (lemma-trust would card 御前[ごぜん], never お前) and
+# generate_reading re-derives 私→わたくし, so neither the lemma nor a regenerated
+# reading is safe. The parser's _emit_word threads the paired reading from this
+# table (see resolve_pronoun_fold_reading). Other katakana 代名詞 in the corpus
+# (アナタ/オラ/コレ/ソレ/ワイ) are deliberately absent and never fold.
+_KATAKANA_PRONOUN_FOLDS: dict[str, tuple[str, str]] = {
+    "ワタシ": ("私", "わたし"),
+    "ボク": ("僕", "ぼく"),
+    "キサマ": ("貴様", "きさま"),
+    "ワレ": ("我", "われ"),
+    "オマエ": ("お前", "おまえ"),
+}
+
+
+def resolve_pronoun_fold_reading(surface: str, mined: str) -> str | None:
+    """Paired hiragana reading for a katakana 代名詞 folded to kanji, else ``None``.
+
+    Self-gating table lookup: returns the reading only when ``surface`` is a
+    curated katakana pronoun key AND ``mined`` is its paired kanji spelling —
+    which holds exactly when ``select_mined_form`` folded a 代名詞 surface. The
+    parser's ``_emit_word`` applies it so the else-branch reading comes from this
+    table rather than ``generate_reading`` (私→わたくし) or the UniDic lemma
+    (御前→ごぜん). Naturally-written kanji pronouns (surface 私, not a key) are
+    untouched. Kept beside the fold map so the spellings have one source of truth.
+    """
+    fold = _KATAKANA_PRONOUN_FOLDS.get(surface)
+    return fold[1] if fold is not None and fold[0] == mined else None
+
 
 def select_mined_form(pos: str | None, orth_base: str, lemma: str, surface: str) -> str:
     """Single selection rule for the card-front form.
@@ -14,9 +51,32 @@ def select_mined_form(pos: str | None, orth_base: str, lemma: str, surface: str)
     expression furigana/reading). Keep it the only place this rule lives —
     a drifted copy silently splits the Expression field from the
     dedup/known-words/audio identity.
+
+    A katakana 代名詞 in the curated ``_KATAKANA_PRONOUN_FOLDS`` map (ワタシ→私,
+    オマエ→お前) folds to its conventional kanji card front so it dedups against
+    the plain-kanji card. Membership-only: other katakana pronouns (アナタ/オラ)
+    are absent and keep their surface. The paired reading is threaded separately
+    at the emit site (``resolve_pronoun_fold_reading``) because the UniDic lemma
+    is unreliable here (オマエ→御前).
+
+    Nouns whose surface is the lemma plus a 1-2 char colloquial vowel-elongation
+    tail (手ぇ→手, 気い→気) fold to the lemma so the card dedups against the plain
+    form. String-only: the ``surface.startswith(lemma)`` guard keeps Issue #5
+    homographs (豪腕/剛腕, surface does not start with the variant lemma) on the
+    surface, and only ``_VOWEL_ELONGATION_TAIL`` chars qualify. コーヒー is
+    unaffected (its gloss-stripped lemma equals the surface). Any ``known_words``
+    rows keyed on the old 手ぇ front go dead — benign, no migration.
     """
     if pos in ("動詞", "形容詞"):
         return orth_base or lemma
+    if pos == "代名詞":
+        fold = _KATAKANA_PRONOUN_FOLDS.get(surface)
+        if fold is not None:
+            return fold[0]
+    if pos == "名詞" and lemma and surface != lemma and surface.startswith(lemma):
+        tail = surface[len(lemma) :]
+        if 1 <= len(tail) <= 2 and all(c in _VOWEL_ELONGATION_TAIL for c in tail):
+            return lemma
     return surface
 
 
@@ -150,7 +210,10 @@ class TokenizedWord:
         Nouns and other non-conjugating POS keep the surface form: unidic
         sometimes maps homograph-like nouns to a different headword
         (``豪腕`` → ``剛腕``); preserving surface for nouns avoids that
-        regression (Issue #5).
+        regression (Issue #5). The one carve-out: a 名詞 surface that is the
+        lemma plus a short colloquial vowel-elongation tail (``手ぇ`` → ``手``,
+        ``気い`` → ``気``) folds to the lemma — see ``select_mined_form`` for the
+        string-only rule and its guards.
         """
         return select_mined_form(self.pos, self.orth_base, self.lemma, self.surface)
 

@@ -1626,10 +1626,19 @@ class TestExtractLemma:
         token = _make_token("私", "代名詞", lemma="私-代名詞")
         assert service._extract_lemma(token) == "私"
 
-    def test_pos_tail_only_strips_when_it_matches_pos1(self, service):
-        """A Japanese tail that is not the token's own pos1 stays intact."""
+    def test_pos_subtype_tail_strips_via_endswith(self, service):
+        """A POS-name tail strips when it EQUALS or ENDS WITH the coarse pos1:
+        代名詞 (a 名詞 subtype) strips even when pos1 is 名詞, and unidic's fine
+        transitivity tag 他動詞 strips against the coarse 動詞."""
         token = _make_token("君", "名詞", lemma="君-代名詞")
-        assert service._extract_lemma(token) == "君-代名詞"
+        assert service._extract_lemma(token) == "君"
+        token = _make_token("引け", "動詞", lemma="引く-他動詞")
+        assert service._extract_lemma(token) == "引く"
+
+    def test_non_pos_hyphen_tail_stays_intact(self, service):
+        """A Japanese tail ending in neither an ASCII letter nor pos1 is kept."""
+        token = _make_token("メル", "名詞", lemma="メル-ビル")
+        assert service._extract_lemma(token) == "メル-ビル"
 
 
 class TestMiningBase:
@@ -4383,14 +4392,21 @@ class TestKinshipHonorificReadings:
         word = next(w for w in words if w.surface == "兄")
         assert word.expression_reading == "あに"
 
-    def test_ichinichi_ambiguous_left_alone(self, tmp_path):
-        """一日 in a date frame stays ついたち — the resolver never touches it."""
+    def test_ichinichi_corrected_even_in_date_frame(self, tmp_path):
+        """一日 reads いちにち in every context (curated override, V2).
+
+        unidic-lite emits ツイタチ for the merged 一日 token even in a calendar-date
+        frame; the reading-override table corrects it to いちにち unconditionally.
+        The calendar-date (ついたち) sense loss is the documented, accepted trade-off
+        — the mining-relevant reading is いちにち. Separate from the kinship
+        resolver, which never touches 一日.
+        """
         cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
         srt = _write_srt(tmp_path, "kin.srt", "月の一日に会う")
         words = SubtitleParserService(cfg).parse_subtitle_file(srt)
         word = next((w for w in words if w.surface == "一日"), None)
         if word is not None:
-            assert word.expression_reading == "ついたち"
+            assert word.expression_reading == "いちにち"
 
 
 class TestDecorationGlyphStripE2E:
@@ -5003,6 +5019,170 @@ class TestMemoizedTermCommon:
         monkeypatch.setattr("anki_miner.services.subtitle_parser._FRONT_CACHE_CAP", 1)
         result = service._memoized_term_common(["呼ぶ", "立つ"])
         assert result == {"呼ぶ": True, "立つ": True}
+
+
+def _build_fold_service(root, rows):
+    """Real DefinitionService over a tagged fixture index for the V7 fold tests.
+
+    ``rows`` is a list of ``(term, reading, common?)``: a 'popular'/'partOfSpeech'
+    tags table makes the provider commonness-aware (``offline_term_commonness``
+    returns real verdicts, not None), so the fold's existence + commonness probes
+    both run end-to-end. Mirrors ``_build_commonness_service``.
+    """
+    from anki_miner.services.definition_service import DefinitionService
+    from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
+    from anki_miner.services.dictionary.storage import (
+        SCHEMA_VERSION,
+        DictRow,
+        TagMeta,
+        bulk_insert,
+        create_index,
+        write_meta,
+        write_tags,
+    )
+
+    folder = root / "fold-fix"
+    folder.mkdir(parents=True, exist_ok=True)
+    db = folder / "index.sqlite"
+    create_index(db)
+    bulk_insert(
+        db,
+        [
+            DictRow(
+                term=t,
+                reading=r,
+                content=f"<div>{t}</div>",
+                tags="popular" if common else "n",
+                rules="",
+                sequence=i + 1,
+            )
+            for i, (t, r, common) in enumerate(rows)
+        ],
+    )
+    write_tags(
+        db,
+        [
+            TagMeta(name="popular", category="popular", ord=0, notes="", score=0.0),
+            TagMeta(name="n", category="partOfSpeech", ord=0, notes="noun", score=0.0),
+        ],
+    )
+    write_meta(db, {"schema_version": str(SCHEMA_VERSION), "source_name": "fold-fix"})
+    provider = IndexedDictProvider("fold-fix", db, display_name="Fold Fix")
+    provider.load()
+    return DefinitionService(AnkiMinerConfig(), providers=[provider])
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestKatakanaVerbFrontFold:
+    """V7 end-to-end: an all-katakana verb orthBase the dictionary does not attest
+    (ヤル, from a real ヤラれた span) folds to its common hiragana headword (やる) so
+    the card dedups against the plain やる card. Real fugashi mints the inflected
+    span; a real IndexedDictProvider/DefinitionService supplies existence
+    (``offline_terms_exist``) and commonness (``offline_term_commonness``). Every
+    guard is pinned against the pre-fix ヤル the same span produced before the fold.
+    """
+
+    def _mine(self, service, sentence, *, term_common=True):
+        parser = SubtitleParserService(
+            AnkiMinerConfig(),
+            term_lookup=service.offline_terms_exist,
+            term_common_lookup=service.offline_term_commonness if term_common else None,
+        )
+        unit = ReadingUnit(text=sentence, index=0, location_label="t")
+        words, _index, _counts = parser.parse_text_units([unit], want_line_index=False)
+        return words
+
+    def test_katakana_verb_folds_to_common_hiragana(self, tmp_path):
+        # ヤラれた → orthBase ヤル (all-katakana, equal readings ⇒ both prior seams
+        # keep it). やる is attested + common, ヤル is not attested → fold to やる,
+        # and front_overridden threads the fold's reading into resolved_reading.
+        service = _build_fold_service(tmp_path, [("やる", "やる", True)])
+        words = self._mine(service, "ヤラれた")
+        forms = [w.mined_form for w in words]
+        assert "やる" in forms
+        assert "ヤル" not in forms
+        yaru = next(w for w in words if w.mined_form == "やる")
+        assert yaru.expression_reading == "やる"
+        assert yaru.resolved_reading == "やる"
+
+    def test_degrade_no_common_probe_keeps_katakana(self, tmp_path):
+        # Same fixture, commonness probe NOT wired: the fold cannot prove やる is
+        # common, so it safe-degrades to the pre-fix ヤル (byte-identical degrade).
+        service = _build_fold_service(tmp_path, [("やる", "やる", True)])
+        words = self._mine(service, "ヤラれた", term_common=False)
+        assert [w.mined_form for w in words] == ["ヤル"]
+
+    def test_attested_katakana_term_blocks_fold(self, tmp_path):
+        # The dictionary ALSO attests the katakana ヤル as a term → attestation
+        # decides: a real katakana headword is KEPT, no fold to やる.
+        service = _build_fold_service(tmp_path, [("やる", "やる", True), ("ヤル", "やる", False)])
+        assert [w.mined_form for w in self._mine(service, "ヤラれた")] == ["ヤル"]
+
+    def test_uncommon_fold_target_keeps_katakana(self, tmp_path):
+        # やる attested but tagged NOT common → never fold onto a rare/wrong
+        # target; the source ヤル is kept.
+        service = _build_fold_service(tmp_path, [("やる", "やる", False)])
+        assert [w.mined_form for w in self._mine(service, "ヤラれた")] == ["ヤル"]
+
+    def test_unattested_fold_target_keeps_katakana(self, tmp_path):
+        # やる not attested at all (only an unrelated headword) → no attested
+        # target to fold onto; ヤル is kept.
+        service = _build_fold_service(tmp_path, [("無関係", "むかんけい", True)])
+        assert [w.mined_form for w in self._mine(service, "ヤラれた")] == ["ヤル"]
+
+    def test_mixed_script_loanword_verb_untouched(self, tmp_path):
+        # ハメられた → orthBase ハメる (katakana stem + hiragana okurigana る). Even
+        # with the hiragana fold はめる attested + common — which WOULD fold were the
+        # all-katakana gate absent — the mixed-script orthBase is never folded.
+        service = _build_fold_service(tmp_path, [("はめる", "はめる", True)])
+        assert [w.mined_form for w in self._mine(service, "ハメられた")] == ["ハメる"]
+
+
+class TestFoldKatakanaVerbFrontGate:
+    """``_fold_katakana_verb_front`` — direct branch coverage of the pure gate,
+    with fake existence/commonness probes so each decision is provably taken for
+    the designed reason (mirrors ``TestMinedFormAttestOrRemap``'s attest-pattern).
+    """
+
+    def _service(self, *, attested=(), common=None):
+        wanted = set(attested)
+        common_map = common
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            return SubtitleParserService(
+                AnkiMinerConfig(),
+                term_lookup=lambda terms: {t for t in terms if t in wanted},
+                term_common_lookup=(
+                    None if common_map is None else (lambda terms: {t: common_map.get(t, False) for t in terms})
+                ),
+            )
+
+    def test_folds_when_all_gates_pass(self):
+        service = self._service(attested=("やる",), common={"やる": True})
+        assert service._fold_katakana_verb_front("ヤル") == "やる"
+
+    def test_mixed_script_not_folded(self):
+        # Hiragana okurigana る ⇒ not all-katakana ⇒ never folded, even though
+        # the fold target would pass every other gate.
+        service = self._service(attested=("はめる",), common={"はめる": True})
+        assert service._fold_katakana_verb_front("ハメる") == "ハメる"
+
+    def test_attested_katakana_kept(self):
+        service = self._service(attested=("ヤル", "やる"), common={"やる": True})
+        assert service._fold_katakana_verb_front("ヤル") == "ヤル"
+
+    def test_unattested_fold_target_kept(self):
+        service = self._service(attested=(), common={"やる": True})
+        assert service._fold_katakana_verb_front("ヤル") == "ヤル"
+
+    def test_uncommon_fold_target_kept(self):
+        service = self._service(attested=("やる",), common={"やる": False})
+        assert service._fold_katakana_verb_front("ヤル") == "ヤル"
+
+    def test_no_commonness_aware_dict_degrades(self):
+        # Commonness probe returns None (no aware dict) ⇒ cannot prove common ⇒
+        # keep the katakana orthBase (byte-identical degrade).
+        service = self._service(attested=("やる",), common=None)
+        assert service._fold_katakana_verb_front("ヤル") == "ヤル"
 
 
 class TestMinedFormAttestOrRemap:
@@ -5785,3 +5965,179 @@ class TestEllipsisTruncationGuard:
         assert start == 0
         assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is False
         assert "飲む" in self._mine("飲みたい…")
+
+
+class TestRepeatedKanaRunReject:
+    """content_gate_ok's ≥3-identical-kana reject kills laughter/scream debris.
+
+    Real fugashi/unidic through ``parse_text_units`` with an offline probe
+    attesting おおう, so the kana-recovery seam WOULD re-admit 覆う from
+    どおおおおっ's おおおっ token. The reject is the ONLY thing that stops it — the
+    control case おおう (a 2-run お) still recovers under the SAME lookup, proving
+    the gate keys on the ≥3 run, not on お-repetition per se.
+    """
+
+    @staticmethod
+    def _mine(test_config, text, lookup):
+        service = SubtitleParserService(test_config, kana_attest_lookup=lookup)
+        words, _idx, _counts = service.parse_text_units(
+            [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
+        )
+        return {w.mined_form for w in words}
+
+    def test_two_run_verb_still_recovers(self, test_config):
+        lookup = _attest_lookup("おおう")
+        assert "おおう" in self._mine(test_config, "おおう", lookup)
+
+    def test_three_run_kills_kana_recovery(self, test_config):
+        # どおおおおっ → おおおっ (動詞 覆う, orthBase おおう): attested identically to the
+        # control, but the おおお 3-run trips content_gate_ok → おおう never mines.
+        lookup = _attest_lookup("おおう")
+        mined = self._mine(test_config, "どおおおおっ", lookup)
+        assert "おおう" not in mined
+        assert mined == set()  # どお is 副詞; the run token is the only content candidate
+
+
+class TestCuratedReadingOverride:
+    """Curated reading corrections for unidic-lite misreadings (一日/仏/マズい/込む).
+
+    Real fugashi/unidic through ``parse_text_units`` — the reading-tab mining
+    path. Each case pins the WRONG pre-fix reading/furigana (asserted ``!=`` the
+    correction) so the override is proven to FIRE, and both ``_emit_word``
+    landing sites are covered: the ``mined == surface`` branch (standalone マズい,
+    一日, 仏, 込む) and the headword-derived else-branch (inflected マズかった,
+    込んだ). A spelling not in the table stays byte-identical.
+    """
+
+    @staticmethod
+    def _emit(test_config, text):
+        service = SubtitleParserService(test_config)
+        words, _idx, _counts = service.parse_text_units(
+            [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
+        )
+        return {w.mined_form: w for w in words}
+
+    def test_ichinichi_noun_mined_surface_branch(self, test_config):
+        # ２４時間の一日 → unidic merges 一日 into ONE token reading ツイタチ (calendar
+        # ついたち); the ２４時間 context forces the merge (standalone 一日 splits
+        # into 一+日). Noun with mined == surface → the first branch.
+        w = self._emit(test_config, "２４時間の一日だ")["一日"]
+        assert w.expression_reading == "いちにち"  # pre-fix: ついたち
+        assert w.expression_furigana == "一日[いちにち]"  # pre-fix: 一日[ついたち]
+        assert w.lemma_reading == "いちにち"
+
+    def test_hotoke_noun_mined_surface_branch(self, test_config):
+        w = self._emit(test_config, "仏を見た")["仏"]
+        assert w.expression_reading == "ほとけ"  # pre-fix: ふつ
+        assert w.expression_furigana == "仏[ほとけ]"  # pre-fix: 仏[ふつ]
+        assert w.lemma_reading == "ほとけ"
+
+    def test_mazui_standalone_hits_mined_surface_branch(self, test_config):
+        # マズい (uninflected 形容詞): orthBase == surface → mined == surface, the
+        # first branch. unidic reads マズい as マジイ.
+        w = self._emit(test_config, "これはマズい")["マズい"]
+        assert w.expression_reading == "まずい"  # pre-fix: まじい
+        # No kanji to bracket → furigana is plain マズい before and after; the
+        # correction is visible only in the reading field.
+        assert w.expression_furigana == "マズい"
+        # lemma is 不味い (mined != lemma) which unidic ALSO misreads in isolation
+        # (不味い→まじい), so the corrected reading is reused for the audio/pitch key.
+        assert w.lemma == "不味い"
+        assert w.lemma_reading == "まずい"
+
+    def test_mazui_inflected_hits_headword_else_branch(self, test_config):
+        # マズかった → adjective token surface マズかっ, mined headword マズい
+        # (mined != surface) → the else-branch re-derives the reading from mined.
+        w = self._emit(test_config, "それはマズかった")["マズい"]
+        assert w.expression_reading == "まずい"  # pre-fix: まじい
+        assert w.lemma_reading == "まずい"
+
+    def test_komu_standalone_hits_mined_surface_branch(self, test_config):
+        # 込む (uninflected 動詞): orthBase == surface → the first branch. unidic
+        # reads the isolated verb as ゴム (the rubber loanword).
+        w = self._emit(test_config, "ここに込む")["込む"]
+        assert w.expression_reading == "こむ"  # pre-fix: ごむ
+        assert w.expression_furigana == "込[こ]む"  # pre-fix: 込[ご]む
+        assert w.lemma_reading == "こむ"
+
+    def test_komu_inflected_hits_headword_else_branch(self, test_config):
+        # 込んだ → verb token surface 込ん, mined headword 込む → the else-branch.
+        w = self._emit(test_config, "急に込んだ")["込む"]
+        assert w.expression_reading == "こむ"  # pre-fix: ごむ
+        assert w.expression_furigana == "込[こ]む"  # pre-fix: 込[ご]む
+        assert w.lemma_reading == "こむ"
+
+    def test_unlisted_compound_is_byte_identical(self, test_config):
+        # 飲み込む reads correctly (のみこむ) and its spelling is not in the table:
+        # no override fires, the expression fields are untouched.
+        w = self._emit(test_config, "薬を飲み込む")["飲み込む"]
+        assert w.expression_reading == "のみこむ"
+        assert w.expression_furigana == "飲[の]み 込[こ]む"
+
+
+class TestKatakanaPronounFold:
+    """Katakana 代名詞 folded to a kanji card front via the curated 5-entry map (V6).
+
+    Real fugashi/unidic through ``parse_text_units`` — the reading-tab mining path.
+    Each folded pronoun lands in ``_emit_word``'s else-branch (mined kanji !=
+    katakana surface), where the paired reading from ``_KATAKANA_PRONOUN_FOLDS``
+    overrides ``generate_reading`` (私→わたくし) and rescues ``lemma_reading`` from
+    the UniDic lemma misreading (御前→ごぜん). Non-map pronouns stay on the surface.
+    """
+
+    @staticmethod
+    def _emit(test_config, text):
+        service = SubtitleParserService(test_config)
+        words, _idx, _counts = service.parse_text_units(
+            [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
+        )
+        return {w.mined_form: w for w in words}
+
+    def test_watashi_folds_with_paired_reading(self, test_config):
+        # ワタシ (代名詞, lemma 私) → card front 私. Without the paired reading the
+        # else-branch generate_reading(私) gives わたくし; the map forces わたし.
+        w = self._emit(test_config, "ワタシは学生だ")["私"]
+        assert w.expression_reading == "わたし"  # generate_reading would give わたくし
+        assert w.expression_furigana == "私[わたし]"  # not 私[わたくし]
+        assert w.lemma_reading == "わたし"
+
+    def test_omae_folds_lemma_reading_rescued(self, test_config):
+        # オマエ lemma is 御前 (would read ごぜん); the fold cards お前 and the paired
+        # reading おまえ flows to lemma_reading via the reading_overridden flag.
+        w = self._emit(test_config, "オマエは誰だ")["お前"]
+        assert w.expression_reading == "おまえ"
+        assert w.expression_furigana == "お 前[まえ]"
+        assert w.lemma == "御前"  # UniDic lemma unchanged — only the front/reading fold
+        assert w.lemma_reading == "おまえ"  # rescued from 御前→ごぜん
+
+    def test_boku_folds(self, test_config):
+        w = self._emit(test_config, "ボクは行く")["僕"]
+        assert w.expression_reading == "ぼく"
+        assert w.expression_furigana == "僕[ぼく]"
+        assert w.lemma_reading == "ぼく"
+
+    def test_kisama_folds(self, test_config):
+        w = self._emit(test_config, "キサマを許さない")["貴様"]
+        assert w.expression_reading == "きさま"
+        assert w.expression_furigana == "貴様[きさま]"
+        assert w.lemma_reading == "きさま"
+
+    def test_ware_folds(self, test_config):
+        w = self._emit(test_config, "ワレを忘れるな")["我"]
+        assert w.expression_reading == "われ"
+        assert w.expression_furigana == "我[われ]"
+        assert w.lemma_reading == "われ"
+
+    def test_non_map_katakana_pronoun_unaffected(self, test_config):
+        # アナタ is a 代名詞 but not in the map: its card front stays the katakana
+        # surface — no 貴方 fold, no お前-style rewrite (membership-only).
+        emitted = self._emit(test_config, "アナタは優しい")
+        assert "アナタ" in emitted
+        assert "貴方" not in emitted
+        assert emitted["アナタ"].expression_reading == "あなた"
+
+    def test_folds_dedup_against_natural_kanji_card(self, test_config):
+        # ワタシ folds to 私 and dedups against a natural 私 in the same line — one
+        # 私 card, not two, and no stray ワタシ front.
+        emitted = self._emit(test_config, "ワタシと私は")
+        assert set(emitted) == {"私"}

@@ -82,6 +82,45 @@ def resolve_special_reading(head_surface: str, next_surface: str | None) -> str 
     return special_kana if next_surface in licensing else None
 
 
+# Curated per-spelling reading corrections for unidic-lite misreadings. Keyed by
+# (card-front spelling, hiragana-folded UniDic reading) → corrected hiragana
+# reading. Unlike the context-licensed kinship table above, each listed spelling
+# reads its wrong value in EVERY context — no correct-reading token exists to
+# protect — so the remap is unconditional. Applied in ``_emit_word``'s Expression
+# fields (both the mined==surface branch and the headword-derived else-branch).
+# Evidence probed on the shipping unidic-lite dictionary (2026-07):
+#   (一日, ついたち) → いちにち: UniDic emits ツイタチ for the merged 一日 token in
+#       every context (incl. ２４時間の一日); the calendar-date sense loss is
+#       documented and accepted (standalone 一日 tokenizes as 一+日, unaffected).
+#   (仏, ふつ) → ほとけ: UniDic emits フツ (the 仏=France abbreviation reading)
+#       universally; no "leave ほとけ alone" token exists — France-sense loss accepted.
+#   (マズい, まじい) → まずい: the katakana-ズ spelling misreads as マジイ; the 漢字
+#       form 不味い reads correctly and is untouched.
+#   (込む, ごむ) → こむ: the isolated 込む verb misreads as the loanword ゴム
+#       (rubber); compounds (飲み込む→のみこむ) read correctly and are untouched.
+_READING_OVERRIDES: dict[tuple[str, str], str] = {
+    ("一日", "ついたち"): "いちにち",
+    ("仏", "ふつ"): "ほとけ",
+    ("マズい", "まじい"): "まずい",
+    ("込む", "ごむ"): "こむ",
+}
+
+
+def resolve_reading_override(spelling: str, derived_reading: str) -> str | None:
+    """Corrected hiragana reading for a spelling unidic-lite misreads, else ``None``.
+
+    Looks up ``(spelling, derived_reading)`` — the card-front spelling paired with
+    its hiragana-folded UniDic reading — in the curated ``_READING_OVERRIDES``
+    table and returns the corrected hiragana reading on a hit, ``None`` otherwise
+    (the caller keeps the UniDic reading). Pure, context-free and dictionary-free:
+    every listed spelling reads the same wrong value in every context, so no
+    licensing suffix is consulted. A SEPARATE sibling of the kinship
+    ``resolve_special_reading`` above — that returns context-licensed katakana;
+    this returns an unconditional hiragana correction.
+    """
+    return _READING_OVERRIDES.get((spelling, derived_reading))
+
+
 def apply_special_readings(tokens: list) -> list:
     """Return ``tokens`` with kinship-head kana overridden per the special table.
 
@@ -162,15 +201,19 @@ def extract_lemma(word_token) -> str:
     # Strip unidic's disambiguator tail: an English gloss
     # ("スクランブル-scramble", "ロック-rock（音楽）" — the fullwidth parens
     # defeat a plain isascii() check, "メリーゴーランド-merry-go-round" — the
-    # gloss itself is hyphenated, hence splitting on the FIRST hyphen) or the
-    # token's own POS name ("君-代名詞"). Decorated lemmas miss every
-    # lemma-keyed lookup (frequency/pitch/offline-definition existence), which
-    # key on the clean headword. Japanese name segments (メル-ビル) have
-    # neither an ASCII letter nor a POS-name tail and are kept intact.
+    # gloss itself is hyphenated, hence splitting on the FIRST hyphen) or a
+    # POS-name tail. The tail is a POS decorator when it EQUALS the coarse pos1
+    # ("君-代名詞") or ENDS WITH it ("引く-他動詞", "落ちる-自動詞" — unidic tags
+    # transitivity with the fine 他動詞/自動詞 while pos1 is the coarse 動詞).
+    # Decorated lemmas miss every lemma-keyed lookup (frequency/pitch/offline-
+    # definition existence) AND block mining_base folds keyed on a clean headword
+    # (引ける→引く). Japanese name segments (メル-ビル) end with neither an ASCII
+    # letter nor pos1 and are kept intact.
     if "-" in lemma:
         head, _, tail = lemma.partition("-")
         pos1 = getattr(getattr(word_token, "feature", None), "pos1", None)
-        if head and tail and (any(c.isascii() and c.isalpha() for c in tail) or tail == pos1):
+        is_pos_tail = bool(pos1) and (tail == pos1 or tail.endswith(pos1))
+        if head and tail and (any(c.isascii() and c.isalpha() for c in tail) or is_pos_tail):
             lemma = head
 
     return str(lemma)
@@ -223,9 +266,10 @@ _FOLD_SUFFIX_PAIRS = (
 def mining_base(word_token) -> str:
     """orthBase for the card front, folded to lemma for derived sub-lemma entries.
 
-    unidic gives potential verbs (保てる←保つ), ra-nuki forms (見れる←見る) and
-    archaic i-adjective bases (良し←良い) their own orthBase while lemma points
-    at the parent headword. Mining orthBase makes a 保てる card distinct from an
+    unidic gives potential verbs (保てる←保つ), ra-nuki forms (見れる←見る),
+    archaic i-adjective bases (良し←良い) and classical 連体形 ク-stems
+    (美しき: orthBase 美し←美しい) their own orthBase while lemma points at the
+    parent headword. Mining orthBase makes a 保てる card distinct from an
     existing 保つ card; folding to lemma dedupes them. Applies only to 動詞 /
     形容詞 — the only POS whose mined_form reads orth_base (select_mined_form).
 
@@ -269,6 +313,14 @@ def mining_base(word_token) -> str:
     lemma = extract_lemma(word_token)
     if not lemma or not orth_base:
         return orth_base
+    # Classical 形容詞 連体形 ク-stem (美しき: orthBase 美し, lemma 美しい): unidic gives
+    # the ク-stem its own orthBase while lemma is the full い-form. Fold to lemma so a
+    # 美しき card dedups against 美しい. 形容詞-only and append-only (lemma == stem + い)
+    # — the stem is byte-identical to the lemma minus its final い, so no kanji/
+    # okurigana variant can leak (unlike the swap pairs below). 良し-class ク-forms
+    # carry orthBase 良し and fold via the ('し','い') swap pair instead.
+    if getattr(feature, "pos1", None) == "形容詞" and orth_base + "い" == lemma:
+        return lemma
     for derived, base in _FOLD_SUFFIX_PAIRS:
         if orth_base.endswith(derived) and len(orth_base) > len(derived) and orth_base[: -len(derived)] + base == lemma:
             return lemma
@@ -796,6 +848,36 @@ def _merge_verb_nominalizers(tokens: list) -> list:
     return merged
 
 
+def _is_run_identity_kana(char: str) -> bool:
+    """Whether ``char`` counts toward a repeated-kana run.
+
+    Hiragana or katakana, EXCLUDING the long-vowel mark ー and the sokuon っ/ッ:
+    those legitimately repeat in stylized text (ーーー) and geminate runs, so they
+    must not trip the reject.
+    """
+    if char in ("ー", "っ", "ッ"):
+        return False
+    return ("ぁ" <= char <= "ゖ") or ("ァ" <= char <= "ヺ")
+
+
+def _has_repeated_kana_run(surface: str) -> bool:
+    """True when ``surface`` holds ≥3 consecutive identical run-identity kana.
+
+    Laughter/scream debris (どおおおお → the おおおっ token, merged シシシ) that
+    unidic mis-tags as a content word or the kana-recovery seam would re-admit. ー
+    and っ/ッ are excluded from the identity alphabet (see _is_run_identity_kana).
+    """
+    run = 1
+    for i in range(1, len(surface)):
+        if surface[i] == surface[i - 1]:
+            run += 1
+        else:
+            run = 1
+        if run >= 3 and _is_run_identity_kana(surface[i]):
+            return True
+    return False
+
+
 @dataclass(frozen=True)
 class TokenInclusionRule:
     """POS/subtype gate deciding which tokens count as mineable content words.
@@ -835,6 +917,15 @@ class TokenInclusionRule:
 
         # Skip empty or whitespace-only tokens
         if not surface or not surface.strip():
+            return False
+
+        # Reject ≥3 consecutive identical kana: laughter/scream runs (どおおおお →
+        # the おおおっ token, merged シシシ) unidic mis-tags as content words or the
+        # kana-recovery seam would re-admit. Placed here (the single gate both
+        # should_include and the recovery probe route through) so include-path,
+        # kana recovery and count/mine parity are covered at once; ー and っ/ッ are
+        # excluded so ーーー stylistics and geminate runs survive.
+        if _has_repeated_kana_run(surface):
             return False
 
         # Get part-of-speech tags

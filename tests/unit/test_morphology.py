@@ -15,11 +15,40 @@ from anki_miner.services.morphology import (
     apply_special_readings,
     attest_merged_readings,
     extract_lemma,
+    extract_orth_base,
     merge_compound_suffixes,
     mining_base,
     replace_overridden_spans,
+    resolve_reading_override,
     resolve_special_reading,
 )
+
+
+def _fugashi_available() -> bool:
+    try:
+        import fugashi  # noqa: F401
+        import unidic_lite  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+def _real_token(sentence, surface):
+    """Return the REAL fugashi token whose surface is ``surface`` in ``sentence``.
+
+    Guard/fold tests must exercise unidic's actual feature layout (orthBase /
+    lForm / kanaBase / decorated lemma), which SimpleNamespace fakes can only
+    approximate. Raises if the tokenizer does not segment ``surface`` out — a
+    signal the fixture drifted from what unidic-lite emits.
+    """
+    import fugashi
+
+    tagger = fugashi.Tagger()
+    for word in tagger(sentence):
+        if word.surface == surface:
+            return word
+    raise AssertionError(f"{surface!r} not tokenized out of {sentence!r}")
 
 
 def _suffix_token(surface, kana):
@@ -176,6 +205,50 @@ class TestMiningBaseNoTrigger:
         assert mining_base(token) == "走り出す"
 
 
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestMiningBaseClassicalAdjective:
+    """Classical 形容詞 連体形 ク-stem folds to the plain い-adjective.
+
+    unidic-lite gives 美しき (連体形) the bare ク-stem orthBase 美し while lemma is
+    the full form 美しい; append-only fold (``lemma == orthBase + 'い'``) dedups a
+    美しき card against 美しい. 形容詞-only; distinct from the ``('し','い')`` swap
+    pair that handles 良し-class ク-forms (orthBase 良し, not 良)."""
+
+    @pytest.mark.parametrize(
+        ("sentence", "surface", "stem", "lemma"),
+        [
+            ("美しき花", "美しき", "美し", "美しい"),
+            ("疑わしき点", "疑わしき", "疑わし", "疑わしい"),
+            ("悲しき運命", "悲しき", "悲し", "悲しい"),
+        ],
+    )
+    def test_ku_stem_folds_to_i_adjective(self, sentence, surface, stem, lemma):
+        token = _real_token(sentence, surface)
+        assert token.feature.pos1 == "形容詞"
+        # Pre-fix pin: orthBase is the bare ク-stem, distinct from the fold target.
+        assert token.feature.orthBase == stem
+        assert extract_orth_base(token) == stem
+        assert mining_base(token) == lemma
+
+    def test_ku_form_with_own_ku_orthbase_still_folds_via_swap_pair(self):
+        # Judge #11: 良し tokenizes 名詞 in isolation, so exercise it in a 形容詞
+        # context (良き友 → 良き, pos1 形容詞, orthBase 良し). It folds via the
+        # existing ('し','い') swap pair — NOT the append-only classical rule
+        # (良し + い = 良しい ≠ 良い) — proving the two folds stay disjoint.
+        token = _real_token("良き友", "良き")
+        assert token.feature.pos1 == "形容詞"
+        assert token.feature.orthBase == "良し"
+        assert token.feature.orthBase + "い" != "良い"  # append-only rule cannot fire
+        assert mining_base(token) == "良い"
+
+    def test_plain_i_adjective_base_form_never_folds(self):
+        # 美しい base form: orthBase == lemma == 美しい, so orthBase + い ≠ lemma;
+        # the append-only rule must leave it untouched.
+        token = _real_token("美しい花", "美しい")
+        assert token.feature.pos1 == "形容詞"
+        assert mining_base(token) == "美しい"
+
+
 class TestExtractLemmaDisambiguatorStrip:
     """unidic decorator tails must strip so lemma-keyed lookups hit."""
 
@@ -189,6 +262,10 @@ class TestExtractLemmaDisambiguatorStrip:
             ("チェックアウト-check-out", "名詞", "チェックアウト"),
             ("君-代名詞", "代名詞", "君"),
             ("私-代名詞", "代名詞", "私"),
+            # Fine-grained POS decorators: unidic tags transitivity as 他動詞/自動詞
+            # in the lemma while pos1 is the coarse 動詞. tail.endswith(pos1) strips.
+            ("引く-他動詞", "動詞", "引く"),
+            ("落ちる-自動詞", "動詞", "落ちる"),
         ],
     )
     def test_strips_gloss_and_pos_tails(self, raw, pos1, expected):
@@ -196,12 +273,32 @@ class TestExtractLemmaDisambiguatorStrip:
         assert extract_lemma(token) == expected
 
     def test_keeps_japanese_name_segments(self):
+        # ビル ends with neither an ASCII letter nor pos1 (名詞) → kept intact.
         token = _token("メル", "名詞", "メル-ビル", "メル")
         assert extract_lemma(token) == "メル-ビル"
 
-    def test_pos_tail_must_match_pos1(self):
+    def test_pos_subtype_tail_strips_via_endswith(self):
+        # 代名詞 is a 名詞 subtype: the endswith broadening strips the POS-name tail
+        # even when the coarse pos1 is 名詞 (代名詞 ends with 名詞).
         token = _token("君", "名詞", "君-代名詞", "君")
-        assert extract_lemma(token) == "君-代名詞"
+        assert extract_lemma(token) == "君"
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestExtractLemmaPosSuffixStripRealToken:
+    """引けいって → 引け carries the fine-POS-decorated lemma 引く-他動詞; stripping it
+    unblocks the ('ける','く') potential fold so the card front is the base 引く."""
+
+    def test_strips_transitivity_suffix_and_unblocks_fold(self):
+        token = _real_token("引けいって", "引け")
+        assert token.feature.pos1 == "動詞"
+        # Pre-fix pin: the decorated lemma on the real token, and its two failures.
+        assert token.feature.lemma == "引く-他動詞"
+        assert token.feature.orthBase == "引ける"
+        # endswith strips 他動詞 (== 動詞 failed the old exact match) to the headword.
+        assert extract_lemma(token) == "引く"
+        # With the clean lemma, mining_base's potential fold fires: 引ける → 引く.
+        assert mining_base(token) == "引く"
 
 
 class TestMixedKatakanaLoanwordVerbs:
@@ -337,6 +434,40 @@ class TestContentGateOk:
         assert rule.should_include(token) is True
 
 
+class TestContentGateRepeatedKana:
+    """≥3 consecutive identical kana are laughter/scream debris, not content."""
+
+    def _rule(self):
+        return TokenInclusionRule(allowed_pos=_ALLOWED_POS, excluded_subtypes=_EXCLUDED_SUBTYPES)
+
+    @pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+    def test_rejects_real_hiragana_run_token(self):
+        # どおおおおっ → おおおっ (動詞, lemma 覆う): the おおお run is the ONLY reason
+        # it must not mine — without the gate the kana-recovery seam re-admits 覆う.
+        token = _real_token("どおおおおっ", "おおおっ")
+        assert token.feature.pos1 == "動詞"
+        assert self._rule().content_gate_ok(token) is False
+
+    @pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+    def test_keeps_two_run_verb_token(self):
+        # おおう (覆う) has only a 2-run お: the gate must NOT fire — the contrast
+        # that proves the reject keys on the ≥3 run, not on お-repetition per se.
+        token = _real_token("おおう", "おおう")
+        assert token.feature.pos1 == "動詞"
+        assert self._rule().content_gate_ok(token) is True
+
+    @pytest.mark.parametrize("surface", ["あああ", "シシシ", "ぬおおお", "ドドド"])
+    def test_rejects_three_identical_kana(self, surface):
+        token = _token_pos2(surface, "名詞", "普通名詞", lemma=surface)
+        assert self._rule().content_gate_ok(token) is False
+
+    @pytest.mark.parametrize("surface", ["バナナ", "スーーー", "がっっっ", "ドキュメント", "ヒヒ"])
+    def test_keeps_sub_threshold_or_excluded_runs(self, surface):
+        # 2-runs (バナナ/ヒヒ) and excluded-alphabet runs (ーーー, っっっ) survive.
+        token = _token_pos2(surface, "名詞", "普通名詞", lemma=surface)
+        assert self._rule().content_gate_ok(token) is True
+
+
 class TestResolveSpecialReading:
     """Honorific-kinship head reading override (兄/姉/父/母 + ちゃん/さん/さま/様)."""
 
@@ -373,6 +504,43 @@ class TestResolveSpecialReading:
     )
     def test_unlicensed_pairs_return_none(self, head, suffix):
         assert resolve_special_reading(head, suffix) is None
+
+
+class TestResolveReadingOverride:
+    """Curated per-spelling reading corrections for unidic-lite misreadings.
+
+    Pure table lookup, separate sibling of ``resolve_special_reading``. Keyed by
+    ``(card-front spelling, hiragana-folded UniDic reading)``.
+    """
+
+    @pytest.mark.parametrize(
+        "spelling,derived,expected",
+        [
+            ("一日", "ついたち", "いちにち"),
+            ("仏", "ふつ", "ほとけ"),
+            ("マズい", "まじい", "まずい"),
+            ("込む", "ごむ", "こむ"),
+        ],
+    )
+    def test_listed_pairs_are_corrected(self, spelling, derived, expected):
+        # The derived readings are exactly the wrong values unidic-lite emits
+        # (pinned here as the pre-fix values the override must replace).
+        assert derived != expected
+        assert resolve_reading_override(spelling, derived) == expected
+
+    @pytest.mark.parametrize(
+        "spelling,derived",
+        [
+            ("一日", "いちにち"),  # already-correct reading is not remapped
+            ("仏", "ほとけ"),  # already-correct reading is not remapped
+            ("込む", "こむ"),  # already-correct reading is not remapped
+            ("飲み込む", "のみこむ"),  # compound reads fine; spelling not in table
+            ("マズい", "まずい"),  # corrected reading passes through unchanged
+            ("時間", "じかん"),  # unrelated spelling
+        ],
+    )
+    def test_unlisted_pairs_return_none(self, spelling, derived):
+        assert resolve_reading_override(spelling, derived) is None
 
 
 class TestMergeNounSuffixesSpecialReading:

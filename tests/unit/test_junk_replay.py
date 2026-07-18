@@ -103,8 +103,22 @@ def test_replay_dir_ignores_non_subtitles(tmp_path: Path) -> None:
 
 def test_write_tsv_roundtrip(tmp_path: Path) -> None:
     rows = [
-        ReplayRow(file="ep01.srt", mined_form="猫", lemma="猫", reading="ねこ", sentence="猫が好きです。"),
-        ReplayRow(file="ep01.srt", mined_form="読む", lemma="読む", reading="よむ", sentence="本を読む。"),
+        ReplayRow(
+            file="ep01.srt",
+            mined_form="猫",
+            lemma="猫",
+            reading="ねこ",
+            expression_reading="ねこ",
+            sentence="猫が好きです。",
+        ),
+        ReplayRow(
+            file="ep01.srt",
+            mined_form="読む",
+            lemma="読む",
+            reading="よん",
+            expression_reading="よむ",
+            sentence="本を読む。",
+        ),
     ]
     out = tmp_path / "sub" / "replay.tsv"
 
@@ -113,8 +127,8 @@ def test_write_tsv_roundtrip(tmp_path: Path) -> None:
     with out.open(encoding="utf-8", newline="") as fh:
         reader = list(csv.reader(fh, delimiter="\t"))
     assert reader[0] == list(_TSV_COLUMNS)
-    assert reader[1] == ["ep01.srt", "猫", "猫", "ねこ", "猫が好きです。"]
-    assert reader[2] == ["ep01.srt", "読む", "読む", "よむ", "本を読む。"]
+    assert reader[1] == ["ep01.srt", "猫", "猫", "ねこ", "ねこ", "猫が好きです。"]
+    assert reader[2] == ["ep01.srt", "読む", "読む", "よん", "よむ", "本を読む。"]
 
 
 def test_build_parser_wires_all_installed_dicts_not_config_chain(tmp_path: Path) -> None:

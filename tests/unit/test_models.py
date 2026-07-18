@@ -6,7 +6,13 @@ import pytest
 
 from anki_miner.models.media import MediaData
 from anki_miner.models.processing import ProcessingResult, ValidationIssue, ValidationResult
-from anki_miner.models.word import LineLemmas, TokenizedWord, WordData, select_mined_form
+from anki_miner.models.word import (
+    LineLemmas,
+    TokenizedWord,
+    WordData,
+    resolve_pronoun_fold_reading,
+    select_mined_form,
+)
 
 
 class TestTokenizedWord:
@@ -194,6 +200,148 @@ class TestTokenizedWord:
         assert select_mined_form("形容詞", "淋しい", "寂しい", "淋しかっ") == "淋しい"
         assert select_mined_form("名詞", "剛腕", "剛腕", "豪腕") == "豪腕"
         assert select_mined_form(None, "テスト", "テスト", "テスト") == "テスト"
+
+
+class TestVowelElongationNounFold:
+    """名詞 whose surface is the lemma plus a colloquial vowel-elongation tail
+    (手ぇ, 気い) mines the bare lemma so it dedups against the plain-form card."""
+
+    @pytest.mark.parametrize(
+        ("lemma", "surface"),
+        [
+            ("手", "手ぇ"),  # small-え elongation
+            ("目", "目ぇ"),
+            ("気", "気い"),  # full-vowel elongation
+            ("血", "血ぃ"),
+            ("手", "手ええ"),  # 2-char tail
+            ("手", "手ー"),  # long-vowel mark tail
+        ],
+    )
+    def test_folds_vowel_elongated_noun_to_lemma(self, lemma, surface):
+        assert select_mined_form("名詞", surface, lemma, surface) == lemma
+
+    @pytest.mark.parametrize(
+        ("pos", "orth_base", "lemma", "surface", "expected"),
+        [
+            # コーヒー: surface == lemma (gloss stripped) → no fold, keep surface.
+            ("名詞", "コーヒー", "コーヒー", "コーヒー", "コーヒー"),
+            # Loanword whose tail is NOT a vowel/elongation char.
+            ("名詞", "パン", "パン", "パンダ", "パンダ"),
+            # Issue #5 homograph: surface does not start with the variant lemma.
+            ("名詞", "剛腕", "剛腕", "豪腕", "豪腕"),
+            # 3-char tail is out of the 1-2 window.
+            ("名詞", "手", "手", "手ぇぇぇ", "手ぇぇぇ"),
+            # Only 名詞 folds — 代名詞 keeps surface.
+            ("代名詞", "俺", "俺", "俺え", "俺え"),
+            # Verb path is unaffected (returns orth_base).
+            ("動詞", "見る", "見る", "見え", "見る"),
+        ],
+    )
+    def test_does_not_overfold(self, pos, orth_base, lemma, surface, expected):
+        assert select_mined_form(pos, orth_base, lemma, surface) == expected
+
+    def test_mined_form_property_folds_vowel_noun(self):
+        word = TokenizedWord(
+            surface="手ぇ",
+            lemma="手",
+            reading="テエ",
+            sentence="",
+            start_time=0,
+            end_time=0,
+            duration=0,
+            pos="名詞",
+            orth_base="手ぇ",
+        )
+        assert word.mined_form == "手"
+
+
+class TestKatakanaPronounFold:
+    """代名詞 whose surface is a curated katakana pronoun (ワタシ, オマエ) mines the
+    conventional kanji card front so it dedups against the plain-kanji card.
+
+    The (surface, lemma) pairs are the REAL unidic-lite tokenization — probed on
+    the shipping dictionary — so ``lemma`` is the value lemma-trust would wrongly
+    card (オマエ→御前). The fold is membership-only, never lemma-derived.
+    """
+
+    @pytest.mark.parametrize(
+        ("surface", "lemma", "kanji"),
+        [
+            ("ワタシ", "私", "私"),
+            ("ボク", "僕", "僕"),
+            ("キサマ", "貴様", "貴様"),
+            ("ワレ", "我", "我"),
+            ("オマエ", "御前", "お前"),  # lemma 御前 (would card 御前[ごぜん]) — NOT trusted
+        ],
+    )
+    def test_folds_katakana_pronoun_to_kanji(self, surface, lemma, kanji):
+        # Pre-fix the card front was the katakana surface itself; the fold must
+        # replace it with the kanji spelling (pinned different).
+        assert surface != kanji
+        assert select_mined_form("代名詞", surface, lemma, surface) == kanji
+
+    @pytest.mark.parametrize(
+        ("surface", "lemma"),
+        [
+            ("アナタ", "貴方"),  # non-map katakana 代名詞 — stays surface
+            ("オラ", "己"),
+            ("コレ", "此れ"),
+            ("ソレ", "其れ"),
+            ("ワイ", "わし"),  # declared residual
+        ],
+    )
+    def test_non_map_katakana_pronoun_unaffected(self, surface, lemma):
+        assert select_mined_form("代名詞", surface, lemma, surface) == surface
+
+    def test_natural_kanji_pronoun_unaffected(self):
+        # A pronoun already written in kanji (surface 私) is not a map key, so it
+        # keeps its surface — no double-fold, and its natural reading path stands.
+        assert select_mined_form("代名詞", "私", "私", "私") == "私"
+
+    def test_non_pronoun_katakana_surface_unaffected(self):
+        # The map is 代名詞-gated: a 名詞 spelled ワタシ (unlikely, but proves the pos
+        # guard) does not fold.
+        assert select_mined_form("名詞", "ワタシ", "ワタシ", "ワタシ") == "ワタシ"
+
+    def test_mined_form_property_folds_katakana_pronoun(self):
+        word = TokenizedWord(
+            surface="オマエ",
+            lemma="御前",
+            reading="オマエ",
+            sentence="",
+            start_time=0,
+            end_time=0,
+            duration=0,
+            pos="代名詞",
+            orth_base="オマエ",
+        )
+        assert word.mined_form == "お前"
+
+    @pytest.mark.parametrize(
+        ("surface", "mined", "reading"),
+        [
+            ("ワタシ", "私", "わたし"),
+            ("ボク", "僕", "ぼく"),
+            ("キサマ", "貴様", "きさま"),
+            ("ワレ", "我", "われ"),
+            ("オマエ", "お前", "おまえ"),
+        ],
+    )
+    def test_resolve_pronoun_fold_reading_paired(self, surface, mined, reading):
+        assert resolve_pronoun_fold_reading(surface, mined) == reading
+
+    @pytest.mark.parametrize(
+        ("surface", "mined"),
+        [
+            ("ワタシ", "ワタシ"),  # mined not yet folded → no override
+            ("ワタシ", "僕"),  # surface/kanji mismatch (self-gating)
+            ("私", "私"),  # natural kanji surface not a key
+            ("アナタ", "貴方"),  # non-map pronoun
+            ("誰", "誰"),  # unrelated word
+        ],
+    )
+    def test_resolve_pronoun_fold_reading_returns_none(self, surface, mined):
+        assert resolve_pronoun_fold_reading(surface, mined) is None
 
 
 class TestLineLemmas:

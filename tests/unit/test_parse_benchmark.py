@@ -145,12 +145,16 @@ _EXPECTED_CATEGORIES = {
     "counter",
     "linebreak-split",
     "ellipsis-truncation",
+    "classical-adjective",
+    "vowel-elongation",
+    "kana-runs",
+    "katakana-pronoun",
 }
 
 
 def test_load_corpus_parses_every_fixture() -> None:
     records = load_corpus(DEFAULT_CORPUS_DIR)
-    # 14 fixture files, 54 curated records at authoring time; never fewer.
+    # One *.jsonl per category under parse_corpus/, 50+ curated records; never fewer.
     assert len(records) >= 50
     categories = set()
     ids = set()

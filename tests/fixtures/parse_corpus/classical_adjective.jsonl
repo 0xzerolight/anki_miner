@@ -1,0 +1,5 @@
+{"id":"ca01","sentence":"美しき花","expected":["美しい","花"],"category":"classical-adjective","note":"連体形 ク-stem orthBase 美し folds to lemma 美しい (append-only, mining_base)"}
+{"id":"ca02","sentence":"疑わしき点","expected":["疑わしい","点"],"category":"classical-adjective"}
+{"id":"ca03","sentence":"悲しき運命","expected":["悲しい","運命"],"category":"classical-adjective"}
+{"id":"ca04","sentence":"良き友","expected":["良い","友"],"category":"classical-adjective","note":"KEEP: 良き orthBase 良し folds via the ('し','い') swap pair, not the append-only rule"}
+{"id":"ca05","sentence":"いい人","expected":["人"],"category":"classical-adjective","note":"KEEP: いい (非自立可能, orthBase いい) never folds; only 人 mined"}

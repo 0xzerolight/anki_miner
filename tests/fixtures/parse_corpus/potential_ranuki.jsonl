@@ -1,3 +1,4 @@
 {"id":"pr01","sentence":"帰れる","expected":["帰れる"],"category":"potential-ranuki"}
 {"id":"pr02","sentence":"見れる","expected":["見る"],"category":"potential-ranuki","note":"ra-nuki folds to base by design (mining_base _FOLD_SUFFIX_PAIRS)"}
 {"id":"pr03","sentence":"保てる","expected":["保つ"],"category":"potential-ranuki","note":"potential folds to base by design"}
+{"id":"pr04","sentence":"引けいって","expected":["引く"],"category":"potential-ranuki","note":"引け lemma 引く-他動詞: stripping the fine-POS tail unblocks the ('ける','く') fold (V10)"}

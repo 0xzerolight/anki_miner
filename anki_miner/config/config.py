@@ -177,7 +177,16 @@ class AnkiMinerConfig:
     # Enabled name-wordset IDs (Issue #59). Each ID maps to a bundled
     # plain-text proper-noun list under resources/wordsets/<id>.txt.
     # Words on any enabled set are dropped from mining unless whitelisted.
-    excluded_wordsets: tuple[str, ...] = field(default_factory=tuple)
+    #
+    # Default-ON (junk-reduction r3): all four bundled sets ship enabled so
+    # proper nouns are dropped out of the box. The literal is a deliberate
+    # duplicate of services.wordset_service.WORDSET_IDS — config must not
+    # import services; a sync-assertion test (test_config_wordsets.py) pins
+    # the two identical. Existing users are seeded once via the schema-v2
+    # migration in gui/utils/config_manager.py.
+    excluded_wordsets: tuple[str, ...] = field(
+        default_factory=lambda: ("surnames", "given-names", "place-names", "org-product")
+    )
 
     # Dictionary settings
     #
