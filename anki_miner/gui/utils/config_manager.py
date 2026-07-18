@@ -36,10 +36,14 @@ class GUIConfigManager:
     # 2026-07-13 (the pre-v2.3.2 allowed_pos backfill, the QSettings→JSON theme
     # carry-over, and the use_offline_dict strip). A config file with no marker
     # is treated as version 0; it still loads cleanly — unknown keys are
-    # dropped and dataclass defaults fill any gaps — it merely forgoes those
-    # pre-v2.5 carry-overs. The three chain rebuilds are permanent
-    # deserializers, not version shims, and are unaffected.
-    CONFIG_SCHEMA_VERSION = 1
+    # dropped and dataclass defaults fill any gaps.
+    #
+    # Version 2 (junk-reduction r3) is the first shim that actually gates on
+    # the marker: on the LOAD path a config written under schema < 2 with no
+    # enabled name wordsets is seeded to the default-ON set (see
+    # _migrate_dict). The three chain rebuilds remain permanent deserializers,
+    # not version shims, and are unaffected.
+    CONFIG_SCHEMA_VERSION = 2
 
     @classmethod
     def save_config(cls, config: AnkiMinerConfig) -> None:
@@ -113,7 +117,9 @@ class GUIConfigManager:
         with path.open("r", encoding="utf-8") as f:
             config_dict = json.load(f)
 
-        return AnkiMinerConfig(**cls._migrate_dict(config_dict))
+        # LOAD path seeds the default-ON name wordsets for pre-v2 configs; the
+        # import path (import_config) calls _migrate_dict without this flag.
+        return AnkiMinerConfig(**cls._migrate_dict(config_dict, seed_wordsets=True))
 
     @classmethod
     def _migrate_dict(
@@ -121,6 +127,7 @@ class GUIConfigManager:
         config_dict: dict[str, Any],
         *,
         backfill_anki_fields: bool = True,
+        seed_wordsets: bool = False,
     ) -> dict[str, Any]:
         """Run the full pre-construction migration pipeline on a raw JSON dict.
 
@@ -137,6 +144,11 @@ class GUIConfigManager:
                 can be merged onto the current mapping — the backfilled dict
                 would otherwise clobber unlisted current sub-keys with
                 defaults.
+            seed_wordsets: When True (LOAD path only), seed the default-ON
+                name wordsets on a schema < 2 config that has none enabled.
+                The import path leaves it False: an imported settings file
+                carries no schema marker, so a deliberate all-off export must
+                not be force-re-enabled here.
         """
         # Convert string paths back to Path objects
         config_dict = cls._strings_to_paths(config_dict)
@@ -157,14 +169,25 @@ class GUIConfigManager:
         # Migrate frequency_chain JSON dicts → FreqEntry
         config_dict = cls._migrate_frequency_chain(config_dict)
 
+        # Default-ON seed for name wordsets (junk-reduction r3). A config
+        # written under schema < 2 that carries no enabled wordsets predates
+        # the default-ON rollout, so seed the full bundled set. This is the
+        # first shim to gate on the marker, so it MUST read it before the pop
+        # below. LOAD-path only (seed_wordsets): the import path never seeds —
+        # an imported settings file has no marker, so a deliberate all-off
+        # export would otherwise be force-re-enabled. A non-empty saved list is
+        # left untouched; the value tracks the dataclass default automatically.
+        if (
+            seed_wordsets
+            and config_dict.get("config_schema_version", 0) < 2
+            and not config_dict.get("excluded_wordsets")
+        ):
+            config_dict["excluded_wordsets"] = create_default_config().excluded_wordsets
+
         # Drop the schema-version marker (see CONFIG_SCHEMA_VERSION): a JSON-
         # only key, never a dataclass field. A missing marker means the file
-        # predates schema versioning (version 0). Every migration shim below
-        # the current floor was removed 2026-07-13, so nothing gates on the
-        # version yet; a version-0 config still loads fine here (unknown keys
-        # dropped + dataclass defaults), it only forgoes the pre-v2.5 carry-
-        # overs those shims performed. Pop it so it neither reaches
-        # AnkiMinerConfig nor logs as a dropped unknown key below.
+        # predates schema versioning (version 0). Popped here so it neither
+        # reaches AnkiMinerConfig nor logs as a dropped unknown key below.
         config_dict.pop("config_schema_version", None)
 
         # Drop keys not in the current dataclass (e.g., removed fields from old

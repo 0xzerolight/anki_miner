@@ -6,8 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, ChainEntry, FreqEntry
+from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, ChainEntry, FreqEntry, create_default_config
 from anki_miner.gui.utils.config_manager import GUIConfigManager
+from anki_miner.services.wordset_service import WORDSET_IDS
 
 
 @pytest.fixture
@@ -465,3 +466,123 @@ def test_handwritten_json_frequency_chain_loads_as_freqentries(tmp_config: Path)
         FreqEntry(source_id="jpdb", enabled=True),
         FreqEntry(source_id="bccwj", enabled=False),
     )
+
+
+# ---------------------------------------------------------------------------
+# Name-wordset default-ON seed migration (schema v2, junk-reduction r3)
+# ---------------------------------------------------------------------------
+
+_ALL_WORDSETS = ("surnames", "given-names", "place-names", "org-product")
+
+
+def _write_config(tmp_config: Path, body: dict) -> None:
+    tmp_config.write_text(json.dumps(body), encoding="utf-8")
+
+
+def test_schema_version_is_two():
+    """The bump that carries the wordset-seed shim."""
+    assert GUIConfigManager.CONFIG_SCHEMA_VERSION == 2
+
+
+class TestWordsetSeedMigration:
+    """Matrix: {no marker, marker=1} x {absent, [], partial, full} on LOAD."""
+
+    def test_no_marker_absent_key_is_seeded(self, tmp_config: Path):
+        _write_config(tmp_config, {"anki_deck_name": "D"})
+        assert GUIConfigManager.load_config().excluded_wordsets == _ALL_WORDSETS
+
+    def test_no_marker_empty_list_is_seeded(self, tmp_config: Path):
+        _write_config(tmp_config, {"excluded_wordsets": []})
+        assert GUIConfigManager.load_config().excluded_wordsets == _ALL_WORDSETS
+
+    def test_no_marker_partial_list_untouched(self, tmp_config: Path):
+        _write_config(tmp_config, {"excluded_wordsets": ["surnames"]})
+        assert GUIConfigManager.load_config().excluded_wordsets == ("surnames",)
+
+    def test_no_marker_full_list_untouched(self, tmp_config: Path):
+        _write_config(tmp_config, {"excluded_wordsets": list(_ALL_WORDSETS)})
+        assert GUIConfigManager.load_config().excluded_wordsets == _ALL_WORDSETS
+
+    def test_marker_v1_absent_key_is_seeded(self, tmp_config: Path):
+        _write_config(tmp_config, {"config_schema_version": 1, "anki_deck_name": "D"})
+        assert GUIConfigManager.load_config().excluded_wordsets == _ALL_WORDSETS
+
+    def test_marker_v1_empty_list_is_seeded(self, tmp_config: Path):
+        _write_config(tmp_config, {"config_schema_version": 1, "excluded_wordsets": []})
+        assert GUIConfigManager.load_config().excluded_wordsets == _ALL_WORDSETS
+
+    def test_marker_v1_partial_list_untouched(self, tmp_config: Path):
+        _write_config(
+            tmp_config,
+            {"config_schema_version": 1, "excluded_wordsets": ["place-names"]},
+        )
+        assert GUIConfigManager.load_config().excluded_wordsets == ("place-names",)
+
+    def test_marker_v1_full_list_untouched(self, tmp_config: Path):
+        _write_config(
+            tmp_config,
+            {"config_schema_version": 1, "excluded_wordsets": list(_ALL_WORDSETS)},
+        )
+        assert GUIConfigManager.load_config().excluded_wordsets == _ALL_WORDSETS
+
+    def test_marker_v2_empty_list_not_reseeded(self, tmp_config: Path):
+        """A v2 config with a deliberate all-off list is respected, not re-seeded."""
+        _write_config(tmp_config, {"config_schema_version": 2, "excluded_wordsets": []})
+        assert GUIConfigManager.load_config().excluded_wordsets == ()
+
+    def test_seed_value_equals_wordset_ids(self, tmp_config: Path):
+        """The seeded set is exactly the canonical WORDSET_IDS, in order."""
+        _write_config(tmp_config, {"excluded_wordsets": []})
+        assert GUIConfigManager.load_config().excluded_wordsets == WORDSET_IDS
+
+
+class TestWordsetSeedImportPath:
+    """Import must NOT seed — an imported all-off must survive."""
+
+    def test_import_empty_list_not_seeded(self, tmp_path: Path):
+        path = tmp_path / "import.json"
+        path.write_text(json.dumps({"excluded_wordsets": []}), encoding="utf-8")
+        # current has the default-ON set; the explicit imported empty wins and
+        # is NOT force-re-seeded back to all-on.
+        result = GUIConfigManager.import_config(path, create_default_config())
+        assert result.excluded_wordsets == ()
+
+    def test_import_partial_list_applied(self, tmp_path: Path):
+        path = tmp_path / "import.json"
+        path.write_text(json.dumps({"excluded_wordsets": ["surnames"]}), encoding="utf-8")
+        result = GUIConfigManager.import_config(path, create_default_config())
+        assert result.excluded_wordsets == ("surnames",)
+
+    def test_import_absent_key_keeps_current(self, tmp_path: Path):
+        path = tmp_path / "import.json"
+        path.write_text(json.dumps({"anki_deck_name": "X"}), encoding="utf-8")
+        current = replace(AnkiMinerConfig(), excluded_wordsets=("place-names",))
+        result = GUIConfigManager.import_config(path, current)
+        assert result.excluded_wordsets == ("place-names",)
+
+
+class TestWordsetSeedIdempotence:
+    """Once seeded and saved (v2), a reload is stable."""
+
+    def test_default_save_load_round_trips_all_on(self, tmp_config: Path):
+        GUIConfigManager.save_config(create_default_config())
+        loaded = GUIConfigManager.load_config()
+        assert loaded.excluded_wordsets == _ALL_WORDSETS
+
+    def test_seed_then_resave_is_stable(self, tmp_config: Path):
+        # First load seeds a pre-v2 markerless config to all-on.
+        _write_config(tmp_config, {"excluded_wordsets": []})
+        first = GUIConfigManager.load_config()
+        assert first.excluded_wordsets == _ALL_WORDSETS
+        # Re-save (stamps v2) and reload: value stable, no double-seed churn.
+        GUIConfigManager.save_config(first)
+        raw = json.loads(tmp_config.read_text(encoding="utf-8"))
+        assert raw["config_schema_version"] == 2
+        second = GUIConfigManager.load_config()
+        assert second.excluded_wordsets == _ALL_WORDSETS
+
+    def test_deliberate_all_off_survives_save_load(self, tmp_config: Path):
+        off = replace(create_default_config(), excluded_wordsets=())
+        GUIConfigManager.save_config(off)
+        loaded = GUIConfigManager.load_config()
+        assert loaded.excluded_wordsets == ()

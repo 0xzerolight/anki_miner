@@ -42,6 +42,16 @@ def test_factory_builds_wordset_service_when_enabled(monkeypatch, base_config):
     assert services.wordset_service.loaded
 
 
-def test_factory_skips_wordset_service_when_empty(base_config):
+def test_factory_builds_wordset_service_by_default(monkeypatch, base_config):
+    """Default-ON (junk-reduction r3): the default config wires the service."""
+    monkeypatch.setattr(service_factory, "WordsetService", _Fake, raising=True)
+    # base_config keeps the dataclass default (all four sets enabled).
     services = service_factory.create_services(base_config)
+    assert services.wordset_service is not None
+    assert services.wordset_service.loaded
+
+
+def test_factory_skips_wordset_service_when_empty(base_config):
+    cfg = dataclasses.replace(base_config, excluded_wordsets=())
+    services = service_factory.create_services(cfg)
     assert services.wordset_service is None
