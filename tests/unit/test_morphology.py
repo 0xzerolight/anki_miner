@@ -18,6 +18,7 @@ from anki_miner.services.morphology import (
     merge_compound_suffixes,
     mining_base,
     replace_overridden_spans,
+    resolve_reading_override,
     resolve_special_reading,
 )
 
@@ -373,6 +374,43 @@ class TestResolveSpecialReading:
     )
     def test_unlicensed_pairs_return_none(self, head, suffix):
         assert resolve_special_reading(head, suffix) is None
+
+
+class TestResolveReadingOverride:
+    """Curated per-spelling reading corrections for unidic-lite misreadings.
+
+    Pure table lookup, separate sibling of ``resolve_special_reading``. Keyed by
+    ``(card-front spelling, hiragana-folded UniDic reading)``.
+    """
+
+    @pytest.mark.parametrize(
+        "spelling,derived,expected",
+        [
+            ("一日", "ついたち", "いちにち"),
+            ("仏", "ふつ", "ほとけ"),
+            ("マズい", "まじい", "まずい"),
+            ("込む", "ごむ", "こむ"),
+        ],
+    )
+    def test_listed_pairs_are_corrected(self, spelling, derived, expected):
+        # The derived readings are exactly the wrong values unidic-lite emits
+        # (pinned here as the pre-fix values the override must replace).
+        assert derived != expected
+        assert resolve_reading_override(spelling, derived) == expected
+
+    @pytest.mark.parametrize(
+        "spelling,derived",
+        [
+            ("一日", "いちにち"),  # already-correct reading is not remapped
+            ("仏", "ほとけ"),  # already-correct reading is not remapped
+            ("込む", "こむ"),  # already-correct reading is not remapped
+            ("飲み込む", "のみこむ"),  # compound reads fine; spelling not in table
+            ("マズい", "まずい"),  # corrected reading passes through unchanged
+            ("時間", "じかん"),  # unrelated spelling
+        ],
+    )
+    def test_unlisted_pairs_return_none(self, spelling, derived):
+        assert resolve_reading_override(spelling, derived) is None
 
 
 class TestMergeNounSuffixesSpecialReading:

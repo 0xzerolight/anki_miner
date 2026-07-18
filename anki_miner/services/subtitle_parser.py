@@ -35,6 +35,7 @@ from anki_miner.services.morphology import (
     merge_compound_suffixes,
     mining_base,
     replace_overridden_spans,
+    resolve_reading_override,
 )
 from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.utils import (
@@ -692,6 +693,9 @@ class SubtitleParserService:
         # ExpressionFurigana/Reading match the mined card front (computed above):
         # orthBase for verbs/adjectives, surface for nouns (see
         # TokenizedWord.mined_form / select_mined_form for the trade-off).
+        # Set by the two curated-reading-override branches so lemma_reading below
+        # reuses the corrected value even when the lemma spelling diverges.
+        reading_overridden = False
         if mined == surface and getattr(word_token, "compound", False) is not True:
             # Single source of truth for the target reading (Task 1.2). When the
             # card front IS the surface token, keep the context-disambiguated
@@ -712,7 +716,18 @@ class SubtitleParserService:
             # concatenated component kana, so they take the else branch and keep
             # the headword-regenerated reading.
             expression_reading = katakana_to_hiragana(reading)
-            expression_furigana = generate_furigana_from_tokens([word_token])
+            override = resolve_reading_override(mined, expression_reading)
+            if override is not None:
+                # unidic-lite misreads this spelling in every context (一日→ツイタチ,
+                # 仏→フツ, マズい→マジイ, 込む→ゴム). Take the curated reading and
+                # regenerate ruby from it — a stale per-token furigana would
+                # contradict the corrected reading field (and the corrected value
+                # flows on to lemma_reading/resolved_reading below).
+                expression_reading = override
+                expression_furigana = _format_furigana(mined, override)
+                reading_overridden = True
+            else:
+                expression_furigana = generate_furigana_from_tokens([word_token])
         elif getattr(word_token, "compound", False) is True and kana_attested and mined == surface:
             # Attested compound whose card front IS the span surface (kind-B, or
             # a kind-A span appearing UNINFLECTED): the dictionary-corrected kana
@@ -742,15 +757,26 @@ class SubtitleParserService:
             # Verbs/adjectives mine as orthBase, whose reading is genuinely not
             # the surface token's kana (蒔い→蒔く); compound synthetics
             # regenerate from the headword. Both re-derive from ``mined``.
-            expression_furigana = self._furigana(mined)
             expression_reading = self._reading(mined)
+            override = resolve_reading_override(mined, expression_reading)
+            if override is not None:
+                # Inflected misread spelling (マズかった→mined マズい→まじい,
+                # 込んだ→mined 込む→ごむ): apply the curated reading and regenerate
+                # ruby from it, mirroring the mined==surface branch above.
+                expression_reading = override
+                expression_furigana = _format_furigana(mined, override)
+                reading_overridden = True
+            else:
+                expression_furigana = self._furigana(mined)
         # Lemma reading for the JPod101 audio retry: when the mined form
         # misses, the loop retries with the lemma kanji and needs the lemma's
         # OWN reading (探す→さがす), not the surface reading (さがし). For
         # most verb/adjective tokens ``mined`` (orthBase) equals the lemma,
         # so reuse the value; a kanji-variant divergence (乞う vs 請う)
-        # recomputes the lemma's reading like the surface-mined case.
-        lemma_reading = expression_reading if mined == lemma else self._reading(lemma)
+        # recomputes the lemma's reading like the surface-mined case. On a curated
+        # reading override the lemma spelling (マズい→不味い) reads the SAME wrong
+        # value in isolation, so reuse the corrected reading rather than recompute.
+        lemma_reading = expression_reading if (mined == lemma or reading_overridden) else self._reading(lemma)
 
         # Pitch reading realignment: when the resolver diverged the front from
         # the lemma (感じる card, but archaic lemma 感ずる), pitch must key on the

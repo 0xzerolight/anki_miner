@@ -82,6 +82,45 @@ def resolve_special_reading(head_surface: str, next_surface: str | None) -> str 
     return special_kana if next_surface in licensing else None
 
 
+# Curated per-spelling reading corrections for unidic-lite misreadings. Keyed by
+# (card-front spelling, hiragana-folded UniDic reading) → corrected hiragana
+# reading. Unlike the context-licensed kinship table above, each listed spelling
+# reads its wrong value in EVERY context — no correct-reading token exists to
+# protect — so the remap is unconditional. Applied in ``_emit_word``'s Expression
+# fields (both the mined==surface branch and the headword-derived else-branch).
+# Evidence probed on the shipping unidic-lite dictionary (2026-07):
+#   (一日, ついたち) → いちにち: UniDic emits ツイタチ for the merged 一日 token in
+#       every context (incl. ２４時間の一日); the calendar-date sense loss is
+#       documented and accepted (standalone 一日 tokenizes as 一+日, unaffected).
+#   (仏, ふつ) → ほとけ: UniDic emits フツ (the 仏=France abbreviation reading)
+#       universally; no "leave ほとけ alone" token exists — France-sense loss accepted.
+#   (マズい, まじい) → まずい: the katakana-ズ spelling misreads as マジイ; the 漢字
+#       form 不味い reads correctly and is untouched.
+#   (込む, ごむ) → こむ: the isolated 込む verb misreads as the loanword ゴム
+#       (rubber); compounds (飲み込む→のみこむ) read correctly and are untouched.
+_READING_OVERRIDES: dict[tuple[str, str], str] = {
+    ("一日", "ついたち"): "いちにち",
+    ("仏", "ふつ"): "ほとけ",
+    ("マズい", "まじい"): "まずい",
+    ("込む", "ごむ"): "こむ",
+}
+
+
+def resolve_reading_override(spelling: str, derived_reading: str) -> str | None:
+    """Corrected hiragana reading for a spelling unidic-lite misreads, else ``None``.
+
+    Looks up ``(spelling, derived_reading)`` — the card-front spelling paired with
+    its hiragana-folded UniDic reading — in the curated ``_READING_OVERRIDES``
+    table and returns the corrected hiragana reading on a hit, ``None`` otherwise
+    (the caller keeps the UniDic reading). Pure, context-free and dictionary-free:
+    every listed spelling reads the same wrong value in every context, so no
+    licensing suffix is consulted. A SEPARATE sibling of the kinship
+    ``resolve_special_reading`` above — that returns context-licensed katakana;
+    this returns an unconditional hiragana correction.
+    """
+    return _READING_OVERRIDES.get((spelling, derived_reading))
+
+
 def apply_special_readings(tokens: list) -> list:
     """Return ``tokens`` with kinship-head kana overridden per the special table.
 

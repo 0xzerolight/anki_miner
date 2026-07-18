@@ -4383,14 +4383,21 @@ class TestKinshipHonorificReadings:
         word = next(w for w in words if w.surface == "兄")
         assert word.expression_reading == "あに"
 
-    def test_ichinichi_ambiguous_left_alone(self, tmp_path):
-        """一日 in a date frame stays ついたち — the resolver never touches it."""
+    def test_ichinichi_corrected_even_in_date_frame(self, tmp_path):
+        """一日 reads いちにち in every context (curated override, V2).
+
+        unidic-lite emits ツイタチ for the merged 一日 token even in a calendar-date
+        frame; the reading-override table corrects it to いちにち unconditionally.
+        The calendar-date (ついたち) sense loss is the documented, accepted trade-off
+        — the mining-relevant reading is いちにち. Separate from the kinship
+        resolver, which never touches 一日.
+        """
         cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
         srt = _write_srt(tmp_path, "kin.srt", "月の一日に会う")
         words = SubtitleParserService(cfg).parse_subtitle_file(srt)
         word = next((w for w in words if w.surface == "一日"), None)
         if word is not None:
-            assert word.expression_reading == "ついたち"
+            assert word.expression_reading == "いちにち"
 
 
 class TestDecorationGlyphStripE2E:
@@ -5785,3 +5792,80 @@ class TestEllipsisTruncationGuard:
         assert start == 0
         assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is False
         assert "飲む" in self._mine("飲みたい…")
+
+
+class TestCuratedReadingOverride:
+    """Curated reading corrections for unidic-lite misreadings (一日/仏/マズい/込む).
+
+    Real fugashi/unidic through ``parse_text_units`` — the reading-tab mining
+    path. Each case pins the WRONG pre-fix reading/furigana (asserted ``!=`` the
+    correction) so the override is proven to FIRE, and both ``_emit_word``
+    landing sites are covered: the ``mined == surface`` branch (standalone マズい,
+    一日, 仏, 込む) and the headword-derived else-branch (inflected マズかった,
+    込んだ). A spelling not in the table stays byte-identical.
+    """
+
+    @staticmethod
+    def _emit(test_config, text):
+        service = SubtitleParserService(test_config)
+        words, _idx, _counts = service.parse_text_units(
+            [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
+        )
+        return {w.mined_form: w for w in words}
+
+    def test_ichinichi_noun_mined_surface_branch(self, test_config):
+        # ２４時間の一日 → unidic merges 一日 into ONE token reading ツイタチ (calendar
+        # ついたち); the ２４時間 context forces the merge (standalone 一日 splits
+        # into 一+日). Noun with mined == surface → the first branch.
+        w = self._emit(test_config, "２４時間の一日だ")["一日"]
+        assert w.expression_reading == "いちにち"  # pre-fix: ついたち
+        assert w.expression_furigana == "一日[いちにち]"  # pre-fix: 一日[ついたち]
+        assert w.lemma_reading == "いちにち"
+
+    def test_hotoke_noun_mined_surface_branch(self, test_config):
+        w = self._emit(test_config, "仏を見た")["仏"]
+        assert w.expression_reading == "ほとけ"  # pre-fix: ふつ
+        assert w.expression_furigana == "仏[ほとけ]"  # pre-fix: 仏[ふつ]
+        assert w.lemma_reading == "ほとけ"
+
+    def test_mazui_standalone_hits_mined_surface_branch(self, test_config):
+        # マズい (uninflected 形容詞): orthBase == surface → mined == surface, the
+        # first branch. unidic reads マズい as マジイ.
+        w = self._emit(test_config, "これはマズい")["マズい"]
+        assert w.expression_reading == "まずい"  # pre-fix: まじい
+        # No kanji to bracket → furigana is plain マズい before and after; the
+        # correction is visible only in the reading field.
+        assert w.expression_furigana == "マズい"
+        # lemma is 不味い (mined != lemma) which unidic ALSO misreads in isolation
+        # (不味い→まじい), so the corrected reading is reused for the audio/pitch key.
+        assert w.lemma == "不味い"
+        assert w.lemma_reading == "まずい"
+
+    def test_mazui_inflected_hits_headword_else_branch(self, test_config):
+        # マズかった → adjective token surface マズかっ, mined headword マズい
+        # (mined != surface) → the else-branch re-derives the reading from mined.
+        w = self._emit(test_config, "それはマズかった")["マズい"]
+        assert w.expression_reading == "まずい"  # pre-fix: まじい
+        assert w.lemma_reading == "まずい"
+
+    def test_komu_standalone_hits_mined_surface_branch(self, test_config):
+        # 込む (uninflected 動詞): orthBase == surface → the first branch. unidic
+        # reads the isolated verb as ゴム (the rubber loanword).
+        w = self._emit(test_config, "ここに込む")["込む"]
+        assert w.expression_reading == "こむ"  # pre-fix: ごむ
+        assert w.expression_furigana == "込[こ]む"  # pre-fix: 込[ご]む
+        assert w.lemma_reading == "こむ"
+
+    def test_komu_inflected_hits_headword_else_branch(self, test_config):
+        # 込んだ → verb token surface 込ん, mined headword 込む → the else-branch.
+        w = self._emit(test_config, "急に込んだ")["込む"]
+        assert w.expression_reading == "こむ"  # pre-fix: ごむ
+        assert w.expression_furigana == "込[こ]む"  # pre-fix: 込[ご]む
+        assert w.lemma_reading == "こむ"
+
+    def test_unlisted_compound_is_byte_identical(self, test_config):
+        # 飲み込む reads correctly (のみこむ) and its spelling is not in the table:
+        # no override fires, the expression fields are untouched.
+        w = self._emit(test_config, "薬を飲み込む")["飲み込む"]
+        assert w.expression_reading == "のみこむ"
+        assert w.expression_furigana == "飲[の]み 込[こ]む"
