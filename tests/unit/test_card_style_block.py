@@ -9,9 +9,11 @@ import pytest
 from anki_miner.services.dictionary.card_style_block import (
     ALL_GROUPS,
     _minify_css,
+    attach_card_style_block,
     base_css_variant,
     build_card_style_block,
     css_witnesses,
+    filter_dict_css_entries,
     split_group_regions,
 )
 from anki_miner.services.dictionary.card_style_presets import load_glossary_css
@@ -220,6 +222,80 @@ class TestBuildCardStyleBlock:
         assert stamped_only == f"<style>{base_css_variant(frozenset())}</style>"
         assert everything == f"<style>{base_css_variant(ALL_GROUPS)}</style>"
         assert len(stamped_only) < len(everything)
+
+
+MINER_FIELD = (
+    '<div class="yomitan-glossary"><ol data-count="1">'
+    '<li data-dictionary="D" data-has-styles="">content</li></ol></div>'
+)
+
+
+class TestFilterDictCssEntries:
+    def test_keeps_only_dicts_present_in_field(self):
+        entries = [("D", ".d{color:red}"), ("E", ".e{color:blue}")]
+        assert filter_dict_css_entries(MINER_FIELD, entries) == ".d{color:red}"
+
+    def test_html_escaped_title_round_trips(self):
+        # The renderer writes the envelope attr with html.escape; the filter must
+        # recover the pre-escape title. css_string_escape matching would MISS
+        # this dict and silently drop its stylesheet — the forbidden outcome.
+        title = 'A&B "quoted"'
+        field = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="A&amp;B &quot;quoted&quot;">x</li></ol></div>'
+        assert filter_dict_css_entries(field, [(title, ".ab{}")]) == ".ab{}"
+
+    def test_duplicate_display_names_both_kept(self):
+        entries = [("D", ".one{}"), ("D", ".two{}")]
+        assert filter_dict_css_entries(MINER_FIELD, entries) == ".one{}\n\n.two{}"
+
+    def test_no_match_yields_empty(self):
+        assert filter_dict_css_entries(MINER_FIELD, [("Other", ".o{}")]) == ""
+
+
+class TestAttachCardStyleBlock:
+    def test_block_trails_content(self):
+        out = attach_card_style_block(MINER_FIELD, dict_css_entries=[("D", ".d{color:red}")])
+        # Trailing, never leading: a leading <style> is hoisted to <head> by
+        # DOMParser and dropped from body.innerHTML (Kiku-class note types).
+        assert out.startswith(MINER_FIELD)
+        assert out.endswith("</style>")
+        assert out.count("<style>") == 1
+        assert ".d{color:red}" in out
+
+    def test_never_leading(self):
+        out = attach_card_style_block(MINER_FIELD, dict_css_entries=[])
+        assert not out.startswith("<style>")
+
+    def test_empty_field_unchanged(self):
+        # Attaching to "" would produce a field-LEADING block — refuse.
+        assert attach_card_style_block("", dict_css_entries=[("D", ".d{}")]) == ""
+
+    def test_markupless_field_unchanged(self):
+        assert attach_card_style_block("plain text", dict_css_entries=[("D", ".d{}")]) == "plain text"
+        # Both tokens required, not either.
+        assert attach_card_style_block('<div class="yomitan-glossary">x</div>', dict_css_entries=[]) == (
+            '<div class="yomitan-glossary">x</div>'
+        )
+
+    def test_filters_dict_css_to_field(self):
+        out = attach_card_style_block(MINER_FIELD, dict_css_entries=[("D", ".d{color:red}"), ("E", ".e{color:blue}")])
+        assert ".d{color:red}" in out
+        assert ".e{color:blue}" not in out
+
+    def test_no_css_dict_gets_base_only_block(self):
+        # JMdict-class: dict ships no styles.css → filter keeps nothing → the
+        # field still carries the tree-shaken base sheet (gap-fillers included
+        # for its unstamped envelope).
+        field = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="JMdict">x</li></ol></div>'
+        out = attach_card_style_block(field, dict_css_entries=[])
+        head = out.removeprefix(field)
+        assert head == f"<style>{base_css_variant(css_witnesses([field]))}</style>"
+        assert "ol[data-count]" in head  # base sheet present
+
+    def test_witnesses_are_field_only(self):
+        # The variant is shaken against THIS field's html alone — per-field
+        # self-containment (writer convergence depends on it).
+        out = attach_card_style_block(MINER_FIELD, dict_css_entries=[])
+        assert out == MINER_FIELD + f"<style>{base_css_variant(css_witnesses([MINER_FIELD]))}</style>"
 
 
 class TestMinifyCss:

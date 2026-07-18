@@ -34,8 +34,8 @@ from anki_miner.services import (
     SubtitleParserService,
     WordFilterService,
 )
-from anki_miner.services.definition_service import collect_dictionary_css
-from anki_miner.services.dictionary.card_style_block import build_card_style_block
+from anki_miner.services.definition_service import collect_dictionary_css_entries
+from anki_miner.services.dictionary.card_style_block import attach_card_style_block
 from anki_miner.services.frequency.multi_frequency_service import harmonic_rank, min_rank
 from anki_miner.services.frequency.render import render_frequency_html
 from anki_miner.services.pitch_accent.render import (
@@ -1187,33 +1187,29 @@ class EpisodeProcessor:
         """
         self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Step 5/5 — Creating Anki cards"))
         card_data: list[CardPayload] = []
-        # Self-contained per-card glossary styling: collect the dictionary CSS
-        # ONCE per episode (collect_dictionary_css does registry + per-dict
-        # SQLite I/O) but assemble the <style> block PER CARD inside the loop —
-        # the base sheet is tree-shaken against each card's own HTML (Issue
-        # #93; witness/variant scans are cheap cached string work; freshly
-        # rendered bodies are born stamped, so witnesses are already
-        # post-stamp). Built when EITHER the glossary OR the definition field
-        # is mapped — an Anki <style> in any field is card-wide, so the block
-        # rides the glossary field when it's mapped and otherwise prepends to
-        # the definition field. That way the base sheet (dark-theme SVG
-        # recolor, tag chips, structured-content layout) reaches default-config
-        # cards too, which map definition="MainDefinition" but leave glossary
-        # unmapped. Skipping the collect only when neither is mapped keeps the
-        # no-styling path I/O-free.
+        # Self-contained PER-FIELD glossary styling: collect the dictionary CSS
+        # entries ONCE per episode (collect_dictionary_css_entries does registry
+        # + per-dict SQLite I/O) but attach a <style> block to EVERY mapped
+        # styled field inside the loop — tree-shaken against that field's own
+        # HTML and filtered to the dictionaries present in it (Issue #93;
+        # witness/variant scans are cheap cached string work; freshly rendered
+        # bodies are born stamped, so witnesses are already post-stamp). Each
+        # field must carry its own TRAILING block: JS-driven note types (Kiku)
+        # keep fields in inert <template>s and re-inject them one at a time
+        # through DOMParser→body.innerHTML, so a <style> in another field never
+        # applies and a field-LEADING <style> is hoisted to <head> and dropped
+        # (attach_card_style_block enforces both — the old single-carrier
+        # "card-wide <style>" model broke every Kiku page). Skipping the collect
+        # when neither field is mapped keeps the no-styling path I/O-free.
         glossary_mapped = bool(self.config.anki_fields.get("glossary"))
         definition_mapped = bool(self.config.anki_fields.get("definition"))
         styling_on = glossary_mapped or definition_mapped
-        episode_dict_css = collect_dictionary_css(self.config) if styling_on else ""
+        episode_dict_css_entries = collect_dictionary_css_entries(self.config) if styling_on else []
         for (word, media), definition, glossary, (pitch_position, pitch_category) in zip(
             media_results, definitions, glossaries, pitch_data, strict=True
         ):
             if not definition:
                 continue
-            # Bound unconditionally ("") so the write-site references are safe.
-            style_block = ""
-            if styling_on:
-                style_block = build_card_style_block(dict_css=episode_dict_css, card_html=(glossary or "") + definition)
 
             extra_fields: dict[str, str] = {}
             if pitch_position:
@@ -1257,7 +1253,11 @@ class EpisodeProcessor:
                     str(word.frequency_harmonic_rank) if word.frequency_harmonic_rank is not None else "9999999"
                 )
             if glossary:
-                extra_fields["glossary"] = (style_block + glossary) if style_block else glossary
+                extra_fields["glossary"] = (
+                    attach_card_style_block(glossary, dict_css_entries=episode_dict_css_entries)
+                    if glossary_mapped
+                    else glossary
+                )
             # Stamp the source unconditionally; AnkiService gates the write on a
             # non-empty configured field name (anki_fields["source"]). Reading-tab
             # runs carry a per-unit page/chapter label ("… @ p.42"); a miss
@@ -1269,14 +1269,12 @@ class EpisodeProcessor:
             else:
                 extra_fields["source"] = f"{ctx.source_label} @ {_format_timestamp(word.start_time)}"
 
-            # When the glossary field isn't the styling carrier (unmapped), prepend
-            # the style block to the definition field so the card still carries the
-            # base sheet. When glossary IS mapped it already rides the glossary
-            # field above (a card-wide <style> only needs to appear once), so the
-            # definition stays untouched — keeping glossary-mapped output identical.
+            # Per-field self-containment: the definition field carries its OWN
+            # trailing block whenever it's mapped — regardless of the glossary
+            # field, which JS note types never render alongside it.
             card_definition = definition
-            if style_block and not glossary_mapped:
-                card_definition = style_block + definition
+            if definition_mapped:
+                card_definition = attach_card_style_block(definition, dict_css_entries=episode_dict_css_entries)
 
             card_data.append(
                 CardPayload(

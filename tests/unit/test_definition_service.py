@@ -5,7 +5,11 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
-from anki_miner.services.definition_service import DefinitionService, collect_dictionary_css
+from anki_miner.services.definition_service import (
+    DefinitionService,
+    collect_dictionary_css,
+    collect_dictionary_css_entries,
+)
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
@@ -106,6 +110,46 @@ class TestCollectDictionaryCss:
         # rule can't leak across distinct-title dicts in the concatenated sheet.
         assert '[data-dictionary="A"] span {color: red}' in css
         assert '[data-dictionary="B"] span {color: blue}' in css
+
+
+class TestCollectDictionaryCssEntries:
+    """``collect_dictionary_css_entries`` is the per-field-filter source: ordered
+    ``(display_name, scoped_css)`` pairs keyed by the exact envelope title."""
+
+    def test_entry_names_are_envelope_titles(self, tmp_path: Path):
+        _seed_dict(tmp_path, "a-dict", "A", styles_css="span { color: red }")
+        entries = collect_dictionary_css_entries(
+            _config(tmp_path, ChainEntry(kind="indexed", dict_id="a-dict", enabled=True))
+        )
+        assert [name for name, _ in entries] == ["A"]
+        assert '[data-dictionary="A"]' in entries[0][1]
+
+    def test_empty_css_providers_skipped(self, tmp_path: Path):
+        # A dict with no styles.css contributes NO entry — not an ("A", "")
+        # pair, which would inject spurious "\n\n" separators into the joins.
+        _seed_dict(tmp_path, "a-dict", "A", styles_css=None)
+        _seed_dict(tmp_path, "b-dict", "B", styles_css="span { color: blue }")
+        entries = collect_dictionary_css_entries(
+            _config(
+                tmp_path,
+                ChainEntry(kind="indexed", dict_id="a-dict", enabled=True),
+                ChainEntry(kind="indexed", dict_id="b-dict", enabled=True),
+            )
+        )
+        assert [name for name, _ in entries] == ["B"]
+
+    def test_collect_dictionary_css_is_join_of_entries(self, tmp_path: Path):
+        # Byte-equivalence pin: the string collector is exactly the "\n\n" join
+        # of the entries' CSS — the two can never drift.
+        _seed_dict(tmp_path, "a-dict", "A", styles_css="span { color: red }")
+        _seed_dict(tmp_path, "b-dict", "B", styles_css="span { color: blue }")
+        config = _config(
+            tmp_path,
+            ChainEntry(kind="indexed", dict_id="a-dict", enabled=True),
+            ChainEntry(kind="indexed", dict_id="b-dict", enabled=True),
+        )
+        entries = collect_dictionary_css_entries(config)
+        assert collect_dictionary_css(config) == "\n\n".join(css for _, css in entries)
 
 
 def make_provider(name="Test", available=True, return_value=None, load_raises=None):
