@@ -1626,10 +1626,19 @@ class TestExtractLemma:
         token = _make_token("私", "代名詞", lemma="私-代名詞")
         assert service._extract_lemma(token) == "私"
 
-    def test_pos_tail_only_strips_when_it_matches_pos1(self, service):
-        """A Japanese tail that is not the token's own pos1 stays intact."""
+    def test_pos_subtype_tail_strips_via_endswith(self, service):
+        """A POS-name tail strips when it EQUALS or ENDS WITH the coarse pos1:
+        代名詞 (a 名詞 subtype) strips even when pos1 is 名詞, and unidic's fine
+        transitivity tag 他動詞 strips against the coarse 動詞."""
         token = _make_token("君", "名詞", lemma="君-代名詞")
-        assert service._extract_lemma(token) == "君-代名詞"
+        assert service._extract_lemma(token) == "君"
+        token = _make_token("引け", "動詞", lemma="引く-他動詞")
+        assert service._extract_lemma(token) == "引く"
+
+    def test_non_pos_hyphen_tail_stays_intact(self, service):
+        """A Japanese tail ending in neither an ASCII letter nor pos1 is kept."""
+        token = _make_token("メル", "名詞", lemma="メル-ビル")
+        assert service._extract_lemma(token) == "メル-ビル"
 
 
 class TestMiningBase:

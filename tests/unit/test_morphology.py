@@ -262,6 +262,10 @@ class TestExtractLemmaDisambiguatorStrip:
             ("チェックアウト-check-out", "名詞", "チェックアウト"),
             ("君-代名詞", "代名詞", "君"),
             ("私-代名詞", "代名詞", "私"),
+            # Fine-grained POS decorators: unidic tags transitivity as 他動詞/自動詞
+            # in the lemma while pos1 is the coarse 動詞. tail.endswith(pos1) strips.
+            ("引く-他動詞", "動詞", "引く"),
+            ("落ちる-自動詞", "動詞", "落ちる"),
         ],
     )
     def test_strips_gloss_and_pos_tails(self, raw, pos1, expected):
@@ -269,12 +273,32 @@ class TestExtractLemmaDisambiguatorStrip:
         assert extract_lemma(token) == expected
 
     def test_keeps_japanese_name_segments(self):
+        # ビル ends with neither an ASCII letter nor pos1 (名詞) → kept intact.
         token = _token("メル", "名詞", "メル-ビル", "メル")
         assert extract_lemma(token) == "メル-ビル"
 
-    def test_pos_tail_must_match_pos1(self):
+    def test_pos_subtype_tail_strips_via_endswith(self):
+        # 代名詞 is a 名詞 subtype: the endswith broadening strips the POS-name tail
+        # even when the coarse pos1 is 名詞 (代名詞 ends with 名詞).
         token = _token("君", "名詞", "君-代名詞", "君")
-        assert extract_lemma(token) == "君-代名詞"
+        assert extract_lemma(token) == "君"
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestExtractLemmaPosSuffixStripRealToken:
+    """引けいって → 引け carries the fine-POS-decorated lemma 引く-他動詞; stripping it
+    unblocks the ('ける','く') potential fold so the card front is the base 引く."""
+
+    def test_strips_transitivity_suffix_and_unblocks_fold(self):
+        token = _real_token("引けいって", "引け")
+        assert token.feature.pos1 == "動詞"
+        # Pre-fix pin: the decorated lemma on the real token, and its two failures.
+        assert token.feature.lemma == "引く-他動詞"
+        assert token.feature.orthBase == "引ける"
+        # endswith strips 他動詞 (== 動詞 failed the old exact match) to the headword.
+        assert extract_lemma(token) == "引く"
+        # With the clean lemma, mining_base's potential fold fires: 引ける → 引く.
+        assert mining_base(token) == "引く"
 
 
 class TestMixedKatakanaLoanwordVerbs:

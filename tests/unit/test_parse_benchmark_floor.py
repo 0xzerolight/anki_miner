@@ -260,6 +260,18 @@ def test_orthbase_meets_kana_runs_floor() -> None:
     assert recall(a_kr) == 1.0, f"strategy (a) kana-runs recall {recall(a_kr)} below 1.0"
 
 
+def test_pos_suffix_lemma_strip_folds_potential() -> None:
+    # V10: 引けいって → 引け carries the decorated lemma 引く-他動詞. Stripping the fine
+    # POS tail (extract_lemma's endswith broadening) unblocks the ('ける','く')
+    # potential fold, so the card front is the base 引く. The line also lives in
+    # potential_ranuki.jsonl (the guard-category floor covers it); this pins the
+    # exact form dict-free AND with the anchor. A revert mines 引ける (fold blocked
+    # by the decorated lemma). 引け occurs in neither replay corpus, so this is the
+    # sole corpus witness.
+    assert mine_lite_orthbase("引けいって") == {"引く"}
+    assert mine_lite_anchor("引けいって") == {"引く"}
+
+
 # NOTE: jiru-zuru (Task 3), kana-written (Task 4), nominal-suffix (Task 5),
 # colloquial/counter (A2), aux-context (A1), long-compound (Task 6/Q2) and
 # ellipsis-truncation (U8) floors are gated above; linebreak-split is

@@ -201,15 +201,19 @@ def extract_lemma(word_token) -> str:
     # Strip unidic's disambiguator tail: an English gloss
     # ("スクランブル-scramble", "ロック-rock（音楽）" — the fullwidth parens
     # defeat a plain isascii() check, "メリーゴーランド-merry-go-round" — the
-    # gloss itself is hyphenated, hence splitting on the FIRST hyphen) or the
-    # token's own POS name ("君-代名詞"). Decorated lemmas miss every
-    # lemma-keyed lookup (frequency/pitch/offline-definition existence), which
-    # key on the clean headword. Japanese name segments (メル-ビル) have
-    # neither an ASCII letter nor a POS-name tail and are kept intact.
+    # gloss itself is hyphenated, hence splitting on the FIRST hyphen) or a
+    # POS-name tail. The tail is a POS decorator when it EQUALS the coarse pos1
+    # ("君-代名詞") or ENDS WITH it ("引く-他動詞", "落ちる-自動詞" — unidic tags
+    # transitivity with the fine 他動詞/自動詞 while pos1 is the coarse 動詞).
+    # Decorated lemmas miss every lemma-keyed lookup (frequency/pitch/offline-
+    # definition existence) AND block mining_base folds keyed on a clean headword
+    # (引ける→引く). Japanese name segments (メル-ビル) end with neither an ASCII
+    # letter nor pos1 and are kept intact.
     if "-" in lemma:
         head, _, tail = lemma.partition("-")
         pos1 = getattr(getattr(word_token, "feature", None), "pos1", None)
-        if head and tail and (any(c.isascii() and c.isalpha() for c in tail) or tail == pos1):
+        is_pos_tail = bool(pos1) and (tail == pos1 or tail.endswith(pos1))
+        if head and tail and (any(c.isascii() and c.isalpha() for c in tail) or is_pos_tail):
             lemma = head
 
     return str(lemma)
