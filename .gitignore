@@ -59,6 +59,7 @@ docs/
 .claude-runner/
 .codex
 resources/
+debug/
 # ...but keep the bundled card stylesheet, which lives in a package directory
 # named "resources" (Issue #44). Negate the dir + just its tracked file types,
 # so the broad rule above doesn't drop it (and __pycache__ stays ignored).
