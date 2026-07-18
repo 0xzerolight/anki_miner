@@ -42,8 +42,8 @@ from anki_miner.services.anki_note_builder import (
 # says "note type" but deck names need the identical escaping (see
 # AnkiService._build_vocab_query — ``Core_2k`` would otherwise glob-match).
 from anki_miner.services.card_restyler import _escape_note_type as _escape_anki_search
-from anki_miner.services.definition_service import collect_dictionary_css
-from anki_miner.services.dictionary.card_style_block import build_card_style_block
+from anki_miner.services.definition_service import collect_dictionary_css_entries
+from anki_miner.services.dictionary.card_style_block import attach_card_style_block
 from anki_miner.services.frequency.multi_frequency_service import harmonic_rank
 from anki_miner.services.frequency.render import render_frequency_html
 from anki_miner.services.morphology import extract_lemma
@@ -274,12 +274,13 @@ def scan_backfill(
         query += f' deck:"{_escape_anki_search(options.deck)}"'
     note_ids = anki_service.find_notes(query)
 
-    # Style-block inputs, collected once per scan (registry/SQLite I/O). The
-    # carrier is where mining attaches the card-wide <style>: glossary when
-    # mapped, else definition (EpisodeProcessor._phase5_create).
+    # Style-block inputs, collected once per scan (registry/SQLite I/O).
+    # Every proposed miner field gets its OWN trailing block — per-field
+    # self-containment, matching EpisodeProcessor._phase5_create (the old
+    # single-carrier "card-wide <style>" model broke JS note types that
+    # render fields in isolation).
     want_styling = bool(selected & {"definition", "glossary"})
-    dict_css = collect_dictionary_css(config) if want_styling else ""
-    carrier_key = "glossary" if anki_fields.get("glossary") else "definition"
+    dict_css_entries = collect_dictionary_css_entries(config) if want_styling else []
 
     tagger = get_shared_tagger()
 
@@ -317,8 +318,7 @@ def scan_backfill(
                 frequency_service=frequency_service,
                 definition=definitions[idx],
                 glossary=glossaries[idx],
-                dict_css=dict_css,
-                carrier_key=carrier_key,
+                dict_css_entries=dict_css_entries,
             )
             sentinel_only_sorts += sum(
                 1 for c in changes if c.field_key == "frequency_sort" and c.new_value == _FREQ_MISS_SENTINEL
@@ -445,8 +445,7 @@ def _compute_note_changes(
     frequency_service: Any,
     definition: str | None,
     glossary: str | None,
-    dict_css: str,
-    carrier_key: str,
+    dict_css_entries: list[tuple[str, str]],
 ) -> list[FieldChange]:
     """Emit FieldChanges for one note under the fill/overwrite policy."""
     anki_fields = config.anki_fields
@@ -471,23 +470,19 @@ def _compute_note_changes(
     if "expression_furigana" in selected and ctx.reading_source == "field":
         proposals["expression_furigana"] = html.escape(_format_furigana(ctx.mined_form, ctx.reading))
 
-    # Style block: prepend to the carrier iff the carrier is being written and
-    # the OTHER miner field doesn't already hold the base sheet. Gating on the
-    # other field only (not the carrier's current value) re-attaches a fresh
-    # sheet when overwrite replaces a styled carrier — matching mining — while
-    # fill mode still can't double up (an empty carrier has no sheet).
-    # card_html witnesses BOTH fields' content (mirrors `(glossary or "") +
-    # definition` in _phase5_create) so the tree-shaken CSS covers each.
-    if carrier_key in proposals:
-        other_key = "definition" if carrier_key == "glossary" else "glossary"
-        other_current = _field_value(ctx.fields, anki_fields.get(other_key)) or ""
-        other_content = proposals.get(other_key, other_current)
-        if "ol[data-count]" not in other_content:
-            block = build_card_style_block(
-                dict_css=dict_css,
-                card_html=proposals[carrier_key] + other_content,
-            )
-            proposals[carrier_key] = block + proposals[carrier_key]
+    # Style block: every freshly-proposed miner field carries its OWN trailing
+    # block, tree-shaken against that field alone and with its dict CSS
+    # filtered to the dictionaries present in it — byte-identical to what
+    # mining would write (attach_card_style_block enforces the trailing /
+    # never-leading placement and no-ops on markup-less proposals). No
+    # cross-field gate: the other field's styling is irrelevant to this one on
+    # field-isolating note types, and a divergent block here would make the
+    # restyler churn backfilled cards forever. Proposals are fresh renders, so
+    # they are born stamped — no stamping needed (that's the restyler's job
+    # for legacy bodies).
+    for key in ("definition", "glossary"):
+        if key in proposals:
+            proposals[key] = attach_card_style_block(proposals[key], dict_css_entries=dict_css_entries)
 
     changes: list[FieldChange] = []
     for key in sorted(proposals):

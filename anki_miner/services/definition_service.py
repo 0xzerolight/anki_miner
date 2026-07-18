@@ -18,22 +18,28 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def collect_dictionary_css(config: AnkiMinerConfig) -> str:
-    """Concatenate every enabled indexed dictionary's scoped ``styles.css``.
+def collect_dictionary_css_entries(config: AnkiMinerConfig) -> list[tuple[str, str]]:
+    """Collect ``(display_name, scoped_css)`` for every enabled dictionary that
+    ships a ``styles.css``.
 
     Builds the configured provider chain from disk, loads each provider, and
-    joins the per-dictionary scoped CSS (``IndexedDictProvider.dictionary_css``)
-    in chain order. The result is embedded (with the tree-shaken base sheet) in
-    each card's self-contained per-card ``<style>`` block via
-    ``card_style_block.build_card_style_block`` at the
+    gathers the per-dictionary scoped CSS (``IndexedDictProvider.dictionary_css``)
+    in chain order. ``display_name`` is ``provider.name`` — exactly the title the
+    renderer stamps into the ``data-dictionary`` envelope attribute, which is what
+    ``card_style_block.filter_dict_css_entries`` matches against to keep a field's
+    embedded CSS down to the dictionaries actually present in it. Entries with no
+    usable CSS are skipped (online providers, dicts without ``styles.css``), and
+    the list is ORDERED with duplicates preserved: ``display_name`` is not
+    guaranteed unique across providers, so this is deliberately not a dict.
+
+    The result feeds each styled field's self-contained trailing ``<style>``
+    block via ``card_style_block.attach_card_style_block`` at the
     ``EpisodeProcessor._phase5_create`` seam — this collection runs once per
-    episode; the block itself is assembled per card (Issue #93). Online
-    providers (Jisho) and dictionaries that ship no ``styles.css`` contribute
-    nothing.
+    episode; blocks are assembled per card/field (Issue #93).
 
     Does light per-dictionary SQLite I/O (registry scan + ``read_meta`` +
     ``open_readonly`` via each provider's ``load()``), so it runs off the GUI
-    thread (inside the card-creation worker). Returns ``""`` when no enabled
+    thread (inside the card-creation worker). Returns ``[]`` when no enabled
     dictionary ships styles. Never raises: a provider that fails to load is
     skipped, mirroring the never-raises provider boundary elsewhere here. Each
     provider opened here is closed before returning so no ``index.sqlite`` handle
@@ -44,7 +50,7 @@ def collect_dictionary_css(config: AnkiMinerConfig) -> str:
 
     registry = DictionaryRegistry(config.dicts_root)
     registry.load()
-    blocks: list[str] = []
+    entries: list[tuple[str, str]] = []
     for provider in registry.build_provider_chain(config):
         css = ""
         try:
@@ -58,8 +64,19 @@ def collect_dictionary_css(config: AnkiMinerConfig) -> str:
                 with contextlib.suppress(Exception):
                     closer()
         if css and css.strip():
-            blocks.append(css.strip())
-    return "\n\n".join(blocks)
+            entries.append((provider.name, css.strip()))
+    return entries
+
+
+def collect_dictionary_css(config: AnkiMinerConfig) -> str:
+    """Concatenate every enabled indexed dictionary's scoped ``styles.css``.
+
+    Thin join over ``collect_dictionary_css_entries`` (byte-equivalent to the
+    pre-entries implementation; pinned by test). Used where an unfiltered
+    whole-config blob is still the right input (e.g. the restyler's
+    envelope-stamping gate).
+    """
+    return "\n\n".join(css for _, css in collect_dictionary_css_entries(config))
 
 
 class DefinitionService:
