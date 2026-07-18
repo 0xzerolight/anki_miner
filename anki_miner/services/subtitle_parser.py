@@ -15,7 +15,12 @@ from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.reading import ReadingUnit
 from anki_miner.models.word import select_mined_form
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, TermLookup
-from anki_miner.services.deinflection import _is_pure_hiragana, find_highlight_end, resolve_dictionary_form
+from anki_miner.services.deinflection import (
+    TermCommonLookup,
+    _is_pure_hiragana,
+    find_highlight_end,
+    resolve_dictionary_form,
+)
 from anki_miner.services.morphology import (
     AttestLookup,
     ReadingLookup,
@@ -235,11 +240,19 @@ class SubtitleParserService:
         term_lookup: TermLookup | None = None,
         reading_lookup: ReadingLookup | None = None,
         kana_attest_lookup: KanaAttestLookup | None = None,
+        term_common_lookup: TermCommonLookup | None = None,
     ):
         """Initialize the subtitle parser.
 
         Args:
             config: Configuration for parsing
+            term_common_lookup: Optional batch commonness probe
+                (``DefinitionService.offline_term_commonness``). When provided,
+                the verb-front resolver narrows its deinflection override pool to
+                headwords a commonness-aware offline dict tags common, so an
+                archaic/rare longer-prefix candidate (呼ばる from 呼ばれる) can't
+                displace the unidic orthBase. ``None`` (or a chain with no aware
+                dict) keeps the resolver byte-identical to pre-commonness.
             kana_attest_lookup: Optional term-OR-reading offline existence probe
                 (``DefinitionService.has_offline_definitions``). When provided,
                 pure-hiragana content words the script gate would drop (きれい,
@@ -290,6 +303,14 @@ class SubtitleParserService:
         # pre-gate behavior (exactly like the matcher's term_lookup gating).
         self._exist_memo: dict[str, bool] = {}
         self._attest: AttestLookup | None = self._memoized_attest if term_lookup is not None else None
+        # Commonness probe for the verb-front resolver (see _memoized_term_common /
+        # _resolve_front). None ⇒ the resolver keeps its full attested override
+        # pool (pre-commonness behavior). _common_memo caches per-surface verdicts;
+        # _common_aware caches the chain-level "is any offline dict commonness-
+        # aware" answer (None = not yet probed, False = unaware → always degrade).
+        self._term_common_lookup = term_common_lookup
+        self._common_memo: dict[str, bool] = {}
+        self._common_aware: bool | None = None
         # Dictionary-attested compound matching (see services/compound_matcher.py).
         # Built only when a term lookup is injected (COMPOUND_MATCHING is always
         # on); the matcher reuses the inclusion rule so spans start only at
@@ -1172,6 +1193,39 @@ class SubtitleParserService:
                 self._exist_memo[s] = s in hits
         return {s for s in surfaces if self._exist_memo.get(s)}
 
+    def _memoized_term_common(self, surfaces: list[str]) -> dict[str, bool] | None:
+        """Per-instance memoized commonness probe (see _resolve_front).
+
+        Wraps ``self._term_common_lookup`` (``offline_term_commonness``), caching
+        each surface's common/not-common verdict in ``self._common_memo`` so a
+        repeated corpus probes each distinct surface once. The underlying probe
+        returns ``None`` when NO offline provider is commonness-aware — a static
+        chain property cached in ``self._common_aware`` so later calls
+        short-circuit to ``None`` without re-probing (degrade byte-identical).
+
+        Returns ``{surface: bool}`` over the queried surfaces, or ``None``. Reads
+        the per-call answer from a local ``verdicts`` snapshot, NEVER by
+        re-subscripting the shared cache after the clear-on-cap below (an
+        eviction of a key populated earlier this call would KeyError — the same
+        cap-clear class the kana-window cache guards against, commit 27a7671).
+        """
+        if self._term_common_lookup is None or self._common_aware is False:
+            return None
+        deduped = list(dict.fromkeys(surfaces))
+        uncached = [s for s in deduped if s not in self._common_memo]
+        verdicts = {s: self._common_memo[s] for s in deduped if s not in uncached}
+        if uncached:
+            result = self._term_common_lookup(uncached)
+            if result is None:
+                self._common_aware = False
+                return None
+            self._common_aware = True
+            if len(self._common_memo) + len(uncached) > _FRONT_CACHE_CAP:
+                self._common_memo.clear()
+            for s in uncached:
+                verdicts[s] = self._common_memo[s] = bool(result.get(s))
+        return verdicts
+
     def _merge_compound_suffixes(self, tokens: list) -> list:
         """Run all compound-merge passes (see morphology.merge_compound_suffixes).
 
@@ -1226,7 +1280,9 @@ class SubtitleParserService:
         key = (inflected_surface, orth_base, ctype if isinstance(ctype, str) else "")
         cached = self._front_cache.get(key)
         if cached is None:
-            cached = resolve_dictionary_form(inflected_surface, orth_base, self._term_lookup)
+            cached = resolve_dictionary_form(
+                inflected_surface, orth_base, self._term_lookup, self._memoized_term_common
+            )
             # The deinflection resolver only rewrites じる/ずる (and leaves every
             # other form == orth_base). Where it made no change, run the
             # garbage-orthBase net so a same-kanji derived front the dictionary

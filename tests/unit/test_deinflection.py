@@ -615,6 +615,17 @@ def _lookup(*attested: str):
     return lambda terms: {t for t in terms if t in attested_set}
 
 
+def _common(*common: str):
+    """Fake term_common_lookup: reports exactly the given headwords common.
+
+    Returns ``{term: bool}`` for the queried terms (an aware chain). Pass no args
+    to mark every term uncommon; pass ``None`` directly to the resolver to model
+    an UNAWARE chain (no commonness dict) — a distinct, byte-identical degrade.
+    """
+    common_set = set(common)
+    return lambda terms: {t: t in common_set for t in terms}
+
+
 class TestResolveDictionaryForm:
     """``resolve_dictionary_form`` — JMdict-anchored modern verb/adjective front.
 
@@ -622,10 +633,10 @@ class TestResolveDictionaryForm:
     ``term_lookup`` is faked so attestation is deterministic and dict-free.
     """
 
-    def _resolve(self, inflected_surface, orth_base, term_lookup):
+    def _resolve(self, inflected_surface, orth_base, term_lookup, term_common_lookup=None):
         from anki_miner.services.deinflection import resolve_dictionary_form
 
-        return resolve_dictionary_form(inflected_surface, orth_base, term_lookup)
+        return resolve_dictionary_form(inflected_surface, orth_base, term_lookup, term_common_lookup)
 
     # --- Produces the modern じる form (asserts PRODUCED, not merely no-op). ---
 
@@ -690,6 +701,44 @@ class TestResolveDictionaryForm:
     def test_empty_inputs_return_orth_base(self):
         assert self._resolve("", "感ずる", _lookup("感じる")) == "感ずる"
         assert self._resolve("感じた", "", _lookup("感じる")) == ""
+
+    # --- Commonness filter (U11): the override pool is narrowed to common heads. ---
+
+    def test_commonness_filter_drops_rare_longer_prefix(self):
+        # 呼ばれる deinflects to BOTH 呼ぶ and the classical 呼ばる (both attested).
+        # 呼ばる shares the longer prefix and would override to junk; tagging only
+        # 呼ぶ common drops 呼ばる from the pool → orthBase 呼ぶ is kept.
+        assert self._resolve("呼ばれる", "呼ぶ", _lookup("呼ぶ", "呼ばる"), _common("呼ぶ")) == "呼ぶ"
+
+    def test_commonness_filter_tataseru_keeps_tatsu(self):
+        # 立たせる: 立たす (uncommon) would override; only 立つ is common → kept.
+        assert self._resolve("立たせる", "立つ", _lookup("立つ", "立たす"), _common("立つ")) == "立つ"
+
+    def test_commonness_filter_ike_keeps_iku(self):
+        # 行け: 行ける (uncommon, longer prefix) would override; 行く common → kept.
+        assert self._resolve("行け", "行く", _lookup("行く", "行ける"), _common("行く")) == "行く"
+
+    def test_commonness_none_probe_is_byte_identical(self):
+        # term_common_lookup=None (no aware dict) → the full attested pool, so the
+        # rare 呼ばる wins the strictly-greater override exactly as pre-U11 (the
+        # degrade under an unaware/absent commonness dict).
+        assert self._resolve("呼ばれる", "呼ぶ", _lookup("呼ぶ", "呼ばる"), None) == "呼ばる"
+
+    def test_commonness_unaware_lookup_degrades_like_none(self):
+        # A probe that returns None (chain has no commonness-aware dict) degrades
+        # identically to passing None — the junk longer-prefix form comes back.
+        assert self._resolve("呼ばれる", "呼ぶ", _lookup("呼ぶ", "呼ばる"), lambda terms: None) == "呼ばる"
+
+    def test_commonness_all_uncommon_falls_back_to_full_pool(self):
+        # 詠じた → 詠じる (modern) is the only attested candidate but is NOT tagged
+        # common. The pool must NOT empty: it falls back to the full attested set
+        # so the rare-but-correct 詠じる still overrides the archaic 詠ずる orthBase.
+        assert self._resolve("詠じた", "詠ずる", _lookup("詠じる"), _common()) == "詠じる"
+
+    def test_commonness_filter_keeps_common_jiru_override(self):
+        # Contract preserved: 感じて → 感じる when 感じる IS common (the じる/ずる
+        # fix the filter must not break).
+        assert self._resolve("感じて", "感ずる", _lookup("感じる", "感ずる"), _common("感じる")) == "感じる"
 
 
 class TestConditionFlagsFromRules:
