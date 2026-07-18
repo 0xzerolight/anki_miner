@@ -5021,6 +5021,170 @@ class TestMemoizedTermCommon:
         assert result == {"呼ぶ": True, "立つ": True}
 
 
+def _build_fold_service(root, rows):
+    """Real DefinitionService over a tagged fixture index for the V7 fold tests.
+
+    ``rows`` is a list of ``(term, reading, common?)``: a 'popular'/'partOfSpeech'
+    tags table makes the provider commonness-aware (``offline_term_commonness``
+    returns real verdicts, not None), so the fold's existence + commonness probes
+    both run end-to-end. Mirrors ``_build_commonness_service``.
+    """
+    from anki_miner.services.definition_service import DefinitionService
+    from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
+    from anki_miner.services.dictionary.storage import (
+        SCHEMA_VERSION,
+        DictRow,
+        TagMeta,
+        bulk_insert,
+        create_index,
+        write_meta,
+        write_tags,
+    )
+
+    folder = root / "fold-fix"
+    folder.mkdir(parents=True, exist_ok=True)
+    db = folder / "index.sqlite"
+    create_index(db)
+    bulk_insert(
+        db,
+        [
+            DictRow(
+                term=t,
+                reading=r,
+                content=f"<div>{t}</div>",
+                tags="popular" if common else "n",
+                rules="",
+                sequence=i + 1,
+            )
+            for i, (t, r, common) in enumerate(rows)
+        ],
+    )
+    write_tags(
+        db,
+        [
+            TagMeta(name="popular", category="popular", ord=0, notes="", score=0.0),
+            TagMeta(name="n", category="partOfSpeech", ord=0, notes="noun", score=0.0),
+        ],
+    )
+    write_meta(db, {"schema_version": str(SCHEMA_VERSION), "source_name": "fold-fix"})
+    provider = IndexedDictProvider("fold-fix", db, display_name="Fold Fix")
+    provider.load()
+    return DefinitionService(AnkiMinerConfig(), providers=[provider])
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestKatakanaVerbFrontFold:
+    """V7 end-to-end: an all-katakana verb orthBase the dictionary does not attest
+    (ヤル, from a real ヤラれた span) folds to its common hiragana headword (やる) so
+    the card dedups against the plain やる card. Real fugashi mints the inflected
+    span; a real IndexedDictProvider/DefinitionService supplies existence
+    (``offline_terms_exist``) and commonness (``offline_term_commonness``). Every
+    guard is pinned against the pre-fix ヤル the same span produced before the fold.
+    """
+
+    def _mine(self, service, sentence, *, term_common=True):
+        parser = SubtitleParserService(
+            AnkiMinerConfig(),
+            term_lookup=service.offline_terms_exist,
+            term_common_lookup=service.offline_term_commonness if term_common else None,
+        )
+        unit = ReadingUnit(text=sentence, index=0, location_label="t")
+        words, _index, _counts = parser.parse_text_units([unit], want_line_index=False)
+        return words
+
+    def test_katakana_verb_folds_to_common_hiragana(self, tmp_path):
+        # ヤラれた → orthBase ヤル (all-katakana, equal readings ⇒ both prior seams
+        # keep it). やる is attested + common, ヤル is not attested → fold to やる,
+        # and front_overridden threads the fold's reading into resolved_reading.
+        service = _build_fold_service(tmp_path, [("やる", "やる", True)])
+        words = self._mine(service, "ヤラれた")
+        forms = [w.mined_form for w in words]
+        assert "やる" in forms
+        assert "ヤル" not in forms
+        yaru = next(w for w in words if w.mined_form == "やる")
+        assert yaru.expression_reading == "やる"
+        assert yaru.resolved_reading == "やる"
+
+    def test_degrade_no_common_probe_keeps_katakana(self, tmp_path):
+        # Same fixture, commonness probe NOT wired: the fold cannot prove やる is
+        # common, so it safe-degrades to the pre-fix ヤル (byte-identical degrade).
+        service = _build_fold_service(tmp_path, [("やる", "やる", True)])
+        words = self._mine(service, "ヤラれた", term_common=False)
+        assert [w.mined_form for w in words] == ["ヤル"]
+
+    def test_attested_katakana_term_blocks_fold(self, tmp_path):
+        # The dictionary ALSO attests the katakana ヤル as a term → attestation
+        # decides: a real katakana headword is KEPT, no fold to やる.
+        service = _build_fold_service(tmp_path, [("やる", "やる", True), ("ヤル", "やる", False)])
+        assert [w.mined_form for w in self._mine(service, "ヤラれた")] == ["ヤル"]
+
+    def test_uncommon_fold_target_keeps_katakana(self, tmp_path):
+        # やる attested but tagged NOT common → never fold onto a rare/wrong
+        # target; the source ヤル is kept.
+        service = _build_fold_service(tmp_path, [("やる", "やる", False)])
+        assert [w.mined_form for w in self._mine(service, "ヤラれた")] == ["ヤル"]
+
+    def test_unattested_fold_target_keeps_katakana(self, tmp_path):
+        # やる not attested at all (only an unrelated headword) → no attested
+        # target to fold onto; ヤル is kept.
+        service = _build_fold_service(tmp_path, [("無関係", "むかんけい", True)])
+        assert [w.mined_form for w in self._mine(service, "ヤラれた")] == ["ヤル"]
+
+    def test_mixed_script_loanword_verb_untouched(self, tmp_path):
+        # ハメられた → orthBase ハメる (katakana stem + hiragana okurigana る). Even
+        # with the hiragana fold はめる attested + common — which WOULD fold were the
+        # all-katakana gate absent — the mixed-script orthBase is never folded.
+        service = _build_fold_service(tmp_path, [("はめる", "はめる", True)])
+        assert [w.mined_form for w in self._mine(service, "ハメられた")] == ["ハメる"]
+
+
+class TestFoldKatakanaVerbFrontGate:
+    """``_fold_katakana_verb_front`` — direct branch coverage of the pure gate,
+    with fake existence/commonness probes so each decision is provably taken for
+    the designed reason (mirrors ``TestMinedFormAttestOrRemap``'s attest-pattern).
+    """
+
+    def _service(self, *, attested=(), common=None):
+        wanted = set(attested)
+        common_map = common
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            return SubtitleParserService(
+                AnkiMinerConfig(),
+                term_lookup=lambda terms: {t for t in terms if t in wanted},
+                term_common_lookup=(
+                    None if common_map is None else (lambda terms: {t: common_map.get(t, False) for t in terms})
+                ),
+            )
+
+    def test_folds_when_all_gates_pass(self):
+        service = self._service(attested=("やる",), common={"やる": True})
+        assert service._fold_katakana_verb_front("ヤル") == "やる"
+
+    def test_mixed_script_not_folded(self):
+        # Hiragana okurigana る ⇒ not all-katakana ⇒ never folded, even though
+        # the fold target would pass every other gate.
+        service = self._service(attested=("はめる",), common={"はめる": True})
+        assert service._fold_katakana_verb_front("ハメる") == "ハメる"
+
+    def test_attested_katakana_kept(self):
+        service = self._service(attested=("ヤル", "やる"), common={"やる": True})
+        assert service._fold_katakana_verb_front("ヤル") == "ヤル"
+
+    def test_unattested_fold_target_kept(self):
+        service = self._service(attested=(), common={"やる": True})
+        assert service._fold_katakana_verb_front("ヤル") == "ヤル"
+
+    def test_uncommon_fold_target_kept(self):
+        service = self._service(attested=("やる",), common={"やる": False})
+        assert service._fold_katakana_verb_front("ヤル") == "ヤル"
+
+    def test_no_commonness_aware_dict_degrades(self):
+        # Commonness probe returns None (no aware dict) ⇒ cannot prove common ⇒
+        # keep the katakana orthBase (byte-identical degrade).
+        service = self._service(attested=("やる",), common=None)
+        assert service._fold_katakana_verb_front("ヤル") == "ヤル"
+
+
 class TestMinedFormAttestOrRemap:
     """U3: a derived/garbage verb-adjective front that matches no dictionary
     headword remaps to its attested lemma — but ONLY when the lemma/orthBase

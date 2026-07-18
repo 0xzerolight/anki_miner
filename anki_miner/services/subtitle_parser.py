@@ -1299,6 +1299,11 @@ class SubtitleParserService:
         ``_attest_or_remap_front`` remaps it to the attested lemma — but only
         when the lemma/orthBase readings diverge, guarding the #19/#5
         same-reading-variant contract. See that method for the full gate.
+
+        Third seam (V7 katakana-verb fold): when both prior seams leave orth_base
+        unchanged AND it is an ALL-katakana verb orthBase the dictionary does not
+        attest (ヤル), ``_fold_katakana_verb_front`` folds it to its common
+        hiragana headword (やる). See that method for the full gate.
         """
         feature = getattr(word_token, "feature", None)
         if getattr(feature, "pos1", None) not in ("動詞", "形容詞"):
@@ -1327,6 +1332,11 @@ class SubtitleParserService:
             # so skip it.
             if cached == orth_base:
                 cached = self._attest_or_remap_front(word_token, orth_base)
+            # Last net: an all-katakana verb orthBase the dictionary leaves
+            # untouched (ヤル) folds to its common hiragana headword (やる) — its
+            # equal lForm/kanaBase readings keep both seams above from firing.
+            if cached == orth_base:
+                cached = self._fold_katakana_verb_front(orth_base)
             if len(self._front_cache) >= _FRONT_CACHE_CAP:
                 self._front_cache.clear()
             self._front_cache[key] = cached
@@ -1391,6 +1401,48 @@ class SubtitleParserService:
         if lemma not in attested:
             return orth_base  # no attested target to remap onto
         return lemma
+
+    def _fold_katakana_verb_front(self, orth_base: str) -> str:
+        """Fold an all-katakana verb orthBase to its common hiragana headword.
+
+        unidic-lite tags a katakana-written verb spelling (ヤル for やる) with its
+        own all-katakana orthBase (ヤル) whose lForm/kanaBase readings are equal
+        (both ヤル), so ``mining_base`` and ``_attest_or_remap_front`` both keep
+        it — the card front ships as ヤル, splitting definition/frequency/dedup/
+        audio from the やる card the learner already has. Reached only after
+        ``resolve_dictionary_form`` and ``_attest_or_remap_front`` both left
+        ``orth_base`` unchanged (a 動詞/形容詞 with a wired ``term_lookup``).
+
+        Folds ``orth_base`` → its hiragana reading iff ALL hold:
+
+        * ``orth_base`` is ALL katakana. LOAD-BEARING: a mixed-script loanword
+          verb (ハメる: katakana stem + hiragana okurigana る) is NOT all-katakana,
+          so the gate never fires — its orthBase is the correct card front and is
+          kept untouched.
+        * the offline dictionary does NOT attest the katakana ``orth_base`` as a
+          term (exact headword, no folding). An attested katakana verb is a real
+          word and is KEPT — attestation, not a fold table, decides.
+        * the dictionary DOES attest the hiragana fold as a term AND a
+          commonness-aware dict tags it common. Never fold onto an unattested or
+          rare/wrong target; a chain with no commonness-aware dict (probe returns
+          ``None``) cannot prove commonness, so the fold safe-degrades to keeping
+          ``orth_base`` (byte-identical to pre-fold — the U11 degrade contract).
+
+        Only ``ヤル`` reaches this gate in both mining corpora (blast radius 1);
+        the guards keep it that way for any future all-katakana verb orthBase.
+        """
+        if not _is_all_katakana(orth_base):
+            return orth_base
+        fold = katakana_to_hiragana(orth_base)
+        if fold == orth_base:
+            return orth_base
+        attested = self._memoized_attest([orth_base, fold])
+        if orth_base in attested or fold not in attested:
+            return orth_base
+        common = self._memoized_term_common([fold])
+        if common is None or not common.get(fold):
+            return orth_base
+        return fold
 
     def _extract_reading(self, word_token) -> str:
         """Extract kana reading from a token (see morphology.extract_reading)."""
