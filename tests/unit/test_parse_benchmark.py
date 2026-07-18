@@ -147,6 +147,7 @@ _EXPECTED_CATEGORIES = {
     "ellipsis-truncation",
     "classical-adjective",
     "vowel-elongation",
+    "kana-runs",
 }
 
 

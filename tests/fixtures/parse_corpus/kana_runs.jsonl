@@ -1,0 +1,6 @@
+{"id":"kr01","sentence":"シシシ","expected":[],"category":"kana-runs","note":"FIRE (dict-free): 獅子+子 merges to シシシ (3-run シ); content_gate_ok rejects the merged token"}
+{"id":"kr02","sentence":"メメメ","expected":[],"category":"kana-runs","note":"FIRE (dict-free): merged メメメ (3-run メ) rejected"}
+{"id":"kr03","sentence":"どおおおおっ","expected":[],"category":"kana-runs","note":"recovery-death: おおおっ (覆う) 3-run お; proof of the kill is TestRepeatedKanaRunReject (needs an attesting dict, absent from the anchor)"}
+{"id":"kr04","sentence":"バナナ","expected":["バナナ"],"category":"kana-runs","note":"KEEP: ナナ is a 2-run, below the ≥3 threshold"}
+{"id":"kr05","sentence":"スーパー","expected":["スーパー"],"category":"kana-runs","note":"KEEP: ー is excluded from the identity alphabet"}
+{"id":"kr06","sentence":"ヒヒ","expected":["ヒヒ"],"category":"kana-runs","note":"KEEP: 狒々, a 2-run real word"}

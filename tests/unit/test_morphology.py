@@ -410,6 +410,40 @@ class TestContentGateOk:
         assert rule.should_include(token) is True
 
 
+class TestContentGateRepeatedKana:
+    """≥3 consecutive identical kana are laughter/scream debris, not content."""
+
+    def _rule(self):
+        return TokenInclusionRule(allowed_pos=_ALLOWED_POS, excluded_subtypes=_EXCLUDED_SUBTYPES)
+
+    @pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+    def test_rejects_real_hiragana_run_token(self):
+        # どおおおおっ → おおおっ (動詞, lemma 覆う): the おおお run is the ONLY reason
+        # it must not mine — without the gate the kana-recovery seam re-admits 覆う.
+        token = _real_token("どおおおおっ", "おおおっ")
+        assert token.feature.pos1 == "動詞"
+        assert self._rule().content_gate_ok(token) is False
+
+    @pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+    def test_keeps_two_run_verb_token(self):
+        # おおう (覆う) has only a 2-run お: the gate must NOT fire — the contrast
+        # that proves the reject keys on the ≥3 run, not on お-repetition per se.
+        token = _real_token("おおう", "おおう")
+        assert token.feature.pos1 == "動詞"
+        assert self._rule().content_gate_ok(token) is True
+
+    @pytest.mark.parametrize("surface", ["あああ", "シシシ", "ぬおおお", "ドドド"])
+    def test_rejects_three_identical_kana(self, surface):
+        token = _token_pos2(surface, "名詞", "普通名詞", lemma=surface)
+        assert self._rule().content_gate_ok(token) is False
+
+    @pytest.mark.parametrize("surface", ["バナナ", "スーーー", "がっっっ", "ドキュメント", "ヒヒ"])
+    def test_keeps_sub_threshold_or_excluded_runs(self, surface):
+        # 2-runs (バナナ/ヒヒ) and excluded-alphabet runs (ーーー, っっっ) survive.
+        token = _token_pos2(surface, "名詞", "普通名詞", lemma=surface)
+        assert self._rule().content_gate_ok(token) is True
+
+
 class TestResolveSpecialReading:
     """Honorific-kinship head reading override (兄/姉/父/母 + ちゃん/さん/さま/様)."""
 

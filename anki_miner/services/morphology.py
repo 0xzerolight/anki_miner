@@ -844,6 +844,36 @@ def _merge_verb_nominalizers(tokens: list) -> list:
     return merged
 
 
+def _is_run_identity_kana(char: str) -> bool:
+    """Whether ``char`` counts toward a repeated-kana run.
+
+    Hiragana or katakana, EXCLUDING the long-vowel mark ー and the sokuon っ/ッ:
+    those legitimately repeat in stylized text (ーーー) and geminate runs, so they
+    must not trip the reject.
+    """
+    if char in ("ー", "っ", "ッ"):
+        return False
+    return ("ぁ" <= char <= "ゖ") or ("ァ" <= char <= "ヺ")
+
+
+def _has_repeated_kana_run(surface: str) -> bool:
+    """True when ``surface`` holds ≥3 consecutive identical run-identity kana.
+
+    Laughter/scream debris (どおおおお → the おおおっ token, merged シシシ) that
+    unidic mis-tags as a content word or the kana-recovery seam would re-admit. ー
+    and っ/ッ are excluded from the identity alphabet (see _is_run_identity_kana).
+    """
+    run = 1
+    for i in range(1, len(surface)):
+        if surface[i] == surface[i - 1]:
+            run += 1
+        else:
+            run = 1
+        if run >= 3 and _is_run_identity_kana(surface[i]):
+            return True
+    return False
+
+
 @dataclass(frozen=True)
 class TokenInclusionRule:
     """POS/subtype gate deciding which tokens count as mineable content words.
@@ -883,6 +913,15 @@ class TokenInclusionRule:
 
         # Skip empty or whitespace-only tokens
         if not surface or not surface.strip():
+            return False
+
+        # Reject ≥3 consecutive identical kana: laughter/scream runs (どおおおお →
+        # the おおおっ token, merged シシシ) unidic mis-tags as content words or the
+        # kana-recovery seam would re-admit. Placed here (the single gate both
+        # should_include and the recovery probe route through) so include-path,
+        # kana recovery and count/mine parity are covered at once; ー and っ/ッ are
+        # excluded so ーーー stylistics and geminate runs survive.
+        if _has_repeated_kana_run(surface):
             return False
 
         # Get part-of-speech tags

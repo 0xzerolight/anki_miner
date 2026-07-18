@@ -5794,6 +5794,37 @@ class TestEllipsisTruncationGuard:
         assert "飲む" in self._mine("飲みたい…")
 
 
+class TestRepeatedKanaRunReject:
+    """content_gate_ok's ≥3-identical-kana reject kills laughter/scream debris.
+
+    Real fugashi/unidic through ``parse_text_units`` with an offline probe
+    attesting おおう, so the kana-recovery seam WOULD re-admit 覆う from
+    どおおおおっ's おおおっ token. The reject is the ONLY thing that stops it — the
+    control case おおう (a 2-run お) still recovers under the SAME lookup, proving
+    the gate keys on the ≥3 run, not on お-repetition per se.
+    """
+
+    @staticmethod
+    def _mine(test_config, text, lookup):
+        service = SubtitleParserService(test_config, kana_attest_lookup=lookup)
+        words, _idx, _counts = service.parse_text_units(
+            [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
+        )
+        return {w.mined_form for w in words}
+
+    def test_two_run_verb_still_recovers(self, test_config):
+        lookup = _attest_lookup("おおう")
+        assert "おおう" in self._mine(test_config, "おおう", lookup)
+
+    def test_three_run_kills_kana_recovery(self, test_config):
+        # どおおおおっ → おおおっ (動詞 覆う, orthBase おおう): attested identically to the
+        # control, but the おおお 3-run trips content_gate_ok → おおう never mines.
+        lookup = _attest_lookup("おおう")
+        mined = self._mine(test_config, "どおおおおっ", lookup)
+        assert "おおう" not in mined
+        assert mined == set()  # どお is 副詞; the run token is the only content candidate
+
+
 class TestCuratedReadingOverride:
     """Curated reading corrections for unidic-lite misreadings (一日/仏/マズい/込む).
 

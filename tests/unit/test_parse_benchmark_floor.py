@@ -244,6 +244,22 @@ def test_anchor_meets_vowel_elongation_floor() -> None:
     assert junk_rate(b_ve) == 0.0, f"strategy (b) vowel-elongation junk_rate {junk_rate(b_ve)} above 0.0"
 
 
+def test_orthbase_meets_kana_runs_floor() -> None:
+    results = _scored()
+    # V8 pins strategy (a), NOT (b): the merged-token junk (獅子+子 → シシシ, 3-run シ)
+    # only survives UNGATED dict-free, so strategy (a) is where content_gate_ok's
+    # ≥3-identical-kana reject actually removes it. Under (b) the attest-or-bail
+    # merge gate decomposes シシシ on its own (獅子子 unattested), which would mask a
+    # revert. A revert re-mints シシシ/メメメ under (a) ⇒ junk_rate>0. recall==1.0 pins
+    # that the reject does not over-reach: バナナ (2-run ナナ), スーパー (excluded ー)
+    # and ヒヒ (2-run 狒々) still mine. The kana-recovery-death case (どおおおおっ→
+    # 覆う) needs an attesting dict absent from the locked anchor, so its kill is
+    # proven in the wired TestRepeatedKanaRunReject unit tests, not here.
+    a_kr = results["a-lite-orthbase"].by_category["kana-runs"]
+    assert junk_rate(a_kr) == 0.0, f"strategy (a) kana-runs junk_rate {junk_rate(a_kr)} above 0.0"
+    assert recall(a_kr) == 1.0, f"strategy (a) kana-runs recall {recall(a_kr)} below 1.0"
+
+
 # NOTE: jiru-zuru (Task 3), kana-written (Task 4), nominal-suffix (Task 5),
 # colloquial/counter (A2), aux-context (A1), long-compound (Task 6/Q2) and
 # ellipsis-truncation (U8) floors are gated above; linebreak-split is
