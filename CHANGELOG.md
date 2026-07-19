@@ -14,6 +14,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Removed
 
+## [2.8.3] - 2026-07-19
+
+### Added
+- **Paste text straight into the Reading tab to mine it (Reading → Text).** A new Reading sub-tab takes a pasted Japanese snippet and mines it through the same pipeline as manga and novels — no file needed. There are no screenshots or extracted audio (synthetic sentence TTS still applies if you've enabled it under Settings → Audio), and the text is snapshotted the moment you press Mine, so you can keep editing while a run is in progress. Useful for a paragraph off a website, a chat log, or anything you have as text rather than a media file.
+- **Backfill missing fields on cards you already made (Tools → Card Backfill).** After you install a new frequency list, pitch-accent data, dictionary, or audio pack, existing Anki Miner cards don't automatically get the new data. Card Backfill scans a deck (read-only) and shows a preview table of exactly what it would fill — pitch, frequency, definition, glossary, and reading fields — then Apply writes precisely those previewed values and tags every touched note `anki-miner::backfill`. It fills only empty fields by default; overwriting already-populated fields is a separate explicit checkbox.
+- **Mine a whole folder of books at once (Reading → Novels).** The Novels tab gains a folder-mining section: point it at a directory of `.epub`/`.txt` books and it mines each one as its own item, instead of adding them one at a time.
+- **Bulk-import your known-word list from another tool (Manage Known Words → Import…).** Migrating from jpdb, Migaku (current Word Exporter JSON/CSV and the legacy add-on backup), or AnkiMorphs — or bringing a plain one-word-per-line list — now loads straight into your user known-words list so those words are never mined again. The format is auto-detected, the count of newly-added (deduplicated) words is reported, and jpdb's review grades are read fail-safe so an unfamiliar grade is treated as known rather than dropped.
+- **Strip subtitle annotations before mining (Settings → Filtering).** A new checkbox removes sound-effect tags, speaker labels, and inline furigana annotations from subtitle text before it's parsed, so that decoration stays out of your cards and word matching. On by default for new configs.
+
+### Changed
+- **A large parsing overhaul that mines far fewer junk cards with more accurate readings.** Rolled up from several rounds of work:
+  - Name word sets (surnames, given names, place names, organization names) are now **enabled by default** for new installs and for configs that never touched the setting — a one-time migration that leaves any customized selection alone. Turn them off under Settings → Filtering.
+  - Tokenizer garbage is rejected: ellipsis-truncation fragments (何が欲し… no longer mines 欲する), laughter/scream runs of three-or-more repeated identical kana (ヒヒヒヒ, どおおおおっ), and katakana fragments split out of an unmerged run.
+  - Stylized spellings fold to their standard headword with no cards lost: katakana pronouns (ワタシ/ボク/キサマ/ワレ/オマエ → 私/僕/貴様/我/お前), ヤル → やる, classical adjective stems (美しき → 美しい), and vowel-elongated nouns (手ぇ/気い → 手/気) — all with correct readings and furigana.
+  - Compound words are merged only when an installed dictionary actually attests the merged spelling, and the merge span cap was raised to 16 characters so longer real compounds survive.
+  - Modern verb/adjective card fronts resolve to their dictionary form (呼ばれる → 呼ぶ, 立たせる → 立つ, 続いて → 続く) when a commonness-tagged dictionary like Jitendex/JMdict is installed, and a curated reading-override table fixes unidic-lite misreadings (一日 → いちにち, 仏 → ほとけ, マズい → まずい, 込む → こむ).
+  - Auxiliary-verb tokens (助動詞語幹, 非自立可能) are no longer recovered as standalone words.
+  - Valid all-hiragana content words are recovered when an offline dictionary (JMdict) attests them, so real usually-kana vocabulary (かざす-class) that unidic-lite previously dropped now gets mined.
+  - The Reading → Subtitles per-cue path now runs the same annotation stripping and subtitle regex filter that the video path already did — previously it silently skipped them, so re-mining caption-heavy subs there yields noticeably fewer, cleaner cards.
+- **Card styling moved to per-field trailing style blocks.** The stylesheet that ships inside each mined note is now placed as a trailing block on each styled field instead of one leading block. This fixes note types that render fields in isolation or strip a leading `<style>` — mined glossaries no longer collapse into a run-on " | "-separated blob on Lapis-class note types, and JS-heavy Kiku-class note types now style every mapped field. Run **Tools → Restyle Mined Cards** once to migrate existing cards.
+- **Faster batch and queue runs.** Frequency lookups are batched, lookup services (dictionaries, frequency, pitch, audio) are shared across all items in a batch or queue run instead of being rebuilt per item, and per-phase timing was added to the logs. A memory (RSS) climb of ~45 MB per run when word sets are enabled is fixed — the lists now load once per app session.
+- **Interface translations updated across all 11 languages** for the new Text sub-tab, Card Backfill, Novels folder-mining, and known-word import strings.
+
+### Fixed
+- **On Windows, the bundled video preview now works on machines without a Vulkan driver.** The bundled `libmpv-2.dll` has a load-time dependency on `vulkan-1.dll`, which is absent on fresh installs, VMs, and generic display drivers — so the preview silently fell back to a "requires mpv" notice on those PCs (CI's runner happened to have the DLL, which masked it). Release builds now ship `vulkan-1.dll` next to libmpv so the preview loads out of the box. When the bundled player still can't load, the on-screen notice points Windows users to the log file (instead of macOS/Linux `brew install mpv` commands), and the underlying Windows error code is written to the log so the failure is diagnosable.
+- **The top menu bar is readable in dark mode.** The File/Edit menu strip and the corner buttons rendered as near-white-on-white in dark mode (most visible on Windows); the menu bar is now themed.
+- **Definitions match the exact spelling on the card.** Homograph reading-matches are scoped on the render path so a card gets the definition for the spelling it shows, not a same-reading homograph's.
+- **Pitch accent lines up with the resolved card front.** When a verb/adjective front resolves to its dictionary form, the pitch-accent reading is realigned to that form.
+- **Known-word import is hardened.** Import decoding, size limits, and whitespace handling were tightened, the deduplicated count is reported in the generic-list prompt, and jpdb review sorting no longer chokes on a non-numeric timestamp.
+- **Cancelling a Reading run is logged as a cancel, not a success.** Manga, subtitle, and text mining now classify a cancelled outcome correctly instead of writing a misleading success line.
+- **The word curator copies the sentence you selected** (#95), not the primary one, when you pick an alternate example sentence.
+- **macOS AppleDouble sidecar files (`._*`) are dropped** from reading input instead of being treated as content.
+- **Hardened against oversized or malformed files:** an explicit `PIL.MAX_IMAGE_PIXELS` cap on manga page images, and size caps on `.mokuro` sidecar JSON and EPUB member reads.
+
 ## [2.8.2] - 2026-07-16
 
 ### Added
