@@ -5480,6 +5480,10 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
         <translation>Reproduzir</translation>
     </message>
     <message>
+        <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
         <translation>A pré-visualização de vídeo requer mpv (libmpv). Versões empacotadas já o incluem; no Linux, instale-o pelo gerenciador de pacotes (por exemplo, libmpv2); no macOS, pelo Homebrew (brew install mpv).</translation>
     </message>

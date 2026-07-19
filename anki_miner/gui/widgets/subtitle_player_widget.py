@@ -24,6 +24,7 @@ duration/time-pos/eof is the NORMAL first event, not an edge case.
 from __future__ import annotations
 
 import logging
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,7 @@ from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayo
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.widgets.mpv_video_widget import MpvVideoWidget
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
+from anki_miner.utils.bundled_binary import frozen_state
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.mpv_loader import create_mpv_player, mpv_available
 
@@ -208,15 +210,10 @@ class SubtitlePlayerWidget(QWidget):
         self.subtitle_label.setVisible(False)
 
         if not self._mpv_available:
-            # pip install without a system libmpv: degrade to a notice; the
-            # rest of the dialog (sentence picker, offset controls) still works.
-            self._backend_notice_label.setText(
-                self.tr(
-                    "Video preview requires mpv (libmpv). Bundled builds include it; "
-                    "on Linux install it from your package manager (e.g. libmpv2), "
-                    "on macOS via Homebrew (brew install mpv)."
-                )
-            )
+            # libmpv could not load: degrade to a notice; the rest of the dialog
+            # (sentence picker, offset controls) still works. The advice is
+            # platform-aware — see _backend_unavailable_text.
+            self._backend_notice_label.setText(self._backend_unavailable_text())
             self._backend_notice_label.setVisible(True)
             self.video_widget.setVisible(False)
             return
@@ -233,6 +230,33 @@ class SubtitlePlayerWidget(QWidget):
         # paused at 0 (the factory sets pause=True only at construction).
         self.player.pause = True
         self._load_or_defer(str(video_path))
+
+    def _backend_unavailable_text(self) -> str:
+        """Return the libmpv-unavailable notice, platform- and frozen-aware.
+
+        On a frozen **Windows** build the bundled ``libmpv-2.dll`` is present but
+        failed to load (a missing transitive dependency on this machine, e.g. an
+        absent ``vulkan-1.dll``); no package-manager rescue exists, so pointing
+        the user at a "install libmpv2 / brew install mpv" step is useless — send
+        them to a reinstall/report path and name the log. For pip/dev installs
+        (not frozen) on any OS, and for frozen **macOS/Linux** — where the
+        loader's fall-through to a system libmpv means ``brew install mpv`` / the
+        distro ``libmpv2`` package genuinely restores the preview — keep the
+        original install advice unchanged.
+        """
+        frozen, _ = frozen_state()
+        if frozen and sys.platform == "win32":
+            return self.tr(
+                "Video preview is unavailable: the bundled video component (libmpv) "
+                "could not be loaded on this PC. Try reinstalling Anki Miner; if the "
+                "problem persists, report it and attach your log from "
+                "%USERPROFILE%\\.anki_miner\\anki_miner.log."
+            )
+        return self.tr(
+            "Video preview requires mpv (libmpv). Bundled builds include it; "
+            "on Linux install it from your package manager (e.g. libmpv2), "
+            "on macOS via Homebrew (brew install mpv)."
+        )
 
     def _load_or_defer(self, path: str) -> None:
         """Issue loadfile now, or queue it until the render context exists.

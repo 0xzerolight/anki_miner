@@ -5468,6 +5468,10 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>Putar</translation>
     </message>
     <message>
+        <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
         <translation>Pratinjau video memerlukan mpv (libmpv). Build bawaan sudah menyertakannya; di Linux instal melalui pengelola paket Anda (mis. libmpv2), di macOS melalui Homebrew (brew install mpv).</translation>
     </message>
