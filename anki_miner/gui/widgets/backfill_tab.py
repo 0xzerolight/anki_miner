@@ -269,14 +269,18 @@ class CardBackfillTab(QWidget):
         rows = [(note.expression, change) for note in plan.notes for change in note.changes][:_PREVIEW_ROW_CAP]
         self.preview_table.setRowCount(len(rows))
         for row, (expression, change) in enumerate(rows):
-            for col, text in enumerate((expression, change.field_name, change.old_display, change.new_value)):
-                display = self._strip_cell(text)
-                if not display and text:
-                    # Markup with no text nodes (a pitch-accent SVG) strips to
-                    # empty; show a marker so the cell isn't blank in the preview.
-                    display = self.tr("(formatted content)")
-                item = QTableWidgetItem(display[:_CELL_ELIDE] + "…" if len(display) > _CELL_ELIDE else display)
-                item.setToolTip(display)
+            # Only new_value is raw field markup (HTML/SVG) — strip it for the
+            # cell and show a marker when it has no text nodes (a pitch-accent
+            # SVG). The other three columns are already display-safe: expression
+            # and field_name are plain text, and old_display was _display()-
+            # stripped when the plan was built, so re-stripping it here would
+            # double-truncate.
+            new_display = self._strip_cell(change.new_value)
+            if not new_display and change.new_value:
+                new_display = self.tr("(formatted content)")
+            for col, text in enumerate((expression, change.field_name, change.old_display, new_display)):
+                item = QTableWidgetItem(text[:_CELL_ELIDE] + "…" if len(text) > _CELL_ELIDE else text)
+                item.setToolTip(text)
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.preview_table.setItem(row, col, item)
         self.summary_label.setText(self._summary_text(plan, len(rows)))
