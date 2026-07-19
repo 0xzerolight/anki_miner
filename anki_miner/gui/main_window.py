@@ -290,6 +290,10 @@ class MainWindow(QMainWindow):
         # allows only one corner widget per corner, so both buttons live inside
         # a container QWidget laid out horizontally.
         corner_widget = QWidget(menu_bar)
+        # Named so common.qss can paint its background with the theme's window
+        # color; without it the strip behind the buttons stays white in dark
+        # mode on Windows (native menu-bar default).
+        corner_widget.setObjectName("menu_corner_widget")
         corner_layout = QHBoxLayout(corner_widget)
         corner_layout.setContentsMargins(0, 0, 0, 0)
         corner_layout.setSpacing(0)

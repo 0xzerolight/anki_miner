@@ -907,6 +907,52 @@ QMenu::separator {
     background-color: ${color-border};
 }
 
+/* --- Menu bar (top strip + Report/Star/Discord corner buttons) ---
+   Without an explicit QMenuBar rule, Qt stops native-styling the menu bar once
+   an app-wide stylesheet is applied but does NOT fall back to the palette
+   Window color, so on Windows the strip stays white while QWidget{color} paints
+   the text near-white -> white-on-white in dark themes. Theme it from tokens. */
+QMenuBar {
+    background-color: ${color-background};
+    color: ${color-text};
+}
+
+QMenuBar::item {
+    background: transparent;
+    color: ${color-text};
+    padding: ${spacing-xs}px ${spacing-sm}px;
+}
+
+QMenuBar::item:selected,
+QMenuBar::item:pressed {
+    background-color: ${color-surface-hover};
+    color: ${color-text};
+}
+
+/* The menu-bar corner container (Report/Star/Discord). Named so its background
+   paints uniformly on Windows instead of relying on the transparent child
+   showing the QMenuBar fill through. */
+QWidget#menu_corner_widget {
+    background-color: ${color-background};
+}
+
+/* Corner link buttons are autoRaise QToolButtons (transparent bg, no inline
+   style); theme their text so they stay readable in dark mode. */
+QToolButton#report_issue_button,
+QToolButton#github_star_button,
+QToolButton#discord_button {
+    color: ${color-text};
+    background-color: transparent;
+    padding: ${spacing-xxs}px ${spacing-xs}px;
+}
+
+QToolButton#report_issue_button:hover,
+QToolButton#github_star_button:hover,
+QToolButton#discord_button:hover {
+    color: ${color-primary};
+    background-color: ${color-surface-hover};
+}
+
 /* --- Combo Box Dropdown --- */
 
 QComboBox QAbstractItemView {
