@@ -1214,6 +1214,14 @@ Tổng số thẻ đã tạo: %2</translation>
         <translation>Tạo âm thanh cô đọng chỉ gồm lời thoại từ tệp video hoặc âm thanh và phụ đề của nó.</translation>
     </message>
     <message>
+        <source>Backfill fields on existing cards</source>
+        <translation>Điền dữ liệu còn thiếu vào các trường trên thẻ hiện có</translation>
+    </message>
+    <message>
+        <source>Fill missing pitch, frequency, definition and reading fields on already-mined cards.</source>
+        <translation>Điền các trường trọng âm cao độ, tần suất, định nghĩa và cách đọc còn thiếu trên các thẻ đã khai thác.</translation>
+    </message>
+    <message>
         <source>View mining history &amp; stats</source>
         <translation>Xem lịch sử và thống kê khai thác</translation>
     </message>
@@ -1484,6 +1492,160 @@ Tổng số thẻ đã tạo: %2</translation>
     <message>
         <source>Cap video quality, max duration, and how many playlist videos are fetched.</source>
         <translation>Giới hạn chất lượng video, thời lượng tối đa và số video danh sách phát được tải về.</translation>
+    </message>
+</context><context>
+    <name>CardBackfillTab</name>
+    <message>
+        <source>Card Backfill</source>
+        <translation>Điền dữ liệu còn thiếu cho thẻ</translation>
+    </message>
+    <message>
+        <source>Fill missing fields on cards you mined earlier, using the currently installed dictionaries, frequency sources and pitch data. For very large collections, run per-deck. Overwrite mode may need a follow-up Restyle to refresh card styling.</source>
+        <translation>Điền dữ liệu còn thiếu trên những thẻ đã khai thác trước đó bằng các từ điển, nguồn tần suất và dữ liệu trọng âm cao độ hiện được cài đặt. Với bộ sưu tập rất lớn, hãy chạy theo từng bộ thẻ. Chế độ ghi đè có thể cần chạy Tạo lại kiểu cho thẻ đã khai thác sau đó để làm mới kiểu dáng thẻ.</translation>
+    </message>
+    <message>
+        <source>Deck:</source>
+        <translation>Bộ thẻ:</translation>
+    </message>
+    <message>
+        <source>All decks</source>
+        <translation>Tất cả bộ thẻ</translation>
+    </message>
+    <message>
+        <source>Fields to fill</source>
+        <translation>Các trường cần điền</translation>
+    </message>
+    <message>
+        <source>Pitch accent (graph + text)</source>
+        <translation>Trọng âm cao độ (đồ thị + văn bản)</translation>
+    </message>
+    <message>
+        <source>Frequency (display + sort)</source>
+        <translation>Tần suất (hiển thị + sắp xếp)</translation>
+    </message>
+    <message>
+        <source>Definitions</source>
+        <translation>Định nghĩa</translation>
+    </message>
+    <message>
+        <source>Glossary</source>
+        <translation>Bảng chú giải</translation>
+    </message>
+    <message>
+        <source>Reading + furigana</source>
+        <translation>Cách đọc + furigana</translation>
+    </message>
+    <message>
+        <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
+        <translation>Điền furigana từ cách đọc hiện có và ngược lại; không tạo cách đọc mới.</translation>
+    </message>
+    <message>
+        <source>Overwrite existing values</source>
+        <translation>Ghi đè giá trị hiện có</translation>
+    </message>
+    <message>
+        <source>Scan</source>
+        <translation>Quét</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Hủy</translation>
+    </message>
+    <message>
+        <source>Expression</source>
+        <translation>Biểu thức</translation>
+    </message>
+    <message>
+        <source>Field</source>
+        <translation>Trường</translation>
+    </message>
+    <message>
+        <source>Current</source>
+        <translation>Hiện tại</translation>
+    </message>
+    <message>
+        <source>New</source>
+        <translation>Mới</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Áp dụng</translation>
+    </message>
+    <message>
+        <source>Map this field in Settings → Anki</source>
+        <translation>Ánh xạ trường này trong Cài đặt → Anki</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
+        <translation>Không thể lấy tên bộ thẻ từ Anki — đang quét tất cả bộ thẻ.</translation>
+    </message>
+    <message>
+        <source>Select at least one field group to fill.</source>
+        <translation>Chọn ít nhất một nhóm trường cần điền.</translation>
+    </message>
+    <message>
+        <source>Scanning…</source>
+        <translation>Đang quét…</translation>
+    </message>
+    <message>
+        <source>(formatted content)</source>
+        <translation>(nội dung đã định dạng)</translation>
+    </message>
+    <message>
+        <source>{fields} field(s) across {notes} note(s) will be filled.</source>
+        <translation>Sẽ điền {fields} trường trong {notes} ghi chú.</translation>
+    </message>
+    <message>
+        <source>Showing first {rows} rows.</source>
+        <translation>Đang hiển thị {rows} hàng đầu tiên.</translation>
+    </message>
+    <message>
+        <source>Nothing to fill — all selected fields already have values.</source>
+        <translation>Không có gì để điền — tất cả trường đã chọn đều đã có giá trị.</translation>
+    </message>
+    <message>
+        <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
+        <translation>Có {count} giá trị sắp xếp là giá trị giữ chỗ 9999999 cho trường hợp không tìm thấy tần suất.</translation>
+    </message>
+    <message>
+        <source>Skipped (resource not loaded): {fields}.</source>
+        <translation>Đã bỏ qua (tài nguyên chưa được tải): {fields}.</translation>
+    </message>
+    <message>
+        <source>{count} note(s) skipped — empty Expression field.</source>
+        <translation>Đã bỏ qua {count} ghi chú — trường Biểu thức trống.</translation>
+    </message>
+    <message>
+        <source>Apply backfill?</source>
+        <translation>Tiến hành điền dữ liệu còn thiếu cho thẻ?</translation>
+    </message>
+    <message>
+        <source>Close Anki's card browser and note editors first.
+
+This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continue?</source>
+        <translation>Trước tiên, hãy đóng trình duyệt thẻ và trình sửa ghi chú của Anki.
+
+Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn thẻ {tag}. Tiếp tục?</translation>
+    </message>
+    <message>
+        <source>Applying…</source>
+        <translation>Đang áp dụng…</translation>
+    </message>
+    <message>
+        <source>Filled {fields} field(s) on {notes} note(s). Tagged {tag}.</source>
+        <translation>Đã điền {fields} trường trong {notes} ghi chú. Đã gắn thẻ {tag}.</translation>
+    </message>
+    <message>
+        <source>{count} skipped — changed or deleted since the scan.</source>
+        <translation>Đã bỏ qua {count} ghi chú — đã bị thay đổi hoặc xóa kể từ lần quét.</translation>
+    </message>
+    <message>
+        <source>Tagging failed for some notes (see log).</source>
+        <translation>Không thể gắn thẻ cho một số ghi chú (xem nhật ký).</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
     </message>
 </context><context>
     <name>CondenseTab</name>
@@ -2812,14 +2974,6 @@ Hành động này không thể hoàn tác. Bạn sẽ cần nhập lại từ z
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
-        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Word Frequency</source>
         <translation>Tần suất từ</translation>
     </message>
@@ -2934,6 +3088,14 @@ Hành động này không thể hoàn tác. Bạn sẽ cần nhập lại từ z
     <message>
         <source>Subtitle Text Filtering</source>
         <translation>Lọc văn bản phụ đề</translation>
+    </message>
+    <message>
+        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
+        <translation>Loại bỏ chú thích phụ đề (chú thích hiệu ứng âm thanh, nhãn người nói, furigana nội dòng)</translation>
+    </message>
+    <message>
+        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
+        <translation>Loại bỏ chú thích phụ đề không phải lời thoại trước khi khai thác: hiệu ứng âm thanh chiếm toàn dòng như (電話), nhãn người nói ở đầu dòng như (Tanaka), và furigana nội dòng như 瀕死(ひんし). Bật theo mặc định; bộ lọc Regex bên dưới vẫn được áp dụng thêm sau đó.</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -3644,6 +3806,10 @@ Tiếp tục?</translation>
         <translation>Cô đọng</translation>
     </message>
     <message>
+        <source>Card Backfill</source>
+        <translation>Điền dữ liệu còn thiếu cho thẻ</translation>
+    </message>
+    <message>
         <source>Single</source>
         <translation>Đơn lẻ</translation>
     </message>
@@ -4166,6 +4332,10 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation>Đã khai thác %1: %2 thẻ.</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>Đã hủy %1.</translation>
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation>Thất bại %1: %2.</translation>
     </message>
@@ -4382,6 +4552,10 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation>Đã khai thác %1: %2 thẻ.</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>Đã hủy %1.</translation>
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation>Thất bại %1: %2.</translation>
     </message>
@@ -4480,6 +4654,10 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     <message>
         <source>Mined %1 cards.</source>
         <translation>Đã khai thác %1 thẻ.</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Đã hủy.</translation>
     </message>
     <message>
         <source>Failed: %1.</source>

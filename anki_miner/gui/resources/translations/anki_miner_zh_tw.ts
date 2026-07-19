@@ -1214,6 +1214,14 @@ Total cards created: %2</source>
         <translation>從影片或音訊檔及其字幕建立僅含對白的濃縮音訊。</translation>
     </message>
     <message>
+        <source>Backfill fields on existing cards</source>
+        <translation>回填現有卡片的欄位</translation>
+    </message>
+    <message>
+        <source>Fill missing pitch, frequency, definition and reading fields on already-mined cards.</source>
+        <translation>在已採集的卡片上填入缺少的高低音調、頻率、釋義和讀音欄位。</translation>
+    </message>
+    <message>
         <source>View mining history &amp; stats</source>
         <translation>檢視採集歷史與統計</translation>
     </message>
@@ -1484,6 +1492,160 @@ Total cards created: %2</source>
     <message>
         <source>Cap video quality, max duration, and how many playlist videos are fetched.</source>
         <translation>限制影片畫質、最長時間，以及擷取多少個播放清單影片。</translation>
+    </message>
+</context><context>
+    <name>CardBackfillTab</name>
+    <message>
+        <source>Card Backfill</source>
+        <translation>卡片欄位回填</translation>
+    </message>
+    <message>
+        <source>Fill missing fields on cards you mined earlier, using the currently installed dictionaries, frequency sources and pitch data. For very large collections, run per-deck. Overwrite mode may need a follow-up Restyle to refresh card styling.</source>
+        <translation>使用目前安裝的字典、頻率來源和高低音調資料，填入先前採集之卡片的缺漏欄位。若收藏庫非常龐大，請逐個牌組執行。覆寫模式可能需要再執行一次「重新設定採集卡片樣式」，以更新卡片樣式。</translation>
+    </message>
+    <message>
+        <source>Deck:</source>
+        <translation>牌組：</translation>
+    </message>
+    <message>
+        <source>All decks</source>
+        <translation>所有牌組</translation>
+    </message>
+    <message>
+        <source>Fields to fill</source>
+        <translation>要填入的欄位</translation>
+    </message>
+    <message>
+        <source>Pitch accent (graph + text)</source>
+        <translation>高低音調（圖＋文字）</translation>
+    </message>
+    <message>
+        <source>Frequency (display + sort)</source>
+        <translation>頻率（顯示＋排序）</translation>
+    </message>
+    <message>
+        <source>Definitions</source>
+        <translation>釋義</translation>
+    </message>
+    <message>
+        <source>Glossary</source>
+        <translation>詞彙表</translation>
+    </message>
+    <message>
+        <source>Reading + furigana</source>
+        <translation>讀音＋振假名</translation>
+    </message>
+    <message>
+        <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
+        <translation>依現有讀音填入振假名，反之亦然；不會產生新的讀音。</translation>
+    </message>
+    <message>
+        <source>Overwrite existing values</source>
+        <translation>覆寫現有值</translation>
+    </message>
+    <message>
+        <source>Scan</source>
+        <translation>掃描</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Expression</source>
+        <translation>表達式</translation>
+    </message>
+    <message>
+        <source>Field</source>
+        <translation>欄位</translation>
+    </message>
+    <message>
+        <source>Current</source>
+        <translation>目前</translation>
+    </message>
+    <message>
+        <source>New</source>
+        <translation>新值</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>套用</translation>
+    </message>
+    <message>
+        <source>Map this field in Settings → Anki</source>
+        <translation>在「設定」→「Anki」中對應此欄位</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
+        <translation>無法從 Anki 取得牌組名稱——將掃描所有牌組。</translation>
+    </message>
+    <message>
+        <source>Select at least one field group to fill.</source>
+        <translation>請至少選取一個要填入的欄位群組。</translation>
+    </message>
+    <message>
+        <source>Scanning…</source>
+        <translation>掃描中…</translation>
+    </message>
+    <message>
+        <source>(formatted content)</source>
+        <translation>（已格式化內容）</translation>
+    </message>
+    <message>
+        <source>{fields} field(s) across {notes} note(s) will be filled.</source>
+        <translation>將填入 {notes} 則筆記中的 {fields} 個欄位。</translation>
+    </message>
+    <message>
+        <source>Showing first {rows} rows.</source>
+        <translation>僅顯示前 {rows} 列。</translation>
+    </message>
+    <message>
+        <source>Nothing to fill — all selected fields already have values.</source>
+        <translation>沒有可填入的內容——所有選取的欄位都已有值。</translation>
+    </message>
+    <message>
+        <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
+        <translation>有 {count} 個排序值為代表找不到頻率的預留值 9999999。</translation>
+    </message>
+    <message>
+        <source>Skipped (resource not loaded): {fields}.</source>
+        <translation>已略過（資源未載入）：{fields}。</translation>
+    </message>
+    <message>
+        <source>{count} note(s) skipped — empty Expression field.</source>
+        <translation>已略過 {count} 則筆記——表達式欄位為空白。</translation>
+    </message>
+    <message>
+        <source>Apply backfill?</source>
+        <translation>要套用卡片欄位回填嗎？</translation>
+    </message>
+    <message>
+        <source>Close Anki's card browser and note editors first.
+
+This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continue?</source>
+        <translation>請先關閉 Anki 的卡片瀏覽器和筆記編輯器。
+
+這將修改 {notes} 則筆記（{fields} 個欄位）並加上標籤 {tag}。要繼續嗎？</translation>
+    </message>
+    <message>
+        <source>Applying…</source>
+        <translation>套用中…</translation>
+    </message>
+    <message>
+        <source>Filled {fields} field(s) on {notes} note(s). Tagged {tag}.</source>
+        <translation>已填入 {notes} 則筆記的 {fields} 個欄位，並加上標籤 {tag}。</translation>
+    </message>
+    <message>
+        <source>{count} skipped — changed or deleted since the scan.</source>
+        <translation>已略過 {count} 筆——自掃描後已變更或刪除。</translation>
+    </message>
+    <message>
+        <source>Tagging failed for some notes (see log).</source>
+        <translation>部分筆記無法加上標籤（請查看日誌）。</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>取消中…</translation>
     </message>
 </context><context>
     <name>CondenseTab</name>
@@ -2812,14 +2974,6 @@ This cannot be undone. You would need to reimport from the source zip.</source>
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
-        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Word Frequency</source>
         <translation>單字頻率</translation>
     </message>
@@ -2934,6 +3088,14 @@ This cannot be undone. You would need to reimport from the source zip.</source>
     <message>
         <source>Subtitle Text Filtering</source>
         <translation>字幕文字篩選</translation>
+    </message>
+    <message>
+        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
+        <translation>移除字幕註解（音效字幕、說話者標籤、行內振假名）</translation>
+    </message>
+    <message>
+        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
+        <translation>採集前移除非對話的字幕註解：例如整行音效(電話)、開頭的說話者標籤 (Tanaka)，以及行內振假名瀕死(ひんし)。預設開啟；下方的正規表示式篩選器仍會接續套用。</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -3644,6 +3806,10 @@ Continue?</source>
         <translation>濃縮</translation>
     </message>
     <message>
+        <source>Card Backfill</source>
+        <translation>卡片欄位回填</translation>
+    </message>
+    <message>
         <source>Single</source>
         <translation>單一</translation>
     </message>
@@ -4166,6 +4332,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>已採集 %1：%2 張卡片。</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>已取消 %1。</translation>
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation>失敗 %1：%2。</translation>
     </message>
@@ -4382,6 +4552,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>已採集 %1：%2 張卡片。</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>已取消 %1。</translation>
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation>失敗 %1：%2。</translation>
     </message>
@@ -4480,6 +4654,10 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Mined %1 cards.</source>
         <translation>已採集 %1 張卡片。</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>已取消。</translation>
     </message>
     <message>
         <source>Failed: %1.</source>

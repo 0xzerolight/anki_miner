@@ -1214,6 +1214,14 @@ Total de cartes créées : %2</translation>
         <translation>Construisez un audio condensé ne contenant que les dialogues à partir d'un fichier vidéo ou audio et de ses sous-titres.</translation>
     </message>
     <message>
+        <source>Backfill fields on existing cards</source>
+        <translation>Compléter les champs des cartes existantes</translation>
+    </message>
+    <message>
+        <source>Fill missing pitch, frequency, definition and reading fields on already-mined cards.</source>
+        <translation>Complétez les champs manquants d’accent de hauteur, de fréquence, de définition et de lecture sur les cartes déjà extraites.</translation>
+    </message>
+    <message>
         <source>View mining history &amp; stats</source>
         <translation>Voir l'historique et les statistiques d'extraction</translation>
     </message>
@@ -1484,6 +1492,160 @@ Total de cartes créées : %2</translation>
     <message>
         <source>Cap video quality, max duration, and how many playlist videos are fetched.</source>
         <translation>Plafonnez la qualité vidéo, la durée maximale et le nombre de vidéos récupérées d'une liste de lecture.</translation>
+    </message>
+</context><context>
+    <name>CardBackfillTab</name>
+    <message>
+        <source>Card Backfill</source>
+        <translation>Complétion des cartes</translation>
+    </message>
+    <message>
+        <source>Fill missing fields on cards you mined earlier, using the currently installed dictionaries, frequency sources and pitch data. For very large collections, run per-deck. Overwrite mode may need a follow-up Restyle to refresh card styling.</source>
+        <translation>Complétez les champs manquants des cartes extraites précédemment à l’aide des dictionnaires, des sources de fréquence et des données d’accent de hauteur actuellement installés. Pour les très grandes collections, procédez paquet par paquet. Le mode d’écrasement peut nécessiter ensuite l’action « Redéfinir le style des cartes extraites » pour actualiser leur style.</translation>
+    </message>
+    <message>
+        <source>Deck:</source>
+        <translation>Paquet :</translation>
+    </message>
+    <message>
+        <source>All decks</source>
+        <translation>Tous les paquets</translation>
+    </message>
+    <message>
+        <source>Fields to fill</source>
+        <translation>Champs à compléter</translation>
+    </message>
+    <message>
+        <source>Pitch accent (graph + text)</source>
+        <translation>Accent de hauteur (graphique + texte)</translation>
+    </message>
+    <message>
+        <source>Frequency (display + sort)</source>
+        <translation>Fréquence (affichage + tri)</translation>
+    </message>
+    <message>
+        <source>Definitions</source>
+        <translation>Définitions</translation>
+    </message>
+    <message>
+        <source>Glossary</source>
+        <translation>Glossaire</translation>
+    </message>
+    <message>
+        <source>Reading + furigana</source>
+        <translation>Lecture + furigana</translation>
+    </message>
+    <message>
+        <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
+        <translation>Génère les furigana à partir d’une lecture existante et inversement ; ne génère pas de nouvelles lectures.</translation>
+    </message>
+    <message>
+        <source>Overwrite existing values</source>
+        <translation>Écraser les valeurs existantes</translation>
+    </message>
+    <message>
+        <source>Scan</source>
+        <translation>Analyser</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Annuler</translation>
+    </message>
+    <message>
+        <source>Expression</source>
+        <translation>Expression</translation>
+    </message>
+    <message>
+        <source>Field</source>
+        <translation>Champ</translation>
+    </message>
+    <message>
+        <source>Current</source>
+        <translation>Valeur actuelle</translation>
+    </message>
+    <message>
+        <source>New</source>
+        <translation>Nouvelle valeur</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Appliquer</translation>
+    </message>
+    <message>
+        <source>Map this field in Settings → Anki</source>
+        <translation>Associez ce champ dans Paramètres → Anki</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
+        <translation>Impossible de récupérer les noms des paquets depuis Anki — analyse de tous les paquets.</translation>
+    </message>
+    <message>
+        <source>Select at least one field group to fill.</source>
+        <translation>Sélectionnez au moins un groupe de champs à compléter.</translation>
+    </message>
+    <message>
+        <source>Scanning…</source>
+        <translation>Analyse…</translation>
+    </message>
+    <message>
+        <source>(formatted content)</source>
+        <translation>(contenu mis en forme)</translation>
+    </message>
+    <message>
+        <source>{fields} field(s) across {notes} note(s) will be filled.</source>
+        <translation>Nombre de champs à compléter : {fields} ; nombre de notes concernées : {notes}.</translation>
+    </message>
+    <message>
+        <source>Showing first {rows} rows.</source>
+        <translation>Affichage des {rows} premières lignes.</translation>
+    </message>
+    <message>
+        <source>Nothing to fill — all selected fields already have values.</source>
+        <translation>Rien à compléter — tous les champs sélectionnés contiennent déjà une valeur.</translation>
+    </message>
+    <message>
+        <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
+        <translation>Nombre de valeurs de tri égales au marqueur 9999999 (« fréquence introuvable ») : {count}.</translation>
+    </message>
+    <message>
+        <source>Skipped (resource not loaded): {fields}.</source>
+        <translation>Ressources non chargées, champs ignorés : {fields}.</translation>
+    </message>
+    <message>
+        <source>{count} note(s) skipped — empty Expression field.</source>
+        <translation>Notes ignorées en raison d’un champ Expression vide : {count}.</translation>
+    </message>
+    <message>
+        <source>Apply backfill?</source>
+        <translation>Appliquer la complétion ?</translation>
+    </message>
+    <message>
+        <source>Close Anki's card browser and note editors first.
+
+This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continue?</source>
+        <translation>Fermez d’abord le navigateur de cartes et les éditeurs de notes d’Anki.
+
+Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields} ; étiquette à attribuer : {tag}. Continuer ?</translation>
+    </message>
+    <message>
+        <source>Applying…</source>
+        <translation>Application…</translation>
+    </message>
+    <message>
+        <source>Filled {fields} field(s) on {notes} note(s). Tagged {tag}.</source>
+        <translation>Nombre de champs complétés : {fields} ; nombre de notes mises à jour : {notes}. Étiquette attribuée : {tag}.</translation>
+    </message>
+    <message>
+        <source>{count} skipped — changed or deleted since the scan.</source>
+        <translation>Éléments ignorés car modifiés ou supprimés depuis l’analyse : {count}.</translation>
+    </message>
+    <message>
+        <source>Tagging failed for some notes (see log).</source>
+        <translation>L’attribution de l’étiquette a échoué pour certaines notes (voir le journal).</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Annulation…</translation>
     </message>
 </context><context>
     <name>CondenseTab</name>
@@ -2823,14 +2985,6 @@ Cette action est irréversible. Vous devriez réimporter depuis le zip source.</
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
-        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Word Frequency</source>
         <translation>Fréquence des mots</translation>
     </message>
@@ -2945,6 +3099,14 @@ Cette action est irréversible. Vous devriez réimporter depuis le zip source.</
     <message>
         <source>Subtitle Text Filtering</source>
         <translation>Filtrage du texte des sous-titres</translation>
+    </message>
+    <message>
+        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
+        <translation>Supprimer les annotations des sous-titres (indications d’effets sonores, noms de locuteurs, furigana intégrés)</translation>
+    </message>
+    <message>
+        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
+        <translation>Supprimez avant l’extraction les annotations non dialoguées des sous-titres : effets sonores sur une ligne entière comme (電話), noms de locuteurs en début de ligne comme (Tanaka) et furigana intégrés comme 瀕死(ひんし). Cette option est activée par défaut ; le filtre regex ci-dessous continue de s’appliquer en complément.</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -3655,6 +3817,10 @@ Continuer ?</translation>
         <translation>Condenser</translation>
     </message>
     <message>
+        <source>Card Backfill</source>
+        <translation>Complétion des cartes</translation>
+    </message>
+    <message>
         <source>Single</source>
         <translation>Unique</translation>
     </message>
@@ -4177,6 +4343,10 @@ Vous pourrez ajuster cela plus tard dans Paramètres → Anki.</translation>
         <translation>Extrait %1 : %2 cartes.</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>%1 annulé.</translation>
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation>Échec %1 : %2.</translation>
     </message>
@@ -4393,6 +4563,10 @@ Vous pourrez ajuster cela plus tard dans Paramètres → Anki.</translation>
         <translation>Extrait %1 : %2 cartes.</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>%1 annulé.</translation>
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation>Échec %1 : %2.</translation>
     </message>
@@ -4491,6 +4665,10 @@ Vous pourrez ajuster cela plus tard dans Paramètres → Anki.</translation>
     <message>
         <source>Mined %1 cards.</source>
         <translation>%1 cartes extraites.</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Annulé.</translation>
     </message>
     <message>
         <source>Failed: %1.</source>

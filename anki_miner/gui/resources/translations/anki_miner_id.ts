@@ -1214,6 +1214,14 @@ Total kartu dibuat: %2</translation>
         <translation>Bangun audio padat berisi dialog saja dari berkas video atau audio dan subtitelnya.</translation>
     </message>
     <message>
+        <source>Backfill fields on existing cards</source>
+        <translation>Isi bidang pada kartu yang sudah ada</translation>
+    </message>
+    <message>
+        <source>Fill missing pitch, frequency, definition and reading fields on already-mined cards.</source>
+        <translation>Isi bidang aksen nada, frekuensi, definisi, dan bacaan yang belum terisi pada kartu hasil mining.</translation>
+    </message>
+    <message>
         <source>View mining history &amp; stats</source>
         <translation>Lihat riwayat &amp; statistik mining</translation>
     </message>
@@ -1484,6 +1492,160 @@ Total kartu dibuat: %2</translation>
     <message>
         <source>Cap video quality, max duration, and how many playlist videos are fetched.</source>
         <translation>Batasi kualitas video, durasi maksimum, dan jumlah video playlist yang diambil.</translation>
+    </message>
+</context><context>
+    <name>CardBackfillTab</name>
+    <message>
+        <source>Card Backfill</source>
+        <translation>Pengisian Bidang Kartu</translation>
+    </message>
+    <message>
+        <source>Fill missing fields on cards you mined earlier, using the currently installed dictionaries, frequency sources and pitch data. For very large collections, run per-deck. Overwrite mode may need a follow-up Restyle to refresh card styling.</source>
+        <translation>Isi bidang yang belum terisi pada kartu hasil mining sebelumnya menggunakan kamus, sumber frekuensi, dan data aksen nada yang saat ini terpasang. Untuk koleksi yang sangat besar, jalankan per dek. Mode timpa mungkin memerlukan tindakan Tata Ulang Kartu Hasil Mining setelahnya untuk memperbarui gaya kartu.</translation>
+    </message>
+    <message>
+        <source>Deck:</source>
+        <translation>Dek:</translation>
+    </message>
+    <message>
+        <source>All decks</source>
+        <translation>Semua dek</translation>
+    </message>
+    <message>
+        <source>Fields to fill</source>
+        <translation>Bidang yang akan diisi</translation>
+    </message>
+    <message>
+        <source>Pitch accent (graph + text)</source>
+        <translation>Aksen nada (grafik + teks)</translation>
+    </message>
+    <message>
+        <source>Frequency (display + sort)</source>
+        <translation>Frekuensi (tampilan + pengurutan)</translation>
+    </message>
+    <message>
+        <source>Definitions</source>
+        <translation>Definisi</translation>
+    </message>
+    <message>
+        <source>Glossary</source>
+        <translation>Glosarium</translation>
+    </message>
+    <message>
+        <source>Reading + furigana</source>
+        <translation>Bacaan + furigana</translation>
+    </message>
+    <message>
+        <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
+        <translation>Mengisi furigana dari bacaan yang ada dan sebaliknya; tidak menghasilkan bacaan baru.</translation>
+    </message>
+    <message>
+        <source>Overwrite existing values</source>
+        <translation>Timpa nilai yang ada</translation>
+    </message>
+    <message>
+        <source>Scan</source>
+        <translation>Pindai</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Batal</translation>
+    </message>
+    <message>
+        <source>Expression</source>
+        <translation>Ekspresi</translation>
+    </message>
+    <message>
+        <source>Field</source>
+        <translation>Bidang</translation>
+    </message>
+    <message>
+        <source>Current</source>
+        <translation>Saat Ini</translation>
+    </message>
+    <message>
+        <source>New</source>
+        <translation>Baru</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Terapkan</translation>
+    </message>
+    <message>
+        <source>Map this field in Settings → Anki</source>
+        <translation>Petakan bidang ini di Pengaturan → Anki</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
+        <translation>Tidak dapat mengambil nama dek dari Anki — memindai semua dek.</translation>
+    </message>
+    <message>
+        <source>Select at least one field group to fill.</source>
+        <translation>Pilih setidaknya satu kelompok bidang untuk diisi.</translation>
+    </message>
+    <message>
+        <source>Scanning…</source>
+        <translation>Memindai…</translation>
+    </message>
+    <message>
+        <source>(formatted content)</source>
+        <translation>(konten terformat)</translation>
+    </message>
+    <message>
+        <source>{fields} field(s) across {notes} note(s) will be filled.</source>
+        <translation>{fields} bidang pada {notes} catatan akan diisi.</translation>
+    </message>
+    <message>
+        <source>Showing first {rows} rows.</source>
+        <translation>Menampilkan {rows} baris pertama.</translation>
+    </message>
+    <message>
+        <source>Nothing to fill — all selected fields already have values.</source>
+        <translation>Tidak ada yang perlu diisi — semua bidang yang dipilih sudah memiliki nilai.</translation>
+    </message>
+    <message>
+        <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
+        <translation>{count} nilai pengurutan merupakan nilai penanda 9999999 untuk frekuensi yang tidak ditemukan.</translation>
+    </message>
+    <message>
+        <source>Skipped (resource not loaded): {fields}.</source>
+        <translation>Dilewati (sumber daya belum dimuat): {fields}.</translation>
+    </message>
+    <message>
+        <source>{count} note(s) skipped — empty Expression field.</source>
+        <translation>{count} catatan dilewati — bidang Ekspresi kosong.</translation>
+    </message>
+    <message>
+        <source>Apply backfill?</source>
+        <translation>Terapkan pengisian bidang kartu?</translation>
+    </message>
+    <message>
+        <source>Close Anki's card browser and note editors first.
+
+This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continue?</source>
+        <translation>Tutup peramban kartu Anki dan editor catatan terlebih dahulu.
+
+Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya dengan tag {tag}. Lanjutkan?</translation>
+    </message>
+    <message>
+        <source>Applying…</source>
+        <translation>Menerapkan…</translation>
+    </message>
+    <message>
+        <source>Filled {fields} field(s) on {notes} note(s). Tagged {tag}.</source>
+        <translation>{fields} bidang pada {notes} catatan telah diisi. Ditandai dengan tag {tag}.</translation>
+    </message>
+    <message>
+        <source>{count} skipped — changed or deleted since the scan.</source>
+        <translation>{count} dilewati — diubah atau dihapus sejak pemindaian.</translation>
+    </message>
+    <message>
+        <source>Tagging failed for some notes (see log).</source>
+        <translation>Penandaan gagal untuk beberapa catatan (lihat log).</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Membatalkan…</translation>
     </message>
 </context><context>
     <name>CondenseTab</name>
@@ -2812,14 +2974,6 @@ Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang dari zip sumber.</transla
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
-        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Word Frequency</source>
         <translation>Frekuensi Kata</translation>
     </message>
@@ -2934,6 +3088,14 @@ Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang dari zip sumber.</transla
     <message>
         <source>Subtitle Text Filtering</source>
         <translation>Pemfilteran Teks Subtitel</translation>
+    </message>
+    <message>
+        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
+        <translation>Hapus anotasi subtitel (teks efek suara, tag pembicara, furigana sebaris)</translation>
+    </message>
+    <message>
+        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
+        <translation>Hapus anotasi subtitel nondialog sebelum mining: efek suara sebaris penuh seperti (電話), tag pembicara di awal seperti (Tanaka), dan furigana sebaris seperti 瀕死(ひんし). Aktif secara bawaan; filter regex di bawah tetap diterapkan sebagai tambahan.</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -3644,6 +3806,10 @@ Lanjutkan?</translation>
         <translation>Padatkan</translation>
     </message>
     <message>
+        <source>Card Backfill</source>
+        <translation>Pengisian Bidang Kartu</translation>
+    </message>
+    <message>
         <source>Single</source>
         <translation>Tunggal</translation>
     </message>
@@ -4166,6 +4332,10 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation>Selesai mining %1: %2 kartu.</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>Dibatalkan %1.</translation>
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation>Gagal %1: %2.</translation>
     </message>
@@ -4382,6 +4552,10 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation>Selesai mining %1: %2 kartu.</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>Dibatalkan %1.</translation>
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation>Gagal %1: %2.</translation>
     </message>
@@ -4480,6 +4654,10 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     <message>
         <source>Mined %1 cards.</source>
         <translation>Berhasil mining %1 kartu.</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Dibatalkan.</translation>
     </message>
     <message>
         <source>Failed: %1.</source>

@@ -1214,6 +1214,14 @@ Total cards created: %2</source>
         <translation>動画または音声ファイルとその字幕から、セリフのみの凝縮音声を作成します。</translation>
     </message>
     <message>
+        <source>Backfill fields on existing cards</source>
+        <translation>既存カードのフィールドを一括補完</translation>
+    </message>
+    <message>
+        <source>Fill missing pitch, frequency, definition and reading fields on already-mined cards.</source>
+        <translation>すでにマイニングしたカードで欠けているピッチ、頻度、語義、読みの各フィールドを補完します。</translation>
+    </message>
+    <message>
         <source>View mining history &amp; stats</source>
         <translation>マイニング履歴と統計を表示</translation>
     </message>
@@ -1484,6 +1492,160 @@ Total cards created: %2</source>
     <message>
         <source>Cap video quality, max duration, and how many playlist videos are fetched.</source>
         <translation>動画の画質、最大再生時間、取得するプレイリスト動画の数に上限を設定します。</translation>
+    </message>
+</context><context>
+    <name>CardBackfillTab</name>
+    <message>
+        <source>Card Backfill</source>
+        <translation>カードの一括補完</translation>
+    </message>
+    <message>
+        <source>Fill missing fields on cards you mined earlier, using the currently installed dictionaries, frequency sources and pitch data. For very large collections, run per-deck. Overwrite mode may need a follow-up Restyle to refresh card styling.</source>
+        <translation>現在インストールされている辞書、頻度ソース、ピッチデータを使い、以前マイニングしたカードの欠落フィールドを補完します。非常に大きなコレクションでは、デッキ単位で実行してください。上書きモードでは、カードのスタイルを更新するため、後で「マイニングしたカードのスタイルを再適用」の実行が必要になる場合があります。</translation>
+    </message>
+    <message>
+        <source>Deck:</source>
+        <translation>デッキ：</translation>
+    </message>
+    <message>
+        <source>All decks</source>
+        <translation>すべてのデッキ</translation>
+    </message>
+    <message>
+        <source>Fields to fill</source>
+        <translation>補完するフィールド</translation>
+    </message>
+    <message>
+        <source>Pitch accent (graph + text)</source>
+        <translation>ピッチアクセント（グラフ＋テキスト）</translation>
+    </message>
+    <message>
+        <source>Frequency (display + sort)</source>
+        <translation>頻度（表示＋ソート）</translation>
+    </message>
+    <message>
+        <source>Definitions</source>
+        <translation>語義</translation>
+    </message>
+    <message>
+        <source>Glossary</source>
+        <translation>用語集</translation>
+    </message>
+    <message>
+        <source>Reading + furigana</source>
+        <translation>読み＋ふりがな</translation>
+    </message>
+    <message>
+        <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
+        <translation>既存の読みからふりがなを、またふりがなから読みを補完します。新しい読みは生成しません。</translation>
+    </message>
+    <message>
+        <source>Overwrite existing values</source>
+        <translation>既存の値を上書き</translation>
+    </message>
+    <message>
+        <source>Scan</source>
+        <translation>スキャン</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <source>Expression</source>
+        <translation>表現</translation>
+    </message>
+    <message>
+        <source>Field</source>
+        <translation>フィールド</translation>
+    </message>
+    <message>
+        <source>Current</source>
+        <translation>現在値</translation>
+    </message>
+    <message>
+        <source>New</source>
+        <translation>新しい値</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>適用</translation>
+    </message>
+    <message>
+        <source>Map this field in Settings → Anki</source>
+        <translation>設定 → Anki でこのフィールドを割り当ててください</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
+        <translation>Anki からデッキ名を取得できませんでした。すべてのデッキをスキャンします。</translation>
+    </message>
+    <message>
+        <source>Select at least one field group to fill.</source>
+        <translation>補完するフィールドグループを 1 つ以上選択してください。</translation>
+    </message>
+    <message>
+        <source>Scanning…</source>
+        <translation>スキャン中…</translation>
+    </message>
+    <message>
+        <source>(formatted content)</source>
+        <translation>（書式付きコンテンツ）</translation>
+    </message>
+    <message>
+        <source>{fields} field(s) across {notes} note(s) will be filled.</source>
+        <translation>ノート {notes} 件にあるフィールド {fields} 個を補完します。</translation>
+    </message>
+    <message>
+        <source>Showing first {rows} rows.</source>
+        <translation>先頭の {rows} 行を表示しています。</translation>
+    </message>
+    <message>
+        <source>Nothing to fill — all selected fields already have values.</source>
+        <translation>補完する項目はありません。選択したフィールドにはすでに値があります。</translation>
+    </message>
+    <message>
+        <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
+        <translation>ソート値 {count} 件が、頻度未検出時のプレースホルダー 9999999 です。</translation>
+    </message>
+    <message>
+        <source>Skipped (resource not loaded): {fields}.</source>
+        <translation>スキップしました（リソース未読み込み）： {fields}。</translation>
+    </message>
+    <message>
+        <source>{count} note(s) skipped — empty Expression field.</source>
+        <translation>表現フィールドが空のため、ノート {count} 件をスキップしました。</translation>
+    </message>
+    <message>
+        <source>Apply backfill?</source>
+        <translation>カードの一括補完を適用しますか？</translation>
+    </message>
+    <message>
+        <source>Close Anki's card browser and note editors first.
+
+This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continue?</source>
+        <translation>Anki のカードブラウザとノートエディタを先に閉じてください。
+
+この操作により、ノート {notes} 件（フィールド {fields} 個）が変更され、タグ {tag} が付けられます。続行しますか？</translation>
+    </message>
+    <message>
+        <source>Applying…</source>
+        <translation>適用中…</translation>
+    </message>
+    <message>
+        <source>Filled {fields} field(s) on {notes} note(s). Tagged {tag}.</source>
+        <translation>ノート {notes} 件のフィールド {fields} 個を補完しました。タグ {tag} を付けました。</translation>
+    </message>
+    <message>
+        <source>{count} skipped — changed or deleted since the scan.</source>
+        <translation>スキャン後に変更または削除されたため、{count} 件をスキップしました。</translation>
+    </message>
+    <message>
+        <source>Tagging failed for some notes (see log).</source>
+        <translation>一部のノートへのタグ付けに失敗しました（ログを参照）。</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
     </message>
 </context><context>
     <name>CondenseTab</name>
@@ -2812,14 +2974,6 @@ This cannot be undone. You would need to reimport from the source zip.</source>
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
-        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Word Frequency</source>
         <translation>単語の頻度</translation>
     </message>
@@ -2934,6 +3088,14 @@ This cannot be undone. You would need to reimport from the source zip.</source>
     <message>
         <source>Subtitle Text Filtering</source>
         <translation>字幕テキストのフィルタリング</translation>
+    </message>
+    <message>
+        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
+        <translation>字幕注釈を削除（効果音字幕、話者タグ、インラインふりがな）</translation>
+    </message>
+    <message>
+        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
+        <translation>マイニング前に、セリフ以外の字幕注釈を削除します。行全体の効果音（例：(電話)）、先頭の話者タグ（例：(Tanaka)）、インラインふりがな（例：瀕死(ひんし)）が対象です。既定でオンです。下の正規表現フィルターも重ねて適用されます。</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -3644,6 +3806,10 @@ Continue?</source>
         <translation>凝縮</translation>
     </message>
     <message>
+        <source>Card Backfill</source>
+        <translation>カードの一括補完</translation>
+    </message>
+    <message>
         <source>Single</source>
         <translation>単一</translation>
     </message>
@@ -4166,6 +4332,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>%1 をマイニングしました: %2 枚のカード。</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>%1 をキャンセルしました。</translation>
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation>%1 が失敗しました: %2。</translation>
     </message>
@@ -4382,6 +4552,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>%1 をマイニングしました: %2 枚のカード。</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>%1 をキャンセルしました。</translation>
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation>%1 が失敗しました: %2。</translation>
     </message>
@@ -4480,6 +4654,10 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Mined %1 cards.</source>
         <translation>%1 枚のカードをマイニングしました。</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>キャンセルしました。</translation>
     </message>
     <message>
         <source>Failed: %1.</source>

@@ -1214,6 +1214,14 @@ Total cards created: %2</source>
         <translation>Собрать сжатое аудио только с диалогами из видео- или аудиофайла и его субтитров.</translation>
     </message>
     <message>
+        <source>Backfill fields on existing cards</source>
+        <translation>Дозаполнение полей существующих карточек</translation>
+    </message>
+    <message>
+        <source>Fill missing pitch, frequency, definition and reading fields on already-mined cards.</source>
+        <translation>Заполнение отсутствующих полей тонального ударения, частотности, определения и чтения в карточках, уже созданных при майнинге.</translation>
+    </message>
+    <message>
         <source>View mining history &amp; stats</source>
         <translation>Просмотр истории и статистики майнинга</translation>
     </message>
@@ -1484,6 +1492,160 @@ Total cards created: %2</source>
     <message>
         <source>Cap video quality, max duration, and how many playlist videos are fetched.</source>
         <translation>Ограничивайте качество видео, максимальную длительность и количество загружаемых видео из плейлиста.</translation>
+    </message>
+</context><context>
+    <name>CardBackfillTab</name>
+    <message>
+        <source>Card Backfill</source>
+        <translation>Дозаполнение карточек</translation>
+    </message>
+    <message>
+        <source>Fill missing fields on cards you mined earlier, using the currently installed dictionaries, frequency sources and pitch data. For very large collections, run per-deck. Overwrite mode may need a follow-up Restyle to refresh card styling.</source>
+        <translation>Заполните отсутствующие поля в ранее созданных при майнинге карточках с помощью установленных сейчас словарей, источников частотности и данных тонального ударения. Для очень больших коллекций запускайте отдельно для каждой колоды. После перезаписи может потребоваться выполнить действие «Изменить стиль намайненных карточек», чтобы обновить оформление карточек.</translation>
+    </message>
+    <message>
+        <source>Deck:</source>
+        <translation>Колода:</translation>
+    </message>
+    <message>
+        <source>All decks</source>
+        <translation>Все колоды</translation>
+    </message>
+    <message>
+        <source>Fields to fill</source>
+        <translation>Поля для заполнения</translation>
+    </message>
+    <message>
+        <source>Pitch accent (graph + text)</source>
+        <translation>Тональное ударение (график + текст)</translation>
+    </message>
+    <message>
+        <source>Frequency (display + sort)</source>
+        <translation>Частотность (отображение + сортировка)</translation>
+    </message>
+    <message>
+        <source>Definitions</source>
+        <translation>Определения</translation>
+    </message>
+    <message>
+        <source>Glossary</source>
+        <translation>Глоссарий</translation>
+    </message>
+    <message>
+        <source>Reading + furigana</source>
+        <translation>Чтение + фуригана</translation>
+    </message>
+    <message>
+        <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
+        <translation>Заполняет фуригану по существующему чтению и наоборот; не создаёт новые чтения.</translation>
+    </message>
+    <message>
+        <source>Overwrite existing values</source>
+        <translation>Перезаписывать существующие значения</translation>
+    </message>
+    <message>
+        <source>Scan</source>
+        <translation>Сканировать</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Отмена</translation>
+    </message>
+    <message>
+        <source>Expression</source>
+        <translation>Выражение</translation>
+    </message>
+    <message>
+        <source>Field</source>
+        <translation>Поле</translation>
+    </message>
+    <message>
+        <source>Current</source>
+        <translation>Текущее</translation>
+    </message>
+    <message>
+        <source>New</source>
+        <translation>Новое</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Применить</translation>
+    </message>
+    <message>
+        <source>Map this field in Settings → Anki</source>
+        <translation>Сопоставьте это поле в разделе «Настройки» → «Anki»</translation>
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
+        <translation>Не удалось получить названия колод из Anki — сканируются все колоды.</translation>
+    </message>
+    <message>
+        <source>Select at least one field group to fill.</source>
+        <translation>Выберите хотя бы одну группу полей для заполнения.</translation>
+    </message>
+    <message>
+        <source>Scanning…</source>
+        <translation>Сканирование…</translation>
+    </message>
+    <message>
+        <source>(formatted content)</source>
+        <translation>(форматированное содержимое)</translation>
+    </message>
+    <message>
+        <source>{fields} field(s) across {notes} note(s) will be filled.</source>
+        <translation>Поля для заполнения: {fields}; затронутые заметки: {notes}.</translation>
+    </message>
+    <message>
+        <source>Showing first {rows} rows.</source>
+        <translation>Показаны строки с начала списка (количество: {rows}).</translation>
+    </message>
+    <message>
+        <source>Nothing to fill — all selected fields already have values.</source>
+        <translation>Заполнять нечего — все выбранные поля уже содержат значения.</translation>
+    </message>
+    <message>
+        <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
+        <translation>Сортировочные значения, равные заглушке 9999999 для ненайденной частотности: {count}.</translation>
+    </message>
+    <message>
+        <source>Skipped (resource not loaded): {fields}.</source>
+        <translation>Пропущено (ресурс не загружен): {fields}.</translation>
+    </message>
+    <message>
+        <source>{count} note(s) skipped — empty Expression field.</source>
+        <translation>Заметки, пропущенные из-за пустого поля «Выражение»: {count}.</translation>
+    </message>
+    <message>
+        <source>Apply backfill?</source>
+        <translation>Применить дозаполнение?</translation>
+    </message>
+    <message>
+        <source>Close Anki's card browser and note editors first.
+
+This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continue?</source>
+        <translation>Сначала закройте браузер карточек и редакторы заметок Anki.
+
+Будут изменены заметки (количество: {notes}; поля: {fields}) и помечены тегом {tag}. Продолжить?</translation>
+    </message>
+    <message>
+        <source>Applying…</source>
+        <translation>Применение…</translation>
+    </message>
+    <message>
+        <source>Filled {fields} field(s) on {notes} note(s). Tagged {tag}.</source>
+        <translation>Заполнено полей: {fields}; затронуто заметок: {notes}. Присвоен тег {tag}.</translation>
+    </message>
+    <message>
+        <source>{count} skipped — changed or deleted since the scan.</source>
+        <translation>Пропущенные заметки: {count} — они были изменены или удалены после сканирования.</translation>
+    </message>
+    <message>
+        <source>Tagging failed for some notes (see log).</source>
+        <translation>Не удалось присвоить тег некоторым заметкам (см. журнал).</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Отмена…</translation>
     </message>
 </context><context>
     <name>CondenseTab</name>
@@ -2834,14 +2996,6 @@ This cannot be undone. You would need to reimport from the source zip.</source>
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
-        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Word Frequency</source>
         <translation>Частотность слов</translation>
     </message>
@@ -2956,6 +3110,14 @@ This cannot be undone. You would need to reimport from the source zip.</source>
     <message>
         <source>Subtitle Text Filtering</source>
         <translation>Фильтрация текста субтитров</translation>
+    </message>
+    <message>
+        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
+        <translation>Удалять аннотации из субтитров (подписи звуковых эффектов, метки говорящих, встроенная фуригана)</translation>
+    </message>
+    <message>
+        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
+        <translation>Перед майнингом удалять из субтитров аннотации, не относящиеся к диалогу: звуковые эффекты, занимающие всю строку, например (電話), метки говорящих в начале строки, например (Tanaka), и встроенную фуригану, например 瀕死(ひんし). По умолчанию включено; расположенный ниже фильтр регулярных выражений применяется дополнительно.</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -3666,6 +3828,10 @@ Continue?</source>
         <translation>Сжать</translation>
     </message>
     <message>
+        <source>Card Backfill</source>
+        <translation>Дозаполнение карточек</translation>
+    </message>
+    <message>
         <source>Single</source>
         <translation>Один</translation>
     </message>
@@ -4188,6 +4354,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>%1: создано карточек — %2.</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>Отменено: %1.</translation>
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation>Ошибка %1: %2.</translation>
     </message>
@@ -4404,6 +4574,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>%1: создано карточек — %2.</translation>
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation>Отменено: %1.</translation>
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation>Ошибка %1: %2.</translation>
     </message>
@@ -4502,6 +4676,10 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Mined %1 cards.</source>
         <translation>Намайнено карточек: %1.</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>Отменено.</translation>
     </message>
     <message>
         <source>Failed: %1.</source>

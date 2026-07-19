@@ -1201,6 +1201,14 @@ Total cards created: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Backfill fields on existing cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fill missing pitch, frequency, definition and reading fields on already-mined cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>View mining history &amp; stats</source>
         <translation type="unfinished" />
     </message>
@@ -1470,6 +1478,158 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>Cap video quality, max duration, and how many playlist videos are fetched.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>CardBackfillTab</name>
+    <message>
+        <source>Card Backfill</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fill missing fields on cards you mined earlier, using the currently installed dictionaries, frequency sources and pitch data. For very large collections, run per-deck. Overwrite mode may need a follow-up Restyle to refresh card styling.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All decks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fields to fill</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent (graph + text)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency (display + sort)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Definitions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Glossary</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reading + furigana</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Overwrite existing values</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Scan</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Expression</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Current</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>New</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Map this field in Settings → Anki</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select at least one field group to fill.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Scanning…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>(formatted content)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>{fields} field(s) across {notes} note(s) will be filled.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Showing first {rows} rows.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing to fill — all selected fields already have values.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped (resource not loaded): {fields}.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>{count} note(s) skipped — empty Expression field.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Apply backfill?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Close Anki's card browser and note editors first.
+
+This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continue?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Applying…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Filled {fields} field(s) on {notes} note(s). Tagged {tag}.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>{count} skipped — changed or deleted since the scan.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tagging failed for some notes (see log).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -2787,14 +2947,6 @@ This cannot be undone. You would need to reimport from the source zip.</source>
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
-        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Word Frequency</source>
         <translation type="unfinished" />
     </message>
@@ -2908,6 +3060,14 @@ This cannot be undone. You would need to reimport from the source zip.</source>
     </message>
     <message>
         <source>Subtitle Text Filtering</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3601,6 +3761,10 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Card Backfill</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Single</source>
         <translation type="unfinished" />
     </message>
@@ -4122,6 +4286,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation type="unfinished" />
     </message>
@@ -4338,6 +4506,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Cancelled %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Failed %1: %2.</source>
         <translation type="unfinished" />
     </message>
@@ -4435,6 +4607,10 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Mined %1 cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled.</source>
         <translation type="unfinished" />
     </message>
     <message>
