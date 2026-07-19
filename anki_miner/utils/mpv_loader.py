@@ -85,6 +85,26 @@ def _frozen_state() -> tuple[bool, str | None]:
     return frozen, meipass
 
 
+def _cause_detail(exc: BaseException) -> str:
+    """Return a grep-able suffix carrying the real OS error behind a dlopen failure.
+
+    python-mpv wraps the underlying ``ctypes.CDLL`` ``OSError`` in a generic
+    "could not load it" message via ``raise OSError(...) from e`` (see mpv.py),
+    so the wrapper string DROPS the Windows ``WinError`` code — but the original
+    is preserved on ``exc.__cause__``. On Windows a *present* libmpv-2.dll that
+    fails to load is almost always a missing transitive dependency (WinError 126,
+    e.g. an absent ``vulkan-1.dll`` on a box without a Vulkan-capable GPU driver);
+    surfacing the code is what makes such field failures diagnosable. Returns ""
+    when there is no distinct cause to report. Cross-platform safe: ``.winerror``
+    is read via ``getattr`` (absent off Windows)."""
+    cause = exc.__cause__
+    if cause is None or cause is exc:
+        return ""
+    winerror = getattr(cause, "winerror", None)
+    strerror = getattr(cause, "strerror", None)
+    return f" [cause={cause!r} winerror={winerror} strerror={strerror!r}]"
+
+
 def _soname_globs() -> tuple[str, ...]:
     """Per-OS glob patterns for a libmpv shared library, most specific first."""
     if sys.platform == "win32":
@@ -188,7 +208,12 @@ def _load_mpv_uncached() -> Any:
             # against a newer min-OS than the machine runs) while a
             # user-installed system libmpv works fine — `brew install mpv`
             # must be able to restore the preview.
-            logger.warning("Bundled libmpv at %s failed to load (%s); trying system libmpv", bundled, exc)
+            logger.warning(
+                "Bundled libmpv at %s failed to load (%s)%s; trying system libmpv",
+                bundled,
+                exc,
+                _cause_detail(exc),
+            )
         else:
             _RESOLVED_SOURCE = f"bundled:{bundled}"
             return module
@@ -197,6 +222,21 @@ def _load_mpv_uncached() -> Any:
         import mpv as mpv_module
     except (ImportError, OSError) as exc:
         # OSError = python-mpv installed but libmpv missing (the common pip case).
+        # Log once here (load_mpv caches, so this never spams the rotating file):
+        # bundled=False on a frozen build means no libmpv shipped in the bundle
+        # (a self-built/fork bundle), while bundled=True means the bundled copy
+        # already failed above (its :191 warning carries the WinError) AND no
+        # system libmpv rescued it. Either way the notice would otherwise be the
+        # only trace, and mpv_available() swallows this raise silently.
+        frozen, meipass = _frozen_state()
+        logger.warning(
+            "libmpv unavailable via system search (%s)%s; frozen=%s meipass=%s bundled_found=%s",
+            exc,
+            _cause_detail(exc),
+            frozen,
+            meipass,
+            bundled is not None,
+        )
         raise MpvUnavailableError(f"libmpv not available via system search: {exc}") from exc
     _RESOLVED_SOURCE = "system"
     return mpv_module

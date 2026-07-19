@@ -11,6 +11,7 @@ the queued signals would deliver.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -157,6 +158,45 @@ class TestMpvUnavailable:
             widget.set_offset(1.0)
         assert widget._offset == 1.0
         widget.release()  # must not raise
+
+
+class TestBackendNoticeText:
+    """The libmpv-unavailable notice is platform- and frozen-aware. A frozen
+    Windows user (bundled libmpv-2.dll present but unloadable — the confirmed
+    field bug) must NOT be told to `install libmpv2 / brew install mpv`: no such
+    rescue exists on Windows. pip/dev on any OS, and frozen macOS/Linux (where
+    the loader's system fall-through makes installing a system libmpv work),
+    keep the original install advice."""
+
+    def _notice(self, qtbot) -> str:
+        with patch(f"{MODULE}.mpv_available", return_value=False):
+            widget = _widget(qtbot)
+            widget.set_source(VIDEO, ENTRIES)
+        return widget._backend_notice_label.text()
+
+    def test_frozen_windows_points_to_log_not_package_manager(self, qtbot, monkeypatch):
+        monkeypatch.setattr(f"{MODULE}.frozen_state", lambda: (True, "C:\\meipass"))
+        monkeypatch.setattr(sys, "platform", "win32")
+        text = self._notice(qtbot)
+        assert "anki_miner.log" in text
+        assert "libmpv2" not in text  # the useless-on-Windows advice is gone
+        assert "brew" not in text
+
+    @pytest.mark.parametrize("platform", ["darwin", "linux"])
+    def test_frozen_non_windows_keeps_install_advice(self, qtbot, monkeypatch, platform):
+        monkeypatch.setattr(f"{MODULE}.frozen_state", lambda: (True, "/meipass"))
+        monkeypatch.setattr(sys, "platform", platform)
+        text = self._notice(qtbot)
+        assert "libmpv2" in text
+        assert "brew" in text
+
+    def test_non_frozen_keeps_install_advice_even_on_windows(self, qtbot, monkeypatch):
+        # A pip install on Windows genuinely can add a system libmpv.
+        monkeypatch.setattr(f"{MODULE}.frozen_state", lambda: (False, None))
+        monkeypatch.setattr(sys, "platform", "win32")
+        text = self._notice(qtbot)
+        assert "libmpv2" in text
+        assert "brew" in text
 
 
 class TestAudioTrackSelection:

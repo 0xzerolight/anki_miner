@@ -539,6 +539,38 @@ jobs:
           install_runtime: false
           cache: true
 
+      - name: Bundle the Vulkan loader next to libmpv (Windows)
+        if: runner.os == 'Windows' && matrix.build_vulkan == '1'
+        shell: pwsh
+        # The vendored libmpv-2.dll has a LOAD-TIME (non-delay) import on
+        # vulkan-1.dll — objdump shows vkGetInstanceProcAddr/vkCreateWin32SurfaceKHR
+        # et al. in the regular Import Table, not a delay table. On a machine
+        # without a Vulkan-capable GPU driver (fresh install / VM / generic display
+        # driver) vulkan-1.dll is absent from System32, so LoadLibrary(libmpv-2.dll)
+        # fails with WinError 126 and the video preview silently degrades to the
+        # "requires mpv" notice — even though we never USE Vulkan (the player forces
+        # vo=libmpv + OpenGL, hwdec=no). windows-latest HAS vulkan-1.dll in System32
+        # (proven by the passing mpv smoke), which is exactly why CI never caught
+        # this. Ship the loader (Apache-2.0, redistributable) next to libmpv-2.dll
+        # at the _MEIPASS root — a loader with zero ICDs is harmless because the
+        # Vulkan VO is never selected. Prefer the pinned LunarG SDK loader; fall
+        # back to the runner's System32 copy; fail closed if neither exists.
+        run: |
+          $ErrorActionPreference = "Stop"
+          $dll = Get-ChildItem -Path $env:VULKAN_SDK -Recurse -Filter vulkan-1.dll -ErrorAction SilentlyContinue |
+                 Where-Object { $_.FullName -notmatch '(?i)\\Bin32\\' } | Select-Object -First 1
+          if (-not $dll) {
+            $sys = Join-Path $env:WINDIR 'System32\vulkan-1.dll'
+            if (Test-Path $sys) { $dll = Get-Item $sys }
+          }
+          if (-not $dll) {
+            Write-Error "vulkan-1.dll not found (VULKAN_SDK=$env:VULKAN_SDK, System32); libmpv-2.dll load-time dep would be missing"
+            exit 1
+          }
+          Copy-Item $dll.FullName vendor\libmpv\ -Force
+          Write-Host "Bundled Vulkan loader from $($dll.FullName); vendor/libmpv/ now:"
+          Get-ChildItem vendor\libmpv
+
       # Build the wheel from the pinned pywhispercpp ref with the Vulkan backend,
       # then repair it EXCLUDING the Vulkan loader. We pass NO_REPAIR=1 so
       # pywhispercpp's own repairwheel step does NOT run — its repairwheel call
