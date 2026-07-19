@@ -206,7 +206,10 @@ class KnownWordsManagerDialog(QDialog):
                     "all %2 entries will be imported.\n\nAdd %3 word(s) to your known list?"
                 ),
                 self._format_display_name(outcome.format_key),
-                outcome.total_entries,
+                # A plain list has no known/unknown split, so its "entries" ARE the
+                # imported words — report the deduplicated count (matching %3), not
+                # the raw line count, which over-states on lists with duplicates.
+                len(outcome.words),
                 len(outcome.words),
             )
         else:
