@@ -152,7 +152,7 @@ def _parse_jpdb(cards: list[Any]) -> KnownWordsImportResult:
         reviews = [r for r in card.get("reviews") or [] if isinstance(r, dict) and "grade" in r]
         if not reviews:
             continue
-        latest = max(reviews, key=lambda r: r.get("timestamp", 0))
+        latest = max(reviews, key=_review_timestamp)
         if latest["grade"] not in _JPDB_EXCLUDED_GRADES:
             words.add(_clean(card["spelling"]))
     return _result("jpdb", words, total)
@@ -214,3 +214,16 @@ def _decode(raw: bytes) -> str:
 
 def _clean(value: Any) -> str:
     return value.strip() if isinstance(value, str) else ""
+
+
+def _review_timestamp(review: dict[str, Any]) -> float:
+    """Sort key for jpdb reviews: the numeric ``timestamp``, else 0.
+
+    A non-numeric ``timestamp`` (a drifted/hand-edited export) is coerced to 0
+    rather than fed to ``max()`` — otherwise comparing a str against the int-0
+    default would raise TypeError and escape the KnownWordsImportError contract
+    as a generic "unexpected error". ``bool`` is an ``int`` subclass and floats
+    fine.
+    """
+    ts = review.get("timestamp", 0)
+    return float(ts) if isinstance(ts, (int, float)) else 0.0

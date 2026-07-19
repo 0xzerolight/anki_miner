@@ -86,6 +86,19 @@ class TestJpdb:
         with pytest.raises(KnownWordsImportError):
             parse_known_words_file(_jpdb_file(tmp_path, [_jpdb_card("言葉", reviews_bad_tail)]))
 
+    def test_non_numeric_timestamp_does_not_crash(self, tmp_path):
+        # A drifted/hand-edited export can carry a non-numeric timestamp; it must
+        # coerce to 0 for the latest-review sort instead of raising TypeError on
+        # the mixed str-vs-int comparison (which would escape the
+        # KnownWordsImportError contract as a generic "unexpected error"). The
+        # numeric review still wins the recency comparison.
+        reviews = [
+            {"timestamp": 100, "grade": "okay"},
+            {"timestamp": "2026-01-01", "grade": "fail"},
+        ]
+        result = parse_known_words_file(_jpdb_file(tmp_path, [_jpdb_card("言葉", reviews)]))
+        assert result.words == frozenset({"言葉"})
+
     def test_bom_prefixed_json_still_detected(self, tmp_path):
         cards = [_jpdb_card("言葉", [{"timestamp": 1, "grade": "okay"}])]
         result = parse_known_words_file(_jpdb_file(tmp_path, cards, bom=True))
