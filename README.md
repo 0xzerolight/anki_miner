@@ -146,7 +146,7 @@ Want another theme added? Suggest in a GitHub Issue.
 
 
 <details>
-<summary><strong>Proper-noun filtering</strong></summary>
+<summary><strong>JMnedict License</strong></summary>
 
 Uses bundled name wordsets derived from [JMnedict](https://www.edrdg.org/enamdict/enamdict_doc.html) (JMdict/EDICT project, EDRDG, CC BY-SA 4.0).
 
