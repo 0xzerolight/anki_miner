@@ -226,17 +226,38 @@ else
     echo "::error::Bundled libmpv not found under $DIST — vendor fetch or spec glob missed"
     find "$DIST" -maxdepth 3 -name '*mpv*' || true
     FAILED+=("mpv")
-  elif ANKI_MINER_MPV_PROBE=1 QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee smoke_mpv.log \
-    && grep -q "MPV_PROBE_OK" smoke_mpv.log; then
-    echo "Found bundled libmpv: $LIBMPV"
-    # Informational: surface any host-only lib creep next to the bundled libmpv
-    # (closure changes show up here in the log before they bite users).
-    find "$DIST" -maxdepth 2 -name '*.so*' 2>/dev/null | grep -E 'asound|pulse|jack|pipewire|libGL|wayland' || true
-    echo "BUNDLED_MPV_PASS"
-    echo "PASS mpv"
   else
-    echo "FAIL mpv"
-    FAILED+=("mpv")
+    mpv_ok=1
+    # Windows: libmpv-2.dll has a LOAD-TIME import on vulkan-1.dll. windows-latest
+    # resolves it from System32, so the frozen probe below passes even when it is
+    # NOT bundled — the probe can't catch a dropped vulkan-1.dll. Assert it ships
+    # in the tree so a bare machine (no Vulkan driver) can still load libmpv.
+    case "$LIBMPV" in
+      *-2.dll)
+        if find "$DIST" -type f -name 'vulkan-1.dll' | grep -q .; then
+          echo "Found bundled Vulkan loader (libmpv-2.dll load-time dep)"
+        else
+          echo "::error::vulkan-1.dll not bundled next to $LIBMPV — libmpv fails to load on machines without a Vulkan driver"
+          mpv_ok=0
+        fi
+        ;;
+    esac
+    if ANKI_MINER_MPV_PROBE=1 QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee smoke_mpv.log \
+      && grep -q "MPV_PROBE_OK" smoke_mpv.log; then
+      echo "Found bundled libmpv: $LIBMPV"
+      # Informational: surface any host-only lib creep next to the bundled libmpv
+      # (closure changes show up here in the log before they bite users).
+      find "$DIST" -maxdepth 2 -name '*.so*' 2>/dev/null | grep -E 'asound|pulse|jack|pipewire|libGL|wayland' || true
+    else
+      mpv_ok=0
+    fi
+    if [ "$mpv_ok" = 1 ]; then
+      echo "BUNDLED_MPV_PASS"
+      echo "PASS mpv"
+    else
+      echo "FAIL mpv"
+      FAILED+=("mpv")
+    fi
   fi
 fi
 echo
