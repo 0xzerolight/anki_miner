@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ctypes.util
 import locale
+import logging
 import os
 import re
 import subprocess
@@ -271,3 +272,117 @@ class TestImportSafety:
             if top_level.search(path.read_text(encoding="utf-8")):
                 offenders.append(str(path.relative_to(PROJECT_ROOT)))
         assert offenders == []
+
+
+class _WinLoadError(OSError):
+    """Stand-in for a Windows ctypes.CDLL OSError: real ``.winerror`` can't be
+    produced on the Linux CI gate, so synthesise the attribute directly."""
+
+    def __init__(self, winerror: int, strerror: str):
+        super().__init__(strerror)
+        self.winerror = winerror
+        self.strerror = strerror
+
+
+def _wrapped_winerror(winerror: int, strerror: str) -> OSError:
+    """python-mpv wraps the ctypes OSError via ``raise OSError(...) from e``; the
+    original (carrying ``.winerror``) survives on ``__cause__``. Reproduce that
+    chain so tests exercise the real diagnostic path."""
+    wrapper = OSError("ctypes.find_library found mpv.dll ..., but ctypes.CDLL could not load it.")
+    wrapper.__cause__ = _WinLoadError(winerror, strerror)
+    return wrapper
+
+
+class TestDiagnostics:
+    """The bundled-DLL-load-failure diagnostic (confirmed field bug: a present
+    libmpv-2.dll whose CDLL load fails with WinError 126 for a missing
+    vulkan-1.dll). python-mpv hides the WinError in its wrapper string; the
+    loader must surface ``exc.__cause__.winerror`` in the log."""
+
+    def test_cause_detail_surfaces_winerror(self):
+        detail = mpv_loader._cause_detail(_wrapped_winerror(126, "The specified module could not be found"))
+        assert "winerror=126" in detail
+        assert "module could not be found" in detail
+
+    def test_cause_detail_empty_without_cause(self):
+        assert mpv_loader._cause_detail(OSError("no chained cause")) == ""
+
+    def test_bundled_failure_logs_winerror(self, monkeypatch, tmp_path, caplog):
+        (tmp_path / "libmpv.so.2").write_bytes(b"")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(
+            mpv_loader,
+            "_import_mpv_with_path",
+            MagicMock(side_effect=_wrapped_winerror(126, "The specified module could not be found")),
+        )
+        # No system libmpv rescues it → final unavailability.
+        monkeypatch.setattr(ctypes.util, "find_library", lambda name: None)
+        with (
+            caplog.at_level(logging.WARNING, logger="anki_miner.utils.mpv_loader"),
+            pytest.raises(mpv_loader.MpvUnavailableError),
+        ):
+            mpv_loader.load_mpv()
+        # The :191 bundled-failure warning now carries the real WinError…
+        assert "winerror=126" in caplog.text
+        # …and the previously-silent final raise leaves a trace naming the bundle.
+        assert "bundled_found=True" in caplog.text
+
+    def test_not_found_path_logs_once_and_names_bundle(self, monkeypatch, caplog):
+        # Not frozen, no bundle, no system libmpv: the "no DLL shipped" hypothesis
+        # (self-built/fork bundle) — previously entirely silent.
+        monkeypatch.setattr(ctypes.util, "find_library", lambda name: None)
+        with caplog.at_level(logging.WARNING, logger="anki_miner.utils.mpv_loader"):
+            assert mpv_loader.mpv_available() is False
+            assert mpv_loader.mpv_available() is False  # cached: must not re-log
+        msg = "libmpv unavailable via system search"
+        assert caplog.text.count(msg) == 1
+        assert "bundled_found=False" in caplog.text
+
+
+class TestWin32Loader:
+    """Direct coverage of the Windows resolution path — previously untested (the
+    other loader tests use the Linux ``libmpv.so.2`` soname and mock
+    ``_import_mpv_with_path``). Runs on the Linux gate via ``sys.platform``
+    monkeypatching; the real dlopen still only executes on Windows."""
+
+    def test_bundled_libmpv_path_win32_prefers_mpv2(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(sys, "platform", "win32")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+        (tmp_path / "mpv-1.dll").write_bytes(b"")
+        (tmp_path / "mpv-2.dll").write_bytes(b"")
+        assert mpv_loader.bundled_libmpv_path() == tmp_path / "mpv-2.dll"
+
+    def test_import_win32_patches_find_library_and_registers_dll_dir(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(sys, "platform", "win32")
+        lib = tmp_path / "libmpv-2.dll"
+        lib.write_bytes(b"")
+        added: list[str] = []
+        # os.add_dll_directory is Windows-only; inject it so the hasattr guard
+        # passes and the call is observable on the Linux gate.
+        monkeypatch.setattr(os, "add_dll_directory", lambda p: added.append(p), raising=False)
+        # Give the loader a controlled `original` find_library: the real one
+        # probes _winapi under the faked win32 platform and blows up on Linux.
+        monkeypatch.setattr(ctypes.util, "find_library", lambda name: f"SENTINEL:{name}")
+
+        # A throwaway `mpv` module that records what find_library resolves DURING
+        # its import — i.e. while the loader's monkeypatch is installed.
+        modpkg = tmp_path / "mpvpkg"
+        modpkg.mkdir()
+        (modpkg / "mpv.py").write_text(
+            "import ctypes.util\n"
+            "seen = {n: ctypes.util.find_library(n) for n in "
+            "('mpv', 'mpv-2.dll', 'libmpv-2.dll', 'zzz-not-mpv')}\n"
+        )
+        monkeypatch.syspath_prepend(str(modpkg))
+
+        original = ctypes.util.find_library
+        module = mpv_loader._import_mpv_with_path(lib)
+
+        assert added == [str(lib.parent)]  # DLL directory registered for transitive deps
+        assert module.seen["mpv"] == str(lib)
+        assert module.seen["mpv-2.dll"] == str(lib)
+        assert module.seen["libmpv-2.dll"] == str(lib)
+        assert module.seen["zzz-not-mpv"] == "SENTINEL:zzz-not-mpv"  # non-mpv names fall through
+        assert ctypes.util.find_library is original  # restored in finally
