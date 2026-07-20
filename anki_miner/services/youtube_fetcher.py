@@ -146,7 +146,10 @@ class YouTubeFetcherService:
         Picks up a config override, the app-managed downloaded copy
         (~/.anki_miner/bin/), a bundled binary, or the bare literal on PATH.
         """
-        return resolve_ytdlp(self._config)
+        try:
+            return resolve_ytdlp(self._config)
+        except FileNotFoundError as exc:
+            raise YtdlpNotFoundError(_YTDLP_MISSING_HINT) from exc
 
     # ------------------------------------------------------------------
     # probe_metadata

@@ -383,13 +383,13 @@ class AnkiMinerConfig:
     youtube_cookies_file: Path | None = None
     youtube_ffmpeg_location: Path | None = None
     # Optional explicit override for the yt-dlp executable. When unset,
-    # anki_miner.utils.ytdlp_resolver falls back to the app-managed downloaded
-    # copy (~/.anki_miner/bin/), a bundled binary, or the bare literal on PATH.
+    # anki_miner.utils.ytdlp_resolver prefers PATH, then a verified app-managed
+    # copy (~/.anki_miner/bin/), a bundled binary, or the bare literal fallback.
     ytdlp_location: Path | None = None
-    # When True, the GUI runs a throttled background yt-dlp self-update on
-    # startup (auto-download to ~/.anki_miner/bin/, kept current). Independent of
-    # check_for_updates (the app updater).
-    auto_update_ytdlp: bool = True
+    # Opt-in: when True, the GUI runs a throttled background yt-dlp self-update
+    # on startup (auto-download to ~/.anki_miner/bin/, kept current). Independent
+    # of check_for_updates (the app updater).
+    auto_update_ytdlp: bool = False
 
     # --- Bundled media tooling ---
     # Optional explicit overrides for the ffmpeg/ffprobe executables. When unset,

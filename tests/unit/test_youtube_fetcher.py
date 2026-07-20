@@ -1960,9 +1960,14 @@ class TestYtdlpResolverIntegration:
     """The fetcher resolves the yt-dlp binary via ytdlp_resolver."""
 
     def test_default_command_uses_bare_literal(self, service: YouTubeFetcherService) -> None:
-        """Under the default test config, cmd[0] is the bare literal 'yt-dlp'."""
+        """With no yt-dlp on PATH and no managed/override binary, cmd[0] falls
+        through to the bare literal 'yt-dlp' (048: prefer-PATH means a real PATH
+        hit would otherwise resolve to its absolute path)."""
         payload = _make_metadata()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with (
+            patch("anki_miner.utils.ytdlp_resolver.shutil.which", return_value=None),
+            patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun,
+        ):
             service.probe_metadata("https://youtu.be/abc123")
         assert mrun.call_args.args[0][0] == "yt-dlp"
 

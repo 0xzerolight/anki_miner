@@ -140,10 +140,10 @@ class TestYouTubeConfig:
         config = AnkiMinerConfig(ytdlp_location=temp_dir / "yt-dlp")
         assert config.ytdlp_location == temp_dir / "yt-dlp"
 
-    def test_auto_update_ytdlp_defaults_true(self):
-        """auto_update_ytdlp defaults to True (background update on)."""
+    def test_auto_update_ytdlp_defaults_false(self):
+        """auto_update_ytdlp is opt-in so startup downloads nothing by default."""
         config = AnkiMinerConfig()
-        assert config.auto_update_ytdlp is True
+        assert config.auto_update_ytdlp is False
 
 
 def test_dictionary_chain_default():
