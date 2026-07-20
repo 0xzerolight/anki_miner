@@ -25,6 +25,7 @@ import importlib.util
 import os
 import subprocess
 import sys
+from enum import Enum, auto
 from pathlib import Path
 
 
@@ -107,9 +108,17 @@ _GGML_CORE_GLOBS = (
     "libggml*.dylib",  # macOS (not shipped, kept for symmetry)
 )
 
-# Guard: ggml_backend_load_all() is called at most once per process. The ggml
-# registry is process-global; a second call is a redundant rescan.
-_GGML_BACKENDS_LOADED = False
+
+class _BackendState(Enum):
+    UNTRIED = auto()
+    SUCCEEDED = auto()
+    FAILED = auto()
+
+
+_GGML_BACKEND_STATES = {
+    "ggml_backend_load_all_from_path": _BackendState.UNTRIED,
+    "ggml_backend_load_all": _BackendState.UNTRIED,
+}
 
 
 def _ggml_lib_search_dirs() -> list[Path]:
@@ -198,24 +207,21 @@ def ensure_ggml_backends_loaded() -> None:
     once, BEFORE any Model construction.
 
     No-op and never raises when: pywhispercpp/ggml-vulkan is absent (dev/CPU wheel),
-    libggml can't be located, or the symbol is missing (a non-DL prebuilt wheel that
-    already self-registers). Idempotent via a module guard (ggml's registry is
-    process-global) — the guard is set on EVERY exit path, including exceptions, so a
-    load failure never thrashes on each subsequent Model construction.
+    libggml can't be located, or both symbols are missing (a non-DL prebuilt wheel
+    that already self-registers). Each loader is attempted at most once: success is
+    memoized separately from failure, and a failed preferred loader falls through
+    to the older no-argument loader.
     """
-    global _GGML_BACKENDS_LOADED
-    if _GGML_BACKENDS_LOADED:
+    if _BackendState.SUCCEEDED in _GGML_BACKEND_STATES.values():
         return
     try:
         vulkan_lib = _find_ggml_vulkan_lib()
         if vulkan_lib is None:
-            _GGML_BACKENDS_LOADED = True  # nothing to load; don't retry every Model
             return
         backend_dir = vulkan_lib.parent
         dirs = _ggml_lib_search_dirs()
         core = _find_ggml_core_lib(dirs)
         if core is None:
-            _GGML_BACKENDS_LOADED = True
             return
 
         import ctypes  # noqa: PLC0415  (module stays importable without pywhispercpp)
@@ -225,21 +231,31 @@ def ensure_ggml_backends_loaded() -> None:
         mode = getattr(ctypes, "RTLD_GLOBAL", 0)
         lib = ctypes.CDLL(str(core), mode=mode) if hasattr(ctypes, "RTLD_GLOBAL") else ctypes.CDLL(str(core))
 
-        fn = getattr(lib, "ggml_backend_load_all_from_path", None)
-        if fn is not None:
-            fn.restype = None
-            fn.argtypes = [ctypes.c_char_p]
-            fn(str(backend_dir).encode("utf-8"))
-        else:
-            # Fallback: older ggml with only the no-arg form (scans exe-dir + cwd).
-            fn0 = getattr(lib, "ggml_backend_load_all", None)
-            if fn0 is not None:
-                fn0.restype = None
-                fn0.argtypes = []
-                fn0()
-        _GGML_BACKENDS_LOADED = True
+        loaders: tuple[tuple[str, list[object], tuple[object, ...]], ...] = (
+            (
+                "ggml_backend_load_all_from_path",
+                [ctypes.c_char_p],
+                (str(backend_dir).encode("utf-8"),),
+            ),
+            ("ggml_backend_load_all", [], ()),
+        )
+        for name, argtypes, args in loaders:
+            if _GGML_BACKEND_STATES[name] is not _BackendState.UNTRIED:
+                continue
+            fn = getattr(lib, name, None)
+            if fn is None:
+                continue
+            try:
+                fn.restype = None
+                fn.argtypes = argtypes
+                fn(*args)
+            except Exception:  # noqa: BLE001 — try the next backend loader
+                _GGML_BACKEND_STATES[name] = _BackendState.FAILED
+                continue
+            _GGML_BACKEND_STATES[name] = _BackendState.SUCCEEDED
+            return
     except Exception:  # noqa: BLE001 — a load failure must degrade to CPU/CT2, never abort
-        _GGML_BACKENDS_LOADED = True  # do not thrash on every Model construction
+        return
 
 
 def whisper_cpp_available() -> bool:

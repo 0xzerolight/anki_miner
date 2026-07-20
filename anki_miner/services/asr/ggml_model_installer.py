@@ -50,6 +50,10 @@ __all__ = [
 #: this value (comfortably above 1.03 GB, still guarding a runaway response).
 _MAX_BYTES = 1300 * 1024 * 1024
 
+# whisper.cpp's custom legacy GGML files write uint32 0x67676d6c first,
+# represented as these bytes on supported little-endian platforms.
+_GGML_MAGIC = b"lmgg"
+
 
 @dataclass(frozen=True)
 class _GgmlSpec:
@@ -114,27 +118,31 @@ def vad_model_path(asr_models_root: Path) -> Path:
     return ggml_models_root(asr_models_root) / _VAD_SPEC.filename
 
 
-def _is_present(path: Path) -> bool:
-    """Return True if *path* is a non-empty regular file (complete download).
+def _is_present(path: Path, min_size_bytes: int) -> bool:
+    """Return True if *path* has the expected GGML header and minimum size.
 
-    A zero-byte file is treated as absent: an interrupted external copy can
-    leave a truncated stub that would then fail at load time. ``install`` always
-    promotes atomically, so in normal operation this is defense-in-depth.
+    Truncated files and non-model responses are treated as absent so the native
+    loader never sees them. ``install`` promotes atomically, so in normal
+    operation this is defense-in-depth for externally copied files.
     """
     try:
-        return path.stat().st_size > 0
+        if path.stat().st_size < min_size_bytes:
+            return False
+        with path.open("rb") as model_file:
+            return model_file.read(len(_GGML_MAGIC)) == _GGML_MAGIC
     except OSError:
         return False
 
 
 def is_ggml_downloaded(asr_model: str, asr_models_root: Path) -> bool:
     """Return True if *asr_model*'s acoustic ggml file is present and complete."""
-    return _is_present(ggml_model_path(asr_model, asr_models_root))
+    spec = _acoustic_spec(asr_model)
+    return _is_present(ggml_models_root(asr_models_root) / spec.filename, spec.size_bytes)
 
 
 def is_vad_downloaded(asr_models_root: Path) -> bool:
     """Return True if the shared Silero VAD ggml file is present and complete."""
-    return _is_present(vad_model_path(asr_models_root))
+    return _is_present(vad_model_path(asr_models_root), _VAD_SPEC.size_bytes)
 
 
 def install_ggml_model(
@@ -209,7 +217,7 @@ def _install_spec(
     target = ggml_models_root(asr_models_root) / spec.filename
 
     # Skip when already present and complete; nothing to download.
-    if _is_present(target):
+    if _is_present(target, spec.size_bytes):
         return target
 
     if cancel_event is not None and cancel_event.is_set():

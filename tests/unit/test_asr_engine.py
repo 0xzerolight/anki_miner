@@ -390,3 +390,38 @@ def test_find_ggml_core_lib_picks_auditwheel_hashed_dispatcher(tmp_path):
     core = _engine._find_ggml_core_lib([tmp_path])
     assert core is not None
     assert core.name == "libggml-9964a741.so.0.9.8"
+
+
+def test_failed_backend_not_memoized_as_success(monkeypatch, tmp_path):
+    """A failed loader is terminally FAILED; selection advances to fallback."""
+    import ctypes
+
+    from anki_miner.services.asr import _engine
+
+    states = dict.fromkeys(_engine._GGML_BACKEND_STATES, _engine._BackendState.UNTRIED)
+    monkeypatch.setattr(_engine, "_GGML_BACKEND_STATES", states)
+    monkeypatch.setattr(_engine, "_find_ggml_vulkan_lib", lambda: tmp_path / "libggml-vulkan.so")
+    monkeypatch.setattr(_engine, "_ggml_lib_search_dirs", lambda: [tmp_path])
+    monkeypatch.setattr(_engine, "_find_ggml_core_lib", lambda _dirs: tmp_path / "libggml.so")
+
+    calls = []
+
+    def load_from_path(_path):
+        calls.append("from_path")
+        raise OSError("broken backend")
+
+    def load_fallback():
+        calls.append("fallback")
+
+    class FakeLib:
+        ggml_backend_load_all_from_path = staticmethod(load_from_path)
+        ggml_backend_load_all = staticmethod(load_fallback)
+
+    monkeypatch.setattr(ctypes, "CDLL", lambda *args, **kwargs: FakeLib())
+
+    _engine.ensure_ggml_backends_loaded()
+
+    assert states["ggml_backend_load_all_from_path"] is _engine._BackendState.FAILED
+    assert states["ggml_backend_load_all"] is _engine._BackendState.SUCCEEDED
+    _engine.ensure_ggml_backends_loaded()
+    assert calls == ["from_path", "fallback"]
