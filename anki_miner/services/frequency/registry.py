@@ -23,6 +23,7 @@ from anki_miner.services.frequency.providers.indexed_freq_provider import (
     IndexedFreqProvider,
 )
 from anki_miner.services.frequency.storage import SCHEMA_VERSION
+from anki_miner.utils.atomic_io import reconcile_backups_in
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,13 @@ class FrequencySourceRegistry:
         self._sources: dict[str, FreqSourceMeta] = {}
 
     def load(self) -> None:
-        self._sources = scan_index_root(self._root, self._parse_meta, warn_label="frequency source")
+        reconcile_backups_in(self._root)
+        self._sources = scan_index_root(
+            self._root,
+            self._parse_meta,
+            child_prefilter=lambda child: ".bak-" not in child.name,
+            warn_label="frequency source",
+        )
 
     def _parse_meta(self, child: Path, db: Path, meta: dict[str, str]) -> FreqSourceMeta:
         try:

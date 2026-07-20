@@ -9,16 +9,18 @@ empty dictionary/frequency/audio-pack slot.
 
 This module owns *only* that backup/rename/move/restore/cleanup skeleton. Each
 caller keeps its own pre-checks (e.g. the "already exists and not overwrite"
-``SetupError``) at the call site and passes its exact mover (``shutil.move`` or
-``os.replace``) as an argument.
+``SetupError``) at the call site.
 """
 
 from __future__ import annotations
 
+import errno
 import shutil
-from datetime import UTC, datetime
+import tempfile
 from pathlib import Path
 from typing import Callable
+
+from anki_miner.utils.atomic_io import atomic_replace_dir
 
 
 def promote_staged_dir(
@@ -33,30 +35,29 @@ def promote_staged_dir(
     Args:
         staging: The freshly-built staging directory to move into place.
         final: The canonical destination path.
-        mover: The move primitive (``shutil.move`` or ``os.replace``); invoked
-            as ``mover(str(staging), str(final))``.
+        mover: Compatibility move primitive, used for a cross-filesystem
+            transfer or if a caller reaches the existing-final path with
+            ``overwrite=False``.
         overwrite: When ``final`` already exists, replace it (back up first,
             restore on failure). Callers are responsible for rejecting an
             unwanted overwrite *before* calling this helper.
 
     Raises:
-        Whatever ``mover`` raises. On failure while replacing an existing
-        ``final``, the backup is restored before the exception propagates.
+        Whatever the placement primitive raises. On replacement failure, the
+        backup is restored before the exception propagates.
     """
-    if final.exists() and overwrite:
-        backup = final.with_name(final.name + ".bak-" + datetime.now(UTC).strftime("%Y%m%d%H%M%S%f"))
-        final.rename(backup)
-        try:
-            mover(str(staging), str(final))
-        except Exception:
-            # Restore the backup so the user is not left with an empty slot.
-            # If the mover partially populated final (cross-fs copy interrupted),
-            # wipe the partial dir before restoring so the rename is unambiguous.
-            if final.exists():
-                shutil.rmtree(final, ignore_errors=True)
-            if not final.exists():
-                backup.rename(final)
-            raise
-        shutil.rmtree(backup, ignore_errors=True)
-    else:
+    if final.exists() and not overwrite:
         mover(str(staging), str(final))
+    else:
+        try:
+            atomic_replace_dir(staging, final)
+        except OSError as exc:
+            if exc.errno != errno.EXDEV:
+                raise
+            local_parent = Path(tempfile.mkdtemp(prefix=f".staging-{final.name}-", dir=final.parent))
+            try:
+                local_staging = local_parent / final.name
+                mover(str(staging), str(local_staging))
+                atomic_replace_dir(local_staging, final)
+            finally:
+                shutil.rmtree(local_parent, ignore_errors=True)

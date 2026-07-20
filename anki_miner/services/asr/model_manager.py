@@ -12,6 +12,7 @@ import tempfile
 from pathlib import Path
 
 from anki_miner.services.asr import _engine
+from anki_miner.utils.atomic_io import atomic_replace_dir, reconcile_backups_in
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,7 @@ def is_downloaded(name: str, models_root: Path) -> bool:
     Returns:
         ``True`` if a complete model is present, ``False`` otherwise.
     """
+    reconcile_backups_in(models_root)
     if not models_root.exists():
         return False
     for candidate in models_root.rglob("model.bin"):
@@ -67,6 +69,8 @@ def is_downloaded(name: str, models_root: Path) -> bool:
             # model.bin sitting directly in models_root itself — not a valid layout
             continue
         rel_parts = candidate.relative_to(models_root).parts
+        if any(".bak-" in part for part in rel_parts):
+            continue
         if not any(_name_matches(part, name) for part in rel_parts):
             continue
         # Integrity: non-empty payload + required metadata sibling present.
@@ -120,10 +124,9 @@ def download(name: str, models_root: Path, cancel_event=None) -> None:
         # Promote each top-level staged entry into models_root atomically.
         for entry in staging.iterdir():
             dest = models_root / entry.name
-            if dest.is_dir():
-                shutil.rmtree(dest)
-            elif dest.exists():
-                dest.unlink()
-            os.replace(entry, dest)
+            if entry.is_dir():
+                atomic_replace_dir(entry, dest)
+            else:
+                os.replace(entry, dest)
     finally:
         shutil.rmtree(staging, ignore_errors=True)

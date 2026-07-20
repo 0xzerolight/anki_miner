@@ -111,6 +111,15 @@ class TestIsInstalled:
         (tmp_path / "onnxruntime" / "__init__.py").write_bytes(b"x")
         assert onnx_pack_installer.is_installed(tmp_path) is True
 
+    def test_recovers_dangling_backup(self, tmp_path):
+        backup = tmp_path / "onnxruntime.bak-20260721000000000001"
+        backup.mkdir()
+        (backup / "__init__.py").write_bytes(b"x")
+
+        assert onnx_pack_installer.is_installed(tmp_path) is True
+        assert (tmp_path / "onnxruntime").is_dir()
+        assert not backup.exists()
+
 
 class TestInstall:
     def test_happy_path_extracts_tree(self, tmp_path, monkeypatch):
@@ -167,6 +176,28 @@ class TestInstall:
         onnx_pack_installer.install_onnx_pack(tmp_path)
         assert not (tmp_path / "onnxruntime" / "stale.py").exists()
         assert (tmp_path / "onnxruntime" / "__init__.py").exists()
+
+    def test_reinstall_fault_preserves_existing(self, tmp_path, monkeypatch):
+        import anki_miner.utils.atomic_io as atomic_io
+
+        target = tmp_path / "onnxruntime"
+        target.mkdir()
+        (target / "__init__.py").write_bytes(b"old package")
+        spec = _force_supported_linux(monkeypatch)
+        _patch_download(monkeypatch, spec)
+        real_replace = atomic_io.os.replace
+
+        def fail_promotion(src, dst):
+            if Path(src).parent.name.startswith(".staging-onnx-") and Path(dst) == target:
+                raise OSError("promotion fault")
+            return real_replace(src, dst)
+
+        monkeypatch.setattr(atomic_io.os, "replace", fail_promotion)
+
+        with pytest.raises(OSError, match="promotion fault"):
+            onnx_pack_installer.install_onnx_pack(tmp_path)
+
+        assert (target / "__init__.py").read_bytes() == b"old package"
 
     def test_sha_mismatch_raises_and_promotes_nothing(self, tmp_path, monkeypatch):
         spec = _force_supported_linux(monkeypatch, sha_real=False)  # keep pinned sha

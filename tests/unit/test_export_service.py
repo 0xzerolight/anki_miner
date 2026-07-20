@@ -364,7 +364,7 @@ class TestAtomicWriteDelimited:
         out.write_text(original_content, encoding="utf-8")
 
         with (
-            patch("anki_miner.services.export_service.os.replace", side_effect=OSError("disk full")),
+            patch("anki_miner.utils.atomic_io.os.replace", side_effect=OSError("disk full")),
             pytest.raises(OSError, match="disk full"),
         ):
             export_service.export_csv(sample_words, out)
@@ -396,6 +396,15 @@ class TestAtomicWriteDelimited:
         tmp_file = out.with_suffix(out.suffix + ".tmp")
         assert not tmp_file.exists()
 
+    def test_uses_unique_temp_without_clobbering_other_writer(self, export_service, sample_words, tmp_path):
+        out = tmp_path / "words.csv"
+        other_writer_tmp = out.with_suffix(out.suffix + ".tmp")
+        other_writer_tmp.write_bytes(b"other writer")
+
+        export_service.export_csv(sample_words, out)
+
+        assert other_writer_tmp.read_bytes() == b"other writer"
+
 
 class TestAtomicWriteVocabList:
     """export_vocab_list must not corrupt a pre-existing destination file if the
@@ -412,7 +421,7 @@ class TestAtomicWriteVocabList:
         original_write_text = out.__class__.write_text
 
         def failing_write_text(self, content, **kwargs):
-            if self.suffix.endswith(".tmp"):
+            if self != out:
                 raise OSError("permission denied")
             return original_write_text(self, content, **kwargs)
 
@@ -443,3 +452,12 @@ class TestAtomicWriteVocabList:
 
         tmp_file = out.with_suffix(out.suffix + ".tmp")
         assert not tmp_file.exists()
+
+    def test_uses_unique_temp_without_clobbering_other_writer(self, export_service, sample_words, tmp_path):
+        out = tmp_path / "vocab.txt"
+        other_writer_tmp = out.with_suffix(out.suffix + ".tmp")
+        other_writer_tmp.write_bytes(b"other writer")
+
+        export_service.export_vocab_list(sample_words, out, fmt="plain")
+
+        assert other_writer_tmp.read_bytes() == b"other writer"

@@ -77,6 +77,26 @@ def test_is_downloaded_true_when_model_bin_present(tmp_path):
     assert is_downloaded("small", tmp_path) is True
 
 
+def test_is_downloaded_recovers_dangling_backup(tmp_path):
+    model_dir = tmp_path / "models--Systran--faster-whisper-small"
+    backup = model_dir.with_name(model_dir.name + ".bak-20260721000000000001")
+    _write_model(backup / "snapshots" / "abc123")
+
+    assert is_downloaded("small", tmp_path) is True
+    assert model_dir.is_dir()
+    assert not backup.exists()
+
+
+def test_is_downloaded_ignores_complete_model_below_backup_component(tmp_path):
+    canonical = tmp_path / "cache"
+    canonical.mkdir()
+    (canonical / "partial").write_bytes(b"incomplete")
+    backup = tmp_path / "cache.bak-2026-07-21T00:00:00"
+    _write_model(backup / "faster-whisper-small")
+
+    assert is_downloaded("small", tmp_path) is False
+
+
 def test_is_downloaded_true_model_bin_directly_in_subdir(tmp_path):
     """Returns True even with a flat layout (model.bin one level under models_root)."""
     subdir = tmp_path / "faster-whisper-large-v3"
@@ -210,6 +230,36 @@ def test_download_promotes_staged_model_into_models_root(monkeypatch, tmp_path):
 
     assert is_downloaded("small", tmp_path) is True
     assert not any(p.name.startswith(".staging-") for p in tmp_path.iterdir())
+
+
+def test_dir_install_fault_leaves_old_target_intact(monkeypatch, tmp_path):
+    dest = tmp_path / "models--Systran--faster-whisper-small"
+    old_snapshot = dest / "snapshots" / "old"
+    old_snapshot.mkdir(parents=True)
+    (old_snapshot / "model.bin").write_bytes(b"old model")
+    (old_snapshot / "config.json").write_bytes(b"old config")
+
+    def fake_download_fn(name, *, cache_dir):
+        snap = Path(cache_dir) / f"models--Systran--faster-whisper-{name}" / "snapshots" / "new"
+        snap.mkdir(parents=True)
+        (snap / "model.bin").write_bytes(b"new model")
+        (snap / "config.json").write_bytes(b"new config")
+
+    real_replace = model_manager.os.replace
+
+    def fail_promotion(src, dst):
+        if Path(src).parent.name.startswith(".staging-small-") and Path(dst) == dest:
+            raise OSError("promotion fault")
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(model_manager._engine, "get_download_fn", lambda: fake_download_fn)
+    monkeypatch.setattr(model_manager.os, "replace", fail_promotion)
+
+    with pytest.raises(OSError, match="promotion fault"):
+        download("small", tmp_path)
+
+    assert (old_snapshot / "model.bin").read_bytes() == b"old model"
+    assert (old_snapshot / "config.json").read_bytes() == b"old config"
 
 
 def test_download_leaves_models_root_clean_on_failure(monkeypatch, tmp_path):

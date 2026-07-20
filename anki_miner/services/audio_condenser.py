@@ -46,6 +46,7 @@ import pysubs2
 
 from anki_miner.services.asr.srt_writer import segments_to_srt
 from anki_miner.services.media_extractor import MediaExtractorService
+from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES, list_subtitle_streams
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.file_pairing import find_sibling_subtitle, resolve_output_path
@@ -249,7 +250,8 @@ def write_condensed_lrc(events: list[Event], path: str | Path) -> None:
     for start, end, text in events:
         lines.append(f"[{_format_lrc_timestamp(start)}]{text}")
         lines.append(f"[{_format_lrc_timestamp(end)}]")
-    Path(path).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    with atomic_write_path(Path(path)) as staged:
+        staged.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _format_lrc_timestamp(ms: int) -> str:
@@ -301,6 +303,10 @@ class EncoderUnavailableError(Exception):
     queue **once** (every file would hit the same missing encoder) instead of
     grinding through N identical failures.
     """
+
+
+class _CondenseOutputIncomplete(Exception):
+    """Internal control flow: discard a failed/cancelled staged output."""
 
 
 def build_aselect_graph(periods: list[Period]) -> str:
@@ -459,50 +465,48 @@ class AudioCondenserService:
 
             global_index = self.extractor._resolve_audio_track_global_index(media, audio_track_override)
 
-            cmd = [
-                resolve_ffmpeg(self.config),
-                "-y",
-                "-hide_banner",
-                "-nostdin",
-                "-progress",
-                "pipe:1",
-                "-i",
-                str(media),
-            ]
-            if global_index is not None:
-                cmd += ["-map", f"0:{global_index}"]
-            else:
-                # Untagged single-track raws: mirror _extract_audio's 0:a:0 fallback.
-                cmd += ["-map", "0:a:0"]
-            cmd += ["-vn", "-sn", "-dn", "-filter_script:a", str(graph_path), "-c:a", encoder]
-            if uses_bitrate:
-                cmd += ["-b:a", f"{bitrate_kbps}k"]
-            if downmix:
-                cmd += ["-ac", "2"]
-            cmd.append(str(out_audio))
+            try:
+                with atomic_write_path(out_audio) as staged_audio:
+                    cmd = [
+                        resolve_ffmpeg(self.config),
+                        "-y",
+                        "-hide_banner",
+                        "-nostdin",
+                        "-progress",
+                        "pipe:1",
+                        "-i",
+                        str(media),
+                    ]
+                    if global_index is not None:
+                        cmd += ["-map", f"0:{global_index}"]
+                    else:
+                        # Untagged single-track raws: mirror _extract_audio's 0:a:0 fallback.
+                        cmd += ["-map", "0:a:0"]
+                    cmd += ["-vn", "-sn", "-dn", "-filter_script:a", str(graph_path), "-c:a", encoder]
+                    if uses_bitrate:
+                        cmd += ["-b:a", f"{bitrate_kbps}k"]
+                    if downmix:
+                        cmd += ["-ac", "2"]
+                    cmd.append(str(staged_audio))
 
-            total_ms = sum(end - start for start, end in periods)
-            # Generous ceiling: encoding a condensed track is far faster than
-            # real time, but the input still has to be fully decoded, so scale to
-            # the kept duration with a floor for tiny selections.
-            timeout = max(600.0, total_ms / 1000 * 4)
+                    total_ms = sum(end - start for start, end in periods)
+                    # Generous ceiling: encoding a condensed track is far faster than
+                    # real time, but the input still has to be fully decoded, so scale to
+                    # the kept duration with a floor for tiny selections.
+                    timeout = max(600.0, total_ms / 1000 * 4)
 
-            ok = self._run_streaming(
-                cmd,
-                total_period_ms=total_ms,
-                timeout=timeout,
-                progress_cb=progress_cb,
-                cancel_event=cancel_event,
-            )
-            if not ok:
-                # Failure/cancel: ffmpeg's ``-y`` may have left a truncated
-                # ``<stem>_condensed.mp3``. Drop it so the next run's skip gate
-                # (``out_audio.exists() and not overwrite``) doesn't mistake the
-                # corrupt partial for a finished condense. Mirrors the
-                # partial-cleanup in extract_embedded_subtitle.
-                with contextlib.suppress(OSError):
-                    out_audio.unlink(missing_ok=True)
-            return ok
+                    ok = self._run_streaming(
+                        cmd,
+                        total_period_ms=total_ms,
+                        timeout=timeout,
+                        progress_cb=progress_cb,
+                        cancel_event=cancel_event,
+                    )
+                    if not ok:
+                        raise _CondenseOutputIncomplete
+            except _CondenseOutputIncomplete:
+                return False
+            return True
         finally:
             # The graph file is the ONLY temp this service owns (extracted subs
             # belong to the caller). Clean it on every path.

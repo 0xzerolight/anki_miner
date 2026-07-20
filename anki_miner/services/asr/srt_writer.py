@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pysubs2
 
+from anki_miner.utils.atomic_io import atomic_write_path
+
 
 def segments_to_srt(segments: list[tuple[float, float, str]], out_path: Path) -> None:
     """Write *segments* to *out_path* in SRT format.
@@ -32,4 +34,5 @@ def segments_to_srt(segments: list[tuple[float, float, str]], out_path: Path) ->
             continue
         event = pysubs2.SSAEvent(start=start_ms, end=end_ms, text=text)
         subs.append(event)
-    subs.save(str(out_path), format_="srt")
+    with atomic_write_path(out_path) as staged:
+        subs.save(str(staged), format_="srt")
