@@ -35,7 +35,7 @@ def home(tmp_path, monkeypatch):
 
 def _releases_json(tag="2024.03.10", asset_names=None):
     if asset_names is None:
-        asset_names = ["yt-dlp", "yt-dlp.exe", "yt-dlp_macos"]
+        asset_names = ["yt-dlp", "yt-dlp.exe", "yt-dlp_macos", "SHA2-256SUMS"]
     return {
         "tag_name": tag,
         "html_url": "https://github.com/yt-dlp/yt-dlp/releases/tag/" + tag,
@@ -50,12 +50,19 @@ def _releases_json(tag="2024.03.10", asset_names=None):
 
 
 class _FakeResponse(io.BytesIO):
+    def __init__(self, body, final_url="https://objects.githubusercontent.com/yt-dlp-release-asset"):
+        super().__init__(body)
+        self._final_url = final_url
+
     def __enter__(self):
         return self
 
     def __exit__(self, *a):
         self.close()
         return False
+
+    def geturl(self):
+        return self._final_url
 
 
 def _fake_urlopen_json(payload):
@@ -144,6 +151,15 @@ class TestLatestVersionAndAsset:
         updater = YtdlpUpdater(config)
         version, url = updater.latest_version_and_asset()
         # Version still parses, but the off-host URL must be dropped.
+        assert version == "2024.03.10"
+        assert url is None
+
+    def test_missing_sums_manifest_rejects_asset(self, config, home, monkeypatch):
+        monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
+        payload = _releases_json(asset_names=["yt-dlp"])
+        monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", _fake_urlopen_json(payload))
+        updater = YtdlpUpdater(config)
+        version, url = updater.latest_version_and_asset()
         assert version == "2024.03.10"
         assert url is None
 
@@ -295,7 +311,13 @@ class TestCheckAndUpdate:
 
 class TestDownloadAndInstall:
     def _fake_body(self, monkeypatch, data: bytes):
+        import hashlib
+
+        manifest = f"{hashlib.sha256(data).hexdigest()}  yt-dlp\n".encode()
+
         def _open(request, timeout=None):  # noqa: ARG001
+            if request.full_url.endswith("/SHA2-256SUMS"):
+                return _FakeResponse(manifest)
             return _FakeResponse(data)
 
         monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", _open)
@@ -304,7 +326,10 @@ class TestDownloadAndInstall:
         monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
         self._fake_body(monkeypatch, b"x" * (2 * 1024 * 1024))
         updater = YtdlpUpdater(config)
-        dest = updater._download_and_install("https://github.com/x/yt-dlp", "2024.03.10")
+        dest = updater._download_and_install(
+            "https://github.com/yt-dlp/yt-dlp/releases/download/2024.03.10/yt-dlp",
+            "2024.03.10",
+        )
         assert dest.exists()
         assert dest.read_bytes() == b"x" * (2 * 1024 * 1024)
         assert os.access(dest, os.X_OK)
@@ -316,7 +341,10 @@ class TestDownloadAndInstall:
         self._fake_body(monkeypatch, b"tiny")
         updater = YtdlpUpdater(config)
         with pytest.raises(ValueError):
-            updater._download_and_install("https://github.com/x/yt-dlp", "2024.03.10")
+            updater._download_and_install(
+                "https://github.com/yt-dlp/yt-dlp/releases/download/2024.03.10/yt-dlp",
+                "2024.03.10",
+            )
         # Partial/garbage cleaned up; nothing installed.
         assert not (updater.download_dir() / "yt-dlp").exists()
         assert list(updater.download_dir().glob("*.tmp")) == []
@@ -334,10 +362,16 @@ class TestDownloadAndInstall:
             def read(self, *a):
                 raise OSError("connection reset")
 
+            def geturl(self):
+                return "https://objects.githubusercontent.com/yt-dlp-release-asset"
+
         monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", lambda *a, **k: _Broken())
         updater = YtdlpUpdater(config)
         with pytest.raises(OSError):
-            updater._download_and_install("https://github.com/x/yt-dlp", "2024.03.10")
+            updater._download_and_install(
+                "https://github.com/yt-dlp/yt-dlp/releases/download/2024.03.10/yt-dlp",
+                "2024.03.10",
+            )
         assert list(updater.download_dir().glob("*.tmp")) == []
 
     def test_cancel_mid_download_cleans_up(self, config, home, monkeypatch):
@@ -345,6 +379,9 @@ class TestDownloadAndInstall:
         self._fake_body(monkeypatch, b"x" * (2 * 1024 * 1024))
         updater = YtdlpUpdater(config, cancel=lambda: True)
         with pytest.raises(RuntimeError):
-            updater._download_and_install("https://github.com/x/yt-dlp", "2024.03.10")
+            updater._download_and_install(
+                "https://github.com/yt-dlp/yt-dlp/releases/download/2024.03.10/yt-dlp",
+                "2024.03.10",
+            )
         assert not (updater.download_dir() / "yt-dlp").exists()
         assert list(updater.download_dir().glob("*.tmp")) == []

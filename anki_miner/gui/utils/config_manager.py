@@ -42,8 +42,9 @@ class GUIConfigManager:
     # the marker: on the LOAD path a config written under schema < 2 with no
     # enabled name wordsets is seeded to the default-ON set (see
     # _migrate_dict). The three chain rebuilds remain permanent deserializers,
-    # not version shims, and are unaffected.
-    CONFIG_SCHEMA_VERSION = 2
+    # not version shims, and are unaffected. Version 3 disables the legacy
+    # default-ON yt-dlp updater once; a v3 config may explicitly opt back in.
+    CONFIG_SCHEMA_VERSION = 3
 
     @classmethod
     def save_config(cls, config: AnkiMinerConfig) -> None:
@@ -117,9 +118,15 @@ class GUIConfigManager:
         with path.open("r", encoding="utf-8") as f:
             config_dict = json.load(f)
 
-        # LOAD path seeds the default-ON name wordsets for pre-v2 configs; the
-        # import path (import_config) calls _migrate_dict without this flag.
-        return AnkiMinerConfig(**cls._migrate_dict(config_dict, seed_wordsets=True))
+        # LOAD path runs schema migrations for existing gui_config.json files;
+        # the import path calls _migrate_dict without these load-only flags.
+        return AnkiMinerConfig(
+            **cls._migrate_dict(
+                config_dict,
+                seed_wordsets=True,
+                disable_legacy_ytdlp_update=True,
+            )
+        )
 
     @classmethod
     def _migrate_dict(
@@ -128,6 +135,7 @@ class GUIConfigManager:
         *,
         backfill_anki_fields: bool = True,
         seed_wordsets: bool = False,
+        disable_legacy_ytdlp_update: bool = False,
     ) -> dict[str, Any]:
         """Run the full pre-construction migration pipeline on a raw JSON dict.
 
@@ -149,6 +157,9 @@ class GUIConfigManager:
                 The import path leaves it False: an imported settings file
                 carries no schema marker, so a deliberate all-off export must
                 not be force-re-enabled here.
+            disable_legacy_ytdlp_update: When True (LOAD path only), force the
+                updater off for configs written under schema < 3. Schema 3+
+                preserves an explicit opt-in.
         """
         # Convert string paths back to Path objects
         config_dict = cls._strings_to_paths(config_dict)
@@ -183,6 +194,12 @@ class GUIConfigManager:
             and not config_dict.get("excluded_wordsets")
         ):
             config_dict["excluded_wordsets"] = create_default_config().excluded_wordsets
+
+        # P0 containment (048): pre-v3 files serialized the old default-ON
+        # updater choice. Force it off once; after a v3 save, a deliberate user
+        # opt-in remains true on later loads.
+        if disable_legacy_ytdlp_update and config_dict.get("config_schema_version", 0) < 3:
+            config_dict["auto_update_ytdlp"] = False
 
         # Drop the schema-version marker (see CONFIG_SCHEMA_VERSION): a JSON-
         # only key, never a dataclass field. A missing marker means the file

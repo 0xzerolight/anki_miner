@@ -4,14 +4,15 @@ Mirrors :mod:`anki_miner.services.update_checker`: ``urllib.request`` with a
 timeout + User-Agent header, a GitHub URL allowlist, ``packaging``-based version
 comparison, and a "returns a result / never raises" contract.
 
-The binary is installed into ``~/.anki_miner/bin/`` (see
-:mod:`anki_miner.utils.ytdlp_resolver`, which prefers that copy). The YouTube
-fetcher then runs that managed binary instead of relying on a PATH install.
+The binary is installed into ``~/.anki_miner/bin/`` with a verification receipt
+(see :mod:`anki_miner.utils.ytdlp_resolver`). The resolver prefers an explicit
+PATH install, then uses the managed binary only while its receipt still matches.
 """
 
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import logging
 import os
@@ -41,6 +42,9 @@ _ASSET_BY_PLATFORM: dict[str, str] = {
     "darwin": "yt-dlp_macos",
 }
 
+_SUMS_ASSET_NAME = "SHA2-256SUMS"
+_RELEASE_DOWNLOAD_PREFIX = "/yt-dlp/yt-dlp/releases/download/"
+
 # Allowlist for URLs we contact / download from. Only HTTPS on these hosts is
 # accepted; everything else is fail-closed. (Mirrors update_checker's allowlist —
 # copied rather than imported to keep the modules decoupled.)
@@ -69,6 +73,61 @@ def _validate_github_url(url: str) -> bool:
     except ValueError:
         return False
     return parts.scheme == "https" and parts.netloc.lower() in _GITHUB_URL_ALLOWLIST
+
+
+def _release_asset_url(tag: str, asset_name: str) -> str:
+    """Return the canonical download URL for one yt-dlp release asset."""
+    quoted_tag = urllib.parse.quote(tag, safe="")
+    quoted_name = urllib.parse.quote(asset_name, safe="")
+    return f"https://github.com{_RELEASE_DOWNLOAD_PREFIX}{quoted_tag}/{quoted_name}"
+
+
+def _release_tag_from_asset_url(url: str, asset_name: str) -> str | None:
+    """Extract a tag only from the exact yt-dlp repo release URL shape."""
+    if not isinstance(url, str):
+        return None
+    try:
+        parts = urllib.parse.urlsplit(url)
+    except ValueError:
+        return None
+    suffix = f"/{urllib.parse.quote(asset_name, safe='')}"
+    if (
+        parts.scheme != "https"
+        or parts.netloc.lower() != "github.com"
+        or parts.query
+        or parts.fragment
+        or not parts.path.startswith(_RELEASE_DOWNLOAD_PREFIX)
+        or not parts.path.endswith(suffix)
+    ):
+        return None
+    quoted_tag = parts.path[len(_RELEASE_DOWNLOAD_PREFIX) : -len(suffix)]
+    if not quoted_tag or "/" in quoted_tag:
+        return None
+    tag = urllib.parse.unquote(quoted_tag)
+    return tag if _release_asset_url(tag, asset_name) == url else None
+
+
+def _manifest_sha256(manifest: bytes, asset_name: str) -> str:
+    """Return the unique valid SHA-256 entry for *asset_name*, or raise."""
+    entries: list[str] = []
+    for line in manifest.decode("utf-8").splitlines():
+        fields = line.strip().split(maxsplit=1)
+        if len(fields) != 2:
+            continue
+        filename = fields[1]
+        if filename.startswith("*"):
+            filename = filename[1:]
+        if filename == asset_name:
+            entries.append(fields[0].lower())
+
+    if not entries:
+        raise ValueError(f"{_SUMS_ASSET_NAME} has no entry for {asset_name!r}")
+    if len(entries) != 1:
+        raise ValueError(f"{_SUMS_ASSET_NAME} has duplicate entries for {asset_name!r}")
+    expected = entries[0]
+    if len(expected) != 64 or any(char not in "0123456789abcdef" for char in expected):
+        raise ValueError(f"{_SUMS_ASSET_NAME} has an invalid SHA-256 for {asset_name!r}")
+    return expected
 
 
 @dataclass
@@ -152,9 +211,10 @@ class YtdlpUpdater:
     def latest_version_and_asset(self) -> tuple[str | None, str | None]:
         """Return ``(latest_version, asset_download_url)`` from GitHub releases.
 
-        Picks the per-OS asset and validates its URL against the allowlist. Any
-        failure (network, parse, off-host) yields ``(None, None)`` (or a parsed
-        version with a None URL if only the asset URL is off-host). Never raises.
+        Picks exactly one per-OS asset plus exactly one ``SHA2-256SUMS`` asset,
+        both at canonical URLs for the reported yt-dlp repo/tag. Any failure
+        yields ``(None, None)`` (or a parsed version with a None URL when only
+        the release assets are invalid). Never raises.
         """
         try:
             request = urllib.request.Request(
@@ -177,12 +237,19 @@ class YtdlpUpdater:
             asset_name = _ASSET_BY_PLATFORM.get(sys.platform)
             url: str | None = None
             if asset_name:
-                for asset in data.get("assets") or []:
-                    if asset.get("name") == asset_name:
-                        candidate = asset.get("browser_download_url")
-                        if isinstance(candidate, str) and _validate_github_url(candidate):
-                            url = candidate
-                        break
+                assets = data.get("assets") or []
+                asset_candidates = [asset for asset in assets if asset.get("name") == asset_name]
+                sums_candidates = [asset for asset in assets if asset.get("name") == _SUMS_ASSET_NAME]
+                if len(asset_candidates) == 1 and len(sums_candidates) == 1:
+                    asset_url = asset_candidates[0].get("browser_download_url")
+                    sums_url = sums_candidates[0].get("browser_download_url")
+                    if (
+                        isinstance(asset_url, str)
+                        and isinstance(sums_url, str)
+                        and asset_url == _release_asset_url(tag_name, asset_name)
+                        and sums_url == _release_asset_url(tag_name, _SUMS_ASSET_NAME)
+                    ):
+                        url = asset_url
             return (version, url)
         except Exception:
             logger.debug("yt-dlp latest-release lookup failed", exc_info=True)
@@ -271,8 +338,13 @@ class YtdlpUpdater:
         Returns the installed binary path. Raises on failure (the caller's
         ``check_and_update`` wraps it into a ``failed`` result).
         """
-        if not _validate_github_url(url):
-            raise ValueError(f"Refusing to download off-allowlist URL: {url!r}")
+        asset_name = _ASSET_BY_PLATFORM.get(sys.platform)
+        if asset_name is None:
+            raise ValueError(f"No yt-dlp asset for platform {sys.platform!r}")
+        tag = _release_tag_from_asset_url(url, asset_name)
+        if tag is None or tag.lstrip("v") != version:
+            raise ValueError(f"Refusing non-release or mismatched yt-dlp asset URL: {url!r}")
+        sums_url = _release_asset_url(tag, _SUMS_ASSET_NAME)
 
         bin_dir = self.download_dir()
         bin_dir.mkdir(parents=True, exist_ok=True)
@@ -286,7 +358,11 @@ class YtdlpUpdater:
                 headers={"User-Agent": "anki-miner (+https://github.com/0xzerolight/anki_miner)"},
             )
             written = 0
+            digest = hashlib.sha256()
             with urllib.request.urlopen(request, timeout=30) as response, open(tmp, "wb") as out:
+                final_url = response.geturl()
+                if not _validate_github_url(final_url):
+                    raise ValueError(f"Refusing yt-dlp redirect to off-allowlist URL: {final_url!r}")
                 while True:
                     if self._cancel is not None and self._cancel():
                         raise RuntimeError("yt-dlp download cancelled")
@@ -294,10 +370,27 @@ class YtdlpUpdater:
                     if not chunk:
                         break
                     out.write(chunk)
+                    digest.update(chunk)
                     written += len(chunk)
 
             if written < _MIN_SIZE_BYTES:
                 raise ValueError(f"Downloaded yt-dlp is implausibly small ({written} bytes); rejecting.")
+
+            sums_request = urllib.request.Request(
+                sums_url,
+                headers={"User-Agent": "anki-miner (+https://github.com/0xzerolight/anki_miner)"},
+            )
+            with urllib.request.urlopen(sums_request, timeout=30) as response:
+                sums_final_url = response.geturl()
+                if not _validate_github_url(sums_final_url):
+                    raise ValueError(f"Refusing {_SUMS_ASSET_NAME} redirect to off-allowlist URL: {sums_final_url!r}")
+                expected_sha256 = _manifest_sha256(response.read(), asset_name)
+
+            actual_sha256 = digest.hexdigest()
+            # TLS-served sums authenticate this GitHub release, not a publisher key;
+            # a compromised release could replace both binary and checksum.
+            if actual_sha256 != expected_sha256:
+                raise ValueError("Downloaded yt-dlp SHA-256 does not match SHA2-256SUMS")
 
             if sys.platform != "win32":
                 os.chmod(tmp, 0o755)
@@ -313,10 +406,23 @@ class YtdlpUpdater:
                         )
 
             self._atomic_replace(tmp, final)
+            self._write_verification_receipt(final, actual_sha256)
             logger.info("Installed yt-dlp %s to %s", version, final)
             return final
         except BaseException:
             # Clean up the partial / rejected tmp on ANY failure (incl. cancel).
+            with contextlib.suppress(OSError):
+                tmp.unlink()
+            raise
+
+    def _write_verification_receipt(self, binary: Path, sha256: str) -> None:
+        """Atomically record the verified digest beside a promoted binary."""
+        receipt = ytdlp_resolver.ytdlp_verification_receipt_path(binary)
+        tmp = receipt.with_name(f"{receipt.name}.{os.getpid()}.tmp")
+        try:
+            tmp.write_text(f"{sha256}\n", encoding="ascii")
+            self._atomic_replace(tmp, receipt)
+        except BaseException:
             with contextlib.suppress(OSError):
                 tmp.unlink()
             raise

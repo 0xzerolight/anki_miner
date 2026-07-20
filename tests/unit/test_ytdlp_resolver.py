@@ -1,6 +1,8 @@
 """Tests for the yt-dlp binary runtime resolver."""
 
 import dataclasses
+import hashlib
+import shutil
 
 import pytest
 
@@ -18,11 +20,23 @@ def base_config(tmp_path):
     return AnkiMinerConfig(media_temp_folder=tmp_path / "temp_media")
 
 
+@pytest.fixture(autouse=True)
+def no_path_ytdlp(monkeypatch):
+    """Keep non-PATH resolver tiers deterministic on developer machines."""
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+
+
 def _make_executable(path):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("#!/bin/sh\n")
     path.chmod(0o755)
     return path
+
+
+def _write_receipt(path):
+    receipt = path.with_name(f"{path.name}.verified")
+    receipt.write_text(hashlib.sha256(path.read_bytes()).hexdigest())
+    return receipt
 
 
 class TestBinaryName:
@@ -62,9 +76,10 @@ class TestResolveYtdlp:
         config = dataclasses.replace(base_config, ytdlp_location=tmp_path / "does-not-exist")
         assert resolve_ytdlp(config) == "yt-dlp"
 
-    def test_downloaded_copy_used(self, base_config, tmp_path, monkeypatch):
+    def test_verified_downloaded_copy_used(self, base_config, tmp_path, monkeypatch):
         bin_dir = tmp_path / "home" / "bin"
         downloaded = _make_executable(bin_dir / "yt-dlp")
+        _write_receipt(downloaded)
         monkeypatch.setattr(ytdlp_resolver.sys, "frozen", False, raising=False)
         monkeypatch.setattr(ytdlp_resolver, "ytdlp_download_dir", lambda: bin_dir)
         assert resolve_ytdlp(base_config) == str(downloaded)
@@ -112,6 +127,7 @@ class TestResolveYtdlp:
     def test_downloaded_beats_bundled(self, base_config, tmp_path, monkeypatch):
         download_dir = tmp_path / "home" / "bin"
         downloaded = _make_executable(download_dir / "yt-dlp")
+        _write_receipt(downloaded)
         bundled = _make_executable(tmp_path / "bin" / "yt-dlp")
         assert bundled.exists()
         monkeypatch.setattr(ytdlp_resolver.sys, "frozen", True, raising=False)
@@ -142,6 +158,7 @@ class TestCaching:
         # A download appears after startup; without _clear_cache the stale
         # literal would be returned. The updater calls _clear_cache() post-install.
         downloaded = _make_executable(download_dir / "yt-dlp")
+        _write_receipt(downloaded)
         ytdlp_resolver._clear_cache()
         assert resolve_ytdlp(base_config) == str(downloaded)
 

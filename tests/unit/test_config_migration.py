@@ -479,9 +479,9 @@ def _write_config(tmp_config: Path, body: dict) -> None:
     tmp_config.write_text(json.dumps(body), encoding="utf-8")
 
 
-def test_schema_version_is_two():
-    """The bump that carries the wordset-seed shim."""
-    assert GUIConfigManager.CONFIG_SCHEMA_VERSION == 2
+def test_schema_version_is_three():
+    """The latest bump carries the updater-containment shim."""
+    assert GUIConfigManager.CONFIG_SCHEMA_VERSION == 3
 
 
 class TestWordsetSeedMigration:
@@ -574,10 +574,10 @@ class TestWordsetSeedIdempotence:
         _write_config(tmp_config, {"excluded_wordsets": []})
         first = GUIConfigManager.load_config()
         assert first.excluded_wordsets == _ALL_WORDSETS
-        # Re-save (stamps v2) and reload: value stable, no double-seed churn.
+        # Re-save (stamps current schema) and reload: value stays stable.
         GUIConfigManager.save_config(first)
         raw = json.loads(tmp_config.read_text(encoding="utf-8"))
-        assert raw["config_schema_version"] == 2
+        assert raw["config_schema_version"] == GUIConfigManager.CONFIG_SCHEMA_VERSION
         second = GUIConfigManager.load_config()
         assert second.excluded_wordsets == _ALL_WORDSETS
 
