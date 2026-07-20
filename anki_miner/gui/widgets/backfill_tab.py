@@ -327,6 +327,13 @@ class CardBackfillTab(QWidget):
         plan = self._plan
         if plan is None:
             return
+        if plan.config_version != self.config.config_version:
+            self._plan = None
+            self.preview_table.setRowCount(0)
+            self.apply_button.setEnabled(False)
+            self.summary_label.setText("")
+            self.status_label.setText(self.tr("Settings changed since this scan; re-scan before applying."))
+            return
         answer = QMessageBox.question(
             self,
             self.tr("Apply backfill?"),

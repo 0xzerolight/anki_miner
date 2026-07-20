@@ -1,6 +1,7 @@
 """Tests for episode_processor module."""
 
 import re
+import sqlite3
 import threading
 from dataclasses import replace
 from pathlib import Path
@@ -1513,7 +1514,7 @@ class TestKnownWordDBIntegration:
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        mock_known_db.add_words.assert_called_once_with({"食べる"}, source="mined")
+        mock_known_db.add_words_with_receipt.assert_called_once_with({"食べる"}, source="mined")
 
     def test_locked_db_on_post_create_add_words_keeps_successful_result(self, test_config, mock_services, tmp_path):
         """A locked known_words.db during the post-create add_words must NOT
@@ -1534,7 +1535,7 @@ class TestKnownWordDBIntegration:
         mock_known_db.get_known_words.return_value = set()
         mock_known_db.get_words_by_source.return_value = set()
         mock_known_db.sync_with_anki.return_value = (0, 0)
-        mock_known_db.add_words.side_effect = sqlite3.OperationalError("database is locked")
+        mock_known_db.add_words_with_receipt.side_effect = sqlite3.OperationalError("database is locked")
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["word_filter"].filter_unknown.return_value = [word]
@@ -1559,7 +1560,7 @@ class TestKnownWordDBIntegration:
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         # The lock was hit, but the successful run is preserved.
-        mock_known_db.add_words.assert_called_once()
+        mock_known_db.add_words_with_receipt.assert_called_once()
         assert result.cards_created == 1
         assert result.card_ids == [12345]
         assert not result.errors
@@ -4344,8 +4345,8 @@ class TestMinedFormsOnResult:
             "anki_service": anki_service,
         }
 
-    def test_mined_forms_populated_on_success(self, test_config, mock_services, tmp_path):
-        """mined_forms on the result must contain the mined_form of every created card."""
+    def test_mined_forms_empty_without_known_word_insert_receipt(self, test_config, mock_services, tmp_path):
+        """No known-word DB insert means there are no rows Undo may remove."""
         # Verb: mined_form == lemma; noun: mined_form == surface.
         verb = TokenizedWord(
             surface="食べた",
@@ -4389,8 +4390,7 @@ class TestMinedFormsOnResult:
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         assert result.cards_created == 2
-        # verb mined_form == lemma; noun mined_form == surface
-        assert set(result.mined_forms) == {"食べる", "猫"}
+        assert result.mined_forms == []
 
     def test_mined_forms_empty_when_no_cards_created(self, test_config, mock_services, tmp_path):
         """mined_forms must be empty when no words are found."""
@@ -4415,8 +4415,7 @@ class TestMinedFormsOnResult:
         mock_known_db.is_available.return_value = True
         mock_known_db.get_known_words.return_value = set()
         mock_known_db.sync_with_anki.return_value = (0, 0)
-        # The earlier run already recorded 食べる as 'mined'.
-        mock_known_db.get_words_by_source.return_value = {"食べる"}
+        mock_known_db.add_words_with_receipt.return_value = {"猫"}
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [prior, fresh]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -4440,7 +4439,42 @@ class TestMinedFormsOnResult:
         # Both were mined, but 食べる predates this session → only 猫 is revertable.
         assert result.mined_forms == ["猫"]
         # The full set is still recorded in the DB.
-        mock_known_db.add_words.assert_called_once_with({"食べる", "猫"}, source="mined")
+        mock_known_db.add_words_with_receipt.assert_called_once_with({"食べる", "猫"}, source="mined")
+
+    def test_undo_defaults_empty_and_uses_only_new_forms(self, test_config, mock_services, tmp_path):
+        """Undo receipt is exact on success and empty when the DB insert fails."""
+        prior = _make_word("食べる")
+        fresh = _make_word("猫", surface="猫", pos="名詞", start_time=4.0)
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [prior, fresh]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [prior, fresh]
+        mock_services["media_extractor"].extract_media_batch.return_value = [
+            (prior, _make_media("taberu")),
+            (fresh, _make_media("neko")),
+        ]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat", "1. cat"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1, 2]
+
+        mock_known_db = MagicMock()
+        mock_known_db.is_available.return_value = True
+        mock_known_db.get_known_words.return_value = set()
+        mock_known_db.get_words_by_source.return_value = set()
+        mock_known_db.sync_with_anki.return_value = (0, 0)
+        mock_known_db.add_words_with_receipt.return_value = {"猫"}
+        processor = build_processor(
+            config=replace(test_config, use_known_words_db=True),
+            presenter=NullPresenter(),
+            known_word_db=mock_known_db,
+            **mock_services,
+        )
+
+        inserted = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+        assert inserted.mined_forms == ["猫"]
+
+        mock_known_db.add_words_with_receipt.side_effect = sqlite3.OperationalError("database is locked")
+        locked = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+        assert locked.cards_created == 2
+        assert locked.mined_forms == []
 
 
 class TestOfflineDefinitionPreFilter:

@@ -613,6 +613,7 @@ def _plan(notes, overwrite=False):
         unavailable_fields=(),
         sentinel_only_sorts=0,
         expression_field="",
+        config_version=0,
     )
 
 

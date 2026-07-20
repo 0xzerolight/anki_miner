@@ -21,6 +21,7 @@ from anki_miner.models.batch_queue import BatchQueue, QueueItemStatus
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.dictionary.registry import stale_dict_reimport_error
+from anki_miner.utils.episode_matcher import EpisodeNumberExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +107,9 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
 
     def run(self):
         """Process all pending items in queue sequentially."""
-        total_cards = 0
+        total_cards = self.batch_queue.total_cards_created
+        if not isinstance(total_cards, int):
+            total_cards = 0
         total_items = self.batch_queue.pending_count
 
         self.queue_started.emit(total_items)
@@ -219,11 +222,21 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                 if not pairs:
                     raise ValueError("No matching video/subtitle pairs found")
 
+                committed_episode_keys: set[tuple[int | None, int]] = getattr(item, "committed_episode_keys", set())
+                pending_pairs = []
+                for pair in pairs:
+                    episode_info = EpisodeNumberExtractor.extract_episode_info(pair.video)
+                    episode_key = (
+                        (episode_info.season_number, episode_info.episode_number) if episode_info is not None else None
+                    )
+                    if episode_key is None or episode_key not in committed_episode_keys:
+                        pending_pairs.append((pair, episode_key))
+
                 # Process each pair using episode processor
                 cards_for_item = 0
                 interrupted = False
                 failed_pairs: list[tuple[str, str]] = []  # (video name, first error)
-                for pair in pairs:
+                for pair, episode_key in pending_pairs:
                     if self.check_cancelled():
                         interrupted = True
                         break
@@ -250,6 +263,11 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                         failed_pairs.append((pair.video.name, str(e)))
                         continue
                     cards_for_item += result.cards_created
+                    if result.success and episode_key is not None:
+                        committed_episode_keys.add(episode_key)
+                    if self.check_cancelled():
+                        interrupted = True
+                        break
                     if not result.success:
                         # process_episode also returns soft failures as results with
                         # errors populated; surface them per-item so the GUI marks the
@@ -259,6 +277,8 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                 # Partial successes still count toward the queue total (cards
                 # created before a cancel exist in Anki).
                 total_cards += cards_for_item
+                item.cards_created = getattr(item, "cards_created", 0) + cards_for_item
+                item.committed_episode_keys = committed_episode_keys
                 if interrupted:
                     # Cancelled between pairs: the item is partially processed,
                     # neither completed nor failed, so no terminal signal —
@@ -269,7 +289,7 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                     item.status = QueueItemStatus.PENDING
                 elif failed_pairs:
                     msg = (
-                        f"{len(failed_pairs)}/{len(pairs)} episodes failed "
+                        f"{len(failed_pairs)}/{len(pending_pairs)} episodes failed "
                         f"(e.g. {failed_pairs[0][0]}: {failed_pairs[0][1]})"
                     )
                     item.status = QueueItemStatus.ERROR
@@ -277,8 +297,7 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                     self.item_failed.emit(item.id, msg)
                 else:
                     item.status = QueueItemStatus.COMPLETED
-                    item.cards_created = cards_for_item
-                    self.item_completed.emit(item.id, cards_for_item)
+                    self.item_completed.emit(item.id, item.cards_created)
 
             except Exception as e:  # noqa: BLE001 — surface every failure to GUI
                 logger.exception("BatchQueueWorker item %s failed", item.id)

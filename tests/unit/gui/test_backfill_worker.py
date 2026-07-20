@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
 from anki_miner.gui.workers.backfill_worker import BackfillApplyWorker, BackfillScanWorker
 from anki_miner.services.card_backfiller import BackfillOptions, BackfillPlan, BackfillResult
 
@@ -16,6 +17,7 @@ _PLAN = BackfillPlan(
     unavailable_fields=(),
     sentinel_only_sorts=0,
     expression_field="Expression",
+    config_version=0,
 )
 _RESULT = BackfillResult(notes_updated=1, fields_filled=2, tagged=1, skipped_stale=0)
 
@@ -63,6 +65,47 @@ class TestBackfillScanWorker:
 
 
 class TestBackfillApplyWorker:
+    def test_cancel_before_apply_still_emits_terminal_result(self, qtbot, test_config):
+        with patch(f"{_WORKER_MOD}.AnkiService") as anki_cls:
+            worker = BackfillApplyWorker(test_config, _PLAN)
+            emitted: list[BackfillResult] = []
+            worker.result_ready.connect(emitted.append)
+            worker.cancel()
+            worker.run()
+
+        assert emitted == [BackfillResult(0, 0, 0, 0)]
+        anki_cls.assert_not_called()
+
+    def test_backfill_cancel_reaches_terminal_state(self, qtbot, test_config):
+        tab = CardBackfillTab(test_config)
+        qtbot.addWidget(tab)
+        plan = _PLAN
+        result = BackfillResult(notes_updated=1, fields_filled=2, tagged=1, skipped_stale=0)
+
+        def fake_apply(anki, plan, *, tag, progress, is_cancelled):
+            worker.cancel()
+            return result
+
+        with (
+            patch(f"{_WORKER_MOD}.AnkiService"),
+            patch(f"{_WORKER_MOD}.apply_backfill", side_effect=fake_apply),
+        ):
+            worker = BackfillApplyWorker(test_config, plan)
+            worker.result_ready.connect(tab._on_apply_finished)
+            worker.finished.connect(tab._on_worker_finished)
+            tab._plan = plan
+            tab.worker_thread = worker
+            tab._set_running(True)
+            tab.status_label.setText("Cancelling…")
+            with qtbot.waitSignal(worker.finished, timeout=5000):
+                worker.start()
+            worker.wait(5000)
+
+        assert tab._plan is None
+        assert not tab.apply_button.isEnabled()
+        assert tab.status_label.text() != "Cancelling…"
+        assert "1" in tab.status_label.text()
+
     def test_emits_result_on_success(self, qtbot, test_config):
         with (
             patch(f"{_WORKER_MOD}.AnkiService") as anki_cls,

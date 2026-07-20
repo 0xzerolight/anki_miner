@@ -743,17 +743,10 @@ def main():
     window.tabs.addTab(subtitles_tab, QCoreApplication.translate("MainWindow", "Tools"))
 
     settings_tab = SettingsTab(window.get_config())
-    # from_settings=True suppresses the config_refreshed re-emit: SettingsTab
-    # and the mining tabs are notified directly on the next lines, so a
-    # re-emit would only reload SettingsTab's panels mid-save (re-entrancy).
+    # MainWindow stamps + saves the config, then config_refreshed fans the
+    # POST-SAVE committed object out to every tab. This prevents a scan worker's
+    # stale pre-save config snapshot from regaining authority after save.
     settings_tab.config_changed.connect(lambda cfg: window.update_config(cfg, from_settings=True))
-    # Wire config_changed to every mining tab registered via register_mining_tab.
-    # Iterating over window.tabs (skipping Analytics and Settings themselves)
-    # avoids repeating each tab name here.
-    for i in range(window.tabs.count()):
-        tab_widget = window.tabs.widget(i)
-        if tab_widget is not None and hasattr(tab_widget, "update_config"):
-            settings_tab.config_changed.connect(tab_widget.update_config)
     # Make Test Connection + the deck/note-type sync buttons live: they all
     # emit SettingsTab.validation_requested, which was previously connected to
     # nothing (T-53). Routing it to _run_validation also drives the Anki

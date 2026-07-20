@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from anki_miner.config import create_default_config
+from anki_miner.config import AnkiMinerConfig, create_default_config
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 
 
@@ -21,6 +21,10 @@ def isolated_config_file(tmp_path: Path, monkeypatch):
     fake_config = tmp_path / "gui_config.json"
     monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", fake_config)
     return fake_config
+
+
+def test_config_version_does_not_shift_positional_fields():
+    assert AnkiMinerConfig("Custom Deck").anki_deck_name == "Custom Deck"
 
 
 class TestThemeFavoritesRoundTrip:

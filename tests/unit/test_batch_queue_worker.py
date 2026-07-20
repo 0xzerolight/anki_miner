@@ -190,6 +190,54 @@ def test_partial_failure_emits_item_failed_with_partial_cards(tmp_path):
     assert results["finished"] == [3], "queue_finished should include cards from successful pairs"
 
 
+def test_partial_series_retry_skips_committed(tmp_path):
+    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
+    queue = BatchQueue()
+    item = queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
+
+    first_processor = MagicMock()
+    first_processor.process_episode.side_effect = [_ok_result(cards=3), _failed_result()]
+    first_worker = _make_worker_with_queue(queue)
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=first_processor,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair1, pair2],
+        ),
+    ):
+        first_worker.run()
+
+    assert item.status == QueueItemStatus.ERROR
+    assert item.cards_created == 3
+    assert queue.reset_failed_for_retry() == 1
+
+    retry_processor = MagicMock()
+    retry_processor.process_episode.return_value = _ok_result(cards=2)
+    retry_worker = _make_worker_with_queue(queue)
+    retry_results = _wire_status_slots(retry_worker, queue)
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=retry_processor,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair1, pair2],
+        ),
+    ):
+        retry_worker.run()
+
+    processed_videos = [call.args[0] for call in retry_processor.process_episode.call_args_list]
+    assert processed_videos == [pair2.video]
+    assert item.cards_created == 5
+    assert retry_results["completed"] == [(item.id, 5)]
+    assert retry_results["finished"] == [5]
+
+
 def test_all_pairs_succeed_emits_item_completed(tmp_path):
     """Regression: all pairs succeed → item_completed with total cards; item_failed not emitted."""
     pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
@@ -396,6 +444,72 @@ def test_cancel_mid_item_does_not_emit_item_completed(tmp_path):
     assert item.status == QueueItemStatus.PENDING, "interrupted item returns to PENDING"
     # Cards created before the cancel exist in Anki and count toward the total.
     assert results["finished"] == [2]
+
+
+def test_cancel_during_final_pair_returns_item_to_pending(tmp_path):
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    queue = BatchQueue()
+    item = queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
+    proc = MagicMock()
+
+    def cancel_during_pair(*_args, **_kwargs):
+        worker.cancel()
+        return _ok_result(cards=2)
+
+    proc.process_episode.side_effect = cancel_during_pair
+    worker = _make_worker_with_queue(queue)
+    results = _wire_capture_only(worker)
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+    ):
+        worker.run()
+
+    assert item.status == QueueItemStatus.PENDING
+    assert item.cards_created == 2
+    assert item.committed_episode_keys == {(None, 1)}
+    assert results["completed"] == []
+    assert results["failed"] == []
+    assert results["finished"] == [2]
+
+
+def test_zero_commit_cancel_during_final_pair_returns_item_to_pending(tmp_path):
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    queue = BatchQueue()
+    item = queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
+    proc = MagicMock()
+
+    def cancel_during_pair(*_args, **_kwargs):
+        worker.cancel()
+        return _failed_result()
+
+    proc.process_episode.side_effect = cancel_during_pair
+    worker = _make_worker_with_queue(queue)
+    results = _wire_capture_only(worker)
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+    ):
+        worker.run()
+
+    assert item.status == QueueItemStatus.PENDING
+    assert item.cards_created == 0
+    assert item.committed_episode_keys == set()
+    assert results["completed"] == []
+    assert results["failed"] == []
+    assert results["finished"] == [0]
 
 
 def test_cancel_propagates_to_current_processor():

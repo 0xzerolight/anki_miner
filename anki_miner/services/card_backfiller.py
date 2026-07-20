@@ -133,6 +133,7 @@ class BackfillPlan:
     # Exact mapped field used to capture ``NotePlan.expression``. Apply uses
     # this scan-time name for its compare-before-write identity check.
     expression_field: str
+    config_version: int = 0
 
     @property
     def total_field_changes(self) -> int:
@@ -344,6 +345,7 @@ def scan_backfill(
         unavailable_fields=tuple(unavailable),
         sentinel_only_sorts=sentinel_only_sorts,
         expression_field=word_field,
+        config_version=config.config_version,
     )
 
 

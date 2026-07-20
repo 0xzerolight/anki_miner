@@ -1,10 +1,8 @@
 """Tests for :class:`MainWindow.update_config` config_refreshed propagation (T-13).
 
-A non-Settings config mutation (theme cycle, skip-update, first-run flag) must
-emit ``config_refreshed`` so ``SettingsTab.config`` stays in sync; otherwise the
-next Settings Save resurrects the pre-change value. A mutation that came FROM the
-Settings save path must NOT re-emit (SettingsTab + tabs already saw it via
-``config_changed`` directly), to avoid a redundant mid-save reload.
+Every config mutation must emit the post-save committed config so all tabs share
+one monotonic identity. SettingsTab treats the version-only refresh as external
+state, avoiding a mid-save panel reload.
 
 Builds a real ``MainWindow`` with heavy startup side effects patched out, like
 ``test_main_window_menu``.
@@ -42,24 +40,22 @@ def test_update_config_emits_config_refreshed(main_window):
     new_config = replace(main_window.config, theme="dark")
     main_window.update_config(new_config)
 
-    assert received == [new_config]
-    assert main_window.config is new_config
+    assert received == [main_window.config]
+    assert main_window.config.theme == "dark"
+    assert main_window.config.config_version == new_config.config_version + 1
 
 
-def test_update_config_from_settings_does_not_emit(main_window):
-    """A Settings-originated save must NOT re-emit config_refreshed.
-
-    SettingsTab + tabs already received the new config via config_changed, so
-    re-emitting would trigger a redundant mid-save SettingsTab._load_config().
-    """
+def test_update_config_from_settings_emits_committed_config(main_window):
+    """Settings saves fan out the post-save version, never the pre-save object."""
     received: list[AnkiMinerConfig] = []
     main_window.config_refreshed.connect(received.append)
 
     new_config = replace(main_window.config, theme="dark")
     main_window.update_config(new_config, from_settings=True)
 
-    assert received == []
-    assert main_window.config is new_config
+    assert received == [main_window.config]
+    assert received[0].theme == "dark"
+    assert received[0].config_version == new_config.config_version + 1
 
 
 def test_cycle_theme_propagates_to_config_refreshed(main_window, monkeypatch):

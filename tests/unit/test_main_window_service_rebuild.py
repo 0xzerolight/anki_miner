@@ -50,7 +50,8 @@ def test_update_config_rebuilds_anki_service(main_window, monkeypatch):
     main_window.update_config(new_config)
 
     assert main_window._anki_service is not old_service
-    assert constructed_with[-1] is new_config
+    assert constructed_with[-1] is main_window.config
+    assert constructed_with[-1].ankiconnect_url == new_config.ankiconnect_url
 
 
 def test_update_config_rebuilds_validation_service(main_window, monkeypatch):
@@ -69,7 +70,8 @@ def test_update_config_rebuilds_validation_service(main_window, monkeypatch):
     main_window.update_config(new_config)
 
     assert main_window.validation_service is not old_service
-    assert constructed_with[-1] is new_config
+    assert constructed_with[-1] is main_window.config
+    assert constructed_with[-1].ankiconnect_url == new_config.ankiconnect_url
 
 
 def test_undo_callback_uses_rebuilt_anki_service(main_window, monkeypatch):
