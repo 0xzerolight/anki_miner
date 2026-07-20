@@ -60,7 +60,7 @@ def _svc(notes):
     svc = MagicMock()
     svc.find_notes.return_value = [n["noteId"] for n in notes]
     svc.notes_info.return_value = notes
-    svc.update_notes_fields.side_effect = lambda updates: len(updates)
+    svc.update_notes_fields.side_effect = lambda updates: [note_id for note_id, _fields in updates]
     return svc
 
 
@@ -71,6 +71,17 @@ def _no_disk_io(monkeypatch):
 
 
 class TestRestyleMinedCards:
+    def test_partial_update_counts_failed_and_preserves_counter_sum(self):
+        svc = _svc([_note(1, BARE), _note(2, BARE)])
+        svc.update_notes_fields.side_effect = None
+        svc.update_notes_fields.return_value = [1]
+
+        result = restyle_mined_cards(svc, _cfg())
+
+        assert result.restyled == 1
+        assert result.failed == 1
+        assert result.restyled + result.failed + result.skipped_styled + result.skipped_no_markup == result.scanned
+
     def test_bare_card_gets_trailing_block(self):
         svc = _svc([_note(1, BARE)])
         result = restyle_mined_cards(svc, _cfg())
@@ -393,7 +404,7 @@ class TestRestyleMinedCards:
         svc = MagicMock()
         svc.find_notes.return_value = [1, 2, 3]
         svc.notes_info.return_value = notes
-        svc.update_notes_fields.side_effect = lambda updates: len(updates)
+        svc.update_notes_fields.side_effect = lambda updates: [note_id for note_id, _fields in updates]
         result = restyle_mined_cards(svc, _cfg())
         assert result.restyled == 1  # only note 3 was a bare miner card
 
@@ -402,7 +413,7 @@ class TestRestyleMinedCards:
         svc = MagicMock()
         svc.find_notes.return_value = [1, 2]
         svc.notes_info.side_effect = lambda ids: [_note(ids[0], BARE)]
-        svc.update_notes_fields.side_effect = lambda updates: len(updates)
+        svc.update_notes_fields.side_effect = lambda updates: [note_id for note_id, _fields in updates]
         state = {"n": 0}
 
         def is_cancelled():

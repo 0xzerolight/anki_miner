@@ -44,6 +44,7 @@ def post_action(
             json={"action": action, "version": 6, "params": params or {}},
             timeout=timeout,
         )
+        response.raise_for_status()
         result = response.json()
     except requests.exceptions.ConnectionError as e:
         raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from e
@@ -90,6 +91,7 @@ def post_multi(
             json={"action": "multi", "version": 6, "params": {"actions": actions}},
             timeout=timeout,
         )
+        response.raise_for_status()
         result = response.json()
     except requests.exceptions.ConnectionError as e:
         raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from e
@@ -102,7 +104,7 @@ def post_multi(
         )
     if result.get("error"):
         raise AnkiConnectionError(f"AnkiConnect error in 'multi': {result['error']}")
-    return result.get("result") or []
+    return _expect_list(result.get("result"), "multi", len(actions))
 
 
 def _expected_type_name(elem_type: type | tuple[type, ...]) -> str:
