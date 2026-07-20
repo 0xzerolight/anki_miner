@@ -6,7 +6,10 @@ round-trip correctness of the produced SRT files.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pysubs2
+import pytest
 
 from anki_miner.services.asr.srt_writer import segments_to_srt
 
@@ -103,6 +106,23 @@ def test_srt_empty_segments_creates_empty_file(tmp_path):
     assert out.exists()
     subs = pysubs2.load(str(out), format_="srt")
     assert len(subs) == 0
+
+
+def test_srt_write_fault_preserves_existing_srt(tmp_path, monkeypatch):
+    out = tmp_path / "out.srt"
+    out.write_bytes(b"good srt\n")
+
+    def _fail_save(self, path, *args, **kwargs):
+        Path(path).write_bytes(b"partial")
+        raise OSError("disk full")
+
+    monkeypatch.setattr(pysubs2.SSAFile, "save", _fail_save)
+
+    with pytest.raises(OSError, match="disk full"):
+        segments_to_srt([(0.0, 1.0, "hello")], out)
+
+    assert out.read_bytes() == b"good srt\n"
+    assert sorted(child.name for child in tmp_path.iterdir()) == [out.name]
 
 
 # ---------------------------------------------------------------------------

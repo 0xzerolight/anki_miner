@@ -42,6 +42,7 @@ from anki_miner.exceptions import SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services._install_common import cleanup_part, sweep_stale, verify_sha256
 from anki_miner.services.resource_downloader import download_to_temp
+from anki_miner.utils.atomic_io import atomic_replace_dir
 
 logger = logging.getLogger(__name__)
 
@@ -254,12 +255,7 @@ def _extract_component(part_path: Path, spec: _CudaLibSpec, cuda_libs_root: Path
         except zipfile.BadZipFile as exc:
             raise SetupError(f"CUDA {spec.component} download is not a valid wheel: {exc}") from exc
 
-        # Promote the staging dir onto the component dir atomically.
-        if target.is_dir():
-            shutil.rmtree(target)
-        elif target.exists():
-            target.unlink()
-        os.replace(staging, target)
+        atomic_replace_dir(staging, target)
         staging = None  # type: ignore[assignment]  # promoted; do not rmtree.
     finally:
         if staging is not None:

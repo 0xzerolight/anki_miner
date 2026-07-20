@@ -34,7 +34,12 @@ class DictionaryRegistry:
         self._dicts: dict[str, DictMeta] = {}
 
     def load(self) -> None:
-        self._dicts = scan_index_root(self._root, self._parse_meta, warn_label="dictionary")
+        self._dicts = scan_index_root(
+            self._root,
+            self._parse_meta,
+            child_prefilter=lambda child: ".bak-" not in child.name,
+            warn_label="dictionary",
+        )
 
     def _parse_meta(self, child: Path, db: Path, meta: dict[str, str]) -> DictMeta:
         try:

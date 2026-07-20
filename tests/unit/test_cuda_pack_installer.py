@@ -141,6 +141,26 @@ class TestInstall:
         assert not (tmp_path / "cudnn" / "__init__.py").exists()
         assert cuda_pack_installer.is_installed(tmp_path) is True
 
+    def test_reinstall_fault_preserves_existing_component(self, tmp_path, monkeypatch):
+        target = tmp_path / "cudnn"
+        target.mkdir()
+        (target / "libcudnn.so.9").write_bytes(b"old cudnn")
+        _force_linux(monkeypatch)
+        _patch_download(monkeypatch)
+        real_replace = cuda_pack_installer.os.replace
+
+        def fail_promotion(src, dst):
+            if Path(src).name.startswith(".staging-cudnn-") and Path(dst) == target:
+                raise OSError("promotion fault")
+            return real_replace(src, dst)
+
+        monkeypatch.setattr(cuda_pack_installer.os, "replace", fail_promotion)
+
+        with pytest.raises(OSError, match="promotion fault"):
+            cuda_pack_installer.install_cuda_pack(tmp_path)
+
+        assert (target / "libcudnn.so.9").read_bytes() == b"old cudnn"
+
     def test_no_part_files_left_behind(self, tmp_path, monkeypatch):
         _force_linux(monkeypatch)
         _patch_download(monkeypatch)

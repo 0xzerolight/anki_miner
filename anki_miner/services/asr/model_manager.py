@@ -12,6 +12,7 @@ import tempfile
 from pathlib import Path
 
 from anki_miner.services.asr import _engine
+from anki_miner.utils.atomic_io import atomic_replace_dir
 
 logger = logging.getLogger(__name__)
 
@@ -120,10 +121,9 @@ def download(name: str, models_root: Path, cancel_event=None) -> None:
         # Promote each top-level staged entry into models_root atomically.
         for entry in staging.iterdir():
             dest = models_root / entry.name
-            if dest.is_dir():
-                shutil.rmtree(dest)
-            elif dest.exists():
-                dest.unlink()
-            os.replace(entry, dest)
+            if entry.is_dir():
+                atomic_replace_dir(entry, dest)
+            else:
+                os.replace(entry, dest)
     finally:
         shutil.rmtree(staging, ignore_errors=True)

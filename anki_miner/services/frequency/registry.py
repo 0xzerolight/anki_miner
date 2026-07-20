@@ -57,7 +57,12 @@ class FrequencySourceRegistry:
         self._sources: dict[str, FreqSourceMeta] = {}
 
     def load(self) -> None:
-        self._sources = scan_index_root(self._root, self._parse_meta, warn_label="frequency source")
+        self._sources = scan_index_root(
+            self._root,
+            self._parse_meta,
+            child_prefilter=lambda child: ".bak-" not in child.name,
+            warn_label="frequency source",
+        )
 
     def _parse_meta(self, child: Path, db: Path, meta: dict[str, str]) -> FreqSourceMeta:
         try:

@@ -168,6 +168,28 @@ class TestInstall:
         assert not (tmp_path / "onnxruntime" / "stale.py").exists()
         assert (tmp_path / "onnxruntime" / "__init__.py").exists()
 
+    def test_reinstall_fault_preserves_existing(self, tmp_path, monkeypatch):
+        import anki_miner.utils.atomic_io as atomic_io
+
+        target = tmp_path / "onnxruntime"
+        target.mkdir()
+        (target / "__init__.py").write_bytes(b"old package")
+        spec = _force_supported_linux(monkeypatch)
+        _patch_download(monkeypatch, spec)
+        real_replace = atomic_io.os.replace
+
+        def fail_promotion(src, dst):
+            if Path(src).parent.name.startswith(".staging-onnx-") and Path(dst) == target:
+                raise OSError("promotion fault")
+            return real_replace(src, dst)
+
+        monkeypatch.setattr(atomic_io.os, "replace", fail_promotion)
+
+        with pytest.raises(OSError, match="promotion fault"):
+            onnx_pack_installer.install_onnx_pack(tmp_path)
+
+        assert (target / "__init__.py").read_bytes() == b"old package"
+
     def test_sha_mismatch_raises_and_promotes_nothing(self, tmp_path, monkeypatch):
         spec = _force_supported_linux(monkeypatch, sha_real=False)  # keep pinned sha
         _patch_download(monkeypatch, spec)

@@ -398,6 +398,24 @@ def test_write_condensed_lrc_minutes_exceed_59(tmp_path):
     assert path.read_text(encoding="utf-8") == "[61:00.00]late\n[61:01.00]\n"
 
 
+def test_write_condensed_lrc_fault_preserves_existing_output(tmp_path, monkeypatch):
+    path = tmp_path / "out.lrc"
+    path.write_bytes(b"good lrc\n")
+
+    def _fail_write_text(self, data, *, encoding=None, errors=None, newline=None):
+        with self.open("w", encoding=encoding, errors=errors, newline=newline) as stream:
+            stream.write("partial")
+        raise OSError("disk full")
+
+    monkeypatch.setattr(Path, "write_text", _fail_write_text)
+
+    with pytest.raises(OSError, match="disk full"):
+        write_condensed_lrc([(1000, 2000, "Hello")], path)
+
+    assert path.read_bytes() == b"good lrc\n"
+    assert sorted(child.name for child in tmp_path.iterdir()) == [path.name]
+
+
 # ===========================================================================
 # Part 2 — AudioCondenserService (ffmpeg orchestration, faked subprocess)
 # ===========================================================================
@@ -503,7 +521,10 @@ def test_condense_uses_resolved_ffmpeg_and_progress_header(tmp_path):
     cmd = captured["cmd"]
     assert cmd[0] == "/bundled/ffmpeg"
     assert cmd[:6] == ["/bundled/ffmpeg", "-y", "-hide_banner", "-nostdin", "-progress", "pipe:1"]
-    assert cmd[-1] == str(tmp_path / "out.mp3")
+    staged_output = Path(cmd[-1])
+    assert staged_output != tmp_path / "out.mp3"
+    assert staged_output.parent == tmp_path
+    assert staged_output.suffix == ".mp3"
     # stderr must be merged into the read pipe (undrained PIPE deadlocks ffmpeg).
     assert captured["kwargs"]["stderr"] == subprocess.STDOUT
     assert captured["kwargs"]["stdout"] == subprocess.PIPE
@@ -760,6 +781,23 @@ def test_condense_removes_partial_output_on_failure(tmp_path):
 
     assert ok is False
     assert not out_audio.exists()
+
+
+def test_condenser_fault_preserves_existing_output(tmp_path):
+    svc = _service(tmp_path, global_index=0)
+    out_audio = tmp_path / "ep01_condensed.mp3"
+    out_audio.write_bytes(b"good audio")
+
+    def _make(cmd: list[str], **kwargs: Any) -> _FakePopen:
+        Path(cmd[-1]).write_bytes(b"partial")
+        return _FakePopen(["Conversion failed!"], returncode=1)
+
+    with patch(_RESOLVE, return_value="ffmpeg"), patch(_POPEN, side_effect=_make):
+        ok = svc.condense(Path("/v/ep01.mkv"), [(0, 2000)], out_audio)
+
+    assert ok is False
+    assert out_audio.read_bytes() == b"good audio"
+    assert sorted(child.name for child in tmp_path.iterdir()) == [out_audio.name]
 
 
 # --- extract_embedded_subtitle ---------------------------------------------

@@ -212,6 +212,36 @@ def test_download_promotes_staged_model_into_models_root(monkeypatch, tmp_path):
     assert not any(p.name.startswith(".staging-") for p in tmp_path.iterdir())
 
 
+def test_dir_install_fault_leaves_old_target_intact(monkeypatch, tmp_path):
+    dest = tmp_path / "models--Systran--faster-whisper-small"
+    old_snapshot = dest / "snapshots" / "old"
+    old_snapshot.mkdir(parents=True)
+    (old_snapshot / "model.bin").write_bytes(b"old model")
+    (old_snapshot / "config.json").write_bytes(b"old config")
+
+    def fake_download_fn(name, *, cache_dir):
+        snap = Path(cache_dir) / f"models--Systran--faster-whisper-{name}" / "snapshots" / "new"
+        snap.mkdir(parents=True)
+        (snap / "model.bin").write_bytes(b"new model")
+        (snap / "config.json").write_bytes(b"new config")
+
+    real_replace = model_manager.os.replace
+
+    def fail_promotion(src, dst):
+        if Path(src).parent.name.startswith(".staging-small-") and Path(dst) == dest:
+            raise OSError("promotion fault")
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(model_manager._engine, "get_download_fn", lambda: fake_download_fn)
+    monkeypatch.setattr(model_manager.os, "replace", fail_promotion)
+
+    with pytest.raises(OSError, match="promotion fault"):
+        download("small", tmp_path)
+
+    assert (old_snapshot / "model.bin").read_bytes() == b"old model"
+    assert (old_snapshot / "config.json").read_bytes() == b"old config"
+
+
 def test_download_leaves_models_root_clean_on_failure(monkeypatch, tmp_path):
     """A download that raises mid-transfer must not leave a partial model behind."""
 

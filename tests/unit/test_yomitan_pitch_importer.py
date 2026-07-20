@@ -540,6 +540,17 @@ class TestAtomicWrite:
         assert not dest.exists()
         assert not dest.with_suffix(dest.suffix + ".tmp").exists()
 
+    def test_meta_bank_writer_uses_unique_temp(self, tmp_path: Path) -> None:
+        import anki_miner.services.yomitan_meta_bank as mod
+
+        dest = tmp_path / "pitch.csv"
+        other_writer_tmp = dest.with_suffix(dest.suffix + ".tmp")
+        other_writer_tmp.write_bytes(b"other writer")
+
+        mod.atomic_write_csv(dest, ["reading", "kanji", "pattern"], [["ねこ", "猫", "1"]])
+
+        assert other_writer_tmp.read_bytes() == b"other writer"
+
 
 class TestMalformedEntries:
     def test_short_entries_silently_skipped(self, tmp_path: Path) -> None:

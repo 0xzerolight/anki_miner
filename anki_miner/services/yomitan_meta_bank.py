@@ -17,7 +17,6 @@ from __future__ import annotations
 import csv
 import json
 import logging
-import os
 import tempfile
 import zipfile
 from collections.abc import Iterable, Iterator, Sequence
@@ -32,6 +31,7 @@ from anki_miner.services.dictionary.schema_validation import (
     is_valid_meta_bank_entry,
 )
 from anki_miner.services.dictionary.zip_safety import raise_if_index_nested, validate_zip_safe
+from anki_miner.utils.atomic_io import atomic_write_path
 
 logger = logging.getLogger(__name__)
 
@@ -202,21 +202,14 @@ def open_yomitan_meta_banks(
 def atomic_write_csv(dest_csv: Path, header: Sequence[str], rows: Iterable[Sequence[Any]]) -> None:
     """Write ``header`` + ``rows`` to ``dest_csv`` atomically.
 
-    Stages to a sibling ``.tmp`` then ``os.replace`` so a crash mid-write
-    leaves the user's existing CSV intact. The ``.tmp`` is unlinked in a
-    ``finally`` so a failure mid-rows doesn't orphan it in ~/.anki_miner
+    Stages to a unique sibling then atomically replaces so a crash mid-write
+    leaves the user's existing CSV intact. The staged file is unlinked on a
+    failure mid-rows so it is not orphaned in ~/.anki_miner
     (carries forward the T-40 fix into the shared writer).
     """
     dest_csv.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = dest_csv.with_suffix(dest_csv.suffix + ".tmp")
-    try:
-        with open(tmp_path, "w", encoding="utf-8", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(header)
-            for row in rows:
-                writer.writerow(row)
-        os.replace(tmp_path, dest_csv)
-    finally:
-        # On success os.replace already consumed the temp; missing_ok makes
-        # this a no-op then, and cleans the orphan on a mid-rows failure.
-        tmp_path.unlink(missing_ok=True)
+    with atomic_write_path(dest_csv) as tmp_path, open(tmp_path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        for row in rows:
+            writer.writerow(row)

@@ -66,6 +66,15 @@ def test_is_categorical_absent_defaults_false(tmp_path: Path):
     assert meta.is_categorical is False
 
 
+def test_backup_dir_not_enumerated_as_resource(tmp_path: Path):
+    _build_source(tmp_path, "jpdb.bak-20260721000000000000", [("猫", "ねこ", 100)])
+
+    reg = FrequencySourceRegistry(tmp_path)
+    reg.load()
+
+    assert reg.get("jpdb.bak-20260721000000000000") is None
+
+
 def test_load_finds_sources(tmp_path: Path):
     _build_source(tmp_path, "jpdb", [("猫", "ねこ", 100)])
     _build_source(tmp_path, "bccwj", [("犬", "いぬ", 200), ("猫", "ねこ", 50)])

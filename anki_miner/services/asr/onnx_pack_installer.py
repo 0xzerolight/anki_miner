@@ -28,7 +28,6 @@ Placement mirrors the atomic-staging idiom in ``cuda_pack_installer`` and
 from __future__ import annotations
 
 import logging
-import os
 import platform
 import shutil
 import sys
@@ -41,6 +40,7 @@ from anki_miner.exceptions import SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services._install_common import cleanup_part, sweep_stale, verify_sha256
 from anki_miner.services.resource_downloader import download_to_temp
+from anki_miner.utils.atomic_io import atomic_replace_dir
 
 logger = logging.getLogger(__name__)
 
@@ -253,11 +253,6 @@ def _extract_package(part_path: Path, onnx_pack_root: Path) -> None:
         if not (extracted_pkg / "__init__.py").exists():
             raise SetupError("onnxruntime wheel is missing onnxruntime/__init__.py")
 
-        # Promote the extracted package onto the target dir atomically.
-        if target.is_dir():
-            shutil.rmtree(target)
-        elif target.exists():
-            target.unlink()
-        os.replace(extracted_pkg, target)
+        atomic_replace_dir(extracted_pkg, target)
     finally:
         shutil.rmtree(staging, ignore_errors=True)

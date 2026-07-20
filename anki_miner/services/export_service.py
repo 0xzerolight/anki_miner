@@ -1,12 +1,11 @@
 """Export service for vocabulary data in various formats."""
 
-import contextlib
 import csv
-import os
 from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models.word import WordData
+from anki_miner.utils.atomic_io import atomic_write_path
 
 
 class ExportService:
@@ -76,14 +75,8 @@ class ExportService:
                 lines.append(lemma)
 
         content = "\n".join(lines) + "\n" if lines else ""
-        tmp = output_path.with_suffix(output_path.suffix + ".tmp")
-        try:
+        with atomic_write_path(output_path) as tmp:
             tmp.write_text(content, encoding="utf-8")
-            os.replace(tmp, output_path)
-        except Exception:
-            with contextlib.suppress(OSError):
-                tmp.unlink(missing_ok=True)
-            raise
         return len(lines)
 
     def _write_delimited(
@@ -120,46 +113,38 @@ class ExportService:
             header.extend(["Screenshot", "Audio"])
         header.extend(["Start Time", "End Time"])
 
-        tmp = output_path.with_suffix(output_path.suffix + ".tmp")
-        try:
-            with open(tmp, "w", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f, delimiter=delimiter)
-                writer.writerow(header)
+        with atomic_write_path(output_path) as tmp, open(tmp, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f, delimiter=delimiter)
+            writer.writerow(header)
 
-                for w in words:
-                    row = [
-                        w.word.lemma,
-                        w.word.surface,
-                        w.word.reading,
-                        w.word.sentence,
-                        w.definition or "",
-                        w.word.expression_furigana,
-                        w.word.sentence_furigana,
-                        w.pitch_position or "",
-                        w.pitch_category or "",
-                        str(w.frequency_rank) if w.frequency_rank is not None else "",
-                    ]
-                    if include_media_refs:
-                        screenshot_name = w.media.screenshot_filename if w.media else None
-                        audio_name = w.media.audio_filename if w.media else None
-                        row.extend(
-                            [
-                                screenshot_name or "",
-                                audio_name or "",
-                            ]
-                        )
+            for w in words:
+                row = [
+                    w.word.lemma,
+                    w.word.surface,
+                    w.word.reading,
+                    w.word.sentence,
+                    w.definition or "",
+                    w.word.expression_furigana,
+                    w.word.sentence_furigana,
+                    w.pitch_position or "",
+                    w.pitch_category or "",
+                    str(w.frequency_rank) if w.frequency_rank is not None else "",
+                ]
+                if include_media_refs:
+                    screenshot_name = w.media.screenshot_filename if w.media else None
+                    audio_name = w.media.audio_filename if w.media else None
                     row.extend(
                         [
-                            f"{w.word.start_time:.2f}",
-                            f"{w.word.end_time:.2f}",
+                            screenshot_name or "",
+                            audio_name or "",
                         ]
                     )
-                    writer.writerow(row)
-
-            os.replace(tmp, output_path)
-        except Exception:
-            with contextlib.suppress(OSError):
-                tmp.unlink(missing_ok=True)
-            raise
+                row.extend(
+                    [
+                        f"{w.word.start_time:.2f}",
+                        f"{w.word.end_time:.2f}",
+                    ]
+                )
+                writer.writerow(row)
 
         return len(words)
