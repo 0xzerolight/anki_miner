@@ -746,7 +746,7 @@ def main():
     # MainWindow stamps + saves the config, then config_refreshed fans the
     # POST-SAVE committed object out to every tab. This prevents a scan worker's
     # stale pre-save config snapshot from regaining authority after save.
-    settings_tab.config_changed.connect(lambda cfg: window.update_config(cfg, from_settings=True))
+    settings_tab.config_changed.connect(lambda cfg: window.update_config(cfg))
     # Make Test Connection + the deck/note-type sync buttons live: they all
     # emit SettingsTab.validation_requested, which was previously connected to
     # nothing (T-53). Routing it to _run_validation also drives the Anki

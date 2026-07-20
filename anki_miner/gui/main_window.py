@@ -853,13 +853,14 @@ class MainWindow(QMainWindow):
         """
         return self.config
 
-    def update_config(self, config: AnkiMinerConfig, *, from_settings: bool = False) -> None:
+    def update_config(self, config: AnkiMinerConfig) -> None:
         """Update configuration, save to disk, and propagate to tabs.
+
+        Every path bumps ``config_version`` and emits the post-save committed
+        config so in-flight backfill plans stamped with an older version abort.
 
         Args:
             config: New configuration.
-            from_settings: Marks the Settings save path for call-site clarity.
-                All paths emit the same post-save committed config.
         """
         committed_config = replace(
             config,

@@ -775,7 +775,7 @@ class TestCloseEventFlushesSettingsAutosave:
         tab = SettingsTab(test_config)
         qtbot.addWidget(tab)
         main_window.tabs.addTab(tab, "Settings")
-        tab.config_changed.connect(lambda cfg: main_window.update_config(cfg, from_settings=True))
+        tab.config_changed.connect(lambda cfg: main_window.update_config(cfg))
         return tab
 
     def test_flush_runs_before_background_shutdown(self, main_window, test_config, qtbot, monkeypatch):

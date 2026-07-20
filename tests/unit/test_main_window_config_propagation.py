@@ -51,7 +51,7 @@ def test_update_config_from_settings_emits_committed_config(main_window):
     main_window.config_refreshed.connect(received.append)
 
     new_config = replace(main_window.config, theme="dark")
-    main_window.update_config(new_config, from_settings=True)
+    main_window.update_config(new_config)
 
     assert received == [main_window.config]
     assert received[0].theme == "dark"
@@ -120,7 +120,7 @@ def test_settings_save_then_unrelated_keeps_theme(main_window):
 
     # SettingsTab saves an unrelated field, carrying the current theme forward.
     settings_save = replace(fake_settings.config, anki_deck_name="other")
-    main_window.update_config(settings_save, from_settings=True)
+    main_window.update_config(settings_save)
     saved.append(main_window.config)
 
     assert saved[-1].theme == "dark"

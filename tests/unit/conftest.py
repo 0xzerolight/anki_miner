@@ -134,7 +134,7 @@ def _build_tabs(patch_heavy_init, test_config):
     window.tabs.addTab(analytics_tab, "Analytics")
 
     settings_tab = SettingsTab(window.get_config())
-    settings_tab.config_changed.connect(lambda cfg: window.update_config(cfg, from_settings=True))
+    settings_tab.config_changed.connect(lambda cfg: window.update_config(cfg))
     window.tabs.addTab(settings_tab, "Settings")
 
     window.config_refreshed.connect(settings_tab.update_config)
