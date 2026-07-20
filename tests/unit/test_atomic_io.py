@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -96,6 +97,26 @@ def test_reconcile_dir_restores_newest_valid_backup(tmp_path: Path) -> None:
     assert (dest / "payload").read_bytes() == b"newer"
     assert older.is_dir()
     assert invalid.is_dir()
+
+
+@pytest.mark.parametrize("scan_root", [False, True], ids=["direct", "root-scan"])
+def test_reconcile_restores_newest_backup_by_mtime_across_name_formats(tmp_path: Path, scan_root: bool) -> None:
+    dest = tmp_path / "resource"
+    dest.mkdir()
+    newer = tmp_path / "resource.bak-1700000000000000000-epoch"
+    older = tmp_path / "resource.bak-2026-07-21T00:00:00-legacy"
+    for backup, payload in ((newer, b"newer"), (older, b"older")):
+        backup.mkdir()
+        (backup / "payload").write_bytes(payload)
+    os.utime(newer, ns=(2_000_000_000, 2_000_000_000))
+    os.utime(older, ns=(1_000_000_000, 1_000_000_000))
+
+    if scan_root:
+        atomic_io.reconcile_backups_in(tmp_path)
+    else:
+        reconcile_dir(dest)
+
+    assert (dest / "payload").read_bytes() == b"newer"
 
 
 def test_crash_mid_promote_recovered_on_next_scan(tmp_path: Path) -> None:

@@ -14,6 +14,9 @@ caller keeps its own pre-checks (e.g. the "already exists and not overwrite"
 
 from __future__ import annotations
 
+import errno
+import shutil
+import tempfile
 from pathlib import Path
 from typing import Callable
 
@@ -32,8 +35,9 @@ def promote_staged_dir(
     Args:
         staging: The freshly-built staging directory to move into place.
         final: The canonical destination path.
-        mover: Compatibility move primitive, used only if a caller reaches the
-            existing-final path with ``overwrite=False``.
+        mover: Compatibility move primitive, used for a cross-filesystem
+            transfer or if a caller reaches the existing-final path with
+            ``overwrite=False``.
         overwrite: When ``final`` already exists, replace it (back up first,
             restore on failure). Callers are responsible for rejecting an
             unwanted overwrite *before* calling this helper.
@@ -45,4 +49,15 @@ def promote_staged_dir(
     if final.exists() and not overwrite:
         mover(str(staging), str(final))
     else:
-        atomic_replace_dir(staging, final)
+        try:
+            atomic_replace_dir(staging, final)
+        except OSError as exc:
+            if exc.errno != errno.EXDEV:
+                raise
+            local_parent = Path(tempfile.mkdtemp(prefix=f".staging-{final.name}-", dir=final.parent))
+            try:
+                local_staging = local_parent / final.name
+                mover(str(staging), str(local_staging))
+                atomic_replace_dir(local_staging, final)
+            finally:
+                shutil.rmtree(local_parent, ignore_errors=True)

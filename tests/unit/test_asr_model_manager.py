@@ -87,6 +87,16 @@ def test_is_downloaded_recovers_dangling_backup(tmp_path):
     assert not backup.exists()
 
 
+def test_is_downloaded_ignores_complete_model_below_backup_component(tmp_path):
+    canonical = tmp_path / "cache"
+    canonical.mkdir()
+    (canonical / "partial").write_bytes(b"incomplete")
+    backup = tmp_path / "cache.bak-2026-07-21T00:00:00"
+    _write_model(backup / "faster-whisper-small")
+
+    assert is_downloaded("small", tmp_path) is False
+
+
 def test_is_downloaded_true_model_bin_directly_in_subdir(tmp_path):
     """Returns True even with a flat layout (model.bin one level under models_root)."""
     subdir = tmp_path / "faster-whisper-large-v3"

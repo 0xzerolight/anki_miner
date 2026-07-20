@@ -58,11 +58,12 @@ def reconcile_dir(dest_dir: Path) -> None:
 
     prefix = dest_dir.name + ".bak-"
     try:
-        backups = sorted(
-            (child for child in dest_dir.parent.iterdir() if child.name.startswith(prefix) and _is_valid_dir(child)),
-            key=lambda child: child.name,
-            reverse=True,
-        )
+        backups = []
+        for child in dest_dir.parent.iterdir():
+            if not child.name.startswith(prefix) or not _is_valid_dir(child):
+                continue
+            backups.append((child.stat().st_mtime_ns, child.name, child))
+        backups.sort(reverse=True)
     except OSError:
         return
     if not backups:
@@ -74,7 +75,7 @@ def reconcile_dir(dest_dir: Path) -> None:
         except OSError:
             return
     try:
-        os.replace(backups[0], dest_dir)
+        os.replace(backups[0][2], dest_dir)
     except OSError:
         return
 

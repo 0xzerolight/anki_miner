@@ -69,6 +69,8 @@ def is_downloaded(name: str, models_root: Path) -> bool:
             # model.bin sitting directly in models_root itself — not a valid layout
             continue
         rel_parts = candidate.relative_to(models_root).parts
+        if any(".bak-" in part for part in rel_parts):
+            continue
         if not any(_name_matches(part, name) for part in rel_parts):
             continue
         # Integrity: non-empty payload + required metadata sibling present.
