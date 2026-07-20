@@ -9,7 +9,7 @@ import requests
 
 from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.models import CardPayload, MediaData
-from anki_miner.services._ankiconnect import _expect_list
+from anki_miner.services._ankiconnect import _expect_list, post_action, post_multi
 from anki_miner.services.anki_media_store import _content_addressed_name
 from anki_miner.services.anki_service import AnkiService
 
@@ -23,6 +23,30 @@ def _mock_response(result=None, error=None):
     resp = MagicMock()
     resp.json.return_value = {"result": result, "error": error}
     return resp
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda: post_action("http://localhost:8765", "findNotes"),
+        lambda: post_multi(
+            "http://localhost:8765",
+            [{"action": "findNotes", "version": 6, "params": {"query": "deck:*"}}],
+        ),
+    ],
+)
+def test_http_error_is_not_ankiconnect_success(call):
+    """HTTP failure wins over an AnkiConnect-shaped success body."""
+    resp = _mock_response(result=[123])
+    resp.raise_for_status.side_effect = requests.HTTPError("503 Service Unavailable")
+
+    with (
+        patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
+        pytest.raises(AnkiConnectionError, match="503 Service Unavailable"),
+    ):
+        call()
+
+    resp.json.assert_not_called()
 
 
 @pytest.fixture(autouse=True)
@@ -527,13 +551,13 @@ class TestCreateCardsBatch:
             items.append(CardPayload(word=word, media=media, definition=f"def_{i}"))
         return items
 
-    def test_empty_list_returns_zero(self, test_config):
-        """Should return 0 immediately for an empty list."""
+    def test_empty_list_returns_no_ids(self, test_config):
+        """Should return no confirmed IDs for an empty list."""
         service = AnkiService(test_config)
 
         result = service.create_cards_batch([])
 
-        assert result == 0
+        assert result == []
 
     def test_single_batch_under_fifty(self, test_config, make_tokenized_word, recording_progress):
         """Should process all items in one batch when count < 50."""
@@ -545,7 +569,7 @@ class TestCreateCardsBatch:
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
             result = service.create_cards_batch(items, recording_progress)
 
-        assert result == 3
+        assert result == [100, 101, 102]
 
     def test_multiple_batches_one_fifty_items(self, test_config, make_tokenized_word, recording_progress):
         """Should split 150 items into two batches (100 + 50) and sum results."""
@@ -562,7 +586,7 @@ class TestCreateCardsBatch:
         ) as mock_post:
             result = service.create_cards_batch(items, recording_progress)
 
-        assert result == 150
+        assert result == list(range(150))
         # Exactly 2 batches (100 + 50), not more
         assert mock_post.call_count == 2
 
@@ -595,8 +619,8 @@ class TestCreateCardsBatch:
         ):
             service.create_cards_batch(items)
 
-    def test_counts_only_non_null_note_ids(self, test_config, make_tokenized_word):
-        """Should only count non-null IDs in the result array."""
+    def test_addnotes_returns_only_confirmed_note_ids(self, test_config, make_tokenized_word):
+        """Return confirmed identities; null addNotes slots stay skipped."""
         service = AnkiService(test_config)
         items = self._make_word_data(make_tokenized_word, n=5)
 
@@ -606,7 +630,7 @@ class TestCreateCardsBatch:
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
             result = service.create_cards_batch(items)
 
-        assert result == 3
+        assert result == [100, 102, 104]
 
     def test_non_duplicate_batch_error_propagates(self, test_config, make_tokenized_word):
         """A non-duplicate addNotes error (e.g. missing deck) still aborts."""
@@ -764,7 +788,7 @@ class TestCreateCardsBatch:
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             result = service.create_cards_batch([CardPayload(word=word, media=media, definition="definition")])
 
-        assert result == 1
+        assert len(result) == 1
         payload = mock_post.call_args[1]["json"]
         note = payload["params"]["notes"][0]
         word_field_name = test_config.anki_fields["word"]
@@ -781,7 +805,7 @@ class TestCreateCardsBatch:
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             result = service.create_cards_batch([CardPayload(word=word, media=media, definition="definition")])
 
-        assert result == 1
+        assert len(result) == 1
         payload = mock_post.call_args[1]["json"]
         note = payload["params"]["notes"][0]
         word_field_name = test_config.anki_fields["word"]
@@ -920,7 +944,7 @@ class TestVocabCacheMergeOnCreate:
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=add_resp):
             created = service.create_cards_batch(items)
 
-        assert created == 1
+        assert len(created) == 1
         # Cache must still be populated (not wiped) and contain the new word
         assert service._existing_vocab_cache is not None
         assert "食べる" in service._existing_vocab_cache
@@ -987,7 +1011,7 @@ class TestVocabCacheMergeOnCreate:
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=add_resp):
             n = service.create_cards_batch(items)
 
-        assert n == 1
+        assert len(n) == 1
         assert "食べる" in service._existing_vocab_cache, "created word must be merged"
         assert "未作成" not in service._existing_vocab_cache, "uncreated word must NOT be merged"
         assert "既知" in service._existing_vocab_cache
@@ -1192,8 +1216,8 @@ class TestStoreMediaFilesBatch:
         assert "clip.mp3" in stored
         assert "bad.jpg" not in stored
 
-    def test_length_mismatch_logs_warning(self, test_config, make_tokenized_word, tmp_path, caplog):
-        """A chunk where post_multi returns fewer results than actions should log a warning."""
+    def test_length_mismatch_retries_each_file(self, test_config, make_tokenized_word, tmp_path, caplog):
+        """A truncated multi response confirms nothing; retry each file."""
         service = AnkiService(test_config)
 
         word = make_tokenized_word()
@@ -1210,18 +1234,20 @@ class TestStoreMediaFilesBatch:
         )
 
         # Return only one result for two actions — deliberate mismatch
-        resp = _mock_response(result=["shot.jpg"])
+        responses = [
+            _mock_response(result=["shot.jpg"]),
+            _mock_response(result="shot.jpg"),
+            _mock_response(result="clip.mp3"),
+        ]
 
         with (
-            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
+            patch("anki_miner.services._ankiconnect.requests.post", side_effect=responses),
             caplog.at_level(logging.WARNING, logger="anki_miner.services.anki_media_store"),
         ):
             stored = service._store_media_files_batch([CardPayload(word=word, media=media, definition="def")])
 
-        assert any("silently skipped" in r.message for r in caplog.records)
-        # Only the one result that came back should be counted
-        assert "shot.jpg" in stored
-        assert "clip.mp3" not in stored
+        assert any("retrying 2 file" in r.message for r in caplog.records)
+        assert stored == {"shot.jpg", "clip.mp3"}
 
     def test_multi_failure_falls_back_to_per_file(self, test_config, make_tokenized_word, tmp_path):
         """A transport failure on the multi POST should retry the chunk per-file."""
@@ -1614,6 +1640,20 @@ class TestPostMultiErrors:
         ):
             post_multi("http://localhost:8765", [{"action": "noop", "version": 6, "params": {}}])
 
+    def test_addnotes_and_multi_cardinality(self):
+        """A truncated multi result is malformed, never implicit success."""
+        actions = [
+            {"action": "updateNoteFields", "version": 6, "params": {"note": {"id": 1, "fields": {}}}},
+            {"action": "updateNoteFields", "version": 6, "params": {"note": {"id": 2, "fields": {}}}},
+        ]
+        resp = _mock_response(result=[None])
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
+            pytest.raises(AnkiConnectionError, match="1 item.*expected 2"),
+        ):
+            post_multi("http://localhost:8765", actions)
+
 
 # ---------------------------------------------------------------------------
 # TestOptionalFields
@@ -1708,7 +1748,7 @@ class TestOptionalFields:
                 [CardPayload(word=word, media=media, definition="definition", extra_fields=extra)]
             )
 
-        assert result == 1
+        assert len(result) == 1
         payload = mock_post.call_args[1]["json"]
         note = payload["params"]["notes"][0]
         assert note["fields"]["PitchPosition"] == "1"
@@ -2147,7 +2187,7 @@ class TestDictMediaUpload:
         config = self._make_config_with_dict_media(test_config, temp_dir / "dicts")
         service = AnkiService(config)
 
-        definition = '<div>ふ<img class="anki-miner-dict-media" ' 'src="test-dict__svg-accent_X.svg">そ</div>'
+        definition = '<div>ふ<img class="anki-miner-dict-media" src="test-dict__svg-accent_X.svg">そ</div>'
         word = make_tokenized_word()
         media = MediaData()
 
@@ -2408,7 +2448,7 @@ class TestDictMediaUpload:
         # 1 failed multi + 2 per-file storeMediaFile retries + addNotes
         actions = [c[1]["json"]["action"] for c in mock_post.call_args_list]
         assert actions == ["multi", "storeMediaFile", "storeMediaFile", "addNotes"]
-        assert created == 2
+        assert len(created) == 2
         # Confirmed per-file stores are cached.
         assert "test-dict__svg-accent_X.svg" in service._dict_media_uploaded
         assert "test-dict__second.svg" in service._dict_media_uploaded
@@ -2436,7 +2476,7 @@ class TestDictMediaUpload:
             created = service.create_cards_batch([CardPayload(word=word, media=MediaData(), definition=definition)])
 
         # Card creation survives the media failure.
-        assert created == 1
+        assert len(created) == 1
         # The chunk was retried per-file before giving up.
         actions = [c[1]["json"]["action"] for c in mock_post.call_args_list]
         assert actions == ["multi", "storeMediaFile", "addNotes"]
@@ -2519,7 +2559,7 @@ class TestAnkiTagsConfig:
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp) as mock_post:
             count = service.create_cards_batch([CardPayload(word=word, media=media, definition="definition")])
 
-        assert count == 1
+        assert len(count) == 1
         payload = mock_post.call_args[1]["json"]
         note = payload["params"]["notes"][0]
         assert note["tags"] == expected
@@ -2564,7 +2604,7 @@ class TestGlossaryFieldRouting:
     field_data verbatim.
     """
 
-    _GLOSSARY_HTML = '<div class="yomitan-glossary">' '<ol><li data-dictionary="X">X def</li></ol>' "</div>"
+    _GLOSSARY_HTML = '<div class="yomitan-glossary"><ol><li data-dictionary="X">X def</li></ol></div>'
 
     def test_glossary_routed_to_mapped_anki_field(self, test_config, make_tokenized_word):
         """When anki_fields['glossary'] is set, AnkiService writes the raw HTML to that field."""
@@ -2592,7 +2632,7 @@ class TestGlossaryFieldRouting:
                 ]
             )
 
-        assert result == 1
+        assert len(result) == 1
         payload = mock_post.call_args[1]["json"]
         note = payload["params"]["notes"][0]
         assert note["fields"]["Glossary"] == self._GLOSSARY_HTML
@@ -2620,7 +2660,7 @@ class TestGlossaryFieldRouting:
                 ]
             )
 
-        assert result == 1
+        assert len(result) == 1
         payload = mock_post.call_args[1]["json"]
         note = payload["params"]["notes"][0]
         assert "Glossary" not in note["fields"]
@@ -2683,7 +2723,7 @@ class TestGlossaryFieldRouting:
                 ]
             )
 
-        assert result == 1
+        assert len(result) == 1
         payload = mock_post.call_args[1]["json"]
         note = payload["params"]["notes"][0]
         # Optional fields still routed normally
@@ -2710,9 +2750,7 @@ class TestGlossaryFieldRouting:
         media = MediaData()
 
         glossary_with_media = (
-            '<div class="yomitan-glossary">'
-            '<img class="anki-miner-dict-media" src="test-dict__svg-pitch_X.svg">'
-            "</div>"
+            '<div class="yomitan-glossary"><img class="anki-miner-dict-media" src="test-dict__svg-pitch_X.svg"></div>'
         )
 
         # multi sub-result for one file, then addNotes result
@@ -2733,7 +2771,7 @@ class TestGlossaryFieldRouting:
                 ]
             )
 
-        assert result == 1
+        assert len(result) == 1
         multi_calls = [c for c in mock_post.call_args_list if c[1]["json"]["action"] == "multi"]
         assert len(multi_calls) == 1
         actions = multi_calls[0][1]["json"]["params"]["actions"]
@@ -2760,7 +2798,7 @@ class TestGlossaryFieldRouting:
                 ]
             )
 
-        assert result == 1
+        assert len(result) == 1
 
     def test_none_extra_fields_does_not_crash(self, test_config, make_tokenized_word):
         """CardPayload with default extra_fields=None must still work fine after glossary wiring."""
@@ -2773,7 +2811,7 @@ class TestGlossaryFieldRouting:
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
             result = service.create_cards_batch([CardPayload(word=word, media=media, definition="def")])
 
-        assert result == 1
+        assert len(result) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -3428,7 +3466,7 @@ class TestNullSlotSkipCount:
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
             result = service.create_cards_batch(items)
 
-        assert result == 3
+        assert result == [100, 102, 104]
         assert service.last_skipped_duplicates == 2
 
     def test_null_slots_emit_info_log(self, test_config, make_tokenized_word, caplog):
@@ -3458,7 +3496,7 @@ class TestNullSlotSkipCount:
         with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
             result = service.create_cards_batch(items)
 
-        assert result == 3
+        assert result == [100, 101, 102]
         assert service.last_skipped_duplicates == 0
 
     def test_null_slots_accumulated_across_multiple_batches(self, test_config, make_tokenized_word):
@@ -3478,7 +3516,7 @@ class TestNullSlotSkipCount:
         ):
             result = service.create_cards_batch(items)
 
-        assert result == 197
+        assert result == list(range(197))
         assert service.last_skipped_duplicates == 3
 
 
@@ -3544,7 +3582,7 @@ class TestProbeDuplicates:
         with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[probe, add]) as mock_post:
             result = service.create_cards_batch(items)
 
-        assert result == 2
+        assert result == [100, 102]
         assert service.last_skipped_duplicates == 1
         assert service.last_created_note_ids == [100, 102]
         assert self._actions(mock_post) == ["canAddNotesWithErrorDetail", "addNotes"]
@@ -3567,7 +3605,7 @@ class TestProbeDuplicates:
         with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[probe]) as mock_post:
             result = service.create_cards_batch(items)
 
-        assert result == 0
+        assert result == []
         assert service.last_skipped_duplicates == 2
         assert self._actions(mock_post) == ["canAddNotesWithErrorDetail"]
 
@@ -3603,7 +3641,7 @@ class TestProbeDuplicates:
         with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[probe, add]) as mock_post:
             result = service.create_cards_batch(items)
 
-        assert result == 1
+        assert len(result) == 1
         probe_notes = mock_post.call_args_list[0][1]["json"]["params"]["notes"]
         assert probe_notes[0]["options"] == {"allowDuplicate": False, "duplicateScope": "deck"}
 
@@ -3644,7 +3682,7 @@ class TestProbeDuplicates:
         ) as mock_post:
             result = service.create_cards_batch(items)
 
-        assert result == 1
+        assert len(result) == 1
         assert service.last_skipped_duplicates == 1  # note1 is the duplicate
         assert self._actions(mock_post) == [
             "canAddNotesWithErrorDetail",
@@ -3712,7 +3750,7 @@ class TestNoteFieldPrimitives:
         service = AnkiService(test_config)
         updates = [(1, {"Glossary": "a"}), (2, {"Glossary": "b"})]
         with patch("anki_miner.services.anki_service.post_multi", return_value=[None, None]) as pm:
-            assert service.update_notes_fields(updates) == 2
+            assert service.update_notes_fields(updates) == [1, 2]
         actions = pm.call_args[0][1]
         assert [a["action"] for a in actions] == ["updateNoteFields", "updateNoteFields"]
         assert actions[0]["params"]["note"] == {"id": 1, "fields": {"Glossary": "a"}}
@@ -3721,12 +3759,12 @@ class TestNoteFieldPrimitives:
         service = AnkiService(test_config)
         updates = [(1, {"Glossary": "a"}), (2, {"Glossary": "b"})]
         with patch("anki_miner.services.anki_service.post_multi", return_value=[None, {"error": "boom"}]):
-            assert service.update_notes_fields(updates) == 1
+            assert service.update_notes_fields(updates) == [1]
 
     def test_update_notes_fields_empty_short_circuits(self, test_config):
         service = AnkiService(test_config)
         with patch("anki_miner.services.anki_service.post_multi") as pm:
-            assert service.update_notes_fields([]) == 0
+            assert service.update_notes_fields([]) == []
         pm.assert_not_called()
 
     def test_update_notes_fields_splits_by_byte_budget(self, test_config, monkeypatch):
@@ -3736,7 +3774,7 @@ class TestNoteFieldPrimitives:
         monkeypatch.setattr("anki_miner.services.anki_service._UPDATE_NOTES_MAX_BYTES", 10)
         updates = [(1, {"Glossary": "aaaaaaaa"}), (2, {"Glossary": "bbbbbbbb"})]
         with patch("anki_miner.services.anki_service.post_multi", return_value=[None]) as pm:
-            assert service.update_notes_fields(updates) == 2
+            assert service.update_notes_fields(updates) == [1, 2]
         # Two separate multi POSTs (one note each), not a single combined body.
         assert pm.call_count == 2
         assert [len(call[0][1]) for call in pm.call_args_list] == [1, 1]
@@ -3752,7 +3790,7 @@ class TestNoteFieldPrimitives:
             ),
             patch("anki_miner.services.anki_service.post_action", return_value=None) as pa,
         ):
-            assert service.update_notes_fields(updates) == 2
+            assert service.update_notes_fields(updates) == [1, 2]
         # One tiny per-note POST per note in the failed chunk.
         assert pa.call_count == 2
         assert all(call[0][1] == "updateNoteFields" for call in pa.call_args_list)

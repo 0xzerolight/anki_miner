@@ -244,7 +244,8 @@ class DeckBuilderWorker(ProcessorOwningWorker):
                 # `proc` directly instead.
                 if self.check_cancelled():
                     break
-                callback = self._make_curation_callback(selected, carded)
+                pending_carded: set[str] = set()
+                callback = self._make_curation_callback(selected, carded, pending_carded)
                 # Empty-curation behavior: our callback only ever returns a list
                 # (never None), so process_episode treats an empty [] as an
                 # intentional "card nothing this episode" — a COMPLETED zero-card
@@ -257,13 +258,13 @@ class DeckBuilderWorker(ProcessorOwningWorker):
                 #     if not unknown_words:        # [] == completed, zero cards
                 #         return ctx.build_result(new_words_found=0)
                 #
-                # We only read ``result.cards_created`` (0 for such an episode),
-                # so an episode with no newly-selected lemmas simply contributes
-                # zero cards and the loop continues. We deliberately let the
-                # callback return the (possibly empty) filtered list rather than
-                # pre-skipping the episode: pre-skipping would require re-deriving
-                # each episode's mineable lemma set here, and a zero-card result
-                # is already the correct, harmless outcome.
+                # A successful, error-free zero-card result therefore contributes
+                # zero and continues. Any failed non-raising ProcessingResult is
+                # rejected below before its staged lemmas, card count, or item
+                # completion can be committed. We deliberately let the callback
+                # return the (possibly empty) filtered list rather than pre-skip:
+                # pre-skipping would require re-deriving each episode's mineable
+                # lemma set here.
                 result = proc.process_episode(
                     pair.video,
                     pair.subtitle,
@@ -272,6 +273,14 @@ class DeckBuilderWorker(ProcessorOwningWorker):
                     episode_name_override=name,
                     progress_callback=self.progress_callback,
                 )
+                if self.check_cancelled():
+                    pending_carded.clear()
+                    break
+                if not result.success or result.errors:
+                    pending_carded.clear()
+                    detail = "; ".join(result.errors) or "processing result reported failure"
+                    raise RuntimeError(f"Deck build failed for {name}: {detail}")
+                carded.update(pending_carded)
                 total += result.cards_created
                 self.item_completed.emit(name, result.cards_created)
 
@@ -301,22 +310,23 @@ class DeckBuilderWorker(ProcessorOwningWorker):
         self,
         selected: set[str],
         carded: set[str],
+        pending_carded: set[str],
     ) -> Callable[[list], list]:
-        """Build a curation callback enforcing cross-episode single-carding.
+        """Build a curation callback staging cross-episode single-carding.
 
         The returned closure keeps a word iff its lemma is in ``selected`` and
-        not yet in ``carded``, then records every kept lemma in ``carded`` so the
-        same lemma is never carded twice across episodes (it cards at its first
-        occurrence in batch order). ``carded`` is shared across all episodes in
-        one build.
+        neither confirmed in ``carded`` nor staged in ``pending_carded``. The
+        caller merges the stage into ``carded`` only after ``process_episode``
+        returns a successful, error-free result; failed/cancelled results clear
+        the stage. ``carded`` is shared across all episodes in one build.
         """
 
         def callback(words: list) -> list:
             kept = []
             for w in words:
-                if w.lemma in selected and w.lemma not in carded:
+                if w.lemma in selected and w.lemma not in carded and w.lemma not in pending_carded:
                     kept.append(w)
-                    carded.add(w.lemma)
+                    pending_carded.add(w.lemma)
             return kept
 
         return callback

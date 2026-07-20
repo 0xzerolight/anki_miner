@@ -1302,8 +1302,8 @@ class EpisodeProcessor:
                 )
             )
 
-        cards_created = self.anki_service.create_cards_batch(card_data, progress_callback)
-        created_note_ids = list(self.anki_service.last_created_note_ids)
+        created_note_ids = self.anki_service.create_cards_batch(card_data, progress_callback)
+        cards_created = len(created_note_ids)
 
         self.presenter.show_success(
             QCoreApplication.translate("EpisodeProcessor", "Successfully created %n card(s)", "", cards_created)

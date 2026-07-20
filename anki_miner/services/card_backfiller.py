@@ -130,6 +130,9 @@ class BackfillPlan:
     # mining-faithful). Surfaced separately so the summary doesn't read as
     # "N cards ranked" when many only received the sentinel.
     sentinel_only_sorts: int
+    # Exact mapped field used to capture ``NotePlan.expression``. Apply uses
+    # this scan-time name for its compare-before-write identity check.
+    expression_field: str
 
     @property
     def total_field_changes(self) -> int:
@@ -138,14 +141,18 @@ class BackfillPlan:
 
 @dataclass(frozen=True)
 class BackfillResult:
-    """Apply outcome. ``tagged``/``fields_filled`` count ATTEMPTED updates —
-    ``update_notes_fields`` returns only a count, so the tag marks notes the
-    backfill touched or attempted."""
+    """Apply outcome with confirmed writes separated from failed writes.
+
+    ``notes_updated``, ``fields_filled``, and ``tagged`` count only note IDs
+    confirmed by AnkiConnect. ``failed`` counts attempted note updates that
+    were not confirmed. ``skipped_stale`` remains a field-change count.
+    """
 
     notes_updated: int
     fields_filled: int
     tagged: int
     skipped_stale: int
+    failed: int = 0
 
 
 def _is_empty(value: str) -> bool:
@@ -336,6 +343,7 @@ def scan_backfill(
         skipped_no_identity=skipped_no_identity,
         unavailable_fields=tuple(unavailable),
         sentinel_only_sorts=sentinel_only_sorts,
+        expression_field=word_field,
     )
 
 
@@ -585,19 +593,19 @@ def apply_backfill(
 
     What the user previewed is exactly what gets written — values are never
     recomputed. Per chunk, one ``notesInfo`` recheck drops notes deleted since
-    the scan and (in fill-only-empty mode) drops any change whose target field
-    is no longer empty, so a value the user added between Scan and Apply is
-    never clobbered; overwrite mode only drops deleted notes (the user asked
-    for the replace). Tags are added per chunk immediately AFTER that chunk's
-    write, so cancellation never leaves written-but-untagged notes; a tag
-    failure is logged and reflected in ``tagged``, never fatal.
+    the scan, notes whose normalized Expression no longer matches the scanned
+    identity, and (in fill-only-empty mode) changes whose target field is no
+    longer empty. Overwrite mode may replace targets, but never bypasses the
+    Expression identity check. Tags are added only to IDs whose field update
+    AnkiConnect confirmed; a tag failure is logged and reflected in ``tagged``,
+    never fatal.
 
     Cancellation is honored between chunks: committed chunks stay written and
     tagged (the restyler precedent); partial counts are returned.
     """
     overwrite = plan.options.overwrite
     total_notes = len(plan.notes)
-    notes_updated = fields_filled = tagged = skipped_stale = 0
+    notes_updated = fields_filled = tagged = skipped_stale = failed = 0
     written_so_far = 0
 
     for chunk in _chunks(plan.notes, _CHUNK):
@@ -614,6 +622,11 @@ def apply_backfill(
             if not isinstance(fields, dict):
                 skipped_stale += len(note.changes)  # deleted since scan
                 continue
+            if plan.expression_field:
+                current_expression = _field_value(fields, plan.expression_field)
+                if current_expression is None or _strip_for_dedup(current_expression) != note.expression:
+                    skipped_stale += len(note.changes)
+                    continue
             payload: dict[str, str] = {}
             for change in note.changes:
                 current = _field_value(fields, change.field_name)
@@ -628,14 +641,18 @@ def apply_backfill(
                 updates.append((note.note_id, payload))
         written_so_far += len(chunk)
         if updates:
-            notes_updated += anki_service.update_notes_fields(updates)
-            fields_filled += sum(len(payload) for _nid, payload in updates)
-            attempted_ids = [nid for nid, _payload in updates]
-            try:
-                anki_service.add_tags(attempted_ids, tag)
-                tagged += len(attempted_ids)
-            except Exception as e:
-                logger.warning("Backfill tagging failed for %d note(s): %s", len(attempted_ids), e)
+            successful_id_set = set(anki_service.update_notes_fields(updates))
+            confirmed_updates = [(nid, payload) for nid, payload in updates if nid in successful_id_set]
+            confirmed_ids = [nid for nid, _payload in confirmed_updates]
+            notes_updated += len(confirmed_ids)
+            fields_filled += sum(len(payload) for _nid, payload in confirmed_updates)
+            failed += len(updates) - len(confirmed_ids)
+            if confirmed_ids:
+                try:
+                    anki_service.add_tags(confirmed_ids, tag)
+                    tagged += len(confirmed_ids)
+                except Exception as e:
+                    logger.warning("Backfill tagging failed for %d note(s): %s", len(confirmed_ids), e)
         if progress:
             progress(written_so_far, total_notes)
 
@@ -644,4 +661,5 @@ def apply_backfill(
         fields_filled=fields_filled,
         tagged=tagged,
         skipped_stale=skipped_stale,
+        failed=failed,
     )

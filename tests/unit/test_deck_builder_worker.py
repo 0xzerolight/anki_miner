@@ -21,6 +21,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.workers import deck_builder_worker as dbw_module
 from anki_miner.gui.workers.deck_builder_worker import DeckBuilderWorker
 from anki_miner.models.deck_build import DeckBuildRequest, DeckSelectionMode
+from anki_miner.models.processing import ProcessingResult
 from anki_miner.models.word import TokenizedWord
 from anki_miner.utils.file_pairing import FilePair
 
@@ -56,8 +57,17 @@ def _fake_processor(counts: collections.Counter[str], known: set[str] | None = N
         # source='user' ignore list is folded into the preview estimate (T-24);
         # default to empty so the estimate equals the known set in these tests.
         proc.known_word_db.get_words_by_source.return_value = set()
-    proc.process_episode.return_value = MagicMock(cards_created=1)
+    proc.process_episode.return_value = _processing_result(1)
     return proc
+
+
+def _processing_result(cards_created: int, errors: list[str] | None = None) -> ProcessingResult:
+    return ProcessingResult(
+        total_words_found=cards_created,
+        new_words_found=cards_created,
+        cards_created=cards_created,
+        errors=errors or [],
+    )
 
 
 def _make_request(pairs, *, mode=DeckSelectionMode.ALL, value=0.0, collection_filter=False) -> DeckBuildRequest:
@@ -209,20 +219,20 @@ def test_cross_episode_dedup(qapp):
     base = _fake_processor(counts)
     ep1 = _fake_processor(counts)
     ep2 = _fake_processor(counts)
+    kept: list[list[str]] = []
+
+    def process_once(*args, curation_callback, **kwargs):
+        kept.append([word.lemma for word in curation_callback([_make_word("a")])])
+        return _processing_result(1)
+
+    ep1.process_episode.side_effect = process_once
+    ep2.process_episode.side_effect = process_once
     worker, _ = _make_worker(qapp, _make_request([_make_pair("ep1"), _make_pair("ep2")]), processors=[base, ep1, ep2])
     try:
         worker.confirm()
         worker.run()
 
-        # Extract the curation_callback handed to each episode and feed it the same word.
-        cb1 = ep1.process_episode.call_args.kwargs["curation_callback"]
-        cb2 = ep2.process_episode.call_args.kwargs["curation_callback"]
-
-        kept_ep1 = cb1([_make_word("a")])
-        assert [w.lemma for w in kept_ep1] == ["a"]  # carded on first occurrence
-
-        kept_ep2 = cb2([_make_word("a")])
-        assert kept_ep2 == []  # dropped: already carded in ep1
+        assert kept == [["a"], []]
     finally:
         worker._stop_patch.stop()
 
@@ -575,9 +585,9 @@ def test_build_finished_sums_cards_and_reports_coverage(qapp):
     counts = collections.Counter({"a": 1})
     base = _fake_processor(counts)
     ep1 = _fake_processor(counts)
-    ep1.process_episode.return_value = MagicMock(cards_created=2)
+    ep1.process_episode.return_value = _processing_result(2)
     ep2 = _fake_processor(counts)
-    ep2.process_episode.return_value = MagicMock(cards_created=3)
+    ep2.process_episode.return_value = _processing_result(3)
     worker, _ = _make_worker(qapp, _make_request([_make_pair("ep1"), _make_pair("ep2")]), processors=[base, ep1, ep2])
     try:
         previews = _collect(worker.preview_ready)
@@ -597,6 +607,39 @@ def test_build_finished_sums_cards_and_reports_coverage(qapp):
         worker._stop_patch.stop()
 
 
+def test_failed_processing_result_never_marks_deck_builder_complete(qapp):
+    counts = collections.Counter({"a": 1})
+    base = _fake_processor(counts)
+    ep = _fake_processor(counts)
+    captured = {}
+
+    def fail_episode(*args, curation_callback, **kwargs):
+        captured["callback"] = curation_callback
+        assert [word.lemma for word in curation_callback([_make_word("a")])] == ["a"]
+        return ProcessingResult(
+            total_words_found=1,
+            new_words_found=1,
+            cards_created=1,
+            errors=["Anki write failed"],
+        )
+
+    ep.process_episode.side_effect = fail_episode
+    worker, _ = _make_worker(qapp, _make_request([_make_pair("ep1")]), processors=[base, ep])
+    try:
+        completed = _collect(worker.item_completed)
+        finished = _collect(worker.build_finished)
+        errors = _collect(worker.error)
+        worker.confirm()
+        worker.run()
+
+        assert completed == []
+        assert finished == []
+        assert errors == ["Deck build failed for ep1: Anki write failed"]
+        assert [word.lemma for word in captured["callback"]([_make_word("a")])] == ["a"]
+    finally:
+        worker._stop_patch.stop()
+
+
 def test_cancel_mid_build_does_not_emit_build_finished(qapp):
     """A cancel during the build loop must NOT emit build_finished.
 
@@ -611,7 +654,7 @@ def test_cancel_mid_build_does_not_emit_build_finished(qapp):
 
     def cancel_during_ep1(*args, **kwargs):
         worker.cancel()
-        return MagicMock(cards_created=1)
+        return _processing_result(1)
 
     ep1.process_episode.side_effect = cancel_during_ep1
     try:
@@ -643,7 +686,7 @@ def test_cancel_mid_build_propagates_to_processor(qapp):
 
     def cancel_during_ep1(*args, **kwargs):
         worker.cancel()
-        return MagicMock(cards_created=1)
+        return _processing_result(1)
 
     ep1.process_episode.side_effect = cancel_during_ep1
     try:
@@ -666,9 +709,9 @@ def test_empty_episode_does_not_abort_build(qapp):
     counts = collections.Counter({"a": 1})
     base = _fake_processor(counts)
     ep1 = _fake_processor(counts)
-    ep1.process_episode.return_value = MagicMock(cards_created=0)
+    ep1.process_episode.return_value = _processing_result(0)
     ep2 = _fake_processor(counts)
-    ep2.process_episode.return_value = MagicMock(cards_created=4)
+    ep2.process_episode.return_value = _processing_result(4)
     worker, _ = _make_worker(qapp, _make_request([_make_pair("ep1"), _make_pair("ep2")]), processors=[base, ep1, ep2])
     try:
         finished = _collect(worker.build_finished)

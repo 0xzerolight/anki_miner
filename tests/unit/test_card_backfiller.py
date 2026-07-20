@@ -596,7 +596,7 @@ class RecordingAnkiService(FakeAnkiService):
 
     def update_notes_fields(self, updates):
         self.updates.append(list(updates))
-        return len(updates)
+        return [note_id for note_id, _fields in updates]
 
     def add_tags(self, note_ids, tags):
         if self.fail_tags:
@@ -612,6 +612,7 @@ def _plan(notes, overwrite=False):
         skipped_no_identity=0,
         unavailable_fields=(),
         sentinel_only_sorts=0,
+        expression_field="",
     )
 
 
@@ -620,6 +621,62 @@ def _note_plan(note_id, changes):
 
 
 class TestApplyBackfill:
+    def test_backfill_counts_only_confirmed_and_never_tags_failed(self):
+        anki = RecordingAnkiService(
+            {
+                1: _note(1, word="word1", Frequency=""),
+                2: _note(2, word="word2", Frequency=""),
+            }
+        )
+        anki.update_notes_fields = lambda updates: [1]
+        plan = _plan(
+            [
+                _note_plan(1, [("frequency", "Frequency", "", "a")]),
+                _note_plan(2, [("frequency", "Frequency", "", "b")]),
+            ]
+        )
+
+        result = apply_backfill(anki, plan)
+
+        assert result.notes_updated == 1
+        assert result.fields_filled == 1
+        assert result.failed == 1
+        assert result.tagged == 1
+        assert anki.tag_calls == [([1], BACKFILL_TAG)]
+
+    def test_stale_backfill_note_skipped(self, backfill_config):
+        word_field = backfill_config.anki_fields["word"]
+        anki = RecordingAnkiService(
+            {
+                1: _note(
+                    1,
+                    **{
+                        word_field: "猫",
+                        "ExpressionReading": "ねこ",
+                        "Frequency": "",
+                    },
+                )
+            }
+        )
+        freq = FakeFrequencyService({("猫", "ねこ"): [("JPDB", 42, None)]})
+        plan = scan_backfill(anki, backfill_config, _services(freq=freq), _options({"frequency"}))
+        anki.notes[1] = _note(
+            1,
+            **{
+                word_field: "犬",
+                "ExpressionReading": "いぬ",
+                "Frequency": "",
+            },
+        )
+
+        result = apply_backfill(anki, plan)
+
+        assert anki.updates == []
+        assert anki.tag_calls == []
+        assert result.notes_updated == 0
+        assert result.fields_filled == 0
+        assert result.skipped_stale == 1
+
     def test_groups_multi_field_changes_per_note(self):
         anki = RecordingAnkiService({1: _note(1, Frequency="", FrequencySort="")})
         plan = _plan(

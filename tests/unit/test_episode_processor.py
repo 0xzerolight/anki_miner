@@ -54,7 +54,7 @@ class TestSanitizeSourceLabel:
             "Can a Gal Be Kind to Otaku [WEBRip-1080p][10bit][AV1][Opus 2.0][JA]-Trix"
         )
         assert _sanitize_source_label(label) == (
-            "Season 01 — Gals Can't Be Kind to Otaku!! (2026) - S01E01 - " "Can a Gal Be Kind to Otaku"
+            "Season 01 — Gals Can't Be Kind to Otaku!! (2026) - S01E01 - Can a Gal Be Kind to Otaku"
         )
 
     def test_preserves_mid_title_brackets(self):
@@ -129,7 +129,7 @@ class TestProcessEpisode:
             "1. to eat",
             "1. to run",
         ]
-        mock_services["anki_service"].create_cards_batch.return_value = 2
+        mock_services["anki_service"].create_cards_batch.return_value = [1, 2]
 
         result = processor.process_episode(video, sub)
 
@@ -160,7 +160,7 @@ class TestProcessEpisode:
         mock_services["word_filter"].filter_unknown.return_value = words
         mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], _make_media("taberu"))]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         result = proc.process_episode(tmp_path / "ep01.mkv", tmp_path / "ep01.ass")
 
@@ -185,7 +185,7 @@ class TestProcessEpisode:
             (words[1], _make_media("hashiru")),
         ]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. eat", "1. run"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
         mock_services["anki_service"].last_skipped_duplicates = 1
 
         proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
@@ -211,7 +211,7 @@ class TestProcessEpisode:
             (words[1], _make_media("hashiru")),
         ]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. eat", "1. run"]
-        mock_services["anki_service"].create_cards_batch.return_value = 2
+        mock_services["anki_service"].create_cards_batch.return_value = [1, 2]
         mock_services["anki_service"].last_skipped_duplicates = 0
         mock_services["anki_service"].last_media_store_failures = 3
 
@@ -276,7 +276,7 @@ class TestProcessEpisode:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor.process_episode(video, sub)
 
@@ -336,7 +336,7 @@ class TestProcessEpisode:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to do someone in"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor.process_episode(video, sub)
 
@@ -355,7 +355,7 @@ class TestProcessEpisode:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor.process_episode(video, sub, audio_only=True)
 
@@ -373,7 +373,7 @@ class TestProcessEpisode:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor.process_episode(video, sub)
 
@@ -401,7 +401,7 @@ class TestProcessEpisode:
         mock_services["media_extractor"].resolve_animated_format.return_value = resolved
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
         proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", audio_only=audio_only)
         return presenter
 
@@ -499,7 +499,7 @@ class TestProcessEpisode:
             (words[0], media1),
         ]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
@@ -617,7 +617,7 @@ class TestOptionalServices:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -657,7 +657,7 @@ class TestOptionalServices:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to bet"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -689,7 +689,7 @@ class TestOptionalServices:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to bet"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -727,7 +727,7 @@ class TestOptionalServices:
         mock_services["word_filter"].filter_unknown.return_value = [hit1, miss, hit2]
         mock_services["media_extractor"].extract_media_batch.return_value = [(hit1, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -759,7 +759,7 @@ class TestOptionalServices:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -796,7 +796,7 @@ class TestOptionalServices:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -831,7 +831,7 @@ class TestOptionalServices:
         mock_services["word_filter"].filter_by_frequency.return_value = [word1]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word1, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=config,
@@ -859,7 +859,7 @@ class TestOptionalServices:
         mock_services["word_filter"].filter_unknown.return_value = [word1]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word1, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=config,
@@ -888,7 +888,7 @@ class TestOptionalServices:
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         presenter = MagicMock(spec=NullPresenter())
         services = {**mock_services, "word_filter": WordFilterService(config)}
@@ -920,7 +920,7 @@ class TestOptionalServices:
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = False
@@ -953,7 +953,7 @@ class TestOptionalServices:
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         mock_frequency = MagicMock()
         mock_frequency.is_available.return_value = True  # a source IS loaded...
@@ -1023,7 +1023,7 @@ class TestOptionalServices:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -1056,7 +1056,7 @@ class TestOptionalServices:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -1087,7 +1087,7 @@ class TestOptionalServices:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         config = replace(
             test_config,
@@ -1130,7 +1130,7 @@ class TestOptionalServices:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         # Map the optional frequency_sort field so the sort column is emitted.
         config = replace(test_config, anki_fields={**test_config.anki_fields, "frequency_sort": "FrequencySort"})
@@ -1172,7 +1172,7 @@ class TestOptionalServices:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         # test_config leaves frequency_sort unmapped, so the sentinel is suppressed
         # and the default-config wire stays byte-identical to pre-harmonic behavior.
@@ -1212,7 +1212,7 @@ class TestOptionalServices:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         config = replace(test_config, anki_fields={**test_config.anki_fields, "frequency_sort": "FrequencySort"})
         processor = build_processor(
@@ -1281,7 +1281,7 @@ class TestPitchLemmaReading:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -1297,9 +1297,9 @@ class TestPitchLemmaReading:
         assert len(words_arg) == 1
         lemma, reading, pos = words_arg[0]
         assert lemma == "食べる"
-        assert reading == "タベル", (
-            f"Expected lemma_reading 'タベル', got '{reading}' — " "surface reading must not reach pitch lookup"
-        )
+        assert (
+            reading == "タベル"
+        ), f"Expected lemma_reading 'タベル', got '{reading}' — surface reading must not reach pitch lookup"
         assert pos == "動詞"
 
     def test_falls_back_to_surface_reading_when_lemma_reading_empty(self, test_config, mock_services, tmp_path):
@@ -1325,7 +1325,7 @@ class TestPitchLemmaReading:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -1375,7 +1375,7 @@ class TestPitchLemmaReading:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to feel"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -1405,7 +1405,7 @@ class TestPitchLemmaReading:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to feel"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         config = replace(
             test_config,
@@ -1464,7 +1464,7 @@ class TestKnownWordDBIntegration:
         mock_services["word_filter"].filter_unknown.return_value = [word1]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media1)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=replace(test_config, use_known_words_db=True),
@@ -1502,7 +1502,7 @@ class TestKnownWordDBIntegration:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=replace(test_config, use_known_words_db=True),
@@ -1545,7 +1545,7 @@ class TestKnownWordDBIntegration:
         # as a side effect (the process_episode early reset clears any pre-call value).
         def _create_batch(card_data, progress_callback=None):
             mock_services["anki_service"].last_created_note_ids = [12345]
-            return 1
+            return [12345]
 
         mock_services["anki_service"].create_cards_batch.side_effect = _create_batch
 
@@ -1591,7 +1591,7 @@ class TestKnownWordDBIntegration:
 
         def _create_batch(card_data, progress_callback=None):
             mock_services["anki_service"].last_created_note_ids = [999]
-            return 1
+            return [999]
 
         mock_services["anki_service"].create_cards_batch.side_effect = _create_batch
 
@@ -1626,7 +1626,7 @@ class TestKnownWordDBIntegration:
         mock_services["anki_service"].get_existing_vocabulary.return_value = {"泳ぐ"}
         mock_services["word_filter"].filter_unknown.return_value = [word1]
         mock_services["media_extractor"].extract_media_batch.return_value = []
-        mock_services["anki_service"].create_cards_batch.return_value = 0
+        mock_services["anki_service"].create_cards_batch.return_value = []
 
         processor = build_processor(
             config=replace(test_config, use_known_words_db=False),
@@ -1679,7 +1679,7 @@ class TestIncludeKnownWordsFlag:
         mock_services["anki_service"].get_existing_vocabulary.return_value = {"食べる", "走る"}
         mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media1), (word2, media2)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat", "1. to run"]
-        mock_services["anki_service"].create_cards_batch.return_value = 2
+        mock_services["anki_service"].create_cards_batch.return_value = [1, 2]
 
         processor = build_processor(
             config=config,
@@ -1716,7 +1716,7 @@ class TestIncludeKnownWordsFlag:
         mock_services["anki_service"].get_existing_vocabulary.return_value = {"食べる", "走る"}
         mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media1), (word2, media2)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat", "1. to run"]
-        mock_services["anki_service"].create_cards_batch.return_value = 2
+        mock_services["anki_service"].create_cards_batch.return_value = [1, 2]
 
         processor = build_processor(
             config=config,
@@ -1749,7 +1749,7 @@ class TestIncludeKnownWordsFlag:
         mock_services["word_filter"].filter_unknown.return_value = [word1]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media1)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -1803,7 +1803,7 @@ class TestWordListServiceIntegration:
         mock_services["word_filter"].filter_by_word_lists.return_value = [word1]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -1853,7 +1853,7 @@ class TestWordsetServiceIntegration:
         mock_services["word_filter"].filter_by_wordsets.return_value = [word1]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -1881,7 +1881,7 @@ class TestWordsetServiceIntegration:
         mock_services["word_filter"].filter_unknown.return_value = [word1]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word1, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=config,
@@ -1937,7 +1937,7 @@ class TestWhitelistForceInclude:
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["media_extractor"].extract_media_batch.return_value = [(kept, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. coffee"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         services = {**mock_services, "word_filter": WordFilterService(config)}
         processor = build_processor(
@@ -1960,7 +1960,7 @@ class TestWhitelistForceInclude:
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["media_extractor"].extract_media_batch.return_value = [(kept, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         services = {**mock_services, "word_filter": WordFilterService(config)}
         processor = build_processor(
@@ -1984,7 +1984,7 @@ class TestWhitelistForceInclude:
         mock_services["definition_service"].has_offline_definitions.side_effect = lambda lemmas: dict.fromkeys(
             lemmas, False
         )
-        mock_services["anki_service"].create_cards_batch.return_value = 0
+        mock_services["anki_service"].create_cards_batch.return_value = []
 
         services = {**mock_services, "word_filter": WordFilterService(config)}
         processor = build_processor(
@@ -2006,7 +2006,7 @@ class TestWhitelistForceInclude:
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = {word.mined_form}
-        mock_services["anki_service"].create_cards_batch.return_value = 0
+        mock_services["anki_service"].create_cards_batch.return_value = []
 
         services = {**mock_services, "word_filter": WordFilterService(config)}
         processor = build_processor(
@@ -2028,7 +2028,7 @@ class TestWhitelistForceInclude:
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
-        mock_services["anki_service"].create_cards_batch.return_value = 0
+        mock_services["anki_service"].create_cards_batch.return_value = []
 
         services = {**mock_services, "word_filter": WordFilterService(config)}
         processor = build_processor(
@@ -2077,7 +2077,7 @@ class TestCrossEpisodeFiltering:
         mock_services["word_filter"].filter_by_episode_count.return_value = [word1]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -2131,7 +2131,7 @@ class TestCrossEpisodeFiltering:
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["media_extractor"].extract_media_batch.return_value = [(word_b, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to run"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         services = {**mock_services, "word_filter": WordFilterService(config)}
         processor = build_processor(config=config, presenter=NullPresenter(), **services)
@@ -2181,7 +2181,7 @@ class TestDefinitionSkipping:
             "1. to eat",
             None,
         ]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -2229,7 +2229,7 @@ class TestStatsServiceIntegration:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -2254,7 +2254,7 @@ class TestStatsServiceIntegration:
         mock_services["word_filter"].filter_unknown.return_value = [words[0]]  # 1 unknown
         mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -2295,7 +2295,7 @@ class TestStatsServiceIntegration:
         mock_services["word_filter"].filter_by_frequency.return_value = [common]
         mock_services["media_extractor"].extract_media_batch.return_value = [(common, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         # Frequency cutoff is gated on a loaded service now; inject one so the
         # mocked filter_by_frequency still runs and the 2->1 shrink stays real
@@ -2382,7 +2382,7 @@ class TestStatsServiceIntegration:
         # as a side effect (the process_episode early reset clears any pre-call value).
         def _create_batch(card_data, progress_callback=None):
             mock_services["anki_service"].last_created_note_ids = [12345]
-            return 1
+            return [12345]
 
         mock_services["anki_service"].create_cards_batch.side_effect = _create_batch
 
@@ -2420,7 +2420,7 @@ class TestStatsServiceIntegration:
 
         def _create_batch(card_data, progress_callback=None):
             mock_services["anki_service"].last_created_note_ids = [12345]
-            return 1
+            return [12345]
 
         mock_services["anki_service"].create_cards_batch.side_effect = _create_batch
 
@@ -2540,7 +2540,7 @@ class TestProcessYoutubeUrl:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
     def test_missing_fetcher_raises_runtime_error(self, test_config, mock_services, tmp_path):
         """process_youtube_url on a processor without a fetcher raises RuntimeError."""
@@ -2962,7 +2962,7 @@ class TestProcessYoutubeUrlCancelPropagation:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         mock_fetcher = MagicMock()
         mock_fetcher.fetch_video.return_value = FetchedMedia(
@@ -3156,7 +3156,7 @@ class TestIPlusOneFilter:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
     def test_calls_parse_with_index_when_flag_on(self, test_config, mock_services, tmp_path):
         """Flag on routes Phase 1 through parse_subtitle_file_with_index."""
@@ -3306,7 +3306,7 @@ class TestIPlusOneFilter:
         mock_services["word_filter"].filter_i_plus_one.side_effect = lambda words, idx, all_unknown_lemmas=None: [word1]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word1, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         spy_presenter = MagicMock(spec=NullPresenter())
 
@@ -3324,10 +3324,9 @@ class TestIPlusOneFilter:
             for call in spy_presenter.show_info.call_args_list
             if call.args and isinstance(call.args[0], str) and pattern.search(call.args[0])
         ]
-        assert matched, (
-            "Expected an i+1 filter show_info message; got: "
-            f"{[c.args for c in spy_presenter.show_info.call_args_list]}"
-        )
+        assert (
+            matched
+        ), f"Expected an i+1 filter show_info message; got: {[c.args for c in spy_presenter.show_info.call_args_list]}"
         # Specifically: kept 1/2 (50%).
         assert "kept 1/2 words (50%)" in matched[0]
 
@@ -3357,7 +3356,7 @@ class TestGlossaryFetch:
         mock_services["word_filter"].filter_unknown.return_value = words
         mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
         return tmp_path / "v.mkv", tmp_path / "s.ass"
 
     @pytest.fixture
@@ -3465,7 +3464,7 @@ class TestGlossaryFetch:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to do someone in"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         lemma_glossary = '<div class="yomitan-glossary"><ol><li>to do</li></ol></div>'
         mock_services["definition_service"].get_glossaries_batch.side_effect = [[None], [lemma_glossary]]
@@ -3625,7 +3624,7 @@ class TestAudioTrackOverrideForwarding:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         video = tmp_path / "ep01.mkv"
         sub = tmp_path / "ep01.ass"
@@ -3645,7 +3644,7 @@ class TestAudioTrackOverrideForwarding:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         video = tmp_path / "ep01.mkv"
         sub = tmp_path / "ep01.ass"
@@ -3670,7 +3669,7 @@ class TestAudioTrackOverrideForwarding:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         video = tmp_path / "ep01.mkv"
         sub = tmp_path / "ep01.ass"
@@ -3732,7 +3731,7 @@ class TestSourceField:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
     def test_default_source_label_from_video_path(self, processor, mock_services, tmp_path):
         """Without an override, source_label is '<folder> — <stem>' plus timestamp."""
@@ -3825,7 +3824,7 @@ class TestPreflightCardTarget:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         parent = MagicMock()
         parent.attach_mock(mock_services["anki_service"], "anki_service")
@@ -3908,7 +3907,7 @@ class TestPreflightCardTarget:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         mock_fetcher = MagicMock()
         mock_fetcher.fetch_video.return_value = FetchedMedia(
@@ -4079,7 +4078,7 @@ class TestPhase2FilterOrdering:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
     def test_i_plus_one_runs_before_sentence_length(self, test_config, mock_services, tmp_path):
         config = replace(
@@ -4147,7 +4146,7 @@ class TestPhase2FilterOrdering:
         mock_services["word_filter"].filter_by_script_type.return_value = [word1]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(config=config, presenter=NullPresenter(), **mock_services)
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
@@ -4173,7 +4172,7 @@ class TestPhase2FilterOrdering:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(config=config, presenter=NullPresenter(), **mock_services)
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
@@ -4194,7 +4193,7 @@ class TestPhase2FilterOrdering:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(config=config, presenter=NullPresenter(), **mock_services)
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
@@ -4245,7 +4244,7 @@ class TestRecordDifficultyGuard:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -4278,7 +4277,7 @@ class TestRecordDifficultyGuard:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -4306,7 +4305,7 @@ class TestRecordDifficultyGuard:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(
             config=test_config,
@@ -4380,7 +4379,7 @@ class TestMinedFormsOnResult:
             "1. to eat",
             "1. cat",
         ]
-        mock_services["anki_service"].create_cards_batch.return_value = 2
+        mock_services["anki_service"].create_cards_batch.return_value = [1, 2]
 
         processor = build_processor(
             config=test_config,
@@ -4427,7 +4426,7 @@ class TestMinedFormsOnResult:
             (fresh, _make_media("neko")),
         ]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat", "1. cat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 2
+        mock_services["anki_service"].create_cards_batch.return_value = [1, 2]
 
         processor = build_processor(
             config=replace(test_config, use_known_words_db=True),
@@ -4489,7 +4488,7 @@ class TestOfflineDefinitionPreFilter:
         }
         mock_services["media_extractor"].extract_media_batch.return_value = [(keep, _make_media("k"))]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         captured: dict = {}
 
@@ -4770,7 +4769,7 @@ class TestPhaseTimingLogs:
         services["word_filter"].filter_unknown.return_value = [word]
         services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
         services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        services["anki_service"].create_cards_batch.return_value = 1
+        services["anki_service"].create_cards_batch.return_value = [1]
 
         processor = build_processor(config=test_config, presenter=NullPresenter(), **services)
         with caplog.at_level(logging.INFO, logger="anki_miner.orchestration.episode_processor"):

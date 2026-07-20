@@ -179,13 +179,15 @@ class RestyleResult:
     ``scanned``: a note is ``restyled`` if ANY carrier field changed, else
     ``skipped_styled`` if any carrier field had miner markup (already current,
     or a non-conforming ``<style>`` structure left untouched), else
-    ``skipped_no_markup`` (non-miner note).
+    ``skipped_no_markup`` (non-miner note). A changed note whose write was not
+    confirmed is ``failed``. These four outcome counters sum to ``scanned``.
     """
 
     scanned: int
     restyled: int
     skipped_styled: int
     skipped_no_markup: int
+    failed: int = 0
 
 
 def _chunks(items: list[int], size: int) -> Iterator[list[int]]:
@@ -247,7 +249,7 @@ def restyle_mined_cards(
     # old silent every-run-restyle failure mode).
 
     note_ids = anki_service.find_notes(f'note:"{_escape_note_type(config.anki_note_type)}"')
-    scanned = restyled = skipped_styled = skipped_no_markup = 0
+    scanned = restyled = skipped_styled = skipped_no_markup = failed = 0
 
     for chunk in _chunks(note_ids, _CHUNK):
         if is_cancelled and is_cancelled():
@@ -279,8 +281,11 @@ def restyle_mined_cards(
             else:
                 skipped_no_markup += 1
         if updates:
-            restyled += anki_service.update_notes_fields(updates)
+            successful_id_set = set(anki_service.update_notes_fields(updates))
+            confirmed = sum(1 for note_id, _fields in updates if note_id in successful_id_set)
+            restyled += confirmed
+            failed += len(updates) - confirmed
         if progress:
             progress(scanned, len(note_ids))
 
-    return RestyleResult(scanned, restyled, skipped_styled, skipped_no_markup)
+    return RestyleResult(scanned, restyled, skipped_styled, skipped_no_markup, failed)

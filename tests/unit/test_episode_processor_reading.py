@@ -90,7 +90,7 @@ def _make_anki_service() -> MagicMock:
             pc.on_complete()
         svc.last_created_note_ids = list(range(1, len(card_data) + 1))
         svc.last_card_data = list(card_data)
-        return len(card_data)
+        return list(svc.last_created_note_ids)
 
     svc.create_cards_batch.side_effect = _create
     svc.last_card_data = []

@@ -287,28 +287,29 @@ class AnkiService:
             elem_type=dict,
         )
 
-    def update_notes_fields(self, updates: list[tuple[int, dict[str, str]]]) -> int:
+    def update_notes_fields(self, updates: list[tuple[int, dict[str, str]]]) -> list[int]:
         """Overwrite fields on many notes in one batch (``updateNoteFields`` via ``post_multi``).
 
-        ``updates`` is ``[(note_id, {field_name: value})]``. Returns the count of
-        notes updated without an AnkiConnect error. This writes note *content*
+        ``updates`` is ``[(note_id, {field_name: value})]``. Returns the ordered
+        note IDs whose updates AnkiConnect confirmed. This writes note *content*
         (fields the app already fills at mining time), never note-type styling.
-        Returns 0 for empty input.
+        Returns ``[]`` for empty input.
         """
         if not updates:
-            return 0
-        updated = 0
+            return []
+        updated_note_ids: list[int] = []
         for chunk in _chunk_note_updates(updates):
-            updated += self._post_note_update_chunk(chunk)
-        return updated
+            updated_note_ids.extend(self._post_note_update_chunk(chunk))
+        return updated_note_ids
 
-    def _post_note_update_chunk(self, chunk: list[tuple[int, dict[str, str]]]) -> int:
+    def _post_note_update_chunk(self, chunk: list[tuple[int, dict[str, str]]]) -> list[int]:
         """POST one ``updateNoteFields`` chunk via ``multi``; fall back per-note on transport failure.
 
-        Returns the count of notes updated without an AnkiConnect error. A chunk
-        oversized enough to trip the connection reset surfaces as an
-        ``AnkiConnectionError``; we then retry each note in its own tiny POST
-        (like ``AnkiMediaStore._store_media_files_individually``) so one bad chunk
+        Returns ordered note IDs updated without an AnkiConnect error. A chunk
+        oversized enough to trip the connection reset, or a malformed result
+        cardinality, surfaces as an ``AnkiConnectionError``; we then retry each
+        note in its own tiny POST (like
+        ``AnkiMediaStore._store_media_files_individually``) so one bad chunk
         doesn't abort the whole restyle.
         """
         actions = [
@@ -316,7 +317,11 @@ class AnkiService:
             for nid, fields in chunk
         ]
         try:
-            results = post_multi(self.config.ankiconnect_url, actions, timeout=60)
+            results = _expect_list(
+                post_multi(self.config.ankiconnect_url, actions, timeout=60),
+                "multi",
+                len(actions),
+            )
         except AnkiConnectionError as e:
             logger.warning(
                 "updateNoteFields multi POST failed (%s); retrying %d note(s) individually",
@@ -324,12 +329,15 @@ class AnkiService:
                 len(actions),
             )
             return self._update_notes_individually(chunk)
-        errors = sum(1 for sub in results[: len(actions)] if isinstance(sub, dict) and sub.get("error"))
-        return len(actions) - errors
+        return [
+            nid
+            for (nid, _fields), sub in zip(chunk, results, strict=True)
+            if not (isinstance(sub, dict) and sub.get("error"))
+        ]
 
-    def _update_notes_individually(self, chunk: list[tuple[int, dict[str, str]]]) -> int:
+    def _update_notes_individually(self, chunk: list[tuple[int, dict[str, str]]]) -> list[int]:
         """Per-note ``updateNoteFields`` fallback (tiny bodies) for a failed-multi chunk."""
-        updated = 0
+        updated_note_ids: list[int] = []
         for nid, fields in chunk:
             try:
                 post_action(
@@ -338,10 +346,10 @@ class AnkiService:
                     params={"note": {"id": nid, "fields": fields}},
                     timeout=60,
                 )
-                updated += 1
+                updated_note_ids.append(nid)
             except AnkiConnectionError as e:
                 logger.warning("Failed to update note %s individually: %s", nid, e)
-        return updated
+        return updated_note_ids
 
     def add_tags(self, note_ids: list[int], tags: str) -> None:
         """Add ``tags`` to notes (AnkiConnect ``addTags``); no-op for empty input.
@@ -491,7 +499,7 @@ class AnkiService:
         self,
         word_data_list: list[CardPayload],
         progress_callback: ProgressCallback | None = None,
-    ) -> int:
+    ) -> list[int]:
         """Create multiple Anki cards in batches.
 
         Args:
@@ -499,13 +507,13 @@ class AnkiService:
             progress_callback: Optional callback for progress reporting
 
         Returns:
-            Number of successfully created cards
+            Ordered note IDs successfully created and confirmed by AnkiConnect.
         """
         if not word_data_list:
             self.last_created_note_ids = []
             self.last_skipped_duplicates = 0
             self.last_media_store_failures = 0
-            return 0
+            return []
 
         self.last_created_note_ids = []
         self.last_skipped_duplicates = 0
@@ -667,7 +675,7 @@ class AnkiService:
                 len(word_data_list),
                 bold_fallback,
             )
-        return total_created
+        return list(all_created_ids)
 
     @staticmethod
     def _strip_note_to_first_field(note: dict) -> dict:
