@@ -18,8 +18,8 @@ import pytest
 from anki_miner.exceptions import SetupError
 from anki_miner.services.asr import ggml_model_installer as gmi
 
-_FAKE_ACOUSTIC = b"fake-ggml-acoustic-bytes"
-_FAKE_VAD = b"fake-ggml-vad-bytes"
+_FAKE_ACOUSTIC = b"lmgg-fake-acoustic-bytes"
+_FAKE_VAD = b"lmgg-fake-vad-bytes"
 
 
 def _retarget_acoustic(monkeypatch, asr_model: str, *, real_sha: bool = True) -> gmi._GgmlSpec:
@@ -30,7 +30,11 @@ def _retarget_acoustic(monkeypatch, asr_model: str, *, real_sha: bool = True) ->
     """
     spec = gmi._ACOUSTIC_SPECS[asr_model]
     if real_sha:
-        spec = dataclasses.replace(spec, sha256=hashlib.sha256(_FAKE_ACOUSTIC).hexdigest())
+        spec = dataclasses.replace(
+            spec,
+            sha256=hashlib.sha256(_FAKE_ACOUSTIC).hexdigest(),
+            size_bytes=len(_FAKE_ACOUSTIC),
+        )
     specs = dict(gmi._ACOUSTIC_SPECS)
     specs[asr_model] = spec
     monkeypatch.setattr(gmi, "_ACOUSTIC_SPECS", specs)
@@ -40,7 +44,7 @@ def _retarget_acoustic(monkeypatch, asr_model: str, *, real_sha: bool = True) ->
 def _retarget_vad(monkeypatch, *, real_sha: bool = True) -> gmi._GgmlSpec:
     spec = gmi._VAD_SPEC
     if real_sha:
-        spec = dataclasses.replace(spec, sha256=hashlib.sha256(_FAKE_VAD).hexdigest())
+        spec = dataclasses.replace(spec, sha256=hashlib.sha256(_FAKE_VAD).hexdigest(), size_bytes=len(_FAKE_VAD))
     monkeypatch.setattr(gmi, "_VAD_SPEC", spec)
     return spec
 
@@ -95,10 +99,29 @@ class TestIsDownloaded:
         path.write_bytes(b"")
         assert gmi.is_ggml_downloaded("small", tmp_path) is False
 
-    def test_true_when_file_present(self, tmp_path):
+    def test_stub_or_wrong_magic_model_rejected(self, tmp_path, monkeypatch):
+        specs = dict(gmi._ACOUSTIC_SPECS)
+        specs["small"] = dataclasses.replace(specs["small"], size_bytes=8)
+        monkeypatch.setattr(gmi, "_ACOUSTIC_SPECS", specs)
+        monkeypatch.setattr(gmi, "_VAD_SPEC", dataclasses.replace(gmi._VAD_SPEC, size_bytes=8))
+
+        checks = (
+            (gmi.ggml_model_path("small", tmp_path), lambda: gmi.is_ggml_downloaded("small", tmp_path)),
+            (gmi.vad_model_path(tmp_path), lambda: gmi.is_vad_downloaded(tmp_path)),
+        )
+        for path, is_present in checks:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            for invalid in (b"", b"x", b"<html>download failed</html>"):
+                path.write_bytes(invalid)
+                assert is_present() is False
+            path.write_bytes(b"lmgg" + b"\0" * 4)
+            assert is_present() is True
+
+    def test_true_when_file_present(self, tmp_path, monkeypatch):
+        _retarget_acoustic(monkeypatch, "small")
         path = gmi.ggml_model_path("small", tmp_path)
         path.parent.mkdir(parents=True)
-        path.write_bytes(b"x" * 16)
+        path.write_bytes(_FAKE_ACOUSTIC)
         assert gmi.is_ggml_downloaded("small", tmp_path) is True
 
     def test_false_then_true_after_install(self, tmp_path, monkeypatch):
@@ -137,9 +160,10 @@ class TestInstallAcoustic:
 
     def test_skips_when_already_present(self, tmp_path, monkeypatch):
         # Pre-stage the file; download must NOT be called.
+        _retarget_acoustic(monkeypatch, "large-v3")
         path = gmi.ggml_model_path("large-v3", tmp_path)
         path.parent.mkdir(parents=True)
-        path.write_bytes(b"already-here")
+        path.write_bytes(_FAKE_ACOUSTIC)
 
         def boom(*a, **k):  # pragma: no cover - must not run
             raise AssertionError("download_to_temp should not be called when present")
@@ -147,7 +171,7 @@ class TestInstallAcoustic:
         monkeypatch.setattr(gmi, "download_to_temp", boom)
         result = gmi.install_ggml_model("large-v3", tmp_path)
         assert result == path
-        assert path.read_bytes() == b"already-here"
+        assert path.read_bytes() == _FAKE_ACOUSTIC
 
     def test_returns_path_type(self, tmp_path, monkeypatch):
         spec = _retarget_acoustic(monkeypatch, "small")
@@ -201,9 +225,10 @@ class TestInstallVad:
         assert gmi.is_vad_downloaded(tmp_path) is True
 
     def test_skips_when_already_present(self, tmp_path, monkeypatch):
+        _retarget_vad(monkeypatch)
         path = gmi.vad_model_path(tmp_path)
         path.parent.mkdir(parents=True)
-        path.write_bytes(b"vad-here")
+        path.write_bytes(_FAKE_VAD)
 
         def boom(*a, **k):  # pragma: no cover - must not run
             raise AssertionError("download_to_temp should not run when present")
