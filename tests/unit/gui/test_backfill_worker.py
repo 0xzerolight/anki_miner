@@ -15,6 +15,7 @@ _PLAN = BackfillPlan(
     skipped_no_identity=0,
     unavailable_fields=(),
     sentinel_only_sorts=0,
+    expression_field="Expression",
 )
 _RESULT = BackfillResult(notes_updated=1, fields_filled=2, tagged=1, skipped_stale=0)
 

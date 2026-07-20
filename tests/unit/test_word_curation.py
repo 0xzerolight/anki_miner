@@ -99,7 +99,7 @@ class TestCurationCallback:
         mock_services["word_filter"].filter_unknown.return_value = [word1, word2]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         # Only select the first word
         def select_first(word_list):
@@ -164,7 +164,7 @@ class TestCurationCallback:
         mock_services["word_filter"].filter_unknown.return_value = words
         mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         result = processor.process_episode(
             tmp_path / "v.mkv",

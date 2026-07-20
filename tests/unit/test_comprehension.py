@@ -107,7 +107,7 @@ class TestComprehensionCalculation:
         media = _make_media("taberu")
         mock_services["media_extractor"].extract_media_batch.return_value = [(w, media) for w in words]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. def", "1. def"]
-        mock_services["anki_service"].create_cards_batch.return_value = 2
+        mock_services["anki_service"].create_cards_batch.return_value = [1, 2]
 
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
@@ -134,7 +134,7 @@ class TestComprehensionCalculation:
         media = _make_media("yomu")
         mock_services["media_extractor"].extract_media_batch.return_value = [(unknown[0], media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to read"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
@@ -159,7 +159,7 @@ class TestComprehensionCalculation:
         mock_services["word_filter"].filter_unknown.return_value = unknown
         mock_services["media_extractor"].extract_media_batch.return_value = [(unknown[0], media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to run"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 

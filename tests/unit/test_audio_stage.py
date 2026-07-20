@@ -77,7 +77,7 @@ def _wire_pipeline(mock_services, pairs):
     mock_services["word_filter"].filter_unknown.return_value = words
     mock_services["media_extractor"].extract_media_batch.return_value = pairs
     mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"] * len(words)
-    mock_services["anki_service"].create_cards_batch.return_value = len(words)
+    mock_services["anki_service"].create_cards_batch.return_value = list(range(len(words)))
 
 
 class TestExpressionAudio:

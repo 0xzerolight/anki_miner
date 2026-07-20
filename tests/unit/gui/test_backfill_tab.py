@@ -52,6 +52,7 @@ def _plan(notes, field_keys=frozenset({"frequency"}), **kwargs):
         "skipped_no_identity": 0,
         "unavailable_fields": (),
         "sentinel_only_sorts": 0,
+        "expression_field": "Expression",
     }
     defaults.update(kwargs)
     return BackfillPlan(**defaults)

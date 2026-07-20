@@ -172,7 +172,7 @@ class TestEpisodeProcessorCancel:
         mock_services["word_filter"].filter_unknown.return_value = words
         mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
@@ -252,7 +252,7 @@ class TestProcessEpisodeCancelEvent:
         mock_services["word_filter"].filter_unknown.return_value = words
         mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = 1
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
         return words
 
     def test_set_cancel_event_stops_at_first_checkpoint(self, processor, mock_services, tmp_path):
