@@ -42,7 +42,7 @@ from anki_miner.exceptions import SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services._install_common import cleanup_part, sweep_stale, verify_sha256
 from anki_miner.services.resource_downloader import download_to_temp
-from anki_miner.utils.atomic_io import atomic_replace_dir
+from anki_miner.utils.atomic_io import atomic_replace_dir, reconcile_dir
 
 logger = logging.getLogger(__name__)
 
@@ -148,12 +148,16 @@ def is_installed(cuda_libs_root: Path) -> bool:
 
     Cheap: a couple of directory globs, no file reads.
     """
+    cudnn = cuda_libs_root / "cudnn"
+    cublas = cuda_libs_root / "cublas"
+    reconcile_dir(cudnn)
+    reconcile_dir(cublas)
     if sys.platform == "win32":
-        cudnn_ok = any((cuda_libs_root / "cudnn").glob("cudnn64_9.dll"))
-        cublas_ok = any((cuda_libs_root / "cublas").glob("cublas64_12.dll"))
+        cudnn_ok = any(cudnn.glob("cudnn64_9.dll"))
+        cublas_ok = any(cublas.glob("cublas64_12.dll"))
     else:
-        cudnn_ok = any((cuda_libs_root / "cudnn").glob("libcudnn.so.9*"))
-        cublas_ok = any((cuda_libs_root / "cublas").glob("libcublas.so.12*"))
+        cudnn_ok = any(cudnn.glob("libcudnn.so.9*"))
+        cublas_ok = any(cublas.glob("libcublas.so.12*"))
     return cudnn_ok and cublas_ok
 
 

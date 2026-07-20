@@ -77,6 +77,16 @@ def test_is_downloaded_true_when_model_bin_present(tmp_path):
     assert is_downloaded("small", tmp_path) is True
 
 
+def test_is_downloaded_recovers_dangling_backup(tmp_path):
+    model_dir = tmp_path / "models--Systran--faster-whisper-small"
+    backup = model_dir.with_name(model_dir.name + ".bak-20260721000000000001")
+    _write_model(backup / "snapshots" / "abc123")
+
+    assert is_downloaded("small", tmp_path) is True
+    assert model_dir.is_dir()
+    assert not backup.exists()
+
+
 def test_is_downloaded_true_model_bin_directly_in_subdir(tmp_path):
     """Returns True even with a flat layout (model.bin one level under models_root)."""
     subdir = tmp_path / "faster-whisper-large-v3"

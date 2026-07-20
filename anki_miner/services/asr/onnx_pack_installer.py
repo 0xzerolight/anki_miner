@@ -40,7 +40,7 @@ from anki_miner.exceptions import SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services._install_common import cleanup_part, sweep_stale, verify_sha256
 from anki_miner.services.resource_downloader import download_to_temp
-from anki_miner.utils.atomic_io import atomic_replace_dir
+from anki_miner.utils.atomic_io import atomic_replace_dir, reconcile_dir
 
 logger = logging.getLogger(__name__)
 
@@ -140,7 +140,9 @@ def is_installed(onnx_pack_root: Path) -> bool:
 
     Cheap: a single ``__init__.py`` existence check on the extracted package.
     """
-    return (onnx_pack_root / "onnxruntime" / "__init__.py").exists()
+    target = onnx_pack_root / "onnxruntime"
+    reconcile_dir(target)
+    return (target / "__init__.py").exists()
 
 
 def install_onnx_pack(

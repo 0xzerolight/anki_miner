@@ -116,6 +116,21 @@ class TestIsInstalled:
         (tmp_path / "cublas" / "libcublas.so.12").write_bytes(b"y")
         assert cuda_pack_installer.is_installed(tmp_path) is True
 
+    def test_recovers_dangling_backups(self, tmp_path, monkeypatch):
+        _force_linux(monkeypatch)
+        cudnn_backup = tmp_path / "cudnn.bak-20260721000000000001"
+        cublas_backup = tmp_path / "cublas.bak-20260721000000000002"
+        cudnn_backup.mkdir()
+        cublas_backup.mkdir()
+        (cudnn_backup / "libcudnn.so.9").write_bytes(b"x")
+        (cublas_backup / "libcublas.so.12").write_bytes(b"y")
+
+        assert cuda_pack_installer.is_installed(tmp_path) is True
+        assert (tmp_path / "cudnn").is_dir()
+        assert (tmp_path / "cublas").is_dir()
+        assert not cudnn_backup.exists()
+        assert not cublas_backup.exists()
+
     def test_true_with_minor_filename_variation(self, tmp_path, monkeypatch):
         _force_linux(monkeypatch)
         (tmp_path / "cudnn").mkdir()

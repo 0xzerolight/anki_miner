@@ -111,6 +111,15 @@ class TestIsInstalled:
         (tmp_path / "onnxruntime" / "__init__.py").write_bytes(b"x")
         assert onnx_pack_installer.is_installed(tmp_path) is True
 
+    def test_recovers_dangling_backup(self, tmp_path):
+        backup = tmp_path / "onnxruntime.bak-20260721000000000001"
+        backup.mkdir()
+        (backup / "__init__.py").write_bytes(b"x")
+
+        assert onnx_pack_installer.is_installed(tmp_path) is True
+        assert (tmp_path / "onnxruntime").is_dir()
+        assert not backup.exists()
+
 
 class TestInstall:
     def test_happy_path_extracts_tree(self, tmp_path, monkeypatch):

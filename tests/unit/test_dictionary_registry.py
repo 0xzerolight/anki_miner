@@ -46,12 +46,15 @@ class TestDictionaryRegistry:
         assert registry.get("jmdict-english") is not None
 
     def test_backup_dir_not_enumerated_as_resource(self, tmp_path: Path):
+        _seed_dict(tmp_path, "jmdict", "JMdict")
         _seed_dict(tmp_path, "jmdict.bak-20260721000000000000", "JMdict backup")
 
         registry = DictionaryRegistry(tmp_path)
         registry.load()
 
+        assert registry.get("jmdict") is not None
         assert registry.get("jmdict.bak-20260721000000000000") is None
+        assert (tmp_path / "jmdict.bak-20260721000000000000").is_dir()
 
     def test_scan_skips_corrupt_folder_with_warning(self, tmp_path: Path, caplog):
         _seed_dict(tmp_path, "good", "Good")

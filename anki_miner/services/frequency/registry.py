@@ -23,6 +23,7 @@ from anki_miner.services.frequency.providers.indexed_freq_provider import (
     IndexedFreqProvider,
 )
 from anki_miner.services.frequency.storage import SCHEMA_VERSION
+from anki_miner.utils.atomic_io import reconcile_backups_in
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,7 @@ class FrequencySourceRegistry:
         self._sources: dict[str, FreqSourceMeta] = {}
 
     def load(self) -> None:
+        reconcile_backups_in(self._root)
         self._sources = scan_index_root(
             self._root,
             self._parse_meta,

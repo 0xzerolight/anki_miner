@@ -79,6 +79,25 @@ def reconcile_dir(dest_dir: Path) -> None:
         return
 
 
+def reconcile_backups_in(root: Path) -> None:
+    """Reconcile every direct ``X.bak-*`` child of *root* back to ``X``."""
+    try:
+        canonical_names = {
+            canonical
+            for child in root.iterdir()
+            for canonical, marker, suffix in (child.name.rpartition(".bak-"),)
+            if marker and canonical and suffix
+        }
+    except OSError:
+        return
+
+    for canonical_name in sorted(canonical_names):
+        try:
+            reconcile_dir(root / canonical_name)
+        except OSError:
+            continue
+
+
 def _is_valid_dir(path: Path) -> bool:
     try:
         return path.is_dir() and any(path.iterdir())

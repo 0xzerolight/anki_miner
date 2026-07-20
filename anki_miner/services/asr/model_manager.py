@@ -12,7 +12,7 @@ import tempfile
 from pathlib import Path
 
 from anki_miner.services.asr import _engine
-from anki_miner.utils.atomic_io import atomic_replace_dir
+from anki_miner.utils.atomic_io import atomic_replace_dir, reconcile_backups_in
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +61,7 @@ def is_downloaded(name: str, models_root: Path) -> bool:
     Returns:
         ``True`` if a complete model is present, ``False`` otherwise.
     """
+    reconcile_backups_in(models_root)
     if not models_root.exists():
         return False
     for candidate in models_root.rglob("model.bin"):
