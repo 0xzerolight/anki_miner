@@ -21,7 +21,6 @@ from anki_miner.models.batch_queue import BatchQueue, QueueItemStatus
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.dictionary.registry import stale_dict_reimport_error
-from anki_miner.utils.episode_matcher import EpisodeNumberExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -222,21 +221,18 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                 if not pairs:
                     raise ValueError("No matching video/subtitle pairs found")
 
-                committed_episode_keys: set[tuple[int | None, int]] = getattr(item, "committed_episode_keys", set())
+                committed_pair_keys = item.committed_pair_keys
                 pending_pairs = []
                 for pair in pairs:
-                    episode_info = EpisodeNumberExtractor.extract_episode_info(pair.video)
-                    episode_key = (
-                        (episode_info.season_number, episode_info.episode_number) if episode_info is not None else None
-                    )
-                    if episode_key is None or episode_key not in committed_episode_keys:
-                        pending_pairs.append((pair, episode_key))
+                    pair_key = (pair.video.resolve(), pair.subtitle.resolve())
+                    if pair_key not in committed_pair_keys:
+                        pending_pairs.append((pair, pair_key))
 
                 # Process each pair using episode processor
                 cards_for_item = 0
                 interrupted = False
                 failed_pairs: list[tuple[str, str]] = []  # (video name, first error)
-                for pair, episode_key in pending_pairs:
+                for pair, pair_key in pending_pairs:
                     if self.check_cancelled():
                         interrupted = True
                         break
@@ -263,8 +259,8 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                         failed_pairs.append((pair.video.name, str(e)))
                         continue
                     cards_for_item += result.cards_created
-                    if result.success and episode_key is not None:
-                        committed_episode_keys.add(episode_key)
+                    if result.success:
+                        committed_pair_keys.add(pair_key)
                     if self.check_cancelled():
                         interrupted = True
                         break
@@ -278,7 +274,7 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                 # created before a cancel exist in Anki).
                 total_cards += cards_for_item
                 item.cards_created = getattr(item, "cards_created", 0) + cards_for_item
-                item.committed_episode_keys = committed_episode_keys
+                item.committed_pair_keys = committed_pair_keys
                 if interrupted:
                     # Cancelled between pairs: the item is partially processed,
                     # neither completed nor failed, so no terminal signal —

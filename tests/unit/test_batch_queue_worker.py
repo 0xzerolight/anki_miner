@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread
-from anki_miner.models.batch_queue import BatchQueue, QueueItemStatus
+from anki_miner.models.batch_queue import BatchQueue, QueueItem, QueueItemStatus
 from anki_miner.models.processing import ProcessingResult
 
 
@@ -32,12 +32,12 @@ def test_curation_attrs_use_item_offset_and_callback_forwarded(tmp_path):
 
     proc.process_episode.side_effect = fake_process
 
-    item = SimpleNamespace(
-        id="i1",
-        display_name="Show",
-        subtitle_offset=3.0,
+    item = QueueItem(
         video_folder=tmp_path / "video",
         subtitle_folder=tmp_path / "subs",
+        display_name="Show",
+        id="i1",
+        subtitle_offset=3.0,
     )
     queue = MagicMock()
     queue.pending_count = 1
@@ -236,6 +236,43 @@ def test_partial_series_retry_skips_committed(tmp_path):
     assert item.cards_created == 5
     assert retry_results["completed"] == [(item.id, 5)]
     assert retry_results["finished"] == [5]
+
+
+def test_retry_skips_only_committed_pair_path_when_episode_numbers_match(tmp_path):
+    pair1 = SimpleNamespace(
+        video=tmp_path / "release-a" / "ep1.mkv",
+        subtitle=tmp_path / "release-a" / "ep1.ass",
+    )
+    pair2 = SimpleNamespace(
+        video=tmp_path / "release-b" / "ep1.mkv",
+        subtitle=tmp_path / "release-b" / "ep1.ass",
+    )
+    queue = BatchQueue()
+    item = queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
+    item.cards_created = 3
+    item.committed_pair_keys = {(pair1.video.resolve(), pair1.subtitle.resolve())}
+
+    processor = MagicMock()
+    processor.process_episode.return_value = _ok_result(cards=2)
+    worker = _make_worker_with_queue(queue)
+    results = _wire_status_slots(worker, queue)
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=processor,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair1, pair2],
+        ),
+    ):
+        worker.run()
+
+    processed_videos = [call.args[0] for call in processor.process_episode.call_args_list]
+    assert processed_videos == [pair2.video]
+    assert item.cards_created == 5
+    assert results["completed"] == [(item.id, 5)]
+    assert results["finished"] == [5]
 
 
 def test_all_pairs_succeed_emits_item_completed(tmp_path):
@@ -473,7 +510,7 @@ def test_cancel_during_final_pair_returns_item_to_pending(tmp_path):
 
     assert item.status == QueueItemStatus.PENDING
     assert item.cards_created == 2
-    assert item.committed_episode_keys == {(None, 1)}
+    assert item.committed_pair_keys == {(pair.video.resolve(), pair.subtitle.resolve())}
     assert results["completed"] == []
     assert results["failed"] == []
     assert results["finished"] == [2]
@@ -506,7 +543,7 @@ def test_zero_commit_cancel_during_final_pair_returns_item_to_pending(tmp_path):
 
     assert item.status == QueueItemStatus.PENDING
     assert item.cards_created == 0
-    assert item.committed_episode_keys == set()
+    assert item.committed_pair_keys == set()
     assert results["completed"] == []
     assert results["failed"] == []
     assert results["finished"] == [0]
@@ -562,12 +599,11 @@ def test_setup_error_emits_item_failed(tmp_path):
     proc = MagicMock()
     proc.process_episode.side_effect = SetupError("note type not found")
 
-    item = SimpleNamespace(
-        id="i1",
-        display_name="Show",
-        subtitle_offset=0.0,
+    item = QueueItem(
         video_folder=tmp_path / "video",
         subtitle_folder=tmp_path / "subs",
+        display_name="Show",
+        id="i1",
     )
     queue = MagicMock()
     queue.pending_count = 1

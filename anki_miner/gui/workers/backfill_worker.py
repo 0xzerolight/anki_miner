@@ -71,6 +71,7 @@ class BackfillApplyWorker(CancellableWorker):
 
     progress = pyqtSignal(int, int)  # (notes processed, total notes)
     result_ready = pyqtSignal(object)  # BackfillResult
+    cancelled = pyqtSignal()
 
     def __init__(self, config: AnkiMinerConfig, plan: BackfillPlan, parent=None) -> None:
         super().__init__(parent)
@@ -81,6 +82,7 @@ class BackfillApplyWorker(CancellableWorker):
         try:
             if self.check_cancelled():
                 self.result_ready.emit(BackfillResult(0, 0, 0, 0))
+                self.cancelled.emit()
                 return
             anki_service = AnkiService(self.config)
             result = apply_backfill(
@@ -94,7 +96,11 @@ class BackfillApplyWorker(CancellableWorker):
             # counts when cancellation stops later chunks. Always deliver that
             # terminal receipt so the UI clears the consumed plan.
             self.result_ready.emit(result)
+            if self.check_cancelled():
+                self.cancelled.emit()
         except Exception as e:  # noqa: BLE001 — surface every failure to the GUI
-            logger.exception("BackfillApplyWorker unhandled exception")
-            if not self.check_cancelled():
+            if self.check_cancelled():
+                self.cancelled.emit()
+            else:
+                logger.exception("BackfillApplyWorker unhandled exception")
                 self.error.emit(f"Backfill apply failed: {e}")

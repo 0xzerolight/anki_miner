@@ -69,11 +69,14 @@ class TestBackfillApplyWorker:
         with patch(f"{_WORKER_MOD}.AnkiService") as anki_cls:
             worker = BackfillApplyWorker(test_config, _PLAN)
             emitted: list[BackfillResult] = []
+            cancelled: list[bool] = []
             worker.result_ready.connect(emitted.append)
+            worker.cancelled.connect(lambda: cancelled.append(True))
             worker.cancel()
             worker.run()
 
         assert emitted == [BackfillResult(0, 0, 0, 0)]
+        assert cancelled == [True]
         anki_cls.assert_not_called()
 
     def test_backfill_cancel_reaches_terminal_state(self, qtbot, test_config):
@@ -91,7 +94,10 @@ class TestBackfillApplyWorker:
             patch(f"{_WORKER_MOD}.apply_backfill", side_effect=fake_apply),
         ):
             worker = BackfillApplyWorker(test_config, plan)
+            cancelled: list[bool] = []
             worker.result_ready.connect(tab._on_apply_finished)
+            worker.cancelled.connect(tab._on_apply_cancelled)
+            worker.cancelled.connect(lambda: cancelled.append(True))
             worker.finished.connect(tab._on_worker_finished)
             tab._plan = plan
             tab.worker_thread = worker
@@ -105,6 +111,46 @@ class TestBackfillApplyWorker:
         assert not tab.apply_button.isEnabled()
         assert tab.status_label.text() != "Cancelling…"
         assert "1" in tab.status_label.text()
+        assert cancelled == [True]
+
+    def test_cancelled_exception_clears_plan_and_reaches_terminal_state(self, qtbot, test_config):
+        tab = CardBackfillTab(test_config)
+        qtbot.addWidget(tab)
+
+        def fake_apply(anki, plan, *, tag, progress, is_cancelled):
+            worker.cancel()
+            raise RuntimeError("failed after cancel")
+
+        with (
+            patch(f"{_WORKER_MOD}.AnkiService"),
+            patch(f"{_WORKER_MOD}.apply_backfill", side_effect=fake_apply),
+        ):
+            worker = BackfillApplyWorker(test_config, _PLAN)
+            assert hasattr(worker, "cancelled"), "cancelled apply needs an explicit terminal signal"
+            results: list[BackfillResult] = []
+            errors: list[str] = []
+            cancelled: list[bool] = []
+            worker.result_ready.connect(results.append)
+            worker.result_ready.connect(tab._on_apply_finished)
+            worker.cancelled.connect(tab._on_apply_cancelled)
+            worker.cancelled.connect(lambda: cancelled.append(True))
+            worker.error.connect(errors.append)
+            worker.error.connect(tab._on_worker_error)
+            worker.finished.connect(tab._on_worker_finished)
+            tab._plan = _PLAN
+            tab.worker_thread = worker
+            tab._set_running(True)
+            tab.status_label.setText("Cancelling…")
+            with qtbot.waitSignal(worker.finished, timeout=5000):
+                worker.start()
+            worker.wait(5000)
+
+        assert tab._plan is None
+        assert not tab.apply_button.isEnabled()
+        assert tab.status_label.text() != "Cancelling…"
+        assert results == []
+        assert errors == []
+        assert cancelled == [True]
 
     def test_emits_result_on_success(self, qtbot, test_config):
         with (
