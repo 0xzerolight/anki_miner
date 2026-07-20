@@ -9,7 +9,8 @@ Resolution order (first hit wins):
    receipt. Legacy pre-receipt files are never selected.
 4. **Bundled** — inside a PyInstaller frozen bundle, ``sys._MEIPASS/bin/<name>``
    (kept as a forward-compat tier; nothing is added to the spec today).
-5. **Fallback** — the bare literal ``"yt-dlp"``.
+5. **Fallback** — the bare literal ``"yt-dlp"`` when PATH did not resolve the
+   unverified managed slot.
 
 Mirrors :mod:`anki_miner.utils.ffmpeg_resolver`: module-level ``_CACHE`` dict,
 ``_clear_cache()`` test/updater hook, and the shared ``frozen_state()`` /
@@ -110,6 +111,17 @@ def _is_managed_path(candidate: str | Path, managed: Path) -> bool:
         return path.resolve() == managed.resolve()
 
 
+def _is_within_directory(candidate: str | Path, directory: Path) -> bool:
+    """True when canonicalized *candidate* is inside *directory*."""
+    candidate_path = Path(os.path.realpath(candidate))
+    directory_path = Path(os.path.realpath(directory))
+    try:
+        candidate_path.relative_to(directory_path)
+    except ValueError:
+        return False
+    return True
+
+
 def resolve_ytdlp(config) -> str:
     """Resolve the yt-dlp executable path/literal for the given config."""
     override = getattr(config, "ytdlp_location", None)
@@ -121,8 +133,11 @@ def resolve_ytdlp(config) -> str:
     cached = _CACHE.get(cache_key)
     if cached is not None:
         managed = download_dir / ytdlp_binary_name()
-        if not _is_managed_path(cached, managed) or _is_verified_managed_binary(managed):
+        cached_is_managed = _is_managed_path(cached, managed)
+        if not cached_is_managed and not _is_within_directory(cached, download_dir):
             return cached
+        if cached_is_managed and _is_verified_managed_binary(managed):
+            return str(managed)
         del _CACHE[cache_key]
 
     resolved = _compute(override, frozen, meipass, download_dir, path_ytdlp)
@@ -153,7 +168,10 @@ def _compute(
     #    bare literal here: it would shadow a verified managed copy when PATH
     #    has no yt-dlp. A PATH entry resolving to the managed slot still needs
     #    the receipt check below; PATH must not launder that file.
-    if path_ytdlp is not None and not _is_managed_path(path_ytdlp, downloaded):
+    managed_path_hit = path_ytdlp is not None and (
+        _is_managed_path(path_ytdlp, downloaded) or _is_within_directory(path_ytdlp, download_dir)
+    )
+    if path_ytdlp is not None and not managed_path_hit:
         return path_ytdlp
 
     # 3. App-managed copy, but only with a receipt matching its current bytes.
@@ -166,6 +184,10 @@ def _compute(
         if _is_runnable(bundled):
             return str(bundled)
 
-    # 5. Historical fallback — subprocess will report FileNotFoundError if PATH
-    #    has no executable and no trusted local tier exists.
+    # 5. A bare fallback would repeat PATH lookup and execute the rejected
+    #    managed hit. Fail closed after all trusted tiers instead.
+    if managed_path_hit:
+        raise FileNotFoundError("Refusing unverified managed yt-dlp executable on PATH")
+
+    # Historical fallback when PATH had no yt-dlp at resolution time.
     return "yt-dlp"

@@ -20,6 +20,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.main_window import MainWindow
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.services import ytdlp_updater
+from anki_miner.services.youtube_fetcher import YouTubeFetcherService, YtdlpNotFoundError
 from anki_miner.services.ytdlp_updater import YtdlpUpdater
 from anki_miner.utils import ytdlp_resolver
 
@@ -206,7 +207,8 @@ def test_resolver_skips_unverified_managed_binary_and_prefers_path(
     # launder a receiptless app download into a trusted executable.
     monkeypatch.setattr(shutil, "which", lambda name: str(managed))
 
-    assert ytdlp_resolver.resolve_ytdlp(AnkiMinerConfig()) == "yt-dlp"
+    with pytest.raises(FileNotFoundError, match="unverified managed yt-dlp"):
+        ytdlp_resolver.resolve_ytdlp(AnkiMinerConfig())
 
     receipt = managed.with_name("yt-dlp.verified")
     receipt.write_text(hashlib.sha256(managed.read_bytes()).hexdigest(), encoding="ascii")
@@ -214,7 +216,8 @@ def test_resolver_skips_unverified_managed_binary_and_prefers_path(
     assert ytdlp_resolver.resolve_ytdlp(AnkiMinerConfig()) == str(managed)
 
     managed.write_bytes(b"tampered")
-    assert ytdlp_resolver.resolve_ytdlp(AnkiMinerConfig()) == "yt-dlp"
+    with pytest.raises(FileNotFoundError, match="unverified managed yt-dlp"):
+        ytdlp_resolver.resolve_ytdlp(AnkiMinerConfig())
 
     receipt.write_text(hashlib.sha256(managed.read_bytes()).hexdigest(), encoding="ascii")
     path_binary = tmp_path / "path-bin" / "yt-dlp"
@@ -225,6 +228,144 @@ def test_resolver_skips_unverified_managed_binary_and_prefers_path(
     ytdlp_resolver._clear_cache()
 
     assert ytdlp_resolver.resolve_ytdlp(AnkiMinerConfig()) == str(path_binary)
+
+
+def test_resolver_rejects_receiptless_managed_binary_on_real_path(
+    isolated_ytdlp_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    managed = isolated_ytdlp_home / "bin" / "yt-dlp"
+    managed.parent.mkdir(parents=True)
+    managed.write_text("#!/bin/sh\n", encoding="utf-8")
+    managed.chmod(0o755)
+    monkeypatch.setenv("PATH", str(managed.parent))
+
+    with pytest.raises(FileNotFoundError, match="unverified managed yt-dlp"):
+        ytdlp_resolver.resolve_ytdlp(AnkiMinerConfig())
+
+
+def test_resolver_rejects_receiptless_managed_binary_through_hardlink(
+    isolated_ytdlp_home: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    managed = isolated_ytdlp_home / "bin" / "yt-dlp"
+    managed.parent.mkdir(parents=True)
+    managed.write_text("#!/bin/sh\n", encoding="utf-8")
+    managed.chmod(0o755)
+    path_alias = tmp_path / "path-bin" / "yt-dlp"
+    path_alias.parent.mkdir()
+    os.link(managed, path_alias)
+    monkeypatch.setattr(shutil, "which", lambda name: str(path_alias))
+
+    with pytest.raises(FileNotFoundError, match="unverified managed yt-dlp"):
+        ytdlp_resolver.resolve_ytdlp(AnkiMinerConfig())
+
+
+def test_fetcher_translates_rejected_managed_path_before_subprocess(
+    isolated_ytdlp_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    managed = isolated_ytdlp_home / "bin" / "yt-dlp"
+    managed.parent.mkdir(parents=True)
+    managed.write_text("#!/bin/sh\n", encoding="utf-8")
+    managed.chmod(0o755)
+    monkeypatch.setenv("PATH", str(managed.parent))
+
+    def unexpected_run(*args, **kwargs):
+        raise AssertionError("unverified managed binary reached subprocess")
+
+    monkeypatch.setattr("anki_miner.services.youtube_fetcher.subprocess.run", unexpected_run)
+
+    with pytest.raises(YtdlpNotFoundError, match="Update yt-dlp now"):
+        YouTubeFetcherService(AnkiMinerConfig()).probe_metadata("https://youtu.be/abc123")
+
+
+def test_resolver_rechecks_cached_path_alias_into_managed_dir(
+    isolated_ytdlp_home: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    external = tmp_path / "path-bin" / "yt-dlp"
+    external.parent.mkdir()
+    external.write_text("#!/bin/sh\n", encoding="utf-8")
+    external.chmod(0o755)
+    monkeypatch.setattr(shutil, "which", lambda name: str(external))
+    assert ytdlp_resolver.resolve_ytdlp(AnkiMinerConfig()) == str(external)
+
+    managed = isolated_ytdlp_home / "bin" / "yt-dlp"
+    managed.parent.mkdir(parents=True)
+    managed.write_bytes(b"verified-managed")
+    managed.chmod(0o755)
+    managed.with_name("yt-dlp.verified").write_text(
+        hashlib.sha256(managed.read_bytes()).hexdigest(),
+        encoding="ascii",
+    )
+    receiptless = managed.parent / "receiptless-yt-dlp"
+    receiptless.write_bytes(b"receiptless")
+    receiptless.chmod(0o755)
+    external.unlink()
+    external.symlink_to(receiptless)
+
+    assert ytdlp_resolver.resolve_ytdlp(AnkiMinerConfig()) == str(managed)
+
+
+def test_staged_file_mutated_after_stream_hash_is_not_promoted(
+    isolated_ytdlp_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    binary = b"verified-binary" * 80_000
+    digest = hashlib.sha256(binary).hexdigest()
+    manifest = f"{digest}  {_ASSET_NAME}\n".encode()
+    bin_dir = isolated_ytdlp_home / "bin"
+
+    def fake_urlopen(request: object, timeout: int | None = None):  # noqa: ARG001
+        url = _request_url(request)
+        if url == _ASSET_URL:
+            return _FakeResponse(binary, _ALLOWED_FINAL_URL)
+        if url == _SUMS_URL:
+            [staged] = bin_dir.glob("*.tmp")
+            staged.write_bytes(b"tampered-after-stream-hash")
+            return _FakeResponse(manifest, _ALLOWED_FINAL_URL)
+        raise AssertionError(f"unexpected network request: {url}")
+
+    monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", fake_urlopen)
+
+    with pytest.raises(ValueError, match="does not match"):
+        YtdlpUpdater(AnkiMinerConfig())._download_and_install(_ASSET_URL, _TAG)
+
+    final = bin_dir / "yt-dlp"
+    assert not final.exists()
+    assert not final.with_name("yt-dlp.verified").exists()
+
+
+def test_oversized_sums_manifest_is_rejected(
+    isolated_ytdlp_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    binary = b"verified-binary" * 80_000
+    manifest = b"x" * (256 * 1024 + 1)
+    manifest_read_sizes: list[int] = []
+
+    class _TrackedManifestResponse(_FakeResponse):
+        def read(self, size: int = -1) -> bytes:
+            manifest_read_sizes.append(size)
+            return super().read(size)
+
+    def fake_urlopen(request: object, timeout: int | None = None):  # noqa: ARG001
+        url = _request_url(request)
+        if url == _ASSET_URL:
+            return _FakeResponse(binary, _ALLOWED_FINAL_URL)
+        if url == _SUMS_URL:
+            return _TrackedManifestResponse(manifest, _ALLOWED_FINAL_URL)
+        raise AssertionError(f"unexpected network request: {url}")
+
+    monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", fake_urlopen)
+
+    with pytest.raises(ValueError, match="exceeds the 262,144-byte cap"):
+        YtdlpUpdater(AnkiMinerConfig())._download_and_install(_ASSET_URL, _TAG)
+
+    assert manifest_read_sizes == [256 * 1024 + 1]
 
 
 def test_verified_asset_installs(

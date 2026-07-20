@@ -18,6 +18,8 @@ import logging
 import os
 import subprocess
 import sys
+import tempfile
+import threading
 import time
 import urllib.parse
 import urllib.request
@@ -62,6 +64,12 @@ _THROTTLE_SECONDS = 24 * 60 * 60
 _MIN_SIZE_BYTES = 1024 * 1024  # ~1 MB
 # Streaming download chunk size.
 _CHUNK_BYTES = 64 * 1024
+# SHA2-256SUMS is currently tens of KiB; reject unreasonable responses.
+_MAX_SUMS_BYTES = 256 * 1024
+
+# Keep staged-file verification, promotion, and receipt publication ordered
+# across updater instances in this process.
+_INSTALL_LOCK = threading.Lock()
 
 
 def _validate_github_url(url: str) -> bool:
@@ -186,11 +194,11 @@ class YtdlpUpdater:
         Runs ``<yt-dlp> --version``. FileNotFoundError / timeout / any error
         yields None. Never raises.
         """
-        # Resolves (and caches) the pre-install yt-dlp path; check_and_update
-        # clears the resolver cache after a successful install so the next
-        # resolve picks up the freshly downloaded binary.
-        cmd = [ytdlp_resolver.resolve_ytdlp(self._config), "--version"]
         try:
+            # Resolves (and caches) the pre-install yt-dlp path;
+            # check_and_update clears the resolver cache after a successful
+            # install so the next resolve picks up the fresh binary.
+            cmd = [ytdlp_resolver.resolve_ytdlp(self._config), "--version"]
             proc = subprocess.run(
                 cmd,
                 capture_output=True,
@@ -350,7 +358,8 @@ class YtdlpUpdater:
         bin_dir.mkdir(parents=True, exist_ok=True)
         name = self._binary_name()
         final = bin_dir / name
-        tmp = bin_dir / f"{name}.{os.getpid()}.tmp"
+        fd, tmp_name = tempfile.mkstemp(prefix=f".{name}-", suffix=".tmp", dir=bin_dir)
+        tmp = Path(tmp_name)
 
         try:
             request = urllib.request.Request(
@@ -358,8 +367,7 @@ class YtdlpUpdater:
                 headers={"User-Agent": "anki-miner (+https://github.com/0xzerolight/anki_miner)"},
             )
             written = 0
-            digest = hashlib.sha256()
-            with urllib.request.urlopen(request, timeout=30) as response, open(tmp, "wb") as out:
+            with os.fdopen(fd, "wb") as out, urllib.request.urlopen(request, timeout=30) as response:
                 final_url = response.geturl()
                 if not _validate_github_url(final_url):
                     raise ValueError(f"Refusing yt-dlp redirect to off-allowlist URL: {final_url!r}")
@@ -370,7 +378,6 @@ class YtdlpUpdater:
                     if not chunk:
                         break
                     out.write(chunk)
-                    digest.update(chunk)
                     written += len(chunk)
 
             if written < _MIN_SIZE_BYTES:
@@ -384,29 +391,37 @@ class YtdlpUpdater:
                 sums_final_url = response.geturl()
                 if not _validate_github_url(sums_final_url):
                     raise ValueError(f"Refusing {_SUMS_ASSET_NAME} redirect to off-allowlist URL: {sums_final_url!r}")
-                expected_sha256 = _manifest_sha256(response.read(), asset_name)
+                manifest = response.read(_MAX_SUMS_BYTES + 1)
+                if len(manifest) > _MAX_SUMS_BYTES:
+                    raise ValueError(f"{_SUMS_ASSET_NAME} exceeds the {_MAX_SUMS_BYTES:,}-byte cap")
+                expected_sha256 = _manifest_sha256(manifest, asset_name)
 
-            actual_sha256 = digest.hexdigest()
-            # TLS-served sums authenticate this GitHub release, not a publisher key;
-            # a compromised release could replace both binary and checksum.
-            if actual_sha256 != expected_sha256:
-                raise ValueError("Downloaded yt-dlp SHA-256 does not match SHA2-256SUMS")
+            with _INSTALL_LOCK:
+                digest = hashlib.sha256()
+                with tmp.open("rb") as staged:
+                    for chunk in iter(lambda: staged.read(_CHUNK_BYTES), b""):
+                        digest.update(chunk)
+                actual_sha256 = digest.hexdigest()
+                # TLS-served sums authenticate this GitHub release, not a publisher key;
+                # a compromised release could replace both binary and checksum.
+                if actual_sha256 != expected_sha256:
+                    raise ValueError("Downloaded yt-dlp SHA-256 does not match SHA2-256SUMS")
 
-            if sys.platform != "win32":
-                os.chmod(tmp, 0o755)
-                if sys.platform == "darwin":
-                    # Best-effort: strip the quarantine xattr so Gatekeeper does
-                    # not block the freshly-downloaded binary. Failure is fine.
-                    with contextlib.suppress(OSError, subprocess.TimeoutExpired):
-                        subprocess.run(
-                            ["xattr", "-d", "com.apple.quarantine", str(tmp)],
-                            capture_output=True,
-                            timeout=10,
-                            **no_window_kwargs(),
-                        )
+                if sys.platform != "win32":
+                    os.chmod(tmp, 0o755)
+                    if sys.platform == "darwin":
+                        # Best-effort: strip the quarantine xattr so Gatekeeper does
+                        # not block the freshly-downloaded binary. Failure is fine.
+                        with contextlib.suppress(OSError, subprocess.TimeoutExpired):
+                            subprocess.run(
+                                ["xattr", "-d", "com.apple.quarantine", str(tmp)],
+                                capture_output=True,
+                                timeout=10,
+                                **no_window_kwargs(),
+                            )
 
-            self._atomic_replace(tmp, final)
-            self._write_verification_receipt(final, actual_sha256)
+                self._atomic_replace(tmp, final)
+                self._write_verification_receipt(final, actual_sha256)
             logger.info("Installed yt-dlp %s to %s", version, final)
             return final
         except BaseException:
