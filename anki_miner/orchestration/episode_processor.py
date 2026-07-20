@@ -1346,16 +1346,14 @@ class EpisodeProcessor:
         # a failure (T-19). The cache is additive and self-heals on the next
         # run, so dropping this one write is safe; warn and keep the result.
         #
-        # Undo must revert only the 'mined' rows THIS session inserted, never a
-        # 'mined' row a prior session created that this run merely re-encountered
-        # (Anki-duplicate-skipped). Snapshot the existing 'mined' lemmas BEFORE
-        # the insert and report only the genuinely-new ones for the Undo path.
-        mined_forms_for_undo = sorted(mined_words)
+        # Undo must revert only the 'mined' rows THIS session inserted. Default
+        # empty: any DB failure must be fail-safe and never authorize deletion
+        # of a pre-existing row. The insert returns its exact transaction-owned
+        # receipt, avoiding a racy before/after snapshot.
+        mined_forms_for_undo: list[str] = []
         if self.known_word_db and self.known_word_db.is_available() and card_data:
             try:
-                already_mined = self.known_word_db.get_words_by_source("mined")
-                mined_forms_for_undo = sorted(mined_words - already_mined)
-                self.known_word_db.add_words(mined_words, source="mined")
+                mined_forms_for_undo = sorted(self.known_word_db.add_words_with_receipt(mined_words, source="mined"))
             except (sqlite3.Error, OSError) as e:
                 logger.warning(
                     "Could not record %d mined words in known_words.db (%s); "

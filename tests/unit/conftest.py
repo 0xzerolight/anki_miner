@@ -134,11 +134,7 @@ def _build_tabs(patch_heavy_init, test_config):
     window.tabs.addTab(analytics_tab, "Analytics")
 
     settings_tab = SettingsTab(window.get_config())
-    settings_tab.config_changed.connect(window.update_config)
-    for i in range(window.tabs.count()):
-        tab_widget = window.tabs.widget(i)
-        if hasattr(tab_widget, "update_config"):
-            settings_tab.config_changed.connect(tab_widget.update_config)
+    settings_tab.config_changed.connect(lambda cfg: window.update_config(cfg))
     window.tabs.addTab(settings_tab, "Settings")
 
     window.config_refreshed.connect(settings_tab.update_config)

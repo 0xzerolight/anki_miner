@@ -112,7 +112,11 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
                 cancel_event=self._cancel_event,
             )
 
-            if not self.check_cancelled():
+            # Once Anki has committed cards, the result owns the only exact
+            # note-ID receipt the GUI can register for Undo. A cancel that
+            # lands after that commit must not discard it. Zero-commit
+            # cancelled runs remain silent.
+            if result.cards_created or not self.check_cancelled():
                 self.result_ready.emit(result)
 
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI

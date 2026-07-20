@@ -117,6 +117,30 @@ class KnownWordDB:
             after = self._count(conn)
             return after - before
 
+    def add_words_with_receipt(self, words: set[str], source: str = "anki") -> set[str]:
+        """Bulk insert words and return the exact newly inserted lemmas.
+
+        The receipt is derived from each INSERT result inside the same
+        transaction, so callers never need a racy before/after snapshot.
+        Existing rows upgraded to ``source='user'`` are not newly inserted.
+        """
+        if not words:
+            return set()
+
+        with closing(sqlite3.connect(self._db_path)) as conn:
+            inserted: set[str] = set()
+            for word in sorted(words):
+                cursor = conn.execute(
+                    "INSERT OR IGNORE INTO known_words (lemma, source) VALUES (?, ?)",
+                    (word, source),
+                )
+                if cursor.rowcount == 1:
+                    inserted.add(word)
+                elif source == "user":
+                    conn.execute("UPDATE known_words SET source = ? WHERE lemma = ?", (source, word))
+            conn.commit()
+            return inserted
+
     def sync_with_anki(
         self,
         anki_vocabulary: set[str],

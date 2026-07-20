@@ -29,6 +29,7 @@ class QueueItem:
     subtitle_offset: float = 0.0  # Per-item subtitle offset in seconds
     retry_count: int = 0
     max_retries: int = 2
+    committed_pair_keys: set[tuple[Path, Path]] = field(default_factory=set)
 
 
 class BatchQueue:

@@ -105,9 +105,7 @@ class CardBackfillTab(QWidget):
             checkbox = QCheckBox(labels[group])
             if group == "reading":
                 checkbox.setToolTip(
-                    self.tr(
-                        "Fills furigana from an existing reading and vice versa; " "does not generate new readings."
-                    )
+                    self.tr("Fills furigana from an existing reading and vice versa; does not generate new readings.")
                 )
             self.field_checkboxes[group] = checkbox
             layout.addWidget(checkbox)
@@ -327,6 +325,13 @@ class CardBackfillTab(QWidget):
         plan = self._plan
         if plan is None:
             return
+        if plan.config_version != self.config.config_version:
+            self._plan = None
+            self.preview_table.setRowCount(0)
+            self.apply_button.setEnabled(False)
+            self.summary_label.setText("")
+            self.status_label.setText(self.tr("Settings changed since this scan; re-scan before applying."))
+            return
         answer = QMessageBox.question(
             self,
             self.tr("Apply backfill?"),
@@ -343,6 +348,7 @@ class CardBackfillTab(QWidget):
         worker = BackfillApplyWorker(self.config, plan, parent=self)
         worker.progress.connect(self._on_progress)
         worker.result_ready.connect(self._on_apply_finished)
+        worker.cancelled.connect(self._on_apply_cancelled)
         worker.error.connect(self._on_worker_error)
         worker.finished.connect(self._on_worker_finished)
         self.worker_thread = worker
@@ -367,6 +373,14 @@ class CardBackfillTab(QWidget):
         if result.tagged < result.notes_updated:
             parts.append(self.tr("Tagging failed for some notes (see log)."))
         self.status_label.setText(" ".join(parts))
+
+    def _on_apply_cancelled(self) -> None:
+        self._plan = None
+        self.preview_table.setRowCount(0)
+        self.apply_button.setEnabled(False)
+        self.summary_label.setText("")
+        if self.status_label.text() in {self.tr("Applying…"), self.tr("Cancelling…")}:
+            self.status_label.setText(self.tr("Cancelled."))
 
     # ------------------------------------------------------------------
     # Worker plumbing

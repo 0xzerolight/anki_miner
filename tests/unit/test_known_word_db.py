@@ -104,6 +104,15 @@ class TestAddWords:
         conn.close()
         assert row[0] == "mined"
 
+    def test_add_words_with_receipt_returns_only_new_forms(self, tmp_path):
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+        db.add_words({"食べる"}, source="mined")
+
+        inserted = db.add_words_with_receipt({"食べる", "猫"}, source="mined")
+
+        assert inserted == {"猫"}
+
 
 class TestSourceUpgrade:
     """Marking a word 'known' must upgrade an existing anki/mined row to 'user'

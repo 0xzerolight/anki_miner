@@ -58,13 +58,11 @@ class MainWindow(QMainWindow):
     - Settings (configuration)
 
     Signals:
-        config_refreshed: emitted whenever a non-Settings code path updates
-            self.config — every ``update_config`` call except the Settings
-            save path (which passes ``from_settings=True``), plus the
-            background JMdict migration finishing. Tabs that cache services
-            (and SettingsTab, so its panels don't go stale) reconnect this to
-            their update_config to pick up the new state without waiting for
-            the user to edit Settings.
+        config_refreshed: emitted with the post-save committed config after
+            every ``update_config`` call. Tabs that cache services (and
+            SettingsTab, so its panels don't go stale) reconnect this to their
+            update_config to pick up the new state without waiting for the user
+            to edit Settings.
     """
 
     config_refreshed = pyqtSignal(object)  # AnkiMinerConfig
@@ -855,29 +853,26 @@ class MainWindow(QMainWindow):
         """
         return self.config
 
-    def update_config(self, config: AnkiMinerConfig, *, from_settings: bool = False) -> None:
+    def update_config(self, config: AnkiMinerConfig) -> None:
         """Update configuration, save to disk, and propagate to tabs.
+
+        Every path bumps ``config_version`` and emits the post-save committed
+        config so in-flight backfill plans stamped with an older version abort.
 
         Args:
             config: New configuration.
-            from_settings: True when the call originates from the Settings
-                save path (``SettingsTab.config_changed`` → here, see app.py).
-                In that case SettingsTab and the mining tabs have ALREADY
-                received the new config directly via ``config_changed``, so we
-                must NOT re-emit ``config_refreshed`` — doing so would re-enter
-                ``SettingsTab.update_config`` and reload every panel mid-save.
-                Every internal mutation (theme cycle, skip-update, first-run
-                flag, post-update version write) leaves it False so SettingsTab
-                refreshes and the next Save can't resurrect the stale value.
         """
-        self.config = config
-        GUIConfigManager.save_config(config)
+        committed_config = replace(
+            config,
+            config_version=max(self.config.config_version, config.config_version) + 1,
+        )
+        GUIConfigManager.save_config(committed_config)
+        self.config = committed_config
         # Rebuild config-bound services so AnkiConnect URL/port edits take
         # effect: validation and the undo-delete AnkiService were frozen to the
         # startup config and would otherwise keep hitting the old endpoint.
         self._build_config_bound_services()
-        if not from_settings:
-            self.config_refreshed.emit(config)
+        self.config_refreshed.emit(committed_config)
 
     def _build_config_bound_services(self) -> None:
         """(Re)create services bound to the current ``self.config``.

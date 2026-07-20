@@ -53,6 +53,7 @@ def _plan(notes, field_keys=frozenset({"frequency"}), **kwargs):
         "unavailable_fields": (),
         "sentinel_only_sorts": 0,
         "expression_field": "Expression",
+        "config_version": 0,
     }
     defaults.update(kwargs)
     return BackfillPlan(**defaults)
@@ -207,6 +208,37 @@ class TestPreviewTable:
 
 
 class TestApplyFlow:
+    def test_stale_backfill_plan_aborts_on_config_change(self, tab, backfill_config):
+        from PyQt6.QtWidgets import QMessageBox
+
+        stale_plan = _plan([_note_plan(1)], config_version=0)
+        changed_config = replace(backfill_config, theme="dark", config_version=1)
+        tab.update_config(changed_config)
+        tab._on_scan_finished(stale_plan)
+
+        with (
+            patch(f"{_TAB_MOD}.QMessageBox.question", return_value=QMessageBox.StandardButton.Yes),
+            patch(f"{_TAB_MOD}.BackfillApplyWorker") as factory,
+        ):
+            tab._start_apply()
+
+        factory.assert_not_called()
+        assert "settings changed" in tab.status_label.text().lower()
+        assert "re-scan" in tab.status_label.text().lower()
+        assert tab._plan is None
+
+        matching_plan = _plan([_note_plan(1)], config_version=1)
+        tab._on_scan_finished(matching_plan)
+        fake_worker = MagicMock()
+        with (
+            patch(f"{_TAB_MOD}.QMessageBox.question", return_value=QMessageBox.StandardButton.Yes),
+            patch(f"{_TAB_MOD}.BackfillApplyWorker", return_value=fake_worker) as factory,
+        ):
+            tab._start_apply()
+
+        factory.assert_called_once()
+        fake_worker.start.assert_called_once()
+
     def test_apply_confirm_declined_does_nothing(self, tab):
         from PyQt6.QtWidgets import QMessageBox
 

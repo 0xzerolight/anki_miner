@@ -10,6 +10,7 @@ import pytest
 pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
+from anki_miner.models.processing import ProcessingResult
 
 
 def _make_factory_worker(qapp, factory, **kwargs):
@@ -159,14 +160,13 @@ def test_cancel_before_run_skips_process_episode_and_emit(qapp):
     assert results == []
 
 
-def test_result_suppressed_when_cancelled_after_processing(qapp):
-    """A cancel that lands while process_episode is mid-flight suppresses the
-    result_ready emit (the post-call check_cancelled guard)."""
+def test_zero_commit_result_suppressed_when_cancelled_after_processing(qapp):
+    """A cancel before any commit may still suppress the terminal result."""
     worker = _make_worker(qapp)
 
     def _cancel_mid_run(*args, **kwargs):
         worker.cancel()  # user pressed Cancel during the pipeline
-        return MagicMock(name="ProcessingResult")
+        return ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0)
 
     worker.processor.process_episode.side_effect = _cancel_mid_run
 
@@ -177,6 +177,31 @@ def test_result_suppressed_when_cancelled_after_processing(qapp):
     # Processing ran, but the late cancel swallows the result.
     worker.processor.process_episode.assert_called_once()
     assert results == []
+
+
+def test_late_cancel_retains_undo(qtbot, qapp):
+    """A cancel after Anki commits must still deliver IDs for Undo registration."""
+    worker = _make_worker(qapp)
+    result = ProcessingResult(
+        total_words_found=2,
+        new_words_found=2,
+        cards_created=2,
+        card_ids=[101, 102],
+    )
+
+    def _cancel_after_commit(*args, **kwargs):
+        worker.cancel()
+        return result
+
+    worker.processor.process_episode.side_effect = _cancel_after_commit
+    registered_undo_ids: list[int] = []
+    worker.result_ready.connect(lambda emitted: registered_undo_ids.extend(emitted.card_ids))
+
+    with qtbot.waitSignal(worker.result_ready, timeout=1000) as blocker:
+        worker.run()
+
+    assert blocker.args == [result]
+    assert registered_undo_ids == [101, 102]
 
 
 def test_error_emitted_with_prefix_when_process_episode_raises(qapp):

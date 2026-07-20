@@ -119,6 +119,7 @@ class SettingsTab(QWidget):
             "last_known_version",
             "first_run_shortcut_done",
             "first_run_setup_done",
+            "config_version",
         }
     )
 
