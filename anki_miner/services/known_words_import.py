@@ -164,9 +164,8 @@ def _parse_jpdb(cards: list[Any]) -> KnownWordsImportResult:
             if not isinstance(review, dict) or "grade" not in review:
                 skipped_malformed += 1
                 continue
-            try:
-                hash(review["grade"])
-            except TypeError:
+            grade = review["grade"]
+            if not isinstance(grade, str) or not grade:
                 skipped_malformed += 1
                 continue
             reviews.append(review)

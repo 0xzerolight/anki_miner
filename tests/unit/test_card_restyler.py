@@ -270,7 +270,7 @@ class TestRestyleMinedCards:
         # and a rerun must be a no-op. Current config also ships CSS for X, so
         # the appended block carries it (filtered to this field's dicts).
         scoped = '.yomitan-glossary [data-dictionary="X"] li{color:red}'
-        monkeypatch.setattr(card_restyler, "collect_dictionary_css_entries", lambda config: [("X", scoped)])
+        monkeypatch.setattr(card_restyler, "collect_dictionary_css_entries", lambda config: [("x-id", "X", scoped)])
         svc = _svc([_note(1, DICT_STYLED)])
         result = restyle_mined_cards(svc, _cfg())
         assert result.restyled == 1
@@ -486,23 +486,37 @@ class TestRestyleField:
         # NOT consulted on the extract path.
         tail = '.yomitan-glossary [data-dictionary="X"]{color:red}'
         v = f"<style>{_owned('OLD ol[data-count]{}')}\n{tail}</style>{BARE}"
-        out = self._restyle(v, entries=[("Y", ".y{}")], current_dict_css=".y{}")
+        out = self._restyle(v, entries=[("y-id", "Y", ".y{}")], current_dict_css=".y{}")
         assert out == f"{BARE_STAMPED}<style>{base_css_variant(frozenset())}\n{tail}</style>"
         assert ".y{}" not in out  # carried CSS only, never re-collected
 
     def test_fresh_attach_filters_current_config_to_field(self):
-        entries = [("X", ".x{color:red}"), ("Y", ".y{color:blue}")]
+        entries = [("x-id", "X", ".x{color:red}"), ("y-id", "Y", ".y{color:blue}")]
         out = self._restyle(BARE, entries=entries, current_dict_css=".x{color:red}\n\n.y{color:blue}")
         assert out is not None
         assert ".x{color:red}" in out
         assert ".y{color:blue}" not in out  # Y has no envelope in this field
         assert out.startswith(BARE_STAMPED) or out.startswith(BARE)
 
+    def test_fresh_attach_keeps_css_for_legacy_title_envelope(self):
+        title = "Jitendex.org [2026-06-06]"
+        value = BARE.replace('data-dictionary="X"', f'data-dictionary="{title}"')
+        scoped = '.yomitan-glossary [data-dictionary-id="jitendex"] li{color:red}'
+
+        out = self._restyle(
+            value,
+            entries=[("jitendex", title, scoped)],
+            current_dict_css=scoped,
+        )
+
+        assert out is not None
+        assert scoped in out
+
     def test_fresh_attach_stamps_via_current_config_gate(self):
         # The legacy-prepend gate: current config ships CSS for X → X's
         # envelope is stamped even though the body carries no CSS of its own.
         scoped = '.yomitan-glossary [data-dictionary="X"] li{color:red}'
-        out = self._restyle(BARE, entries=[("X", scoped)], current_dict_css=scoped)
+        out = self._restyle(BARE, entries=[("x-id", "X", scoped)], current_dict_css=scoped)
         assert out is not None
         assert '<li data-dictionary="X" data-has-styles="">' in out
 
@@ -534,7 +548,7 @@ class TestLegacyEnvelopeStamping:
         # contributes scoped CSS for that title into the appended block — the
         # restyler injects that CSS, so the envelope must be gated too.
         scoped = '.yomitan-glossary [data-dictionary="X"] li {color: red}'
-        monkeypatch.setattr(card_restyler, "collect_dictionary_css_entries", lambda config: [("X", scoped)])
+        monkeypatch.setattr(card_restyler, "collect_dictionary_css_entries", lambda config: [("x-id", "X", scoped)])
         svc = _svc([_note(1, BARE)])
         result = restyle_mined_cards(svc, _cfg())
         assert result.restyled == 1

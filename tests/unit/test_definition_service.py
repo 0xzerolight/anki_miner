@@ -130,15 +130,15 @@ class TestCollectDictionaryCss:
 
 class TestCollectDictionaryCssEntries:
     """``collect_dictionary_css_entries`` is the per-field-filter source: ordered
-    ``(display_name, scoped_css)`` pairs keyed by the exact envelope title."""
+    ``(dict_id, display_name, scoped_css)`` triples for new and legacy envelopes."""
 
-    def test_entry_names_are_envelope_titles(self, tmp_path: Path):
+    def test_entries_carry_stable_id_and_legacy_title(self, tmp_path: Path):
         _seed_dict(tmp_path, "a-dict", "A", styles_css="span { color: red }")
         entries = collect_dictionary_css_entries(
             _config(tmp_path, ChainEntry(kind="indexed", dict_id="a-dict", enabled=True))
         )
-        assert [name for name, _ in entries] == ["a-dict"]
-        assert '[data-dictionary-id="a-dict"]' in entries[0][1]
+        assert [(dict_id, display_name) for dict_id, display_name, _ in entries] == [("a-dict", "A")]
+        assert '[data-dictionary-id="a-dict"]' in entries[0][2]
 
     def test_empty_css_providers_skipped(self, tmp_path: Path):
         # A dict with no styles.css contributes NO entry — not an ("A", "")
@@ -152,7 +152,7 @@ class TestCollectDictionaryCssEntries:
                 ChainEntry(kind="indexed", dict_id="b-dict", enabled=True),
             )
         )
-        assert [name for name, _ in entries] == ["b-dict"]
+        assert [(dict_id, display_name) for dict_id, display_name, _ in entries] == [("b-dict", "B")]
 
     def test_collect_dictionary_css_is_join_of_entries(self, tmp_path: Path):
         # Byte-equivalence pin: the string collector is exactly the "\n\n" join
@@ -165,7 +165,7 @@ class TestCollectDictionaryCssEntries:
             ChainEntry(kind="indexed", dict_id="b-dict", enabled=True),
         )
         entries = collect_dictionary_css_entries(config)
-        assert collect_dictionary_css(config) == "\n\n".join(css for _, css in entries)
+        assert collect_dictionary_css(config) == "\n\n".join(css for _, _, css in entries)
 
 
 def make_provider(name="Test", available=True, return_value=None, load_raises=None):

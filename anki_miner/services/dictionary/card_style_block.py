@@ -284,15 +284,11 @@ def build_card_style_block(*, dict_css: str, card_html: str) -> str:
     return f"<style>{body}</style>"
 
 
-# Any dictionary envelope title in a field body, stamped or not (contrast
+# Dictionary envelopes in a field body, stamped or not (contrast
 # UNSTAMPED_ENVELOPE_RE, which is deliberately blind to stamped envelopes).
-# Used to filter a field's embedded dict CSS down to the dictionaries actually
-# present in it. Over-inclusion is safe and accepted: on a restyler body this
-# also matches ``[data-dictionary="…"]`` literals inside a carried legacy
-# ``<style>``, but such CSS only exists on cards whose envelope is present too,
-# and an extra scoped sheet is inert (its selectors match nothing).
-_ENVELOPE_TITLE_RE = re.compile(r'data-dictionary="([^"]*)"')
-_ENVELOPE_ID_RE = re.compile(r'data-dictionary-id="([^"]*)"')
+# Restricting the probe to ``<li>`` avoids treating selectors in carried legacy
+# ``<style>`` blocks as card envelopes.
+_ENVELOPE_RE = re.compile(r'<li data-dictionary="([^"]*)"(?: data-dictionary-id="([^"]*)")?')
 
 # The miner-markup fingerprint a field must carry before any styling attaches.
 # Same probe the restyler uses to recognize miner fields; a field without it
@@ -301,27 +297,25 @@ _ENVELOPE_ID_RE = re.compile(r'data-dictionary-id="([^"]*)"')
 _MINER_MARKUP_TOKENS = ("yomitan-glossary", "data-count")
 
 
-def filter_dict_css_entries(field_html: str, entries: Iterable[tuple[str, str]]) -> str:
+def filter_dict_css_entries(field_html: str, entries: Iterable[tuple[str, str, str]]) -> str:
     """Join the scoped CSS of exactly the dictionaries present in ``field_html``.
 
     ``entries`` is ``collect_dictionary_css_entries`` output: ordered
-    ``(display_name, scoped_css)`` pairs, duplicates preserved. Membership is
-    tested against the ``html.unescape``d ``data-dictionary`` attribute values
-    in the field — the renderer writes that attribute with ``html.escape``
-    (``indexed_provider._render``), and ``display_name`` is the pre-escape
-    title, so the round-trip is exact. Deliberately NOT ``css_string_escape``
-    matching: that escaper diverges from ``html.escape`` on ``&``/quotes, and a
-    CSS-selector-form probe (``[data-dictionary="…"]``) never appears in field
-    markup at all — either would silently drop a needed stylesheet, the one
-    forbidden outcome (Issue #93 discipline: filtering may only trim bytes,
-    never styles).
+    ``(dict_id, display_name, scoped_css)`` triples, duplicates preserved. New
+    envelopes carrying ``data-dictionary-id`` match only by stable ID, preserving
+    same-title isolation. Legacy envelopes lacking that attribute match by their
+    ``html.unescape``d display title for back-compat.
     """
-    ids = {html_lib.unescape(dict_id) for dict_id in _ENVELOPE_ID_RE.findall(field_html)}
-    legacy_titles = {html_lib.unescape(title) for title in _ENVELOPE_TITLE_RE.findall(field_html)}
-    return "\n\n".join(css for dict_id, css in entries if dict_id in ids or dict_id in legacy_titles)
+    envelopes = [
+        (html_lib.unescape(title), html_lib.unescape(dict_id) if dict_id else None)
+        for title, dict_id in _ENVELOPE_RE.findall(field_html)
+    ]
+    ids = {dict_id for _, dict_id in envelopes if dict_id is not None}
+    legacy_titles = {title for title, dict_id in envelopes if dict_id is None}
+    return "\n\n".join(css for dict_id, display_name, css in entries if dict_id in ids or display_name in legacy_titles)
 
 
-def attach_card_style_block(field_html: str, *, dict_css_entries: Iterable[tuple[str, str]]) -> str:
+def attach_card_style_block(field_html: str, *, dict_css_entries: Iterable[tuple[str, str, str]]) -> str:
     """Return ``field_html`` with its self-contained TRAILING ``<style>`` block.
 
     The one sanctioned attach seam for fresh writers (mining, backfill); it

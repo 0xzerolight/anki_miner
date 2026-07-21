@@ -231,15 +231,27 @@ MINER_FIELD = (
 
 
 class TestFilterDictCssEntries:
+    def test_same_title_new_dicts_stay_isolated_by_id(self):
+        field = MINER_FIELD.replace(
+            'data-dictionary="D"',
+            'data-dictionary="Same Title" data-dictionary-id="a-dict"',
+        )
+        entries = [
+            ("a-dict", "Same Title", ".a{color:red}"),
+            ("b-dict", "Same Title", ".b{color:blue}"),
+        ]
+
+        assert filter_dict_css_entries(field, entries) == ".a{color:red}"
+
     def test_stable_id_matches_when_display_title_differs(self):
         field = MINER_FIELD.replace(
             'data-dictionary="D"',
             'data-dictionary="Display Title" data-dictionary-id="stable-id"',
         )
-        assert filter_dict_css_entries(field, [("stable-id", ".d{color:red}")]) == ".d{color:red}"
+        assert filter_dict_css_entries(field, [("stable-id", "Display Title", ".d{color:red}")]) == ".d{color:red}"
 
     def test_keeps_only_dicts_present_in_field(self):
-        entries = [("D", ".d{color:red}"), ("E", ".e{color:blue}")]
+        entries = [("d-id", "D", ".d{color:red}"), ("e-id", "E", ".e{color:blue}")]
         assert filter_dict_css_entries(MINER_FIELD, entries) == ".d{color:red}"
 
     def test_html_escaped_title_round_trips(self):
@@ -248,19 +260,19 @@ class TestFilterDictCssEntries:
         # this dict and silently drop its stylesheet — the forbidden outcome.
         title = 'A&B "quoted"'
         field = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="A&amp;B &quot;quoted&quot;">x</li></ol></div>'
-        assert filter_dict_css_entries(field, [(title, ".ab{}")]) == ".ab{}"
+        assert filter_dict_css_entries(field, [("ab-id", title, ".ab{}")]) == ".ab{}"
 
     def test_duplicate_display_names_both_kept(self):
-        entries = [("D", ".one{}"), ("D", ".two{}")]
+        entries = [("one-id", "D", ".one{}"), ("two-id", "D", ".two{}")]
         assert filter_dict_css_entries(MINER_FIELD, entries) == ".one{}\n\n.two{}"
 
     def test_no_match_yields_empty(self):
-        assert filter_dict_css_entries(MINER_FIELD, [("Other", ".o{}")]) == ""
+        assert filter_dict_css_entries(MINER_FIELD, [("other-id", "Other", ".o{}")]) == ""
 
 
 class TestAttachCardStyleBlock:
     def test_block_trails_content(self):
-        out = attach_card_style_block(MINER_FIELD, dict_css_entries=[("D", ".d{color:red}")])
+        out = attach_card_style_block(MINER_FIELD, dict_css_entries=[("d-id", "D", ".d{color:red}")])
         # Trailing, never leading: a leading <style> is hoisted to <head> by
         # DOMParser and dropped from body.innerHTML (Kiku-class note types).
         assert out.startswith(MINER_FIELD)
@@ -274,17 +286,20 @@ class TestAttachCardStyleBlock:
 
     def test_empty_field_unchanged(self):
         # Attaching to "" would produce a field-LEADING block — refuse.
-        assert attach_card_style_block("", dict_css_entries=[("D", ".d{}")]) == ""
+        assert attach_card_style_block("", dict_css_entries=[("d-id", "D", ".d{}")]) == ""
 
     def test_markupless_field_unchanged(self):
-        assert attach_card_style_block("plain text", dict_css_entries=[("D", ".d{}")]) == "plain text"
+        assert attach_card_style_block("plain text", dict_css_entries=[("d-id", "D", ".d{}")]) == "plain text"
         # Both tokens required, not either.
         assert attach_card_style_block('<div class="yomitan-glossary">x</div>', dict_css_entries=[]) == (
             '<div class="yomitan-glossary">x</div>'
         )
 
     def test_filters_dict_css_to_field(self):
-        out = attach_card_style_block(MINER_FIELD, dict_css_entries=[("D", ".d{color:red}"), ("E", ".e{color:blue}")])
+        out = attach_card_style_block(
+            MINER_FIELD,
+            dict_css_entries=[("d-id", "D", ".d{color:red}"), ("e-id", "E", ".e{color:blue}")],
+        )
         assert ".d{color:red}" in out
         assert ".e{color:blue}" not in out
 

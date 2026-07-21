@@ -39,6 +39,20 @@ def _jpdb_file(tmp_path: Path, cards: list[dict], *, bom: bool = False) -> Path:
 
 
 class TestJpdb:
+    def test_non_string_and_empty_grades_are_skipped_and_tallied(self, tmp_path):
+        cards = [
+            _jpdb_card("数値", [{"timestamp": 1, "grade": 7}]),
+            _jpdb_card("ヌル", [{"timestamp": 2, "grade": None}]),
+            _jpdb_card("真偽値", [{"timestamp": 3, "grade": True}]),
+            _jpdb_card("空", [{"timestamp": 4, "grade": ""}]),
+            _jpdb_card("言葉", [{"timestamp": 5, "grade": "okay"}]),
+        ]
+
+        result = parse_known_words_file(_jpdb_file(tmp_path, cards))
+
+        assert result.words == frozenset({"言葉"})
+        assert result.skipped_malformed == 4
+
     def test_malformed_nested_records_skipped_import_still_usable(self, tmp_path):
         cards = [
             _jpdb_card("壊れた履歴", 7),

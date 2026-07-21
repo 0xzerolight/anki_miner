@@ -114,7 +114,7 @@ def _stamp_styled_envelopes(value: str, dict_css: str) -> str:
 _STYLE_SPAN_RE = re.compile(r"<style>(.*?)</style>", re.DOTALL)
 
 
-def _restyle_field(value: str, entries: list[tuple[str, str]], current_dict_css: str) -> str | None:
+def _restyle_field(value: str, entries: list[tuple[str, str, str]], current_dict_css: str) -> str | None:
     """Return the field's target value under the current styling, or ``None``
     when the field must be left untouched (malformed ``<style>`` structure).
 
@@ -249,7 +249,7 @@ def restyle_mined_cards(
         return RestyleResult(0, 0, 0, 0)
 
     entries = collect_dictionary_css_entries(config)
-    current_dict_css = "\n\n".join(css for _, css in entries)
+    current_dict_css = "\n\n".join(css for _, _, css in entries)
     # No empty-block guard needed: base_css_variant itself raises if a variant
     # ever loses the newline-free/ol[data-count] contract (fail-loud beats the
     # old silent every-run-restyle failure mode).

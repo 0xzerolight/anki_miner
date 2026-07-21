@@ -18,19 +18,18 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def collect_dictionary_css_entries(config: AnkiMinerConfig) -> list[tuple[str, str]]:
-    """Collect ``(display_name, scoped_css)`` for every enabled dictionary that
-    ships a ``styles.css``.
+def collect_dictionary_css_entries(config: AnkiMinerConfig) -> list[tuple[str, str, str]]:
+    """Collect ``(dict_id, display_name, scoped_css)`` for every enabled
+    dictionary that ships a ``styles.css``.
 
     Builds the configured provider chain from disk, loads each provider, and
     gathers the per-dictionary scoped CSS (``IndexedDictProvider.dictionary_css``)
-    in chain order. ``display_name`` is ``provider.name`` — exactly the title the
-    renderer stamps into the ``data-dictionary`` envelope attribute, which is what
-    ``card_style_block.filter_dict_css_entries`` matches against to keep a field's
-    embedded CSS down to the dictionaries actually present in it. Entries with no
-    usable CSS are skipped (online providers, dicts without ``styles.css``), and
-    the list is ORDERED with duplicates preserved: ``display_name`` is not
-    guaranteed unique across providers, so this is deliberately not a dict.
+    in chain order. Both stable ``dict_id`` and ``display_name`` are retained:
+    new envelopes match by ID, while pre-ID envelopes still match by title.
+    Entries with no usable CSS are skipped (online providers, dicts without
+    ``styles.css``), and the list is ORDERED with duplicates preserved:
+    ``display_name`` is not guaranteed unique across providers, so this is
+    deliberately not a dict.
 
     The result feeds each styled field's self-contained trailing ``<style>``
     block via ``card_style_block.attach_card_style_block`` at the
@@ -50,7 +49,7 @@ def collect_dictionary_css_entries(config: AnkiMinerConfig) -> list[tuple[str, s
 
     registry = DictionaryRegistry(config.dicts_root)
     registry.load()
-    entries: list[tuple[str, str]] = []
+    entries: list[tuple[str, str, str]] = []
     for provider in registry.build_provider_chain(config):
         css = ""
         try:
@@ -66,7 +65,7 @@ def collect_dictionary_css_entries(config: AnkiMinerConfig) -> list[tuple[str, s
         if css and css.strip():
             dict_id = getattr(provider, "dict_id", None)
             if isinstance(dict_id, str):
-                entries.append((dict_id, css.strip()))
+                entries.append((dict_id, provider.name, css.strip()))
     return entries
 
 
@@ -78,7 +77,7 @@ def collect_dictionary_css(config: AnkiMinerConfig) -> str:
     whole-config blob is still the right input (e.g. the restyler's
     envelope-stamping gate).
     """
-    return "\n\n".join(css for _, css in collect_dictionary_css_entries(config))
+    return "\n\n".join(css for _, _, css in collect_dictionary_css_entries(config))
 
 
 class DefinitionService:

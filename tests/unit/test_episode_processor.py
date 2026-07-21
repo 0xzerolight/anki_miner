@@ -3408,7 +3408,7 @@ class TestGlossaryFetch:
         mock_services["definition_service"].get_glossaries_batch.return_value = [glossary_html]
 
         # Avoid real dictionary-registry / SQLite I/O at the per-field <style> seam.
-        collect = MagicMock(return_value=[("X", '.yomitan-glossary [data-dictionary="X"]{color:red}')])
+        collect = MagicMock(return_value=[("x-id", "X", '.yomitan-glossary [data-dictionary="X"]{color:red}')])
         monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css_entries", collect)
 
         processor.process_episode(video, sub)
@@ -3553,7 +3553,7 @@ class TestGlossaryFetch:
             '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="X">1. to eat</li></ol></div>'
         )
         mock_services["definition_service"].get_definitions_batch.return_value = [definition_html]
-        collect = MagicMock(return_value=[("X", '.yomitan-glossary [data-dictionary="X"]{color:red}')])
+        collect = MagicMock(return_value=[("x-id", "X", '.yomitan-glossary [data-dictionary="X"]{color:red}')])
         monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css_entries", collect)
 
         processor.process_episode(video, sub)
@@ -3587,8 +3587,8 @@ class TestGlossaryFetch:
         mock_services["definition_service"].get_definitions_batch.return_value = [definition_html]
         mock_services["definition_service"].get_glossaries_batch.return_value = [glossary_html]
         entries = [
-            ("X", '.yomitan-glossary [data-dictionary="X"]{color:red}'),
-            ("Y", '.yomitan-glossary [data-dictionary="Y"]{color:blue}'),
+            ("x-id", "X", '.yomitan-glossary [data-dictionary="X"]{color:red}'),
+            ("y-id", "Y", '.yomitan-glossary [data-dictionary="Y"]{color:blue}'),
         ]
         monkeypatch.setattr(
             "anki_miner.orchestration.episode_processor.collect_dictionary_css_entries", lambda cfg: entries
