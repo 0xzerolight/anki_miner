@@ -84,45 +84,66 @@ def make_queue_worker_factory(
     return _make
 
 
+class _PauseAfterFirstWorkerReleaseLock:
+    """Pause the worker after its first claim-lock critical section."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._worker_ident: int | None = None
+        self._pause_worker = True
+        self.worker_paused = threading.Event()
+        self.resume_worker = threading.Event()
+
+    def arm_for_current_thread(self) -> None:
+        self._worker_ident = threading.get_ident()
+
+    def acquire(self) -> bool:
+        return self._lock.acquire()
+
+    def release(self) -> None:
+        self._lock.release()
+        if self._pause_worker and threading.get_ident() == self._worker_ident:
+            self._pause_worker = False
+            self.worker_paused.set()
+            self.resume_worker.wait()
+
+    def __enter__(self) -> _PauseAfterFirstWorkerReleaseLock:
+        self.acquire()
+        return self
+
+    def __exit__(self, *_exc_info: object) -> None:
+        self.release()
+
+
 def race_claim_against_skip(worker: Any, item: Any, on_skipped: Callable[[], None]) -> bool:
-    """Race a worker claim against GUI removal while both await the claim lock."""
+    """Run Clear after the worker's first claim-lock critical section.
+
+    An atomic claim records the item before this barrier, so Clear is refused.
+    A split-lock claim pauses here between its skip check and claim, so Clear
+    removes the row before the worker resumes and exposes the TOCTOU bug.
+    """
     errors: list[BaseException] = []
-    skip_result: list[bool] = []
-    worker_started = threading.Event()
-    clear_started = threading.Event()
+    claim_lock = _PauseAfterFirstWorkerReleaseLock()
+    worker._skip_lock = claim_lock
 
     def _run_worker() -> None:
-        worker_started.set()
+        claim_lock.arm_for_current_thread()
         try:
             worker.run()
         except BaseException as exc:  # pragma: no cover - re-raised on caller thread
             errors.append(exc)
 
-    def _clear_item() -> None:
-        clear_started.set()
-        try:
-            skipped = worker.try_skip_item(item)
-            skip_result.append(skipped)
-            if skipped:
-                on_skipped()
-        except BaseException as exc:  # pragma: no cover - re-raised on caller thread
-            errors.append(exc)
-
-    worker._skip_lock.acquire()
     worker_thread = threading.Thread(target=_run_worker)
-    clear_thread = threading.Thread(target=_clear_item)
+    worker_thread.start()
     try:
-        worker_thread.start()
-        clear_thread.start()
-        assert worker_started.wait(1)
-        assert clear_started.wait(1)
+        assert claim_lock.worker_paused.wait(1)
+        skipped = worker.try_skip_item(item)
+        if skipped:
+            on_skipped()
     finally:
-        worker._skip_lock.release()
+        claim_lock.resume_worker.set()
+        worker_thread.join(3)
 
-    worker_thread.join(3)
-    clear_thread.join(3)
     assert not worker_thread.is_alive()
-    assert not clear_thread.is_alive()
     assert not errors
-    assert len(skip_result) == 1
-    return skip_result[0]
+    return skipped

@@ -106,7 +106,7 @@ def test_two_item_success_signal_sequence(make_worker, mock_processor, fake_load
 
 
 def test_clear_racing_preclaim_never_removes_mined_item(make_worker, mock_processor, fake_load):
-    """Clear and claim share one lock: either side may win, never both."""
+    """Clear in a split-lock claim gap must never remove a mined row."""
     item = _make_item("vol01")
     remaining = [item]
     worker = make_worker(items=[item])

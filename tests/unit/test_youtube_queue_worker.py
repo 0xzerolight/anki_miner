@@ -335,7 +335,7 @@ def test_youtube_running_row_not_dropped_by_tail_clear(make_worker, mock_process
 
 
 def test_clear_racing_preclaim_never_removes_mined_item(make_worker, mock_processor):
-    """Clear and claim share one lock: either side may win, never both."""
+    """Clear in a split-lock claim gap must never remove a mined row."""
     item = _make_item(video_id="a")
     remaining = [item]
     worker = make_worker(items=[item])
