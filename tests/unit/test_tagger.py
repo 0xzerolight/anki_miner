@@ -1,5 +1,8 @@
 """Tests for anki_miner.services.tagger — shared singleton and LockedTagger."""
 
+import os
+import subprocess
+import sys
 import threading
 import time
 from unittest.mock import MagicMock
@@ -8,6 +11,23 @@ import pytest
 
 import anki_miner.services.tagger as tagger_mod
 from anki_miner.services.tagger import LockedTagger, get_shared_tagger
+
+
+def test_importing_main_window_does_not_import_fugashi():
+    env = os.environ.copy()
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys; import anki_miner.gui.main_window; raise SystemExit(1 if 'fugashi' in sys.modules else 0)",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.fixture(autouse=True)
@@ -39,7 +59,7 @@ class TestIdentity:
     def test_same_object_across_calls(self, monkeypatch):
         """Two successive calls return the identical LockedTagger instance."""
         fake_tagger = MagicMock(name="fake_tagger")
-        monkeypatch.setattr(tagger_mod.fugashi, "Tagger", lambda: fake_tagger)
+        monkeypatch.setattr(tagger_mod, "_create_tagger", lambda: fake_tagger)
 
         first = get_shared_tagger()
         second = get_shared_tagger()
@@ -48,7 +68,7 @@ class TestIdentity:
     def test_returns_locked_tagger_instance(self, monkeypatch):
         """get_shared_tagger() returns a LockedTagger, not the raw fugashi.Tagger."""
         fake_tagger = MagicMock(name="fake_tagger")
-        monkeypatch.setattr(tagger_mod.fugashi, "Tagger", lambda: fake_tagger)
+        monkeypatch.setattr(tagger_mod, "_create_tagger", lambda: fake_tagger)
 
         result = get_shared_tagger()
         assert isinstance(result, LockedTagger)
@@ -56,7 +76,7 @@ class TestIdentity:
     def test_singleton_stored_in_module(self, monkeypatch):
         """After the first call, the module-level _locked_tagger holds the wrapper."""
         fake_tagger = MagicMock(name="fake_tagger")
-        monkeypatch.setattr(tagger_mod.fugashi, "Tagger", lambda: fake_tagger)
+        monkeypatch.setattr(tagger_mod, "_create_tagger", lambda: fake_tagger)
 
         result = get_shared_tagger()
         assert tagger_mod._locked_tagger is result
@@ -75,7 +95,7 @@ class TestBuiltOnceUnderConcurrency:
             call_count += 1
             return returned_instance
 
-        monkeypatch.setattr(tagger_mod.fugashi, "Tagger", counting_factory)
+        monkeypatch.setattr(tagger_mod, "_create_tagger", counting_factory)
 
         n_threads = 32
         barrier = threading.Barrier(n_threads)
@@ -112,7 +132,7 @@ class TestFailurePaths:
                 raise RuntimeError("MeCab init failed")
             return fake_tagger
 
-        monkeypatch.setattr(tagger_mod.fugashi, "Tagger", flaky_factory)
+        monkeypatch.setattr(tagger_mod, "_create_tagger", flaky_factory)
 
         with pytest.raises(RuntimeError, match="MeCab init failed"):
             get_shared_tagger()

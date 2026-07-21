@@ -8,8 +8,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from anki_miner.config.paths import ANKI_MINER_HOME
+from anki_miner.utils.bounded_reader import read_json_bounded
 
 logger = logging.getLogger(__name__)
+
+_RECENTS_MAX_BYTES = 256 * 1024
 
 
 class RecentFilesManager:
@@ -80,13 +83,24 @@ class RecentFilesManager:
         """Load entries from the JSON file."""
         if not self._file_path.exists():
             return []
-        try:
-            data = json.loads(self._file_path.read_text(encoding="utf-8"))
-            if isinstance(data, list):
-                return data
-        except (json.JSONDecodeError, OSError):
-            pass
-        return []
+        data = read_json_bounded(self._file_path, _RECENTS_MAX_BYTES, None, "recent files")
+        if not isinstance(data, list):
+            return []
+        entries = data[: self._max_items]
+        if not all(
+            isinstance(entry, dict)
+            and isinstance(entry.get("video"), str)
+            and isinstance(entry.get("subtitle"), str)
+            and (
+                "subtitle_offset" not in entry
+                or isinstance(entry["subtitle_offset"], (int, float))
+                and not isinstance(entry["subtitle_offset"], bool)
+            )
+            for entry in entries
+        ):
+            logger.warning("Invalid recent files entry; using empty list")
+            return []
+        return entries
 
     def _save(self, entries: list[dict]) -> None:
         """Save entries to the JSON file.

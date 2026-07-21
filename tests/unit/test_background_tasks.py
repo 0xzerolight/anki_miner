@@ -328,6 +328,25 @@ def test_deferred_close_finalizes_once_after_deleted_laggard(controller, monkeyp
     quit_app.assert_called_once()
 
 
+def test_deferred_close_quits_when_save_raises(controller, monkeypatch):
+    window = MagicMock()
+    window.config = object()
+    controller._window = window
+    controller._close_laggards = []
+    controller._close_poll_timer = MagicMock()
+    quit_app = MagicMock()
+    monkeypatch.setattr(
+        "anki_miner.gui.controllers.background_tasks.GUIConfigManager.save_config",
+        MagicMock(side_effect=OSError("disk full")),
+    )
+    monkeypatch.setattr("anki_miner.gui.controllers.background_tasks.QApplication.quit", quit_app)
+
+    with pytest.raises(OSError, match="disk full"):
+        controller._poll_deferred_close()
+
+    quit_app.assert_called_once()
+
+
 class _FakeYtdlpWorker(QObject):
     """Fake yt-dlp worker with real, connectable result_ready/error/finished signals."""
 

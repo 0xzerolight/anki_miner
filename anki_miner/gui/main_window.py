@@ -1,6 +1,7 @@
 """Main window for Anki Miner GUI."""
 
 import logging
+from collections.abc import Callable
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
@@ -35,7 +36,7 @@ from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
 from anki_miner.gui.widgets.header_widget import HeaderWidget
 from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
 from anki_miner.models import ProcessingResult, ValidationResult
-from anki_miner.services import ShortcutService, ValidationService
+from anki_miner.services import ShortcutResult, ShortcutService, ValidationService
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.utils.i18n import tr_format
 
@@ -67,7 +68,7 @@ class MainWindow(QMainWindow):
 
     config_refreshed = pyqtSignal(object)  # AnkiMinerConfig
 
-    def __init__(self):
+    def __init__(self, config: AnkiMinerConfig | None = None):
         """Initialize the main window."""
         super().__init__()
 
@@ -76,9 +77,12 @@ class MainWindow(QMainWindow):
         # loop (e.g. a freq-zip import) and re-enter on a half-built window.
         # NOT the persisted first_run_setup_done flag — purely runtime.
         self._first_run_setup_handled = False
+        self._shortcut_work_in_flight = False
+        self._boot_committed = False
+        self._stale_dict_prompt_handled = False
 
         # Load configuration
-        self.config = GUIConfigManager.load_config()
+        self.config = config if config is not None else GUIConfigManager.load_config()
 
         # Create presenter for validation signals
         self.presenter = GUIPresenter(self)
@@ -99,7 +103,7 @@ class MainWindow(QMainWindow):
         # _build_config_bound_services — so an AnkiConnect URL/port edit reaches
         # the next Undo delete instead of the stale startup endpoint.
         self._build_config_bound_services()
-        self._validation_silent = False
+        self._validation_silent = True
 
         # Connect presenter signals
         self._connect_presenter_signals()
@@ -114,62 +118,55 @@ class MainWindow(QMainWindow):
 
         self._update_banner: UpdateBanner | None = None
 
-        # Auto-check system status on startup (silently, no popup)
-        self._validation_silent = True
-        self._run_validation()
+    def commit_boot(self) -> None:
+        """Commit startup state, then start every boot background task."""
+        if self._boot_committed:
+            return
 
-        # Auto-check for updates on startup
-        if self.config.check_for_updates:
-            self._check_for_updates()
+        self._run_optional_boot_step(
+            "legacy frequency-source repair",
+            self._maybe_repair_legacy_frequency_source_name,
+        )
 
-        # One-time repair of the collapsed legacy frequency source display name.
-        self._maybe_repair_legacy_frequency_source_name()
-
-        # One-time JMdict XML → SQLite migration (background)
-        self._maybe_migrate_jmdict()
-
-        # yt-dlp background self-update (throttled, deferred so the window paints
-        # first). Silent on the auto path — no dialog (see _on_ytdlp_update_result).
-        self._maybe_start_ytdlp_update()
-
-        # Post-update confirmation: if last_known_version differs from the
-        # currently running __version__, show a one-shot info dialog. Save the
-        # new version BEFORE showing the dialog so a crash mid-dialog doesn't
-        # cause it to re-fire on the next launch. First launch (empty string)
-        # writes silently.
         previous = self.config.last_known_version
         if previous != __version__:
             self.update_config(replace(self.config, last_known_version=__version__))
-            if previous:
-                QMessageBox.information(
-                    self,
-                    self.tr("Anki Miner updated"),
-                    tr_format(
-                        self.tr(
-                            "Updated to v%1.<br><br>"
-                            "See what's new: "
-                            '<a href="https://github.com/0xzerolight/anki_miner/releases/latest">'
-                            "release notes</a>"
-                        ),
-                        __version__,
-                    ),
-                )
 
-        # First-run desktop shortcut (deferred so the window paints first)
+        if previous and previous != __version__:
+            QMessageBox.information(
+                self,
+                self.tr("Anki Miner updated"),
+                tr_format(
+                    self.tr(
+                        "Updated to v%1.<br><br>"
+                        "See what's new: "
+                        '<a href="https://github.com/0xzerolight/anki_miner/releases/latest">'
+                        "release notes</a>"
+                    ),
+                    __version__,
+                ),
+            )
+
+        self._boot_committed = True
+        self._validation_silent = True
+        self._run_optional_boot_step("startup validation", self._run_validation)
+        if self.config.check_for_updates:
+            self._run_optional_boot_step("update check", self._check_for_updates)
+        self._run_optional_boot_step("JMdict migration", self._maybe_migrate_jmdict)
+        self._run_optional_boot_step("yt-dlp update", self._maybe_start_ytdlp_update)
+
         if not self.config.first_run_shortcut_done:
             QTimer.singleShot(0, self._maybe_create_shortcut_on_first_run)
-
-        # First-run recommended-resources offer (deferred so the window paints
-        # first). Only fires once; the flag is persisted in every branch below.
         if not self.config.first_run_setup_done:
             QTimer.singleShot(0, self._maybe_offer_first_run_setup)
-
-        # Schema-bump migration prompt (4.0): if an enabled indexed dictionary
-        # needs reimport after a schema upgrade, mining would silently emit zero
-        # cards. Prompt (deferred so the window paints first) offering one-click
-        # Reimport All. Runtime guard only — re-offered next launch until fixed.
-        self._stale_dict_prompt_handled = False
         QTimer.singleShot(0, self._maybe_prompt_stale_dictionaries)
+
+    @staticmethod
+    def _run_optional_boot_step(name: str, step: Callable[[], None]) -> None:
+        try:
+            step()
+        except Exception:
+            logger.exception("Optional boot step failed: %s", name)
 
     def _setup_ui(self) -> None:
         """Set up the user interface."""
@@ -494,22 +491,57 @@ class MainWindow(QMainWindow):
 
     def _create_desktop_shortcut(self) -> None:
         """Create a desktop shortcut via ShortcutService and report the result."""
-        result = ShortcutService.create_shortcut()
-        body = "\n".join(result.messages) if result.messages else ""
-        if result.success:
-            QMessageBox.information(self, self.tr("Desktop Shortcut"), body or self.tr("Shortcut created."))
-        else:
-            QMessageBox.warning(
-                self,
-                self.tr("Desktop Shortcut"),
-                result.error or self.tr("Failed to create desktop shortcut."),
-            )
+        self._run_shortcut_work(show_result=True, skip_if_exists=False)
 
     def _maybe_create_shortcut_on_first_run(self) -> None:
         """Auto-create a desktop shortcut on first launch; persist the flag."""
-        if not ShortcutService.shortcut_exists():
-            ShortcutService.create_shortcut()
-        self.update_config(replace(self.config, first_run_shortcut_done=True))
+        self._run_shortcut_work(show_result=False, skip_if_exists=True)
+
+    def _run_shortcut_work(self, *, show_result: bool, skip_if_exists: bool) -> None:
+        if self._shortcut_work_in_flight:
+            return
+        self._shortcut_work_in_flight = True
+
+        def work() -> ShortcutResult | None:
+            if skip_if_exists and ShortcutService.shortcut_exists():
+                return None
+            return ShortcutService.create_shortcut()
+
+        def finish_attempt() -> None:
+            self._shortcut_work_in_flight = False
+            if not self.config.first_run_shortcut_done:
+                try:
+                    self.update_config(replace(self.config, first_run_shortcut_done=True))
+                except Exception:
+                    logger.exception("Could not persist desktop shortcut attempt state")
+
+        def on_done(value: object) -> None:
+            finish_attempt()
+            if not show_result or value is None:
+                return
+            if not isinstance(value, ShortcutResult):
+                QMessageBox.warning(self, self.tr("Desktop Shortcut"), self.tr("Failed to create desktop shortcut."))
+                return
+            body = "\n".join(value.messages) if value.messages else ""
+            if value.success:
+                QMessageBox.information(self, self.tr("Desktop Shortcut"), body or self.tr("Shortcut created."))
+            else:
+                QMessageBox.warning(
+                    self,
+                    self.tr("Desktop Shortcut"),
+                    value.error or self.tr("Failed to create desktop shortcut."),
+                )
+
+        def on_error(message: str) -> None:
+            finish_attempt()
+            logger.warning("Desktop shortcut attempt failed: %s", message)
+            if show_result:
+                QMessageBox.warning(self, self.tr("Desktop Shortcut"), message)
+
+        try:
+            run_off_thread(self, work, on_done, on_error)
+        except Exception as exc:
+            on_error(str(exc))
 
     def _download_recommended_resources(self) -> None:
         """Tools-menu handler: run the resource download dialog, apply result."""
@@ -963,8 +995,10 @@ class MainWindow(QMainWindow):
         self.release_dictionary_resources()
 
         # Save configuration before closing
-        GUIConfigManager.save_config(self.config)
-        event.accept()
+        try:
+            GUIConfigManager.save_config(self.config)
+        finally:
+            event.accept()
 
     def _on_system_status_clicked(self) -> None:
         """Handle system status indicator click."""

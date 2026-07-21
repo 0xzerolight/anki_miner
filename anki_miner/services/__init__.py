@@ -1,5 +1,7 @@
 """Business logic services for Anki Miner."""
 
+from typing import TYPE_CHECKING
+
 from .anki_service import AnkiService
 from .definition_service import DefinitionService
 from .dictionary.providers import IndexedDictProvider, JishoProvider
@@ -8,9 +10,20 @@ from .media_extractor import MediaExtractorService
 from .pitch_accent_service import PitchAccentService
 from .shortcut_service import ShortcutResult, ShortcutService
 from .stats_service import StatsService
-from .subtitle_parser import SubtitleParserService
 from .validation_service import ValidationService
 from .word_filter import WordFilterService
+
+if TYPE_CHECKING:
+    from .subtitle_parser import SubtitleParserService
+
+
+def __getattr__(name: str) -> object:
+    if name == "SubtitleParserService":
+        from .subtitle_parser import SubtitleParserService
+
+        return SubtitleParserService
+    raise AttributeError(name)
+
 
 __all__ = [
     "SubtitleParserService",

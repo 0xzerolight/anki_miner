@@ -22,11 +22,15 @@ from multiple threads do not double-build.
 import threading
 from typing import Any
 
-import fugashi
-
 _tagger_lock = threading.Lock()
-_tagger: fugashi.Tagger | None = None
+_tagger: Any | None = None
 _locked_tagger: "LockedTagger | None" = None
+
+
+def _create_tagger() -> Any:
+    import fugashi
+
+    return fugashi.Tagger()
 
 
 class LockedTagger:
@@ -46,7 +50,7 @@ class LockedTagger:
     # (there is only ever one, but the class-level placement makes the scope clear).
     _parse_lock: threading.RLock = threading.RLock()
 
-    def __init__(self, inner: fugashi.Tagger) -> None:
+    def __init__(self, inner: Any) -> None:
         # Store as a name that will NOT be caught by __getattr__.
         object.__setattr__(self, "_inner", inner)
 
@@ -94,6 +98,6 @@ def get_shared_tagger() -> LockedTagger:
             if _locked_tagger is None:
                 # Build the raw tagger if not already built.
                 if _tagger is None:
-                    _tagger = fugashi.Tagger()
+                    _tagger = _create_tagger()
                 _locked_tagger = LockedTagger(_tagger)
     return _locked_tagger

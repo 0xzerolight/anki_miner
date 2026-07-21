@@ -114,6 +114,33 @@ class TestRecentFilesManager:
         entries = manager.get_recent()
         assert entries == []
 
+    def test_oversized_recent_file_degrades_to_empty(self, manager):
+        manager._file_path.parent.mkdir(parents=True, exist_ok=True)
+        manager._file_path.write_text(
+            '[{"video":"' + ("x" * 300_000) + '","subtitle":"sub.srt","timestamp":"now"}]',
+            encoding="utf-8",
+        )
+
+        assert manager.get_recent() == []
+
+    def test_malformed_recent_entry_degrades_to_empty(self, manager):
+        manager._file_path.parent.mkdir(parents=True, exist_ok=True)
+        manager._file_path.write_text('[{"video": 1, "subtitle": null}]', encoding="utf-8")
+
+        assert manager.get_recent() == []
+
+    def test_loaded_entries_keep_count_cap(self, manager):
+        manager._file_path.parent.mkdir(parents=True, exist_ok=True)
+        entries = [
+            {"video": f"v-{index}", "subtitle": f"s-{index}", "subtitle_offset": 0.0, "timestamp": "now"}
+            for index in range(20)
+        ]
+        import json
+
+        manager._file_path.write_text(json.dumps(entries), encoding="utf-8")
+
+        assert len(manager.get_recent()) == 5
+
     def test_timestamp_is_iso_format(self, manager):
         manager.add_entry(Path("/video/ep01.mkv"), Path("/subs/ep01.ass"))
 

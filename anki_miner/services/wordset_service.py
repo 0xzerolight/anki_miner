@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from importlib.resources import files
 from pathlib import Path
 
+from anki_miner.utils.bounded_reader import file_within_limit
+
 logger = logging.getLogger(__name__)
 
 _RESOURCE_PACKAGE = "anki_miner.resources.wordsets"
@@ -33,6 +35,7 @@ _FALLBACK_LABELS = {
     "place-names": "Place names",
     "org-product": "Company / Product / Org",
 }
+_WORDSET_MAX_BYTES = 8 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -55,31 +58,43 @@ def _resource_root(resource_dir: Path | None) -> Path:
     return Path(str(files(_RESOURCE_PACKAGE)))
 
 
-def _read_header(path: Path) -> dict[str, str]:
+def _read_header(path: Path) -> dict[str, str] | None:
     """Read ``# key: value`` header lines until the first data line."""
+    if not file_within_limit(path, _WORDSET_MAX_BYTES, "wordset"):
+        return None
     meta: dict[str, str] = {}
-    with path.open("r", encoding="utf-8") as f:
-        for line in f:
-            stripped = line.strip()
-            if not stripped:
-                continue
-            if not stripped.startswith("#"):
-                break
-            body = stripped.lstrip("#").strip()
-            if ":" in body:
-                key, _, value = body.partition(":")
-                meta[key.strip().lower()] = value.strip()
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            for line in f:
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                if not stripped.startswith("#"):
+                    break
+                body = stripped.lstrip("#").strip()
+                if ":" in body:
+                    key, _, value = body.partition(":")
+                    meta[key.strip().lower()] = value.strip()
+    except (OSError, UnicodeDecodeError) as exc:
+        logger.warning("Could not decode wordset %s: %s", path, exc)
+        return None
     return meta
 
 
-def _read_words(path: Path) -> set[str]:
+def _read_words(path: Path) -> set[str] | None:
     """Read one wordset file into a set, skipping blank and ``#`` header lines."""
+    if not file_within_limit(path, _WORDSET_MAX_BYTES, "wordset"):
+        return None
     words: set[str] = set()
-    with path.open("r", encoding="utf-8") as f:
-        for line in f:
-            stripped = line.strip()
-            if stripped and not stripped.startswith("#"):
-                words.add(stripped)
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            for line in f:
+                stripped = line.strip()
+                if stripped and not stripped.startswith("#"):
+                    words.add(stripped)
+    except (OSError, UnicodeDecodeError) as exc:
+        logger.warning("Could not decode wordset %s: %s", path, exc)
+        return None
     return words
 
 
@@ -105,7 +120,9 @@ def _load_union_cached(root: Path, enabled_ids: tuple[str, ...]) -> frozenset[st
             if not path.exists():
                 logger.warning("Wordset '%s' not found at %s; skipping", set_id, path)
                 continue
-            words |= _read_words(path)
+            loaded = _read_words(path)
+            if loaded is not None:
+                words |= loaded
         union = frozenset(words)
         _UNION_CACHE[key] = union
         return union
@@ -124,6 +141,8 @@ def load_wordset_catalog(resource_dir: Path | None = None) -> list[WordsetInfo]:
         if not path.exists():
             continue
         meta = _read_header(path)
+        if meta is None:
+            continue
         label = meta.get("label", _FALLBACK_LABELS.get(set_id, set_id))
         try:
             count = int(meta.get("count", "0"))

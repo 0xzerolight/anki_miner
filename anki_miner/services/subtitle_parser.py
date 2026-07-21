@@ -37,7 +37,6 @@ from anki_miner.services.morphology import (
     replace_overridden_spans,
     resolve_reading_override,
 )
-from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.utils import (
     clean_subtitle_text,
     generate_furigana,
@@ -303,6 +302,8 @@ class SubtitleParserService:
         """
         self.config = config
         self._reading_lookup = reading_lookup
+        from anki_miner.services.tagger import get_shared_tagger
+
         # Shared process-wide tagger (see services/tagger.py for the single-flight
         # invariant). __init__ may block ~2-3s on the lazy build if a user triggers
         # the first SubtitleParserService before the background prewarm worker

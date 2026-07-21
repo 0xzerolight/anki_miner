@@ -36,7 +36,7 @@ class TestReadingTtsPersist:
 
         assert len(emitted) == 1
         assert emitted[0].reading_tts_enabled is True
-        assert tab.config.reading_tts_enabled is True
+        assert tab.config.reading_tts_enabled is False
 
     def test_provider_toggle_persists_immediately(self, tab, qtbot):
         tab.audio_panel.set_reading_tts(True, True, True)

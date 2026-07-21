@@ -636,8 +636,8 @@ class SettingsTab(QWidget):
         existing ``config_changed`` → ``MainWindow.update_config`` chain
         persists to ``gui_config.json`` without duplicate logic.
         """
-        self.config = replace(self.config, theme=active, theme_favorites=tuple(favorites))
-        self.config_changed.emit(self.config)
+        new_config = replace(self.config, theme=active, theme_favorites=tuple(favorites))
+        self.config_changed.emit(new_config)
 
     def _on_font_scale_changed(self, scale: float) -> None:
         """Fold the Themes panel font-scale change into the config and persist.
@@ -648,8 +648,8 @@ class SettingsTab(QWidget):
         ``config_changed`` → ``MainWindow.update_config`` chain persists
         ``ui_font_scale`` to ``gui_config.json``.
         """
-        self.config = replace(self.config, ui_font_scale=scale)
-        self.config_changed.emit(self.config)
+        new_config = replace(self.config, ui_font_scale=scale)
+        self.config_changed.emit(new_config)
 
     def _on_zoom_changed(self, zoom: float) -> None:
         """Persist a whole-UI zoom change immediately (applies on next launch).
@@ -658,13 +658,13 @@ class SettingsTab(QWidget):
         unlike font scale there is no live restyle — the Themes panel reveals a
         restart note and this slot only folds ``ui_zoom`` into the config.
         """
-        self.config = replace(self.config, ui_zoom=zoom)
-        self.config_changed.emit(self.config)
+        new_config = replace(self.config, ui_zoom=zoom)
+        self.config_changed.emit(new_config)
 
     def _on_language_changed(self, language: str) -> None:
         """Persist a UI-language change immediately (applies on next launch)."""
-        self.config = replace(self.config, ui_language=language)
-        self.config_changed.emit(self.config)
+        new_config = replace(self.config, ui_language=language)
+        self.config_changed.emit(new_config)
 
     def commit_settings(self, skip_zip_import: bool = False) -> None:
         """Commit the save-path panels into the config and emit ``config_changed``.
@@ -851,7 +851,6 @@ class SettingsTab(QWidget):
                 self._loading = False
 
         # Emit signal to notify listeners of config change
-        self.config = new_config
         self.config_changed.emit(new_config)
         if kept_back:
             # Sticky (no auto-clear): stays visible until the next fully-valid
@@ -951,9 +950,8 @@ class SettingsTab(QWidget):
                 )
         # Import can touch any field — full reload, unlike the targeted
         # auto-save commit.
-        self.config = new_config
-        self._load_config()
         self.config_changed.emit(new_config)
+        self._load_config()
         self._flash_save_status(self.tr("✓ Imported"))
 
     def _flash_save_status(self, text: str) -> None:
@@ -1074,7 +1072,6 @@ class SettingsTab(QWidget):
         needs to sync to Anki here.
         """
         new_config = replace(self.config, dictionary_chain=new_chain)
-        self.config = new_config
         self.config_changed.emit(new_config)
 
     def _persist_audio_chain_change(self, new_chain: tuple[AudioSourceEntry, ...]) -> None:
@@ -1085,7 +1082,6 @@ class SettingsTab(QWidget):
         requiring the user to click Save in Settings.
         """
         new_config = replace(self.config, expression_audio_chain=new_chain)
-        self.config = new_config
         self.config_changed.emit(new_config)
 
     def _persist_reading_tts_change(self) -> None:
@@ -1097,7 +1093,6 @@ class SettingsTab(QWidget):
             reading_tts_google_enabled=google_on,
             reading_tts_papago_enabled=papago_on,
         )
-        self.config = new_config
         self.config_changed.emit(new_config)
 
     def _on_retry_missing_audio(self) -> None:
@@ -1146,7 +1141,6 @@ class SettingsTab(QWidget):
         run without requiring the user to click Save in Settings.
         """
         new_config = replace(self.config, frequency_chain=new_chain)
-        self.config = new_config
         self.config_changed.emit(new_config)
 
     # === Known words handlers (Issues #38 / #42) ===

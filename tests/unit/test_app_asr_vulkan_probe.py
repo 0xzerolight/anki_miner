@@ -81,14 +81,14 @@ def test_no_probe_env_does_not_route_into_probe(monkeypatch):
 
     monkeypatch.setattr(_vulkan_probe, "main", _probe)
 
-    # Stop main() right after the early-exit guards so we don't build the GUI:
-    # _configure_logging runs just after the smoke/probe branches.
+    # Stop main() after the early-exit guards so we don't build the GUI.
     sentinel = RuntimeError("stop after early-exit guards")
 
     def _stop(*args, **kwargs):
         raise sentinel
 
-    monkeypatch.setattr(app, "_configure_logging", _stop)
+    monkeypatch.setattr(app, "_configure_logging", lambda *args, **kwargs: None)
+    monkeypatch.setattr(app, "_apply_ui_zoom", _stop)
 
     with pytest.raises(RuntimeError) as exc_info:
         app.main()

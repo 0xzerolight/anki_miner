@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import sys
 from dataclasses import replace
 from pathlib import Path
 
@@ -52,6 +53,23 @@ class TestYouTubePanelDefaults:
         # test_config does not override youtube_playlist_max, so default is 100.
         assert panel.playlist_max_spinbox.value() == 100
         assert panel.get_playlist_max() == 100
+
+
+def test_config_memory_not_published_when_persistence_listener_raises(tab, monkeypatch):
+    original = tab.config
+    errors: list[BaseException] = []
+
+    def fail_save(config):
+        raise OSError("disk full")
+
+    tab.config_changed.connect(fail_save)
+    monkeypatch.setattr(sys, "excepthook", lambda exc_type, exc, traceback: errors.append(exc))
+
+    tab._on_theme_state_changed("dark", ())
+
+    assert len(errors) == 1
+    assert str(errors[0]) == "disk full"
+    assert tab.config is original
 
 
 class TestYouTubePanelValueHelpers:

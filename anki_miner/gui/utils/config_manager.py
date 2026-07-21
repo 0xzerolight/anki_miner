@@ -7,14 +7,23 @@ import os
 import shutil
 import types
 import typing
+from collections.abc import Mapping
 from dataclasses import fields
 from pathlib import Path
 from typing import Any
 
 from anki_miner.config import AnkiMinerConfig, create_default_config
 from anki_miner.config.paths import ANKI_MINER_HOME
+from anki_miner.utils.bounded_reader import read_json_bounded
 
 logger = logging.getLogger(__name__)
+
+_CONFIG_MAX_BYTES = 2 * 1024 * 1024
+_INVALID_CONFIG = object()
+
+
+class _ConfigReadError(ValueError):
+    pass
 
 
 class GUIConfigManager:
@@ -121,18 +130,21 @@ class GUIConfigManager:
                 AnkiMinerConfig (e.g. wrong types, unexpected structure).
             OSError: If the file cannot be read.
         """
-        with path.open("r", encoding="utf-8") as f:
-            config_dict = json.load(f)
+        config_dict = read_json_bounded(path, _CONFIG_MAX_BYTES, _INVALID_CONFIG, "config")
+        if config_dict is _INVALID_CONFIG:
+            raise _ConfigReadError(f"Could not decode {path.name}")
+        if not isinstance(config_dict, dict):
+            logger.warning("Invalid config %s: expected a JSON object", path)
+            raise _ConfigReadError(f"Invalid root in {path.name}")
 
         # LOAD path runs schema migrations for existing gui_config.json files;
         # the import path calls _migrate_dict without these load-only flags.
-        return AnkiMinerConfig(
-            **cls._migrate_dict(
-                config_dict,
-                seed_wordsets=True,
-                disable_legacy_ytdlp_update=True,
-            )
+        migrated = cls._migrate_dict(
+            config_dict,
+            seed_wordsets=True,
+            disable_legacy_ytdlp_update=True,
         )
+        return AnkiMinerConfig(**cls._decode_field_types(migrated))
 
     @classmethod
     def _migrate_dict(
@@ -194,17 +206,16 @@ class GUIConfigManager:
         # an imported settings file has no marker, so a deliberate all-off
         # export would otherwise be force-re-enabled. A non-empty saved list is
         # left untouched; the value tracks the dataclass default automatically.
-        if (
-            seed_wordsets
-            and config_dict.get("config_schema_version", 0) < 2
-            and not config_dict.get("excluded_wordsets")
-        ):
+        schema_version = config_dict.get("config_schema_version", 0)
+        if not isinstance(schema_version, int) or isinstance(schema_version, bool):
+            schema_version = 0
+        if seed_wordsets and schema_version < 2 and not config_dict.get("excluded_wordsets"):
             config_dict["excluded_wordsets"] = create_default_config().excluded_wordsets
 
         # P0 containment (048): pre-v3 files serialized the old default-ON
         # updater choice. Force it off once; after a v3 save, a deliberate user
         # opt-in remains true on later loads.
-        if disable_legacy_ytdlp_update and config_dict.get("config_schema_version", 0) < 3:
+        if disable_legacy_ytdlp_update and schema_version < 3:
             config_dict["auto_update_ytdlp"] = False
 
         # Drop the schema-version marker (see CONFIG_SCHEMA_VERSION): a JSON-
@@ -239,7 +250,7 @@ class GUIConfigManager:
 
         try:
             return cls._parse_and_migrate(cls.CONFIG_FILE)
-        except (json.JSONDecodeError, TypeError, ValueError) as e:
+        except (_ConfigReadError, TypeError, ValueError) as e:
             logger.warning("gui_config.json invalid (%s); attempting .bak recovery", e)
         except OSError as e:
             # An unreadable file (permissions, transient I/O error) must not
@@ -252,7 +263,7 @@ class GUIConfigManager:
             config = cls._parse_and_migrate(bak_path)
             logger.warning("gui_config.json corrupt; recovered from .bak")
             return config
-        except (json.JSONDecodeError, TypeError, ValueError, OSError) as bak_err:
+        except (_ConfigReadError, TypeError, ValueError, OSError) as bak_err:
             logger.warning("gui_config.json.bak also unusable (%s); using defaults", bak_err)
             return create_default_config()
 
@@ -368,6 +379,9 @@ class GUIConfigManager:
         raw_chain = data.get("dictionary_chain")
         if raw_chain is None:
             return data
+        if not isinstance(raw_chain, (list, tuple)):
+            data.pop("dictionary_chain")
+            return data
 
         # Rebuild ChainEntry instances from JSON dicts
         chain: list[ChainEntry] = []
@@ -379,7 +393,7 @@ class GUIConfigManager:
                         ChainEntry(
                             kind=kind,
                             dict_id=item.get("dict_id"),
-                            enabled=bool(item.get("enabled", True)),
+                            enabled=item.get("enabled", True),
                         )
                     )
             elif isinstance(item, ChainEntry):
@@ -398,6 +412,9 @@ class GUIConfigManager:
         raw_chain = data.get("expression_audio_chain")
         if raw_chain is None:
             return data
+        if not isinstance(raw_chain, (list, tuple)):
+            data.pop("expression_audio_chain")
+            return data
 
         chain: list[AudioSourceEntry] = []
         for item in raw_chain:
@@ -415,7 +432,7 @@ class GUIConfigManager:
                             kind=kind,
                             pack_id=item.get("pack_id"),
                             url=item.get("url"),
-                            enabled=bool(item.get("enabled", True)),
+                            enabled=item.get("enabled", True),
                         )
                     )
             elif isinstance(item, AudioSourceEntry):
@@ -443,6 +460,9 @@ class GUIConfigManager:
         raw_chain = data.get("frequency_chain")
         if raw_chain is None:
             return data
+        if not isinstance(raw_chain, (list, tuple)):
+            data.pop("frequency_chain")
+            return data
 
         chain: list[FreqEntry] = []
         for item in raw_chain:
@@ -454,7 +474,7 @@ class GUIConfigManager:
                     chain.append(
                         FreqEntry(
                             source_id=source_id,
-                            enabled=bool(item.get("enabled", True)),
+                            enabled=item.get("enabled", True),
                         )
                     )
         data["frequency_chain"] = tuple(chain)
@@ -569,6 +589,79 @@ class GUIConfigManager:
             if is_path or is_union_with_path:
                 result.add(name)
         return frozenset(result)
+
+    @staticmethod
+    def _decode_field_types(data: dict[str, Any]) -> dict[str, Any]:
+        """Drop wrong-typed decoded fields so dataclass defaults stay authoritative."""
+        defaults = create_default_config()
+        hints = typing.get_type_hints(AnkiMinerConfig)
+        decoded: dict[str, Any] = {}
+        for key, value in data.items():
+            valid, converted = GUIConfigManager._decode_value(value, hints[key])
+            if valid:
+                decoded[key] = converted
+            else:
+                logger.warning("Invalid type for config field '%s'; using default", key)
+                decoded[key] = getattr(defaults, key)
+        return decoded
+
+    @staticmethod
+    def _decode_value(value: Any, annotation: Any) -> tuple[bool, Any]:
+        origin = typing.get_origin(annotation)
+        args = typing.get_args(annotation)
+        if annotation is Any:
+            return True, value
+        if origin is typing.Literal:
+            return any(type(value) is type(choice) and value == choice for choice in args), value
+        if origin in (typing.Union, types.UnionType):
+            for option in args:
+                valid, converted = GUIConfigManager._decode_value(value, option)
+                if valid:
+                    return True, converted
+            return False, value
+        if annotation is bool:
+            return type(value) is bool, value
+        if annotation is int:
+            return type(value) is int, value
+        if annotation is float:
+            valid = isinstance(value, (int, float)) and not isinstance(value, bool)
+            return valid, float(value) if valid else value
+        if annotation is str:
+            return type(value) is str, value
+        if annotation is type(None):
+            return value is None, value
+        if origin is tuple:
+            if not isinstance(value, (list, tuple)):
+                return False, value
+            item_type = args[0] if args else Any
+            converted_items = []
+            for item in value:
+                valid, converted = GUIConfigManager._decode_value(item, item_type)
+                if not valid:
+                    return False, value
+                converted_items.append(converted)
+            return True, tuple(converted_items)
+        if origin in (dict, Mapping):
+            if not isinstance(value, dict):
+                return False, value
+            key_type, value_type = args or (Any, Any)
+            for item_key, item_value in value.items():
+                if not GUIConfigManager._decode_value(item_key, key_type)[0]:
+                    return False, value
+                if not GUIConfigManager._decode_value(item_value, value_type)[0]:
+                    return False, value
+            return True, value
+        if isinstance(annotation, type) and dataclasses.is_dataclass(annotation):
+            if not isinstance(value, annotation):
+                return False, value
+            field_hints = typing.get_type_hints(annotation)
+            for field in dataclasses.fields(annotation):
+                if not GUIConfigManager._decode_value(getattr(value, field.name), field_hints[field.name])[0]:
+                    return False, value
+            return True, value
+        if isinstance(annotation, type):
+            return isinstance(value, annotation), value
+        return False, value
 
     @staticmethod
     def _strings_to_paths(data: dict[str, Any]) -> dict[str, Any]:

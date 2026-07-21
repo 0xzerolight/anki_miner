@@ -30,6 +30,44 @@ def tmp_config(tmp_path: Path, monkeypatch):
 
 
 class TestLoadResilience:
+    def test_malformed_config_root_recovers_to_defaults(self, tmp_config: Path):
+        tmp_config.write_text('["not", "a", "mapping"]', encoding="utf-8")
+
+        loaded = GUIConfigManager.load_config()
+
+        assert loaded == create_default_config()
+
+    def test_oversized_config_recovers_to_defaults(self, tmp_config: Path):
+        tmp_config.write_text('{"theme":"dark","padding":"' + ("x" * 3_000_000) + '"}', encoding="utf-8")
+
+        loaded = GUIConfigManager.load_config()
+
+        assert loaded == create_default_config()
+
+    def test_wrong_typed_fields_use_defaults_without_discarding_valid_fields(self, tmp_config: Path):
+        tmp_config.write_text(
+            '{"anki_deck_name":"Kept","check_for_updates":"false","max_parallel_workers":"many"}',
+            encoding="utf-8",
+        )
+
+        loaded = GUIConfigManager.load_config()
+        defaults = create_default_config()
+
+        assert loaded.anki_deck_name == "Kept"
+        assert loaded.check_for_updates is defaults.check_for_updates
+        assert loaded.max_parallel_workers == defaults.max_parallel_workers
+
+    def test_wrong_typed_nested_config_uses_field_default(self, tmp_config: Path):
+        tmp_config.write_text(
+            '{"anki_deck_name":"Kept","dictionary_chain":[{"kind":"indexed","dict_id":"local","enabled":"yes"}]}',
+            encoding="utf-8",
+        )
+
+        loaded = GUIConfigManager.load_config()
+
+        assert loaded.anki_deck_name == "Kept"
+        assert loaded.dictionary_chain == create_default_config().dictionary_chain
+
     def test_corrupt_primary_recovers_from_bak(self, tmp_config: Path, caplog):
         """A corrupt primary must be recovered from .bak rather than defaulting.
 

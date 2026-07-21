@@ -60,6 +60,29 @@ class TestLogPathConfig:
         cfg = AnkiMinerConfig(log_path=p)
         assert cfg.log_path == p
 
+    def test_paths_fall_back_when_home_resolution_raises(self):
+        import subprocess
+        import sys
+
+        env = os.environ.copy()
+        env.pop("ANKI_MINER_HOME", None)
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import pathlib; "
+                "pathlib.Path.home = classmethod(lambda cls: (_ for _ in ()).throw(RuntimeError('no home'))); "
+                "import anki_miner.config.paths as paths; "
+                "assert paths.ANKI_MINER_HOME.name == '.anki_miner'",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+
+        assert result.returncode == 0, result.stderr
+
 
 # ---------------------------------------------------------------------------
 # _configure_logging() tests
@@ -73,6 +96,35 @@ class TestConfigureLogging:
         from anki_miner.gui.app import _configure_logging
 
         return _configure_logging
+
+    def test_log_handler_built_before_old_closed(self, tmp_path, monkeypatch):
+        from anki_miner.gui import app as app_module
+
+        events: list[str] = []
+
+        class _RecordingHandler(logging.Handler):
+            def __init__(self, *args, **kwargs) -> None:
+                events.append("build")
+                super().__init__()
+
+        root = logging.getLogger()
+        anki_logger = logging.getLogger("anki_miner")
+        root_level = root.level
+        anki_level = anki_logger.level
+        old = logging.Handler()
+        old._anki_miner_sink = True  # type: ignore[attr-defined]
+        old.close = lambda: events.append("close")  # type: ignore[method-assign]
+        root.addHandler(old)
+        monkeypatch.setattr(app_module, "_OwnerOnlyRotatingFileHandler", _RecordingHandler)
+        try:
+            app_module._configure_logging(tmp_path / "app.log")
+            assert events[:2] == ["build", "close"]
+        finally:
+            root.setLevel(root_level)
+            anki_logger.setLevel(anki_level)
+            for handler in list(root.handlers):
+                if handler is old or isinstance(handler, _RecordingHandler):
+                    root.removeHandler(handler)
 
     def test_creates_parent_dir_if_missing(self, tmp_path):
         """_configure_logging creates the parent directory when it doesn't exist."""
