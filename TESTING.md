@@ -1,6 +1,6 @@
 # Testing
 
-Anki Miner has 7,949 test functions across 370 test files; parameterization expands these to 8,873 collected tests. This page documents how the suite is organized and how to run it.
+Anki Miner has 7,948 test functions across 370 test files; parameterization expands these to 8,873 collected tests. This page documents how the suite is organized and how to run it.
 
 ## Layout
 
