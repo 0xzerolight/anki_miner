@@ -7,8 +7,9 @@ skip → ``clean_subtitle_text`` → drop empties) deliberately duplicates
 ``SubtitleParserService.parse_raw_entries``: reusing it would couple this
 config-free loader to a config/MeCab-bound service.
 
-Config-free by design: the annotation strip + ``config.subtitle_regex_filter``
-the video path applies are NOT run in this loader — they run downstream in
+Config-free by design: default structural annotation stripping runs inside
+``clean_subtitle_text`` before physical lines are flattened. The configured
+``subtitle_regex_filter`` still runs downstream in
 ``SubtitleParserService.parse_text_units`` (``subtitle_cleanup=True``), the one
 config/MeCab-bound seam. ``subtitle_offset`` never applies here (an offset is
 meaningless without media). Encoding handling is *broader* — the video path is

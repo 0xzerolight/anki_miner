@@ -41,7 +41,7 @@ def strip_subtitle_markup(text: str) -> str:
     return text
 
 
-def clean_subtitle_text(text: str, *, strip_annotations: bool = False) -> str:
+def clean_subtitle_text(text: str, *, strip_annotations: bool = True) -> str:
     """Remove formatting tags, then Japanese-normalize for tokenization.
 
     Tag/whitespace stripping runs first, then :func:`normalize_for_tokenization`

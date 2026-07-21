@@ -48,6 +48,12 @@ _SRT = """1
 本を読む。
 """
 
+_ASS_HARD_BREAK = """\
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,猫が好き\\N（案内）犬が眠る
+"""
+
 _RESIDUAL_CASES = [
     json.loads(line)
     for line in (_REPO_ROOT / "tests/fixtures/junk_replay_residuals.jsonl").read_text(encoding="utf-8").splitlines()
@@ -98,6 +104,18 @@ def test_replay_dir_emits_rows(tmp_path: Path) -> None:
     # Liveness only: some verb/noun front is mined, with a non-empty sentence.
     assert any(r.mined_form for r in rows)
     assert all(r.sentence for r in rows)
+
+
+def test_replay_file_strips_annotation_after_ass_hard_break(tmp_path: Path) -> None:
+    path = tmp_path / "ep01.ass"
+    path.write_text(_ASS_HARD_BREAK, encoding="utf-8")
+    parser = build_parser(_empty_chain_config(tmp_path))
+
+    rows = junk_replay.replay_file(parser, path)
+
+    assert rows
+    assert {row.sentence for row in rows} == {"猫が好き 犬が眠る"}
+    assert "案内" not in {row.mined_form for row in rows}
 
 
 @pytest.mark.parametrize("case", _RESIDUAL_CASES, ids=[case["id"] for case in _RESIDUAL_CASES])
