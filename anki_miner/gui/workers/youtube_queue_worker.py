@@ -64,7 +64,7 @@ from anki_miner.gui.workers._queue_progress import (
 )
 from anki_miner.gui.workers._queue_worker_base import SequentialQueueWorker
 from anki_miner.models.youtube import FetchedMedia
-from anki_miner.models.youtube_queue import YouTubeQueueItem
+from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.dictionary.registry import stale_dict_reimport_error
 
@@ -121,6 +121,7 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
         Returns ``True`` on mid-fetch cancellation to make the base ``run()``
         return early (suppressing ``queue_finished``); ``False`` otherwise.
         """
+        item.status = YouTubeItemStatus.PROCESSING
         self.item_started.emit(idx)
         attempts = 0
         last_error: str | None = None

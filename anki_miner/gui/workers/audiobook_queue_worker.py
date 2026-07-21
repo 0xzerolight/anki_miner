@@ -35,6 +35,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
 from anki_miner.gui.workers._queue_worker_base import SequentialQueueWorker
 from anki_miner.models.audiobook_queue import AudiobookQueueItem
+from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.dictionary.registry import stale_dict_reimport_error
 
@@ -82,6 +83,7 @@ class AudiobookQueueWorker(SequentialQueueWorker[AudiobookQueueItem]):
 
     def _run_item(self, idx: int, item: AudiobookQueueItem) -> bool:
         """Mine one item, emitting item_started + item_finished. Never aborts early."""
+        item.status = ReadyItemStatus.PROCESSING
         self.item_started.emit(idx)
         try:
             result = self._mine_one(idx, item)

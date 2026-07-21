@@ -66,6 +66,7 @@ class SubtitleCreationTab(_ToolTabBase):
         self._custom_output_dir: Path | None = None
         self._total_files: int = 0
         self._cancelled: bool = False
+        self._engine_is_available: bool = False
         # Built here (not in the base) so each literal stays in this tab's
         # tr-context — see _ToolTabBase for the rationale.
         self._strings = _ToolTabStrings(
@@ -101,6 +102,7 @@ class SubtitleCreationTab(_ToolTabBase):
         config it captured at construction.
         """
         self.config = config
+        self._refresh_engine_state()
 
     # ------------------------------------------------------------------
     # UI construction
@@ -285,10 +287,19 @@ class SubtitleCreationTab(_ToolTabBase):
     # ------------------------------------------------------------------
 
     def _refresh_engine_state(self) -> None:
-        """Enable/disable Generate based on engine availability."""
-        available = _engine.available()
-        self.engine_notice_label.setVisible(not available)
-        self.generate_button.setEnabled(available)
+        """Probe engine availability off-thread, then update the Generate guard."""
+        self.generate_button.setEnabled(False)
+
+        def _apply(result: object) -> None:
+            self._engine_is_available = bool(result)
+            self.engine_notice_label.setVisible(not self._engine_is_available)
+            self.generate_button.setEnabled(self._engine_is_available)
+
+        def _on_error(message: str) -> None:
+            logger.warning("ASR availability probe failed: %s", message)
+            _apply(False)
+
+        self._run_availability_scan(_engine.available, _apply, _on_error)
 
     # ------------------------------------------------------------------
     # Mode toggle slots
@@ -312,7 +323,7 @@ class SubtitleCreationTab(_ToolTabBase):
 
     def _on_generate(self) -> None:
         """Validate then start the SubtitleGenWorker."""
-        if not _engine.available():
+        if not self._engine_is_available:
             # Should not happen (button disabled), but guard anyway.
             return
 

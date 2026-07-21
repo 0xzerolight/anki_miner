@@ -314,6 +314,25 @@ def test_skip_item_drops_queued_items_mid_run(make_worker, mock_processor):
     assert len(caps["queue_finished"].calls) == 1
 
 
+def test_youtube_running_row_not_dropped_by_tail_clear(make_worker, mock_processor):
+    """PROCESSING must be visible before item_started can trigger a GUI Clear."""
+    items = [_make_item(video_id="a"), _make_item(video_id="b")]
+    remaining = list(items)
+    worker = make_worker(items=items)
+
+    def _clear_non_processing(_idx):
+        targets = [item for item in remaining if item.status is not YouTubeItemStatus.PROCESSING]
+        for item in targets:
+            remaining.remove(item)
+            worker.skip_item(item)
+
+    worker.item_started.connect(_clear_non_processing)
+    worker.run()
+
+    assert remaining == [items[0]]
+    assert mock_processor.process_youtube_url.call_count == 1
+
+
 def test_skip_item_before_run_skips_only_that_item(make_worker, mock_processor):
     """A skip recorded before run() starts drops exactly that item."""
     items = [_make_item(video_id="a"), _make_item(video_id="b"), _make_item(video_id="c")]

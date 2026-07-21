@@ -21,6 +21,13 @@ from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, create_index, write_meta
 
 
+def _run_scan_sync(work, on_done, on_error):
+    try:
+        on_done(work())
+    except Exception as exc:  # noqa: BLE001
+        on_error(str(exc))
+
+
 def _make_dict_on_disk(
     dicts_root: Path,
     dict_id: str,
@@ -63,6 +70,7 @@ def tab_for_restore(test_config: AnkiMinerConfig, tmp_path: Path, qtbot):
     )
     (tmp_path / "dicts").mkdir(parents=True, exist_ok=True)
     widget = SettingsTab(cfg)
+    widget._dict_import_flow._run_latest_scan = _run_scan_sync
     qtbot.addWidget(widget)
     yield widget
     widget.deleteLater()

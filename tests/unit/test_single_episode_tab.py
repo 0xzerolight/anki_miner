@@ -1001,3 +1001,57 @@ def test_tracks_probe_error_shows_warning_and_reenables(tab, tmp_path, qtbot):
 
     mock_warn.assert_called_once()
     assert tab.tracks_button.isEnabled()
+
+
+def test_late_track_probe_does_not_override_after_source_change(tab, tmp_path, qtbot):
+    """A probe result belongs only to the video selected when it started."""
+    import threading
+
+    from PyQt6.QtWidgets import QDialog
+
+    from anki_miner.utils.audio_track_detector import AudioStream
+
+    source_a = tmp_path / "a.mkv"
+    source_b = tmp_path / "b.mkv"
+    source_a.touch()
+    source_b.touch()
+    tab.video_selector.set_path(str(source_a))
+
+    entered = threading.Event()
+    release = threading.Event()
+    stream = AudioStream(
+        global_index=1,
+        audio_index=0,
+        language_tag="jpn",
+        title_tag=None,
+        codec="aac",
+        channels=2,
+        is_default=True,
+    )
+
+    def _probe(*_args, **_kwargs):
+        entered.set()
+        assert release.wait(3)
+        return [stream]
+
+    dialog = MagicMock()
+    dialog.exec.return_value = QDialog.DialogCode.Accepted
+    dialog.selected_override.return_value = 1
+    dialog_cls = MagicMock(return_value=dialog)
+    dialog_cls.DialogCode = QDialog.DialogCode
+
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.list_audio_streams", side_effect=_probe),
+        patch("anki_miner.gui.widgets.single_episode_tab.AudioTracksDialog", dialog_cls),
+    ):
+        before = set(getattr(tab, "_off_thread_workers", set()))
+        tab._on_tracks_clicked()
+        assert entered.wait(3)
+        worker = next(iter(set(tab._off_thread_workers) - before))
+        tab.video_selector.set_path(str(source_b))
+        release.set()
+        assert worker.wait(3000)
+        qtbot.waitUntil(tab.tracks_button.isEnabled, timeout=3000)
+
+    dialog_cls.assert_not_called()
+    assert tab._audio_track_override is None

@@ -85,6 +85,8 @@ def _make_tab(config, qtbot):
     """Construct a SubtitleCreationTab with engine patched available=True."""
     with patch(_ENGINE_AVAILABLE, return_value=True):
         tab = SubtitleCreationTab(config)
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(tab.generate_button.isEnabled, timeout=3000)
     qtbot.addWidget(tab)
     return tab
 
@@ -189,6 +191,8 @@ def test_engine_unavailable_disables_generate(qtbot, tmp_path):
     config = _make_config(tmp_path)
     with patch(_ENGINE_AVAILABLE, return_value=False):
         tab = SubtitleCreationTab(config)
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=3000)
     qtbot.addWidget(tab)
     assert not tab.generate_button.isEnabled()
 
@@ -198,6 +202,8 @@ def test_engine_unavailable_shows_notice(qtbot, tmp_path):
     config = _make_config(tmp_path)
     with patch(_ENGINE_AVAILABLE, return_value=False):
         tab = SubtitleCreationTab(config)
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=3000)
     qtbot.addWidget(tab)
     assert not tab.engine_notice_label.isHidden()
 

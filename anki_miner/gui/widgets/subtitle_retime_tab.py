@@ -88,7 +88,7 @@ class SubtitleRetimeTab(_ToolTabBase):
         # alass availability is cached per-config: probing it (resolve_alass +
         # shutil.which / Path.exists) is a PATH scan we must not repeat on every
         # _alass_available() read. Recomputed only here and in update_config().
-        self._alass_is_available: bool = self._compute_alass_available()
+        self._alass_is_available: bool = False
         # Built here (not in the base) so each literal stays in this tab's
         # tr-context — see _ToolTabBase for the rationale.
         self._strings = _ToolTabStrings(
@@ -126,7 +126,6 @@ class SubtitleRetimeTab(_ToolTabBase):
         # A config change is exactly when alass can appear/disappear (in-app
         # download flips alass_location/bin_root, or the user edits the path),
         # so recompute the cache BEFORE _refresh_engine_state reads it.
-        self._alass_is_available = self._compute_alass_available()
         self._refresh_engine_state()
 
     # ------------------------------------------------------------------
@@ -374,23 +373,33 @@ class SubtitleRetimeTab(_ToolTabBase):
     # ------------------------------------------------------------------
 
     def _refresh_engine_state(self) -> None:
-        """Enable/disable Retime based on alass availability."""
-        available = self._alass_available()
-        self.engine_notice_label.setVisible(not available)
-        self.retime_button.setEnabled(available)
+        """Probe alass availability off-thread, then update the Retime guard."""
+        config = self.config
+        self.retime_button.setEnabled(False)
+
+        def _apply(result: object) -> None:
+            self._alass_is_available = bool(result)
+            self.engine_notice_label.setVisible(not self._alass_is_available)
+            self.retime_button.setEnabled(self._alass_is_available)
+
+        def _on_error(message: str) -> None:
+            logger.warning("alass availability probe failed: %s", message)
+            _apply(False)
+
+        self._run_availability_scan(lambda: self._compute_alass_available(config), _apply, _on_error)
 
     def _alass_available(self) -> bool:
         """Return the cached alass availability (probed once per config)."""
         return self._alass_is_available
 
-    def _compute_alass_available(self) -> bool:
+    def _compute_alass_available(self, config: AnkiMinerConfig) -> bool:
         """Probe whether the alass binary is reachable for the current config.
 
         Runs the PATH scan (resolve_alass + shutil.which / Path.exists). Called
         only from ``__init__`` and ``update_config`` — readers use the cached
         ``self._alass_is_available`` via :meth:`_alass_available`.
         """
-        resolved = resolve_alass(self.config)
+        resolved = resolve_alass(config)
         if resolved == "alass":
             # PATH fallback — check shutil.which
             return shutil.which("alass") is not None
@@ -457,6 +466,8 @@ class SubtitleRetimeTab(_ToolTabBase):
                 # Tab torn down while the probe was in flight (its C++ button is
                 # gone); the queued callback has nothing live to update.
                 return
+            if self.video_file_selector.path_or_none() != video_path:
+                return
             streams = cast("list[AudioStream]", result)
             if not streams:
                 QMessageBox.information(
@@ -475,6 +486,8 @@ class SubtitleRetimeTab(_ToolTabBase):
                 parent=self,
             )
             if dialog.exec() == AudioTracksDialog.DialogCode.Accepted:
+                if self.video_file_selector.path_or_none() != video_path:
+                    return
                 self._audio_track_override = dialog.selected_override()
                 if self._audio_track_override is None:
                     self.audio_track_label.setText(self.tr("Japanese (auto-detect)"))

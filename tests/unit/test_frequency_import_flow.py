@@ -17,6 +17,14 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 from anki_miner.config import AnkiMinerConfig, FreqEntry
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
+
+def _run_scan_sync(work, on_done, on_error):
+    try:
+        on_done(work())
+    except Exception as exc:  # noqa: BLE001
+        on_error(str(exc))
+
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -29,6 +37,7 @@ def tab(test_config: AnkiMinerConfig, tmp_path, qtbot):
     freqs_root.mkdir()
     cfg = replace(test_config, freqs_root=freqs_root)
     widget = SettingsTab(cfg)
+    widget._frequency_import_flow._run_latest_scan = _run_scan_sync
     qtbot.addWidget(widget)
     yield widget
 

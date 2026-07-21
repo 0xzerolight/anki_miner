@@ -130,7 +130,7 @@ class CondenseTab(_ToolTabBase):
         # ffmpeg availability is cached per-config: probing it (resolve_ffmpeg /
         # resolve_ffprobe + shutil.which / Path.exists) is a PATH scan we must
         # not repeat on every read. Recomputed only here and in update_config().
-        self._ffmpeg_is_available: bool = self._compute_ffmpeg_available()
+        self._ffmpeg_is_available: bool = False
         # Built here (not in the base) so each literal stays in this tab's
         # tr-context — see _ToolTabBase for the rationale.
         self._strings = _ToolTabStrings(
@@ -169,7 +169,6 @@ class CondenseTab(_ToolTabBase):
         toggle) must not stomp what the user typed but hasn't yet committed.
         """
         self.config = config
-        self._ffmpeg_is_available = self._compute_ffmpeg_available()
         idle = self.worker_thread is None or not self.worker_thread.isRunning()
         if idle and self._options_differ_from_widgets():
             self._apply_config_defaults()
@@ -517,25 +516,33 @@ class CondenseTab(_ToolTabBase):
     # ------------------------------------------------------------------
 
     def _refresh_engine_state(self) -> None:
-        """Enable/disable Condense based on ffmpeg availability."""
-        available = self._ffmpeg_available()
-        self.engine_notice_label.setVisible(not available)
-        self.condense_button.setEnabled(available)
+        """Probe ffmpeg availability off-thread, then update the Condense guard."""
+        config = self.config
+        self.condense_button.setEnabled(False)
+
+        def _apply(result: object) -> None:
+            self._ffmpeg_is_available = bool(result)
+            self.engine_notice_label.setVisible(not self._ffmpeg_is_available)
+            self.condense_button.setEnabled(self._ffmpeg_is_available)
+
+        def _on_error(message: str) -> None:
+            logger.warning("ffmpeg availability probe failed: %s", message)
+            _apply(False)
+
+        self._run_availability_scan(lambda: self._compute_ffmpeg_available(config), _apply, _on_error)
 
     def _ffmpeg_available(self) -> bool:
         """Return the cached ffmpeg availability (probed once per config)."""
         return self._ffmpeg_is_available
 
-    def _compute_ffmpeg_available(self) -> bool:
+    def _compute_ffmpeg_available(self, config: AnkiMinerConfig) -> bool:
         """Probe whether both ffmpeg and ffprobe are reachable for the config.
 
         Runs the PATH scan (resolve_ffmpeg / resolve_ffprobe + shutil.which /
         Path.exists). Called only from ``__init__`` and ``update_config`` —
         readers use the cached bool via :meth:`_ffmpeg_available`.
         """
-        return self._binary_available(resolve_ffmpeg(self.config)) and self._binary_available(
-            resolve_ffprobe(self.config)
-        )
+        return self._binary_available(resolve_ffmpeg(config)) and self._binary_available(resolve_ffprobe(config))
 
     @staticmethod
     def _binary_available(resolved: str) -> bool:
@@ -614,6 +621,8 @@ class CondenseTab(_ToolTabBase):
                 # Tab torn down while the probe was in flight (its C++ button is
                 # gone); the queued callback has nothing live to update.
                 return
+            if self.media_file_selector.path_or_none() != media_path:
+                return
             streams = cast("list[AudioStream]", result)
             if not streams:
                 QMessageBox.information(
@@ -631,6 +640,8 @@ class CondenseTab(_ToolTabBase):
                 parent=self,
             )
             if dialog.exec() == AudioTracksDialog.DialogCode.Accepted:
+                if self.media_file_selector.path_or_none() != media_path:
+                    return
                 self._audio_track_override = dialog.selected_override()
                 if self._audio_track_override is None:
                     self.audio_track_label.setText(self.tr("Japanese (auto-detect)"))

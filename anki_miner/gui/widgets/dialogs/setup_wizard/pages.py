@@ -78,7 +78,7 @@ class AnkiConnectPage(QWizardPage):
 
         guidance = QLabel(
             tr_format(
-                self.tr("In Anki: Tools → Add-ons → Get Add-ons…, paste the code " "<b>%1</b>, then restart Anki."),
+                self.tr("In Anki: Tools → Add-ons → Get Add-ons…, paste the code <b>%1</b>, then restart Anki."),
                 ANKICONNECT_ADDON_CODE,
             )
         )
@@ -256,6 +256,7 @@ class NoteTypePage(QWizardPage):
         # result whose generation no longer matches (superseded by a newer check).
         self._warn_generation = 0
         self._field_names: list[str] = []
+        self._field_names_note_type: str | None = None
 
         self.setTitle(self.tr("Choose a Note Type"))
         self.setSubTitle(self.tr("Pick the Anki note type whose fields will hold mined data."))
@@ -304,6 +305,9 @@ class NoteTypePage(QWizardPage):
         return bool(self.notetype_combo.currentText().strip())
 
     def _on_notetype_changed(self, _text: str) -> None:
+        self._field_names = []
+        self._field_names_note_type = None
+        self.auto_map_button.setEnabled(False)
         self.completeChanged.emit()
 
     def validatePage(self) -> bool:
@@ -352,19 +356,25 @@ class NoteTypePage(QWizardPage):
         worker = FetchFieldsWorker(self._wizard.anki_service(), note_type, self)
         self._fields_worker = worker
         self._wizard.register_worker(worker)
-        worker.result_ready.connect(self._on_fields_fetched)
+        worker.result_ready.connect(lambda names, stamp=note_type: self._on_fields_fetched(stamp, names))
         worker.error.connect(lambda _m: None)
         worker.start()
 
-    def _on_fields_fetched(self, field_names: object) -> None:
+    def _on_fields_fetched(self, note_type: str, field_names: object) -> None:
+        try:
+            current_note_type = self.notetype_combo.currentText().strip()
+        except RuntimeError:
+            return
+        if note_type != current_note_type:
+            return
         names = list(field_names) if isinstance(field_names, list) else []
         self._field_names = names
+        self._field_names_note_type = note_type
         if not names:
             self.auto_map_button.setEnabled(False)
             self._show_guidance(
                 self.tr(
-                    "No fields found. Make sure Anki is running and the note type name is spelled "
-                    "exactly as in Anki."
+                    "No fields found. Make sure Anki is running and the note type name is spelled exactly as in Anki."
                 )
             )
             return
@@ -403,10 +413,10 @@ class NoteTypePage(QWizardPage):
     # --- auto-map ---
 
     def _on_auto_map_clicked(self) -> None:
-        if not self._field_names:
+        note_type = self.notetype_combo.currentText().strip()
+        if not self._field_names or self._field_names_note_type != note_type:
             return
         mapped = auto_map_fields(self._field_names)
-        note_type = self.notetype_combo.currentText().strip()
         # Merge only the keys that actually matched OVER the current mapping —
         # mirroring AnkiSettingsPanel.populate_from_field_list's "only overwrite
         # on match" rule. auto_map_fields only produces the _FIELD_KEYWORDS keys

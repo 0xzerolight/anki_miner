@@ -159,6 +159,7 @@ class TestMidRunSkip:
     def test_remove_leaves_in_flight_row_in_place(self, tab, tmp_path):
         _mine(tab, [_sub_file(tmp_path, "Ep01.srt")])
         worker = tab.worker_thread
+        tab._run_items[0].status = tab._status_processing
         tab._on_item_started(0)  # Ep01 in flight
 
         tab.file_list.setCurrentRow(0)
@@ -190,6 +191,7 @@ class TestMidRunSkip:
             ],
         )
         worker = tab.worker_thread
+        tab._run_items[0].status = tab._status_processing
         tab._on_item_started(0)  # Ep01 in flight
         item2, item3 = tab._run_items[1], tab._run_items[2]
 
@@ -198,6 +200,19 @@ class TestMidRunSkip:
         assert [p.name for p in tab.listed_paths()] == ["Ep01.srt"]
         skipped = {c.args[0] for c in worker.skip_item.call_args_list}
         assert skipped == {item2, item3}
+
+    def test_reading_running_row_not_dropped_by_tail_clear(self, tab, tmp_path):
+        """Worker-owned PROCESSING state protects a row before the GUI slot runs."""
+        _mine(tab, [_sub_file(tmp_path, "Ep01.srt"), _sub_file(tmp_path, "Ep02.srt")])
+        worker = tab.worker_thread
+        item1, item2 = tab._run_items
+        item1.status = tab._status_processing
+        assert tab._running_item is None
+
+        tab._on_clear_clicked()
+
+        assert [p.name for p in tab.listed_paths()] == ["Ep01.srt"]
+        worker.skip_item.assert_called_once_with(item2)
 
 
 class TestDragDrop:

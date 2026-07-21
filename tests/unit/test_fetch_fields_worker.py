@@ -123,7 +123,7 @@ class TestSettingsTabFetchFieldsWiring:
             inst.isRunning.return_value = False
             # Simulate the fetched field list arriving from the worker thread.
             inst.start.side_effect = lambda: tab._anki_probe._on_fetch_fields_finished(
-                ["Expression", "Sentence", "MainDefinition"]
+                note_type, ["Expression", "Sentence", "MainDefinition"]
             )
             built.append(inst)
             return inst
@@ -157,7 +157,7 @@ class TestSettingsTabFetchFieldsWiring:
         def fake_worker_factory(service, note_type, parent):
             inst = MagicMock()
             inst.isRunning.return_value = False
-            inst.start.side_effect = lambda: tab._anki_probe._on_fetch_fields_finished([])
+            inst.start.side_effect = lambda: tab._anki_probe._on_fetch_fields_finished(note_type, [])
             return inst
 
         with patch(
@@ -169,3 +169,21 @@ class TestSettingsTabFetchFieldsWiring:
         populate.assert_not_called()
         assert "Could not fetch" in tab.anki_panel.notetype_status.text()
         assert tab.anki_panel.fetch_fields_button.isEnabled()
+
+    def test_late_field_fetch_does_not_map_into_new_note_type(self, test_config: AnkiMinerConfig, monkeypatch, qtbot):
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        tab.anki_panel.note_type_input.setText("Type A")
+        populate = MagicMock()
+        monkeypatch.setattr(tab.anki_panel, "populate_from_field_list", populate)
+
+        worker = MagicMock()
+        worker.isRunning.return_value = False
+        with patch("anki_miner.gui.controllers.anki_probe_controller.FetchFieldsWorker", return_value=worker):
+            tab.anki_panel.fetch_fields_button.click()
+
+        on_fields = worker.result_ready.connect.call_args.args[0]
+        tab.anki_panel.note_type_input.setText("Type B")
+        on_fields(["Expression", "Sentence"])
+
+        populate.assert_not_called()

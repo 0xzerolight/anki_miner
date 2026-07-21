@@ -29,6 +29,14 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
+
+def _run_scan_sync(work, on_done, on_error):
+    try:
+        on_done(work())
+    except Exception as exc:  # noqa: BLE001
+        on_error(str(exc))
+
+
 # ---------------------------------------------------------------------------
 # Stub workers — only the bounded-join surface touches.
 # ---------------------------------------------------------------------------
@@ -154,6 +162,9 @@ def tab(test_config: AnkiMinerConfig, tmp_path, qtbot):
         dicts_root=roots["dicts"],
     )
     widget = SettingsTab(cfg)
+    widget._frequency_import_flow._run_latest_scan = _run_scan_sync
+    widget._audio_pack_import_flow._run_latest_scan = _run_scan_sync
+    widget._dict_import_flow._run_latest_scan = _run_scan_sync
     qtbot.addWidget(widget)
     yield widget
 

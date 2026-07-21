@@ -16,6 +16,7 @@ import pytest
 
 from anki_miner.gui.workers.audiobook_queue_worker import AudiobookQueueWorker
 from anki_miner.models.audiobook_queue import AudiobookQueueItem
+from anki_miner.models.mining_queue import ReadyItemStatus
 from tests.unit._queue_worker_harness import (
     connect_all as _connect_all,
 )
@@ -139,6 +140,25 @@ def test_skip_item_mid_run_emits_no_signals_for_skipped(make_worker, mock_proces
     assert caps["started"].calls == [(0,)]
     assert caps["finished"].calls == [(0, "R_a", None, 1)]
     assert len(caps["queue_finished"].calls) == 1
+
+
+def test_audiobook_running_row_not_dropped_by_tail_clear(make_worker, mock_processor):
+    """PROCESSING must be visible before item_started can trigger a GUI Clear."""
+    items = [_make_item("a"), _make_item("b")]
+    remaining = list(items)
+    worker = make_worker(items=items)
+
+    def _clear_non_processing(_idx):
+        targets = [item for item in remaining if item.status is not ReadyItemStatus.PROCESSING]
+        for item in targets:
+            remaining.remove(item)
+            worker.skip_item(item)
+
+    worker.item_started.connect(_clear_non_processing)
+    worker.run()
+
+    assert remaining == [items[0]]
+    assert mock_processor.process_episode.call_count == 1
 
 
 def test_skip_item_before_run_skips_only_that_item(make_worker, mock_processor):
