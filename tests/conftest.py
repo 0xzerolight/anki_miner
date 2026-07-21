@@ -346,6 +346,45 @@ def _drain_qt_deletes():
         app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
 
 
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_teardown(item):
+    """Reap every live ``run_off_thread`` worker at the very START of teardown.
+
+    ``run_off_thread`` dispatches a real ``SingleCallWorker`` (``QThread``) and
+    tracks it in the process-global ``_LIVE_OFF_THREAD_WORKERS`` set until its
+    ``finished`` handler fires. A test that proceeds on a proxy flag rather than
+    joining the worker (e.g. ``SubtitlesSettingsPanel``'s ``_state_in_flight``,
+    cleared on ``result_ready`` — which fires *before* ``finished``) can return
+    while that QThread is still running. When ``pytest-qt``'s ``qtbot`` finalizer
+    (or the ``_drain_qt_deletes`` drain) then destroys the worker's parent
+    widget, Qt aborts on the child QThread destroyed while running ->
+    ``Fatal Python error: Aborted``, killing the whole ``--dist loadfile`` xdist
+    worker and, under ``--max-worker-restart=0``, the CI job — with the crash
+    surfacing in a later, innocent file on the same worker (observed victims:
+    ``test_subtitles_settings_panel``, ``test_condense_tab``). The same unjoined
+    worker also fires a late ``result_ready``/log write after per-test home
+    isolation restored, mutating the real ``~/.anki_miner``.
+
+    This MUST run before any fixture finalizer: ``qtbot`` (an explicitly
+    requested fixture) is torn down before every autouse fixture, so an autouse
+    teardown fixture cannot out-order it. A ``pytest_runtest_teardown``
+    hookwrapper's pre-``yield`` body runs before the fixture-finalization step,
+    so the reap always precedes widget destruction. Reuse the production
+    close-time reaper (``join_all_off_thread_workers``); guarded on the module
+    already being imported so non-GUI tests pay no forced PyQt import.
+    """
+    _off_thread_mod = sys.modules.get("anki_miner.gui.utils.run_off_thread")
+    if _off_thread_mod is not None:
+        laggards = _off_thread_mod.join_all_off_thread_workers(2000)
+        if laggards:
+            logging.getLogger("tests.conftest").warning(
+                "%s left %d run_off_thread worker(s) running at teardown; " "await the worker (not just a proxy flag).",
+                item.nodeid,
+                len(laggards),
+            )
+    yield
+
+
 @pytest.fixture(autouse=True)
 def _reset_theme_state():
     """Reset the ``Theme`` class-level singleton to defaults around every test.
