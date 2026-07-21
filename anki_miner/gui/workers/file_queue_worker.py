@@ -119,6 +119,7 @@ class FileQueueWorker(CancellableWorker):
                 # _cancel_event: is_cancelled must stay False so callers can tell
                 # a tool error from a user cancel.
                 self.file_finished.emit(idx, None, str(exc))
+                self._fatal_error = True
                 self._stop_queue = True
             except Exception as exc:  # noqa: BLE001 - per-item QThread boundary
                 logger.exception("%s item %d failed", type(self).__name__, idx)
