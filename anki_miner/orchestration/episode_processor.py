@@ -600,8 +600,7 @@ class EpisodeProcessor:
                     user_words = self.known_word_db.get_words_by_source("user")
                 except (sqlite3.Error, OSError) as e:
                     logger.warning(
-                        "Could not read the user ignore list from known_words.db (%s); "
-                        "proceeding without it this run.",
+                        "Could not read the user ignore list from known_words.db (%s); proceeding without it this run.",
                         e,
                     )
 
@@ -998,7 +997,7 @@ class EpisodeProcessor:
                 )
             except (sqlite3.Error, OSError) as e:
                 logger.warning(
-                    "Could not record difficulty for %s in stats.db (%s); " "the run will continue.",
+                    "Could not record difficulty for %s in stats.db (%s); the run will continue.",
                     ctx.episode_name,
                     e,
                 )
@@ -1028,8 +1027,10 @@ class EpisodeProcessor:
         # screenshots are configured and we are not in audiobook (audio_only)
         # mode, where screenshots are skipped entirely; otherwise the batch's
         # own default resolves to the static path.
+        picture_mapped = bool(self.config.anki_fields.get("picture"))
+        audio_mapped = bool(self.config.anki_fields.get("audio"))
         extra_kwargs: dict[str, str | None] = {}
-        if self.config.screenshot_animated and not audio_only:
+        if picture_mapped and self.config.screenshot_animated and not audio_only:
             animated_fmt = self.media_extractor.resolve_animated_format()
             extra_kwargs["animated_format"] = animated_fmt
             if animated_fmt == "webp" and self.config.screenshot_animated_format == "avif":
@@ -1048,16 +1049,21 @@ class EpisodeProcessor:
                     )
                 )
 
-        media_results: list[tuple[TokenizedWord, MediaData]] = self.media_extractor.extract_media_batch(
-            video_file,
-            unknown_words,
-            progress_callback,
-            cancelled_check=lambda: self.cancelled,
-            temp_folder=run_temp_folder,
-            audio_track_override=audio_track_override,
-            audio_only=audio_only,
-            **extra_kwargs,
-        )
+        if picture_mapped or audio_mapped:
+            media_results = self.media_extractor.extract_media_batch(
+                video_file,
+                unknown_words,
+                progress_callback,
+                cancelled_check=lambda: self.cancelled,
+                temp_folder=run_temp_folder,
+                audio_track_override=audio_track_override,
+                audio_only=audio_only,
+                include_screenshot=picture_mapped,
+                include_audio=audio_mapped,
+                **extra_kwargs,
+            )
+        else:
+            media_results = [(word, MediaData()) for word in unknown_words]
 
         self._audio_stage.fetch_expression_audio(media_results, progress_callback)
 
@@ -1782,7 +1788,7 @@ class EpisodeProcessor:
                             )
                         )
                         image_path = None
-                    except (OSError, zipfile.BadZipFile) as exc:
+                    except (OSError, ValueError, zipfile.BadZipFile) as exc:
                         # An image failure must never abort the volume (the plan's
                         # degradation policy: keep mining imageless). A BadZipFile
                         # (NOT an OSError subclass) means the whole archive is
@@ -2017,7 +2023,7 @@ class EpisodeProcessor:
             )
         except (sqlite3.Error, OSError) as e:
             logger.warning(
-                "Could not record mining session for %s in stats.db (%s); " "the cards were still created.",
+                "Could not record mining session for %s in stats.db (%s); the cards were still created.",
                 ctx.episode_name,
                 e,
             )

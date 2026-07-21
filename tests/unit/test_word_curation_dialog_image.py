@@ -263,6 +263,21 @@ class TestCache:
         dlg._request_page_image(0)
         assert sync_off_thread.call_count == 6
 
+    def test_cache_byte_budget_evicts_oldest(self, qtbot, sync_off_thread, monkeypatch):
+        monkeypatch.setattr(wcd, "_PAGE_CACHE_MAX_BYTES", _qimage(10, 8).sizeInBytes(), raising=False)
+        units = _make_units((0, "001.png", "p.1"), (1, "002.png", "p.2"))
+        dlg = WordCurationDialog(
+            [_make_word("word0", 0), _make_word("word1", 1)],
+            media_context=_image_context(units),
+        )
+        qtbot.addWidget(dlg)
+
+        dlg._request_page_image(0)
+        dlg._request_page_image(1)
+
+        assert len(dlg._page_cache) == 1
+        assert units[0].image_ref not in dlg._page_cache
+
 
 # ---------------------------------------------------------------------------
 # Stale-guard (generation counter)

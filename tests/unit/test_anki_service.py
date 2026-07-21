@@ -1412,7 +1412,13 @@ class TestStoreMediaFilesBatch:
 
     def test_vanished_expression_audio_counts_as_failure(self, test_config, make_tokenized_word, tmp_path):
         """Vanished expression_audio file (Issue #73 field) is counted in the failure total."""
-        service = AnkiService(test_config)
+        from dataclasses import replace
+
+        config = replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
+        )
+        service = AnkiService(config)
 
         au_path = tmp_path / "clip.mp3"
         au_path.write_bytes(b"audio-data")
@@ -1530,7 +1536,7 @@ class TestExpressionAudio:
 
     def test_store_batch_includes_expression_audio(self, test_config, make_tokenized_word, tmp_path):
         """Expression audio file ships in the same upload batch as card media."""
-        service = AnkiService(test_config)
+        service = AnkiService(self._config_with_expression_audio(test_config))
 
         exp_path = tmp_path / "食べる_exp.mp3"
         exp_path.write_bytes(b"expression-audio-data")
@@ -1579,7 +1585,7 @@ class TestExpressionAudio:
 
     def test_store_batch_dedupes_shared_expression_audio_filename(self, test_config, make_tokenized_word, tmp_path):
         """Two words sharing one deterministic expression-audio filename → one upload action."""
-        service = AnkiService(test_config)
+        service = AnkiService(self._config_with_expression_audio(test_config))
 
         exp_path = tmp_path / "食べる_exp.mp3"
         exp_path.write_bytes(b"expression-audio-data")

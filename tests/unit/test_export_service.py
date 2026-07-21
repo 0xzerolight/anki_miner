@@ -197,6 +197,28 @@ class TestExportCsv:
         assert row[header.index("Pitch Category")] == ""
         assert row[header.index("Frequency")] == ""
 
+    def test_csv_formula_cells_neutralized(self, export_service, make_word_data, tmp_path):
+        word = make_word_data(
+            lemma="=cmd",
+            surface="+cmd",
+            reading="-cmd",
+            sentence="@cmd",
+            definition="\tcmd",
+            expression_furigana="\rcmd",
+        )
+        out = tmp_path / "formula.csv"
+
+        export_service.export_csv([word], out)
+
+        with open(out, newline="", encoding="utf-8") as f:
+            row = next(csv.DictReader(f))
+        assert row["Lemma"] == "'=cmd"
+        assert row["Surface"] == "'+cmd"
+        assert row["Reading"] == "'-cmd"
+        assert row["Sentence"] == "'@cmd"
+        assert row["Definition"] == "'\tcmd"
+        assert row["Expression Furigana"] == "'\rcmd"
+
     def test_media_refs_excluded_by_default(self, export_service, sample_words, tmp_path):
         out = tmp_path / "words.csv"
         export_service.export_csv(sample_words, out)

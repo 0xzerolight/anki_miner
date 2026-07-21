@@ -100,6 +100,19 @@ def test_no_speech_surfaced_no_srt(tmp_path, monkeypatch):
     assert not out_srt.exists()
 
 
+def test_all_degenerate_segments_report_no_speech(tmp_path, monkeypatch):
+    config = _make_config(tmp_path)
+    video = tmp_path / "silent.mkv"
+    video.write_bytes(b"")
+    out_srt = tmp_path / "silent.srt"
+    _patch_pipeline(monkeypatch, segments=[(0.0, 0.0, "text"), (1.0, 2.0, "  ")])
+
+    result = generate_subtitle_one(config, _FakeExtractor(), video, out_srt)
+
+    assert result.status is SubtitleGenStatus.NO_SPEECH
+    assert not out_srt.exists()
+
+
 def test_extraction_failure(tmp_path, monkeypatch):
     config = _make_config(tmp_path)
     video = tmp_path / "ep01.mkv"

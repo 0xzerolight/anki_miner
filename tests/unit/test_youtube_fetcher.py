@@ -617,6 +617,7 @@ class TestFetchVideoResolverFallback:
 
         resolved_ffmpeg = tmp_path / "bundled-ffmpeg"
         resolved_ffmpeg.write_text("#!/bin/sh\n")
+        resolved_ffmpeg.chmod(0o755)
         cfg = replace(yt_config, youtube_ffmpeg_location=None, ffmpeg_location=resolved_ffmpeg)
         svc = YouTubeFetcherService(cfg)
         _make_happy_outputs(tmp_path)
@@ -1079,6 +1080,13 @@ class TestResolveOutputsAmbiguity:
             pytest.raises(YouTubeFetchError, match="Subtitle file unreadable after fetch"),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+    def test_zero_byte_video_rejected(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        _touch(tmp_path / "abc123.mp4", b"")
+        _touch(tmp_path / "abc123.ja.srt", b"1\n00:00:01,000 --> 00:00:02,000\nhi\n")
+
+        with pytest.raises(YouTubeFetchError, match="zero-byte video"):
+            service._resolve_outputs(tmp_path, "abc123", "manual_only")
 
 
 def test_probe_metadata_timeout_wrapped(service: YouTubeFetcherService) -> None:

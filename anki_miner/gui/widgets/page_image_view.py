@@ -29,7 +29,7 @@ from PyQt6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.fonts import make_scaled_font
 from anki_miner.models.reading import ImageRef
-from anki_miner.utils.pil_limits import apply_pil_image_limits
+from anki_miner.utils.pil_limits import apply_pil_image_limits, validate_image_pixel_budget
 
 # Decompression-bomb ceiling: explicit project pin (== Pillow's default),
 # shared with the card path via utils.pil_limits.
@@ -87,6 +87,7 @@ def _to_qimage(img: Image.Image) -> QImage:
     ``w * 4`` stride documents the packed-buffer invariant, and ``.copy()``
     detaches the QImage from the Python buffer before it goes out of scope.
     """
+    validate_image_pixel_budget(img)
     rgba = img.convert("RGBA")
     width, height = rgba.size
     qimage = QImage(rgba.tobytes(), width, height, width * 4, QImage.Format.Format_RGBA8888).copy()

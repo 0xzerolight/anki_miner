@@ -7,6 +7,12 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.models.word import WordData
 from anki_miner.utils.atomic_io import atomic_write_path
 
+_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _neutralize_formula_cell(value: str) -> str:
+    return f"'{value}" if value.startswith(_FORMULA_PREFIXES) else value
+
 
 class ExportService:
     """Export vocabulary data to CSV, TSV, and vocabulary list formats."""
@@ -145,6 +151,6 @@ class ExportService:
                         f"{w.word.end_time:.2f}",
                     ]
                 )
-                writer.writerow(row)
+                writer.writerow([_neutralize_formula_cell(cell) for cell in row])
 
         return len(words)

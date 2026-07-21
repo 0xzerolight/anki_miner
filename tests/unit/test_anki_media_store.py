@@ -2,6 +2,7 @@
 
 import base64
 import logging
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -133,6 +134,33 @@ class TestStoreBatchLazyEncoding:
             media = MediaData(screenshot_path=path, screenshot_filename=fname)
             items.append(CardPayload(word=word, media=media, definition=f"def_{i}"))
         return items
+
+    def test_unmapped_media_makes_no_collection_media_request(self, test_config, make_tokenized_word, tmp_path):
+        screenshot = tmp_path / "word.jpg"
+        screenshot.write_bytes(b"image")
+        audio = tmp_path / "word.mp3"
+        audio.write_bytes(b"audio")
+        fields = dict(test_config.anki_fields)
+        fields.update(picture="", audio="")
+        config = replace(test_config, anki_fields=fields)
+        item = CardPayload(
+            word=make_tokenized_word(),
+            media=MediaData(
+                screenshot_path=screenshot,
+                screenshot_filename=screenshot.name,
+                audio_path=audio,
+                audio_filename=audio.name,
+            ),
+            definition="def",
+        )
+
+        with patch("anki_miner.services._ankiconnect.requests.post") as mock_post:
+            store = AnkiMediaStore(config)
+            stored = store.store_batch([item])
+
+        assert stored == set()
+        assert store.last_store_failures == 0
+        mock_post.assert_not_called()
 
     def test_encoding_is_lazy_across_chunks(self, test_config, make_tokenized_word, tmp_path):
         """With N > chunk_size files, chunk-2 files must NOT be encoded before
@@ -406,6 +434,30 @@ class TestStoreFailureCounting:
 
         assert stored == set()
         assert store.last_store_failures == 1
+
+    def test_oversized_media_payload_fails_cleanly(
+        self, test_config, make_tokenized_word, tmp_path, monkeypatch, caplog
+    ):
+        path = tmp_path / "clip.mp3"
+        path.write_bytes(b"oversized")
+        item = CardPayload(
+            word=make_tokenized_word(),
+            media=MediaData(audio_path=path, audio_filename=path.name),
+            definition="d",
+        )
+        monkeypatch.setattr(anki_media_store, "_MAX_MEDIA_FILE_BYTES", 4, raising=False)
+
+        with (
+            caplog.at_level(logging.WARNING, logger="anki_miner.services.anki_media_store"),
+            patch("anki_miner.services._ankiconnect.requests.post") as mock_post,
+        ):
+            store = AnkiMediaStore(test_config)
+            stored = store.store_batch([item])
+
+        assert stored == set()
+        assert store.last_store_failures == 1
+        assert "cap 4" in caplog.text
+        mock_post.assert_not_called()
 
 
 class TestDictMediaSrcUnescaping:

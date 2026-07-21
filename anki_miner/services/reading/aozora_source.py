@@ -16,6 +16,7 @@ from __future__ import annotations
 import re
 import unicodedata
 
+from anki_miner.exceptions import SetupError
 from anki_miner.models.reading import (
     ReadingDocument,
     ReadingSourceRef,
@@ -26,6 +27,8 @@ from anki_miner.models.reading import (
 # here both for load() and as a re-export for tests that patch/call it.
 from anki_miner.services.reading._util import _decode
 from anki_miner.services.reading.sentence_splitter import split_sentences
+
+_MAX_TEXT_FILE_BYTES = 32 * 1024 * 1024
 
 # --- gaiji (external characters) -----------------------------------------
 
@@ -308,7 +311,16 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
     """Load an Aozora or plain-text novel into a book ``ReadingDocument``."""
     # Per-kind ref contract: file-backed kinds always carry a path.
     assert ref.path is not None
-    text = _decode(ref.path.read_bytes())
+    try:
+        size = ref.path.stat().st_size
+        if size > _MAX_TEXT_FILE_BYTES:
+            raise SetupError(
+                f"novel file '{ref.path.name}' is {size:,} bytes (cap {_MAX_TEXT_FILE_BYTES:,}); refusing to load"
+            )
+        raw = ref.path.read_bytes()
+    except OSError as e:
+        raise SetupError(f"Cannot read novel file '{ref.path.name}': {e}") from e
+    text = _decode(raw)
     lines = _cut_footer(_splitlines(text))
 
     aozora = _is_aozora(text)

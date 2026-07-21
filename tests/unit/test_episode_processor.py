@@ -259,6 +259,29 @@ class TestProcessEpisode:
         assert len(result.errors) > 0
         mock_services["definition_service"].get_definitions_batch.assert_not_called()
 
+    def test_unmapped_picture_and_audio_skip_media_generation(self, test_config, mock_services, tmp_path):
+        fields = dict(test_config.anki_fields)
+        fields.update(picture="", audio="")
+        proc = build_processor(
+            config=replace(test_config, anki_fields=fields),
+            **mock_services,
+            presenter=NullPresenter(),
+        )
+        word = _make_word()
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.side_effect = AssertionError("media generated")
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+        result = proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.cards_created == 1
+        mock_services["media_extractor"].extract_media_batch.assert_not_called()
+        payload = mock_services["anki_service"].create_cards_batch.call_args.args[0][0]
+        assert payload.media == MediaData()
+
     def test_data_flow_between_phases(self, processor, mock_services, tmp_path, monkeypatch):
         """Verify that outputs of one phase are passed as inputs to the next."""
         video = tmp_path / "v.mkv"

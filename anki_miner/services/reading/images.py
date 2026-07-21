@@ -19,7 +19,7 @@ from PIL import Image
 
 from anki_miner.models.reading import ImageRef
 from anki_miner.services.dictionary.zip_safety import validate_zip_safe
-from anki_miner.utils.pil_limits import apply_pil_image_limits
+from anki_miner.utils.pil_limits import apply_pil_image_limits, validate_image_pixel_budget
 
 # Decompression-bomb ceiling: explicit project pin (== Pillow's default) so the
 # card-image decode limit is an intentional, tested value, not an inherited one.
@@ -59,6 +59,7 @@ def prepare_card_image(ref: ImageRef, dest_dir: Path) -> Path:
 
 def _encode_jpeg(img: Image.Image, out_path: Path) -> None:
     """Convert to RGB, cap the long edge at ``_MAX_EDGE``, save JPEG quality 85."""
+    validate_image_pixel_budget(img)
     rgb = img.convert("RGB")
     # thumbnail() preserves aspect ratio and only ever shrinks — it never
     # upscales — so a page already within the cap is saved at its native size.

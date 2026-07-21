@@ -187,6 +187,7 @@ def test_tracks_clicked_passes_resolved_ffprobe(qapp, qtbot, test_config, tmp_pa
 
     fake_ffprobe = tmp_path / "my_ffprobe"
     fake_ffprobe.write_text("#!/bin/sh\n")
+    fake_ffprobe.chmod(0o755)
     cfg = dataclasses.replace(test_config, ffprobe_location=str(fake_ffprobe))
 
     widget = SingleEpisodeTab(

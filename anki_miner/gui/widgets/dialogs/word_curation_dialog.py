@@ -51,6 +51,7 @@ logger = logging.getLogger(__name__)
 # tradeoff (vs. downscale-on-load + box rescale); consecutive words usually
 # share a page, so 4 pages of backtrack covers real navigation.
 _PAGE_CACHE_CAP = 4
+_PAGE_CACHE_MAX_BYTES = 64 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -819,7 +820,10 @@ class WordCurationDialog(QDialog):
                 return
             assert isinstance(image, QImage)
             self._page_cache[ref] = image
-            while len(self._page_cache) > _PAGE_CACHE_CAP:
+            while (
+                len(self._page_cache) > _PAGE_CACHE_CAP
+                or sum(cached.sizeInBytes() for cached in self._page_cache.values()) > _PAGE_CACHE_MAX_BYTES
+            ):
                 self._page_cache.popitem(last=False)
             self.page_image_view.show_page(QPixmap.fromImage(image), box, caption)
 

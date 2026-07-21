@@ -158,6 +158,14 @@ def test_missing_file_raises_setup_error(tmp_path):
     assert "ghost.srt" in str(excinfo.value)
 
 
+def test_oversized_subtitle_file_fails_cleanly(tmp_path, monkeypatch):
+    path = _write(tmp_path, "Ep01.srt", _SRT)
+    monkeypatch.setattr(subtitle_source, "_MAX_TEXT_FILE_BYTES", 4, raising=False)
+
+    with pytest.raises(SetupError, match=r"subtitle file.*cap 4"):
+        subtitle_source.load(_ref(path))
+
+
 def test_unparseable_content_raises_setup_error(tmp_path):
     with pytest.raises(SetupError) as excinfo:
         subtitle_source.load(_ref(_write(tmp_path, "Ep01.srt", "not a subtitle at all")))

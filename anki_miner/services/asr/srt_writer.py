@@ -13,6 +13,17 @@ import pysubs2
 from anki_miner.utils.atomic_io import atomic_write_path
 
 
+def writable_segments(segments: list[tuple[float, float, str]]) -> list[tuple[int, int, str]]:
+    writable: list[tuple[int, int, str]] = []
+    for start_s, end_s, text in segments:
+        text = text.strip()
+        start_ms = round(start_s * 1000)
+        end_ms = round(end_s * 1000)
+        if start_ms != end_ms and text:
+            writable.append((start_ms, end_ms, text))
+    return writable
+
+
 def segments_to_srt(segments: list[tuple[float, float, str]], out_path: Path) -> None:
     """Write *segments* to *out_path* in SRT format.
 
@@ -26,12 +37,7 @@ def segments_to_srt(segments: list[tuple[float, float, str]], out_path: Path) ->
             exist before calling.
     """
     subs = pysubs2.SSAFile()
-    for start_s, end_s, text in segments:
-        text = text.strip()
-        start_ms = round(start_s * 1000)
-        end_ms = round(end_s * 1000)
-        if start_ms == end_ms or not text:
-            continue
+    for start_ms, end_ms, text in writable_segments(segments):
         event = pysubs2.SSAEvent(start=start_ms, end=end_ms, text=text)
         subs.append(event)
     with atomic_write_path(out_path) as staged:
