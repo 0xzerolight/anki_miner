@@ -100,8 +100,8 @@ def _make_tab(config, qtbot):
     with patch(_COMPUTE_AVAILABLE, return_value=True):
         tab = CondenseTab(config)
         qtbot.addWidget(tab)
-        assert tab._availability_worker.wait(30000)
-        qtbot.waitUntil(tab.condense_button.isEnabled, timeout=30000)
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(tab.condense_button.isEnabled, timeout=3000)
     return tab
 
 
@@ -179,8 +179,8 @@ def test_ffmpeg_absent_disables_condense(qtbot, tmp_path):
     config = _make_config(tmp_path)
     with patch(_COMPUTE_AVAILABLE, return_value=False):
         tab = CondenseTab(config)
-        assert tab._availability_worker.wait(30000)
-        qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=30000)
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=3000)
     qtbot.addWidget(tab)
     assert not tab.condense_button.isEnabled()
     assert not tab.engine_notice_label.isHidden()
@@ -195,8 +195,8 @@ def test_ffmpeg_available_via_path_check(qtbot, tmp_path):
         patch("anki_miner.gui.widgets.condense_tab.shutil.which", return_value="/usr/bin/x"),
     ):
         tab = CondenseTab(config)
-        assert tab._availability_worker.wait(30000)
-        qtbot.waitUntil(tab.condense_button.isEnabled, timeout=30000)
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(tab.condense_button.isEnabled, timeout=3000)
     qtbot.addWidget(tab)
     assert tab.condense_button.isEnabled()
 
@@ -210,8 +210,8 @@ def test_ffmpeg_unavailable_via_path_check(qtbot, tmp_path):
         patch("anki_miner.gui.widgets.condense_tab.shutil.which", return_value=None),
     ):
         tab = CondenseTab(config)
-        assert tab._availability_worker.wait(30000)
-        qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=30000)
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=3000)
     qtbot.addWidget(tab)
     assert not tab.condense_button.isEnabled()
 
@@ -923,8 +923,8 @@ def test_seeding_does_not_emit_config_changed(qtbot, tmp_path):
     emitted: list = []
     with patch(_COMPUTE_AVAILABLE, return_value=True):
         tab = CondenseTab(_make_config(tmp_path))
-        assert tab._availability_worker.wait(30000)
-        qtbot.waitUntil(tab.condense_button.isEnabled, timeout=30000)
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(tab.condense_button.isEnabled, timeout=3000)
     qtbot.addWidget(tab)
     tab.config_changed.connect(emitted.append)
 
@@ -1008,7 +1008,7 @@ def test_audio_tracks_probe_applies_override(qtbot, tmp_path):
 
     with patch(_LIST_AUDIO, return_value=[_audio_stream()]), patch(_AUDIO_DIALOG, mock_class):
         tab._on_audio_tracks_clicked()
-        qtbot.waitUntil(lambda: mock_class.called, timeout=30000)
+        qtbot.waitUntil(lambda: mock_class.called, timeout=3000)
 
     assert tab._audio_track_override == 2
     assert "3" in tab.audio_track_label.text()
@@ -1049,8 +1049,8 @@ def test_late_track_probe_does_not_override_after_source_change(qtbot, tmp_path)
         worker = next(iter(set(tab._off_thread_workers) - before))
         tab.media_file_selector.set_path(str(source_b))
         release.set()
-        assert worker.wait(30000)
-        qtbot.waitUntil(tab.audio_tracks_button.isEnabled, timeout=30000)
+        assert worker.wait(3000)
+        qtbot.waitUntil(tab.audio_tracks_button.isEnabled, timeout=3000)
 
     dialog_cls.assert_not_called()
     assert tab._audio_track_override is None
@@ -1073,7 +1073,7 @@ def test_subtitle_tracks_probe_applies_override(qtbot, tmp_path):
 
     with patch(_LIST_SUBS, return_value=[_sub_stream()]), patch(_SUB_DIALOG, mock_class):
         tab._on_subtitle_tracks_clicked()
-        qtbot.waitUntil(lambda: mock_class.called, timeout=30000)
+        qtbot.waitUntil(lambda: mock_class.called, timeout=3000)
 
     assert tab._subtitle_track_override == 0
     assert "1" in tab.subtitle_track_label.text()

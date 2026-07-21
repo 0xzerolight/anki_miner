@@ -26,6 +26,11 @@ from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 _ENGINE_AVAILABLE = "anki_miner.services.asr._engine.available"
 _ALASS_RESOLVER = "anki_miner.gui.widgets.subtitle_retime_tab.resolve_alass"
 _SHUTIL_WHICH = "anki_miner.gui.widgets.subtitle_retime_tab.shutil.which"
+# The Condense sub-tab probes real ffmpeg on PATH (shutil.which) in its
+# off-thread availability scan; the CI test job installs no ffmpeg, so without
+# this its condense_button never enables and _make_tab's waitUntil hangs. Fake
+# it available, mirroring test_condense_tab._make_tab.
+_FFMPEG_COMPUTE_AVAILABLE = "anki_miner.gui.widgets.condense_tab.CondenseTab._compute_ffmpeg_available"
 
 
 def _make_config(tmp_path: Path) -> AnkiMinerConfig:
@@ -40,15 +45,16 @@ def _make_tab(config: AnkiMinerConfig, qtbot) -> SubtitlesTab:
     with (
         patch(_ENGINE_AVAILABLE, return_value=True),
         patch(_ALASS_RESOLVER, return_value="/fake/alass"),
+        patch(_FFMPEG_COMPUTE_AVAILABLE, return_value=True),
         patch("pathlib.Path.exists", return_value=True),
     ):
         tab = SubtitlesTab(config)
         qtbot.addWidget(tab)
         for child in (tab.generate_tab, tab.retime_tab, tab.condense_tab):
-            assert child._availability_worker.wait(30000)
-        qtbot.waitUntil(tab.generate_tab.generate_button.isEnabled, timeout=30000)
-        qtbot.waitUntil(tab.retime_tab.retime_button.isEnabled, timeout=30000)
-        qtbot.waitUntil(tab.condense_tab.condense_button.isEnabled, timeout=30000)
+            assert child._availability_worker.wait(3000)
+        qtbot.waitUntil(tab.generate_tab.generate_button.isEnabled, timeout=3000)
+        qtbot.waitUntil(tab.retime_tab.retime_button.isEnabled, timeout=3000)
+        qtbot.waitUntil(tab.condense_tab.condense_button.isEnabled, timeout=3000)
     return tab
 
 
@@ -207,7 +213,7 @@ def test_update_config_stores_config(qtbot, tmp_path):
     new_config = dataclasses.replace(config, asr_model="small")
     tab.update_config(new_config)
     for child in (tab.generate_tab, tab.retime_tab, tab.condense_tab):
-        assert child._availability_worker.wait(30000)
+        assert child._availability_worker.wait(3000)
     qtbot.wait(10)
 
     assert tab.config is new_config
