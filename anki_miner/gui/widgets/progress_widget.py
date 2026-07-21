@@ -264,6 +264,6 @@ class ProgressWidget(QWidget):
             eta_secs = int(eta_seconds % 60)
 
             if eta_minutes > 0:
-                stats_parts.append(f"ETA ~{eta_minutes:02d}:{eta_secs:02d}")
+                stats_parts.append(f"{self.tr('ETA ~')}{eta_minutes:02d}:{eta_secs:02d}")
 
         self.stats_label.setText(" | ".join(stats_parts))

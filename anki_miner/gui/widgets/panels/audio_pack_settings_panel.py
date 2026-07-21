@@ -239,11 +239,13 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         buttons.addWidget(self._add_online_btn)
 
         self._up_btn = QPushButton("↑")
+        self._up_btn.setAccessibleName(self.tr("Move up"))
         self._up_btn.setToolTip(self.tr("Move up in priority"))
         self._up_btn.clicked.connect(lambda: self.move_up(self._list.currentRow()))
         buttons.addWidget(self._up_btn)
 
         self._down_btn = QPushButton("↓")
+        self._down_btn.setAccessibleName(self.tr("Move down"))
         self._down_btn.setToolTip(self.tr("Move down in priority"))
         self._down_btn.clicked.connect(lambda: self.move_down(self._list.currentRow()))
         buttons.addWidget(self._down_btn)

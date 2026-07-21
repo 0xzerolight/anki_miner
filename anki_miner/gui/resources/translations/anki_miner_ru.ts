@@ -64,6 +64,14 @@
         <translation>Обновить</translation>
     </message>
     <message>
+        <source>Analytics Tab</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>View mining statistics, series difficulty rankings, and progress milestones</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Overview</source>
         <translation>Обзор</translation>
     </message>
@@ -662,8 +670,16 @@ The audio pack was not removed.</source>
         <translation>Добавить пользовательский источник аудио по URL</translation>
     </message>
     <message>
+        <source>Move up</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Move up in priority</source>
         <translation>Повысить приоритет</translation>
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation type="unfinished">Вниз</translation>
     </message>
     <message>
         <source>Move down in priority</source>
@@ -1222,6 +1238,14 @@ Total cards created: %2</source>
         <translation>Заполнение отсутствующих полей тонального ударения, частотности, определения и чтения в карточках, уже созданных при майнинге.</translation>
     </message>
     <message>
+        <source>Restyle mined cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>View mining history &amp; stats</source>
         <translation>Просмотр истории и статистики майнинга</translation>
     </message>
@@ -1616,6 +1640,10 @@ Total cards created: %2</source>
         <translation>Заметки, пропущенные из-за пустого поля «Выражение»: {count}.</translation>
     </message>
     <message>
+        <source>Settings changed since this scan; re-scan before applying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Apply backfill?</source>
         <translation>Применить дозаполнение?</translation>
     </message>
@@ -1646,6 +1674,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Cancelling…</source>
         <translation>Отмена…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation type="unfinished">Отменено.</translation>
     </message>
 </context><context>
     <name>CondenseTab</name>
@@ -1680,6 +1712,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Cancelled</source>
         <translation>Отменено</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">Ошибка — см. журнал</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -2350,6 +2386,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>Сбой повторного импорта</translation>
     </message>
     <message>
+        <source>Scan Failed</source>
+        <translation type="unfinished">Ошибка сканирования</translation>
+    </message>
+    <message>
         <source>No dictionaries with saved sources were found.
 
 Skipped (no saved source — right-click a dictionary row → Re-import… to seed):
@@ -2484,8 +2524,16 @@ The dictionary was not removed.</source>
         <translation>Повторно добавить словари, найденные в папке хранения, которых нет в списке выше (например, после сброса настроек). Повторный импорт не требуется.</translation>
     </message>
     <message>
+        <source>Move up</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Move up in priority</source>
         <translation>Повысить приоритет</translation>
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation type="unfinished">Вниз</translation>
     </message>
     <message>
         <source>Move down in priority</source>
@@ -2974,6 +3022,34 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation>Обзор...</translation>
     </message>
     <message>
+        <source>file</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a %1 by typing path, browsing, or dragging</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 path</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Path to %1. Type or paste a path, or use browse button</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Browse for %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Opens file dialog to select %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select %1</source>
         <translation>Выбрать %1</translation>
     </message>
@@ -3322,6 +3398,10 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation>Сбой импорта</translation>
     </message>
     <message>
+        <source>Scan Failed</source>
+        <translation type="unfinished">Ошибка сканирования</translation>
+    </message>
+    <message>
         <source>Choose frequency source to re-import</source>
         <translation>Выберите источник частотности для повторного импорта</translation>
     </message>
@@ -3372,6 +3452,10 @@ The frequency source was not removed.</source>
     <message>
         <source>+ Add Source…</source>
         <translation>+ Добавить источник…</translation>
+    </message>
+    <message>
+        <source>Move up</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Move up (breaks rank ties first)</source>
@@ -3624,6 +3708,38 @@ Add %3 word(s) to your known list?</source>
         <translation>Обновлено до версии v%1.&lt;br&gt;&lt;br&gt;Что нового: &lt;a href="https://github.com/0xzerolight/anki_miner/releases/latest"&gt;примечания к выпуску&lt;/a&gt;</translation>
     </message>
     <message>
+        <source>Anki Miner Main Window</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Japanese vocabulary mining tool for creating Anki flashcards from video subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Main Tabs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Navigate between Video, Deck Builder, Audio, Reading, Analytics, Tools, and Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Application Header</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Application title and theme selector</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Status Bar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Shows current operation, statistics, and system status</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>&amp;Tools</source>
         <translation>&amp;Сервис</translation>
     </message>
@@ -3696,12 +3812,12 @@ Add %3 word(s) to your known list?</source>
         <translation>Ярлык на рабочем столе</translation>
     </message>
     <message>
-        <source>Shortcut created.</source>
-        <translation>Ярлык создан.</translation>
-    </message>
-    <message>
         <source>Failed to create desktop shortcut.</source>
         <translation>Не удалось создать ярлык на рабочем столе.</translation>
+    </message>
+    <message>
+        <source>Shortcut created.</source>
+        <translation>Ярлык создан.</translation>
     </message>
     <message>
         <source>Restyle Mined Cards</source>
@@ -4133,6 +4249,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <source>Ready</source>
         <translation>Готово</translation>
     </message>
+    <message>
+        <source>ETA ~</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>QueueItemWidget</name>
     <message>
@@ -4466,6 +4586,10 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Mined %1: %2 cards.</source>
         <translation>%1: создано карточек — %2.</translation>
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
+        <translation type="unfinished">Отменено: %1.</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
@@ -5008,10 +5132,9 @@ Imported values override your current settings; anything not in the file is kept
         <translation>Недопустимое регулярное выражение субтитров</translation>
     </message>
     <message>
-        <source>The imported subtitle regex filter is invalid and has been disabled:
+        <source>The imported subtitle regex filter was rejected; the previous filter was kept:
 %1</source>
-        <translation>Импортированный фильтр субтитров на основе регулярного выражения недопустим и был отключён:
-%1</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>✓ Imported</source>
@@ -5069,6 +5192,12 @@ Imported values override your current settings; anything not in the file is kept
         <source>Could not open the known words list: %1</source>
         <translation>Не удалось открыть список известных слов: %1</translation>
     </message>
+    <message>
+        <source>The imported subtitle regex filter is invalid and has been disabled:
+%1</source>
+        <translation type="vanished">Импортированный фильтр субтитров на основе регулярного выражения недопустим и был отключён:
+%1</translation>
+    </message>
 </context><context>
     <name>SetupWizard</name>
     <message>
@@ -5124,6 +5253,14 @@ Imported values override your current settings; anything not in the file is kept
     <message>
         <source>Progress</source>
         <translation>Прогресс</translation>
+    </message>
+    <message>
+        <source>Episode Mining Tab</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Process a single video episode to create vocabulary flashcards</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>File Selection</source>
@@ -5304,6 +5441,10 @@ Imported values override your current settings; anything not in the file is kept
     <message>
         <source>Cancelled</source>
         <translation>Отменено</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">Ошибка — см. журнал</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -5548,6 +5689,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Cancelled</source>
         <translation>Отменено</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">Ошибка — см. журнал</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -6080,6 +6225,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Активна</translation>
     </message>
     <message>
+        <source>Unfavorite</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Favorite</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Click to add to / remove from favorites.</source>
         <translation>Нажмите, чтобы добавить в избранное или удалить из него.</translation>
     </message>
@@ -6100,6 +6253,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Skip this version</source>
         <translation>Пропустить эту версию</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished">Закрыть</translation>
     </message>
     <message>
         <source>Anki Miner v%1 is available!</source>

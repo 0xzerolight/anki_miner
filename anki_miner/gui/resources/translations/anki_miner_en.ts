@@ -64,6 +64,14 @@
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Analytics Tab</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>View mining statistics, series difficulty rankings, and progress milestones</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Overview</source>
         <translation type="unfinished" />
     </message>
@@ -656,7 +664,15 @@ The audio pack was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Move up</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Move up in priority</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Move down</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1209,6 +1225,14 @@ Total cards created: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Restyle mined cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>View mining history &amp; stats</source>
         <translation type="unfinished" />
     </message>
@@ -1603,6 +1627,10 @@ Total cards created: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Settings changed since this scan; re-scan before applying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Apply backfill?</source>
         <translation type="unfinished" />
     </message>
@@ -1630,6 +1658,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -1664,6 +1696,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Cancelled</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed — see log</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2335,6 +2371,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Scan Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No dictionaries with saved sources were found.
 
 Skipped (no saved source — right-click a dictionary row → Re-import… to seed):
@@ -2461,7 +2501,15 @@ The dictionary was not removed.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Move up</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Move up in priority</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Move down</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2925,6 +2973,34 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>file</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a %1 by typing path, browsing, or dragging</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 path</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Path to %1. Type or paste a path, or use browse button</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Browse for %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Opens file dialog to select %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select %1</source>
         <translation type="unfinished" />
     </message>
@@ -3273,6 +3349,10 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Scan Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Choose frequency source to re-import</source>
         <translation type="unfinished" />
     </message>
@@ -3319,6 +3399,10 @@ The frequency source was not removed.</source>
     </message>
     <message>
         <source>+ Add Source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Move up</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3563,6 +3647,38 @@ Add %3 word(s) to your known list?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Anki Miner Main Window</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Japanese vocabulary mining tool for creating Anki flashcards from video subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Main Tabs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Navigate between Video, Deck Builder, Audio, Reading, Analytics, Tools, and Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Application Header</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Application title and theme selector</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Status Bar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Shows current operation, statistics, and system status</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>&amp;Tools</source>
         <translation type="unfinished" />
     </message>
@@ -3635,11 +3751,11 @@ Add %3 word(s) to your known list?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Shortcut created.</source>
+        <source>Failed to create desktop shortcut.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Failed to create desktop shortcut.</source>
+        <source>Shortcut created.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4065,6 +4181,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <source>Ready</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>ETA ~</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>QueueItemWidget</name>
     <message>
@@ -4397,6 +4517,10 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Mined %1: %2 cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4935,7 +5059,7 @@ Imported values override your current settings; anything not in the file is kept
         <translation type="unfinished" />
     </message>
     <message>
-        <source>The imported subtitle regex filter is invalid and has been disabled:
+        <source>The imported subtitle regex filter was rejected; the previous filter was kept:
 %1</source>
         <translation type="unfinished" />
     </message>
@@ -5049,6 +5173,14 @@ Imported values override your current settings; anything not in the file is kept
     </message>
     <message>
         <source>Progress</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Episode Mining Tab</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Process a single video episode to create vocabulary flashcards</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5227,6 +5359,10 @@ Imported values override your current settings; anything not in the file is kept
     </message>
     <message>
         <source>Cancelled</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed — see log</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5470,6 +5606,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Cancelled</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed — see log</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6003,6 +6143,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Unfavorite</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Favorite</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Click to add to / remove from favorites.</source>
         <translation type="unfinished" />
     </message>
@@ -6022,6 +6170,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <name>UpdateBanner</name>
     <message>
         <source>Skip this version</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Close</source>
         <translation type="unfinished" />
     </message>
     <message>

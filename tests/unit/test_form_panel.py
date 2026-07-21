@@ -7,7 +7,7 @@ import pytest
 pytest.importorskip("PyQt6.QtWidgets")
 
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QCheckBox, QLabel, QWidget
+from PyQt6.QtWidgets import QCheckBox, QLabel, QLineEdit, QWidget
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base.form_panel import FormPanel
@@ -82,6 +82,17 @@ def test_field_with_helper_returns_widget(qtbot):
     result = panel.add_field("Label", widget, helper="Some help")
 
     assert result is widget
+
+
+def test_form_rows_have_buddy_relation(qtbot):
+    panel = FormPanel("Test Panel")
+    qtbot.addWidget(panel)
+    widget = QLineEdit()
+
+    panel.add_field("Label", widget)
+
+    label = next(label for label in panel.findChildren(QLabel) if label.text() == "Label:")
+    assert label.buddy() is widget
 
 
 def test_field_with_helper_no_label_does_not_create_container(qtbot):

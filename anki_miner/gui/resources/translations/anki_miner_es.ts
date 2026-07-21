@@ -64,6 +64,14 @@
         <translation>Actualizar</translation>
     </message>
     <message>
+        <source>Analytics Tab</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>View mining statistics, series difficulty rankings, and progress milestones</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Overview</source>
         <translation>Resumen</translation>
     </message>
@@ -662,8 +670,16 @@ El paquete de audio no se quitó.</translation>
         <translation>Agregar una fuente de audio por URL personalizada</translation>
     </message>
     <message>
+        <source>Move up</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Move up in priority</source>
         <translation>Subir prioridad</translation>
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation type="unfinished">Bajar</translation>
     </message>
     <message>
         <source>Move down in priority</source>
@@ -1222,6 +1238,14 @@ Total de tarjetas creadas: %2</translation>
         <translation>Rellene los campos de acento tonal, frecuencia, definición y lectura que falten en tarjetas ya minadas.</translation>
     </message>
     <message>
+        <source>Restyle mined cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>View mining history &amp; stats</source>
         <translation>Ver historial y estadísticas de minería</translation>
     </message>
@@ -1616,6 +1640,10 @@ Total de tarjetas creadas: %2</translation>
         <translation>Número de notas omitidas por tener vacío el campo Expresión: {count}.</translation>
     </message>
     <message>
+        <source>Settings changed since this scan; re-scan before applying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Apply backfill?</source>
         <translation>¿Completar tarjetas?</translation>
     </message>
@@ -1646,6 +1674,10 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
     <message>
         <source>Cancelling…</source>
         <translation>Cancelando…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation type="unfinished">Se canceló.</translation>
     </message>
 </context><context>
     <name>CondenseTab</name>
@@ -1680,6 +1712,10 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
     <message>
         <source>Cancelled</source>
         <translation>Cancelado</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">Falló — consulte el registro</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -2350,6 +2386,10 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>Error de reimportación</translation>
     </message>
     <message>
+        <source>Scan Failed</source>
+        <translation type="unfinished">Error de escaneo</translation>
+    </message>
+    <message>
         <source>No dictionaries with saved sources were found.
 
 Skipped (no saved source — right-click a dictionary row → Re-import… to seed):
@@ -2484,8 +2524,16 @@ El diccionario no se quitó.</translation>
         <translation>Vuelva a añadir los diccionarios que se encuentran en la carpeta de almacenamiento y que no están en la lista anterior (p. ej., tras restablecer la configuración). No se necesita reimportar.</translation>
     </message>
     <message>
+        <source>Move up</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Move up in priority</source>
         <translation>Subir prioridad</translation>
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation type="unfinished">Bajar</translation>
     </message>
     <message>
         <source>Move down in priority</source>
@@ -2963,6 +3011,34 @@ Esto no se puede deshacer. Tendría que reimportar desde el zip de origen.</tran
         <translation>Examinar...</translation>
     </message>
     <message>
+        <source>file</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a %1 by typing path, browsing, or dragging</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 path</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Path to %1. Type or paste a path, or use browse button</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Browse for %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Opens file dialog to select %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select %1</source>
         <translation>Seleccionar %1</translation>
     </message>
@@ -3311,6 +3387,10 @@ Esto no se puede deshacer. Tendría que reimportar desde el zip de origen.</tran
         <translation>Error de importación</translation>
     </message>
     <message>
+        <source>Scan Failed</source>
+        <translation type="unfinished">Error de escaneo</translation>
+    </message>
+    <message>
         <source>Choose frequency source to re-import</source>
         <translation>Elegir fuente de frecuencia para reimportar</translation>
     </message>
@@ -3361,6 +3441,10 @@ La fuente de frecuencia no se quitó.</translation>
     <message>
         <source>+ Add Source…</source>
         <translation>+ Añadir fuente…</translation>
+    </message>
+    <message>
+        <source>Move up</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Move up (breaks rank ties first)</source>
@@ -3613,6 +3697,38 @@ Add %3 word(s) to your known list?</source>
         <translation>Actualizado a v%1.&lt;br&gt;&lt;br&gt;Vea las novedades: &lt;a href="https://github.com/0xzerolight/anki_miner/releases/latest"&gt;notas de la versión&lt;/a&gt;</translation>
     </message>
     <message>
+        <source>Anki Miner Main Window</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Japanese vocabulary mining tool for creating Anki flashcards from video subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Main Tabs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Navigate between Video, Deck Builder, Audio, Reading, Analytics, Tools, and Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Application Header</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Application title and theme selector</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Status Bar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Shows current operation, statistics, and system status</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>&amp;Tools</source>
         <translation>&amp;Herramientas</translation>
     </message>
@@ -3685,12 +3801,12 @@ Add %3 word(s) to your known list?</source>
         <translation>Acceso directo del escritorio</translation>
     </message>
     <message>
-        <source>Shortcut created.</source>
-        <translation>Acceso directo creado.</translation>
-    </message>
-    <message>
         <source>Failed to create desktop shortcut.</source>
         <translation>No se pudo crear el acceso directo en el escritorio.</translation>
+    </message>
+    <message>
+        <source>Shortcut created.</source>
+        <translation>Acceso directo creado.</translation>
     </message>
     <message>
         <source>Restyle Mined Cards</source>
@@ -4122,6 +4238,10 @@ Puede ajustar esto más tarde en Ajustes → Anki.</translation>
         <source>Ready</source>
         <translation>Listo</translation>
     </message>
+    <message>
+        <source>ETA ~</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>QueueItemWidget</name>
     <message>
@@ -4455,6 +4575,10 @@ Puede ajustar esto más tarde en Ajustes → Anki.</translation>
     <message>
         <source>Mined %1: %2 cards.</source>
         <translation>Minado %1: %2 tarjetas.</translation>
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
+        <translation type="unfinished">Se canceló %1.</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
@@ -4997,10 +5121,9 @@ Los valores importados anulan sus ajustes actuales; se conserva todo lo que no e
         <translation>Expresión regular de subtítulos no válida</translation>
     </message>
     <message>
-        <source>The imported subtitle regex filter is invalid and has been disabled:
+        <source>The imported subtitle regex filter was rejected; the previous filter was kept:
 %1</source>
-        <translation>El filtro de expresión regular de subtítulos importado no es válido y se ha desactivado:
-%1</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>✓ Imported</source>
@@ -5058,6 +5181,12 @@ Los valores importados anulan sus ajustes actuales; se conserva todo lo que no e
         <source>Could not open the known words list: %1</source>
         <translation>No se pudo abrir la lista de palabras conocidas: %1</translation>
     </message>
+    <message>
+        <source>The imported subtitle regex filter is invalid and has been disabled:
+%1</source>
+        <translation type="vanished">El filtro de expresión regular de subtítulos importado no es válido y se ha desactivado:
+%1</translation>
+    </message>
 </context><context>
     <name>SetupWizard</name>
     <message>
@@ -5113,6 +5242,14 @@ Los valores importados anulan sus ajustes actuales; se conserva todo lo que no e
     <message>
         <source>Progress</source>
         <translation>Progreso</translation>
+    </message>
+    <message>
+        <source>Episode Mining Tab</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Process a single video episode to create vocabulary flashcards</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>File Selection</source>
@@ -5292,6 +5429,10 @@ Los valores importados anulan sus ajustes actuales; se conserva todo lo que no e
     <message>
         <source>Cancelled</source>
         <translation>Cancelado</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">Falló — consulte el registro</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -5536,6 +5677,10 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
     <message>
         <source>Cancelled</source>
         <translation>Cancelado</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">Falló — consulte el registro</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -6068,6 +6213,14 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
         <translation>Activo</translation>
     </message>
     <message>
+        <source>Unfavorite</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Favorite</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Click to add to / remove from favorites.</source>
         <translation>Haga clic para añadir a / quitar de favoritos.</translation>
     </message>
@@ -6088,6 +6241,10 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
     <message>
         <source>Skip this version</source>
         <translation>Omitir esta versión</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished">Cerrar</translation>
     </message>
     <message>
         <source>Anki Miner v%1 is available!</source>
