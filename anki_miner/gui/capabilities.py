@@ -209,6 +209,16 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("backfill", "fill fields", "pitch", "frequency", "existing cards", "bulk update", "old cards"),
     ),
     Capability(
+        id="restyle-mined-cards",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Restyle mined cards"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities", "Re-apply the latest Anki Miner styling to cards you mined earlier."
+        ),
+        category=_CAT_CARDS,
+        target=CapabilityTarget("settings", "anki"),
+        keywords=("restyle", "existing cards", "old cards", "card styling", "css", "update styles"),
+    ),
+    Capability(
         id="analytics",
         title=QT_TRANSLATE_NOOP("Capabilities", "View mining history & stats"),
         description=QT_TRANSLATE_NOOP("Capabilities", "See what you've mined over time with history and statistics."),

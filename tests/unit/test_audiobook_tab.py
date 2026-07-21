@@ -23,7 +23,7 @@ patched so ``start()`` is a no-op and constructor kwargs can be inspected.
 
 from __future__ import annotations
 
-import time
+import threading
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -35,6 +35,23 @@ from PyQt6.QtCore import QThread
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
 from anki_miner.models.mining_queue import ReadyItemStatus
+
+
+class _BlockingQueueWorker(QThread):
+    """Real queue-shaped QThread held until the test releases it."""
+
+    def __init__(self, processor: object | None = None) -> None:
+        super().__init__()
+        self.curation_processor = processor
+        self.entered = threading.Event()
+        self.release = threading.Event()
+
+    def cancel(self) -> None:
+        pass
+
+    def run(self) -> None:
+        self.entered.set()
+        self.release.wait()
 
 
 @pytest.fixture
@@ -786,24 +803,19 @@ class TestShutdown:
         # Should not raise.
         tab.shutdown()
 
-    def test_shutdown_timeout_retains_live_worker(self, tab, monkeypatch, qtbot):
-        class _SlowWorker(QThread):
-            def cancel(self) -> None:
-                pass
-
-            def run(self) -> None:
-                time.sleep(0.2)
-
+    def test_shutdown_timeout_retains_live_worker(self, tab, monkeypatch):
         monkeypatch.setattr("anki_miner.gui.widgets._queue_mining_tab_base._SHUTDOWN_WAIT_MS", 10)
-        worker = _SlowWorker()
+        worker = _BlockingQueueWorker()
         tab.worker_thread = worker
         worker.start()
-        qtbot.waitUntil(worker.isRunning, timeout=1000)
 
-        tab.shutdown()
-
-        assert tab.worker_thread is worker
-        assert worker.wait(1000)
+        try:
+            assert worker.entered.wait(1.0)
+            tab.shutdown()
+            assert tab.worker_thread is worker
+        finally:
+            worker.release.set()
+            assert worker.wait(1000)
 
 
 class TestCurationContext:
@@ -898,17 +910,28 @@ class TestUpdateConfig:
         assert tab._processor is None
         assert tab._config_dirty is False
 
-    def test_late_finish_cannot_recache_released_processor(self, tab, test_config, tmp_path):
+    def test_queued_late_finish_cannot_recache_released_processor(self, tab, test_config, monkeypatch, qtbot):
         tab._processor = None
-        _add_pair(tab, tmp_path)
-        tab._on_mine_clicked()
-        worker = tab.worker_thread
         stale_processor = MagicMock(name="StaleProcessor")
-        worker.curation_processor = stale_processor
-        worker.isRunning.return_value = False
+        worker = _BlockingQueueWorker(stale_processor)
+        worker.finished.connect(tab._on_worker_finished)
+        tab.worker_thread = worker
+        worker.start()
+        monkeypatch.setattr("anki_miner.gui.widgets._queue_mining_tab_base._SHUTDOWN_WAIT_MS", 10)
 
-        tab.update_config(replace(test_config, subtitle_offset=2.5))
-        tab._on_worker_finished()
+        try:
+            assert worker.entered.wait(1.0)
+            tab.update_config(replace(test_config, subtitle_offset=2.5))
+            tab.shutdown()
+            assert tab.worker_thread is worker
+
+            worker.release.set()
+            assert worker.wait(1000)
+            assert tab.worker_thread is worker
+            qtbot.waitUntil(lambda: tab.worker_thread is None, timeout=1000)
+        finally:
+            worker.release.set()
+            assert worker.wait(1000)
 
         assert tab._processor is None
         stale_processor.close.assert_called_once()
