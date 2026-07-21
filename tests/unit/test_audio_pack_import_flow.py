@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import threading
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -24,9 +25,9 @@ from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 
-def _run_scan_sync(work, on_done, on_error):
+def _run_scan_sync(work, on_done, on_error, *, pass_cancel_check=False):
     try:
-        on_done(work())
+        on_done(work(lambda: False) if pass_cancel_check else work())
     except Exception as exc:  # noqa: BLE001
         on_error(str(exc))
 
@@ -170,15 +171,13 @@ class TestAddPackNoPacks:
         stub_worker.assert_not_called()
 
     def test_gui_thread_scan_runs_off_thread_and_reports_errors(self, tab, monkeypatch, stub_worker, tmp_path, qtbot):
-        import threading
-
         chosen = tmp_path / "unreadable"
         chosen.mkdir()
         monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(chosen))
         warnings = _capture_warnings(monkeypatch)
         scan_thread: dict[str, int] = {}
 
-        def _fail_scan(_path):
+        def _fail_scan(_path, *, cancel_check=None):
             scan_thread["id"] = threading.get_ident()
             raise OSError("permission denied")
 
@@ -197,6 +196,38 @@ class TestAddPackNoPacks:
         assert scan_thread["id"] != threading.get_ident()
         assert "permission denied" in warnings[0][1]
         stub_worker.assert_not_called()
+
+    def test_cancelled_inflight_scan_stops_before_later_entries(self, tab, monkeypatch, tmp_path):
+        chosen = tmp_path / "many-packs"
+        for name in ("a", "b", "c"):
+            (chosen / name).mkdir(parents=True)
+        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(chosen))
+
+        entered = threading.Event()
+        release = threading.Event()
+        visited: list[str] = []
+
+        def _detect(path, *, cancel_check=None):
+            visited.append(path.name)
+            if path.name == "a":
+                entered.set()
+                assert release.wait(3)
+            return None
+
+        monkeypatch.setattr("anki_miner.services.audio_packs.formats.detect_pack_format", _detect)
+
+        del tab._audio_pack_import_flow._run_latest_scan
+        tab._audio_pack_import_flow.add_pack()
+        worker = tab._audio_pack_import_flow._scan_worker
+        assert worker is not None
+        try:
+            assert entered.wait(3)
+            worker.cancel()
+        finally:
+            release.set()
+        assert worker.wait(3000)
+
+        assert visited == ["a"]
 
 
 # ---------------------------------------------------------------------------

@@ -30,9 +30,9 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 
-def _run_scan_sync(work, on_done, on_error):
+def _run_scan_sync(work, on_done, on_error, *, pass_cancel_check=False):
     try:
-        on_done(work())
+        on_done(work(lambda: False) if pass_cancel_check else work())
     except Exception as exc:  # noqa: BLE001
         on_error(str(exc))
 
@@ -303,7 +303,7 @@ class TestAudioPackBoundedJoin:
         monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(pack_dir))
         monkeypatch.setattr(
             "anki_miner.gui.controllers.audio_pack_import_flow.scan_importable_packs",
-            lambda _root: [(pack_dir, "nhk16")],
+            lambda _root, *, cancel_check=None: [(pack_dir, "nhk16")],
         )
         return new
 

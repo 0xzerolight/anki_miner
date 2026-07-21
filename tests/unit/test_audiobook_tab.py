@@ -13,7 +13,7 @@ under test:
 * Mine instantiates :class:`AudiobookQueueWorker` over a READY-items
   snapshot.
 * Per-item signals update the queue model + row widgets + progress widget.
-* Mid-run removal/clear route dropped items to ``worker.skip_item``.
+* Mid-run removal/clear route dropped items to ``worker.try_skip_item``.
 * ``shutdown()`` releases any curation dialog, then cancels and joins.
 * ``update_config()`` rebuilds the processor only when no run is active.
 
@@ -683,8 +683,20 @@ class TestRemoveAndClear:
 
         tab._on_remove_clicked(item2)
 
-        worker.skip_item.assert_called_once_with(item2)
+        worker.try_skip_item.assert_called_once_with(item2)
         assert item2 not in tab._queue.all_items()
+
+    def test_remove_refused_by_worker_claim_preserves_row(self, tab, tmp_path):
+        _add_pair(tab, tmp_path, "vol1")
+        item2 = _add_pair(tab, tmp_path, "vol2")
+        tab._on_mine_clicked()
+        worker = tab.worker_thread
+        worker.try_skip_item.return_value = False
+
+        tab._on_remove_clicked(item2)
+
+        assert item2 in tab._queue.all_items()
+        assert tab.list_widget.count() == 2
 
     def test_clear_removes_non_processing(self, tab, tmp_path):
         _add_pair(tab, tmp_path, "vol1")
@@ -708,7 +720,7 @@ class TestRemoveAndClear:
 
         assert tab._queue.all_items() == [item1]
         assert tab.list_widget.count() == 1
-        skipped = [c.args[0] for c in worker.skip_item.call_args_list]
+        skipped = [c.args[0] for c in worker.try_skip_item.call_args_list]
         assert skipped == [item2, item3]
 
     def test_clear_resets_progress_widget_when_idle(self, tab, tmp_path):

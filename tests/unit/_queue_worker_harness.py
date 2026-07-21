@@ -13,6 +13,7 @@ different arity and does not share this shape.
 
 from __future__ import annotations
 
+import threading
 from typing import Any, Callable
 from unittest.mock import MagicMock
 
@@ -81,3 +82,47 @@ def make_queue_worker_factory(
         )
 
     return _make
+
+
+def race_claim_against_skip(worker: Any, item: Any, on_skipped: Callable[[], None]) -> bool:
+    """Race a worker claim against GUI removal while both await the claim lock."""
+    errors: list[BaseException] = []
+    skip_result: list[bool] = []
+    worker_started = threading.Event()
+    clear_started = threading.Event()
+
+    def _run_worker() -> None:
+        worker_started.set()
+        try:
+            worker.run()
+        except BaseException as exc:  # pragma: no cover - re-raised on caller thread
+            errors.append(exc)
+
+    def _clear_item() -> None:
+        clear_started.set()
+        try:
+            skipped = worker.try_skip_item(item)
+            skip_result.append(skipped)
+            if skipped:
+                on_skipped()
+        except BaseException as exc:  # pragma: no cover - re-raised on caller thread
+            errors.append(exc)
+
+    worker._skip_lock.acquire()
+    worker_thread = threading.Thread(target=_run_worker)
+    clear_thread = threading.Thread(target=_clear_item)
+    try:
+        worker_thread.start()
+        clear_thread.start()
+        assert worker_started.wait(1)
+        assert clear_started.wait(1)
+    finally:
+        worker._skip_lock.release()
+
+    worker_thread.join(3)
+    clear_thread.join(3)
+    assert not worker_thread.is_alive()
+    assert not clear_thread.is_alive()
+    assert not errors
+    assert len(skip_result) == 1
+    return skip_result[0]

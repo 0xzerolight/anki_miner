@@ -854,6 +854,23 @@ class TestScanImportablePacks:
     def test_empty_directory(self, tmp_path):
         assert scan_importable_packs(tmp_path) == []
 
+    def test_cancel_stops_before_scanning_later_children(self, tmp_path, monkeypatch):
+        for name in ("a", "b", "c"):
+            (tmp_path / name).mkdir()
+        cancelled = False
+        visited: list[str] = []
+
+        def _detect(path, *, cancel_check=None):
+            nonlocal cancelled
+            visited.append(path.name)
+            cancelled = True
+            return None
+
+        monkeypatch.setattr("anki_miner.services.audio_packs.formats.detect_pack_format", _detect)
+
+        assert scan_importable_packs(tmp_path, cancel_check=lambda: cancelled) == []
+        assert visited == ["a"]
+
     def test_canonical_user_files_parent_yields_only_children(self, tmp_path):
         """A canonical user_files/ parent must yield ONLY its child packs.
 

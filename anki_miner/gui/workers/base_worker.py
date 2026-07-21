@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import threading
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
@@ -122,17 +122,28 @@ class SingleCallWorker(CancellableWorker):
     # Carries the callable's return value — typed as object (see class docstring).
     result_ready = pyqtSignal(object)
 
-    def __init__(self, work: Callable[[], object], *, error_prefix: str = "", parent=None) -> None:
+    def __init__(
+        self,
+        work: Callable[[], object] | Callable[[Callable[[], bool]], object],
+        *,
+        error_prefix: str = "",
+        pass_cancel_check: bool = False,
+        parent=None,
+    ) -> None:
         """Initialize the single-call worker.
 
         Args:
-            work: Zero-arg callable executed in the background thread.
+            work: Callable executed in the background thread. With
+                ``pass_cancel_check=True``, it receives a live cancellation
+                predicate for checkpoints inside long work.
             error_prefix: Prepended to the exception text on the error signal.
+            pass_cancel_check: Pass :meth:`check_cancelled` to ``work``.
             parent: Optional parent QObject for lifetime management.
         """
         super().__init__(parent)
         self._work = work
         self._error_prefix = error_prefix
+        self._pass_cancel_check = pass_cancel_check
 
     def run(self) -> None:
         """Execute the callable in the background thread and emit the result."""
@@ -140,7 +151,12 @@ class SingleCallWorker(CancellableWorker):
             if self.check_cancelled():
                 return
 
-            result = self._work()
+            if self._pass_cancel_check:
+                cancellable_work = cast(Callable[[Callable[[], bool]], object], self._work)
+                result = cancellable_work(self.check_cancelled)
+            else:
+                work = cast(Callable[[], object], self._work)
+                result = work()
 
             if not self.check_cancelled():
                 self.result_ready.emit(result)

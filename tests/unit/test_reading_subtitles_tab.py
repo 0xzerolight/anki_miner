@@ -153,7 +153,7 @@ class TestMidRunSkip:
         tab.file_list.setCurrentRow(1)
         tab._on_remove_selected_clicked()
 
-        worker.skip_item.assert_called_once_with(item2)
+        worker.try_skip_item.assert_called_once_with(item2)
         assert [p.name for p in tab.listed_paths()] == ["Ep01.srt"]
 
     def test_remove_leaves_in_flight_row_in_place(self, tab, tmp_path):
@@ -166,7 +166,7 @@ class TestMidRunSkip:
         tab._on_remove_selected_clicked()
 
         assert [p.name for p in tab.listed_paths()] == ["Ep01.srt"]
-        worker.skip_item.assert_not_called()
+        worker.try_skip_item.assert_not_called()
 
     def test_remove_after_item_finished_is_removable(self, tab, tmp_path):
         _mine(tab, [_sub_file(tmp_path, "Ep01.srt"), _sub_file(tmp_path, "Ep02.srt")])
@@ -178,7 +178,7 @@ class TestMidRunSkip:
         tab.file_list.setCurrentRow(0)
         tab._on_remove_selected_clicked()
 
-        worker.skip_item.assert_called_once_with(item1)
+        worker.try_skip_item.assert_called_once_with(item1)
         assert [p.name for p in tab.listed_paths()] == ["Ep02.srt"]
 
     def test_clear_during_run_preserves_in_flight_and_skips_rest(self, tab, tmp_path):
@@ -198,21 +198,21 @@ class TestMidRunSkip:
         tab._on_clear_clicked()
 
         assert [p.name for p in tab.listed_paths()] == ["Ep01.srt"]
-        skipped = {c.args[0] for c in worker.skip_item.call_args_list}
+        skipped = {c.args[0] for c in worker.try_skip_item.call_args_list}
         assert skipped == {item2, item3}
 
-    def test_reading_running_row_not_dropped_by_tail_clear(self, tab, tmp_path):
-        """Worker-owned PROCESSING state protects a row before the GUI slot runs."""
+    def test_clear_refused_by_worker_claim_preserves_row(self, tab, tmp_path):
+        """A claim won after Clear's status read, so refused skip keeps the row."""
         _mine(tab, [_sub_file(tmp_path, "Ep01.srt"), _sub_file(tmp_path, "Ep02.srt")])
         worker = tab.worker_thread
         item1, item2 = tab._run_items
-        item1.status = tab._status_processing
+        worker.try_skip_item.side_effect = lambda item: item is item2
         assert tab._running_item is None
 
         tab._on_clear_clicked()
 
         assert [p.name for p in tab.listed_paths()] == ["Ep01.srt"]
-        worker.skip_item.assert_called_once_with(item2)
+        assert [c.args[0] for c in worker.try_skip_item.call_args_list] == [item2, item1]
 
 
 class TestDragDrop:

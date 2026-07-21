@@ -121,6 +121,28 @@ def test_single_call_result_suppressed_when_cancelled_during_work():
     assert results.calls == []
 
 
+def test_single_call_can_pass_live_cancellation_predicate():
+    """Long callables can stop work instead of only suppressing publication."""
+    worker_box: dict = {}
+    observed: list[bool] = []
+
+    def _work(is_cancelled):
+        observed.append(is_cancelled())
+        worker_box["w"].cancel()
+        observed.append(is_cancelled())
+        return "cancelled"
+
+    worker = SingleCallWorker(_work, pass_cancel_check=True)
+    worker_box["w"] = worker
+    results = _Capture()
+    worker.result_ready.connect(results)
+
+    worker.run()
+
+    assert observed == [False, True]
+    assert results.calls == []
+
+
 def test_single_call_error_suppressed_when_cancelled_during_failure():
     """A raise coinciding with a cancel stays silent — no error emit."""
     worker_box: dict = {}

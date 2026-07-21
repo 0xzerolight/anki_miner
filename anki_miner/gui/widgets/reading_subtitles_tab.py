@@ -287,7 +287,8 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
             if worker is not None and queue_item is not None:
                 if queue_item.status == self._status_processing:
                     continue  # leave the row currently being mined in place
-                worker.skip_item(queue_item)
+                if not worker.try_skip_item(queue_item):
+                    continue
             self.file_list.takeItem(self.file_list.row(item))
         self._recompute_buttons()
 
@@ -311,8 +312,8 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
             queue_item = list_item.data(_ITEM_ROLE)
             if queue_item is not None and queue_item.status == self._status_processing:
                 continue  # keep the row being mined
-            if queue_item is not None:
-                worker.skip_item(queue_item)
+            if queue_item is not None and not worker.try_skip_item(queue_item):
+                continue
             self.file_list.takeItem(row)
         self._recompute_buttons()
 
@@ -390,7 +391,7 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
             row_items = [ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind) for ref in refs]
             items.extend(row_items)
             # Stamp the list row with its queue item so a mid-run Remove/Clear
-            # can route it to worker.skip_item. Subtitle files always classify
+            # can route it to worker.try_skip_item. Subtitle files always classify
             # to exactly one ref (detector._subtitle_ref), so row↔item is 1:1.
             list_item = self.file_list.item(row)
             if list_item is not None and row_items:

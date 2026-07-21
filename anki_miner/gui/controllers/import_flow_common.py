@@ -64,9 +64,11 @@ class ModalImportFlowMixin:
 
     def _run_latest_scan(
         self,
-        work: Callable[[], object],
+        work: Callable[[], object] | Callable[[Callable[[], bool]], object],
         on_done: Callable[[object], None],
         on_error: Callable[[str], None],
+        *,
+        pass_cancel_check: bool = False,
     ) -> None:
         """Run bounded discovery work off-thread and ignore superseded results."""
         self._scan_generation += 1
@@ -85,7 +87,13 @@ class ModalImportFlowMixin:
                 with contextlib.suppress(RuntimeError):
                     on_error(message)
 
-        self._scan_worker = run_off_thread(self._parent, work, _on_done, _on_error)
+        self._scan_worker = run_off_thread(
+            self._parent,
+            work,
+            _on_done,
+            _on_error,
+            pass_cancel_check=pass_cancel_check,
+        )
 
     def _run_modal_import(
         self,

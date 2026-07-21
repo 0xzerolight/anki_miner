@@ -139,7 +139,15 @@ class AudioPackImportFlow(ModalImportFlowMixin):
                     tr_format(QCoreApplication.translate("AudioPackImportFlow", "Could not scan folder: %1"), message),
                 )
 
-            self._run_latest_scan(lambda: scan_importable_packs(Path(chosen_dir)), _on_done, _on_error)
+            self._run_latest_scan(
+                lambda is_cancelled: scan_importable_packs(
+                    Path(chosen_dir),
+                    cancel_check=is_cancelled,
+                ),
+                _on_done,
+                _on_error,
+                pass_cancel_check=True,
+            )
             return
 
         chosen_dir, packs = _scan_result

@@ -48,11 +48,12 @@ _LIVE_OFF_THREAD_WORKERS: set[QThread] = set()
 
 def run_off_thread(
     parent: QObject,
-    work: Callable[[], object],
+    work: Callable[[], object] | Callable[[Callable[[], bool]], object],
     on_done: Callable[[object], None],
     on_error: Callable[[str], None] | None = None,
     *,
     error_prefix: str = "",
+    pass_cancel_check: bool = False,
 ) -> SingleCallWorker:
     """Run ``work`` off the GUI thread and deliver its result on the GUI thread.
 
@@ -60,17 +61,25 @@ def run_off_thread(
         parent: GUI-thread QObject that owns the worker. Its
             ``_off_thread_workers`` set (created lazily) holds a live
             reference until the worker finishes, preventing premature GC.
-        work: Zero-arg blocking callable executed on the worker thread.
+        work: Blocking callable executed on the worker thread. With
+            ``pass_cancel_check=True``, it receives a live cancellation
+            predicate for checkpoints inside long work.
         on_done: Called with ``work()``'s return value on the GUI thread.
         on_error: Called with ``f"{error_prefix}{exc}"`` on failure. When
             ``None``, the error string is logged at WARNING instead.
         error_prefix: Prepended to the exception text on failure.
+        pass_cancel_check: Pass the worker's cancellation predicate to ``work``.
 
     Returns:
         The started :class:`SingleCallWorker` (callers may keep it to
         ``cancel()``).
     """
-    worker = SingleCallWorker(work, error_prefix=error_prefix, parent=parent)
+    worker = SingleCallWorker(
+        work,
+        error_prefix=error_prefix,
+        pass_cancel_check=pass_cancel_check,
+        parent=parent,
+    )
 
     worker.result_ready.connect(on_done)
     if on_error is None:
