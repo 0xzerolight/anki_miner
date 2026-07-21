@@ -197,6 +197,26 @@ class TestCacheHit:
         assert second == first
         assert second.is_file()
 
+    def test_growing_audio_cache_does_not_rescan(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        entries = [(f"word{i}", f"reading{i}", f"audio{i}.mp3") for i in range(32)]
+        db, pack_dir = _build_pack(tmp_path, entries)
+        cache_dir = tmp_path / "cache"
+        fetcher = _make_fetcher(db, pack_dir, cache_dir)
+
+        scans = 0
+        real_iterdir = Path.iterdir
+
+        def _counted_iterdir(path):
+            nonlocal scans
+            if path == cache_dir:
+                scans += 1
+            return real_iterdir(path)
+
+        monkeypatch.setattr(Path, "iterdir", _counted_iterdir)
+
+        assert all(fetcher.fetch(word, reading) is not None for word, reading, _file in entries)
+        assert scans <= 1
+
 
 # ---------------------------------------------------------------------------
 # Misses

@@ -95,3 +95,13 @@ def test_cache_key_distinguishes_id_sets(monkeypatch):
     assert surnames._blacklist is not places._blacklist
     assert surnames.is_excluded("田中") and not surnames.is_excluded("渋谷")
     assert places.is_excluded("渋谷") and not places.is_excluded("田中")
+
+
+def test_wordset_union_cache_bounded(monkeypatch):
+    wordset_service._UNION_CACHE.clear()
+    monkeypatch.setattr(wordset_service, "_UNION_CACHE_MAX_ENTRIES", 2)
+
+    for enabled_ids in (("surnames",), ("place-names",), ("surnames", "place-names")):
+        WordsetService(enabled_ids=enabled_ids, resource_dir=FIXTURES).load()
+
+    assert len(wordset_service._UNION_CACHE) == 2

@@ -9,7 +9,15 @@ import sqlite3
 from collections.abc import Callable
 from pathlib import Path
 
-from anki_miner.services.audio_fetch_common import first_candidate_hit as _first_candidate_hit
+from anki_miner.services.audio_fetch_common import (
+    find_cached_by_stem as _find_cached_by_stem,
+)
+from anki_miner.services.audio_fetch_common import (
+    first_candidate_hit as _first_candidate_hit,
+)
+from anki_miner.services.audio_fetch_common import (
+    record_cached_path as _record_cached_path,
+)
 from anki_miner.services.audio_packs import storage
 from anki_miner.utils.file_utils import safe_filename
 
@@ -88,26 +96,10 @@ class LocalAudioPackFetcher:
         if cancelled_check is not None and cancelled_check():
             return None
 
-        # 1. Cache hit: match any extension — suffix varies by pack format.
-        #    iterdir + startswith instead of glob: mined forms may contain
-        #    glob metacharacters ([], *, ?) that would corrupt a glob pattern.
-        #    Skip leftover .part staging files (e.g. stem.mp3.part from a
-        #    crashed prior copy); they contain partial/garbage data.
+        # 1. Cache hit: shared index matches any extension and skips leftover
+        #    .part staging files (e.g. stem.mp3.part from a crashed prior copy).
         stem = safe_filename(f"{self._pack_id}_{mined_form}_{reading}")
-        prefix = f"{stem}."
-        try:
-            existing = next(
-                (
-                    p
-                    for p in self._cache_dir.iterdir()
-                    if p.name.startswith(prefix) and not p.name.endswith(".part") and p.is_file()
-                ),
-                None,
-            )
-        except OSError:
-            # Cache dir missing (first fetch) or unreadable — fall through to
-            # the index lookup; the copy step creates the dir as needed.
-            existing = None
+        existing = _find_cached_by_stem(self._cache_dir, stem)
         if existing is not None:
             return existing
 
@@ -143,6 +135,7 @@ class LocalAudioPackFetcher:
                 part_path = cache_path.with_suffix(orig_suffix + ".part")
                 shutil.copy2(candidate, part_path)
                 os.replace(part_path, cache_path)
+                _record_cached_path(self._cache_dir, cache_path)
             except OSError as exc:
                 logger.debug("LocalAudioPackFetcher: copy failed for %s: %s", candidate, exc)
                 return None

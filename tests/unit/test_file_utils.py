@@ -1,5 +1,8 @@
 """Tests for file_utils module."""
 
+import subprocess
+import sys
+
 import pytest
 
 from anki_miner.utils.file_utils import ensure_directory, safe_filename
@@ -115,3 +118,21 @@ class TestSafeFilename:
         result = safe_filename(long_name)
         assert len(result.encode("utf-8")) <= 255
         assert result.endswith(".mp3")
+
+    def test_safe_filename_all_extension_bounded_no_hang(self):
+        """An extension over 255 bytes must terminate and fit the byte cap."""
+        code = (
+            "from anki_miner.utils.file_utils import safe_filename; "
+            "result = safe_filename('x.' + '界' * 100); "
+            "print(len(result.encode('utf-8')))"
+        )
+
+        completed = subprocess.run(
+            [sys.executable, "-c", code],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+
+        assert 0 < int(completed.stdout) <= 255
