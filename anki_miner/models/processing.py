@@ -24,6 +24,32 @@ class MiningOutcome(Enum):
     FAILED = "failed"
 
 
+class TerminalOutcome(Enum):
+    """Whole-run terminal outcome shared by workers and tabs."""
+
+    SUCCESS = "success"
+    PARTIAL = "partial"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+def classify_terminal_outcome(
+    succeeded: int,
+    failed: int,
+    *,
+    cancelled: bool = False,
+    fatal: bool = False,
+) -> TerminalOutcome:
+    """Classify whole-run counts with cancel/fatal precedence."""
+    if cancelled:
+        return TerminalOutcome.CANCELLED
+    if fatal:
+        return TerminalOutcome.FAILED
+    if failed:
+        return TerminalOutcome.PARTIAL if succeeded else TerminalOutcome.FAILED
+    return TerminalOutcome.SUCCESS
+
+
 def classify_result(result: object | None) -> MiningOutcome:
     """Classify a non-raising ``process_*`` return into a :class:`MiningOutcome`.
 

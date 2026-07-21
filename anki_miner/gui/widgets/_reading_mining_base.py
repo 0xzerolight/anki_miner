@@ -72,6 +72,7 @@ from anki_miner.exceptions import SetupError
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._queue_mining_tab_base import _QueueMiningTabBase, _QueueRunStrings
 from anki_miner.gui.workers.reading_queue_worker import ReadingQueueWorker
+from anki_miner.models import MiningOutcome, TerminalOutcome, classify_result, classify_terminal_outcome
 from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.services.reading import detector
 from anki_miner.utils.i18n import tr_format
@@ -161,6 +162,9 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
     def _reset_run_state(self, total: int) -> None:
         """Reset the whole-run cards accumulator."""
         self._run_cards_total = 0
+        self._run_succeeded = 0
+        self._run_failed_count = 0
+        self._run_cancelled_count = 0
 
     # ------------------------------------------------------------------
     # Reading-specific helpers
@@ -197,9 +201,17 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
             )
             return None
 
-    def _record_item_result(self, result: object) -> None:
-        """Accumulate per-run summary counts from a successful item result."""
-        self._run_cards_total += int(getattr(result, "cards_created", 0) or 0)
+    def _record_item_outcome(self, result: object, error: object) -> MiningOutcome:
+        """Classify and accumulate one worker item outcome."""
+        outcome = MiningOutcome.FAILED if error is not None else classify_result(result)
+        if outcome is MiningOutcome.SUCCESS:
+            self._run_cards_total += int(getattr(result, "cards_created", 0) or 0)
+            self._run_succeeded += 1
+        elif outcome is MiningOutcome.CANCELLED:
+            self._run_cancelled_count += 1
+        else:
+            self._run_failed_count += 1
+        return outcome
 
     def _apply_terminal_bar_state(self, widget) -> None:
         """Set the run's terminal bar state: cancel -> failed -> success.
@@ -208,10 +220,16 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
         — never ``_run_items``, which is already cleared when the cleanup hook
         calls this.
         """
-        if getattr(self, "_cancel_requested", False):
+        outcome = classify_terminal_outcome(
+            self._run_succeeded,
+            self._run_failed_count,
+            cancelled=getattr(self, "_cancel_requested", False) or bool(self._run_cancelled_count),
+            fatal=getattr(self, "_run_failed", False),
+        )
+        if outcome is TerminalOutcome.CANCELLED:
             widget.reset()
             widget.set_status(QCoreApplication.translate("ReadingTab", "Cancelled"))
-        elif getattr(self, "_run_failed", False):
+        elif outcome in (TerminalOutcome.PARTIAL, TerminalOutcome.FAILED):
             widget.reset()
             widget.set_status(QCoreApplication.translate("ReadingTab", "Failed — see log"))
         else:

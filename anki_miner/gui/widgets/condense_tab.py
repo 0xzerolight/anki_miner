@@ -142,6 +142,7 @@ class CondenseTab(_ToolTabBase):
             cancel=self.tr("Cancel"),
             cancelling=self.tr("Cancelling…"),
             cancelled=self.tr("Cancelled"),
+            failed=self.tr("Failed — see log"),
             complete_template=self.tr("Complete — %1 files processed"),
             select_output_folder=self.tr("Select Output Folder"),
             output_default=self.tr("Next to source"),
@@ -791,6 +792,7 @@ class CondenseTab(_ToolTabBase):
         worker.file_finished.connect(self._on_file_finished)
         worker.file_skipped.connect(self._on_file_skipped)
         worker.queue_finished.connect(self._on_queue_finished)
+        worker.error.connect(self._on_run_error)
         # Lifecycle: free the QThread on real thread exit (not on queue_finished,
         # which fires just before the thread ends). Clears the handle so the
         # reentrancy guard and iter_close_workers see no stale worker.

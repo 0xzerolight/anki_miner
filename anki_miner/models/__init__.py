@@ -6,9 +6,11 @@ from .processing import (
     CANCELLED_ERROR,
     MiningOutcome,
     ProcessingResult,
+    TerminalOutcome,
     ValidationIssue,
     ValidationResult,
     classify_result,
+    classify_terminal_outcome,
     result_error_text,
 )
 from .stats import DifficultyEntry, Milestone, MiningSession, OverallStats
@@ -22,7 +24,9 @@ __all__ = [
     "CardPayload",
     "ProcessingResult",
     "MiningOutcome",
+    "TerminalOutcome",
     "classify_result",
+    "classify_terminal_outcome",
     "result_error_text",
     "CANCELLED_ERROR",
     "ValidationResult",

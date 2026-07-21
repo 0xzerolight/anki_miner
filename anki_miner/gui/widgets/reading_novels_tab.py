@@ -49,6 +49,7 @@ from anki_miner.gui.widgets.base import field_label_width
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
+from anki_miner.models import MiningOutcome, result_error_text
 from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading_queue import ReadingQueueItem
 from anki_miner.services.reading import detector
@@ -445,9 +446,9 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         if item is None:
             return
 
-        if error is None:
+        outcome = self._record_item_outcome(result, error)
+        if outcome is MiningOutcome.SUCCESS:
             cards = int(getattr(result, "cards_created", 0) or 0)
-            self._record_item_result(result)
             self.log_widget.append_success(tr_format(self.tr("Mined %1: %2 cards."), item.title, cards))
             if self._presenter is not None:
                 # Presenter forwarding is best-effort — the worker has already
@@ -455,8 +456,11 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
                 # down the run.
                 with contextlib.suppress(Exception):
                     self._presenter.show_processing_result(result)  # type: ignore[arg-type]
+        elif outcome is MiningOutcome.CANCELLED:
+            self.log_widget.append_info(tr_format(self.tr("Cancelled %1."), item.title))
         else:
-            self.log_widget.append_error(tr_format(self.tr("Failed %1: %2."), item.title, error))
+            message = str(error) if error is not None else result_error_text(result)
+            self.log_widget.append_error(tr_format(self.tr("Failed %1: %2."), item.title, message))
 
         # Bar-only advance over items that reached a terminal state — keeps the
         # composed fill correct when a book errors mid-run. Count-unit writes

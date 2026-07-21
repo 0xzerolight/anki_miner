@@ -26,9 +26,10 @@ import logging
 from collections.abc import Sequence
 from typing import Any
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
+from anki_miner.models import classify_terminal_outcome
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ class FileQueueWorker(CancellableWorker):
     #: (idx, out_path) — emitted when the output already exists and overwrite is False.
     file_skipped = pyqtSignal(int, object)
     #: Emitted once after all items have been processed (or skipped / errored).
-    queue_finished = pyqtSignal()
+    queue_finished = pyqtSignal(object)
 
     #: Exceptions that abort the WHOLE queue when raised by :meth:`_process_item`
     #: (a missing tool/encoder dooms every remaining item). The loop reports the
@@ -69,15 +70,39 @@ class FileQueueWorker(CancellableWorker):
         # Set when a _FATAL_QUEUE_EXCEPTIONS member fires: stops the queue
         # without poisoning is_cancelled (a tool error, not a user cancel).
         self._stop_queue = False
+        self._succeeded_count = 0
+        self._failed_count = 0
+        self._fatal_error = False
+        self.file_finished.connect(self._record_file_finished, Qt.ConnectionType.DirectConnection)  # type: ignore[call-arg]
+        self.file_skipped.connect(self._record_file_skipped, Qt.ConnectionType.DirectConnection)  # type: ignore[call-arg]
 
     def run(self) -> None:
         """Process every queued item on the background thread."""
         try:
             self._process_queue()
-        except Exception:  # noqa: BLE001 - never escape QThread.run
+        except Exception as exc:  # noqa: BLE001 - never escape QThread.run
+            self._fatal_error = True
             logger.exception("%s queue run failed", type(self).__name__)
+            self.error.emit(str(exc))
         finally:
-            self.queue_finished.emit()
+            outcome = classify_terminal_outcome(
+                self._succeeded_count,
+                self._failed_count,
+                cancelled=self.is_cancelled,
+                fatal=self._fatal_error,
+            )
+            self.queue_finished.emit(outcome)
+
+    @pyqtSlot(int, object, object)
+    def _record_file_finished(self, _idx: int, _out_path: object, error: object) -> None:
+        if error:
+            self._failed_count += 1
+        else:
+            self._succeeded_count += 1
+
+    @pyqtSlot(int, object)
+    def _record_file_skipped(self, _idx: int, _out_path: object) -> None:
+        self._succeeded_count += 1
 
     def _process_queue(self) -> None:
         for idx, item in enumerate(self._queue_items()):
@@ -94,6 +119,7 @@ class FileQueueWorker(CancellableWorker):
                 # _cancel_event: is_cancelled must stay False so callers can tell
                 # a tool error from a user cancel.
                 self.file_finished.emit(idx, None, str(exc))
+                self._fatal_error = True
                 self._stop_queue = True
             except Exception as exc:  # noqa: BLE001 - per-item QThread boundary
                 logger.exception("%s item %d failed", type(self).__name__, idx)
