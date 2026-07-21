@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import os
 import stat
+import types
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -206,6 +207,21 @@ class TestConfigureLogging:
 
         assert stat.S_IMODE(config_path.stat().st_mode) == 0o600
         assert stat.S_IMODE(log_path.stat().st_mode) == 0o600
+
+    def test_non_posix_log_open_skips_chmod(self, tmp_path, monkeypatch):
+        import anki_miner.gui.app as app
+
+        chmod = MagicMock()
+        monkeypatch.setattr(app, "os", types.SimpleNamespace(name="nt", chmod=chmod))
+        log_path = tmp_path / "app.log"
+        handler = app._OwnerOnlyRotatingFileHandler(log_path, delay=True)
+        try:
+            handler.emit(logging.makeLogRecord({"levelno": logging.ERROR, "msg": "create-log-file"}))
+        finally:
+            handler.close()
+
+        assert log_path.exists()
+        chmod.assert_not_called()
 
     def test_root_logger_level_is_warning(self, tmp_path):
         """_configure_logging sets root logger to WARNING (not DEBUG)."""

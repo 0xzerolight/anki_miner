@@ -185,7 +185,12 @@ class CustomAudioFetcher:
         except (requests.RequestException, OSError, ValueError) as exc:
             # ValueError covers json.JSONDecodeError (non-JSON body).
             self._failure_counts["non_audio"] += 1
-            logger.debug("custom_json fetch failed for %s: %s", _redact_url_for_log(url), exc)
+            logger.debug(
+                "custom_json fetch failed for %s: %s: %s",
+                _redact_url_for_log(url),
+                type(exc).__name__,
+                _redact_url_for_log(str(exc)),
+            )
             return []
 
         if not isinstance(data, dict) or data.get("type") != "audioSourceList":

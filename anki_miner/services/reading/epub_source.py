@@ -30,7 +30,7 @@ import posixpath
 import re
 import zipfile
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import unquote, urlsplit
 
 from lxml import etree, html  # type: ignore[import-untyped]
 
@@ -263,8 +263,14 @@ def _check_encryption(zf: zipfile.ZipFile, names: set[str], epub_path: Path) -> 
                 algorithm = sub.get("Algorithm")
             elif name == "cipherreference" and uri is None:
                 uri = sub.get("URI")
-        if algorithm in _FONT_OBFUSCATION_ALGS and uri and unquote(uri).lower().endswith(_FONT_EXTS):
-            continue
+        if algorithm in _FONT_OBFUSCATION_ALGS and uri:
+            try:
+                uri_path = unquote(urlsplit(uri).path).lower()
+            except ValueError:
+                pass
+            else:
+                if uri_path.endswith(_FONT_EXTS):
+                    continue
         raise SetupError(unsupported_message)
     if not found_encrypted_data:
         raise SetupError(unsupported_message)

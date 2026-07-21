@@ -104,7 +104,7 @@ def _nav(entries: list[tuple[str, str]]) -> str:
 
 def _ncx(entries: list[tuple[str, str]]) -> str:
     pts = "\n".join(
-        f'<navPoint id="np{n}"><navLabel><text>{lbl}</text></navLabel>' f'<content src="{src}"/></navPoint>'
+        f'<navPoint id="np{n}"><navLabel><text>{lbl}</text></navLabel><content src="{src}"/></navPoint>'
         for n, (src, lbl) in enumerate(entries)
     )
     return (
@@ -276,11 +276,21 @@ def test_font_obfuscation_encryption_proceeds(tmp_path: Path) -> None:
     [
         ("http://www.idpf.org/2008/embedding", "OEBPS/fonts/gothic.otf", True),
         ("http://www.idpf.org/2008/embedding", "OEBPS/ch1.xhtml", False),
+        ("http://www.idpf.org/2008/embedding", "OEBPS/ch1.xhtml#.otf", False),
+        ("http://www.idpf.org/2008/embedding", "OEBPS/ch1.xhtml?x=.otf", False),
         ("http://www.w3.org/2001/04/xmlenc#aes256-cbc", "OEBPS/fonts/gothic.otf", False),
         ("http://www.w3.org/2001/04/xmlenc#aes256-cbc", "OEBPS/ch1.xhtml", False),
         (None, None, False),
     ],
-    ids=("allowed-font", "allowed-xhtml", "other-font", "other-xhtml", "malformed-xml"),
+    ids=(
+        "allowed-font",
+        "allowed-xhtml",
+        "fragment-disguised-xhtml",
+        "query-disguised-xhtml",
+        "other-font",
+        "other-xhtml",
+        "malformed-xml",
+    ),
 )
 def test_epub_encryption_requires_allowed_algorithm_and_font_uri(
     tmp_path: Path,

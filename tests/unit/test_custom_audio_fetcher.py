@@ -43,9 +43,11 @@ def _json_response(payload: object, status: int = 200, url: str = "http://localh
 def test_audio_fetch_url_secret_never_logged(tmp_path, caplog):
     direct_url = "https://direct-user:direct-pass@example.test/audio.mp3?token=direct#fragment"
     json_url = "https://json-user:json-pass@example.test/list/word?token=json#fragment"
+    direct_error_url = "https://error-user:error-pass@failure.test/direct?error-token=direct#error-fragment"
+    json_error_url = "https://json-error-user:json-error-pass@failure.test/json?error-token=json#error-fragment"
 
     direct_session = MagicMock()
-    direct_session.get.side_effect = requests.ConnectionError("down")
+    direct_session.get.side_effect = requests.ConnectionError(direct_error_url)
     fetcher = CustomAudioFetcher(
         url_template=json_url,
         kind="custom_json",
@@ -54,7 +56,7 @@ def test_audio_fetch_url_secret_never_logged(tmp_path, caplog):
         delay=0,
     )
     fetcher._session = MagicMock()
-    fetcher._session.get.side_effect = requests.ConnectionError("down")
+    fetcher._session.get.side_effect = requests.ConnectionError(json_error_url)
 
     with caplog.at_level(logging.DEBUG):
         assert download_audio_to_cache(direct_session, direct_url, tmp_path, "stem") is None
@@ -62,7 +64,20 @@ def test_audio_fetch_url_secret_never_logged(tmp_path, caplog):
 
     assert "https://example.test/audio.mp3" in caplog.text
     assert "https://example.test/list/word" in caplog.text
-    for secret in ("direct-user", "direct-pass", "json-user", "json-pass", "token=", "#fragment"):
+    assert "ConnectionError" in caplog.text
+    for secret in (
+        "direct-user",
+        "direct-pass",
+        "json-user",
+        "json-pass",
+        "error-user",
+        "error-pass",
+        "json-error-user",
+        "json-error-pass",
+        "token=",
+        "#fragment",
+        "error-fragment",
+    ):
         assert secret not in caplog.text
 
 

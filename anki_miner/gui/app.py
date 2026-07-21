@@ -113,9 +113,7 @@ def _run_asr_bundled_smoke() -> int:
 
     try:
         if not _engine.available():
-            raise RuntimeError(
-                "faster-whisper or ctranslate2 not importable from bundle " "(available() returned False)"
-            )
+            raise RuntimeError("faster-whisper or ctranslate2 not importable from bundle (available() returned False)")
         # Importing the class exercises ctranslate2 native lib resolution.
         _engine.get_whisper_model_cls()
     except Exception as exc:
@@ -157,7 +155,7 @@ def _run_whispercpp_bundled_smoke() -> int:
     try:
         if not _engine.whisper_cpp_available():
             raise RuntimeError(
-                "pywhispercpp + ggml-vulkan not available from bundle " "(whisper_cpp_available() returned False)"
+                "pywhispercpp + ggml-vulkan not available from bundle (whisper_cpp_available() returned False)"
             )
         # DEFECT-1 fix: register the ggml DL backends (cpu + vulkan) BEFORE importing
         # pywhispercpp, so its extension binds THIS (populated) libggml instance rather
@@ -201,7 +199,8 @@ def _run_whispercpp_bundled_smoke() -> int:
 class _OwnerOnlyRotatingFileHandler(RotatingFileHandler):
     def _open(self):
         Path(self.baseFilename).touch(mode=0o600, exist_ok=True)
-        os.chmod(self.baseFilename, 0o600)
+        if os.name == "posix":
+            os.chmod(self.baseFilename, 0o600)
         return super()._open()
 
 

@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 # so they still produce a correct .miss even with the default UA — which is why
 # the symptom was "0 hits, a few misses, everything synthesized".)
 _BROWSER_USER_AGENT = (
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 " "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 )
 
 # Real word audio is ~10–100 KB. 5 MB is a generous upper bound; anything
@@ -257,7 +257,12 @@ def download_audio_to_cache(
             response.close()
     except (requests.RequestException, OSError) as exc:
         _bump(classify_request_exception(exc))
-        logger.debug("audio download failed for %s: %s", redact_url_for_log(url), exc)
+        logger.debug(
+            "audio download failed for %s: %s: %s",
+            redact_url_for_log(url),
+            type(exc).__name__,
+            redact_url_for_log(str(exc)),
+        )
         return None
 
 
