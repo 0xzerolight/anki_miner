@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog, QWidget
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.controllers.import_flow_common import ModalImportFlowMixin
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
-from anki_miner.gui.utils.run_off_thread import join_worker
+from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.panels import DictionarySettingsPanel
 from anki_miner.gui.workers.import_worker import ImportWorker
 from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip, read_yomitan_title
@@ -30,13 +30,6 @@ from anki_miner.services.resource_catalog import CATALOG_DICT_SLOT_IDS
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
-
-# Bounded join for the predecessor import worker before its reference is
-# dropped. Imports legitimately take a few seconds to wind down, but a stuck
-# worker must never freeze the GUI thread; on timeout we log and proceed,
-# leaking the old handle rather than blocking (mirrors
-# ``MiningTabBase._teardown_previous_run``).
-_IMPORT_JOIN_TIMEOUT_MS = 5000
 
 
 class DictionaryImportFlow(ModalImportFlowMixin):
@@ -510,6 +503,18 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             dlg.setMaximum(100)
             dlg.setValue(0)
 
+            # Join the predecessor before dropping its reference (T-09). This
+            # closure runs inside the previous worker's queued finished slot,
+            # emitted from run() just before the OS thread exits — so its
+            # QThread may still be technically running. Reassigning
+            # _active_import_worker without waiting drops the only reference to a
+            # live, unparented QThread → "QThread: Destroyed while thread is
+            # still running". wait() is at most microseconds from returning here.
+            laggard = self._join_active_import_worker("dictionary import worker")
+            if laggard is not None:
+                laggard.finished.connect(launch_next)
+                return
+
             if kind == "jmdict":
                 worker = ImportWorker.for_jmdict(source_path, self._get_config().dicts_root)
             else:
@@ -520,19 +525,6 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 # pre-run gate (it could never clear the old slot).
                 worker = ImportWorker.for_yomitan(
                     source_path, self._get_config().dicts_root, overwrite=True, dict_id=dict_id
-                )
-            # Join the predecessor before dropping its reference (T-09). This
-            # closure runs inside the previous worker's queued finished slot,
-            # emitted from run() just before the OS thread exits — so its
-            # QThread may still be technically running. Reassigning
-            # _active_import_worker without waiting drops the only reference to a
-            # live, unparented QThread → "QThread: Destroyed while thread is
-            # still running". wait() is at most microseconds from returning here.
-            prev = self._active_import_worker
-            if not join_worker(prev, timeout_ms=_IMPORT_JOIN_TIMEOUT_MS):
-                logger.warning(
-                    "Lingering dictionary import worker did not stop within %d ms; replacing it anyway",
-                    _IMPORT_JOIN_TIMEOUT_MS,
                 )
             self._active_import_worker = worker
 
@@ -568,12 +560,14 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             worker.import_finished.connect(on_done)
             worker.failed.connect(on_failed)
             worker.cancelled.connect(on_cancelled)
+            worker.finished.connect(lambda w=worker: self._release_import_worker(w))
             worker.start()
 
         def on_cancel() -> None:
             state["cancelled"] = True
             worker = self._active_import_worker
-            if worker is not None and worker.isRunning():
+            if still_running(worker):
+                assert worker is not None
                 worker.cancel()
 
         dlg.canceled.connect(on_cancel)

@@ -374,7 +374,12 @@ def test_reimport_all_joins_predecessor_before_reassign(tab_for_reimport_all, mo
 
     # Record the active worker at the instant wait() is called on the predecessor.
     active_at_wait: list[object] = []
-    first.wait.side_effect = lambda *a, **k: active_at_wait.append(tab._dict_import_flow._active_import_worker)
+
+    def record_active_and_join(*_args, **_kwargs) -> bool:
+        active_at_wait.append(tab._dict_import_flow._active_import_worker)
+        return True
+
+    first.wait.side_effect = record_active_and_join
 
     # Fire the predecessor's finished slot — this synchronously calls launch_next.
     _complete_in_flight_worker(stubbed_workers, idx=0)

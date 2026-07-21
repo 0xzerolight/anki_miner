@@ -85,16 +85,7 @@ class ModalImportFlowMixin:
             on_success: Flow-specific handler run on ``import_finished`` with
                 ``(resource_id, meta)`` — chain updates + the success dialog.
         """
-        prev = self._active_import_worker
-        laggard = join_or_retain(prev, timeout_ms=_IMPORT_JOIN_TIMEOUT_MS)
-        if laggard is not None:
-            if all(retained is not laggard for retained in self._retained_import_workers):
-                self._retained_import_workers.append(laggard)
-            logger.warning(
-                "Lingering %s did not stop within %d ms; refusing replacement",
-                join_noun,
-                _IMPORT_JOIN_TIMEOUT_MS,
-            )
+        if self._join_active_import_worker(join_noun) is not None:
             worker.deleteLater()
             return
 
@@ -137,6 +128,20 @@ class ModalImportFlowMixin:
         dlg.canceled.connect(worker.cancel)
         worker.start()
 
+    def _join_active_import_worker(self, join_noun: str) -> ImportWorker | None:
+        """Join the active predecessor, retaining and returning any laggard."""
+        laggard = join_or_retain(self._active_import_worker, timeout_ms=_IMPORT_JOIN_TIMEOUT_MS)
+        if laggard is not None:
+            if all(retained is not laggard for retained in self._retained_import_workers):
+                self._retained_import_workers.append(laggard)
+                laggard.finished.connect(lambda w=laggard: self._forget_import_worker(w))
+            logger.warning(
+                "Lingering %s did not stop within %d ms; refusing replacement",
+                join_noun,
+                _IMPORT_JOIN_TIMEOUT_MS,
+            )
+        return laggard
+
     def _iter_import_workers(self) -> tuple:
         """Return all live active and retained import workers."""
         workers = list(self._retained_import_workers)
@@ -146,11 +151,15 @@ class ModalImportFlowMixin:
         live = tuple(worker for worker in workers if still_running(worker))
         return live or (None,)
 
-    def _release_import_worker(self, worker: ImportWorker) -> None:
-        """Release ``worker`` only from its native ``finished`` signal."""
+    def _forget_import_worker(self, worker: ImportWorker) -> None:
+        """Drop ownership after ``worker`` emits its native ``finished`` signal."""
         if self._active_import_worker is worker:
             self._active_import_worker = None
         self._retained_import_workers = [
             retained for retained in self._retained_import_workers if retained is not worker
         ]
+
+    def _release_import_worker(self, worker: ImportWorker) -> None:
+        """Release ``worker`` only from its native ``finished`` signal."""
+        self._forget_import_worker(worker)
         worker.deleteLater()
