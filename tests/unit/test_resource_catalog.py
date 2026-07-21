@@ -6,6 +6,7 @@ import pytest
 
 from anki_miner.services.resource_catalog import (
     CATALOG_DICT_SLOT_IDS,
+    LEGACY_DICT_SLOT_IDS,
     RECOMMENDED_DEFAULT_SET,
     RESOURCE_KINDS,
     ResourceSpec,
@@ -27,13 +28,11 @@ class TestRecommendedDefaultSet:
     def test_allowed_kinds_value(self):
         assert frozenset({"dict", "freq", "pitch"}) == RESOURCE_KINDS
 
-    def test_jitendex_entry(self):
-        spec = _by_id("jitendex")
+    def test_jmdict_entry(self):
+        spec = _by_id("jmdict-english")
         assert spec.kind == "dict"
-        assert spec.display_name == "Jitendex"
-        assert spec.url == (
-            "https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip"
-        )
+        assert spec.display_name == "JMdict"
+        assert spec.url == ("https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip")
         assert spec.license_note
 
     def test_jpdb_freq_entry(self):
@@ -61,6 +60,19 @@ class TestCatalogDictSlotIds:
         # The pinned-slot guard depends on every dict resource being listed.
         dict_ids = {s.id for s in RECOMMENDED_DEFAULT_SET if s.kind == "dict"}
         assert dict_ids == CATALOG_DICT_SLOT_IDS
+
+    def test_literal_slot_ids(self):
+        # Literal (non-derived) assertion: the on-disk slot id doubles as the
+        # legacy JMdict-XML migration slot and the default chain's dict_id —
+        # renaming it silently orphans both. The derived test above can't
+        # catch a rename (both sides move together).
+        assert {"jmdict-english"} == CATALOG_DICT_SLOT_IDS
+
+    def test_legacy_slot_ids(self):
+        # Former catalog slots keep the pinned re-import affordance for
+        # existing installs; they must never overlap the live catalog.
+        assert {"jitendex"} == LEGACY_DICT_SLOT_IDS
+        assert not (LEGACY_DICT_SLOT_IDS & CATALOG_DICT_SLOT_IDS)
 
     def test_non_dict_specs_are_not_latest_pinned(self):
         # Design boundary: only the dict route guards against title-drift

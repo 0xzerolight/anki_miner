@@ -19,7 +19,7 @@ class ResourceSpec:
     """Describes one recommended downloadable resource.
 
     Attributes:
-        id: Stable short identifier (e.g. ``"jitendex"``).
+        id: Stable short identifier (e.g. ``"jmdict-english"``).
         kind: One of ``"dict"``, ``"freq"``, or ``"pitch"``.
         display_name: Human-facing name shown in the UI.
         url: Direct download URL for the resource artifact.
@@ -38,12 +38,20 @@ class ResourceSpec:
 # date overwrites in place instead of forking a new directory. Pick a stable,
 # collision-free id for any dict spec added here.
 RECOMMENDED_DEFAULT_SET: tuple[ResourceSpec, ...] = (
+    # id deliberately equals the legacy JMdict-XML migration slot
+    # (jmdict_importer.JMDICT_DICT_ID) and the default dictionary_chain entry:
+    # the download fills exactly the slot a fresh config already points at, and
+    # a legacy XML-derived index is upgraded in place by the richer Yomitan
+    # build. English JMdict variants (with_examples, without_proper_names)
+    # share the same "JMdict [date]" title upstream, so the supersede sweep
+    # treats them as the same dictionary — matching Yomitan's own
+    # title-keyed semantics.
     ResourceSpec(
-        id="jitendex",
+        id="jmdict-english",
         kind="dict",
-        display_name="Jitendex",
-        url="https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip",
-        license_note="Jitendex (JMdict-derived) — CC BY-SA 4.0, downloaded from upstream source.",
+        display_name="JMdict",
+        url="https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip",
+        license_note="JMdict — © EDRDG, CC BY-SA 4.0, downloaded from upstream source.",
     ),
     ResourceSpec(
         id="jpdb-freq",
@@ -68,3 +76,8 @@ RECOMMENDED_DEFAULT_SET: tuple[ResourceSpec, ...] = (
 # per-row Re-import guard (a catalog slot accepts a newer, same-base zip whose
 # title-derived id would otherwise differ) and available for boundary tests.
 CATALOG_DICT_SLOT_IDS: frozenset[str] = frozenset(s.id for s in RECOMMENDED_DEFAULT_SET if s.kind == "dict")
+
+# Former catalog dict slots. Users who installed these via an earlier wizard
+# keep the pinned-slot Re-import affordance (a newer same-base zip re-imports
+# into the stable slot even though its title-derived id differs).
+LEGACY_DICT_SLOT_IDS: frozenset[str] = frozenset({"jitendex"})

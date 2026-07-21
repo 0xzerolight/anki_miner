@@ -84,7 +84,7 @@ def import_yomitan_zip(
         dict_id: Optional on-disk slot override. When given, the dict is stored
                  under this fixed folder name instead of one derived from the
                  zip's title+revision. Callers pin a stable slot (e.g. the
-                 recommended-resource id ``"jitendex"`` or an existing slot on
+                 recommended-resource id ``"jmdict-english"`` or an existing slot on
                  re-import) so a title that embeds a changing release date does
                  not fork a new directory every download. Display name still
                  comes from the zip title; only the folder name is pinned.

@@ -375,6 +375,61 @@ class _FakeYtdlpWorker(QObject):
         self.finished.emit()
 
 
+class TestCancelJmdictMigration:
+    """cancel_jmdict_migration: cancel + bounded join, retain-on-timeout.
+
+    The retain case is the abort-hazard regression test: the migration worker
+    is unparented and the controller handle is its sole strong reference —
+    clearing it while the QThread still runs would destroy the thread mid-run
+    and abort the process.
+    """
+
+    class _FakeMigrationWorker:
+        def __init__(self, *, exits_on_wait: bool) -> None:
+            self._running = True
+            self._exits_on_wait = exits_on_wait
+            self.cancel = MagicMock()
+            self.wait_calls: list[int] = []
+
+        def isRunning(self) -> bool:  # noqa: N802 (Qt naming)
+            return self._running
+
+        def wait(self, timeout_ms: int) -> bool:
+            self.wait_calls.append(timeout_ms)
+            if self._exits_on_wait:
+                self._running = False
+                return True
+            return False
+
+    def test_worker_exits_within_wait_clears_handle(self, controller):
+        worker = self._FakeMigrationWorker(exits_on_wait=True)
+        controller.jmdict_migration_worker = worker
+
+        controller.cancel_jmdict_migration()
+
+        worker.cancel.assert_called_once()
+        assert worker.wait_calls == [1000]
+        assert controller.jmdict_migration_worker is None
+
+    def test_wait_timeout_retains_handle(self, controller):
+        worker = self._FakeMigrationWorker(exits_on_wait=False)
+        controller.jmdict_migration_worker = worker
+
+        controller.cancel_jmdict_migration()
+
+        worker.cancel.assert_called_once()
+        assert worker.wait_calls == [1000]
+        # Still running after the bounded wait → the handle MUST be retained
+        # (dropping the sole reference to a live QThread aborts the process);
+        # shutdown() joins the retained worker later.
+        assert controller.jmdict_migration_worker is worker
+
+    def test_noop_without_worker(self, controller):
+        controller.jmdict_migration_worker = None
+        controller.cancel_jmdict_migration()
+        assert controller.jmdict_migration_worker is None
+
+
 class TestStartYtdlpUpdate:
     """start_ytdlp_update mirrors check_for_updates: guard, wire, start."""
 

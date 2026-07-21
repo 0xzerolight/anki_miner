@@ -115,7 +115,10 @@ class TestCatalogSlotBaseMatches:
 
 
 class TestReimportDictCatalogGuard:
-    def test_catalog_slot_accepts_fresh_same_base_zip(self, tmp_path: Path):
+    def test_legacy_slot_accepts_fresh_same_base_zip(self, tmp_path: Path):
+        # "jitendex" left the catalog when JMdict became the recommended dict;
+        # existing installs keep the pinned re-import affordance through
+        # LEGACY_DICT_SLOT_IDS — this is the regression coverage for that.
         dicts_root = tmp_path / "dicts"
         flow = _make_flow(dicts_root)
         # Block right after the guard so no real worker/QThread runs.
@@ -135,7 +138,26 @@ class TestReimportDictCatalogGuard:
         assert warn.call_count == 1
         assert "match" not in warn.call_args.args[1].lower()
 
-    def test_catalog_slot_rejects_wrong_base_zip(self, tmp_path: Path):
+    def test_catalog_slot_accepts_fresh_same_base_zip(self, tmp_path: Path):
+        # The live catalog slot: a newer JMdict zip (title-derived id differs)
+        # re-imports into the pinned "jmdict-english" slot.
+        dicts_root = tmp_path / "dicts"
+        flow = _make_flow(dicts_root)
+        flow._panel.request_resource_release.return_value = False
+        _seed_slot(dicts_root, "jmdict-english", "JMdict [2026-07-21]")
+        fresh = build_yomitan_zip(tmp_path / "src" / "jm.zip", title="JMdict [2026-08-01]")
+
+        with (
+            patch(f"{MOD}.QFileDialog.getOpenFileName", return_value=(str(fresh), "")),
+            patch(f"{MOD}.QMessageBox.warning") as warn,
+        ):
+            flow.reimport_dict("jmdict-english")
+
+        flow._panel.request_resource_release.assert_called_once()
+        assert warn.call_count == 1
+        assert "match" not in warn.call_args.args[1].lower()
+
+    def test_legacy_slot_rejects_wrong_base_zip(self, tmp_path: Path):
         dicts_root = tmp_path / "dicts"
         flow = _make_flow(dicts_root)
         _seed_slot(dicts_root, "jitendex", "Jitendex.org [2025-11-05]")

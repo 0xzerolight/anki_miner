@@ -171,10 +171,12 @@ class TagMeta:
 # common/frequent headword. A dictionary is "commonness-aware" iff its tags
 # table defines at least one tag in one of these categories; a row is "common"
 # iff it carries such a tag. Category-based, NOT table-presence: jitendex uses
-# 'frequent'/'popular', jmdict's tags are 'partOfSpeech'/'name'/'' (no
-# commonness category → unaware), a monolingual dict ships an empty tags table
-# (also unaware). Single source of truth shared by ``row_is_common`` and the
-# provider's ``commonness_aware`` property (U10 infra).
+# 'frequent'/'popular', and so does the Yomitan JMdict build (⭐ → 'popular';
+# news·k/ichi/spec/gai → 'frequent'). The legacy XML-derived jmdict import
+# writes no commonness categories ('partOfSpeech'/'name'/'' only → unaware),
+# and a monolingual dict ships an empty tags table (also unaware). Single
+# source of truth shared by ``row_is_common`` and the provider's
+# ``commonness_aware`` property (U10 infra).
 COMMON_TAG_CATEGORIES = frozenset({"frequent", "popular"})
 
 

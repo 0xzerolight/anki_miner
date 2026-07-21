@@ -138,8 +138,8 @@ Want another theme added? Suggest in a GitHub Issue.
 
 | Type | Resource | Download | Add via |
 |------|----------|----------|---------|
-| Dictionary | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Add Dictionary… |
 | Dictionary | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Add Dictionary… |
+| Dictionary | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Add Dictionary… |
 | Dictionary | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Generated on site | Add Dictionary… |
 | Pitch | [Kanjium](https://github.com/mifunetoshiro/kanjium/blob/master/data/source_files/raw/accents.txt) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Dictionary -> Pitch Accent File |
 | Pitch | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Dictionary -> Pitch Accent File |
