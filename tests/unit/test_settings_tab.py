@@ -376,8 +376,10 @@ class TestImportInvalidSubtitleRegex:
             # The invalid pattern must surface a warning, not be silently applied.
             assert len(warnings) == 1
             assert len(received) == 1
-            # And the filter must be disabled so parse-time never swallows it.
+            # The prior disabled filter stays intact; invalid imported text is not stored.
             assert received[0].use_subtitle_regex_filter is False
+            assert received[0].subtitle_regex_filter == test_config.subtitle_regex_filter
+            assert received[0].subtitle_regex_replacement == test_config.subtitle_regex_replacement
         finally:
             widget.shutdown()
             for w in widget.iter_close_workers():

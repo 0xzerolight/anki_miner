@@ -41,7 +41,7 @@ def strip_subtitle_markup(text: str) -> str:
     return text
 
 
-def clean_subtitle_text(text: str) -> str:
+def clean_subtitle_text(text: str, *, strip_annotations: bool = False) -> str:
     """Remove formatting tags, then Japanese-normalize for tokenization.
 
     Tag/whitespace stripping runs first, then :func:`normalize_for_tokenization`
@@ -53,11 +53,14 @@ def clean_subtitle_text(text: str) -> str:
 
     Args:
         text: Raw subtitle text with possible formatting tags
+        strip_annotations: Strip annotations per physical line before flattening
 
     Returns:
         Cleaned, normalized text without formatting tags
     """
     text = strip_subtitle_markup(text)
+    if strip_annotations:
+        text = strip_inline_annotations(text)
 
     # Normalize whitespace
     text = " ".join(text.split())
@@ -83,6 +86,7 @@ _INNERMOST_PAREN_GROUP_RE = re.compile(r"（([^（）()]*)）|\(([^（）()]*)\)
 # A longer kana parenthetical after a kanji word is likely a real aside, so it
 # is left intact (precision over recall).
 _FURIGANA_MAX_KANA = 10
+_ANNOTATION_STRIP_MAX_PASSES = 32
 
 
 def _is_furigana_content(content: str) -> bool:
@@ -180,15 +184,24 @@ def strip_inline_annotations(text: str) -> str:
        peeled (with following whitespace), repeatedly, so
        ``（旬: 小声で）余計な…`` → ``余計な…``. Deliberately broader than names.
 
-    Mid-line paren groups containing kanji are left untouched (conservative).
-    Balanced-paren matching only: malformed/unbalanced parens leave the text
-    unchanged. Pure function — no I/O, no config; the caller gates it.
+    Each pass applies independently to every ``\n``-separated physical line, so
+    an annotation at any physical line start cannot become mid-cue dialogue when
+    whitespace is later flattened. Mid-line paren groups containing kanji are
+    left untouched (conservative). Balanced-paren matching only:
+    malformed/unbalanced parens leave the text unchanged. Pure function — no
+    I/O, no config; the caller gates it.
     """
+    return "\n".join(_strip_inline_annotations_line(line) for line in text.split("\n"))
+
+
+def _strip_inline_annotations_line(text: str) -> str:
+    """Apply the three annotation passes to one physical subtitle line."""
     # Pass 1: inline furigana. Re-run until stable so adjacent groups whose
     # kanji-adjacency only appears after an earlier deletion also resolve
     # (漢(あ)(い) → 漢). Each successful sub strictly shrinks the string, so
-    # this terminates.
-    while True:
+    # each pass shrinks the string. Cap the work so a long run of adjacent
+    # groups cannot make this repeat-until-stable pass quadratic.
+    for _ in range(_ANNOTATION_STRIP_MAX_PASSES):
         stripped = _INNERMOST_PAREN_GROUP_RE.sub(_strip_furigana_match, text)
         if stripped == text:
             break

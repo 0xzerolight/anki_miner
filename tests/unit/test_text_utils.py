@@ -657,6 +657,11 @@ class TestStripInlineAnnotations:
         # fullwidth speaker tag → ん…
         assert strip_inline_annotations("（水篠(みずしの) 旬(しゅん)）ん…") == "ん…"
 
+    def test_annotation_loop_is_bounded(self):
+        text = "漢" + "(あ)" * 40
+
+        assert strip_inline_annotations(text) == "漢" + "(あ)" * 8
+
     def test_inline_furigana_only_after_kanji(self):
         # A kana paren group NOT preceded by kanji is not furigana; it is
         # left for pass 2/3 (here it is mid-line, so untouched).

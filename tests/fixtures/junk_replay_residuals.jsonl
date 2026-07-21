@@ -1,0 +1,6 @@
+{"id":"whole-line-sfx","text":"（笑い声）","expected_forms":[]}
+{"id":"leading-speaker-tag","text":"（案内）猫が眠る","expected_forms":["猫","眠る"]}
+{"id":"inline-furigana","text":"瀕死(ひんし)の重傷","expected_forms":["瀕死","重傷"]}
+{"id":"ellipsis-stutter","text":"タ… イガ…","expected_forms":[]}
+{"id":"cut-conjugation","text":"欲し…","expected_forms":[]}
+{"id":"inflected-control","text":"本を読んだ","expected_forms":["本","読む"]}

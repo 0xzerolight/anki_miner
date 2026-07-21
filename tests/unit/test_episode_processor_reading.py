@@ -307,6 +307,27 @@ def test_whitelist_force_includes_past_min_occurrence(test_config, tmp_path):
     assert fronts == {"頻", "稀"}
 
 
+def test_whitelist_admits_lemma_sibling_at_floor3(test_config, tmp_path):
+    wl = tmp_path / "wl.txt"
+    wl.write_text("掛ける\n", encoding="utf-8")
+    wls = WordListService(whitelist_path=wl)
+    wls.load()
+
+    cfg = replace(test_config, reading_min_occurrence=3, use_whitelist=True)
+    sibling = _word("掛ける", 0, pos="動詞", surface="賭けた")
+    sibling.orth_base = "賭ける"
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning([sibling], None, collections.Counter({"掛ける": 1}))
+    anki = _make_anki_service()
+
+    _make_processor(cfg, subtitle_parser=sp, anki_service=anki, word_list_service=wls).process_reading(
+        _document([_unit(0)])
+    )
+
+    assert [p.word.mined_form for p in anki.last_card_data] == ["賭ける"]
+    assert "lemma-siblings" in (WordFilterService.partition_whitelisted.__doc__ or "")
+
+
 def test_no_mineable_words_message_names_filters_on_reading_path(test_config):
     """Regression B (reading path): reading_min_occurrence runs OUTSIDE _phase2_filter
     (episode_processor.py:1779), so it can empty the list after words survived the

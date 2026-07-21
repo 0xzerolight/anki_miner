@@ -3,7 +3,6 @@
 import dataclasses
 import json
 import os
-import re
 from dataclasses import replace
 from functools import partial
 from pathlib import Path
@@ -50,6 +49,7 @@ from anki_miner.gui.workers.yomitan_csv_import_worker import YomitanCsvImportWor
 from anki_miner.services.expression_audio_fetcher import purge_miss_markers
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.pitch_accent import import_yomitan_pitch_zip
+from anki_miner.services.subtitle_parser import compile_subtitle_regex_filter
 from anki_miner.utils.i18n import tr_format
 
 # Debounce for the Settings auto-save: a burst of edits coalesces into one
@@ -766,11 +766,12 @@ class SettingsTab(QWidget):
         # would leave the last-good pattern paired with a new replacement the
         # user never previewed.
         subtitle_regex = self.filtering_panel.get_subtitle_regex_filter()
+        subtitle_regex_replacement = self.filtering_panel.get_subtitle_regex_replacement()
         use_subtitle_regex = self.filtering_panel.get_use_subtitle_regex_filter()
         if use_subtitle_regex and subtitle_regex:
             try:
-                re.compile(subtitle_regex)
-            except re.error:
+                compile_subtitle_regex_filter(subtitle_regex, subtitle_regex_replacement)
+            except ValueError:
                 kept_back.append(self.tr("subtitle regex (Filtering)"))
                 new_config = replace(
                     new_config,
@@ -929,21 +930,26 @@ class SettingsTab(QWidget):
                 tr_format(self.tr("Could not import %1:\n%2"), source, e),
             )
             return
-        # Validate an imported subtitle regex the same way the commit path does
-        # (re.compile). import_config applies the pattern without validation, so
+        # Validate an imported subtitle regex the same way the commit path does.
+        # import_config applies the pattern without validation, so
         # an invalid pattern with the filter enabled would otherwise persist and
-        # be silently disabled at parse time (only a log line). Disable it here
+        # be silently disabled at parse time (only a log line). Reject it here
         # and warn the user, so the failure is surfaced rather than swallowed.
         if new_config.use_subtitle_regex_filter and new_config.subtitle_regex_filter:
             try:
-                re.compile(new_config.subtitle_regex_filter)
-            except re.error as e:
-                new_config = replace(new_config, use_subtitle_regex_filter=False)
+                compile_subtitle_regex_filter(new_config.subtitle_regex_filter, new_config.subtitle_regex_replacement)
+            except ValueError as e:
+                new_config = replace(
+                    new_config,
+                    subtitle_regex_filter=self.config.subtitle_regex_filter,
+                    subtitle_regex_replacement=self.config.subtitle_regex_replacement,
+                    use_subtitle_regex_filter=self.config.use_subtitle_regex_filter,
+                )
                 QMessageBox.warning(
                     self,
                     self.tr("Invalid Subtitle Regex"),
                     tr_format(
-                        self.tr("The imported subtitle regex filter is invalid and has " "been disabled:\n%1"),
+                        self.tr("The imported subtitle regex filter was rejected; the previous filter was kept:\n%1"),
                         e,
                     ),
                 )

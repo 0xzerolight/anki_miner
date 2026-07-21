@@ -255,6 +255,17 @@ class TestParseTextUnitsSubtitleCleanup:
         assert {w.sentence for w in words} == {"猫が魚を食べる"}
         assert all("旬" not in w.sentence for w in words)
 
+    def test_physical_line_annotations_never_become_dialogue(self, tmp_path):
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        service = SubtitleParserService(config)
+        units = [ReadingUnit(text="猫が好き\n（案内）犬が眠る", index=0, location_label="0:01")]
+
+        assert service._clean_line_text(units[0].text) == "猫が好き 犬が眠る"
+        words, _i, _c = service.parse_text_units(units, want_line_index=False, subtitle_cleanup=True)
+
+        assert {w.sentence for w in words} == {"猫が好き\n犬が眠る"}
+        assert "案内" not in {w.mined_form for w in words}
+
     def test_strip_off_switch_leaves_annotations(self, tmp_path):
         """strip_subtitle_annotations=False disables the strip even under cleanup
         (the existing off-switch is the escape hatch — no new gate)."""

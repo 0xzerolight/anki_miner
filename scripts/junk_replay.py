@@ -31,9 +31,9 @@ Usage
 
 Gate procedure (junk-reduction merge gate)
 ------------------------------------------
-This harness is the defense-in-depth replay behind the junk-reduction units. The
-durable proof of each unit is its automated unit tests; the replay is a
-reviewer-curated corpus diff run AFTER each unit, never a committed assertion.
+This harness is the defense-in-depth replay behind the junk-reduction units. A
+small synthetic residual fixture is a committed exact regression gate; the
+larger private-corpus replay remains a reviewer-curated diff run after each unit.
 
 Run it twice over the same corpus — once on ``main``, once on the unit branch —
 then take the SYMMETRIC diff of the mined-front sets:
@@ -77,7 +77,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from anki_miner.config.config import AnkiMinerConfig, ChainEntry  # noqa: E402
-from anki_miner.models.reading import ReadingSourceRef  # noqa: E402
+from anki_miner.models.reading import ReadingSourceRef, ReadingUnit  # noqa: E402
 from anki_miner.services.definition_service import DefinitionService  # noqa: E402
 from anki_miner.services.dictionary.registry import DictionaryRegistry  # noqa: E402
 from anki_miner.services.reading import subtitle_source  # noqa: E402
@@ -152,22 +152,16 @@ def build_parser(config: AnkiMinerConfig) -> SubtitleParserService:
     )
 
 
-def replay_file(parser: SubtitleParserService, path: Path) -> list[ReplayRow]:
-    """Mine one subtitle file into its emitted card-front rows.
-
-    Loads per-cue units via the reading loader, then runs the real
-    ``parse_text_units`` with ``subtitle_cleanup=True`` (the video-path
-    annotation-strip seam) so the output equals what production mining emits.
-    """
-    document = subtitle_source.load(ReadingSourceRef(kind="subtitle", path=path))
+def _replay_units(parser: SubtitleParserService, units: list[ReadingUnit], source: str) -> list[ReplayRow]:
+    """Run reading units through the production subtitle-cleanup parser path."""
     words, _index, _counts = parser.parse_text_units(
-        document.units,
+        units,
         want_line_index=False,
         subtitle_cleanup=True,
     )
     return [
         ReplayRow(
-            file=path.name,
+            file=source,
             mined_form=w.mined_form,
             lemma=w.lemma,
             reading=w.reading,
@@ -176,6 +170,23 @@ def replay_file(parser: SubtitleParserService, path: Path) -> list[ReplayRow]:
         )
         for w in words
     ]
+
+
+def replay_text(parser: SubtitleParserService, text: str, *, source: str = "fixture") -> list[ReplayRow]:
+    """Replay one synthetic cue through the same parser path as ``replay_file``."""
+    unit = ReadingUnit(text=text, index=0, location_label=source)
+    return _replay_units(parser, [unit], source)
+
+
+def replay_file(parser: SubtitleParserService, path: Path) -> list[ReplayRow]:
+    """Mine one subtitle file into its emitted card-front rows.
+
+    Loads per-cue units via the reading loader, then runs the real
+    ``parse_text_units`` with ``subtitle_cleanup=True`` (the video-path
+    annotation-strip seam) so the output equals what production mining emits.
+    """
+    document = subtitle_source.load(ReadingSourceRef(kind="subtitle", path=path))
+    return _replay_units(parser, document.units, path.name)
 
 
 def replay_dir(directory: Path, parser: SubtitleParserService) -> list[ReplayRow]:

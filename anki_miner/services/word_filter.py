@@ -156,6 +156,9 @@ class WordFilterService:
         convention shared with :meth:`filter_by_word_lists`: UniDic collapses
         kanji variants (賭ける→掛ける) into one lemma, so whitelisting the card
         front must force-include it even though its lemma differs.
+        This OR-match is the explicit alias policy: a canonical-lemma whitelist
+        entry also admits every distinct card-front surface sharing that lemma
+        (its ``lemma-siblings``), including below an occurrence floor.
         ``all_words`` is already lemma-deduped upstream
         (``SubtitleParserService``), so exactly one word per whitelisted form is
         moved to ``forced``.

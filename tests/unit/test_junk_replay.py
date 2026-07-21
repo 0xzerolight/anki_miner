@@ -15,8 +15,11 @@ from __future__ import annotations
 
 import csv
 import dataclasses
+import json
 import sys
 from pathlib import Path
+
+import pytest
 
 # scripts/ is not a package; insert the repo root so the module is importable.
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -26,6 +29,7 @@ if str(_REPO_ROOT) not in sys.path:
 from anki_miner.config.config import AnkiMinerConfig  # noqa: E402
 from anki_miner.services.dictionary import storage  # noqa: E402
 from anki_miner.services.dictionary.registry import DictionaryRegistry  # noqa: E402
+from scripts import junk_replay  # noqa: E402
 from scripts.junk_replay import (  # noqa: E402
     _TSV_COLUMNS,
     ReplayRow,
@@ -43,6 +47,11 @@ _SRT = """1
 00:00:04,000 --> 00:00:06,000
 本を読む。
 """
+
+_RESIDUAL_CASES = [
+    json.loads(line)
+    for line in (_REPO_ROOT / "tests/fixtures/junk_replay_residuals.jsonl").read_text(encoding="utf-8").splitlines()
+]
 
 
 def _empty_chain_config(tmp_path: Path) -> AnkiMinerConfig:
@@ -89,6 +98,15 @@ def test_replay_dir_emits_rows(tmp_path: Path) -> None:
     # Liveness only: some verb/noun front is mined, with a non-empty sentence.
     assert any(r.mined_form for r in rows)
     assert all(r.sentence for r in rows)
+
+
+@pytest.mark.parametrize("case", _RESIDUAL_CASES, ids=[case["id"] for case in _RESIDUAL_CASES])
+def test_committed_residual_replay(case: dict[str, object], tmp_path: Path) -> None:
+    parser = build_parser(_empty_chain_config(tmp_path))
+
+    rows = junk_replay.replay_text(parser, str(case["text"]), source=str(case["id"]))
+
+    assert [row.mined_form for row in rows] == case["expected_forms"]
 
 
 def test_replay_dir_ignores_non_subtitles(tmp_path: Path) -> None:
