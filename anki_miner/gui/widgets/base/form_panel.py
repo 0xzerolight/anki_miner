@@ -128,6 +128,7 @@ class FormPanel(QFrame):
         if field_label is None:
             self._active_form_layout.addRow(widget)
         else:
+            field_label.setBuddy(widget)
             self._active_form_layout.addRow(field_label, widget)
 
         return widget

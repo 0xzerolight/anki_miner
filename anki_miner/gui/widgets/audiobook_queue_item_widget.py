@@ -136,6 +136,7 @@ class AudiobookQueueItemWidget(QFrame):
         # Remove button
         self.remove_button = QPushButton("×")
         self.remove_button.setObjectName("danger")
+        self.remove_button.setAccessibleName(self.tr("Remove from queue"))
         self.remove_button.setMaximumWidth(SPACING.xl)
         self.remove_button.setToolTip(self.tr("Remove from queue"))
         self.remove_button.clicked.connect(self.removed.emit)

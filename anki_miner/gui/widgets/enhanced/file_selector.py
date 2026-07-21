@@ -136,15 +136,21 @@ class FileSelector(QWidget):
         self.setAcceptDrops(True)
 
         # Set accessibility properties
-        file_or_folder = "file" if self._file_mode else "folder"
+        file_or_folder = self.tr("file") if self._file_mode else self.tr("folder")
         self.setAccessibleName(self._label_text)
-        self.setAccessibleDescription(f"Select a {file_or_folder} by typing path, browsing, or dragging")
+        self.setAccessibleDescription(
+            tr_format(self.tr("Select a %1 by typing path, browsing, or dragging"), file_or_folder)
+        )
 
-        self.input.setAccessibleName(f"{self._label_text} path")
-        self.input.setAccessibleDescription(f"Path to {file_or_folder}. Type or paste a path, or use browse button")
+        self.input.setAccessibleName(tr_format(self.tr("%1 path"), self._label_text))
+        self.input.setAccessibleDescription(
+            tr_format(self.tr("Path to %1. Type or paste a path, or use browse button"), file_or_folder)
+        )
 
-        self.browse_button.setAccessibleName(f"Browse for {file_or_folder}")
-        self.browse_button.setAccessibleDescription(f"Opens file dialog to select {file_or_folder}")
+        self.browse_button.setAccessibleName(tr_format(self.tr("Browse for %1"), file_or_folder))
+        self.browse_button.setAccessibleDescription(
+            tr_format(self.tr("Opens file dialog to select %1"), file_or_folder)
+        )
 
         # Set proper tab order
         self.setTabOrder(self.input, self.browse_button)

@@ -64,6 +64,14 @@
         <translation>Làm mới</translation>
     </message>
     <message>
+        <source>Analytics Tab</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>View mining statistics, series difficulty rankings, and progress milestones</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Overview</source>
         <translation>Tổng quan</translation>
     </message>
@@ -662,8 +670,16 @@ Gói âm thanh chưa được xóa.</translation>
         <translation>Thêm nguồn URL âm thanh tùy chỉnh</translation>
     </message>
     <message>
+        <source>Move up</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Move up in priority</source>
         <translation>Chuyển lên trong thứ tự ưu tiên</translation>
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation type="unfinished">Di chuyển xuống</translation>
     </message>
     <message>
         <source>Move down in priority</source>
@@ -1222,6 +1238,14 @@ Tổng số thẻ đã tạo: %2</translation>
         <translation>Điền các trường trọng âm cao độ, tần suất, định nghĩa và cách đọc còn thiếu trên các thẻ đã khai thác.</translation>
     </message>
     <message>
+        <source>Restyle mined cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>View mining history &amp; stats</source>
         <translation>Xem lịch sử và thống kê khai thác</translation>
     </message>
@@ -1616,6 +1640,10 @@ Tổng số thẻ đã tạo: %2</translation>
         <translation>Đã bỏ qua {count} ghi chú — trường Biểu thức trống.</translation>
     </message>
     <message>
+        <source>Settings changed since this scan; re-scan before applying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Apply backfill?</source>
         <translation>Tiến hành điền dữ liệu còn thiếu cho thẻ?</translation>
     </message>
@@ -1646,6 +1674,10 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     <message>
         <source>Cancelling…</source>
         <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation type="unfinished">Đã hủy.</translation>
     </message>
 </context><context>
     <name>CondenseTab</name>
@@ -1680,6 +1712,10 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     <message>
         <source>Cancelled</source>
         <translation>Đã hủy</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">Thất bại — xem nhật ký</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -2350,6 +2386,10 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
         <translation>Nhập lại thất bại</translation>
     </message>
     <message>
+        <source>Scan Failed</source>
+        <translation type="unfinished">Quét thất bại</translation>
+    </message>
+    <message>
         <source>No dictionaries with saved sources were found.
 
 Skipped (no saved source — right-click a dictionary row → Re-import… to seed):
@@ -2484,8 +2524,16 @@ Từ điển chưa được xóa.</translation>
         <translation>Thêm lại các từ điển tìm thấy trong thư mục lưu trữ nhưng không có trong danh sách ở trên (ví dụ sau khi đặt lại cài đặt). Không cần nhập lại.</translation>
     </message>
     <message>
+        <source>Move up</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Move up in priority</source>
         <translation>Tăng độ ưu tiên</translation>
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation type="unfinished">Di chuyển xuống</translation>
     </message>
     <message>
         <source>Move down in priority</source>
@@ -2952,6 +3000,34 @@ Hành động này không thể hoàn tác. Bạn sẽ cần nhập lại từ z
         <translation>Duyệt...</translation>
     </message>
     <message>
+        <source>file</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a %1 by typing path, browsing, or dragging</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 path</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Path to %1. Type or paste a path, or use browse button</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Browse for %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Opens file dialog to select %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select %1</source>
         <translation>Chọn %1</translation>
     </message>
@@ -3300,6 +3376,10 @@ Hành động này không thể hoàn tác. Bạn sẽ cần nhập lại từ z
         <translation>Nhập thất bại</translation>
     </message>
     <message>
+        <source>Scan Failed</source>
+        <translation type="unfinished">Quét thất bại</translation>
+    </message>
+    <message>
         <source>Choose frequency source to re-import</source>
         <translation>Chọn nguồn tần suất để nhập lại</translation>
     </message>
@@ -3350,6 +3430,10 @@ Nguồn tần suất chưa được gỡ bỏ.</translation>
     <message>
         <source>+ Add Source…</source>
         <translation>+ Thêm nguồn…</translation>
+    </message>
+    <message>
+        <source>Move up</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Move up (breaks rank ties first)</source>
@@ -3602,6 +3686,38 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
         <translation>Đã cập nhật lên v%1.&lt;br&gt;&lt;br&gt;Xem điểm mới: &lt;a href="https://github.com/0xzerolight/anki_miner/releases/latest"&gt;ghi chú phát hành&lt;/a&gt;</translation>
     </message>
     <message>
+        <source>Anki Miner Main Window</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Japanese vocabulary mining tool for creating Anki flashcards from video subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Main Tabs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Navigate between Video, Deck Builder, Audio, Reading, Analytics, Tools, and Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Application Header</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Application title and theme selector</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Status Bar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Shows current operation, statistics, and system status</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>&amp;Tools</source>
         <translation>&amp;Công cụ</translation>
     </message>
@@ -3674,12 +3790,12 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
         <translation>Lối tắt màn hình nền</translation>
     </message>
     <message>
-        <source>Shortcut created.</source>
-        <translation>Đã tạo lối tắt.</translation>
-    </message>
-    <message>
         <source>Failed to create desktop shortcut.</source>
         <translation>Không tạo được lối tắt trên màn hình nền.</translation>
+    </message>
+    <message>
+        <source>Shortcut created.</source>
+        <translation>Đã tạo lối tắt.</translation>
     </message>
     <message>
         <source>Restyle Mined Cards</source>
@@ -4111,6 +4227,10 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <source>Ready</source>
         <translation>Sẵn sàng</translation>
     </message>
+    <message>
+        <source>ETA ~</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>QueueItemWidget</name>
     <message>
@@ -4444,6 +4564,10 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     <message>
         <source>Mined %1: %2 cards.</source>
         <translation>Đã khai thác %1: %2 thẻ.</translation>
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
+        <translation type="unfinished">Đã hủy %1.</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
@@ -4986,10 +5110,9 @@ Giá trị nhập vào ghi đè cài đặt hiện tại của bạn; bất kỳ
         <translation>Biểu thức chính quy phụ đề không hợp lệ</translation>
     </message>
     <message>
-        <source>The imported subtitle regex filter is invalid and has been disabled:
+        <source>The imported subtitle regex filter was rejected; the previous filter was kept:
 %1</source>
-        <translation>Bộ lọc biểu thức chính quy phụ đề đã nhập không hợp lệ và đã bị vô hiệu hóa:
-%1</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>✓ Imported</source>
@@ -5102,6 +5225,14 @@ Giá trị nhập vào ghi đè cài đặt hiện tại của bạn; bất kỳ
     <message>
         <source>Progress</source>
         <translation>Tiến trình</translation>
+    </message>
+    <message>
+        <source>Episode Mining Tab</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Process a single video episode to create vocabulary flashcards</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>File Selection</source>
@@ -5280,6 +5411,10 @@ Giá trị nhập vào ghi đè cài đặt hiện tại của bạn; bất kỳ
     <message>
         <source>Cancelled</source>
         <translation>Đã hủy</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">Thất bại — xem nhật ký</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -5524,6 +5659,10 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     <message>
         <source>Cancelled</source>
         <translation>Đã hủy</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">Thất bại — xem nhật ký</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -6056,6 +6195,14 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>Đang hoạt động</translation>
     </message>
     <message>
+        <source>Unfavorite</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Favorite</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Click to add to / remove from favorites.</source>
         <translation>Nhấp để thêm vào / xóa khỏi mục yêu thích.</translation>
     </message>
@@ -6076,6 +6223,10 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     <message>
         <source>Skip this version</source>
         <translation>Bỏ qua phiên bản này</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished">Đóng</translation>
     </message>
     <message>
         <source>Anki Miner v%1 is available!</source>

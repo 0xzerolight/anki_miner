@@ -64,6 +64,14 @@
         <translation>刷新</translation>
     </message>
     <message>
+        <source>Analytics Tab</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>View mining statistics, series difficulty rankings, and progress milestones</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Overview</source>
         <translation>概览</translation>
     </message>
@@ -662,8 +670,16 @@ The audio pack was not removed.</source>
         <translation>添加自定义音频 URL 源</translation>
     </message>
     <message>
+        <source>Move up</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Move up in priority</source>
         <translation>提高优先级</translation>
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation type="unfinished">下移</translation>
     </message>
     <message>
         <source>Move down in priority</source>
@@ -1222,6 +1238,14 @@ Total cards created: %2</source>
         <translation>补全已挖词卡片中缺失的音调、词频、释义和读音字段。</translation>
     </message>
     <message>
+        <source>Restyle mined cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>View mining history &amp; stats</source>
         <translation>查看挖词历史与统计</translation>
     </message>
@@ -1616,6 +1640,10 @@ Total cards created: %2</source>
         <translation>已跳过 {count} 条笔记——表达字段为空。</translation>
     </message>
     <message>
+        <source>Settings changed since this scan; re-scan before applying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Apply backfill?</source>
         <translation>应用卡片字段补全？</translation>
     </message>
@@ -1646,6 +1674,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Cancelling…</source>
         <translation>正在取消…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation type="unfinished">已取消。</translation>
     </message>
 </context><context>
     <name>CondenseTab</name>
@@ -1680,6 +1712,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Cancelled</source>
         <translation>已取消</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">失败——请查看日志</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -2350,6 +2386,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>重新导入失败</translation>
     </message>
     <message>
+        <source>Scan Failed</source>
+        <translation type="unfinished">扫描失败</translation>
+    </message>
+    <message>
         <source>No dictionaries with saved sources were found.
 
 Skipped (no saved source — right-click a dictionary row → Re-import… to seed):
@@ -2484,8 +2524,16 @@ The dictionary was not removed.</source>
         <translation>重新添加存储文件夹中发现但不在上方列表中的词典（例如设置重置后）。无需重新导入。</translation>
     </message>
     <message>
+        <source>Move up</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Move up in priority</source>
         <translation>提升优先级</translation>
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation type="unfinished">下移</translation>
     </message>
     <message>
         <source>Move down in priority</source>
@@ -2952,6 +3000,34 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation>浏览…</translation>
     </message>
     <message>
+        <source>file</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a %1 by typing path, browsing, or dragging</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 path</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Path to %1. Type or paste a path, or use browse button</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Browse for %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Opens file dialog to select %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select %1</source>
         <translation>选择 %1</translation>
     </message>
@@ -3300,6 +3376,10 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation>导入失败</translation>
     </message>
     <message>
+        <source>Scan Failed</source>
+        <translation type="unfinished">扫描失败</translation>
+    </message>
+    <message>
         <source>Choose frequency source to re-import</source>
         <translation>选择要重新导入的词频来源</translation>
     </message>
@@ -3350,6 +3430,10 @@ The frequency source was not removed.</source>
     <message>
         <source>+ Add Source…</source>
         <translation>+ 添加来源…</translation>
+    </message>
+    <message>
+        <source>Move up</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Move up (breaks rank ties first)</source>
@@ -3602,6 +3686,38 @@ Add %3 word(s) to your known list?</source>
         <translation>已更新至 v%1。&lt;br&gt;&lt;br&gt;查看新增内容：&lt;a href="https://github.com/0xzerolight/anki_miner/releases/latest"&gt;发布说明&lt;/a&gt;</translation>
     </message>
     <message>
+        <source>Anki Miner Main Window</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Japanese vocabulary mining tool for creating Anki flashcards from video subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Main Tabs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Navigate between Video, Deck Builder, Audio, Reading, Analytics, Tools, and Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Application Header</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Application title and theme selector</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Status Bar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Shows current operation, statistics, and system status</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>&amp;Tools</source>
         <translation>工具(&amp;T)</translation>
     </message>
@@ -3674,12 +3790,12 @@ Add %3 word(s) to your known list?</source>
         <translation>桌面快捷方式</translation>
     </message>
     <message>
-        <source>Shortcut created.</source>
-        <translation>快捷方式已创建。</translation>
-    </message>
-    <message>
         <source>Failed to create desktop shortcut.</source>
         <translation>创建桌面快捷方式失败。</translation>
+    </message>
+    <message>
+        <source>Shortcut created.</source>
+        <translation>快捷方式已创建。</translation>
     </message>
     <message>
         <source>Restyle Mined Cards</source>
@@ -4111,6 +4227,10 @@ You can fine-tune these later in Settings → Anki.</source>
         <source>Ready</source>
         <translation>就绪</translation>
     </message>
+    <message>
+        <source>ETA ~</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>QueueItemWidget</name>
     <message>
@@ -4444,6 +4564,10 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Mined %1: %2 cards.</source>
         <translation>已挖词 %1：%2 张卡片。</translation>
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
+        <translation type="unfinished">已取消 %1。</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
@@ -4986,10 +5110,9 @@ Imported values override your current settings; anything not in the file is kept
         <translation>无效的字幕正则表达式</translation>
     </message>
     <message>
-        <source>The imported subtitle regex filter is invalid and has been disabled:
+        <source>The imported subtitle regex filter was rejected; the previous filter was kept:
 %1</source>
-        <translation>导入的字幕正则表达式过滤器无效，已被禁用：
-%1</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>✓ Imported</source>
@@ -5102,6 +5225,14 @@ Imported values override your current settings; anything not in the file is kept
     <message>
         <source>Progress</source>
         <translation>进度</translation>
+    </message>
+    <message>
+        <source>Episode Mining Tab</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Process a single video episode to create vocabulary flashcards</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>File Selection</source>
@@ -5280,6 +5411,10 @@ Imported values override your current settings; anything not in the file is kept
     <message>
         <source>Cancelled</source>
         <translation>已取消</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">失败——请查看日志</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -5524,6 +5659,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Cancelled</source>
         <translation>已取消</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">失败——请查看日志</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -6056,6 +6195,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>活动</translation>
     </message>
     <message>
+        <source>Unfavorite</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Favorite</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Click to add to / remove from favorites.</source>
         <translation>点击以添加到收藏 / 从收藏中移除。</translation>
     </message>
@@ -6076,6 +6223,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Skip this version</source>
         <translation>跳过此版本</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished">关闭</translation>
     </message>
     <message>
         <source>Anki Miner v%1 is available!</source>

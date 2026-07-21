@@ -64,6 +64,14 @@
         <translation>Segarkan</translation>
     </message>
     <message>
+        <source>Analytics Tab</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>View mining statistics, series difficulty rankings, and progress milestones</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Overview</source>
         <translation>Ikhtisar</translation>
     </message>
@@ -662,8 +670,16 @@ Paket audio tidak dihapus.</translation>
         <translation>Tambah sumber URL audio kustom</translation>
     </message>
     <message>
+        <source>Move up</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Move up in priority</source>
         <translation>Naikkan prioritas</translation>
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation type="unfinished">Turun</translation>
     </message>
     <message>
         <source>Move down in priority</source>
@@ -1222,6 +1238,14 @@ Total kartu dibuat: %2</translation>
         <translation>Isi bidang aksen nada, frekuensi, definisi, dan bacaan yang belum terisi pada kartu hasil mining.</translation>
     </message>
     <message>
+        <source>Restyle mined cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>View mining history &amp; stats</source>
         <translation>Lihat riwayat &amp; statistik mining</translation>
     </message>
@@ -1616,6 +1640,10 @@ Total kartu dibuat: %2</translation>
         <translation>{count} catatan dilewati — bidang Ekspresi kosong.</translation>
     </message>
     <message>
+        <source>Settings changed since this scan; re-scan before applying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Apply backfill?</source>
         <translation>Terapkan pengisian bidang kartu?</translation>
     </message>
@@ -1646,6 +1674,10 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
     <message>
         <source>Cancelling…</source>
         <translation>Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation type="unfinished">Dibatalkan.</translation>
     </message>
 </context><context>
     <name>CondenseTab</name>
@@ -1680,6 +1712,10 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
     <message>
         <source>Cancelled</source>
         <translation>Dibatalkan</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">Gagal — lihat log</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -2350,6 +2386,10 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>Impor Ulang Gagal</translation>
     </message>
     <message>
+        <source>Scan Failed</source>
+        <translation type="unfinished">Pemindaian Gagal</translation>
+    </message>
+    <message>
         <source>No dictionaries with saved sources were found.
 
 Skipped (no saved source — right-click a dictionary row → Re-import… to seed):
@@ -2484,8 +2524,16 @@ Kamus tidak dihapus.</translation>
         <translation>Tambahkan kembali kamus yang ditemukan di folder penyimpanan yang tidak ada dalam daftar di atas (mis. setelah pengaturan disetel ulang). Tidak perlu impor ulang.</translation>
     </message>
     <message>
+        <source>Move up</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Move up in priority</source>
         <translation>Naikkan prioritas</translation>
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation type="unfinished">Turun</translation>
     </message>
     <message>
         <source>Move down in priority</source>
@@ -2952,6 +3000,34 @@ Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang dari zip sumber.</transla
         <translation>Telusuri...</translation>
     </message>
     <message>
+        <source>file</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a %1 by typing path, browsing, or dragging</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 path</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Path to %1. Type or paste a path, or use browse button</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Browse for %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Opens file dialog to select %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select %1</source>
         <translation>Pilih %1</translation>
     </message>
@@ -3300,6 +3376,10 @@ Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang dari zip sumber.</transla
         <translation>Impor Gagal</translation>
     </message>
     <message>
+        <source>Scan Failed</source>
+        <translation type="unfinished">Pemindaian Gagal</translation>
+    </message>
+    <message>
         <source>Choose frequency source to re-import</source>
         <translation>Pilih sumber frekuensi untuk diimpor ulang</translation>
     </message>
@@ -3350,6 +3430,10 @@ Sumber frekuensi tidak dihapus.</translation>
     <message>
         <source>+ Add Source…</source>
         <translation>+ Tambah Sumber…</translation>
+    </message>
+    <message>
+        <source>Move up</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Move up (breaks rank ties first)</source>
@@ -3602,6 +3686,38 @@ Tambahkan %3 kata ke daftar kata yang dikenal Anda?</translation>
         <translation>Diperbarui ke v%1.&lt;br&gt;&lt;br&gt;Lihat yang baru: &lt;a href="https://github.com/0xzerolight/anki_miner/releases/latest"&gt;catatan rilis&lt;/a&gt;</translation>
     </message>
     <message>
+        <source>Anki Miner Main Window</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Japanese vocabulary mining tool for creating Anki flashcards from video subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Main Tabs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Navigate between Video, Deck Builder, Audio, Reading, Analytics, Tools, and Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Application Header</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Application title and theme selector</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Status Bar</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Shows current operation, statistics, and system status</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>&amp;Tools</source>
         <translation>&amp;Alat</translation>
     </message>
@@ -3674,12 +3790,12 @@ Tambahkan %3 kata ke daftar kata yang dikenal Anda?</translation>
         <translation>Pintasan Desktop</translation>
     </message>
     <message>
-        <source>Shortcut created.</source>
-        <translation>Pintasan dibuat.</translation>
-    </message>
-    <message>
         <source>Failed to create desktop shortcut.</source>
         <translation>Gagal membuat pintasan desktop.</translation>
+    </message>
+    <message>
+        <source>Shortcut created.</source>
+        <translation>Pintasan dibuat.</translation>
     </message>
     <message>
         <source>Restyle Mined Cards</source>
@@ -4111,6 +4227,10 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <source>Ready</source>
         <translation>Siap</translation>
     </message>
+    <message>
+        <source>ETA ~</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>QueueItemWidget</name>
     <message>
@@ -4444,6 +4564,10 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     <message>
         <source>Mined %1: %2 cards.</source>
         <translation>Selesai mining %1: %2 kartu.</translation>
+    </message>
+    <message>
+        <source>Cancelled %1.</source>
+        <translation type="unfinished">Dibatalkan %1.</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
@@ -4986,10 +5110,9 @@ Nilai yang diimpor menggantikan pengaturan Anda saat ini; apa pun yang tidak ada
         <translation>Regex Subtitel Tidak Valid</translation>
     </message>
     <message>
-        <source>The imported subtitle regex filter is invalid and has been disabled:
+        <source>The imported subtitle regex filter was rejected; the previous filter was kept:
 %1</source>
-        <translation>Filter regex subtitel yang diimpor tidak valid dan telah dinonaktifkan:
-%1</translation>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>✓ Imported</source>
@@ -5102,6 +5225,14 @@ Nilai yang diimpor menggantikan pengaturan Anda saat ini; apa pun yang tidak ada
     <message>
         <source>Progress</source>
         <translation>Progres</translation>
+    </message>
+    <message>
+        <source>Episode Mining Tab</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Process a single video episode to create vocabulary flashcards</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>File Selection</source>
@@ -5280,6 +5411,10 @@ Nilai yang diimpor menggantikan pengaturan Anda saat ini; apa pun yang tidak ada
     <message>
         <source>Cancelled</source>
         <translation>Dibatalkan</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">Gagal — lihat log</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -5524,6 +5659,10 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
     <message>
         <source>Cancelled</source>
         <translation>Dibatalkan</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">Gagal — lihat log</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -6056,6 +6195,14 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>Aktif</translation>
     </message>
     <message>
+        <source>Unfavorite</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Favorite</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Click to add to / remove from favorites.</source>
         <translation>Klik untuk menambahkan ke / menghapus dari favorit.</translation>
     </message>
@@ -6076,6 +6223,10 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
     <message>
         <source>Skip this version</source>
         <translation>Lewati versi ini</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished">Tutup</translation>
     </message>
     <message>
         <source>Anki Miner v%1 is available!</source>

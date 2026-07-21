@@ -102,8 +102,10 @@ class AnalyticsTab(QWidget):
         self.setLayout(main_layout)
 
     def _setup_accessibility(self) -> None:
-        self.setAccessibleName("Analytics Tab")
-        self.setAccessibleDescription("View mining statistics, series difficulty rankings, and progress milestones")
+        self.setAccessibleName(self.tr("Analytics Tab"))
+        self.setAccessibleDescription(
+            self.tr("View mining statistics, series difficulty rankings, and progress milestones")
+        )
 
     def _create_dashboard_section(self) -> QFrame:
         group = QFrame()

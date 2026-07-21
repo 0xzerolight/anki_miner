@@ -388,6 +388,7 @@ class UISettingsPanel(QWidget):
         button.setCheckable(True)
         button.setChecked(is_favorite)
         button.setText(_STAR_FILLED if is_favorite else _STAR_OUTLINE)
+        button.setAccessibleName(self.tr("Unfavorite") if is_favorite else self.tr("Favorite"))
         button.setAutoRaise(True)
         button.setCursor(Qt.CursorShape.PointingHandCursor)
         button.setToolTip(self.tr("Click to add to / remove from favorites."))
@@ -589,6 +590,7 @@ class UISettingsPanel(QWidget):
         is_fav = Theme.is_favorite(key)
         button.setChecked(is_fav)
         button.setText(_STAR_FILLED if is_fav else _STAR_OUTLINE)
+        button.setAccessibleName(self.tr("Unfavorite") if is_fav else self.tr("Favorite"))
 
     def _refresh_family_star(self, key: str) -> None:
         """Rebuild only the family star cell for the family containing ``key``."""

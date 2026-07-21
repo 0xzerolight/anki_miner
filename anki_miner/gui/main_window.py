@@ -210,22 +210,22 @@ class MainWindow(QMainWindow):
     def _setup_accessibility(self) -> None:
         """Set up accessibility features for screen readers and keyboard navigation."""
         # Set window accessible name and description
-        self.setAccessibleName("Anki Miner Main Window")
+        self.setAccessibleName(self.tr("Anki Miner Main Window"))
         self.setAccessibleDescription(
-            "Japanese vocabulary mining tool for creating Anki flashcards from video subtitles"
+            self.tr("Japanese vocabulary mining tool for creating Anki flashcards from video subtitles")
         )
 
         # Set accessible names for main components
-        self.tabs.setAccessibleName("Main Tabs")
+        self.tabs.setAccessibleName(self.tr("Main Tabs"))
         self.tabs.setAccessibleDescription(
-            "Navigate between Video, Deck Builder, Audio, Reading, Analytics, Tools, and Settings"
+            self.tr("Navigate between Video, Deck Builder, Audio, Reading, Analytics, Tools, and Settings")
         )
 
-        self.header.setAccessibleName("Application Header")
-        self.header.setAccessibleDescription("Application title and theme selector")
+        self.header.setAccessibleName(self.tr("Application Header"))
+        self.header.setAccessibleDescription(self.tr("Application title and theme selector"))
 
-        self.status_bar.setAccessibleName("Status Bar")
-        self.status_bar.setAccessibleDescription("Shows current operation, statistics, and system status")
+        self.status_bar.setAccessibleName(self.tr("Status Bar"))
+        self.status_bar.setAccessibleDescription(self.tr("Shows current operation, statistics, and system status"))
 
         # Set tab order: header -> tabs -> status bar
         self.setTabOrder(self.header, self.tabs)

@@ -57,6 +57,7 @@ class UpdateBanner(QFrame):
 
         dismiss_btn = QPushButton("✕")
         dismiss_btn.setObjectName("dismissBtn")
+        dismiss_btn.setAccessibleName(self.tr("Close"))
         dismiss_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         dismiss_btn.clicked.connect(self._on_dismiss)
         layout.addWidget(dismiss_btn)
