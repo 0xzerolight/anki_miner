@@ -10,6 +10,7 @@ signals and the mutated item state.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -56,7 +57,7 @@ def mock_processor():
 @pytest.fixture
 def fake_load(monkeypatch):
     """Patch ``detector.load`` to return a per-source document without I/O."""
-    load_mock = MagicMock(side_effect=lambda source: SimpleNamespace(doc_for=source.title))
+    load_mock = MagicMock(side_effect=lambda source, **_kwargs: SimpleNamespace(doc_for=source.title))
     monkeypatch.setattr(
         "anki_miner.gui.workers.reading_queue_worker.detector.load",
         load_mock,
@@ -140,7 +141,7 @@ def test_cancelled_result_marks_item_ready(make_worker, mock_processor, fake_loa
 
 def test_process_reading_receives_loaded_document(make_worker, mock_processor, fake_load):
     doc = SimpleNamespace(name="loaded-doc")
-    fake_load.side_effect = lambda source: doc
+    fake_load.side_effect = lambda source, **_kwargs: doc
     items = [_make_item("vol01")]
 
     worker = make_worker(items=items)
@@ -148,6 +149,15 @@ def test_process_reading_receives_loaded_document(make_worker, mock_processor, f
 
     call = mock_processor.process_reading.call_args
     assert call.args == (doc,)
+
+
+def test_load_receives_annotation_opt_out(make_worker, test_config, fake_load):
+    config = replace(test_config, strip_subtitle_annotations=False)
+    item = _make_item("ep01", kind="subtitle")
+
+    make_worker(items=[item], config=config).run()
+
+    fake_load.assert_called_once_with(item.source, strip_subtitle_annotations=False)
 
 
 # ---------------------------------------------------------------------------
@@ -158,7 +168,7 @@ def test_process_reading_receives_loaded_document(make_worker, mock_processor, f
 def test_load_setuperror_on_first_item_continues_queue(make_worker, mock_processor, fake_load):
     items = [_make_item("vol01"), _make_item("vol02")]
 
-    def _load(source):
+    def _load(source, **_kwargs):
         if source.title == "vol01":
             raise SetupError("This EPUB is DRM-protected and cannot be mined.")
         return SimpleNamespace(doc_for=source.title)
@@ -318,7 +328,7 @@ def test_process_reading_kwargs(make_worker, mock_processor, fake_load):
         return words
 
     doc = SimpleNamespace(name="doc")
-    fake_load.side_effect = lambda source: doc
+    fake_load.side_effect = lambda source, **_kwargs: doc
     items = [_make_item("my_manga", kind="mokuro")]
     worker = make_worker(items=items, curation_callback=_curation)
     worker.run()

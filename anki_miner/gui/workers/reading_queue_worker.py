@@ -157,7 +157,10 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
         exception (load or mining) propagates to the error handling in
         ``_run_item``.
         """
-        document = detector.load(item.source)
+        document = detector.load(
+            item.source,
+            strip_subtitle_annotations=self._config.strip_subtitle_annotations,
+        )
         # Published for the manga tab's curation context (page images). Set
         # before process_reading so it is always the in-flight item's document
         # by the time the curation callback parks this thread.

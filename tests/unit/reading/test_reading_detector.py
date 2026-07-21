@@ -429,7 +429,10 @@ def test_load_dispatches_to_source_module(kind: str, monkeypatch: pytest.MonkeyP
     result = detector.load(ref)
 
     assert result is sentinel
-    fake_load.assert_called_once_with(ref)
+    if kind == "subtitle":
+        fake_load.assert_called_once_with(ref, strip_annotations=False)
+    else:
+        fake_load.assert_called_once_with(ref)
 
 
 def test_load_does_not_import_sibling_modules():

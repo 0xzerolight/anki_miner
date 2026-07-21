@@ -185,7 +185,10 @@ def replay_file(parser: SubtitleParserService, path: Path) -> list[ReplayRow]:
     ``parse_text_units`` with ``subtitle_cleanup=True`` (the video-path
     annotation-strip seam) so the output equals what production mining emits.
     """
-    document = subtitle_source.load(ReadingSourceRef(kind="subtitle", path=path))
+    document = subtitle_source.load(
+        ReadingSourceRef(kind="subtitle", path=path),
+        strip_annotations=parser.config.strip_subtitle_annotations,
+    )
     return _replay_units(parser, document.units, path.name)
 
 

@@ -87,7 +87,7 @@ def detect(path: Path) -> list[ReadingSourceRef]:
     )
 
 
-def load(ref: ReadingSourceRef) -> ReadingDocument:
+def load(ref: ReadingSourceRef, *, strip_subtitle_annotations: bool = False) -> ReadingDocument:
     """Dispatch a ref to its source loader and return the loaded document.
 
     Imports the per-kind loader lazily inside the branch so importing this
@@ -110,7 +110,7 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
     if ref.kind == "subtitle":
         from . import subtitle_source
 
-        return subtitle_source.load(ref)
+        return subtitle_source.load(ref, strip_annotations=strip_subtitle_annotations)
     if ref.kind == "text":
         from . import text_source
 
@@ -150,7 +150,7 @@ def detect_book_folder(directory: Path) -> list[ReadingSourceRef]:
     )
     if not books:
         raise SetupError(
-            f"No .epub or .txt books found in '{directory.name}'. " "Manga folders are mined in the Manga tab."
+            f"No .epub or .txt books found in '{directory.name}'. Manga folders are mined in the Manga tab."
         )
     return [_book_ref(child, "epub" if child.suffix.lower() == ".epub" else "txt") for child in books]
 
@@ -199,7 +199,7 @@ def _detect_archive(archive_path: Path) -> list[ReadingSourceRef]:
     sidecar = archive_path.with_suffix(".mokuro")
     if sidecar.is_file():
         return [_mokuro_ref(sidecar)]
-    raise SetupError(f"No .mokuro sidecar found for '{archive_path.name}'. " f"Expected '{sidecar.name}' alongside it.")
+    raise SetupError(f"No .mokuro sidecar found for '{archive_path.name}'. Expected '{sidecar.name}' alongside it.")
 
 
 def _detect_directory(directory: Path) -> list[ReadingSourceRef]:
@@ -272,12 +272,10 @@ def _read_mokuro_meta(mokuro_path: Path) -> dict[str, Any]:
         raise SetupError(f"Invalid .mokuro file '{mokuro_path.name}': {e}") from e
 
     if not isinstance(data, dict):
-        raise SetupError(f"Invalid .mokuro file '{mokuro_path.name}': " "expected a JSON object at the top level.")
+        raise SetupError(f"Invalid .mokuro file '{mokuro_path.name}': expected a JSON object at the top level.")
 
     missing = [key for key in _MOKURO_REQUIRED_KEYS if key not in data]
     if missing:
-        raise SetupError(
-            f"Invalid .mokuro file '{mokuro_path.name}': " f"missing required key(s): {', '.join(missing)}."
-        )
+        raise SetupError(f"Invalid .mokuro file '{mokuro_path.name}': missing required key(s): {', '.join(missing)}.")
 
     return data

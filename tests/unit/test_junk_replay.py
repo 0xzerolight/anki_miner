@@ -118,6 +118,18 @@ def test_replay_file_strips_annotation_after_ass_hard_break(tmp_path: Path) -> N
     assert "案内" not in {row.mined_form for row in rows}
 
 
+def test_replay_file_preserves_annotation_after_ass_hard_break_when_disabled(tmp_path: Path) -> None:
+    path = tmp_path / "ep01.ass"
+    path.write_text(_ASS_HARD_BREAK, encoding="utf-8")
+    config = dataclasses.replace(_empty_chain_config(tmp_path), strip_subtitle_annotations=False)
+    parser = build_parser(config)
+
+    rows = junk_replay.replay_file(parser, path)
+
+    assert rows
+    assert {row.sentence for row in rows} == {"猫が好き （案内）犬が眠る"}
+
+
 @pytest.mark.parametrize("case", _RESIDUAL_CASES, ids=[case["id"] for case in _RESIDUAL_CASES])
 def test_committed_residual_replay(case: dict[str, object], tmp_path: Path) -> None:
     parser = build_parser(_empty_chain_config(tmp_path))

@@ -41,38 +41,41 @@ def strip_subtitle_markup(text: str) -> str:
     return text
 
 
-def clean_subtitle_text(text: str, *, strip_annotations: bool = True) -> str:
+def clean_subtitle_text(text: str, *, strip_annotations: bool = False) -> str:
     """Remove formatting tags, then Japanese-normalize for tokenization.
 
-    Tag/whitespace stripping runs first, then :func:`normalize_for_tokenization`
+    Markup stripping runs first, then :func:`normalize_for_tokenization`
     (halfwidth katakana → fullwidth, NFC combining-mark composition, CJK-compat
-    and radical NFKD folding) and the minimal kanji-variant map (𠮟 → 叱). Because
-    normalization precedes tokenization here, the returned string *is* the text
-    MeCab tokenizes and the stored card sentence, so token offsets, dedup keys,
-    and script-type filters all see one consistent normalized form.
+    and radical NFKD folding) and the minimal kanji-variant map (𠮟 → 叱). When
+    annotation stripping is enabled, physical lines stay separate through
+    normalization and are stripped before whitespace is flattened. The returned
+    string *is* the text MeCab tokenizes and the stored card sentence, so token
+    offsets, dedup keys, and script-type filters all see one normalized form.
 
     Args:
         text: Raw subtitle text with possible formatting tags
-        strip_annotations: Strip annotations per physical line before flattening
+        strip_annotations: Strip annotations per physical line after normalization
 
     Returns:
         Cleaned, normalized text without formatting tags
     """
     if strip_annotations:
-        # Keep every subtitle physical-line break until annotations have been
-        # stripped per line; strip_subtitle_markup normally flattens ASS/SSA
-        # \N and \n markers to spaces.
+        # Preserve physical lines until the gated post-normalization strip;
+        # strip_subtitle_markup normally flattens ASS/SSA \N and \n to spaces.
         text = re.sub(r"\\[nN]|\r\n?", "\n", text)
     text = strip_subtitle_markup(text)
-    if strip_annotations:
-        text = strip_inline_annotations(text)
 
-    # Normalize whitespace
-    text = " ".join(text.split())
+    # Preserve the pre-annotation behavior exactly when the opt-in is disabled.
+    if not strip_annotations:
+        text = " ".join(text.split())
 
     # Japanese pre-tokenization normalization (see anki_miner.utils.ja_normalize).
     text = normalize_for_tokenization(text)
     text = standardize_kanji_variants(text)
+
+    if strip_annotations:
+        text = strip_inline_annotations(text)
+        text = " ".join(text.split())
 
     return text.strip()
 
@@ -189,14 +192,15 @@ def strip_inline_annotations(text: str) -> str:
        peeled (with following whitespace), repeatedly, so
        ``（旬: 小声で）余計な…`` → ``余計な…``. Deliberately broader than names.
 
-    Each pass applies independently to every ``\n``-separated physical line, so
-    an annotation at any physical line start cannot become mid-cue dialogue when
-    whitespace is later flattened. Mid-line paren groups containing kanji are
-    left untouched (conservative). Balanced-paren matching only:
+    Each pass applies independently to every physical line (actual newlines or
+    ASS/SSA ``\\N``/``\\n`` markers), so an annotation at any physical line start
+    cannot become mid-cue dialogue when whitespace is later flattened. Mid-line
+    paren groups containing kanji are left untouched (conservative). Balanced-
+    paren matching only:
     malformed/unbalanced parens leave the text unchanged. Pure function — no
     I/O, no config; the caller gates it.
     """
-    return "\n".join(_strip_inline_annotations_line(line) for line in text.split("\n"))
+    return "\n".join(_strip_inline_annotations_line(line) for line in re.split(r"\\[nN]|\r\n?|\n", text))
 
 
 def _strip_inline_annotations_line(text: str) -> str:

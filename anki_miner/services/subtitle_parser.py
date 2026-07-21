@@ -476,9 +476,9 @@ class SubtitleParserService:
     def _clean_line_text(self, raw_text: str) -> str:
         """Full per-line text pipeline shared by the mining and display paths.
 
-        Order: markup strip → per-physical-line ``strip_inline_annotations``
-        (gated on ``config.strip_subtitle_annotations``, default ON) → whitespace
-        collapse + JP normalization → ``_apply_text_filter``. Applied identically
+        Order: markup strip → JP normalization → per-physical-line annotation
+        strip (gated on ``config.strip_subtitle_annotations``, default ON) →
+        whitespace collapse → ``_apply_text_filter``. Applied identically
         by ``_iter_parsed_lines`` (mining) and ``parse_raw_entries`` (display) so
         the shown cue text matches what mining tokenizes. A line that collapses
         to empty is skipped by each caller's existing ``if not text: continue``
@@ -1153,12 +1153,9 @@ class SubtitleParserService:
             # subtitle-cue kind only (subtitle_cleanup).
             text = standardize_kanji_variants(normalize_for_tokenization(unit.text))
             if subtitle_cleanup:
-                # Reading→Subtitles per-cue kind: the video path's subtitle-only
-                # cleanup (annotation strip + user regex) the loader can't run
-                # (it is config-free). Order mirrors _clean_line_text (:423–426);
-                # a cue that collapses to empty is skipped, so its (empty) text
-                # never reaches _build_line_state and contributes no count or
-                # line-index entry — content-free lines are already skipped below.
+                # Reading→Subtitles per-cue cleanup remains gated here for
+                # synthetic ReadingUnit callers and is idempotent when the
+                # config-fed loader already stripped the cue.
                 if self.config.strip_subtitle_annotations:
                     text = strip_inline_annotations(text)
                 text = self._apply_text_filter(text)

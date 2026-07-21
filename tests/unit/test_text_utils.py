@@ -83,7 +83,18 @@ class TestCleanSubtitleText:
     def test_strips_leading_annotation_after_ass_hard_break(self):
         text = r"猫が好き\N（案内）犬が眠る"
 
-        assert clean_subtitle_text(text) == "猫が好き 犬が眠る"
+        assert clean_subtitle_text(text, strip_annotations=True) == "猫が好き 犬が眠る"
+
+    @pytest.mark.parametrize(
+        "text, expected",
+        [
+            ("漢(ｶﾝ)", "漢"),
+            ("漢(は\u3099ん)", "漢"),
+            ("⼭(やま)", "山"),
+        ],
+    )
+    def test_normalizes_before_stripping_annotations(self, text, expected):
+        assert clean_subtitle_text(text, strip_annotations=True) == expected
 
     def test_removes_html_tags(self):
         """Should remove HTML tags."""
