@@ -16,16 +16,25 @@ from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFl
 MOD = "anki_miner.gui.controllers.dictionary_import_flow"
 
 
+def _run_scan_sync(work, on_done, on_error):
+    try:
+        on_done(work())
+    except Exception as exc:  # noqa: BLE001
+        on_error(str(exc))
+
+
 def _make_flow(dicts_root: Path) -> DictionaryImportFlow:
     cfg = MagicMock()
     cfg.dicts_root = dicts_root
-    return DictionaryImportFlow(
+    flow = DictionaryImportFlow(
         parent=MagicMock(spec=QWidget),
         panel=MagicMock(),
         get_config=lambda: cfg,
         persist_chain=MagicMock(),
         notify_config_changed=MagicMock(),
     )
+    flow._run_latest_scan = _run_scan_sync
+    return flow
 
 
 def test_add_dict_dialog_defaults_to_dicts_dir():

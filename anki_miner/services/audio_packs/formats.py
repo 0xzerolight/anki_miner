@@ -23,18 +23,25 @@ from anki_miner.services.audio_packs.storage import AudioPackRow
 logger = logging.getLogger(__name__)
 
 AUDIO_EXTENSIONS: set[str] = {".mp3", ".m4a", ".aac", ".ogg", ".oga", ".opus", ".flac", ".wav"}
+CancelCheck = Callable[[], bool]
+
+
+def _never_cancelled() -> bool:
+    return False
+
 
 # ---------------------------------------------------------------------------
 # Format detection
 # ---------------------------------------------------------------------------
 
 
-def detect_pack_format(pack_dir: Path) -> str | None:
+def detect_pack_format(pack_dir: Path, *, cancel_check: CancelCheck | None = None) -> str | None:
     """Return the format string for *pack_dir*, or None if unrecognised.
 
     Detection order: ajt → nhk16 → forvo → jpod_legacy.
     """
-    if not pack_dir.is_dir():
+    is_cancelled = cancel_check or _never_cancelled
+    if is_cancelled() or not pack_dir.is_dir():
         return None
 
     fmt = _detect_index_driven_format(pack_dir)
@@ -42,11 +49,11 @@ def detect_pack_format(pack_dir: Path) -> str | None:
         return fmt
 
     # forvo: immediate subdirectories that contain audio-extension files (no index files)
-    if _looks_like_forvo(pack_dir):
+    if _looks_like_forvo(pack_dir, cancel_check=is_cancelled):
         return "forvo"
 
     # jpod_legacy: audio files (possibly nested) with "{reading} - {expression}" stems
-    if _looks_like_jpod_legacy(pack_dir):
+    if _looks_like_jpod_legacy(pack_dir, cancel_check=is_cancelled):
         return "jpod_legacy"
 
     return None
@@ -109,7 +116,7 @@ def _looks_like_ozk5(data: object | None) -> bool:
     return isinstance(data.get("kana_index"), dict) or isinstance(data.get("kanji_index"), dict)
 
 
-def _looks_like_forvo(pack_dir: Path) -> bool:
+def _looks_like_forvo(pack_dir: Path, *, cancel_check: CancelCheck = _never_cancelled) -> bool:
     """True if pack_dir has immediate subdirs that contain audio-ext files.
 
     Assumption: speaker-dir files use plain expression stems (e.g. "食べる.mp3"),
@@ -118,21 +125,25 @@ def _looks_like_forvo(pack_dir: Path) -> bool:
     forvo here; real JPod101 legacy packs are flat (files directly in pack_dir).
     """
     for entry in pack_dir.iterdir():
+        if cancel_check():
+            return False
         if entry.is_dir() and not entry.name.startswith("."):
             for child in entry.iterdir():
+                if cancel_check():
+                    return False
                 if child.is_file() and child.suffix.lower() in AUDIO_EXTENSIONS:
                     return True
     return False
 
 
-def _looks_like_jpod_legacy(pack_dir: Path) -> bool:
+def _looks_like_jpod_legacy(pack_dir: Path, *, cancel_check: CancelCheck = _never_cancelled) -> bool:
     """True if any audio file (recursive) has a stem with exactly one ' - ' separator.
 
     Uses the same full split (no maxsplit) and len-2 check as the parser so that
     detection and parsing agree: stems like "a - b - c" (3 parts) are ignored by
     both the detector and the parser.
     """
-    for audio_file in _iter_audio_files(pack_dir):
+    for audio_file in _iter_audio_files(pack_dir, cancel_check=cancel_check):
         parts = audio_file.stem.split(" - ")
         if len(parts) == 2:
             return True
@@ -144,9 +155,11 @@ def _looks_like_jpod_legacy(pack_dir: Path) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def _iter_audio_files(directory: Path) -> Iterator[Path]:
+def _iter_audio_files(directory: Path, *, cancel_check: CancelCheck = _never_cancelled) -> Iterator[Path]:
     """Yield all audio-extension files recursively under *directory*."""
     for path in directory.rglob("*"):
+        if cancel_check():
+            return
         if path.is_file() and path.suffix.lower() in AUDIO_EXTENSIONS:
             yield path
 
@@ -708,7 +721,11 @@ PARSERS: dict[str, ParserFn] = {
 # ---------------------------------------------------------------------------
 
 
-def scan_importable_packs(directory: Path) -> list[tuple[Path, str]]:
+def scan_importable_packs(
+    directory: Path,
+    *,
+    cancel_check: CancelCheck | None = None,
+) -> list[tuple[Path, str]]:
     """Return (pack_dir, format) for every detectable pack under *directory*.
 
     Checks each immediate non-hidden child directory first, then *directory*
@@ -723,27 +740,41 @@ def scan_importable_packs(directory: Path) -> list[tuple[Path, str]]:
     A directory that is itself a pack with no pack children gets the full
     detection as before.
     """
+    is_cancelled = cancel_check or _never_cancelled
     seen: set[Path] = set()
     child_results: list[tuple[Path, str]] = []
 
     if directory.is_dir():
-        for child in sorted(directory.iterdir()):
+        children: list[Path] = []
+        for child in directory.iterdir():
+            if is_cancelled():
+                return []
+            children.append(child)
+        for child in sorted(children):
+            if is_cancelled():
+                return []
             if not child.is_dir() or child.name.startswith("."):
                 continue
             resolved = child.resolve()
             if resolved in seen:
                 continue
             seen.add(resolved)
-            fmt = detect_pack_format(child)
+            fmt = detect_pack_format(child, cancel_check=is_cancelled)
+            if is_cancelled():
+                return []
             if fmt is not None:
                 child_results.append((child, fmt))
 
     results: list[tuple[Path, str]] = []
+    if is_cancelled():
+        return results
     if directory.resolve() not in seen:
         if child_results:
             dir_fmt = _detect_index_driven_format(directory) if directory.is_dir() else None
         else:
-            dir_fmt = detect_pack_format(directory)
+            dir_fmt = detect_pack_format(directory, cancel_check=is_cancelled)
+        if is_cancelled():
+            return []
         if dir_fmt is not None:
             results.append((directory, dir_fmt))
 

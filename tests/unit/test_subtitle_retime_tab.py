@@ -33,6 +33,7 @@ from anki_miner.utils.file_pairing import FilePair
 # ---------------------------------------------------------------------------
 
 _AVAILABLE = "anki_miner.gui.widgets.subtitle_retime_tab.SubtitleRetimeTab._alass_available"
+_COMPUTE_AVAILABLE = "anki_miner.gui.widgets.subtitle_retime_tab.SubtitleRetimeTab._compute_alass_available"
 _OS_ACCESS = "anki_miner.gui.widgets.subtitle_retime_tab.os.access"
 _WORKER_CLS = "anki_miner.gui.widgets.subtitle_retime_tab.SubtitleRetimeWorker"
 _FIND_PAIRS = "anki_miner.gui.widgets.subtitle_retime_tab.FilePairMatcher.find_pairs_by_episode_number"
@@ -82,9 +83,11 @@ class _FakeWorker:
 
 def _make_tab(config, qtbot):
     """Construct a SubtitleRetimeTab with alass patched available=True."""
-    with patch(_AVAILABLE, return_value=True):
+    with patch(_COMPUTE_AVAILABLE, return_value=True):
         tab = SubtitleRetimeTab(config)
-    qtbot.addWidget(tab)
+        qtbot.addWidget(tab)
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(tab.retime_button.isEnabled, timeout=3000)
     return tab
 
 
@@ -129,8 +132,10 @@ def test_alass_present_enables_retime(qtbot, tmp_path):
 def test_alass_absent_disables_retime(qtbot, tmp_path):
     """alass absent → Retime disabled, notice visible."""
     config = _make_config(tmp_path)
-    with patch(_AVAILABLE, return_value=False):
+    with patch(_COMPUTE_AVAILABLE, return_value=False):
         tab = SubtitleRetimeTab(config)
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=3000)
     qtbot.addWidget(tab)
     assert not tab.retime_button.isEnabled()
     assert not tab.engine_notice_label.isHidden()
@@ -144,6 +149,8 @@ def test_alass_available_via_path_check(qtbot, tmp_path):
         patch("anki_miner.gui.widgets.subtitle_retime_tab.shutil.which", return_value="/usr/bin/alass"),
     ):
         tab = SubtitleRetimeTab(config)
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(tab.retime_button.isEnabled, timeout=3000)
     qtbot.addWidget(tab)
     assert tab.retime_button.isEnabled()
 
@@ -156,6 +163,8 @@ def test_alass_unavailable_via_path_check(qtbot, tmp_path):
         patch("anki_miner.gui.widgets.subtitle_retime_tab.shutil.which", return_value=None),
     ):
         tab = SubtitleRetimeTab(config)
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=3000)
     qtbot.addWidget(tab)
     assert not tab.retime_button.isEnabled()
 
@@ -166,6 +175,8 @@ def test_alass_resolved_path_missing_unavailable(qtbot, tmp_path):
     missing = str(tmp_path / "nope" / "alass")
     with patch("anki_miner.gui.widgets.subtitle_retime_tab.resolve_alass", return_value=missing):
         tab = SubtitleRetimeTab(config)
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=3000)
     qtbot.addWidget(tab)
     assert not tab.retime_button.isEnabled()
 
@@ -177,6 +188,8 @@ def test_alass_resolved_path_exists_available(qtbot, tmp_path):
     binary.write_bytes(b"fake")
     with patch("anki_miner.gui.widgets.subtitle_retime_tab.resolve_alass", return_value=str(binary)):
         tab = SubtitleRetimeTab(config)
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(tab.retime_button.isEnabled, timeout=3000)
     qtbot.addWidget(tab)
     assert tab.retime_button.isEnabled()
 
@@ -842,12 +855,13 @@ def test_alass_probe_cached_not_rerun_per_call(qtbot, tmp_path):
     ):
         tab = SubtitleRetimeTab(config)
         qtbot.addWidget(tab)
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(tab.retime_button.isEnabled, timeout=3000)
         # Construction probed exactly once.
         assert which.call_count == 1
         # Repeated availability reads must NOT re-probe.
         assert tab._alass_available() is True
         assert tab._alass_available() is True
-        tab._refresh_engine_state()
         assert which.call_count == 1
 
 
@@ -862,12 +876,16 @@ def test_update_config_recomputes_alass_cache(qtbot, tmp_path):
     ):
         tab = SubtitleRetimeTab(config)
         qtbot.addWidget(tab)
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=3000)
         assert not tab.retime_button.isEnabled()
         assert which.call_count == 1
 
         # alass now appears on PATH; a config refresh must flip the cached bool.
         which.return_value = "/usr/bin/alass"
         tab.update_config(dataclasses.replace(config, alass_location="/x"))
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(tab.retime_button.isEnabled, timeout=3000)
         assert which.call_count == 2
         assert tab.retime_button.isEnabled()
         assert tab._alass_is_available is True
@@ -885,6 +903,8 @@ def test_on_retime_uses_cached_availability_without_reprobe(qtbot, tmp_path):
     ):
         tab = SubtitleRetimeTab(config)
         qtbot.addWidget(tab)
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(tab.retime_button.isEnabled, timeout=3000)
         assert which.call_count == 1
         # No files selected -> _on_retime bails after the (cached) guard, no re-probe.
         # Patch the no-files warning modal so it does not block under offscreen Qt.
@@ -939,6 +959,47 @@ def test_tracks_clicked_warns_when_video_missing(qtbot, tmp_path):
         tab._on_tracks_clicked()
     mock_warn.assert_called_once()
     mock_list.assert_not_called()
+
+
+def test_late_track_probe_does_not_override_after_source_change(qtbot, tmp_path):
+    """A probe result belongs only to the video selected when it started."""
+    import threading
+
+    from PyQt6.QtWidgets import QDialog
+
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    source_a = tmp_path / "a.mkv"
+    source_b = tmp_path / "b.mkv"
+    source_a.touch()
+    source_b.touch()
+    tab.video_file_selector.set_path(str(source_a))
+
+    entered = threading.Event()
+    release = threading.Event()
+
+    def _probe(*_args, **_kwargs):
+        entered.set()
+        assert release.wait(3)
+        return [_audio_stream()]
+
+    dialog = MagicMock()
+    dialog.exec.return_value = QDialog.DialogCode.Accepted
+    dialog.selected_override.return_value = 2
+    dialog_cls = MagicMock(return_value=dialog)
+    dialog_cls.DialogCode = QDialog.DialogCode
+
+    with patch(_LIST_STREAMS, side_effect=_probe), patch(_TRACKS_DIALOG, dialog_cls):
+        before = set(getattr(tab, "_off_thread_workers", set()))
+        tab._on_tracks_clicked()
+        assert entered.wait(3)
+        worker = next(iter(set(tab._off_thread_workers) - before))
+        tab.video_file_selector.set_path(str(source_b))
+        release.set()
+        assert worker.wait(3000)
+        qtbot.waitUntil(tab.tracks_button.isEnabled, timeout=3000)
+
+    dialog_cls.assert_not_called()
+    assert tab._audio_track_override is None
 
 
 def test_tracks_probe_runs_off_gui_thread(qtbot, tmp_path):

@@ -156,7 +156,12 @@ class FrequencyImportFlow(ModalImportFlowMixin):
             on_success=on_success,
         )
 
-    def reimport_source(self, source_id: str) -> None:
+    def reimport_source(
+        self,
+        source_id: str,
+        *,
+        _scan_result: tuple[Path, Path | None, str | None] | None = None,
+    ) -> None:
         """Re-import an existing source into the same id.
 
         The importer copied the original input alongside the index as
@@ -164,8 +169,33 @@ class FrequencyImportFlow(ModalImportFlowMixin):
         user re-picking the file. If that copy is gone (older import / moved
         folder), prompt the user to re-pick.
         """
-        dest_root = self._get_config().freqs_root
-        source_file = self._find_source_copy(dest_root / source_id)
+        if _scan_result is None:
+            dest_root = self._get_config().freqs_root
+            source_dir = dest_root / source_id
+            self._set_import_buttons_enabled(False)
+
+            def _scan() -> tuple[Path, Path | None, str | None]:
+                source_file = self._find_source_copy(source_dir)
+                existing_name = storage.read_meta(source_dir / "index.sqlite").get("source_name")
+                return dest_root, source_file, existing_name
+
+            def _on_done(result: object) -> None:
+                assert isinstance(result, tuple)
+                self.reimport_source(source_id, _scan_result=result)
+
+            def _on_error(message: str) -> None:
+                self._set_import_buttons_enabled(True)
+                QMessageBox.warning(
+                    self._parent,
+                    QCoreApplication.translate("FrequencyImportFlow", "Scan Failed"),
+                    message,
+                )
+
+            self._run_latest_scan(_scan, _on_done, _on_error)
+            return
+
+        dest_root, source_file, existing_name = _scan_result
+        self._set_import_buttons_enabled(True)
         if source_file is None:
             chosen, _ = QFileDialog.getOpenFileName(
                 self._parent,
@@ -183,7 +213,6 @@ class FrequencyImportFlow(ModalImportFlowMixin):
         # CSV path re-derives the name from the generic "source.csv" persisted
         # copy's stem and collapses the label to "source". Read the authoritative
         # SQLite meta (not the sidecar); None for a zip / missing index is fine.
-        existing_name = storage.read_meta(dest_root / source_id / "index.sqlite").get("source_name")
         worker = ImportWorker.for_source(source_file, dest_root, source_id=source_id, source_name=existing_name)
 
         def on_success(imported_id: str, meta: dict) -> None:

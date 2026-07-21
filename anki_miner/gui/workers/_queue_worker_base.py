@@ -12,7 +12,7 @@ Signal shape (declared here, inherited by every subclass — PyQt6 propagates
 signals to subclasses):
 
 * ``item_started(int)`` — idx, fired once before an item is mined. Items removed
-  mid-run via :meth:`skip_item` are silently skipped: no signals for them.
+  mid-run via :meth:`try_skip_item` are silently skipped: no signals for them.
 * ``item_progress(int, str, int)`` — idx, label, pct.
 * ``item_finished(int, object, object, int)`` — idx, result-or-None,
   error-string-or-None, attempts. Fires exactly once per item that runs.
@@ -111,6 +111,7 @@ class SequentialQueueWorker(ProcessorOwningWorker, Generic[ItemT]):
         # stable for the whole run.
         self._skip_lock = threading.Lock()
         self._skipped: set[ItemT] = set()
+        self._claimed: set[ItemT] = set()
 
     @property
     def curation_processor(self) -> EpisodeProcessor | None:
@@ -121,22 +122,27 @@ class SequentialQueueWorker(ProcessorOwningWorker, Generic[ItemT]):
         """
         return self._processor
 
-    def skip_item(self, item: ItemT) -> None:
-        """Mark *item* to be skipped if its turn has not started yet.
+    def try_skip_item(self, item: ItemT) -> bool:
+        """Atomically skip an unclaimed item; refuse an item being mined.
 
-        Thread-safe; called from the GUI thread when the user removes a queued
-        row during an active run. Best-effort: an item the loop has already
-        started runs to completion (its idx signals resolve against the tab's
-        frozen run-items snapshot, which tolerates removed rows). Skipped items
-        emit no signals at all.
+        The GUI must remove the row only when this returns ``True``. Claim and
+        skip share ``_skip_lock``, so Clear cannot remove an item after the
+        worker has decided to mine it. Skipped items emit no signals at all.
         """
         with self._skip_lock:
+            if item in self._claimed:
+                return False
             self._skipped.add(item)
+            return True
 
-    def _is_skipped(self, item: ItemT) -> bool:
-        """Thread-safe membership check for the skip channel."""
+    def _try_claim_item(self, item: ItemT) -> bool:
+        """Atomically claim and mark *item* unless Clear skipped it first."""
         with self._skip_lock:
-            return item in self._skipped
+            if item in self._skipped:
+                return False
+            self._claimed.add(item)
+            self._mark_item_claimed(item)
+            return True
 
     def run(self) -> None:
         """Process the queue end-to-end.
@@ -179,7 +185,7 @@ class SequentialQueueWorker(ProcessorOwningWorker, Generic[ItemT]):
         for idx, item in enumerate(self._items):
             if self.is_cancelled:
                 break
-            if self._is_skipped(item):
+            if not self._try_claim_item(item):
                 continue  # removed from the GUI mid-run; no signals for it
             if self._run_item(idx, item):
                 # Subclass requested an early return (YouTube mid-fetch cancel)
@@ -206,4 +212,8 @@ class SequentialQueueWorker(ProcessorOwningWorker, Generic[ItemT]):
         Return ``True`` to abort ``run()`` without emitting ``queue_finished``
         (YouTube's mid-fetch cancellation); ``False`` to continue the queue.
         """
+        raise NotImplementedError
+
+    def _mark_item_claimed(self, item: ItemT) -> None:
+        """Set the subclass-specific PROCESSING state under ``_skip_lock``."""
         raise NotImplementedError

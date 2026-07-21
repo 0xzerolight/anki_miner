@@ -282,13 +282,13 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         is a no-op and yanking the row the user is watching mine only confuses.
         """
         worker = self.worker_thread
-        running = self._running_item
         for item in self.file_list.selectedItems():
             queue_item = item.data(_ITEM_ROLE)
             if worker is not None and queue_item is not None:
-                if queue_item is running:
+                if queue_item.status == self._status_processing:
                     continue  # leave the row currently being mined in place
-                worker.skip_item(queue_item)
+                if not worker.try_skip_item(queue_item):
+                    continue
             self.file_list.takeItem(self.file_list.row(item))
         self._recompute_buttons()
 
@@ -304,17 +304,16 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
             self.file_list.clear()
             self._recompute_buttons()
             return
-        running = self._running_item
         # Reverse order so takeItem doesn't shift not-yet-visited row indices.
         for row in reversed(range(self.file_list.count())):
             list_item = self.file_list.item(row)
             if list_item is None:
                 continue
             queue_item = list_item.data(_ITEM_ROLE)
-            if queue_item is not None and queue_item is running:
+            if queue_item is not None and queue_item.status == self._status_processing:
                 continue  # keep the row being mined
-            if queue_item is not None:
-                worker.skip_item(queue_item)
+            if queue_item is not None and not worker.try_skip_item(queue_item):
+                continue
             self.file_list.takeItem(row)
         self._recompute_buttons()
 
@@ -392,7 +391,7 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
             row_items = [ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind) for ref in refs]
             items.extend(row_items)
             # Stamp the list row with its queue item so a mid-run Remove/Clear
-            # can route it to worker.skip_item. Subtitle files always classify
+            # can route it to worker.try_skip_item. Subtitle files always classify
             # to exactly one ref (detector._subtitle_ref), so row↔item is 1:1.
             list_item = self.file_list.item(row)
             if list_item is not None and row_items:

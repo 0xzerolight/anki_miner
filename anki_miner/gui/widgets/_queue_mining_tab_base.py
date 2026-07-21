@@ -688,6 +688,10 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
 
     def _drop_item(self, item: Any) -> None:
         """Remove ``item`` from queue model, list widget, and bookkeeping."""
+        # Claim and skip are atomic in the worker. If mining won that race,
+        # preserve the row; its signals still need a live GUI target.
+        if self.worker_thread is not None and not self.worker_thread.try_skip_item(item):
+            return
         self._queue.remove(item)
         list_item = self._list_items.pop(item, None)
         if list_item is not None:
@@ -697,11 +701,6 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
                 # widget (deleted alongside the list item).
                 self.list_widget.takeItem(row)
         self._row_widgets.pop(item, None)
-        # Mid-run removal must also reach the worker: it iterates its own
-        # constructor snapshot, so editing the GUI queue alone would still mine
-        # the removed item (cards for rows that no longer exist).
-        if self.worker_thread is not None:
-            self.worker_thread.skip_item(item)
 
     # ------------------------------------------------------------------
     # Button recomputation

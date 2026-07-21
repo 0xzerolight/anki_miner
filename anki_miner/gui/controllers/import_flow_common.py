@@ -20,13 +20,15 @@ translated, so no translatable literal lives in this shared module.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from collections.abc import Callable
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QWidget
 
-from anki_miner.gui.utils.run_off_thread import join_or_retain, still_running
+from anki_miner.gui.utils.run_off_thread import join_or_retain, run_off_thread, still_running
+from anki_miner.gui.workers.base_worker import CancellableWorker, SingleCallWorker
 from anki_miner.gui.workers.import_worker import ImportWorker
 
 logger = logging.getLogger(__name__)
@@ -53,10 +55,45 @@ class ModalImportFlowMixin:
     _parent: QWidget
     _active_import_worker: ImportWorker | None
     _retained_import_workers: list[ImportWorker]
+    _scan_worker: SingleCallWorker | None = None
+    _scan_generation: int = 0
 
     def _set_import_buttons_enabled(self, enabled: bool) -> None:
         """Toggle import-trigger buttons — provided by the concrete flow."""
         raise NotImplementedError
+
+    def _run_latest_scan(
+        self,
+        work: Callable[[], object] | Callable[[Callable[[], bool]], object],
+        on_done: Callable[[object], None],
+        on_error: Callable[[str], None],
+        *,
+        pass_cancel_check: bool = False,
+    ) -> None:
+        """Run bounded discovery work off-thread and ignore superseded results."""
+        self._scan_generation += 1
+        generation = self._scan_generation
+        if still_running(self._scan_worker):
+            assert self._scan_worker is not None
+            self._scan_worker.cancel()
+
+        def _on_done(result: object) -> None:
+            if generation == self._scan_generation:
+                with contextlib.suppress(RuntimeError):
+                    on_done(result)
+
+        def _on_error(message: str) -> None:
+            if generation == self._scan_generation:
+                with contextlib.suppress(RuntimeError):
+                    on_error(message)
+
+        self._scan_worker = run_off_thread(
+            self._parent,
+            work,
+            _on_done,
+            _on_error,
+            pass_cancel_check=pass_cancel_check,
+        )
 
     def _run_modal_import(
         self,
@@ -162,11 +199,14 @@ class ModalImportFlowMixin:
             resume_once()
 
     def _iter_import_workers(self) -> tuple:
-        """Return all live active and retained import workers."""
-        workers = list(self._retained_import_workers)
+        """Return all live scan, active, and retained import workers."""
+        workers: list[CancellableWorker] = list(self._retained_import_workers)
         active = self._active_import_worker
         if active is not None and all(worker is not active for worker in workers):
             workers.append(active)
+        if still_running(self._scan_worker):
+            assert self._scan_worker is not None
+            workers.append(self._scan_worker)
         live = tuple(worker for worker in workers if still_running(worker))
         return live or (None,)
 

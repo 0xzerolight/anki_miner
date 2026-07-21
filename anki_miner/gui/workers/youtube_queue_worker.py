@@ -20,7 +20,7 @@ the stale-gate + factory-build ``run()`` preamble all live on
 Signal shapes (exact):
 
 * ``item_started(int)`` — idx fired before the first attempt for the item.
-  Items removed mid-run via :meth:`skip_item` are silently skipped: no
+  Items removed mid-run via :meth:`try_skip_item` are silently skipped: no
   ``item_started`` / ``item_finished`` for them.
 * ``item_progress(int, str, int)`` — idx, label, pct. ``pct`` is an
   ``int(round(0..100))`` percentage covering the WHOLE item as one
@@ -64,7 +64,7 @@ from anki_miner.gui.workers._queue_progress import (
 )
 from anki_miner.gui.workers._queue_worker_base import SequentialQueueWorker
 from anki_miner.models.youtube import FetchedMedia
-from anki_miner.models.youtube_queue import YouTubeQueueItem
+from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.dictionary.registry import stale_dict_reimport_error
 
@@ -158,6 +158,9 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
         else:
             self.item_finished.emit(idx, None, last_error, attempts)
         return False
+
+    def _mark_item_claimed(self, item: YouTubeQueueItem) -> None:
+        item.status = YouTubeItemStatus.PROCESSING
 
     def _allocate_workspace(self) -> Path:
         """Create and return a fresh per-attempt workspace directory.

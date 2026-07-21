@@ -19,10 +19,18 @@ from anki_miner.gui.widgets.settings_tab import SettingsTab
 from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip
 
 
+def _run_scan_sync(work, on_done, on_error):
+    try:
+        on_done(work())
+    except Exception as exc:  # noqa: BLE001
+        on_error(str(exc))
+
+
 @pytest.fixture
 def tab(test_config: AnkiMinerConfig, qtbot):
     """Instantiate a SettingsTab against the shared test config."""
     widget = SettingsTab(test_config)
+    widget._dict_import_flow._run_latest_scan = _run_scan_sync
     qtbot.addWidget(widget)
     yield widget
 

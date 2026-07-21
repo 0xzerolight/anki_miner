@@ -26,6 +26,8 @@ Subclass contract — a subclass MUST provide, before any hoisted slot runs:
 
 from __future__ import annotations
 
+import contextlib
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator
@@ -33,9 +35,11 @@ from typing import TYPE_CHECKING, Iterator
 from PyQt6.QtWidgets import QFileDialog, QFrame, QLabel, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
+from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -78,6 +82,34 @@ class _ToolTabBase(QWidget):
     cancel_button: ModernButton
     progress_widget: ProgressWidget
     log_widget: LogWidget
+    _availability_worker: SingleCallWorker | None = None
+    _availability_generation: int = 0
+
+    def _run_availability_scan(
+        self,
+        work: Callable[[], object],
+        on_done: Callable[[object], None],
+        on_error: Callable[[str], None],
+    ) -> None:
+        """Run the latest availability scan off-thread and discard stale results."""
+        generation = getattr(self, "_availability_generation", 0) + 1
+        self._availability_generation = generation
+        previous = getattr(self, "_availability_worker", None)
+        if still_running(previous):
+            assert previous is not None
+            previous.cancel()
+
+        def _on_done(result: object) -> None:
+            if generation == self._availability_generation:
+                with contextlib.suppress(RuntimeError):
+                    on_done(result)
+
+        def _on_error(message: str) -> None:
+            if generation == self._availability_generation:
+                with contextlib.suppress(RuntimeError):
+                    on_error(message)
+
+        self._availability_worker = run_off_thread(self, work, _on_done, _on_error)
 
     # ------------------------------------------------------------------
     # Progress-section chrome
@@ -190,6 +222,9 @@ class _ToolTabBase(QWidget):
 
     def iter_close_workers(self) -> Iterator[CancellableWorker]:
         """Yield the active worker so BackgroundTaskController can join it on close."""
+        if still_running(self._availability_worker):
+            assert self._availability_worker is not None
+            yield self._availability_worker
         if self.worker_thread is not None:
             yield self.worker_thread
 

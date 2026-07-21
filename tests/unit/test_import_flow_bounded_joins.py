@@ -29,6 +29,14 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
+
+def _run_scan_sync(work, on_done, on_error, *, pass_cancel_check=False):
+    try:
+        on_done(work(lambda: False) if pass_cancel_check else work())
+    except Exception as exc:  # noqa: BLE001
+        on_error(str(exc))
+
+
 # ---------------------------------------------------------------------------
 # Stub workers — only the bounded-join surface touches.
 # ---------------------------------------------------------------------------
@@ -154,6 +162,9 @@ def tab(test_config: AnkiMinerConfig, tmp_path, qtbot):
         dicts_root=roots["dicts"],
     )
     widget = SettingsTab(cfg)
+    widget._frequency_import_flow._run_latest_scan = _run_scan_sync
+    widget._audio_pack_import_flow._run_latest_scan = _run_scan_sync
+    widget._dict_import_flow._run_latest_scan = _run_scan_sync
     qtbot.addWidget(widget)
     yield widget
 
@@ -292,7 +303,7 @@ class TestAudioPackBoundedJoin:
         monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(pack_dir))
         monkeypatch.setattr(
             "anki_miner.gui.controllers.audio_pack_import_flow.scan_importable_packs",
-            lambda _root: [(pack_dir, "nhk16")],
+            lambda _root, *, cancel_check=None: [(pack_dir, "nhk16")],
         )
         return new
 

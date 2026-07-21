@@ -97,7 +97,6 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
     def _run_item(self, idx: int, item: ReadingQueueItem) -> bool:
         """Load + mine one item, owning its READY→PROCESSING→COMPLETED/ERROR
         lifecycle. Never aborts the queue early (returns False)."""
-        item.status = ReadyItemStatus.PROCESSING
         self.item_started.emit(idx)
         try:
             result = self._mine_one(idx, item)
@@ -113,6 +112,9 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
         else:
             self._record_result(idx, item, result)
         return False
+
+    def _mark_item_claimed(self, item: ReadingQueueItem) -> None:
+        item.status = ReadyItemStatus.PROCESSING
 
     def _record_result(self, idx: int, item: ReadingQueueItem, result: object) -> None:
         """Route a non-raising ``process_reading`` return by its outcome.

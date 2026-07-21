@@ -8,7 +8,7 @@ monkeypatched here — no real network/Anki.
 from __future__ import annotations
 
 from dataclasses import replace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -257,7 +257,7 @@ def test_notetype_page_auto_map_stages_fields(qtbot, wiz_config):
         return_value=MagicMock(check_field_names=lambda: (True, ""))
     )
     page.notetype_combo.setCurrentText("Lapis")
-    page._on_fields_fetched(["Expression", "Sentence", "MainDefinition", "Picture", "SentenceAudio"])
+    page._on_fields_fetched("Lapis", ["Expression", "Sentence", "MainDefinition", "Picture", "SentenceAudio"])
     page._on_auto_map_clicked()
 
     cfg = wiz.working_config()
@@ -269,6 +269,30 @@ def test_notetype_page_auto_map_stages_fields(qtbot, wiz_config):
     import types as _types  # noqa: PLC0415
 
     assert isinstance(cfg.anki_fields, _types.MappingProxyType)
+
+
+def test_late_field_fetch_does_not_map_into_new_note_type(qtbot, wiz_config):
+    """Fields fetched for A must not be auto-mapped after selection changes to B."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    page._warn_missing_fields = MagicMock()  # type: ignore[method-assign]
+    page.notetype_combo.setCurrentText("Type A")
+
+    worker = MagicMock()
+    worker.isRunning.return_value = False
+    with patch("anki_miner.gui.widgets.dialogs.setup_wizard.pages.FetchFieldsWorker", return_value=worker):
+        page._fetch_fields()
+
+    on_fields = worker.result_ready.connect.call_args.args[0]
+    page.notetype_combo.setCurrentText("Type B")
+    on_fields(["Expression", "Sentence"])
+    page._on_auto_map_clicked()
+
+    assert wiz.working_config().anki_note_type == "Type A"
+    assert wiz.working_config().anki_fields == wiz_config.anki_fields
 
 
 def test_auto_map_merges_over_current_fields_and_maps_pitch(qtbot, wiz_config):
@@ -292,7 +316,7 @@ def test_auto_map_merges_over_current_fields_and_maps_pitch(qtbot, wiz_config):
     )
     page.notetype_combo.setCurrentText("Lapis")
     # No "source"/"origin" field here, but PitchGraph and PitchText are present.
-    page._on_fields_fetched(["Expression", "Sentence", "PitchGraph", "PitchText"])
+    page._on_fields_fetched("Lapis", ["Expression", "Sentence", "PitchGraph", "PitchText"])
     page._on_auto_map_clicked()
 
     fields = wiz.working_config().anki_fields
@@ -314,7 +338,7 @@ def test_notetype_page_unsuitable_fieldlist_shows_guidance(qtbot, wiz_config):
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
     page.notetype_combo.setCurrentText("Basic")
-    page._on_fields_fetched(["Front", "Back"])
+    page._on_fields_fetched("Basic", ["Front", "Back"])
     # isVisibleTo(page) reflects the explicit setVisible(True) without needing the
     # top-level wizard to be shown (offscreen Qt).
     assert page.guidance_label.isVisibleTo(page)
@@ -328,7 +352,7 @@ def test_notetype_page_suitable_fieldlist_hides_guidance(qtbot, wiz_config):
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
     page.notetype_combo.setCurrentText("Lapis")
-    page._on_fields_fetched(["Expression", "Sentence", "MainDefinition"])
+    page._on_fields_fetched("Lapis", ["Expression", "Sentence", "MainDefinition"])
     assert not page.guidance_label.isVisibleTo(page)
 
 
@@ -339,7 +363,7 @@ def test_notetype_page_empty_fieldlist_shows_unreachable_guidance(qtbot, wiz_con
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
     page.notetype_combo.setCurrentText("Ghost")
-    page._on_fields_fetched([])
+    page._on_fields_fetched("Ghost", [])
     assert page.guidance_label.isVisibleTo(page)
 
 

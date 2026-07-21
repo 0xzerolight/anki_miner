@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import threading
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -22,6 +23,14 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.gui.widgets.settings_tab import SettingsTab
+
+
+def _run_scan_sync(work, on_done, on_error, *, pass_cancel_check=False):
+    try:
+        on_done(work(lambda: False) if pass_cancel_check else work())
+    except Exception as exc:  # noqa: BLE001
+        on_error(str(exc))
+
 
 # ---------------------------------------------------------------------------
 # Pack-building helpers
@@ -72,6 +81,7 @@ def tab(test_config: AnkiMinerConfig, tmp_path, qtbot):
     cfg = replace(test_config, audio_packs_root=tmp_path / "audio_packs")
     (tmp_path / "audio_packs").mkdir()
     widget = SettingsTab(cfg)
+    widget._audio_pack_import_flow._run_latest_scan = _run_scan_sync
     qtbot.addWidget(widget)
     yield widget
     # _on_save_clicked reconciles styling, spawning a short-lived AnkiConnect
@@ -159,6 +169,65 @@ class TestAddPackNoPacks:
         monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: "")
         tab._audio_pack_import_flow.add_pack()
         stub_worker.assert_not_called()
+
+    def test_gui_thread_scan_runs_off_thread_and_reports_errors(self, tab, monkeypatch, stub_worker, tmp_path, qtbot):
+        chosen = tmp_path / "unreadable"
+        chosen.mkdir()
+        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(chosen))
+        warnings = _capture_warnings(monkeypatch)
+        scan_thread: dict[str, int] = {}
+
+        def _fail_scan(_path, *, cancel_check=None):
+            scan_thread["id"] = threading.get_ident()
+            raise OSError("permission denied")
+
+        monkeypatch.setattr(
+            "anki_miner.gui.controllers.audio_pack_import_flow.scan_importable_packs",
+            _fail_scan,
+        )
+
+        del tab._audio_pack_import_flow._run_latest_scan
+        tab._audio_pack_import_flow.add_pack()
+        worker = getattr(tab._audio_pack_import_flow, "_scan_worker", None)
+        if worker is not None:
+            assert worker.wait(3000)
+        qtbot.waitUntil(lambda: bool(warnings), timeout=3000)
+
+        assert scan_thread["id"] != threading.get_ident()
+        assert "permission denied" in warnings[0][1]
+        stub_worker.assert_not_called()
+
+    def test_cancelled_inflight_scan_stops_before_later_entries(self, tab, monkeypatch, tmp_path):
+        chosen = tmp_path / "many-packs"
+        for name in ("a", "b", "c"):
+            (chosen / name).mkdir(parents=True)
+        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(chosen))
+
+        entered = threading.Event()
+        release = threading.Event()
+        visited: list[str] = []
+
+        def _detect(path, *, cancel_check=None):
+            visited.append(path.name)
+            if path.name == "a":
+                entered.set()
+                assert release.wait(3)
+            return None
+
+        monkeypatch.setattr("anki_miner.services.audio_packs.formats.detect_pack_format", _detect)
+
+        del tab._audio_pack_import_flow._run_latest_scan
+        tab._audio_pack_import_flow.add_pack()
+        worker = tab._audio_pack_import_flow._scan_worker
+        assert worker is not None
+        try:
+            assert entered.wait(3)
+            worker.cancel()
+        finally:
+            release.set()
+        assert worker.wait(3000)
+
+        assert visited == ["a"]
 
 
 # ---------------------------------------------------------------------------

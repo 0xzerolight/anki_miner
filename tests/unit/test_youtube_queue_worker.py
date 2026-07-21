@@ -28,6 +28,7 @@ from tests.unit._queue_worker_harness import (
 from tests.unit._queue_worker_harness import (
     make_mock_processor,
     make_queue_worker_factory,
+    race_claim_against_skip,
 )
 
 
@@ -293,8 +294,8 @@ def test_skip_item_drops_queued_items_mid_run(make_worker, mock_processor):
     def _clear_rest_while_mining_first(**kw):
         # Simulate the user clicking Clear while item 1 is PROCESSING: the
         # GUI drops the non-PROCESSING tail into the worker's skip channel.
-        worker_box["worker"].skip_item(items[1])
-        worker_box["worker"].skip_item(items[2])
+        assert worker_box["worker"].try_skip_item(items[1])
+        assert worker_box["worker"].try_skip_item(items[2])
         return "R_A"
 
     mock_processor.process_youtube_url.side_effect = _clear_rest_while_mining_first
@@ -314,13 +315,46 @@ def test_skip_item_drops_queued_items_mid_run(make_worker, mock_processor):
     assert len(caps["queue_finished"].calls) == 1
 
 
+def test_youtube_running_row_not_dropped_by_tail_clear(make_worker, mock_processor):
+    """PROCESSING must be visible before item_started can trigger a GUI Clear."""
+    items = [_make_item(video_id="a"), _make_item(video_id="b")]
+    remaining = list(items)
+    worker = make_worker(items=items)
+
+    def _clear_non_processing(_idx):
+        targets = [item for item in remaining if item.status is not YouTubeItemStatus.PROCESSING]
+        for item in targets:
+            if worker.try_skip_item(item):
+                remaining.remove(item)
+
+    worker.item_started.connect(_clear_non_processing)
+    worker.run()
+
+    assert remaining == [items[0]]
+    assert mock_processor.process_youtube_url.call_count == 1
+
+
+def test_clear_racing_preclaim_never_removes_mined_item(make_worker, mock_processor):
+    """Clear in a split-lock claim gap must never remove a mined row."""
+    item = _make_item(video_id="a")
+    remaining = [item]
+    worker = make_worker(items=[item])
+    assert item.status is YouTubeItemStatus.READY
+
+    skipped = race_claim_against_skip(worker, item, lambda: remaining.remove(item))
+
+    mined = mock_processor.process_youtube_url.call_count == 1
+    assert skipped is (not mined)
+    assert bool(remaining) is mined
+
+
 def test_skip_item_before_run_skips_only_that_item(make_worker, mock_processor):
     """A skip recorded before run() starts drops exactly that item."""
     items = [_make_item(video_id="a"), _make_item(video_id="b"), _make_item(video_id="c")]
     mock_processor.process_youtube_url.side_effect = lambda **kw: f"R_{kw['video_id']}"
 
     worker = make_worker(items=items)
-    worker.skip_item(items[1])
+    assert worker.try_skip_item(items[1])
     caps = _connect_all(worker)
     worker.run()
 

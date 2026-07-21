@@ -5,9 +5,10 @@ Unlike the YouTube queue worker there is no fetch/probe stage, no retry
 (retry-once existed only for network fetch errors), and no workspace
 allocation: ``process_episode`` owns its own temp folder for local files.
 
-Signal shapes, ctor validation, the skip channel, ``curation_processor``, and
-the stale-gate + factory-build ``run()`` preamble all live on
-:class:`SequentialQueueWorker`; this subclass supplies only the per-item body.
+Signal shapes, ctor validation, the ``try_skip_item`` channel,
+``curation_processor``, and the stale-gate + factory-build ``run()`` preamble
+all live on :class:`SequentialQueueWorker`; this subclass supplies only the
+per-item body.
 
 * ``item_started(int)`` — idx fired before the item is mined. Items removed
   mid-run via :meth:`skip_item` are silently skipped.
@@ -35,6 +36,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
 from anki_miner.gui.workers._queue_worker_base import SequentialQueueWorker
 from anki_miner.models.audiobook_queue import AudiobookQueueItem
+from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.dictionary.registry import stale_dict_reimport_error
 
@@ -91,6 +93,9 @@ class AudiobookQueueWorker(SequentialQueueWorker[AudiobookQueueItem]):
         else:
             self.item_finished.emit(idx, result, None, 1)
         return False
+
+    def _mark_item_claimed(self, item: AudiobookQueueItem) -> None:
+        item.status = ReadyItemStatus.PROCESSING
 
     def _mine_one(self, idx: int, item: AudiobookQueueItem) -> object:
         """Mine a single audiobook file pair.

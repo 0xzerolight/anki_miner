@@ -13,6 +13,7 @@ different arity and does not share this shape.
 
 from __future__ import annotations
 
+import threading
 from typing import Any, Callable
 from unittest.mock import MagicMock
 
@@ -81,3 +82,68 @@ def make_queue_worker_factory(
         )
 
     return _make
+
+
+class _PauseAfterFirstWorkerReleaseLock:
+    """Pause the worker after its first claim-lock critical section."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._worker_ident: int | None = None
+        self._pause_worker = True
+        self.worker_paused = threading.Event()
+        self.resume_worker = threading.Event()
+
+    def arm_for_current_thread(self) -> None:
+        self._worker_ident = threading.get_ident()
+
+    def acquire(self) -> bool:
+        return self._lock.acquire()
+
+    def release(self) -> None:
+        self._lock.release()
+        if self._pause_worker and threading.get_ident() == self._worker_ident:
+            self._pause_worker = False
+            self.worker_paused.set()
+            self.resume_worker.wait()
+
+    def __enter__(self) -> _PauseAfterFirstWorkerReleaseLock:
+        self.acquire()
+        return self
+
+    def __exit__(self, *_exc_info: object) -> None:
+        self.release()
+
+
+def race_claim_against_skip(worker: Any, item: Any, on_skipped: Callable[[], None]) -> bool:
+    """Run Clear after the worker's first claim-lock critical section.
+
+    An atomic claim records the item before this barrier, so Clear is refused.
+    A split-lock claim pauses here between its skip check and claim, so Clear
+    removes the row before the worker resumes and exposes the TOCTOU bug.
+    """
+    errors: list[BaseException] = []
+    claim_lock = _PauseAfterFirstWorkerReleaseLock()
+    worker._skip_lock = claim_lock
+
+    def _run_worker() -> None:
+        claim_lock.arm_for_current_thread()
+        try:
+            worker.run()
+        except BaseException as exc:  # pragma: no cover - re-raised on caller thread
+            errors.append(exc)
+
+    worker_thread = threading.Thread(target=_run_worker)
+    worker_thread.start()
+    try:
+        assert claim_lock.worker_paused.wait(1)
+        skipped = worker.try_skip_item(item)
+        if skipped:
+            on_skipped()
+    finally:
+        claim_lock.resume_worker.set()
+        worker_thread.join(3)
+
+    assert not worker_thread.is_alive()
+    assert not errors
+    return skipped

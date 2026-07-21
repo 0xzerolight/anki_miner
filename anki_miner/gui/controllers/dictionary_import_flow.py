@@ -23,7 +23,7 @@ from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.panels import DictionarySettingsPanel
 from anki_miner.gui.workers.import_worker import ImportWorker
 from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip, read_yomitan_title
-from anki_miner.services.dictionary.registry import DictionaryRegistry
+from anki_miner.services.dictionary.registry import DictionaryRegistry, DictMeta
 from anki_miner.services.dictionary.storage import read_meta
 from anki_miner.services.dictionary.superseded import strip_date_bracket
 from anki_miner.services.resource_catalog import CATALOG_DICT_SLOT_IDS
@@ -189,7 +189,12 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         cur_base, cur_had = strip_date_bracket(existing_name)
         return zip_had and cur_had and zip_base == cur_base
 
-    def reimport_dict(self, slot_id: str) -> None:
+    def reimport_dict(
+        self,
+        slot_id: str,
+        *,
+        _scan_result: tuple[Path, str, bool] | None = None,
+    ) -> None:
         """Prompt for a matching Yomitan zip and re-import into an existing slot.
 
         Slot identity is preserved by validating that the chosen zip's derived
@@ -197,23 +202,45 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         ``overwrite=True``. Picking a different zip would orphan the stale slot
         and silently create a new one — we abort with a warning instead.
         """
-        zip_path_str, _ = QFileDialog.getOpenFileName(
-            self._parent,
-            QCoreApplication.translate("DictionaryImportFlow", "Choose Yomitan dictionary zip"),
-            resolve_start_dir(None, file_mode=True, default_dir=self._get_config().dicts_root),
-            QCoreApplication.translate("DictionaryImportFlow", "Yomitan zip (*.zip)"),
-        )
-        if not zip_path_str:
+        if _scan_result is None:
+            zip_path_str, _ = QFileDialog.getOpenFileName(
+                self._parent,
+                QCoreApplication.translate("DictionaryImportFlow", "Choose Yomitan dictionary zip"),
+                resolve_start_dir(None, file_mode=True, default_dir=self._get_config().dicts_root),
+                QCoreApplication.translate("DictionaryImportFlow", "Yomitan zip (*.zip)"),
+            )
+            if not zip_path_str:
+                return
+
+            zip_path = Path(zip_path_str)
+            self._set_import_buttons_enabled(False)
+
+            def _scan() -> tuple[Path, str, bool]:
+                derived_id = derive_dict_id_from_zip(zip_path)
+                base_matches = (
+                    derived_id != slot_id
+                    and slot_id in CATALOG_DICT_SLOT_IDS
+                    and self._catalog_slot_base_matches(slot_id, zip_path)
+                )
+                return zip_path, derived_id, base_matches
+
+            def _on_done(result: object) -> None:
+                assert isinstance(result, tuple)
+                self.reimport_dict(slot_id, _scan_result=result)
+
+            def _on_error(message: str) -> None:
+                self._set_import_buttons_enabled(True)
+                QMessageBox.warning(
+                    self._parent,
+                    QCoreApplication.translate("DictionaryImportFlow", "Invalid Zip"),
+                    message,
+                )
+
+            self._run_latest_scan(_scan, _on_done, _on_error)
             return
 
-        zip_path = Path(zip_path_str)
-        try:
-            derived_id = derive_dict_id_from_zip(zip_path)
-        except Exception as exc:  # noqa: BLE001 — surface every failure to GUI
-            QMessageBox.warning(
-                self._parent, QCoreApplication.translate("DictionaryImportFlow", "Invalid Zip"), str(exc)
-            )
-            return
+        zip_path, derived_id, base_matches = _scan_result
+        self._set_import_buttons_enabled(True)
 
         # A catalog slot is pinned (its on-disk id is a stable id like "jitendex",
         # not the title-derived one), so a fresh copy of the SAME dictionary
@@ -221,9 +248,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         # it when its title base matches the existing slot's, but still reject a
         # genuinely different dictionary — otherwise picking the wrong zip would
         # silently overwrite the slot with unrelated content.
-        if derived_id != slot_id and not (
-            slot_id in CATALOG_DICT_SLOT_IDS and self._catalog_slot_base_matches(slot_id, zip_path)
-        ):
+        if derived_id != slot_id and not base_matches:
             QMessageBox.warning(
                 self._parent,
                 QCoreApplication.translate("DictionaryImportFlow", "Zip does not match slot"),
@@ -336,7 +361,11 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             on_success=on_success,
         )
 
-    def reimport_all(self) -> None:
+    def reimport_all(
+        self,
+        *,
+        _scan_result: tuple[list[tuple[str, str, str, Path]], list[str]] | None = None,
+    ) -> None:
         """Reimport every dictionary in the chain from its saved source.
 
         For each indexed ChainEntry, dispatch based on format:
@@ -355,34 +384,53 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         loop. ``config_changed`` is emitted once at the end so cached
         DefinitionService instances rebuild a single time.
         """
-        # Fresh registry scan so we see source_name / format for the summary.
-        registry = DictionaryRegistry(self._get_config().dicts_root)
-        registry.load()
+        if _scan_result is None:
+            config = self._get_config()
+            chain = self._panel.get_chain()
+            self._set_import_buttons_enabled(False)
 
-        # Job tuples: ("yomitan", dict_id, display_name, source_zip_path)
-        #             ("jmdict",  dict_id, display_name, xml_path)
-        jobs: list[tuple[str, str, str, Path]] = []
-        missing_legacy: list[str] = []
+            def _scan() -> tuple[list[tuple[str, str, str, Path]], list[str]]:
+                registry = DictionaryRegistry(config.dicts_root)
+                registry.load()
+                jobs: list[tuple[str, str, str, Path]] = []
+                missing_legacy: list[str] = []
+                for entry in chain:
+                    if entry.kind != "indexed" or entry.dict_id is None:
+                        continue
+                    meta = registry.get(entry.dict_id)
+                    if meta is None:
+                        missing_legacy.append(entry.dict_id)
+                        continue
+                    if meta.format == "jmdict":
+                        if config.jmdict_path.exists():
+                            jobs.append(("jmdict", meta.dict_id, meta.source_name, config.jmdict_path))
+                        else:
+                            missing_legacy.append(meta.source_name)
+                        continue
+                    source_zip = config.dicts_root / meta.dict_id / "source.zip"
+                    if source_zip.exists():
+                        jobs.append(("yomitan", meta.dict_id, meta.source_name, source_zip))
+                    else:
+                        missing_legacy.append(meta.source_name)
+                return jobs, missing_legacy
 
-        for entry in self._panel.get_chain():
-            if entry.kind != "indexed" or entry.dict_id is None:
-                continue
-            meta = registry.get(entry.dict_id)
-            if meta is None:
-                missing_legacy.append(entry.dict_id)
-                continue
-            if meta.format == "jmdict":
-                if self._get_config().jmdict_path.exists():
-                    jobs.append(("jmdict", meta.dict_id, meta.source_name, self._get_config().jmdict_path))
-                else:
-                    missing_legacy.append(meta.source_name)
-                continue
-            # Yomitan and anything else with a saved zip
-            source_zip = self._get_config().dicts_root / meta.dict_id / "source.zip"
-            if source_zip.exists():
-                jobs.append(("yomitan", meta.dict_id, meta.source_name, source_zip))
-            else:
-                missing_legacy.append(meta.source_name)
+            def _on_done(result: object) -> None:
+                assert isinstance(result, tuple)
+                self.reimport_all(_scan_result=result)
+
+            def _on_error(message: str) -> None:
+                self._set_import_buttons_enabled(True)
+                QMessageBox.warning(
+                    self._parent,
+                    QCoreApplication.translate("DictionaryImportFlow", "Scan Failed"),
+                    message,
+                )
+
+            self._run_latest_scan(_scan, _on_done, _on_error)
+            return
+
+        jobs, missing_legacy = _scan_result
+        self._set_import_buttons_enabled(True)
 
         if not jobs:
             if missing_legacy:
@@ -573,7 +621,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         dlg.canceled.connect(on_cancel)
         launch_next()
 
-    def restore_unlisted(self) -> None:
+    def restore_unlisted(self, *, _scan_result: list[DictMeta] | None = None) -> None:
         """Re-add on-disk dictionaries that are absent from the chain config.
 
         Recovers dicts present in ``dicts_root`` (with a valid, current-schema
@@ -582,13 +630,33 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         is performed; the indexes already exist on disk and only the chain config
         needs updating.
         """
-        registry = DictionaryRegistry(self._get_config().dicts_root)
-        registry.load()
-        # Compare against the panel's current chain (not the frozen config) so
-        # that unsaved panel edits are respected — a dict the user just added via
-        # set_chain is already "listed" even before Save is clicked.
-        panel_config = replace(self._get_config(), dictionary_chain=self._panel.get_chain())
-        orphans = registry.unlisted(panel_config)
+        if _scan_result is None:
+            config = self._get_config()
+            panel_config = replace(config, dictionary_chain=self._panel.get_chain())
+            self._set_import_buttons_enabled(False)
+
+            def _scan() -> list[DictMeta]:
+                registry = DictionaryRegistry(config.dicts_root)
+                registry.load()
+                return registry.unlisted(panel_config)
+
+            def _on_done(result: object) -> None:
+                assert isinstance(result, list)
+                self.restore_unlisted(_scan_result=result)
+
+            def _on_error(message: str) -> None:
+                self._set_import_buttons_enabled(True)
+                QMessageBox.warning(
+                    self._parent,
+                    QCoreApplication.translate("DictionaryImportFlow", "Scan Failed"),
+                    message,
+                )
+
+            self._run_latest_scan(_scan, _on_done, _on_error)
+            return
+
+        orphans = _scan_result
+        self._set_import_buttons_enabled(True)
 
         if not orphans:
             QMessageBox.information(

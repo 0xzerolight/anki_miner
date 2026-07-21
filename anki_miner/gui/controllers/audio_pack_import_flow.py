@@ -115,27 +115,43 @@ class AudioPackImportFlow(ModalImportFlowMixin):
 
         return tuple(current)
 
-    def add_pack(self) -> None:
+    def add_pack(self, *, _scan_result: tuple[str, list[tuple[Path, str]]] | None = None) -> None:
         """Prompt for a directory and import all detectable audio packs in it."""
-        chosen_dir = QFileDialog.getExistingDirectory(
-            self._parent,
-            QCoreApplication.translate("AudioPackImportFlow", "Choose audio pack folder"),
-            resolve_start_dir(None, file_mode=False),
-        )
-        if not chosen_dir:
-            return
-
-        try:
-            packs = scan_importable_packs(Path(chosen_dir))
-        except OSError as exc:
-            # Permission/IO errors during the directory walk must not escape
-            # the Qt slot — surface them as a dialog instead.
-            QMessageBox.warning(
+        if _scan_result is None:
+            chosen_dir = QFileDialog.getExistingDirectory(
                 self._parent,
-                QCoreApplication.translate("AudioPackImportFlow", "Scan Failed"),
-                tr_format(QCoreApplication.translate("AudioPackImportFlow", "Could not scan folder: %1"), exc),
+                QCoreApplication.translate("AudioPackImportFlow", "Choose audio pack folder"),
+                resolve_start_dir(None, file_mode=False),
+            )
+            if not chosen_dir:
+                return
+            self._set_import_buttons_enabled(False)
+
+            def _on_done(result: object) -> None:
+                assert isinstance(result, list)
+                self.add_pack(_scan_result=(chosen_dir, result))
+
+            def _on_error(message: str) -> None:
+                self._set_import_buttons_enabled(True)
+                QMessageBox.warning(
+                    self._parent,
+                    QCoreApplication.translate("AudioPackImportFlow", "Scan Failed"),
+                    tr_format(QCoreApplication.translate("AudioPackImportFlow", "Could not scan folder: %1"), message),
+                )
+
+            self._run_latest_scan(
+                lambda is_cancelled: scan_importable_packs(
+                    Path(chosen_dir),
+                    cancel_check=is_cancelled,
+                ),
+                _on_done,
+                _on_error,
+                pass_cancel_check=True,
             )
             return
+
+        chosen_dir, packs = _scan_result
+        self._set_import_buttons_enabled(True)
         # Sort by upstream source priority so completion order = priority order
         # and _chain_with_new_packs_inserted preserves the correct sequence.
         # Unknown pack_ids land after all known ones (stable sort).

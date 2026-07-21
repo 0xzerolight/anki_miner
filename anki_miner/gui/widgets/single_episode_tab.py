@@ -355,6 +355,8 @@ class SingleEpisodeTab(MiningTabBase):
 
         def _on_streams(result: object) -> None:
             self.tracks_button.setEnabled(True)
+            if self.video_selector.path_or_none() != video_path:
+                return
             streams = cast("list[AudioStream]", result)
             if not streams:
                 QMessageBox.information(
@@ -377,6 +379,8 @@ class SingleEpisodeTab(MiningTabBase):
                 parent=self,
             )
             if dialog.exec() == AudioTracksDialog.DialogCode.Accepted:
+                if self.video_selector.path_or_none() != video_path:
+                    return
                 self._audio_track_override = dialog.selected_override()
 
         def _on_probe_error(msg: str) -> None:

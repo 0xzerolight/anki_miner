@@ -28,6 +28,7 @@ from tests.unit._queue_worker_harness import (
 from tests.unit._queue_worker_harness import (
     make_mock_processor,
     make_queue_worker_factory,
+    race_claim_against_skip,
 )
 
 
@@ -102,6 +103,20 @@ def test_two_item_success_signal_sequence(make_worker, mock_processor, fake_load
     ]
     assert [i.cards_created for i in items] == [4, 7]
     assert [i.error_message for i in items] == [None, None]
+
+
+def test_clear_racing_preclaim_never_removes_mined_item(make_worker, mock_processor, fake_load):
+    """Clear in a split-lock claim gap must never remove a mined row."""
+    item = _make_item("vol01")
+    remaining = [item]
+    worker = make_worker(items=[item])
+    assert item.status is ReadyItemStatus.READY
+
+    skipped = race_claim_against_skip(worker, item, lambda: remaining.remove(item))
+
+    mined = mock_processor.process_reading.call_count == 1
+    assert skipped is (not mined)
+    assert bool(remaining) is mined
 
 
 def test_failed_result_marks_item_error(make_worker, mock_processor, fake_load):

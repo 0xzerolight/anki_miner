@@ -149,15 +149,17 @@ class AnkiProbeController:
 
         worker = FetchFieldsWorker(service, note_type, self._parent)
         self._fetch_fields_worker = worker
-        worker.result_ready.connect(self._on_fetch_fields_finished)
+        worker.result_ready.connect(lambda names, stamp=note_type: self._on_fetch_fields_finished(stamp, names))
         worker.error.connect(self._on_fetch_fields_error)
         worker.start()
 
-    def _on_fetch_fields_finished(self, field_names: list[str]) -> None:
+    def _on_fetch_fields_finished(self, note_type: str, field_names: list[str]) -> None:
         """Populate the panel with the fetched field list (main-thread slot)."""
         if not self._alive(self._anki_panel):
             return
         self._anki_panel.set_fetch_fields_button_enabled(True)
+        if note_type != self._anki_panel.get_note_type().strip():
+            return
         if not field_names:
             # Empty list means AnkiConnect rejected the request or returned
             # nothing — most commonly the note type doesn't exist, or Anki
