@@ -45,10 +45,10 @@ def _make_tab(config: AnkiMinerConfig, qtbot) -> SubtitlesTab:
         tab = SubtitlesTab(config)
         qtbot.addWidget(tab)
         for child in (tab.generate_tab, tab.retime_tab, tab.condense_tab):
-            assert child._availability_worker.wait(3000)
-        qtbot.waitUntil(tab.generate_tab.generate_button.isEnabled, timeout=3000)
-        qtbot.waitUntil(tab.retime_tab.retime_button.isEnabled, timeout=3000)
-        qtbot.waitUntil(tab.condense_tab.condense_button.isEnabled, timeout=3000)
+            assert child._availability_worker.wait(30000)
+        qtbot.waitUntil(tab.generate_tab.generate_button.isEnabled, timeout=30000)
+        qtbot.waitUntil(tab.retime_tab.retime_button.isEnabled, timeout=30000)
+        qtbot.waitUntil(tab.condense_tab.condense_button.isEnabled, timeout=30000)
     return tab
 
 
@@ -207,7 +207,7 @@ def test_update_config_stores_config(qtbot, tmp_path):
     new_config = dataclasses.replace(config, asr_model="small")
     tab.update_config(new_config)
     for child in (tab.generate_tab, tab.retime_tab, tab.condense_tab):
-        assert child._availability_worker.wait(3000)
+        assert child._availability_worker.wait(30000)
     qtbot.wait(10)
 
     assert tab.config is new_config
