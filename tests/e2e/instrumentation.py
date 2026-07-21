@@ -71,8 +71,9 @@ Input / output contract (for the runner's serializer)
 ------------------------------------------------------
 :func:`detect_divergence` takes the per-session ``list[StateSnapshot]`` (the
 snapshot captured *after* each session is the natural choice), an optional
-parallel ``cards_created: list[int]``, and an optional ``mode`` (default
-``"inprocess"``). It returns a :class:`DivergenceReport` dataclass; both it and
+parallel ``cards_created: list[int | None]`` (``None`` marks a cancel-injected session),
+and an optional ``mode`` (default ``"inprocess"``). It returns a
+:class:`DivergenceReport` dataclass; both it and
 :class:`StateSnapshot` use only JSON-friendly fields so ``dataclasses.asdict``
 round-trips straight into ``report.json``.
 """
@@ -451,7 +452,7 @@ def _sqlite_series(snapshots: list[StateSnapshot], db_name: str) -> list[int]:
 def detect_divergence(
     snapshots: list[StateSnapshot],
     *,
-    cards_created: list[int] | None = None,
+    cards_created: list[int | None] | None = None,
     mode: Literal["inprocess", "crossprocess"] = "inprocess",
 ) -> DivergenceReport:
     """Flag session-over-session divergence in the snapshot series.
@@ -460,10 +461,10 @@ def detect_divergence(
         snapshots: Per-session snapshots in order (typically the snapshot captured
             *after* each session). Fewer than 2 snapshots → an empty ``PASS``
             report (no trend to judge).
-        cards_created: Optional parallel per-session card counts. A drop from a
-            positive count to ``0`` later in the run is surfaced as an
-            *investigate* flag (WARN, not FAIL) — it can be legitimate
-            known-words accumulation.
+        cards_created: Optional parallel per-session card counts. ``None`` marks
+            a cancel-injected session and is skipped. A later drop from a positive
+            count to ``0`` is surfaced as an *investigate* flag (WARN, not FAIL) —
+            it can be legitimate known-words accumulation.
         mode: ``"inprocess"`` (default) evaluates all :data:`SUSPECT_METRICS`
             and the RSS slope to drive the verdict.  ``"crossprocess"`` skips
             the in-process metrics (``top_level_widgets``, ``python_threads``,
@@ -551,6 +552,8 @@ def detect_divergence(
     if cards_created:
         seen_positive = False
         for i, n in enumerate(cards_created):
+            if n is None:
+                continue
             if n > 0:
                 seen_positive = True
             elif n == 0 and seen_positive:

@@ -40,7 +40,7 @@ Subtitle file (ASS/SRT/SSA)
 │ 4. Fetch Definitions                                │
 │    DefinitionService → DictionaryRegistry chain     │
 │    (IndexedDictProvider offline dicts, first-hit-   │
-│     wins; JishoProvider online fallback)            │
+│     wins; JishoProvider opt-in fallback)            │
 │    → list[str | None]                               │
 ├─────────────────────────────────────────────────────┤
 │ 5. Create Anki Cards                                │
@@ -83,9 +83,9 @@ Leaf packages (`config`, `models`, `exceptions`, `utils`) have no internal depen
 
 ## Core Abstractions
 
-Three protocols in `interfaces/` define the system's extension points:
+Five protocols in `interfaces/` define the system's extension points:
 
-**PresenterProtocol** (`interfaces/presenter.py`): output abstraction with 7 methods.
+**PresenterProtocol** (`interfaces/presenter.py`): output abstraction with 6 methods.
 - `show_info`, `show_success`, `show_warning`, `show_error`: message display.
 - `show_validation_result(ValidationResult)`: system check results.
 - `show_processing_result(ProcessingResult)`: episode processing summary.
@@ -98,6 +98,10 @@ Implementations: `GUIPresenter` (Qt signals) and `NullPresenter` (tests). The pr
 
 **DictionaryProvider** (`interfaces/dictionary_provider.py`): pluggable dictionary backend.
 - `name` property, `is_online` property, `is_available()`, `load()`, `lookup(word) -> str | None`
+
+**ExpressionAudioFetcher** (`interfaces/expression_audio.py`): word-pronunciation audio lookup via `fetch` and `fetch_candidates`.
+
+**SentenceAudioFetcher** (`interfaces/sentence_audio.py`): sentence-level TTS lookup via `fetch`.
 
 All use `typing.Protocol` for structural subtyping. Implementations satisfy the protocol via duck typing, without explicit inheritance.
 
@@ -136,10 +140,10 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 
 **Core services (always created):**
 
-- **SubtitleParserService**: parses ASS/SRT/SSA files via `pysubs2`, tokenizes Japanese text with `fugashi` (MeCab wrapper), generates furigana annotations against `TokenizedWord.mined_form` (lemma for verbs/adjectives, surface for nouns), and deduplicates emitted words by lemma. Compound-merge passes (prefix, noun-suffix, verb-nominalizer) reconstruct synthetic lemmas from each component's `feature.lemma` so dictionary lookups can hit the headword.
+- **SubtitleParserService**: parses ASS/SRT/SSA files via `pysubs2`, tokenizes Japanese text with `fugashi` (MeCab wrapper), generates furigana annotations against `TokenizedWord.mined_form` (lemma for verbs/adjectives, surface for nouns), and deduplicates emitted words by `mined_form`. Compound-merge passes (prefix, noun-suffix, verb-nominalizer) reconstruct synthetic lemmas from each component's `feature.lemma` so dictionary lookups can hit the headword.
 - **WordFilterService**: multi-layer filtering via `filter_unknown` (lemma-only check against known vocabulary), `filter_by_frequency`, `filter_by_word_lists` (blacklist/whitelist keyed by lemma), `deduplicate_by_sentence` (NFKC-normalized, whitespace-collapsed dedup key), `filter_i_plus_one`, and `filter_by_episode_count`. The name-wordset filter (Issue #59) runs in `_phase2_filter` after the blacklist/whitelist step and is gated on `bypass_optional_filters` (skipped by the Deck Builder corpus preview); which wordsets are active is controlled by `config.excluded_wordsets`. Wordset files are bundled JMnedict-derived proper-noun lists in `anki_miner/resources/wordsets/`.
 - **MediaExtractorService**: extracts screenshots (`ffmpeg -frames:v 1`) and audio clips at subtitle timestamps. The audio encoder follows `config.audio_format`: `libmp3lame` for mp3 (the default), `libopus` for opus. Runs in parallel via `ThreadPoolExecutor` with `max_parallel_workers` threads. Auto-detects the Japanese audio stream via `ffprobe` with thread-safe caching. Optional animated screenshots use `libsvtav1` (AVIF) or `libwebp_anim` (WebP), each probed for availability before use.
-- **DefinitionService**: orchestrates the provider chain built by `DictionaryRegistry` from `config.dictionary_chain`. First-hit-wins across offline `IndexedDictProvider` instances, with `JishoProvider` as the online fallback. Returns HTML-formatted definition strings.
+- **DefinitionService**: orchestrates the provider chain built by `DictionaryRegistry` from `config.dictionary_chain`. First-hit-wins across offline `IndexedDictProvider` instances, with an enabled `JishoProvider` entry as the online fallback. Returns HTML-formatted definition strings.
 - **AnkiService**: AnkiConnect HTTP API wrapper (localhost:8765). Key operations: `verify_card_target` (pre-flight: checks note type, validates fields, creates deck), `get_existing_vocabulary`, `store_media_file`, `create_cards_batch` (batch size 100; media uploads chunk separately at 50 files or 4 MB of base64, whichever comes first), `delete_notes`. Stores `last_created_note_ids` for undo support.
 - **ValidationService**: checks AnkiConnect connectivity, ffmpeg presence, deck existence, and note type existence. Returns `ValidationResult` (never raises).
 - **YouTubeFetcherService** (`services/youtube_fetcher.py`): wraps the `yt-dlp` subprocess. Three entry points: `probe_metadata(url) → VideoInfo` (fast, `--skip-download --dump-single-json --no-playlist`), `probe_playlist(url, limit) → PlaylistInfo` (`--skip-download --flat-playlist --dump-single-json --playlist-items 1:{limit+1}`, the extra entry lets callers detect over-cap playlists), and `fetch_video(url, video_id, workspace, sub_mode, progress_cb, cancel_event) → FetchedMedia`. Detects native vs translated auto-captions via `_has_native_auto_ja()`. Tracks the `Popen` handle so cancellation can kill the full process tree (yt-dlp → ffmpeg child) via `psutil`. Writes the (video, subtitle) pair into a caller-owned workspace directory.
@@ -161,8 +165,8 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 **Dictionary providers** (`services/dictionary/providers/`):
 
 - **IndexedDictProvider**: SQLite-backed offline provider used by every on-disk dictionary (JMdict and user-loaded Yomitan dicts). On first launch, JMdict XML is migrated to a SQLite index at `~/.anki_miner/dicts/jmdict-english/index.sqlite`; lookups run against that index. The read-only connection is opened with `check_same_thread=False` so a single instance is safe to share across worker threads.
-- **DictionaryRegistry**: scans `config.dicts_root` (`ANKI_MINER_HOME/dicts/`) for installed dictionaries and builds the provider chain from `config.dictionary_chain`. Disk I/O happens in the explicit `load()` call, not in `__init__`. The chain is first-hit-wins, with `JishoProvider` appended as the online fallback.
-- **JishoProvider**: REST client for the jisho.org API. Always available. Rate-limited with a configurable delay (`jisho_delay`).
+- **DictionaryRegistry**: scans `config.dicts_root` (`ANKI_MINER_HOME/dicts/`) for installed dictionaries and builds the enabled provider chain from `config.dictionary_chain`. Disk I/O happens in the explicit `load()` call, not in `__init__`. Enabled providers remain in configured order; disabled entries are skipped.
+- **JishoProvider**: opt-in REST client for the jisho.org API, disabled in the default `dictionary_chain`. Rate-limited with a configurable delay (`jisho_delay`).
 
 **Expression audio** (`services/audio_packs/`, `services/expression_audio_fetcher.py`):
 
@@ -308,7 +312,7 @@ HTTP POST to `localhost:8765` (configurable). Protocol version 6. Key actions:
 
 ### Jisho API
 
-GET `https://jisho.org/api/v1/search/words?keyword=<word>`. Rate-limited with configurable delay (default 0.5s). Surfaced as `JishoProvider` inside the configurable provider chain — its position is user-controlled via `config.dictionary_chain`. In the default chain it sits after `IndexedDictProvider(jmdict-english)` so it acts as the online fallback when no installed dictionary returns a hit, but users may move it ahead of any indexed dictionary or disable it entirely.
+GET `https://jisho.org/api/v1/search/words?keyword=<word>`. Rate-limited with configurable delay (default 0.5s). Surfaced as `JishoProvider` inside the configurable provider chain — its position is user-controlled via `config.dictionary_chain`. It is disabled by default; when enabled in the default position, it sits after `IndexedDictProvider(jmdict-english)` as the online fallback. Users may move it ahead of any indexed dictionary.
 
 ### ffmpeg / ffprobe
 

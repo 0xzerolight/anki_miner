@@ -542,8 +542,7 @@ def run_one_session(
                         spurious = observed - expected
                         report.ok = False
                         report.errors.append(
-                            f"mined-set not a subset (faithful): "
-                            f"spurious={sorted(spurious)!r} not in EXPECTED_LEMMAS"
+                            f"mined-set not a subset (faithful): spurious={sorted(spurious)!r} not in EXPECTED_LEMMAS"
                         )
     except (E2ETimeout, E2EMiningError) as exc:
         report.ok = False
@@ -716,7 +715,7 @@ def _assemble_report(
     session is itself a failure regardless of the trend).
     """
     post_snaps = [s.snapshot_post for s in sessions if s.snapshot_post is not None]
-    cards = [s.cards_created for s in sessions]
+    cards = [None if s.cancel_outcome else s.cards_created for s in sessions]
     divergence = detect_divergence(post_snaps, cards_created=cards, mode=mode)
 
     any_failed = any(not s.ok for s in sessions)
@@ -761,8 +760,7 @@ def _assert_safe_home(test_home: Path) -> None:
     real_home = (Path.home() / ".anki_miner").resolve()
     if Path(test_home).resolve() == real_home:
         raise AssertionError(
-            f"Refusing to run the soak against the real anki_miner home {real_home}. "
-            f"Configure an isolated test_home."
+            f"Refusing to run the soak against the real anki_miner home {real_home}. Configure an isolated test_home."
         )
 
 

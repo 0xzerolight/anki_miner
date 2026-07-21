@@ -276,6 +276,13 @@ def test_cards_zero_throughout_not_investigate():
     assert all("cards" not in f.lower() for f in report.flags)
 
 
+def test_cancelled_card_session_not_investigate():
+    snaps = _stable_series(4)
+    report = detect_divergence(snaps, cards_created=[4, 4, 4, None])
+    assert all("cards" not in f.lower() for f in report.flags)
+    assert report.verdict == "PASS"
+
+
 # --------------------------------------------------------------------------
 # detect_divergence: edge cases
 # --------------------------------------------------------------------------
