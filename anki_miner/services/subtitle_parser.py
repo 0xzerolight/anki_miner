@@ -85,7 +85,7 @@ PARSE_RELEVANT_CONFIG_FIELDS = (
 COMPOUND_MATCHING = True
 
 # Maximum number of files held simultaneously in the per-instance per-file
-# tokenization cache.  When the cap is hit the oldest entry (insertion order)
+# tokenization cache.  When the cap is hit the least-recently-used entry
 # is evicted so the dict stays bounded while still covering the Deck Builder's
 # Phase-1 → Phase-2 cross-file reuse pattern for any corpus up to this size.
 _LINE_CACHE_MAX_FILES: int = 256
@@ -377,7 +377,7 @@ class SubtitleParserService:
         # parse_* calls; an mtime change invalidates the entry. _reset_caches()
         # does NOT touch this — it is not a per-parse cache.
         #
-        # Size-bounded: capped at _LINE_CACHE_MAX_FILES entries via insertion-order
+        # Size-bounded: capped at _LINE_CACHE_MAX_FILES entries via LRU
         # eviction (pop the oldest key when full). Prevents unbounded growth during
         # large Deck Builder builds while still caching all files touched in Phase 1
         # for Phase 2 reuse when the corpus fits within the cap.
@@ -543,8 +543,12 @@ class SubtitleParserService:
         if mtime is not None:
             cached = self._line_cache.get(key)
             if cached is not None and cached[0] == mtime:
+                self._line_cache.pop(key)
+                self._line_cache[key] = cached
                 yield from cached[1]
                 return
+            if cached is not None:
+                self._line_cache.pop(key)
 
         subs = self._load_subs(subtitle_file)
 
@@ -577,9 +581,9 @@ class SubtitleParserService:
         # mtime is None only when stat() failed, in which case _load_subs above
         # already raised, so this assignment is reachable only with a real mtime.
         #
-        # Evict the oldest entry when the cache is at capacity so growth stays
-        # bounded (see _LINE_CACHE_MAX_FILES). dict preserves insertion order in
-        # Python 3.7+, so next(iter(...)) yields the oldest key.
+        # Evict the least-recently-used entry at capacity so growth stays bounded
+        # (see _LINE_CACHE_MAX_FILES). dict preserves insertion order in Python
+        # 3.7+, so next(iter(...)) yields the oldest key.
         if mtime is not None:
             if len(self._line_cache) >= _LINE_CACHE_MAX_FILES:
                 self._line_cache.pop(next(iter(self._line_cache)))

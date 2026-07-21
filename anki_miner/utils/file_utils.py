@@ -3,6 +3,17 @@
 from pathlib import Path
 
 
+def _truncate_utf8(value: str, byte_budget: int) -> str:
+    """Return the longest codepoint prefix fitting ``byte_budget`` UTF-8 bytes."""
+    used = 0
+    for index, char in enumerate(value):
+        char_bytes = len(char.encode("utf-8"))
+        if used + char_bytes > byte_budget:
+            return value[:index]
+        used += char_bytes
+    return value
+
+
 def ensure_directory(path: Path) -> Path:
     """Ensure a directory exists, creating it if necessary.
 
@@ -49,8 +60,12 @@ def safe_filename(filename: str) -> str:
     if len(safe_name.encode("utf-8")) > 255:
         ext = Path(safe_name).suffix
         name = Path(safe_name).stem
-        while len((name + ext).encode("utf-8")) > 255:
-            name = name[:-1]
+        name_budget = 255 - len(ext.encode("utf-8"))
+        if name_budget < 0:
+            name = ""
+            ext = _truncate_utf8(ext, 255)
+        else:
+            name = _truncate_utf8(name, name_budget)
         safe_name = name + ext
 
     # Fallback for empty result

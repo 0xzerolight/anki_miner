@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import threading
+from collections import OrderedDict
 from dataclasses import dataclass
 from importlib.resources import files
 from pathlib import Path
@@ -14,16 +15,13 @@ logger = logging.getLogger(__name__)
 
 _RESOURCE_PACKAGE = "anki_miner.resources.wordsets"
 
-# Process-wide cache of loaded blacklist unions, keyed by
-# (resolved resource dir, frozenset of enabled set IDs). The bundled wordset
-# files are immutable at runtime, so a union once read is reusable forever and
-# never needs invalidation. Repeated ``WordsetService.load()`` calls (one per
-# mining run — the factory rebuilds services every episode) otherwise re-read
-# ~480K JMnedict entries into a fresh ~45 MB set each time, ratcheting RSS; the
-# cache makes the second and later loads return the SAME frozenset object so the
-# big allocation happens once per (dir, id-set). Guarded by a double-checked
-# lock, mirroring ``services/tagger.get_shared_tagger``.
-_UNION_CACHE: dict[tuple[str, frozenset[str]], frozenset[str]] = {}
+# Small process-wide LRU of loaded blacklist unions, keyed by
+# (resolved resource dir, frozenset of enabled set IDs). Repeated
+# ``WordsetService.load()`` calls otherwise re-read ~480K JMnedict entries into
+# a fresh ~45 MB set each time. Resident entries return the SAME frozenset;
+# uncommon ID combinations are evicted so unions cannot grow without bound.
+_UNION_CACHE_MAX_ENTRIES = 8
+_UNION_CACHE: OrderedDict[tuple[str, frozenset[str]], frozenset[str]] = OrderedDict()
 _UNION_CACHE_LOCK = threading.Lock()
 
 # Canonical bundled set IDs, in display order. Labels here are fallbacks;
@@ -102,17 +100,14 @@ def _load_union_cached(root: Path, enabled_ids: tuple[str, ...]) -> frozenset[st
     """Return the unioned blacklist for ``enabled_ids`` under ``root``, cached.
 
     First call for a given (``root``, id-set) reads each set file and stores the
-    frozenset union in the process-wide cache; later calls return that SAME
-    object without touching disk. Double-checked locking keeps concurrent first
-    loads from doing redundant reads (and from racing the dict write).
+    frozenset union in the process-wide cache; resident hits return that SAME
+    object without touching disk. The lock prevents concurrent duplicate reads.
     """
     key = (str(root), frozenset(enabled_ids))
-    cached = _UNION_CACHE.get(key)
-    if cached is not None:
-        return cached
     with _UNION_CACHE_LOCK:
         cached = _UNION_CACHE.get(key)
         if cached is not None:
+            _UNION_CACHE.move_to_end(key)
             return cached
         words: set[str] = set()
         for set_id in enabled_ids:
@@ -125,6 +120,8 @@ def _load_union_cached(root: Path, enabled_ids: tuple[str, ...]) -> frozenset[st
                 words |= loaded
         union = frozenset(words)
         _UNION_CACHE[key] = union
+        if len(_UNION_CACHE) > _UNION_CACHE_MAX_ENTRIES:
+            _UNION_CACHE.popitem(last=False)
         return union
 
 

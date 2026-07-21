@@ -4109,6 +4109,38 @@ class TestLineCacheMultiFile:
         assert counts_a1 == counts_a2
         assert counts_b["犬"] == 1
 
+    def test_subtitle_cache_is_lru(self, test_config, tmp_path, monkeypatch):
+        from anki_miner.services import subtitle_parser
+
+        monkeypatch.setattr(subtitle_parser, "_LINE_CACHE_MAX_FILES", 2)
+        files = [tmp_path / f"{name}.srt" for name in ("a", "b", "c")]
+        for path in files:
+            path.write_text("placeholder", encoding="utf-8")
+
+        subs = {path.name: self._make_file_subs(text) for path, text in zip(files, ("猫", "犬", "鳥"), strict=True)}
+        tokens = [
+            _make_token("猫", "名詞", lemma="猫", kana="ネコ"),
+            _make_token("犬", "名詞", lemma="犬", kana="イヌ"),
+            _make_token("鳥", "名詞", lemma="鳥", kana="トリ"),
+        ]
+        mock_tagger = MagicMock(side_effect=[[tokens[0]], [tokens[1]], [tokens[2]], [tokens[0]]])
+
+        with (
+            patch(
+                "anki_miner.services.subtitle_parser.pysubs2.load",
+                side_effect=lambda path: subs[Path(path).name],
+            ),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+            service.count_lemmas(files[0])
+            service.count_lemmas(files[1])
+            service.count_lemmas(files[0])
+            service.count_lemmas(files[2])
+            service.count_lemmas(files[0])
+
+        assert mock_tagger.call_count == 3
+
 
 # --- Dictionary-attested compound matching (services/compound_matcher.py) ---
 

@@ -145,6 +145,27 @@ def test_validate_zip_safe_invoked(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     assert len(calls) == 1
 
 
+def test_cbz_page_access_does_not_rescan_archive(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    page = _make_image(tmp_path / "page.png", (50, 50))
+    archive = _zip_with(tmp_path / "vol.cbz", {"page01.png": page, "page02.png": page})
+
+    calls = 0
+    from anki_miner.services.reading import images as images_mod
+
+    real = images_mod.validate_zip_safe
+
+    def _spy(zf: zipfile.ZipFile, tmp_root: Path) -> None:
+        nonlocal calls
+        calls += 1
+        real(zf, tmp_root)
+
+    monkeypatch.setattr(images_mod, "validate_zip_safe", _spy)
+    prepare_card_image(ImageRef(archive, "page01.png"), tmp_path / "out")
+    prepare_card_image(ImageRef(archive, "page02.png"), tmp_path / "out")
+
+    assert calls == 1
+
+
 def test_validate_zip_safe_raise_propagates(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     page = _make_image(tmp_path / "page.png", (50, 50))
     archive = _zip_with(tmp_path / "vol.cbz", {"page01.png": page})

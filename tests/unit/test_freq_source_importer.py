@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import tracemalloc
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -588,6 +589,32 @@ class TestCsvImport:
         csv_path.write_text("term,rank\n", encoding="utf-8")
         with pytest.raises(SetupError, match="no usable frequency entries"):
             import_frequency_source(csv_path, tmp_path / "sources")
+
+    def test_freq_import_streams(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        csv_path = tmp_path / "large.csv"
+        with csv_path.open("w", encoding="utf-8") as f:
+            f.write("term,rank\n")
+            f.writelines(f"term{i},{i + 1}\n" for i in range(100_000))
+
+        rows_were_streamed = False
+        real_build_index = storage.build_index
+
+        def _build_index(db_path, rows, meta):
+            nonlocal rows_were_streamed
+            rows_were_streamed = not isinstance(rows, list)
+            return real_build_index(db_path, rows, meta)
+
+        monkeypatch.setattr(storage, "build_index", _build_index)
+        tracemalloc.start()
+        try:
+            result = import_frequency_source(csv_path, tmp_path / "sources")
+            _, peak = tracemalloc.get_traced_memory()
+        finally:
+            tracemalloc.stop()
+
+        assert result.entry_count == 100_000
+        assert rows_were_streamed
+        assert peak < 48 * 1024 * 1024
 
 
 class TestSourceIdAndAtomicity:

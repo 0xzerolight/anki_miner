@@ -30,10 +30,10 @@ from __future__ import annotations
 import logging
 import shutil
 import tempfile
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Callable
 
 from anki_miner.exceptions import SetupError
 from anki_miner.services._staging import promote_staged_dir
@@ -226,11 +226,11 @@ def _import_zip(
             # Store labels display-only: the sentinel rank keeps every row out of
             # numeric aggregation; the level shows on the card via display_value.
             # Direction detection is meaningless for categories, so it is skipped.
-            rows: list[storage.FreqRow] = [
+            rows: Iterable[storage.FreqRow] = (
                 (term, reading, storage.CATEGORICAL_RANK, label)
                 for (term, reading), label in sorted(labels.items(), key=lambda kv: kv[0])
-            ]
-            entry_count = len(rows)
+            )
+            entry_count = len(labels)
             skipped_display_only = total_considered - total_labelled  # rank-only rows dropped
             converted = False
         else:
@@ -240,13 +240,8 @@ def _import_zip(
                     f"{skipped_display_only} display-only entries). "
                     "The dictionary may use an unsupported data format."
                 )
-            # Sorted by rank for stable, human-scannable storage order.
-            rows = [
-                (term, reading, rank, display_value)
-                for (term, reading), (rank, display_value) in sorted(ranks.items(), key=lambda kv: kv[1][0])
-            ]
-            rows, converted = _apply_direction(rows, declared_mode)
-            entry_count = len(rows)
+            rows, converted = _iter_rank_rows(ranks, declared_mode)
+            entry_count = len(ranks)
 
         result = _finalize(
             input_path=zip_path,
@@ -333,12 +328,9 @@ def _import_csv(
             "Yomitan .zip dictionaries — import one of those instead."
         )
 
-    rows: list[storage.FreqRow] = [
-        (term, reading, rank, None) for (term, reading), rank in sorted(ranks.items(), key=lambda kv: kv[1])
-    ]
     # Plain CSVs never declare a direction, so always probe: an occurrence-count
     # list re-ranks here instead of silently inverting max_frequency_rank.
-    rows, converted = _apply_direction(rows, "")
+    rows, converted = _iter_rank_rows(ranks, "")
 
     result = _finalize(
         input_path=csv_path,
@@ -361,23 +353,52 @@ def _import_csv(
     return result
 
 
-def _apply_direction(
-    rows: list[storage.FreqRow],
+def _iter_rank_rows(
+    ranks: Mapping[tuple[str, str | None], int | tuple[int, str | None]],
     declared_mode: str,
-) -> tuple[list[storage.FreqRow], bool]:
-    """Detect direction and re-rank occurrence-based sources to ``1..n``.
+) -> tuple[Iterable[storage.FreqRow], bool]:
+    """Yield stored rows in stable order, re-ranking occurrence sources.
 
-    ``declared_mode`` (Yomitan ``frequencyMode``) is authoritative; a blank mode
-    (CSVs, undeclared zips) triggers the statistical probe over the stored
-    values. When occurrence-based, the raw counts in the ``rank`` column are
-    converted to real ranks (largest count = rank 1). Returns the (possibly
-    re-ranked) rows and whether a conversion happened.
+    The dedupe mapping remains necessary, but yielded rows stream into SQLite
+    instead of duplicating the entire source in a second list.
     """
+    probe_terms = {
+        term
+        for table in (mode_probe.MORE_COMMON_TERMS, mode_probe.LESS_COMMON_TERMS)
+        for terms in table.values()
+        for term in terms
+    }
     term_values: dict[str, list[int]] = {}
-    for term, _reading, value, _display in rows:
-        term_values.setdefault(term, []).append(value)
+    for (term, _reading), value in ranks.items():
+        if term in probe_terms:
+            rank = value if isinstance(value, int) else value[0]
+            term_values.setdefault(term, []).append(rank)
+
     if mode_probe.resolve_is_occurrence(declared_mode, term_values):
-        return mode_probe.convert_to_ranks(rows), True
+        ordered = sorted(
+            ranks.items(),
+            key=lambda item: (
+                -(item[1] if isinstance(item[1], int) else item[1][0]),
+                item[0][0],
+                item[0][1] or "",
+            ),
+        )
+        rows = (
+            (term, reading, new_rank, None if isinstance(value, int) else value[1])
+            for new_rank, ((term, reading), value) in enumerate(ordered, 1)
+        )
+        return rows, True
+
+    ordered = sorted(ranks.items(), key=lambda item: item[1] if isinstance(item[1], int) else item[1][0])
+    rows = (
+        (
+            term,
+            reading,
+            value if isinstance(value, int) else value[0],
+            None if isinstance(value, int) else value[1],
+        )
+        for (term, reading), value in ordered
+    )
     return rows, False
 
 
@@ -412,7 +433,7 @@ def _finalize(
     source_name: str,
     source_revision: str,
     fmt: str,
-    rows: list[storage.FreqRow],
+    rows: Iterable[storage.FreqRow],
     entry_count: int,
     skipped_display_only: int,
     skipped_malformed: int = 0,
