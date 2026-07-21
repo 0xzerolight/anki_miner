@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -164,6 +166,25 @@ def test_oversized_subtitle_file_fails_cleanly(tmp_path, monkeypatch):
 
     with pytest.raises(SetupError, match=r"subtitle file.*cap 4"):
         subtitle_source.load(_ref(path))
+
+
+def test_subtitle_file_growth_after_stat_uses_bounded_read(monkeypatch):
+    path = MagicMock(spec=Path)
+    path.name = "Ep01.srt"
+    path.stem = "Ep01"
+    path.suffix = ".srt"
+    path.stat.return_value = SimpleNamespace(st_size=1)
+    path.read_bytes.return_value = b"x" * 5
+    reader = MagicMock()
+    reader.__enter__.return_value = reader
+    reader.read.side_effect = lambda size: b"x" * size
+    path.open.return_value = reader
+    monkeypatch.setattr(subtitle_source, "_MAX_TEXT_FILE_BYTES", 4, raising=False)
+
+    with pytest.raises(SetupError, match=r"subtitle file.*cap 4"):
+        subtitle_source.load(_ref(path))  # type: ignore[arg-type]
+
+    reader.read.assert_called_once_with(5)
 
 
 def test_unparseable_content_raises_setup_error(tmp_path):

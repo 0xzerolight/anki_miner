@@ -317,7 +317,12 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
             raise SetupError(
                 f"novel file '{ref.path.name}' is {size:,} bytes (cap {_MAX_TEXT_FILE_BYTES:,}); refusing to load"
             )
-        raw = ref.path.read_bytes()
+        with ref.path.open("rb") as f:
+            raw = f.read(_MAX_TEXT_FILE_BYTES + 1)
+        if len(raw) > _MAX_TEXT_FILE_BYTES:
+            raise SetupError(
+                f"novel file '{ref.path.name}' exceeds cap {_MAX_TEXT_FILE_BYTES:,} bytes; refusing to load"
+            )
     except OSError as e:
         raise SetupError(f"Cannot read novel file '{ref.path.name}': {e}") from e
     text = _decode(raw)

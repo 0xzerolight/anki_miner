@@ -1736,6 +1736,7 @@ class EpisodeProcessor:
         self.presenter.show_info(step_banner)
         images_dir = run_temp_folder / "images"
         units_by_index = {unit.index: unit for unit in document.units}
+        picture_mapped = bool(self.config.anki_fields.get("picture"))
 
         # YOU own the per-run bookkeeping: a unique-ref → materialized-path memo,
         # a set of archives whose safety gate failed or that are corrupt (skip
@@ -1768,7 +1769,7 @@ class EpisodeProcessor:
             media = MediaData()
             unit = units_by_index.get(int(word.start_time))
             ref = unit.image_ref if unit is not None else None
-            if ref is not None and ref.source not in failed_archives and ref not in failed_refs:
+            if picture_mapped and ref is not None and ref.source not in failed_archives and ref not in failed_refs:
                 image_path = ref_cache.get(ref)
                 if image_path is None:
                     try:
