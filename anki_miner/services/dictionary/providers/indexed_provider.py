@@ -130,7 +130,7 @@ class IndexedDictProvider:
         # <style> wrapper) and exposed via `dictionary_css`; collect_dictionary_css
         # concatenates it into each card's per-card <style> block. Absent for
         # JMdict and for dicts imported before styles.css capture.
-        self._scoped_css = scope_dict_css(meta.get("styles_css", ""), self.dict_id)
+        self._scoped_css = scope_dict_css(meta.get("styles_css", ""), self.dict_id, self._display_name)
         return True
 
     def lookup(self, word: str) -> str | None:

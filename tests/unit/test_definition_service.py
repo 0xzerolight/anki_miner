@@ -108,8 +108,14 @@ class TestCollectDictionaryCss:
         )
         # Each dict's rule is prefixed with ITS OWN [data-dictionary] scope, so a
         # rule can't leak across distinct-title dicts in the concatenated sheet.
-        assert '[data-dictionary-id="a-dict"] span {color: red}' in css
-        assert '[data-dictionary-id="b-dict"] span {color: blue}' in css
+        assert (
+            '[data-dictionary-id="a-dict"] span, '
+            '.yomitan-glossary [data-dictionary="A"]:not([data-dictionary-id]) span {color: red}' in css
+        )
+        assert (
+            '[data-dictionary-id="b-dict"] span, '
+            '.yomitan-glossary [data-dictionary="B"]:not([data-dictionary-id]) span {color: blue}' in css
+        )
 
     def test_duplicate_title_dicts_isolated_by_id(self, tmp_path: Path):
         _seed_dict(tmp_path, "a-dict", "Same", styles_css="span { color: red }")
@@ -123,9 +129,9 @@ class TestCollectDictionaryCss:
             )
         )
 
-        assert '[data-dictionary-id="a-dict"] span {color: red}' in css
-        assert '[data-dictionary-id="b-dict"] span {color: blue}' in css
-        assert '[data-dictionary="Same"]' not in css
+        assert '[data-dictionary-id="a-dict"] span, ' in css
+        assert '[data-dictionary-id="b-dict"] span, ' in css
+        assert css.count('[data-dictionary="Same"]:not([data-dictionary-id]) span') == 2
 
 
 class TestCollectDictionaryCssEntries:

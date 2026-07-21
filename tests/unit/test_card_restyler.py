@@ -23,6 +23,7 @@ from anki_miner.services.dictionary.card_style_block import (
     base_css_variant,
     css_witnesses,
 )
+from anki_miner.services.dictionary.dict_css_scope import scope_dict_css
 
 
 def _variant_for(html: str) -> str:
@@ -501,7 +502,7 @@ class TestRestyleField:
     def test_fresh_attach_keeps_css_for_legacy_title_envelope(self):
         title = "Jitendex.org [2026-06-06]"
         value = BARE.replace('data-dictionary="X"', f'data-dictionary="{title}"')
-        scoped = '.yomitan-glossary [data-dictionary-id="jitendex"] li{color:red}'
+        scoped = scope_dict_css("li {color:red}", "jitendex", title)
 
         out = self._restyle(
             value,
@@ -510,7 +511,8 @@ class TestRestyleField:
         )
 
         assert out is not None
-        assert scoped in out
+        assert 'data-dictionary-id="' not in value
+        assert f'[data-dictionary="{title}"]:not([data-dictionary-id]) li {{color:red}}' in out
 
     def test_fresh_attach_stamps_via_current_config_gate(self):
         # The legacy-prepend gate: current config ships CSS for X → X's

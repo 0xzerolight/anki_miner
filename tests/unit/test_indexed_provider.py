@@ -819,7 +819,9 @@ class TestDictionaryCss:
         assert provider.load() is True
         # Scoped CSS exposed bare (no <style> wrapper), scoped to the dict.
         assert provider.dictionary_css == (
-            '.yomitan-glossary [data-dictionary-id="jitendex"] span[data-sc-class="tag"] {color: red}'
+            '.yomitan-glossary [data-dictionary-id="jitendex"] span[data-sc-class="tag"], '
+            '.yomitan-glossary [data-dictionary="Jitendex.org [2026-06-06]"]'
+            ':not([data-dictionary-id]) span[data-sc-class="tag"] {color: red}'
         )
         out = provider.lookup("食べる")
         assert out is not None

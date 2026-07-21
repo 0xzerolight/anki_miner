@@ -3,11 +3,36 @@
 from __future__ import annotations
 
 import time
+from html.parser import HTMLParser
 
 from anki_miner.services.dictionary.dict_css_scope import scope_dict_css
 
 TITLE = "Jitendex.org [2026-06-06]"
 SCOPE = '.yomitan-glossary [data-dictionary-id="Jitendex.org [2026-06-06]"]'
+
+
+class _EnvelopeAttrs(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.attrs: dict[str, str | None] = {}
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "li" and not self.attrs:
+            self.attrs = dict(attrs)
+
+
+def _rule_targets_field(css: str, field_html: str) -> bool:
+    envelope = _EnvelopeAttrs()
+    envelope.feed(field_html)
+    dict_id = envelope.attrs.get("data-dictionary-id")
+    if dict_id is None:
+        scope = (
+            f'.yomitan-glossary [data-dictionary="{envelope.attrs["data-dictionary"]}"]:not([data-dictionary-id]) span'
+        )
+    else:
+        scope = f'.yomitan-glossary [data-dictionary-id="{dict_id}"] span'
+    selectors = css.partition(" {")[0].split(", ")
+    return scope in selectors
 
 
 def test_empty_input_returns_empty():
@@ -18,6 +43,29 @@ def test_empty_input_returns_empty():
 def test_simple_rule_is_scoped():
     out = scope_dict_css("span[data-sc-class='tag'] { color: red; }", TITLE)
     assert out == f"{SCOPE} span[data-sc-class='tag'] {{color: red;}}"
+
+
+def test_legacy_title_fallback_matches_pre_id_field_without_leaking_between_new_same_title_dicts():
+    legacy_css = scope_dict_css("span { color: red }", "legacy-id", "Legacy Title")
+    legacy_field = (
+        '<div class="yomitan-glossary"><ol data-count="1">'
+        '<li data-dictionary="Legacy Title"><span>legacy</span></li></ol></div>'
+    )
+    assert _rule_targets_field(legacy_css, legacy_field)
+
+    css_a = scope_dict_css("span { color: red }", "a-dict", "Same Title")
+    css_b = scope_dict_css("span { color: blue }", "b-dict", "Same Title")
+    field_a = legacy_field.replace(
+        'data-dictionary="Legacy Title"', 'data-dictionary="Same Title" data-dictionary-id="a-dict"'
+    )
+    field_b = legacy_field.replace(
+        'data-dictionary="Legacy Title"', 'data-dictionary="Same Title" data-dictionary-id="b-dict"'
+    )
+
+    assert _rule_targets_field(css_a, field_a)
+    assert not _rule_targets_field(css_b, field_a)
+    assert not _rule_targets_field(css_a, field_b)
+    assert _rule_targets_field(css_b, field_b)
 
 
 def test_comma_selector_list_each_prefixed():
@@ -32,13 +80,13 @@ def test_comma_inside_parens_not_split():
 
 
 def test_title_quotes_and_backslash_escaped():
-    out = scope_dict_css("p { color: red }", 'Weird "Dict" \\ name')
-    assert out.startswith('.yomitan-glossary [data-dictionary-id="Weird \\"Dict\\" \\\\ name"] p')
+    out = scope_dict_css("p { color: red }", "stable-id", 'Weird "Dict" \\ name')
+    assert '.yomitan-glossary [data-dictionary="Weird \\"Dict\\" \\\\ name"]:not([data-dictionary-id]) p' in out
 
 
 def test_title_angle_brackets_stripped():
     # A hostile title cannot break out of the <style> element via the scope.
-    out = scope_dict_css("p { color: red }", "Evil</style><script>")
+    out = scope_dict_css("p { color: red }", "stable-id", "Evil</style><script>")
     assert "<" not in out and ">" not in out
 
 
