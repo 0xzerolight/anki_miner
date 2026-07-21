@@ -75,16 +75,17 @@ class AudioPackImportFlow(ModalImportFlowMixin):
         # Long-lived worker reference: ImportWorker is a QThread and would be
         # destroyed mid-run if it fell out of scope before joining.
         self._active_import_worker: ImportWorker | None = None
+        self._retained_import_workers: list[ImportWorker] = []
 
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close.
 
-        Returns the active import worker so ``SettingsTab.iter_close_workers``
+        Returns active and retained import workers so ``SettingsTab.iter_close_workers``
         can chain it into the single ``BackgroundTaskController._join_worker_for_close``
         policy (cancel + bounded grace join + laggard deferral).  A ``None``
         entry (idle flow) is filtered by ``_join_worker_for_close``.
         """
-        return (self._active_import_worker,)
+        return self._iter_import_workers()
 
     def _set_import_buttons_enabled(self, enabled: bool) -> None:
         """Toggle import-trigger buttons. Prevents overlapping import workers."""

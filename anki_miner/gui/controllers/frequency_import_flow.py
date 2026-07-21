@@ -63,6 +63,7 @@ class FrequencyImportFlow(ModalImportFlowMixin):
         # Long-lived worker reference: ImportWorker is a QThread and would be
         # destroyed mid-run if it fell out of scope before joining.
         self._active_import_worker: ImportWorker | None = None
+        self._retained_import_workers: list[ImportWorker] = []
 
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close.
@@ -70,7 +71,7 @@ class FrequencyImportFlow(ModalImportFlowMixin):
         A ``None`` entry (idle flow) is filtered by
         ``BackgroundTaskController._join_worker_for_close``.
         """
-        return (self._active_import_worker,)
+        return self._iter_import_workers()
 
     def _set_import_buttons_enabled(self, enabled: bool) -> None:
         """Toggle the add-trigger button. Prevents overlapping import workers."""

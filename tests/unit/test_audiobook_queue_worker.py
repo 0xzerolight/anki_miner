@@ -448,3 +448,37 @@ def test_stale_dict_aborts_queue_once(qapp, mock_processor, test_config):
     assert caps["finished"].calls == []
     assert len(caps["queue_finished"].calls) == 1
     mock_processor.process_episode.assert_not_called()
+
+
+def test_run_envelope_turns_preflight_error_into_terminal_result(qapp, mock_processor, test_config, tmp_path):
+    from anki_miner.config import ChainEntry
+
+    dict_dir = tmp_path / "broken"
+    dict_dir.mkdir()
+    db_path = dict_dir / "index.sqlite"
+    db_path.touch()
+    sidecar = dict_dir / "meta.json"
+    sidecar.write_bytes(b"\xff")
+    sidecar.touch()
+    config = replace(
+        test_config,
+        dicts_root=tmp_path,
+        dictionary_chain=(ChainEntry(kind="indexed", dict_id="broken"),),
+    )
+    worker = AudiobookQueueWorker(
+        processor=mock_processor,
+        config=config,
+        items=[_make_item()],
+        curation_callback=None,
+    )
+    errors: list[str] = []
+    worker.error.connect(errors.append)
+    caps = _connect_all(worker)
+
+    worker.run()
+
+    assert len(errors) == 1
+    assert errors[0].startswith("UnicodeDecodeError:")
+    assert caps["started"].calls == []
+    assert caps["finished"].calls == []
+    assert len(caps["queue_finished"].calls) == 1

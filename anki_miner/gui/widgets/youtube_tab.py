@@ -370,3 +370,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
         """
         super().shutdown()
         self._add_flow.shutdown()
+
+    def iter_close_workers(self) -> tuple:
+        """Return live add-flow workers that outlived bounded shutdown joins."""
+        return self._add_flow.iter_close_workers()

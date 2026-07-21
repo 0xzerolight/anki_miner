@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import unicodedata
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -226,6 +227,25 @@ def test_output_dir_is_created(qapp, tmp_path):
 
     assert out_dir.exists()
     assert cap["finished"][0][2] is None  # success
+
+
+def test_run_envelope_turns_mkdir_error_into_terminal_result(qapp, tmp_path, monkeypatch):
+    v = tmp_path / "ep01.mkv"
+    s = tmp_path / "ep01_orig.srt"
+    v.write_bytes(b"")
+    s.write_bytes(b"")
+    out_dir = tmp_path / "blocked"
+    retimer = MagicMock(return_value=True)
+    worker = _make_worker([(v, s)], output_dir=out_dir, retimer=retimer)
+    cap = _capture(worker)
+    monkeypatch.setattr(Path, "mkdir", MagicMock(side_effect=PermissionError("mkdir denied")))
+
+    worker.run()
+
+    assert cap["started"] == [0]
+    assert cap["finished"] == [(0, None, "mkdir denied")]
+    assert cap["queue_finished"] == [True]
+    retimer.assert_not_called()
 
 
 def test_output_path_preserves_subtitle_extension(qapp, tmp_path):

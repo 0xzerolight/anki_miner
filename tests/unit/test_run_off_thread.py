@@ -22,6 +22,7 @@ from anki_miner.gui.utils.run_off_thread import (
     join_tracked_workers,
     join_worker,
     run_off_thread,
+    still_running,
 )
 from anki_miner.gui.workers.base_worker import CancellableWorker
 
@@ -154,6 +155,16 @@ def test_run_off_thread_on_done_runs_on_gui_thread(qtbot):
 
 def test_join_worker_none_returns_true():
     assert join_worker(None) is True
+
+
+def test_deleted_wrapper_treated_as_stopped():
+    class _Dead:
+        def isRunning(self):  # noqa: N802
+            raise RuntimeError("wrapped C/C++ object has been deleted")
+
+    dead = _Dead()
+    assert still_running(dead) is False
+    assert join_worker(dead) is True
 
 
 def test_join_worker_not_running_returns_true():

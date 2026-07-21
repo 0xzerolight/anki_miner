@@ -54,6 +54,7 @@ from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtWidgets import QListWidgetItem
 
+from anki_miner.gui.utils.run_off_thread import join_or_retain, still_running
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.models import MiningOutcome, classify_result, result_error_text
 from anki_miner.utils.i18n import tr_format
@@ -74,7 +75,7 @@ logger = logging.getLogger(__name__)
 # Upper bound for joining the queue worker at shutdown. Generous: covers a slow
 # per-item stage (ffmpeg extraction, an archive/epub load, a YouTube fetch)
 # finishing plus AnkiConnect timeouts. Converts a worst-case hang into a bounded
-# delay with a leaked-thread warning.
+# delay while retaining the laggard for deferred close.
 _SHUTDOWN_WAIT_MS = 30_000
 
 
@@ -177,6 +178,8 @@ class _QueueMiningTabBase(MiningTabBase):
         # _on_worker_finished reconciles: drops the cached processor so the next
         # run rebuilds with the new config.
         self._config_dirty: bool = False
+        self._config_generation = 0
+        self._worker_config_generation = 0
 
         # Snapshot of the items handed to the active worker, in order. Indexed by
         # the worker's per-item idx signals; frozen at launch so mid-run removals
@@ -247,6 +250,7 @@ class _QueueMiningTabBase(MiningTabBase):
         # QThread.finished fires on every run() exit (success, cancel, exception),
         # so run-end cleanup converges here rather than only on the success path.
         worker.finished.connect(self._on_worker_finished)
+        self._worker_config_generation = self._config_generation
         self.worker_thread = worker
 
         self.log_widget.append_info(tr_format(self._run_strings.run_starting, self._run_strings.mine_label, len(items)))
@@ -307,7 +311,11 @@ class _QueueMiningTabBase(MiningTabBase):
         # worker_thread, so subsequent runs reuse it and Remove-dictionary can
         # release it. No-op when _processor was already set (prebuilt path).
         if self._processor is None and self.worker_thread is not None:
-            self._processor = self.worker_thread.curation_processor
+            processor = self.worker_thread.curation_processor
+            if self._worker_config_generation == self._config_generation:
+                self._processor = processor
+            elif processor is not None:
+                processor.close()
         # Recover any item stranded mid-flight (reads _run_items, still intact).
         self._recover_stranded_items()
         self.worker_thread = None
@@ -349,8 +357,9 @@ class _QueueMiningTabBase(MiningTabBase):
             config: New frozen configuration.
         """
         self.config = config
+        self._config_generation += 1
 
-        worker_busy = self.worker_thread is not None and self.worker_thread.isRunning()
+        worker_busy = still_running(self.worker_thread)
         if worker_busy:
             # Mark dirty; reconcile in _on_worker_finished (OVH-056).
             self._config_dirty = True
@@ -373,7 +382,7 @@ class _QueueMiningTabBase(MiningTabBase):
 
         The processor is rebuilt lazily on the next Mine click.
         """
-        if self.worker_thread is not None and self.worker_thread.isRunning():
+        if still_running(self.worker_thread):
             return False
         if self._processor is not None:
             self._processor.release_dictionary_resources()
@@ -399,13 +408,17 @@ class _QueueMiningTabBase(MiningTabBase):
             # about-to-park) worker falls through.
             self._poison_curation_gate()
             self.worker_thread.quit()
-            if not self.worker_thread.wait(_SHUTDOWN_WAIT_MS):
+            self.worker_thread = join_or_retain(
+                self.worker_thread,
+                _SHUTDOWN_WAIT_MS,
+                cancel_worker=False,
+            )
+            if self.worker_thread is not None:
                 logger.warning(
-                    "%s queue worker did not stop within %sms at shutdown; leaking thread",
+                    "%s queue worker did not stop within %sms at shutdown; retaining for deferred close",
                     self._shutdown_log_name,
                     _SHUTDOWN_WAIT_MS,
                 )
-            self.worker_thread = None
 
     # ------------------------------------------------------------------
     # Subclass hooks

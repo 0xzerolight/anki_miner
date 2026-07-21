@@ -26,15 +26,14 @@ from collections.abc import Callable
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QWidget
 
-from anki_miner.gui.utils.run_off_thread import join_worker
+from anki_miner.gui.utils.run_off_thread import join_or_retain, still_running
 from anki_miner.gui.workers.import_worker import ImportWorker
 
 logger = logging.getLogger(__name__)
 
 # Bounded join for the predecessor import worker before its reference is
-# dropped. A stuck worker must never freeze the GUI thread; on timeout we log
-# and proceed, leaking the old handle rather than blocking (mirrors
-# ``MiningTabBase._teardown_previous_run``).
+# replaced. A stuck worker must never freeze the GUI thread; on timeout the
+# predecessor stays retained and the replacement is refused.
 _IMPORT_JOIN_TIMEOUT_MS = 5000
 
 
@@ -53,6 +52,7 @@ class ModalImportFlowMixin:
 
     _parent: QWidget
     _active_import_worker: ImportWorker | None
+    _retained_import_workers: list[ImportWorker]
 
     def _set_import_buttons_enabled(self, enabled: bool) -> None:
         """Toggle import-trigger buttons — provided by the concrete flow."""
@@ -85,21 +85,23 @@ class ModalImportFlowMixin:
             on_success: Flow-specific handler run on ``import_finished`` with
                 ``(resource_id, meta)`` — chain updates + the success dialog.
         """
+        prev = self._active_import_worker
+        laggard = join_or_retain(prev, timeout_ms=_IMPORT_JOIN_TIMEOUT_MS)
+        if laggard is not None:
+            if all(retained is not laggard for retained in self._retained_import_workers):
+                self._retained_import_workers.append(laggard)
+            logger.warning(
+                "Lingering %s did not stop within %d ms; refusing replacement",
+                join_noun,
+                _IMPORT_JOIN_TIMEOUT_MS,
+            )
+            worker.deleteLater()
+            return
+
         dlg = QProgressDialog(progress_label, cancel_label, 0, 100 if determinate else 0, self._parent)
         dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
         dlg.show()
 
-        # Join the predecessor before dropping its reference: reassigning
-        # _active_import_worker without waiting could drop the only reference to
-        # a still-running, unparented QThread → "QThread: Destroyed while thread
-        # is still running".
-        prev = self._active_import_worker
-        if not join_worker(prev, timeout_ms=_IMPORT_JOIN_TIMEOUT_MS):
-            logger.warning(
-                "Lingering %s did not stop within %d ms; replacing it anyway",
-                join_noun,
-                _IMPORT_JOIN_TIMEOUT_MS,
-            )
         self._active_import_worker = worker
         self._set_import_buttons_enabled(False)
 
@@ -131,5 +133,24 @@ class ModalImportFlowMixin:
         worker.import_finished.connect(on_done)
         worker.failed.connect(on_failed)
         worker.cancelled.connect(on_cancelled)
+        worker.finished.connect(lambda w=worker: self._release_import_worker(w))
         dlg.canceled.connect(worker.cancel)
         worker.start()
+
+    def _iter_import_workers(self) -> tuple:
+        """Return all live active and retained import workers."""
+        workers = list(self._retained_import_workers)
+        active = self._active_import_worker
+        if active is not None and all(worker is not active for worker in workers):
+            workers.append(active)
+        live = tuple(worker for worker in workers if still_running(worker))
+        return live or (None,)
+
+    def _release_import_worker(self, worker: ImportWorker) -> None:
+        """Release ``worker`` only from its native ``finished`` signal."""
+        if self._active_import_worker is worker:
+            self._active_import_worker = None
+        self._retained_import_workers = [
+            retained for retained in self._retained_import_workers if retained is not worker
+        ]
+        worker.deleteLater()

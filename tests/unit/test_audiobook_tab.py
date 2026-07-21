@@ -23,12 +23,14 @@ patched so ``start()`` is a no-op and constructor kwargs can be inspected.
 
 from __future__ import annotations
 
+import time
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
+from PyQt6.QtCore import QThread
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
@@ -772,6 +774,25 @@ class TestShutdown:
         # Should not raise.
         tab.shutdown()
 
+    def test_shutdown_timeout_retains_live_worker(self, tab, monkeypatch, qtbot):
+        class _SlowWorker(QThread):
+            def cancel(self) -> None:
+                pass
+
+            def run(self) -> None:
+                time.sleep(0.2)
+
+        monkeypatch.setattr("anki_miner.gui.widgets._queue_mining_tab_base._SHUTDOWN_WAIT_MS", 10)
+        worker = _SlowWorker()
+        tab.worker_thread = worker
+        worker.start()
+        qtbot.waitUntil(worker.isRunning, timeout=1000)
+
+        tab.shutdown()
+
+        assert tab.worker_thread is worker
+        assert worker.wait(1000)
+
 
 class TestCurationContext:
     """_build_curation_context sources player + lookup from the live worker."""
@@ -864,6 +885,21 @@ class TestUpdateConfig:
         original_processor.close.assert_called_once()
         assert tab._processor is None
         assert tab._config_dirty is False
+
+    def test_late_finish_cannot_recache_released_processor(self, tab, test_config, tmp_path):
+        tab._processor = None
+        _add_pair(tab, tmp_path)
+        tab._on_mine_clicked()
+        worker = tab.worker_thread
+        stale_processor = MagicMock(name="StaleProcessor")
+        worker.curation_processor = stale_processor
+        worker.isRunning.return_value = False
+
+        tab.update_config(replace(test_config, subtitle_offset=2.5))
+        tab._on_worker_finished()
+
+        assert tab._processor is None
+        stale_processor.close.assert_called_once()
 
 
 class TestReleaseDictionaryResources:

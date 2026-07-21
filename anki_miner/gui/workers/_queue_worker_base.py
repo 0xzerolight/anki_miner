@@ -145,6 +145,15 @@ class SequentialQueueWorker(ProcessorOwningWorker, Generic[ItemT]):
         and the cancel/skip loop scaffolding live here; the subclass
         :meth:`_run_item` supplies the per-item body.
         """
+        try:
+            self._run_queue()
+        except Exception as exc:  # noqa: BLE001 - QThread.run exception boundary
+            logger.exception("%s run failed", type(self).__name__)
+            self.error.emit(f"{type(exc).__name__}: {exc}")
+            self.queue_finished.emit()
+
+    def _run_queue(self) -> None:
+        """Run queue logic inside :meth:`run`'s exception boundary."""
         # Schema-staleness pre-loop gate: abort the whole queue once with a
         # single actionable error when an enabled indexed dict slot needs
         # reimport — before any mining — instead of one silent zero-card
