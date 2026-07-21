@@ -3,8 +3,8 @@
 Replaced QMediaPlayer/QtMultimedia in the mpv migration: the Qt FFmpeg backend
 carried a whole bug family (Windows D3D-sink teardown freeze, no software AV1
 decode → the deleted Issue #82 watchdog/nudge apparatus). libmpv decodes AV1 in
-software (dav1d, ``hwdec=no``) and tears down deterministically via
-``terminate()``, so none of that machinery exists anymore.
+software (dav1d, ``hwdec=no``) and uses a bounded ``terminate()`` wrapper, so
+none of that machinery exists anymore.
 
 Ownership: this controller owns the ``mpv.MPV`` handle (``self.player``, None
 until the first ``set_source``); :class:`MpvVideoWidget` owns only the render
@@ -36,7 +36,7 @@ from anki_miner.gui.widgets.mpv_video_widget import MpvVideoWidget
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 from anki_miner.utils.bundled_binary import frozen_state
 from anki_miner.utils.i18n import tr_format
-from anki_miner.utils.mpv_loader import create_mpv_player, mpv_available
+from anki_miner.utils.mpv_loader import create_mpv_player, mpv_available, terminate_mpv_player
 
 logger = logging.getLogger(__name__)
 
@@ -289,8 +289,8 @@ class SubtitlePlayerWidget(QWidget):
         Runs once per player (= once per widget lifetime). Every handler body
         is a bare signal emit — they run on python-mpv's event thread where
         touching widgets or calling back into libmpv is undefined behavior.
-        python-mpv keeps references to registered handlers, and terminate()
-        joins the event thread, so no emit can outlive the widget.
+        python-mpv keeps references to registered handlers; a successful
+        terminate joins the event thread so no emit can outlive the widget.
         """
         player.observe_property("time-pos", lambda _name, value: self._mpv_time_pos.emit(value))
         player.observe_property("duration", lambda _name, value: self._mpv_duration.emit(value))
@@ -308,7 +308,7 @@ class SubtitlePlayerWidget(QWidget):
                 self._mpv_playback_error.emit(self.tr("playback failed"))
 
     def _teardown_player(self) -> None:
-        """Terminate the mpv core deterministically. Idempotent.
+        """Detach and request bounded mpv core termination. Idempotent.
 
         Exact order matters (this replaces the old QMediaPlayer D3D teardown
         dance wholesale):
@@ -318,8 +318,8 @@ class SubtitlePlayerWidget(QWidget):
         2. ``video_widget.detach()`` frees the render context while the core
            is still alive. Freeing against a dead core — or terminating a core
            with a live render context — is a hard process abort in libmpv.
-        3. ``player.terminate()`` destroys the handle and joins python-mpv's
-           event thread, so no observer emit can arrive afterwards.
+        3. The bounded terminate helper destroys the handle and joins
+           python-mpv's event thread when teardown completes in time.
         """
         if self.player is None:
             return
@@ -328,10 +328,10 @@ class SubtitlePlayerWidget(QWidget):
         self._pending_seek_ms = None
         self._pending_load = None
         self.video_widget.detach()
-        player.terminate()
+        terminate_mpv_player(player)
 
     def closeEvent(self, event) -> None:
-        """Tear down the mpv core deterministically on widget close."""
+        """Tear down the mpv core with a bounded wait on widget close."""
         self._teardown_player()
         super().closeEvent(event)
 

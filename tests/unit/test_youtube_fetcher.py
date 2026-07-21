@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import io
 import json
+import signal
 import subprocess
 import threading
 import time
@@ -11,7 +13,6 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-import psutil  # type: ignore[import-untyped]
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
@@ -24,6 +25,7 @@ from anki_miner.exceptions.youtube import (
     YtdlpNotFoundError,
 )
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
+from anki_miner.utils.process_supervisor import SupervisedResult, SupervisedState
 
 # ---------------------------------------------------------------------------
 # Test helpers
@@ -61,15 +63,27 @@ class _FakePopen:
     """Minimal stand-in for subprocess.Popen with a scripted stdout stream."""
 
     def __init__(self, lines: list[str], returncode: int = 0) -> None:
-        # Terminate each line with \n to match Popen(text=True) behavior.
-        self.stdout = iter(f"{line}\n" for line in lines)
+        output = "".join(line if line.endswith("\n") else f"{line}\n" for line in lines)
+        self.stdout = io.BytesIO(output.encode("utf-8"))
+        self.stderr = None
         self._returncode = returncode
+        self.returncode: int | None = returncode
         self.pid = 4242
         self.wait_called = 0
 
-    def wait(self) -> int:
+    def poll(self) -> int | None:
+        return self.returncode
+
+    def wait(self, timeout: float | None = None) -> int:
         self.wait_called += 1
+        self.returncode = self._returncode
         return self._returncode
+
+    def terminate(self) -> None:
+        self.returncode = -15
+
+    def kill(self) -> None:
+        self.returncode = -9
 
 
 @pytest.fixture
@@ -123,6 +137,12 @@ def _remote_component_capability(request: pytest.FixtureRequest, monkeypatch: py
         monkeypatch.setattr(yf, "_ytdlp_supports_remote_components", lambda _path: False)
     yield
     real.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def _stub_supervisor_killpg() -> Any:
+    with patch("anki_miner.utils.process_supervisor.os.killpg"):
+        yield
 
 
 # ---------------------------------------------------------------------------
@@ -816,27 +836,37 @@ class TestFetchVideoErrors:
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
 
 
+def test_ytdlp_hang_killed_by_deadline(service: YouTubeFetcherService, tmp_path: Path) -> None:
+    captured: dict[str, Any] = {}
+
+    def timed_out(_command: list[str], **kwargs: Any) -> SupervisedResult:
+        captured.update(kwargs)
+        return SupervisedResult(SupervisedState.TIMED_OUT, -signal.SIGKILL, "", "")
+
+    with (
+        patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+        patch("anki_miner.services.youtube_fetcher.run_supervised", side_effect=timed_out, create=True),
+        patch("subprocess.Popen", side_effect=AssertionError("legacy Popen path used")),
+        pytest.raises(YouTubeFetchError, match="timed out"),
+    ):
+        service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+    assert captured["timeout_s"] == 3 * 60 * 60
+    assert captured["combine_stderr"] is True
+
+
 class TestFetchVideoCancel:
     def test_cancel_event_triggers_kill_tree(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         lines = ["[ankimine_dl] 100 1000", "[ankimine_dl] 200 1000"]
         cancel = threading.Event()
         cancel.set()  # pre-set; the first line iteration will notice.
 
-        fake_parent = MagicMock()
-        fake_parent.children.return_value = []
-        fake_parent.terminate = MagicMock()
+        popen = _FakePopen(lines, returncode=0)
 
         with (
             patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
-            patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
-            patch(
-                "anki_miner.services.youtube_fetcher.psutil.Process",
-                return_value=fake_parent,
-            ),
-            patch(
-                "anki_miner.services.youtube_fetcher.psutil.wait_procs",
-                return_value=([fake_parent], []),
-            ),
+            patch("subprocess.Popen", return_value=popen),
+            patch("anki_miner.utils.process_supervisor.os.killpg") as killpg,
             pytest.raises(YouTubeFetchError, match="Cancelled by user"),
         ):
             service.fetch_video(
@@ -846,7 +876,8 @@ class TestFetchVideoCancel:
                 "manual_only",
                 cancel_event=cancel,
             )
-        fake_parent.terminate.assert_called_once()
+        killpg.assert_any_call(popen.pid, signal.SIGTERM)
+        killpg.assert_any_call(popen.pid, signal.SIGKILL)
 
     def test_cancel_with_no_stdout_lines_reports_cancelled(
         self, service: YouTubeFetcherService, tmp_path: Path
@@ -865,11 +896,7 @@ class TestFetchVideoCancel:
         with (
             patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
-            # The watchdog may race in and kill an "already exited" process.
-            patch(
-                "anki_miner.services.youtube_fetcher.psutil.Process",
-                side_effect=psutil.NoSuchProcess(4242),
-            ),
+            patch("anki_miner.utils.process_supervisor.os.killpg"),
             pytest.raises(YouTubeFetchError, match="Cancelled by user"),
         ):
             service.fetch_video(
@@ -888,19 +915,15 @@ class TestFetchVideoCancel:
         cancel = threading.Event()
 
         class _CancelDuringWaitPopen(_FakePopen):
-            def wait(self) -> int:
+            def wait(self, timeout: float | None = None) -> int:
                 cancel.set()  # cancel lands after stdout drained, before exit
-                return super().wait()
+                return super().wait(timeout)
 
         popen = _CancelDuringWaitPopen(["[ankimine_dl] 1024 1024"], returncode=0)
 
         with (
             patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=popen),
-            patch(
-                "anki_miner.services.youtube_fetcher.psutil.Process",
-                side_effect=psutil.NoSuchProcess(4242),
-            ),
             pytest.raises(YouTubeFetchError, match="Cancelled by user"),
         ):
             service.fetch_video(
@@ -923,20 +946,26 @@ class _BlockedStdoutPopen:
     def __init__(self) -> None:
         self.pid = 4242
         self._dead = threading.Event()
-        self.stdout = self._stream()
+        self.stdout = self
+        self.stderr = None
+        self.returncode: int | None = None
 
-    def _stream(self):
+    def read(self, _size: int) -> bytes:
         # Bounded block so an unfixed implementation fails the test instead
         # of wedging the suite; a 'killed' process ends the stream early.
         self._dead.wait(timeout=8.0)
-        return
-        yield  # pragma: no cover - makes this function a generator
+        return b""
 
-    def kill_from_watchdog(self) -> None:
+    def poll(self) -> int | None:
+        return self.returncode
+
+    def kill_from_supervisor(self, _pid: int, sig: int) -> None:
         """Simulate process-tree death closing stdout."""
+        self.returncode = -sig
         self._dead.set()
 
-    def wait(self) -> int:
+    def wait(self, timeout: float | None = None) -> int:
+        self._dead.wait(timeout)
         return 1  # killed -> non-zero exit
 
 
@@ -946,15 +975,10 @@ class TestFetchVideoCancelDuringSilentPhase:
     ) -> None:
         """Cancel must reach yt-dlp even when stdout is silent (T-02).
 
-        The in-loop check only runs when yt-dlp prints; with the reader
-        blocked, only an out-of-band path (watchdog) can call _kill_tree.
+        The supervisor must observe cancellation independently of pipe output.
         """
         cancel = threading.Event()
         popen = _BlockedStdoutPopen()
-
-        fake_parent = MagicMock()
-        fake_parent.children.return_value = []
-        fake_parent.terminate.side_effect = popen.kill_from_watchdog
 
         errors: list[BaseException] = []
 
@@ -973,11 +997,7 @@ class TestFetchVideoCancelDuringSilentPhase:
         with (
             patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=popen),
-            patch("anki_miner.services.youtube_fetcher.psutil.Process", return_value=fake_parent),
-            patch(
-                "anki_miner.services.youtube_fetcher.psutil.wait_procs",
-                return_value=([fake_parent], []),
-            ),
+            patch("anki_miner.utils.process_supervisor.os.killpg", side_effect=popen.kill_from_supervisor) as killpg,
         ):
             t = threading.Thread(target=_run_fetch, daemon=True)
             t.start()
@@ -987,7 +1007,7 @@ class TestFetchVideoCancelDuringSilentPhase:
             t.join(timeout=5.0)
             assert not t.is_alive(), "fetch_video never noticed the cancel (no out-of-band kill path)"
 
-        fake_parent.terminate.assert_called()
+        assert killpg.called
         assert len(errors) == 1
         assert isinstance(errors[0], YouTubeFetchError)
         assert "cancel" in str(errors[0]).lower()
@@ -1148,176 +1168,6 @@ class TestFlatpakSnapCookieGuidance:
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
         assert self._GUIDANCE_SUBSTR not in str(exc.value)
-
-
-# ---------------------------------------------------------------------------
-# H5 — _kill_tree psutil edge cases
-# ---------------------------------------------------------------------------
-
-
-class TestKillTreeEdgeCases:
-    """Cancel path resilience against races between terminate() and process exit."""
-
-    def _run_cancel(
-        self,
-        service: YouTubeFetcherService,
-        tmp_path: Path,
-        process_side_effect: Any = None,
-        process_return: Any = None,
-        wait_procs_return: Any = ([], []),
-    ) -> None:
-        """Run fetch_video with a pre-set cancel_event and the given psutil mocks."""
-        cancel = threading.Event()
-        cancel.set()
-        lines = ["[ankimine_dl] 100 1000"]
-
-        process_patch_kwargs: dict[str, Any] = {}
-        if process_side_effect is not None:
-            process_patch_kwargs["side_effect"] = process_side_effect
-        else:
-            process_patch_kwargs["return_value"] = process_return
-
-        with (
-            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
-            patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
-            patch(
-                "anki_miner.services.youtube_fetcher.psutil.Process",
-                **process_patch_kwargs,
-            ),
-            patch(
-                "anki_miner.services.youtube_fetcher.psutil.wait_procs",
-                return_value=wait_procs_return,
-            ),
-            pytest.raises(YouTubeFetchError, match="Cancelled by user"),
-        ):
-            service.fetch_video(
-                "https://youtu.be/abc123",
-                "abc123",
-                tmp_path,
-                "manual_only",
-                cancel_event=cancel,
-            )
-
-    def test_parent_vanished_before_children(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
-        # psutil.Process(pid) raises NoSuchProcess -> cancel path must exit cleanly.
-        self._run_cancel(
-            service,
-            tmp_path,
-            process_side_effect=psutil.NoSuchProcess(4242),
-        )
-
-    def test_child_vanished_mid_iteration(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
-        # One child whose terminate() raises NoSuchProcess. Parent survives.
-        dead_child = MagicMock()
-        dead_child.terminate.side_effect = psutil.NoSuchProcess(9999)
-
-        parent = MagicMock()
-        parent.children.return_value = [dead_child]
-        parent.terminate = MagicMock()
-
-        self._run_cancel(
-            service,
-            tmp_path,
-            process_return=parent,
-            wait_procs_return=([parent, dead_child], []),
-        )
-
-        # Parent still got terminated even though the child went away first.
-        parent.terminate.assert_called_once()
-        dead_child.terminate.assert_called_once()
-
-    def test_sigkill_escalation_when_wait_procs_times_out(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
-        # wait_procs reports the parent still alive after SIGTERM -> .kill() fires.
-        parent = MagicMock()
-        parent.children.return_value = []
-        parent.terminate = MagicMock()
-        parent.kill = MagicMock()
-
-        self._run_cancel(
-            service,
-            tmp_path,
-            process_return=parent,
-            wait_procs_return=([], [parent]),
-        )
-
-        parent.terminate.assert_called_once()
-        parent.kill.assert_called_once()
-
-
-# ---------------------------------------------------------------------------
-# _kill_tree per-fetch handle scoping (stale-watchdog guard)
-# ---------------------------------------------------------------------------
-
-
-class TestKillTreeExpectedScoping:
-    """``_kill_tree(expected=...)`` must only kill when it owns the live handle.
-
-    Guards the cross-fetch race: a watchdog descheduled past its join could wake
-    during a later fetch and claim-and-kill the wrong subprocess. The per-fetch
-    ``expected`` handle makes the claim no-op when ``self._popen`` has moved on.
-    """
-
-    def _install_parent(self, service: YouTubeFetcherService) -> MagicMock:
-        """Point service._popen at a fresh fake popen; return its psutil parent mock."""
-        popen = MagicMock()
-        popen.pid = 4242
-        service._popen = popen
-
-        parent = MagicMock()
-        parent.children.return_value = []
-        parent.terminate = MagicMock()
-        parent.kill = MagicMock()
-        return parent
-
-    def test_stale_expected_does_not_kill_current_fetch(self, service: YouTubeFetcherService) -> None:
-        # service._popen is the *current* fetch; a stale watchdog calls with a
-        # DIFFERENT popen object -> claim must no-op, nothing terminated/killed,
-        # and the live handle must be left intact for its real owner.
-        parent = self._install_parent(service)
-        current_popen = service._popen
-        stale_popen = MagicMock()  # a different object than current_popen
-        stale_popen.pid = 9999
-
-        with (
-            patch("anki_miner.services.youtube_fetcher.psutil.Process", return_value=parent) as proc,
-            patch("anki_miner.services.youtube_fetcher.psutil.wait_procs", return_value=([], [])),
-        ):
-            service._kill_tree(expected=stale_popen)
-
-        proc.assert_not_called()
-        parent.terminate.assert_not_called()
-        parent.kill.assert_not_called()
-        # Live handle untouched -> the real same-fetch killer can still claim it.
-        assert service._popen is current_popen
-
-    def test_matching_expected_kills(self, service: YouTubeFetcherService) -> None:
-        # expected IS the current handle -> normal claim-and-kill proceeds.
-        parent = self._install_parent(service)
-        current_popen = service._popen
-
-        with (
-            patch("anki_miner.services.youtube_fetcher.psutil.Process", return_value=parent),
-            patch("anki_miner.services.youtube_fetcher.psutil.wait_procs", return_value=([], [])),
-        ):
-            service._kill_tree(expected=current_popen)
-
-        parent.terminate.assert_called_once()
-        # Claimed: shared handle nulled so the loser of any same-fetch race no-ops.
-        assert service._popen is None
-
-    def test_none_expected_kills_current(self, service: YouTubeFetcherService) -> None:
-        # expected=None (default) preserves the legacy same-fetch path: claim
-        # whatever handle is current and kill it.
-        parent = self._install_parent(service)
-
-        with (
-            patch("anki_miner.services.youtube_fetcher.psutil.Process", return_value=parent),
-            patch("anki_miner.services.youtube_fetcher.psutil.wait_procs", return_value=([], [])),
-        ):
-            service._kill_tree()
-
-        parent.terminate.assert_called_once()
-        assert service._popen is None
 
 
 # ---------------------------------------------------------------------------
@@ -1929,7 +1779,7 @@ class TestProbePlaylist:
 
 
 class TestNoWindowSpawn:
-    """Issue #79: every yt-dlp spawn must spread no_window_kwargs()."""
+    """Issue #79: every yt-dlp spawn must suppress a Windows console."""
 
     SENTINEL = {"creationflags": 0x424242}
 
@@ -1942,7 +1792,7 @@ class TestNoWindowSpawn:
             service.probe_metadata("https://youtu.be/abc123")
         assert mrun.call_args.kwargs.get("creationflags") == 0x424242
 
-    def test_fetch_video_spreads_no_window(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+    def test_fetch_video_starts_new_session(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         _make_happy_outputs(tmp_path)
         captured: dict[str, Any] = {}
 
@@ -1951,12 +1801,12 @@ class TestNoWindowSpawn:
             return _FakePopen(lines=[], returncode=0)
 
         with (
-            patch("anki_miner.services.youtube_fetcher.no_window_kwargs", return_value=self.SENTINEL),
             patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("anki_miner.utils.process_supervisor.sys.platform", "linux"),
             patch("subprocess.Popen", side_effect=fake_popen),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
-        assert captured["kwargs"].get("creationflags") == 0x424242
+        assert captured["kwargs"].get("start_new_session") is True
 
 
 # ---------------------------------------------------------------------------

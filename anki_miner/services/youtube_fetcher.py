@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import collections
-import contextlib
 import functools
 import json
 import logging
@@ -16,7 +15,6 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Literal
 
-import psutil  # type: ignore[import-untyped]
 from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
@@ -30,6 +28,7 @@ from anki_miner.exceptions.youtube import (
 )
 from anki_miner.models.youtube import FetchedMedia, PlaylistEntry, PlaylistInfo, SubMode, VideoInfo
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg
+from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
 from anki_miner.utils.subprocess_utils import no_window_kwargs
 from anki_miner.utils.ytdlp_resolver import resolve_ytdlp
 
@@ -49,14 +48,7 @@ _PLAYLIST_UNAVAILABLE_TITLES = {"[Private video]", "[Deleted video]"}
 _PROGRESS_RE = re.compile(r"\[ankimine_dl\] (\S+) (\S+)")
 _POSTPROCESS_MARKERS = ("[Merger]", "[FixupM3u8]", "[SubtitleConvertor]", "[ExtractAudio]")
 
-# Poll interval for fetch_video's out-of-band cancel watchdog. The reader
-# loop only observes cancel_event when yt-dlp prints a line; during silent
-# phases (the [Merger] ffmpeg post-process, stalled reads, retry backoff)
-# the reader thread is blocked in stdout iteration, so a watchdog thread
-# delivers the kill instead. Cancel latency is near-zero (the watchdog waits
-# on the event itself); this interval only bounds how quickly a *completed*
-# fetch retires the watchdog.
-_CANCEL_POLL_INTERVAL_S = 0.5
+_YTDLP_FETCH_TIMEOUT_S = 3 * 60 * 60
 
 # JS runtimes yt-dlp can solve YouTube's n-challenge with. "deno" is omitted: it is
 # yt-dlp's built-in default, so when the user has deno nothing needs doing. Ordered
@@ -124,9 +116,7 @@ def _tail(buf: collections.deque[str], n: int = 20) -> str:
 class YouTubeFetcherService:
     """Probe and download YouTube video+subtitles via yt-dlp.
 
-    This service is stateless beyond holding the currently active fetch
-    subprocess handle so that cancellation can reach it. It does not keep
-    any cross-call caches.
+    This service does not keep any cross-call state.
     """
 
     def __init__(
@@ -134,11 +124,6 @@ class YouTubeFetcherService:
         config: AnkiMinerConfig,
     ) -> None:
         self._config = config
-        self._popen: subprocess.Popen[str] | None = None
-        # Serializes the claim in _kill_tree: the reader loop's inline cancel
-        # check and the cancel watchdog thread may race to kill the same
-        # subprocess; exactly one caller must proceed.
-        self._kill_lock = threading.Lock()
 
     def _ytdlp(self) -> str:
         """Resolve the yt-dlp executable to invoke for this fetcher's config.
@@ -452,102 +437,48 @@ class YouTubeFetcherService:
 
         cmd = self._build_fetch_cmd(url, workspace, sub_mode)
 
-        # Local reference kept for the finally's wait(): _kill_tree claims
-        # (nulls) self._popen when it kills, so the shared handle may be gone
-        # by the time the reader loop unwinds.
-        try:
-            popen = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                bufsize=1,
-                text=True,
-                **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
-            )
-        except FileNotFoundError as e:
-            # The probes guard their own subprocess.run; the fetch Popen had no
-            # such guard, so a missing yt-dlp leaked a raw FileNotFoundError.
-            raise YtdlpNotFoundError(_YTDLP_MISSING_HINT) from e
-        self._popen = popen
-
         tail: collections.deque[str] = collections.deque(maxlen=50)
         postprocessing_seen = False
-        cancelled = False
 
-        # Out-of-band cancel delivery: a watchdog thread waits on cancel_event
-        # and kills the process tree, which closes stdout and unblocks the
-        # reader loop below even when yt-dlp is silent. fetch_done retires the
-        # watchdog once this fetch completes.
-        fetch_done = threading.Event()
-        watchdog: threading.Thread | None = None
-        if cancel_event is not None:
-            watchdog = threading.Thread(
-                target=self._cancel_watchdog,
-                args=(cancel_event, fetch_done, popen),
-                name="ytdlp-cancel-watchdog",
-                daemon=True,
-            )
-            watchdog.start()
+        def handle_line(line: str) -> None:
+            nonlocal postprocessing_seen
+            tail.append(line)
+            m = _PROGRESS_RE.search(line)
+            if m is not None:
+                if progress_cb is not None:
+                    downloaded_s, total_s = m.group(1), m.group(2)
+                    if total_s == "NA":
+                        progress_cb(QCoreApplication.translate("YouTubeFetcher", "Downloading video"), None)
+                    else:
+                        try:
+                            downloaded = float(downloaded_s)
+                            total = float(total_s)
+                            frac = downloaded / total if total > 0 else None
+                        except ValueError:
+                            frac = None
+                        progress_cb(QCoreApplication.translate("YouTubeFetcher", "Downloading video"), frac)
+                return
+            if not postprocessing_seen and self._is_postprocess_line(line):
+                postprocessing_seen = True
+                if progress_cb is not None:
+                    progress_cb(QCoreApplication.translate("YouTubeFetcher", "Merging audio and video"), None)
 
-        assert popen.stdout is not None
-        try:
-            for raw in popen.stdout:
-                line = raw.rstrip("\n")
-                tail.append(line)
-
-                if cancel_event is not None and cancel_event.is_set():
-                    cancelled = True
-                    self._kill_tree(expected=popen)
-                    break
-
-                m = _PROGRESS_RE.search(line)
-                if m is not None:
-                    if progress_cb is not None:
-                        downloaded_s, total_s = m.group(1), m.group(2)
-                        if total_s == "NA":
-                            progress_cb(
-                                QCoreApplication.translate("YouTubeFetcher", "Downloading video"),
-                                None,
-                            )
-                        else:
-                            try:
-                                downloaded = float(downloaded_s)
-                                total = float(total_s)
-                                frac = downloaded / total if total > 0 else None
-                            except ValueError:
-                                frac = None
-                            progress_cb(
-                                QCoreApplication.translate("YouTubeFetcher", "Downloading video"),
-                                frac,
-                            )
-                    continue
-
-                if not postprocessing_seen and self._is_postprocess_line(line):
-                    postprocessing_seen = True
-                    if progress_cb is not None:
-                        progress_cb(
-                            QCoreApplication.translate("YouTubeFetcher", "Merging audio and video"),
-                            None,
-                        )
-                    continue
-        finally:
-            returncode = popen.wait()
-            self._popen = None
-            fetch_done.set()
-            if watchdog is not None:
-                watchdog.join(timeout=_CANCEL_POLL_INTERVAL_S * 4)
-
-        # Re-check after the loop: a cancel landing after the final stdout
-        # line (or during a fetch that printed nothing) is invisible to the
-        # in-loop check and would otherwise complete as success — outputs
-        # resolved and cards mined after Stop.
-        if cancel_event is not None and cancel_event.is_set():
-            cancelled = True
-
-        if cancelled:
+        process_result = run_supervised(
+            cmd,
+            timeout_s=_YTDLP_FETCH_TIMEOUT_S,
+            cancel=cancel_event,
+            line_callback=handle_line,
+            combine_stderr=True,
+        )
+        if isinstance(process_result.error, FileNotFoundError):
+            raise YtdlpNotFoundError(_YTDLP_MISSING_HINT) from process_result.error
+        if process_result.state is SupervisedState.CANCELLED:
             raise YouTubeFetchError("Cancelled by user")
-
-        if returncode != 0:
+        if process_result.state is SupervisedState.TIMED_OUT:
+            raise YouTubeFetchError(f"yt-dlp download timed out after {_YTDLP_FETCH_TIMEOUT_S}s")
+        if process_result.state is SupervisedState.FAILED:
+            if process_result.returncode is None and process_result.error is not None:
+                raise YouTubeFetchError(f"yt-dlp process failed: {process_result.error}") from process_result.error
             self._raise_for_error(tail)
 
         # Success: locate output files by globbing on video_id.
@@ -784,77 +715,3 @@ class YouTubeFetcherService:
             subtitle_file=subtitle_file,
             sub_source=sub_source,
         )
-
-    def _cancel_watchdog(
-        self,
-        cancel_event: threading.Event,
-        fetch_done: threading.Event,
-        popen: subprocess.Popen[str],
-    ) -> None:
-        """Kill the yt-dlp tree when *cancel_event* fires mid-fetch.
-
-        Runs on a daemon thread for the duration of one ``fetch_video`` call.
-        Waits on the cancel event itself (near-zero latency on cancel) and
-        polls *fetch_done* each interval so a completed fetch retires the
-        thread promptly without it ever killing anything.
-
-        *popen* is this fetch's own handle: it is passed through to
-        :meth:`_kill_tree` as ``expected`` so a stale watchdog descheduled past
-        its join can never claim-and-kill a *subsequent* fetch's subprocess —
-        the ``fetch_done``/``is_set`` check and the kill are not atomic across
-        fetches, so the per-fetch handle is the authoritative guard.
-        """
-        while True:
-            if cancel_event.wait(_CANCEL_POLL_INTERVAL_S):
-                if not fetch_done.is_set():
-                    self._kill_tree(expected=popen)
-                return
-            if fetch_done.is_set():
-                return
-
-    def _kill_tree(self, expected: subprocess.Popen[str] | None = None) -> None:
-        # Claim-once: the reader loop's inline cancel check and the cancel
-        # watchdog can race to kill the same fetch; whichever claims the
-        # handle proceeds, the loser no-ops, keeping terminate() single-shot.
-        # fetch_video's finally holds its own local reference for wait(), so
-        # nulling the shared handle here is safe. psutil.NoSuchProcess below
-        # covers a pid that already exited before the Process() lookup.
-        #
-        # *expected* scopes the claim to one fetch: callers tied to a specific
-        # fetch (the reader loop, the cancel watchdog) pass that fetch's own
-        # popen. A stale watchdog that was descheduled past its join and wakes
-        # up during a *later* fetch would otherwise claim and kill the wrong
-        # subprocess — the fetch_done check and this claim are not atomic across
-        # fetches. When expected is None the caller accepts whatever handle is
-        # current (same-fetch callers that have no specific handle to assert).
-        with self._kill_lock:
-            popen = self._popen
-            if expected is not None and popen is not expected:
-                return
-            self._popen = None
-        if popen is None:
-            return
-        try:
-            parent = psutil.Process(popen.pid)
-        except psutil.NoSuchProcess:
-            return
-
-        try:
-            children = parent.children(recursive=True)
-        except psutil.NoSuchProcess:
-            children = []
-
-        for c in children:
-            with contextlib.suppress(psutil.NoSuchProcess):
-                c.terminate()
-        logger.info("killing yt-dlp process tree: pid=%s", parent.pid)
-        with contextlib.suppress(psutil.NoSuchProcess):
-            parent.terminate()
-
-        try:
-            _, alive = psutil.wait_procs([parent, *children], timeout=5)
-        except psutil.NoSuchProcess:
-            alive = []
-        for p in alive:
-            with contextlib.suppress(psutil.NoSuchProcess):
-                p.kill()

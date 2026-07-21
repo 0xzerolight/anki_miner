@@ -49,6 +49,7 @@ __all__ = [
     "load_mpv",
     "mpv_available",
     "mpv_probe_main",
+    "terminate_mpv_player",
 ]
 
 logger = logging.getLogger(__name__)
@@ -64,6 +65,7 @@ _WINDOWS_DLL_NAMES = ("mpv-2.dll", "libmpv-2.dll", "mpv-1.dll")
 _LOCK = threading.Lock()
 _CACHED: tuple[Any, ImportError | None] | None = None
 _RESOLVED_SOURCE: str | None = None
+_MPV_TERMINATE_TIMEOUT_S = 2.0
 
 
 def _clear_cache() -> None:
@@ -288,6 +290,29 @@ def create_mpv_player(log_handler: Callable[[str, str, str], None] | None = None
     )
 
 
+def terminate_mpv_player(player: Any, *, timeout_s: float = _MPV_TERMINATE_TIMEOUT_S) -> bool:
+    """Call python-mpv's blocking terminate with a bounded caller-side join."""
+    failed = threading.Event()
+
+    def terminate() -> None:
+        try:
+            player.terminate()
+        except Exception:  # noqa: BLE001 - teardown cannot escape a daemon helper
+            failed.set()
+            logger.exception("mpv terminate failed")
+
+    thread = threading.Thread(target=terminate, daemon=True, name="mpv-terminate")
+    thread.start()
+    thread.join(timeout=max(timeout_s, 0.0))
+    if thread.is_alive():
+        # LR-08 ACCEPTED OPEN residual: fatal in-process MPV(...) construction and
+        # use-after-free after timed-out terminate remain; an out-of-process mpv
+        # renderer is a separate deferred item.
+        logger.error("mpv terminate exceeded %.1fs; close continues", timeout_s)
+        return False
+    return not failed.is_set()
+
+
 def mpv_probe_main() -> int:
     """Headless bundle-smoke probe (``ANKI_MINER_MPV_PROBE=1``).
 
@@ -301,7 +326,8 @@ def mpv_probe_main() -> int:
         player = mpv_module.MPV(vo="null", ao="null")
         version = player.mpv_version
         api = getattr(mpv_module, "MPV_VERSION", None)
-        player.terminate()
+        if not terminate_mpv_player(player):
+            raise RuntimeError("mpv terminate timed out")
     except Exception as exc:  # noqa: BLE001 - probe reports, never crashes
         print(f"MPV_PROBE_FAIL: {exc}", flush=True)
         return 1
