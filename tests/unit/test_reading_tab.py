@@ -38,6 +38,9 @@ from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
 from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
 from anki_miner.gui.widgets.reading_tab import ReadingTab
 from anki_miner.gui.widgets.reading_text_tab import ReadingTextTab
+from anki_miner.models.mining_queue import ReadyItemStatus
+from anki_miner.models.reading import ReadingSourceRef
+from anki_miner.models.reading_queue import ReadingQueueItem
 
 _MANGA_CLS = "anki_miner.gui.widgets.reading_tab.ReadingMangaTab"
 _NOVELS_CLS = "anki_miner.gui.widgets.reading_tab.ReadingNovelsTab"
@@ -94,6 +97,29 @@ class TestInnerTabs:
         assert isinstance(tab.novels_tab, ReadingNovelsTab)
         assert isinstance(tab.subtitles_tab, ReadingSubtitlesTab)
         assert isinstance(tab.text_tab, ReadingTextTab)
+
+
+def test_item_only_failure_not_green_on_each_reading_tab(tab):
+    cases = (
+        (tab.manga_tab, tab.manga_tab.overall_progress_widget),
+        (tab.novels_tab, tab.novels_tab.progress_widget),
+        (tab.subtitles_tab, tab.subtitles_tab.overall_progress_widget),
+        (tab.text_tab, tab.text_tab.overall_progress_widget),
+    )
+    for child, progress_widget in cases:
+        source = ReadingSourceRef(kind="text", title="Broken", text="broken")
+        item = ReadingQueueItem(source=source, title=source.title, kind=source.kind)
+        item.status = ReadyItemStatus.ERROR
+        child._cancel_requested = False
+        child._run_failed = False
+        child._run_items = [item]
+        child._reset_run_state(1)
+
+        child._on_item_finished(0, None, "boom", 1)
+        child._on_worker_finished()
+
+        assert progress_widget.progress_bar.value() == 0
+        assert progress_widget.status_label.text() == "Failed — see log"
 
 
 # ---------------------------------------------------------------------------

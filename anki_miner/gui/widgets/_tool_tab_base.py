@@ -40,6 +40,7 @@ from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.base_worker import SingleCallWorker
+from anki_miner.models import TerminalOutcome
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -63,6 +64,7 @@ class _ToolTabStrings:
     cancel: str
     cancelling: str
     cancelled: str
+    failed: str
     complete_template: str
     select_output_folder: str
     output_default: str
@@ -186,17 +188,23 @@ class _ToolTabBase(QWidget):
             self._strings.skipped_prefix + Path(path_label).name if path_label else self._strings.skipped
         )
 
-    def _on_queue_finished(self) -> None:
+    def _on_queue_finished(self, outcome: object = TerminalOutcome.SUCCESS) -> None:
         self._primary_button.setEnabled(True)
         self.cancel_button.hide()
         # Reset for the next run's cancel button.
         self.cancel_button.setText(self._strings.cancel)
         self.cancel_button.setEnabled(True)
-        if self._cancelled:
+        if self._cancelled or outcome is TerminalOutcome.CANCELLED:
             self.progress_widget.reset()
             self.progress_widget.set_status(self._strings.cancelled)
+        elif outcome in (TerminalOutcome.PARTIAL, TerminalOutcome.FAILED):
+            self.progress_widget.reset()
+            self.progress_widget.set_status(self._strings.failed)
         else:
             self.progress_widget.show_completion(tr_format(self._strings.complete_template, self._item_total()))
+
+    def _on_run_error(self, message: str) -> None:
+        self.log_widget.append_error(message)
 
     def _on_worker_finished(self) -> None:
         """Release the QThread once it has actually exited."""

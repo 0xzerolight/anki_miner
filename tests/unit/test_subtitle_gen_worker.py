@@ -99,7 +99,7 @@ def _capture(worker: SubtitleGenWorker) -> dict:
     worker.file_progress.connect(lambda idx, pct, msg: cap["progress"].append((idx, pct, msg)))
     worker.file_finished.connect(lambda idx, out, err: cap["finished"].append((idx, out, err)))
     worker.file_skipped.connect(lambda idx, out: cap["skipped"].append((idx, out)))
-    worker.queue_finished.connect(lambda: cap["queue_finished"].append(True))
+    worker.queue_finished.connect(lambda _outcome: cap["queue_finished"].append(True))
     return cap
 
 

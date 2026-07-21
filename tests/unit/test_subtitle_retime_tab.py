@@ -63,6 +63,7 @@ class _FakeWorker:
         self.file_finished = MagicMock()
         self.file_skipped = MagicMock()
         self.queue_finished = MagicMock()
+        self.error = MagicMock()
         self.finished = MagicMock()  # native QThread.finished (lifecycle release)
         self.deleteLater = MagicMock()
         self._started = False

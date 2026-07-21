@@ -29,6 +29,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
+from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
 
 # ---------------------------------------------------------------------------
 # Common patch target constants
@@ -63,6 +64,7 @@ class _FakeWorker:
         self.file_finished = MagicMock()
         self.file_skipped = MagicMock()
         self.queue_finished = MagicMock()
+        self.error = MagicMock()
         self.finished = MagicMock()  # native QThread.finished (lifecycle release)
         self.deleteLater = MagicMock()
         self._started = False
@@ -968,3 +970,26 @@ def test_queue_finished_cancelled_resets(qtbot, tmp_path):
     tab._on_queue_finished()
     assert tab.progress_widget.progress_bar.value() == 0
     assert tab.progress_widget.status_label.text() == "Cancelled"
+
+
+def test_all_files_failed_shows_failure_not_complete(qtbot, tmp_path):
+    class _AllFailedWorker(FileQueueWorker):
+        def _queue_items(self):
+            return ["first", "second"]
+
+        def _process_item(self, idx, item):
+            self.file_finished.emit(idx, None, f"{item} failed")
+
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab._total_files = 2
+    tab._cancelled = False
+    worker = _AllFailedWorker()
+    worker.file_finished.connect(tab._on_file_finished)
+    worker.queue_finished.connect(tab._on_queue_finished)
+
+    with qtbot.waitSignal(worker.finished, timeout=5000):
+        worker.start()
+
+    assert worker.wait(5000)
+    assert tab.progress_widget.progress_bar.value() == 0
+    assert tab.progress_widget.status_label.text() == "Failed — see log"

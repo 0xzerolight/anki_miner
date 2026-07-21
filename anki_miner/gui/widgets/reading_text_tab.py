@@ -43,7 +43,7 @@ from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
-from anki_miner.models import MiningOutcome, classify_result, result_error_text
+from anki_miner.models import MiningOutcome, result_error_text
 from anki_miner.models.reading import ReadingSourceRef
 from anki_miner.models.reading_queue import ReadingQueueItem
 from anki_miner.utils.i18n import tr_format
@@ -261,10 +261,9 @@ class ReadingTextTab(_ReadingMiningTabBase):
         # return (success, failure, or a cancel mid-mine) arrives as error=None
         # with the verdict inside the result. Classify both so a cancelled run
         # isn't logged as a green "Mined 0 cards." success.
-        outcome = MiningOutcome.FAILED if error is not None else classify_result(result)
+        outcome = self._record_item_outcome(result, error)
         if outcome is MiningOutcome.SUCCESS:
             cards = int(getattr(result, "cards_created", 0) or 0)
-            self._record_item_result(result)
             self.log_widget.append_success(tr_format(self.tr("Mined %1 cards."), cards))
             if self._presenter is not None:
                 # Presenter forwarding is best-effort — the worker has already

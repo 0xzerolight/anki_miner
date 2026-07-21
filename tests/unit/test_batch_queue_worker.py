@@ -1050,6 +1050,44 @@ def test_shared_lookup_services_closed_once_on_normal_exit(tmp_path):
     bundle.close.assert_called_once_with()
 
 
+def test_close_failure_does_not_emit_second_summary(qtbot, tmp_path):
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+
+    queue = BatchQueue()
+    queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
+
+    proc = MagicMock()
+    proc.process_episode.return_value = _ok_result(cards=4)
+    bundle = _bundle_mock()
+    bundle.close.side_effect = RuntimeError("close boom")
+
+    worker = _make_worker_with_queue(queue)
+    results = _wire_status_slots(worker, queue)
+    errors: list[str] = []
+    worker.error.connect(errors.append)
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_shared_lookup_services",
+            return_value=bundle,
+        ),
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+        qtbot.waitSignal(worker.finished, timeout=5000),
+    ):
+        worker.start()
+
+    assert worker.wait(5000)
+    assert errors == ["close boom"]
+    assert results["finished"] == [4]
+
+
 def test_shared_lookup_services_closed_on_exception_exit(tmp_path):
     """A processor-construction crash still closes the bundle (finally path)."""
     queue = BatchQueue()

@@ -114,33 +114,31 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
         self.queue_started.emit(total_items)
 
         try:
-            try:
-                self._run_queue(total_cards)
-            except Exception as e:  # noqa: BLE001 — surface every failure to GUI
-                # Setup work OUTSIDE the per-item try (stale-dict gate,
-                # AnkiService construction — which raises ValueError on missing
-                # anki_fields — and get_next_pending) runs in the reimplemented
-                # QThread.run(); an escaping exception here is a PyQt6 FATAL
-                # abort. Catch it, surface via error, and still emit
-                # queue_finished so the GUI leaves the running state (mirrors
-                # ManualPairWorkerThread.run()).
-                logger.exception("BatchQueueWorker run failed before/around the item loop")
-                self.error.emit(str(e))
-                self.queue_finished.emit(total_cards)
+            total_cards = self._run_queue(total_cards)
+        except Exception as e:  # noqa: BLE001 — surface every failure to GUI
+            # Setup work OUTSIDE the per-item try (stale-dict gate,
+            # AnkiService construction — which raises ValueError on missing
+            # anki_fields — and get_next_pending) runs in the reimplemented
+            # QThread.run(); an escaping exception here is a PyQt6 FATAL
+            # abort. Catch it, surface via error, and still emit
+            # queue_finished so the GUI leaves the running state (mirrors
+            # ManualPairWorkerThread.run()).
+            logger.exception("BatchQueueWorker run failed before/around the item loop")
+            self.error.emit(str(e))
         finally:
             # Close the final item's processor on every exit (normal, cancel,
             # or exception) so its sqlite handles / Session don't leak.
             self._close_current_processor()
+            self.queue_finished.emit(total_cards)
 
-    def _run_queue(self, total_cards: int) -> None:
+    def _run_queue(self, total_cards: int) -> int:
         # Schema-staleness pre-loop gate (4.0): if any enabled indexed dict slot
         # needs reimport, abort the WHOLE queue with a single actionable error
         # up front rather than emitting one silent zero-card failure per item.
         stale_msg = stale_dict_reimport_error(self.config)
         if stale_msg is not None:
             self.error.emit(stale_msg)
-            self.queue_finished.emit(total_cards)
-            return
+            return total_cards
 
         # Build ONE shared AnkiService for the whole run so its vocab cache
         # (get_existing_vocabulary) survives across all queue items. Each item
@@ -165,16 +163,21 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
         for msg in shared_lookup.load_result.warnings:
             self.presenter.show_warning(msg)
         try:
-            self._process_items(total_cards, shared_anki_service, shared_lookup)
+            total_cards = self._process_items(total_cards, shared_anki_service, shared_lookup)
         finally:
-            shared_lookup.close()
+            try:
+                shared_lookup.close()
+            except Exception as e:  # noqa: BLE001 — cleanup must not replace the run result
+                logger.exception("BatchQueueWorker shared lookup close failed")
+                self.error.emit(str(e))
+        return total_cards
 
     def _process_items(
         self,
         total_cards: int,
         shared_anki_service: AnkiService,
         shared_lookup: SharedLookupServices,
-    ) -> None:
+    ) -> int:
         """Run the per-item loop over the run-scoped shared services."""
         while not self.check_cancelled():
             # Close the previous item's processor before building the next
@@ -301,4 +304,4 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                 item.error_message = str(e)
                 self.item_failed.emit(item.id, str(e))
 
-        self.queue_finished.emit(total_cards)
+        return total_cards
