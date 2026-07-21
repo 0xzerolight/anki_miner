@@ -272,6 +272,7 @@ class TestValidationService:
 
             fake_ffmpeg = tmp_path / "ffmpeg"
             fake_ffmpeg.write_text("#!/bin/sh\n")
+            fake_ffmpeg.chmod(0o755)
             config = replace(test_config, ffmpeg_location=fake_ffmpeg)
             service = ValidationService(config)
 

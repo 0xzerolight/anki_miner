@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from anki_miner.models import MediaData
 from anki_miner.services.media_extractor import MediaExtractorService
 
 MODULE = "anki_miner.services.media_extractor"
@@ -119,6 +120,32 @@ class TestExtractMedia:
         assert result.screenshot_filename is None
         assert result.audio_path is not None
         assert result.audio_filename is not None
+
+    def test_unmapped_picture_skips_screenshot_generation(self, service, video_file, make_tokenized_word):
+        word = make_tokenized_word()
+
+        with (
+            patch.object(service, "_extract_screenshot") as mock_screenshot,
+            patch.object(service, "_extract_audio", return_value=True),
+        ):
+            result = service.extract_media(video_file, word, include_screenshot=False)
+
+        mock_screenshot.assert_not_called()
+        assert result.screenshot_path is None
+        assert result.audio_path is not None
+
+    def test_unmapped_audio_skips_audio_generation(self, service, video_file, make_tokenized_word):
+        word = make_tokenized_word()
+
+        with (
+            patch.object(service, "_extract_screenshot", return_value=True),
+            patch.object(service, "_extract_audio") as mock_audio,
+        ):
+            result = service.extract_media(video_file, word, include_audio=False)
+
+        mock_audio.assert_not_called()
+        assert result.screenshot_path is not None
+        assert result.audio_path is None
 
     def test_correct_filename_generation(self, service, video_file, make_tokenized_word):
         """Should generate filenames as {safe_lemma}_{timestamp_ms}_{seq}.ext."""
@@ -1126,6 +1153,25 @@ class TestExtractMediaBatch:
 
         assert len(result) == 0
 
+    def test_audio_mapped_without_picture_keeps_audio_results(self, service, video_file, make_tokenized_word, tmp_path):
+        word = make_tokenized_word(lemma="音声のみ", start_time=1.0)
+        audio = tmp_path / "audio.mp3"
+        audio.write_bytes(b"audio")
+
+        with patch.object(
+            service,
+            "extract_media",
+            return_value=MediaData(audio_path=audio, audio_filename=audio.name),
+        ):
+            result = service.extract_media_batch(
+                video_file,
+                [word],
+                include_screenshot=False,
+                include_audio=True,
+            )
+
+        assert result == [(word, MediaData(audio_path=audio, audio_filename=audio.name))]
+
     def test_reports_progress_via_callback(
         self, service, video_file, make_tokenized_word, recording_progress, tmp_path
     ):
@@ -1775,6 +1821,7 @@ class TestFfmpegResolverWiring:
         """When config.ffmpeg_location is a real file, it becomes cmd[0]."""
         fake_ffmpeg = tmp_path / "my_ffmpeg"
         fake_ffmpeg.write_text("#!/bin/sh\n")
+        fake_ffmpeg.chmod(0o755)
         cfg = dataclasses.replace(test_config, ffmpeg_location=str(fake_ffmpeg))
         with patch(f"{MODULE}.ensure_directory"):
             svc = MediaExtractorService(cfg)
@@ -1794,6 +1841,7 @@ class TestFfmpegResolverWiring:
         """Audio extraction command cmd[0] honours config.ffmpeg_location."""
         fake_ffmpeg = tmp_path / "my_ffmpeg"
         fake_ffmpeg.write_text("#!/bin/sh\n")
+        fake_ffmpeg.chmod(0o755)
         cfg = dataclasses.replace(test_config, ffmpeg_location=str(fake_ffmpeg))
         with patch(f"{MODULE}.ensure_directory"):
             svc = MediaExtractorService(cfg)
@@ -1816,6 +1864,7 @@ class TestFfmpegResolverWiring:
         """_check_encoder_available probe cmd[0] honours config.ffmpeg_location."""
         fake_ffmpeg = tmp_path / "my_ffmpeg"
         fake_ffmpeg.write_text("#!/bin/sh\n")
+        fake_ffmpeg.chmod(0o755)
         cfg = dataclasses.replace(test_config, ffmpeg_location=str(fake_ffmpeg))
         with patch(f"{MODULE}.ensure_directory"):
             svc = MediaExtractorService(cfg)
@@ -1833,6 +1882,7 @@ class TestFfmpegResolverWiring:
         """_list_audio_streams_cached forwards ffprobe_cmd=resolve_ffprobe(config)."""
         fake_ffprobe = tmp_path / "my_ffprobe"
         fake_ffprobe.write_text("#!/bin/sh\n")
+        fake_ffprobe.chmod(0o755)
         cfg = dataclasses.replace(test_config, ffprobe_location=str(fake_ffprobe))
         with patch(f"{MODULE}.ensure_directory"):
             svc = MediaExtractorService(cfg)
@@ -1847,6 +1897,7 @@ class TestFfmpegResolverWiring:
         """_get_japanese_audio_stream forwards ffprobe_cmd=resolve_ffprobe(config)."""
         fake_ffprobe = tmp_path / "my_ffprobe"
         fake_ffprobe.write_text("#!/bin/sh\n")
+        fake_ffprobe.chmod(0o755)
         cfg = dataclasses.replace(test_config, ffprobe_location=str(fake_ffprobe))
         with patch(f"{MODULE}.ensure_directory"):
             svc = MediaExtractorService(cfg)

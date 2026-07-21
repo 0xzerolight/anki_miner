@@ -132,7 +132,7 @@ def generate_subtitle_one(
         # No recognised speech: surface it rather than writing a blank SRT and
         # reporting a clean "Done". Empty audio is already rejected upstream by
         # extract_full_audio; this catches silence / music-only tracks.
-        if not segments:
+        if not srt_writer.writable_segments(segments):
             logger.info("subtitle_generation: no speech detected in %s", video_path)
             return SubtitleGenResult(SubtitleGenStatus.NO_SPEECH)
 

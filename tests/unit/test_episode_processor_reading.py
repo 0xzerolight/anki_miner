@@ -16,13 +16,14 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PIL import UnidentifiedImageError
+from PIL import Image, UnidentifiedImageError
 
 from anki_miner.exceptions import AnkiMinerException, SetupError
 from anki_miner.models import TokenizedWord
 from anki_miner.models.reading import ImageRef, ReadingDocument, ReadingUnit
 from anki_miner.orchestration.episode_processor import EpisodeProcessor, _format_timestamp
 from anki_miner.presenters import NullPresenter
+from anki_miner.services.anki_media_store import AnkiMediaStore
 from anki_miner.services.word_filter import WordFilterService
 from anki_miner.services.word_list_service import WordListService
 
@@ -388,6 +389,35 @@ def test_image_materialized_once_per_ref(test_config):
     assert prep.call_count == 1
     pics = {p.media.screenshot_filename for p in anki.last_card_data}
     assert pics == {"reading_abc.jpg"}
+
+
+def test_unmapped_picture_skips_reading_image_materialization_and_media_request(test_config, tmp_path, monkeypatch):
+    fields = dict(test_config.anki_fields)
+    fields["picture"] = ""
+    cfg = replace(test_config, anki_fields=fields)
+    source = tmp_path / "page.png"
+    Image.new("RGB", (2, 2), "white").save(source)
+    word = _word("犬", 0)
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning([word], None, collections.Counter({"犬": 1}))
+    anki = _make_anki_service()
+    create_cards = anki.create_cards_batch.side_effect
+    media_store = AnkiMediaStore(cfg)
+
+    def _create_with_media_store(card_data, pc=None):
+        media_store.store_batch(card_data)
+        return create_cards(card_data, pc)
+
+    anki.create_cards_batch.side_effect = _create_with_media_store
+    proc = _make_processor(cfg, subtitle_parser=sp, anki_service=anki)
+    monkeypatch.setenv("ANKI_MINER_KEEP_TEMP", "1")
+
+    with patch("anki_miner.services._ankiconnect.requests.post") as media_request:
+        result = proc.process_reading(_document([_unit(0, image_ref=ImageRef(source))]))
+
+    assert result.cards_created == 1
+    assert list(test_config.media_temp_folder.glob("run_*/images/*")) == []
+    media_request.assert_not_called()
 
 
 def test_cancel_during_image_loop_stops_further_prep(test_config):

@@ -35,9 +35,9 @@ logger = logging.getLogger(__name__)
 # Iterated by store_batch to collect sources and to propagate content-hashed
 # stored names back onto the payload before note building.
 _MEDIA_FIELD_ATTRS = (
-    ("screenshot_filename", "screenshot_path"),
-    ("audio_filename", "audio_path"),
-    ("expression_audio_filename", "expression_audio_path"),
+    ("picture", "screenshot_filename", "screenshot_path"),
+    ("audio", "audio_filename", "audio_path"),
+    ("expression_audio", "expression_audio_filename", "expression_audio_path"),
 )
 
 # `<img>` tags emitted by yomitan_renderer for dictionary-bundled assets carry
@@ -60,6 +60,7 @@ _MEDIA_BATCH_CHUNK = 50
 # chunk of large files flushes early instead of tripping the reset (Issue: media
 # files not stored on big batches).
 _MEDIA_BATCH_MAX_BYTES = 4 * 1024 * 1024
+_MAX_MEDIA_FILE_BYTES = 32 * 1024 * 1024
 
 
 def _extract_dict_media_srcs(definition_html: str) -> list[str]:
@@ -156,6 +157,14 @@ def _stream_encode_chunks(
         except OSError as e:
             logger.warning("Failed to stat media file %s: %s", filename, e)
             continue
+        if raw_size > _MAX_MEDIA_FILE_BYTES:
+            logger.warning(
+                "Media file %s is %d bytes (cap %d); skipping upload",
+                filename,
+                raw_size,
+                _MAX_MEDIA_FILE_BYTES,
+            )
+            continue
         # base64 encodes 3 raw bytes → 4 ASCII chars; round up to next 4-byte
         # boundary.  The +3 before integer division handles the padding.
         estimated_bytes = ((raw_size + 2) // 3) * 4
@@ -205,10 +214,22 @@ def _build_store_media_action(filename: str, src_path: Path, content_hash: bool 
     rendered ``<img>`` references is preserved.
     """
     try:
+        raw_size = src_path.stat().st_size
+        if raw_size > _MAX_MEDIA_FILE_BYTES:
+            logger.warning(
+                "Media file %s is %d bytes (cap %d); skipping upload",
+                filename,
+                raw_size,
+                _MAX_MEDIA_FILE_BYTES,
+            )
+            return None
         with open(src_path, "rb") as f:
-            raw = f.read()
+            raw = f.read(_MAX_MEDIA_FILE_BYTES + 1)
     except OSError as e:
         logger.warning(f"Failed to read media file {filename}: {e}")
+        return None
+    if len(raw) > _MAX_MEDIA_FILE_BYTES:
+        logger.warning("Media file %s exceeds the %d-byte cap; skipping upload", filename, _MAX_MEDIA_FILE_BYTES)
         return None
     stored_name = _content_addressed_name(filename, raw) if content_hash else filename
     data_base64 = base64.b64encode(raw).decode("utf-8")
@@ -283,7 +304,9 @@ class AnkiMediaStore:
         refs: dict[str, list[tuple[MediaData, str]]] = {}
         for item in word_data_list:
             media = item.media
-            for fn_attr, path_attr in _MEDIA_FIELD_ATTRS:
+            for field_key, fn_attr, path_attr in _MEDIA_FIELD_ATTRS:
+                if not self.config.anki_fields.get(field_key):
+                    continue
                 filename = getattr(media, fn_attr)
                 src_path = getattr(media, path_attr)
                 if not filename or not src_path:

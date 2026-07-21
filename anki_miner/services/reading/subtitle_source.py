@@ -32,6 +32,8 @@ from anki_miner.models.reading import (
 from anki_miner.services.reading._util import _decode
 from anki_miner.utils.text_utils import clean_subtitle_text
 
+_MAX_TEXT_FILE_BYTES = 32 * 1024 * 1024
+
 
 def _format_cue_time(seconds: float) -> str:
     """Cue start as trimmed ``m:ss`` / ``h:mm:ss`` (not the video path's
@@ -57,7 +59,17 @@ def load(ref: ReadingSourceRef, *, strip_annotations: bool = False) -> ReadingDo
     assert ref.path is not None
     path = ref.path
     try:
-        raw = path.read_bytes()
+        size = path.stat().st_size
+        if size > _MAX_TEXT_FILE_BYTES:
+            raise SetupError(
+                f"subtitle file '{path.name}' is {size:,} bytes (cap {_MAX_TEXT_FILE_BYTES:,}); refusing to load"
+            )
+        with path.open("rb") as f:
+            raw = f.read(_MAX_TEXT_FILE_BYTES + 1)
+        if len(raw) > _MAX_TEXT_FILE_BYTES:
+            raise SetupError(
+                f"subtitle file '{path.name}' exceeds cap {_MAX_TEXT_FILE_BYTES:,} bytes; refusing to load"
+            )
     except OSError as e:
         raise SetupError(f"Cannot read subtitle file '{path.name}': {e}") from e
 

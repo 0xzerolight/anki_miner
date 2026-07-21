@@ -177,6 +177,8 @@ class MediaExtractorService:
         audio_track_override: int | None = None,
         proc_registry: _FfmpegProcRegistry | None = None,
         audio_only: bool = False,
+        include_screenshot: bool = True,
+        include_audio: bool = True,
         animated_format: Any = _RESOLVE,
     ) -> MediaData:
         """Extract screenshot and audio for a single word.
@@ -214,7 +216,9 @@ class MediaExtractorService:
         # _RESOLVE means "not threaded" — resolve here for direct callers/tests.
         if animated_format is _RESOLVE:
             effective_fmt = (
-                self.resolve_animated_format() if (self.config.screenshot_animated and not audio_only) else None
+                self.resolve_animated_format()
+                if (include_screenshot and self.config.screenshot_animated and not audio_only)
+                else None
             )
         else:
             effective_fmt = animated_format
@@ -245,15 +249,17 @@ class MediaExtractorService:
         # When animated is configured but no encoder is available (effective_fmt
         # is None), the screenshot is skipped without spawning ffmpeg.
         screenshot_success = False
-        if not audio_only and not (self.config.screenshot_animated and effective_fmt is None):
+        if include_screenshot and not audio_only and not (self.config.screenshot_animated and effective_fmt is None):
             screenshot_success = self._extract_screenshot(
                 video_file, word.start_time, word.duration, screenshot_path, effective_fmt, proc_registry
             )
 
         # Extract audio
-        audio_success = self._extract_audio(
-            video_file, word.start_time, word.duration, audio_path, audio_track_override, proc_registry
-        )
+        audio_success = False
+        if include_audio:
+            audio_success = self._extract_audio(
+                video_file, word.start_time, word.duration, audio_path, audio_track_override, proc_registry
+            )
 
         return MediaData(
             screenshot_path=screenshot_path if screenshot_success else None,
@@ -272,6 +278,8 @@ class MediaExtractorService:
         *,
         audio_track_override: int | None = None,
         audio_only: bool = False,
+        include_screenshot: bool = True,
+        include_audio: bool = True,
         animated_format: Any = _RESOLVE,
     ) -> list[tuple[TokenizedWord, MediaData]]:
         """Extract media for multiple words in parallel.
@@ -311,7 +319,9 @@ class MediaExtractorService:
         # (str | None) is used as-is; only the _RESOLVE default self-resolves.
         if animated_format is _RESOLVE:
             animated_fmt = (
-                self.resolve_animated_format() if (self.config.screenshot_animated and not audio_only) else None
+                self.resolve_animated_format()
+                if (include_screenshot and self.config.screenshot_animated and not audio_only)
+                else None
             )
         else:
             animated_fmt = animated_format
@@ -332,7 +342,7 @@ class MediaExtractorService:
         if cancelled_check and cancelled_check():
             return []
         cover_path: Path | None = None
-        if audio_only:
+        if audio_only and include_screenshot:
             output_dir = temp_folder if temp_folder is not None else self.config.media_temp_folder
             cover_path = self.extract_cover_art(video_file, output_dir, proc_registry=proc_registry)
         # Poll only when the caller can actually cancel; otherwise block
@@ -350,6 +360,8 @@ class MediaExtractorService:
                     audio_track_override=audio_track_override,
                     proc_registry=proc_registry,
                     audio_only=audio_only,
+                    include_screenshot=include_screenshot,
+                    include_audio=include_audio,
                     animated_format=animated_fmt,
                 ): word
                 for word in words
@@ -383,9 +395,12 @@ class MediaExtractorService:
                         # audio_only keys the keep/drop decision on audio (there
                         # is no per-word screenshot); default mode keeps the
                         # original screenshot-based filter.
-                        keep = media.has_audio if audio_only else media.has_screenshot
+                        if audio_only:
+                            keep = media.has_audio if include_audio else include_screenshot and cover_path is not None
+                        else:
+                            keep = media.has_screenshot if include_screenshot else include_audio and media.has_audio
                         if keep:
-                            if audio_only and cover_path is not None:
+                            if audio_only and include_screenshot and cover_path is not None:
                                 media.screenshot_path = cover_path
                                 media.screenshot_filename = cover_path.name
                             media_data_list.append((word, media))
@@ -404,7 +419,7 @@ class MediaExtractorService:
                             # audio_only mode is untouched: its keep decision already
                             # keys on has_audio, so a word reaching here always has
                             # audio.
-                            if not audio_only and not media.has_audio and progress_callback:
+                            if not audio_only and include_audio and not media.has_audio and progress_callback:
                                 progress_callback.on_error(
                                     word.lemma,
                                     QCoreApplication.translate("MediaExtractorService", "audio extraction failed"),
@@ -414,7 +429,7 @@ class MediaExtractorService:
                             # bare skip_reason variable (untranslatable).
                             skip_template = (
                                 QCoreApplication.translate("MediaExtractorService", "No audio: %1")
-                                if audio_only
+                                if include_audio and (audio_only or not include_screenshot)
                                 else QCoreApplication.translate("MediaExtractorService", "No screenshot: %1")
                             )
                             if progress_callback:
@@ -998,8 +1013,7 @@ class MediaExtractorService:
                 return stream.global_index
 
         logger.warning(
-            "audio_track_override=%d not found in stream list (got %d streams); "
-            "falling back to Japanese auto-detect",
+            "audio_track_override=%d not found in stream list (got %d streams); falling back to Japanese auto-detect",
             audio_track_override,
             len(streams),
         )

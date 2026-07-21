@@ -200,7 +200,7 @@ class YouTubeFetcherService:
         if proc.returncode != 0:
             stderr_tail = (proc.stderr or "").strip().splitlines()[-20:]
             raise YouTubeFetchError(
-                "yt-dlp metadata probe failed (exit " f"{proc.returncode}): {chr(10).join(stderr_tail)}"
+                f"yt-dlp metadata probe failed (exit {proc.returncode}): {chr(10).join(stderr_tail)}"
             )
 
         try:
@@ -234,7 +234,7 @@ class YouTubeFetcherService:
         duration_s = 0 if duration is None else int(duration)
         if duration_s > self._config.youtube_max_duration_s:
             raise VideoTooLongError(
-                f"Video duration {duration_s}s exceeds configured maximum " f"{self._config.youtube_max_duration_s}s"
+                f"Video duration {duration_s}s exceeds configured maximum {self._config.youtube_max_duration_s}s"
             )
 
         subs = data.get("subtitles") or {}
@@ -330,7 +330,7 @@ class YouTubeFetcherService:
         if proc.returncode != 0:
             stderr_tail = (proc.stderr or "").strip().splitlines()[-20:]
             raise YouTubeFetchError(
-                "yt-dlp playlist probe failed (exit " f"{proc.returncode}): {chr(10).join(stderr_tail)}"
+                f"yt-dlp playlist probe failed (exit {proc.returncode}): {chr(10).join(stderr_tail)}"
             )
 
         try:
@@ -598,7 +598,7 @@ class YouTubeFetcherService:
             return
         if shutil.which("ffmpeg") is None:
             raise FfmpegNotFoundError(
-                "ffmpeg not found on PATH. Install ffmpeg or set the " "'youtube_ffmpeg_location' config option."
+                "ffmpeg not found on PATH. Install ffmpeg or set the 'youtube_ffmpeg_location' config option."
             )
 
     def _build_fetch_cmd(self, url: str, workspace: Path, sub_mode: SubMode) -> list[str]:
@@ -609,7 +609,7 @@ class YouTubeFetcherService:
         # metacharacter, so a folder like "100% Japanese" produced an invalid
         # template and the fetch failed with a misleading "outputs are missing".
         output_tpl = "%(id)s.%(ext)s"
-        fmt = f"bestvideo[height<={max_height}]+bestaudio/" f"best[height<={max_height}]"
+        fmt = f"bestvideo[height<={max_height}]+bestaudio/best[height<={max_height}]"
 
         cmd: list[str] = [self._ytdlp()]
         if sub_mode == "manual_only":
@@ -638,7 +638,7 @@ class YouTubeFetcherService:
                 output_tpl,
                 "--newline",
                 "--progress-template",
-                "download:[ankimine_dl] %(progress.downloaded_bytes)s " "%(progress.total_bytes)s",
+                "download:[ankimine_dl] %(progress.downloaded_bytes)s %(progress.total_bytes)s",
                 "--retries",
                 "3",
                 "--fragment-retries",
@@ -728,7 +728,7 @@ class YouTubeFetcherService:
 
         if "database is locked" in joined_lower or "database locked" in joined_lower:
             browser = self._config.youtube_cookies_from_browser or "the browser"
-            msg = f"Cookie database is locked. Close {browser} and retry, or " "set Cookies → Browser to None."
+            msg = f"Cookie database is locked. Close {browser} and retry, or set Cookies → Browser to None."
             if sys.platform.startswith("linux") and ("profile" in joined_lower and "not found" in joined_lower):
                 msg += (
                     " If you installed Firefox via Flatpak or Snap, use the "
@@ -763,9 +763,14 @@ class YouTubeFetcherService:
 
         if video_file is None or subtitle_file is None:
             raise YouTubeFetchError(
-                "yt-dlp exited 0 but expected output files are missing "
-                f"(video={video_file}, subtitle={subtitle_file})"
+                f"yt-dlp exited 0 but expected output files are missing (video={video_file}, subtitle={subtitle_file})"
             )
+        try:
+            video_size = video_file.stat().st_size
+        except OSError as e:
+            raise YouTubeFetchError(f"Video file unreadable after fetch: {video_file}") from e
+        if video_size <= 0:
+            raise YouTubeFetchError(f"yt-dlp produced a zero-byte video file: {video_file}")
         try:
             sub_size = subtitle_file.stat().st_size
         except OSError as e:

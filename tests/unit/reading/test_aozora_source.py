@@ -3,8 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
+import pytest
+
+from anki_miner.exceptions import SetupError
 from anki_miner.models.reading import ReadingSourceRef
+from anki_miner.services.reading import aozora_source
 from anki_miner.services.reading.aozora_source import (
     _decode,
     _gaiji_char,
@@ -149,6 +155,32 @@ def test_aozora_cp932_full(tmp_path):
     assert all(u.image_ref is None for u in doc.units)
     # Colophon (底本 / 青空文庫作成ファイル) is cut.
     assert all("底本" not in u.text for u in doc.units)
+
+
+def test_oversized_novel_file_fails_cleanly(tmp_path, monkeypatch):
+    path = _write(tmp_path, "本文です。", "utf-8")
+    monkeypatch.setattr(aozora_source, "_MAX_TEXT_FILE_BYTES", 4, raising=False)
+
+    with pytest.raises(SetupError, match=r"novel file.*cap 4"):
+        load(_ref(path))
+
+
+def test_novel_file_growth_after_stat_uses_bounded_read(monkeypatch):
+    path = MagicMock(spec=Path)
+    path.name = "novel.txt"
+    path.stem = "novel"
+    path.stat.return_value = SimpleNamespace(st_size=1)
+    path.read_bytes.return_value = b"x" * 5
+    reader = MagicMock()
+    reader.__enter__.return_value = reader
+    reader.read.side_effect = lambda size: b"x" * size
+    path.open.return_value = reader
+    monkeypatch.setattr(aozora_source, "_MAX_TEXT_FILE_BYTES", 4, raising=False)
+
+    with pytest.raises(SetupError, match=r"novel file.*cap 4"):
+        load(_ref(path))  # type: ignore[arg-type]
+
+    reader.read.assert_called_once_with(5)
 
 
 def test_aozora_footer_cut_and_symbol_block_dropped(tmp_path):

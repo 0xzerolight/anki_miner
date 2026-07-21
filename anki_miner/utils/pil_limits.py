@@ -24,3 +24,9 @@ def apply_pil_image_limits() -> None:
     regardless of import order and each consumer documents its reliance.
     """
     Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
+
+
+def validate_image_pixel_budget(image: Image.Image) -> None:
+    pixels = image.width * image.height
+    if pixels > MAX_IMAGE_PIXELS:
+        raise ValueError(f"decoded image is {pixels:,} pixels (cap {MAX_IMAGE_PIXELS:,}); refusing to decode")

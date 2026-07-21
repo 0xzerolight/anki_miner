@@ -11,6 +11,7 @@ from PIL import Image
 from anki_miner.exceptions import SetupError
 from anki_miner.models.reading import ImageRef
 from anki_miner.services.reading.images import _MAX_EDGE, prepare_card_image
+from anki_miner.utils import pil_limits
 
 
 def _make_image(path: Path, size: tuple[int, int], mode: str = "RGB", fmt: str = "PNG") -> Path:
@@ -33,6 +34,14 @@ def test_downscale_large_image_long_edge_capped(tmp_path: Path) -> None:
     with Image.open(out) as img:
         assert max(img.size) == _MAX_EDGE
         assert img.size == (1280, 640)
+
+
+def test_oversized_image_or_text_file_fails_cleanly(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    src = _make_image(tmp_path / "oversized.png", (3, 2))
+    monkeypatch.setattr(pil_limits, "MAX_IMAGE_PIXELS", 4)
+
+    with pytest.raises(ValueError, match=r"6 pixels.*cap 4"):
+        prepare_card_image(ImageRef(src), tmp_path / "out")
 
 
 def test_never_upscale_small_image_keeps_size(tmp_path: Path) -> None:

@@ -51,7 +51,7 @@ def _compute(base: str, override: Any, frozen: bool, meipass: str | None) -> str
     # 1. Config override.
     if override:
         override_path = Path(override)
-        if override_path.is_file():
+        if override_path.is_file() and (sys.platform == "win32" or os.access(override_path, os.X_OK)):
             return str(override_path)
 
     # 2. Bundled binary inside the frozen distributable. Require the executable

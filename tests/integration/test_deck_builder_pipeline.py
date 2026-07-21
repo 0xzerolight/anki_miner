@@ -124,6 +124,8 @@ def _fake_extract_media_batch(
         *,
         audio_track_override=None,
         audio_only=False,
+        include_screenshot=True,
+        include_audio=True,
     ) -> list[tuple[TokenizedWord, MediaData]]:
         results = []
         for word in words:

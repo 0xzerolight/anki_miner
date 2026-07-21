@@ -18,6 +18,7 @@ class TestResolveFfmpeg:
     def test_config_override_wins_when_file_exists(self, base_config, tmp_path):
         binary = tmp_path / "my-ffmpeg"
         binary.write_text("#!/bin/sh\n")
+        binary.chmod(0o755)
         config = dataclasses.replace(base_config, ffmpeg_location=binary)
 
         assert resolve_ffmpeg(config) == str(binary)
@@ -27,6 +28,21 @@ class TestResolveFfmpeg:
         config = dataclasses.replace(base_config, ffmpeg_location=missing)
 
         assert resolve_ffmpeg(config) == "ffmpeg"
+
+    @pytest.mark.parametrize(
+        ("resolver", "field", "fallback"),
+        [
+            (resolve_ffmpeg, "ffmpeg_location", "ffmpeg"),
+            (resolve_ffprobe, "ffprobe_location", "ffprobe"),
+        ],
+    )
+    def test_0600_ffmpeg_override_rejected_pre_subprocess(self, base_config, tmp_path, resolver, field, fallback):
+        binary = tmp_path / fallback
+        binary.write_text("#!/bin/sh\n")
+        binary.chmod(0o600)
+        config = dataclasses.replace(base_config, **{field: binary})
+
+        assert resolver(config) == fallback
 
     def test_bundled_used_when_frozen(self, base_config, tmp_path, monkeypatch):
         bin_dir = tmp_path / "bin"
@@ -85,6 +101,7 @@ class TestResolveFfmpeg:
         # Both an override and a bundled binary exist; override wins.
         override = tmp_path / "override-ffmpeg"
         override.write_text("#!/bin/sh\n")
+        override.chmod(0o755)
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
         (bin_dir / "ffmpeg").write_text("#!/bin/sh\n")
@@ -101,6 +118,7 @@ class TestResolveFfprobe:
     def test_config_override_wins_when_file_exists(self, base_config, tmp_path):
         binary = tmp_path / "my-ffprobe"
         binary.write_text("#!/bin/sh\n")
+        binary.chmod(0o755)
         config = dataclasses.replace(base_config, ffprobe_location=binary)
 
         assert resolve_ffprobe(config) == str(binary)
@@ -133,8 +151,10 @@ class TestCaching:
     def test_cache_does_not_mask_changed_override(self, base_config, tmp_path):
         first = tmp_path / "ffmpeg-a"
         first.write_text("#!/bin/sh\n")
+        first.chmod(0o755)
         second = tmp_path / "ffmpeg-b"
         second.write_text("#!/bin/sh\n")
+        second.chmod(0o755)
 
         cfg_a = dataclasses.replace(base_config, ffmpeg_location=first)
         cfg_b = dataclasses.replace(base_config, ffmpeg_location=second)
@@ -146,6 +166,7 @@ class TestCaching:
     def test_repeated_call_hits_cache(self, base_config, tmp_path):
         binary = tmp_path / "ffmpeg-cached"
         binary.write_text("#!/bin/sh\n")
+        binary.chmod(0o755)
         config = dataclasses.replace(base_config, ffmpeg_location=binary)
 
         first = resolve_ffmpeg(config)

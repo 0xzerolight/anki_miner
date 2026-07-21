@@ -19,6 +19,7 @@ from PyQt6.QtGui import QColor, QImage, QPixmap
 from anki_miner.gui.widgets import page_image_view as piv
 from anki_miner.gui.widgets.page_image_view import PageImageView, _PageCanvas, load_page_qimage
 from anki_miner.models.reading import ImageRef
+from anki_miner.utils import pil_limits
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -178,6 +179,13 @@ class TestLoadDirPage:
         path = tmp_path / "broken.png"
         path.write_bytes(b"not an image at all")
         with pytest.raises(UnidentifiedImageError):
+            load_page_qimage(ImageRef(path))
+
+    def test_pixel_budget_checked_before_rgba_expansion(self, qapp, tmp_path, monkeypatch):
+        path = _write_image(tmp_path / "oversized.png", "PNG", size=(3, 2))
+        monkeypatch.setattr(pil_limits, "MAX_IMAGE_PIXELS", 4)
+
+        with pytest.raises(ValueError, match=r"6 pixels.*cap 4"):
             load_page_qimage(ImageRef(path))
 
 
