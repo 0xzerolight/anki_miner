@@ -136,9 +136,8 @@ ALLOWLIST: dict[str, set[str]] = {
         "widgets/dialogs/resource_download_dialog.py",
         # Prose only: a comment referencing resource_download_dialog's .wait().
         "widgets/dialogs/setup_wizard/setup_wizard.py",
-        # background_tasks._join_worker_for_close: the timeout_ms=None branch is a
-        # deliberate unbounded join reserved for SHORT workers with no cancel hook
-        # (cache prewarm), on the shutdown/close path. Documented in its docstring.
+        # Prose only: shutdown explains why the worker-side curation event must
+        # be poisoned before its bounded QThread join.
         "controllers/background_tasks.py",
     },
     # time.sleep — only inside `_robust_rmtree`'s Windows-retry loop, and that

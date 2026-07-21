@@ -5,9 +5,8 @@ Two reusable primitives back the GUI-freeze-hardening effort:
 * :func:`run_off_thread` — fire a zero-arg blocking callable on a worker
   thread and deliver its result back on the GUI thread, with automatic
   worker ownership so it is never garbage-collected mid-run.
-* :func:`join_worker` / :func:`join_tracked_workers` — bounded, GUI-safe
-  joins that replace every untimed ``worker.wait()`` (which can hang the GUI
-  thread forever).
+* :func:`still_running` / :func:`join_or_retain` — deleted-wrapper-safe
+  liveness and bounded joins that retain timed-out workers.
 
 Slots connected here run on the GUI thread: the worker is parented to a
 GUI-thread :class:`QObject`, so Qt queues its cross-thread signals onto the
@@ -19,12 +18,15 @@ from __future__ import annotations
 import contextlib
 import logging
 from collections.abc import Callable
+from typing import TypeVar
 
 from PyQt6.QtCore import QObject, QThread
 
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 
 logger = logging.getLogger(__name__)
+
+_WorkerT = TypeVar("_WorkerT", bound=QThread)
 
 _REGISTRY_ATTR = "_off_thread_workers"
 
@@ -97,6 +99,38 @@ def run_off_thread(
     return worker
 
 
+def still_running(worker: QThread | None) -> bool:
+    """Return whether ``worker`` has a live, running C++ QThread."""
+    if worker is None:
+        return False
+    try:
+        return bool(worker.isRunning())
+    except RuntimeError:
+        return False
+
+
+def join_or_retain(
+    worker: _WorkerT | None,
+    timeout_ms: int = 2000,
+    *,
+    cancel_worker: bool = True,
+) -> _WorkerT | None:
+    """Bounded-join ``worker``; return it only while it remains live."""
+    if not still_running(worker):
+        return None
+    assert worker is not None
+    try:
+        if cancel_worker:
+            cancel = getattr(worker, "cancel", None)
+            if callable(cancel):
+                cancel()
+        if worker.wait(timeout_ms):
+            return None
+    except RuntimeError:
+        return None
+    return worker if still_running(worker) else None
+
+
 def join_worker(worker: QThread | None, timeout_ms: int = 2000) -> bool:
     """Bounded, GUI-safe join. Never waits without a timeout.
 
@@ -109,15 +143,7 @@ def join_worker(worker: QThread | None, timeout_ms: int = 2000) -> bool:
         the timeout; ``False`` if it was still running when the timeout
         elapsed.
     """
-    if worker is None or not worker.isRunning():
-        return True
-
-    # Give cooperative (CancellableWorker) loops a chance to exit early.
-    cancel = getattr(worker, "cancel", None)
-    if callable(cancel):
-        cancel()
-
-    return bool(worker.wait(timeout_ms))
+    return join_or_retain(worker, timeout_ms) is None
 
 
 def join_tracked_workers(parent: QObject, timeout_ms: int = 2000) -> list[QThread]:

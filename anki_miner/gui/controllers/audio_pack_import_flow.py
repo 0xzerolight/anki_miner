@@ -10,7 +10,6 @@ dependency stays one-way: tab → controller → workers/services.
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Callable
 from pathlib import Path
 
@@ -20,19 +19,12 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog, QWidget
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.gui.controllers.import_flow_common import ModalImportFlowMixin
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
-from anki_miner.gui.utils.run_off_thread import join_worker
+from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
 from anki_miner.gui.workers.import_worker import ImportWorker
 from anki_miner.services.audio_packs.formats import scan_importable_packs
 from anki_miner.services.audio_packs.importer import derive_pack_id
 from anki_miner.utils.i18n import tr_format
-
-logger = logging.getLogger(__name__)
-
-# Bounded join for the predecessor import worker before its reference is
-# dropped. A stuck worker must never freeze the GUI thread; on timeout we log
-# and proceed (mirrors ``MiningTabBase._teardown_previous_run``).
-_IMPORT_JOIN_TIMEOUT_MS = 5000
 
 # Upstream source priority for newly imported packs inserted into the chain.
 # Lower index = higher priority (queried first).  Keys are canonical pack_ids
@@ -75,16 +67,17 @@ class AudioPackImportFlow(ModalImportFlowMixin):
         # Long-lived worker reference: ImportWorker is a QThread and would be
         # destroyed mid-run if it fell out of scope before joining.
         self._active_import_worker: ImportWorker | None = None
+        self._retained_import_workers: list[ImportWorker] = []
 
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close.
 
-        Returns the active import worker so ``SettingsTab.iter_close_workers``
+        Returns active and retained import workers so ``SettingsTab.iter_close_workers``
         can chain it into the single ``BackgroundTaskController._join_worker_for_close``
         policy (cancel + bounded grace join + laggard deferral).  A ``None``
         entry (idle flow) is filtered by ``_join_worker_for_close``.
         """
-        return (self._active_import_worker,)
+        return self._iter_import_workers()
 
     def _set_import_buttons_enabled(self, enabled: bool) -> None:
         """Toggle import-trigger buttons. Prevents overlapping import workers."""
@@ -247,15 +240,14 @@ class AudioPackImportFlow(ModalImportFlowMixin):
                 )
             )
 
-            worker = ImportWorker.for_pack(pack_dir, dest_root)
             # Join the predecessor before dropping its reference (same as
             # DictionaryImportFlow.reimport_all T-09 join rationale).
-            prev = self._active_import_worker
-            if not join_worker(prev, timeout_ms=_IMPORT_JOIN_TIMEOUT_MS):
-                logger.warning(
-                    "Lingering audio pack import worker did not stop within %d ms; replacing it anyway",
-                    _IMPORT_JOIN_TIMEOUT_MS,
-                )
+            laggard = self._join_active_import_worker("audio pack import worker")
+            if laggard is not None:
+                self._resume_once_finished(laggard, launch_next)
+                return
+
+            worker = ImportWorker.for_pack(pack_dir, dest_root)
             self._active_import_worker = worker
 
             def on_progress(_cur: int, _total: int, msg: str) -> None:
@@ -286,12 +278,14 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             worker.import_finished.connect(on_done)
             worker.failed.connect(on_failed)
             worker.cancelled.connect(on_cancelled)
+            worker.finished.connect(lambda w=worker: self._release_import_worker(w))
             worker.start()
 
         def on_cancel() -> None:
             state["cancelled"] = True
             w = self._active_import_worker
-            if w is not None and w.isRunning():
+            if still_running(w):
+                assert w is not None
                 w.cancel()
 
         dlg.canceled.connect(on_cancel)

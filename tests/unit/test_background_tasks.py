@@ -249,7 +249,7 @@ class TestShutdownJoinsOffThreadWorkers:
 
         ctrl, tabs = shutdown_controller
         parent = _Sink()
-        worker = run_off_thread(parent, lambda: (_SleepWorker().run()), lambda _v: None)
+        worker = run_off_thread(parent, lambda: _SleepWorker().run(), lambda _v: None)
         # The above immediately runs run() on the worker thread; cooperative cancel
         # is what shutdown relies on. Wait until it's actually running.
         qtbot.waitUntil(lambda: worker.isRunning(), timeout=2000)
@@ -294,6 +294,38 @@ class TestShutdownJoinsOffThreadWorkers:
         finally:
             assert worker.wait(7000)
             rot._LIVE_OFF_THREAD_WORKERS.discard(worker)
+
+    def test_prewarm_uses_bounded_join(self, shutdown_controller):
+        ctrl, tabs = shutdown_controller
+        worker = MagicMock(name="PrewarmWorker")
+        ctrl.prewarm_worker = worker
+
+        ctrl.shutdown(tabs)
+
+        prewarm_call = next(call for call in ctrl._join_worker_for_close.call_args_list if call.args == (worker,))
+        assert prewarm_call.kwargs["timeout_ms"] == 2000
+
+
+def test_deferred_close_finalizes_once_after_deleted_laggard(controller, monkeypatch):
+    class _Dead:
+        def isRunning(self):  # noqa: N802
+            raise RuntimeError("wrapped C/C++ object has been deleted")
+
+    window = MagicMock()
+    window.config = object()
+    controller._window = window
+    controller._close_laggards = [_Dead()]
+    controller._close_poll_timer = MagicMock()
+    save = MagicMock()
+    quit_app = MagicMock()
+    monkeypatch.setattr("anki_miner.gui.controllers.background_tasks.GUIConfigManager.save_config", save)
+    monkeypatch.setattr("anki_miner.gui.controllers.background_tasks.QApplication.quit", quit_app)
+
+    controller._poll_deferred_close()
+    controller._poll_deferred_close()
+
+    save.assert_called_once_with(window.config)
+    quit_app.assert_called_once()
 
 
 class _FakeYtdlpWorker(QObject):

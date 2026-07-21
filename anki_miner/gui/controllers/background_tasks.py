@@ -19,7 +19,7 @@ from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.utils.config_manager import GUIConfigManager
-from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers
+from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers, join_or_retain, still_running
 from anki_miner.gui.workers.validation_worker import ValidationWorkerThread
 
 if TYPE_CHECKING:
@@ -129,6 +129,7 @@ class BackgroundTaskController(QObject):
         # join in shutdown() (see _join_worker_for_close for the policy).
         self._close_poll_timer: QTimer | None = None
         self._close_laggards: list = []
+        self._close_finalized = False
 
     # --- Task starters -----------------------------------------------------
 
@@ -144,7 +145,7 @@ class BackgroundTaskController(QObject):
             True when a new worker was started; False when a validation run
             is already in flight (the caller surfaces that to the user).
         """
-        if self.validation_worker is not None and self.validation_worker.isRunning():
+        if still_running(self.validation_worker):
             return False
         worker = ValidationWorkerThread(service, self)
         self.validation_worker = worker
@@ -156,7 +157,7 @@ class BackgroundTaskController(QObject):
 
     def check_for_updates(self) -> None:
         """Start the update check worker unless one is already running."""
-        if self.update_worker is not None and self.update_worker.isRunning():
+        if still_running(self.update_worker):
             return
 
         from anki_miner import __version__
@@ -181,7 +182,7 @@ class BackgroundTaskController(QObject):
             config: Live config (resolves the current yt-dlp + override).
             force: When True, bypass the 24h throttle (manual "Update now").
         """
-        if self.ytdlp_update_worker is not None and self.ytdlp_update_worker.isRunning():
+        if still_running(self.ytdlp_update_worker):
             return
 
         from anki_miner.gui.workers import ytdlp_update_worker as worker_mod
@@ -241,7 +242,7 @@ class BackgroundTaskController(QObject):
         release the handle on the native ``QThread.finished`` (covers the cancel
         path, where ``result_ready`` never fires).
         """
-        if self.restyle_cards_worker is not None and self.restyle_cards_worker.isRunning():
+        if still_running(self.restyle_cards_worker):
             return
 
         from anki_miner.gui.workers.restyle_cards_worker import RestyleCardsWorker
@@ -377,7 +378,7 @@ class BackgroundTaskController(QObject):
         starters; the per-attribute handle keeps the shutdown join addressable.
         """
         existing = getattr(self, attr)
-        if existing is not None and existing.isRunning():
+        if still_running(existing):
             return
 
         worker = factory()
@@ -451,7 +452,7 @@ class BackgroundTaskController(QObject):
         """
         laggards: list = []
 
-        def join(worker, *, timeout_ms: int | None = _CLOSE_JOIN_GRACE_MS) -> None:
+        def join(worker, *, timeout_ms: int = _CLOSE_JOIN_GRACE_MS) -> None:
             if not self._join_worker_for_close(worker, timeout_ms=timeout_ms):
                 laggards.append(worker)
 
@@ -469,12 +470,7 @@ class BackgroundTaskController(QObject):
         join(self.vulkan_model_download_worker)
         join(self.restyle_cards_worker)
 
-        # The best-effort prewarm worker has no cancel hook (it's a short,
-        # uninterruptible cache warm), so join it without timeout instead of
-        # routing it through the deferred close: even on a slow dicts_root it
-        # exits on its own in bounded time, and a bounded wait(2000) that
-        # expired would only delay shutdown behind the poll timer for it.
-        join(self.prewarm_worker, timeout_ms=None)
+        join(self.prewarm_worker)
 
         # Cancel and wait for any processing workers in tabs
         for i in range(tabs.count()):
@@ -518,14 +514,11 @@ class BackgroundTaskController(QObject):
 
         return laggards
 
-    def _join_worker_for_close(self, worker, *, timeout_ms: int | None = _CLOSE_JOIN_GRACE_MS) -> bool:
+    def _join_worker_for_close(self, worker, *, timeout_ms: int = _CLOSE_JOIN_GRACE_MS) -> bool:
         """Single shutdown join policy for all owned worker threads.
 
-        Cancel the worker when it supports ``cancel()``, then join it:
-
-        * ``timeout_ms=None`` — unbounded blocking join, reserved for short
-          workers with no cancel hook (the cache prewarm).
-        * otherwise — bounded grace join. Returns False when the worker
+        Cancel the worker when it supports ``cancel()``, then bounded-join it.
+        Returns False when the worker
           outlives it; the caller must then defer the close rather than let
           Qt destroy a running QThread (window-parented workers die with the
           window, unparented tab workers get GC'd — either way Qt6 aborts
@@ -537,15 +530,7 @@ class BackgroundTaskController(QObject):
 
         Returns True when the worker has exited (or was None / not running).
         """
-        if worker is None or not worker.isRunning():
-            return True
-        cancel = getattr(worker, "cancel", None)
-        if callable(cancel):
-            cancel()
-        if timeout_ms is None:
-            worker.wait()
-            return True
-        return bool(worker.wait(timeout_ms))
+        return join_or_retain(worker, timeout_ms) is None
 
     def defer_close(self, event, laggards: list) -> None:
         """Deferred arm of the shutdown join policy.
@@ -578,8 +563,11 @@ class BackgroundTaskController(QObject):
         ``lastWindowClosed``, which would leave the event loop running with
         no windows.
         """
-        if any(w.isRunning() for w in self._close_laggards):
+        if self._close_finalized:
             return
+        if any(still_running(worker) for worker in self._close_laggards):
+            return
+        self._close_finalized = True
         if self._close_poll_timer is not None:
             self._close_poll_timer.stop()
         # Every laggard has exited, so no thread is reading through the per-tab

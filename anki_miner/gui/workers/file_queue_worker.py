@@ -22,12 +22,15 @@ Subclasses implement two hooks and keep their own per-item logic:
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 from typing import Any
 
 from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
+
+logger = logging.getLogger(__name__)
 
 
 class FileQueueWorker(CancellableWorker):
@@ -71,6 +74,8 @@ class FileQueueWorker(CancellableWorker):
         """Process every queued item on the background thread."""
         try:
             self._process_queue()
+        except Exception:  # noqa: BLE001 - never escape QThread.run
+            logger.exception("%s queue run failed", type(self).__name__)
         finally:
             self.queue_finished.emit()
 
@@ -90,6 +95,9 @@ class FileQueueWorker(CancellableWorker):
                 # a tool error from a user cancel.
                 self.file_finished.emit(idx, None, str(exc))
                 self._stop_queue = True
+            except Exception as exc:  # noqa: BLE001 - per-item QThread boundary
+                logger.exception("%s item %d failed", type(self).__name__, idx)
+                self.file_finished.emit(idx, None, str(exc))
 
     # ------------------------------------------------------------------
     # Subclass hooks

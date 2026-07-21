@@ -39,7 +39,7 @@ from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtWidgets import QMessageBox, QWidget
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.utils.run_off_thread import join_worker
+from anki_miner.gui.utils.run_off_thread import join_or_retain, still_running
 from anki_miner.gui.workers.youtube_playlist_probe_worker import (
     YouTubePlaylistProbeWorker,
     YouTubePlaylistResolveWorker,
@@ -281,37 +281,52 @@ class PlaylistAddController:
         quit() + join returns within ~timeout_s. The playlist probe worker
         checks cancellation between entries and each in-flight subprocess is
         timeout-bounded, so the join has the same guarantee (Issue #70). The
-        joins are nonetheless bounded by :func:`join_worker`: a wedged yt-dlp
+        joins are nonetheless bounded by :func:`join_or_retain`: a wedged yt-dlp
         subprocess must never freeze the GUI thread at shutdown — on timeout we
-        log and drop the handle anyway (mirrors
-        ``MiningTabBase._teardown_previous_run``).
+        log and retain the handle for deferred close tracking.
         """
+        lagging_probes: list[YouTubeProbeWorker] = []
         for probe in list(self._probe_workers):
             probe.quit()
-            if not join_worker(probe, timeout_ms=_PROBE_JOIN_TIMEOUT_MS):
+            probe_laggard = join_or_retain(probe, timeout_ms=_PROBE_JOIN_TIMEOUT_MS)
+            if probe_laggard is not None:
                 logger.warning(
-                    "Lingering YouTube probe worker did not stop within %d ms; dropping it anyway",
+                    "Lingering YouTube probe worker did not stop within %d ms; retaining it for deferred close",
                     _PROBE_JOIN_TIMEOUT_MS,
                 )
-        self._probe_workers.clear()
+                lagging_probes.append(probe)
+        self._probe_workers = lagging_probes
 
         if self._playlist_probe_worker is not None:
             self._playlist_probe_worker.quit()
-            if not join_worker(self._playlist_probe_worker, timeout_ms=_PROBE_JOIN_TIMEOUT_MS):
+            playlist_probe_laggard = join_or_retain(self._playlist_probe_worker, timeout_ms=_PROBE_JOIN_TIMEOUT_MS)
+            if playlist_probe_laggard is not None:
                 logger.warning(
-                    "Lingering YouTube playlist probe worker did not stop within %d ms; dropping it anyway",
+                    "Lingering YouTube playlist probe worker did not stop within %d ms; retaining it for deferred close",
                     _PROBE_JOIN_TIMEOUT_MS,
                 )
-            self._playlist_probe_worker = None
-        self._playlist_probe_items = []
+            else:
+                self._playlist_probe_worker = None
+                self._playlist_probe_items = []
         if self._playlist_resolve_worker is not None:
             self._playlist_resolve_worker.quit()
-            if not join_worker(self._playlist_resolve_worker, timeout_ms=_PROBE_JOIN_TIMEOUT_MS):
+            resolve_laggard = join_or_retain(self._playlist_resolve_worker, timeout_ms=_PROBE_JOIN_TIMEOUT_MS)
+            if resolve_laggard is not None:
                 logger.warning(
-                    "Lingering YouTube playlist resolve worker did not stop within %d ms; dropping it anyway",
+                    "Lingering YouTube playlist resolve worker did not stop within %d ms; retaining it for deferred close",
                     _PROBE_JOIN_TIMEOUT_MS,
                 )
-            self._playlist_resolve_worker = None
+            else:
+                self._playlist_resolve_worker = None
+
+    def iter_close_workers(self) -> tuple:
+        """Return every live add-flow worker for deferred close tracking."""
+        workers = [
+            *self._probe_workers,
+            self._playlist_probe_worker,
+            self._playlist_resolve_worker,
+        ]
+        return tuple(worker for worker in workers if still_running(worker))
 
     # ------------------------------------------------------------------
     # Single-video probe lifecycle

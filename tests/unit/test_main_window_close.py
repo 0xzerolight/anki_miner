@@ -9,6 +9,7 @@ fake subclasses of the real tab widgets into ``window.tabs`` before triggering
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -106,6 +107,12 @@ class _FakeYouTubeTab(YouTubeTab):
         self.worker_thread: _FakeWorker | None = _FakeWorker(running=worker_running)
         self.shutdown_called = False
         self._processor = None  # needed by inherited release_dictionary_resources
+        # W5: iter_close_workers() enumerates add-flow laggards; give it a stub
+        # so the real inherited method has something to enumerate.
+        self._add_flow = SimpleNamespace(
+            iter_close_workers=lambda: (),
+            shutdown=lambda: None,
+        )
 
     def shutdown(self) -> None:
         self.shutdown_called = True
@@ -561,16 +568,17 @@ class TestCloseEventWindowOwnedWorkers:
         assert worker.wait_called_with == 2000
         event.accept.assert_called_once()
 
-    def test_prewarm_worker_joined_without_timeout(self, main_window):
+    def test_prewarm_worker_joined_with_bounded_timeout(self, main_window):
         worker = _FakePrewarmWorker(running=True)
         main_window.background_tasks.prewarm_worker = worker
 
         event = _trigger_close(main_window)
 
-        # The prewarm worker has no cancel hook; it must be joined with an
-        # unbounded wait() — a bounded wait could expire and abandon it.
+        # LR-15: the prewarm worker is joined with a BOUNDED wait so a
+        # non-returning native call cannot freeze the GUI close path forever;
+        # a timed-out prewarm is retained as a laggard, not abandoned.
         assert worker.wait_called
-        assert worker.wait_args == ()
+        assert worker.wait_args == (2000,)
         event.accept.assert_called_once()
 
 
