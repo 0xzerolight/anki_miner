@@ -267,6 +267,18 @@ class TestAddSource:
 
 
 class TestReimportSource:
+    def test_wrong_typed_source_name_uses_normal_default(self, tab, monkeypatch, stub_worker):
+        from anki_miner.services.frequency import storage
+
+        source_dir = tab.config.freqs_root / "jpdb"
+        source_dir.mkdir(parents=True)
+        (source_dir / "source.csv").write_text("word,rank\n猫,5\n", encoding="utf-8")
+        monkeypatch.setattr(storage, "read_meta", lambda _path: {"source_name": []})
+
+        tab._frequency_import_flow.reimport_source("jpdb")
+
+        assert stub_worker.instances[0]._kwargs["source_name"] is None
+
     def test_reimport_uses_stored_source_and_id(self, tab, monkeypatch, stub_worker):
         # Materialize a persisted source copy alongside the (would-be) index.
         freqs_root = tab.config.freqs_root

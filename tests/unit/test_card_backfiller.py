@@ -151,7 +151,7 @@ def _stub_tagger_and_style(monkeypatch):
     )
     monkeypatch.setattr(
         "anki_miner.services.card_backfiller.collect_dictionary_css_entries",
-        lambda config: [("D", "DICTCSS")],
+        lambda config: [("d-id", "D", "DICTCSS")],
     )
 
 

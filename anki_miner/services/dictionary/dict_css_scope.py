@@ -7,10 +7,10 @@ ignored that file, so its cards rendered dictionary content unstyled (Issue #87,
 "Bug 1").
 
 This module replicates Yomitan's own Anki behavior: prefix every top-level
-selector with ``.yomitan-glossary [data-dictionary="<title>"]`` and emit the
-result inline as a ``<style>`` block on each card. Two things fall out of that
-scope: the rules only ever match the *miner's* glossary markup for *this*
-dictionary, so one dict's CSS never bleeds into another's entries.
+selector with scopes for the dictionary's stable ID and its legacy display-title
+markup. The title scope excludes envelopes carrying a stable ID, so it restores
+pre-ID cards without allowing same-title new dictionaries to bleed into one
+another.
 
 Because the output is injected verbatim into an HTML ``<style>`` element inside a
 card field, the CSS is third-party and untrusted. We sanitize defensively:
@@ -84,6 +84,28 @@ _FORBIDDEN_RE = re.compile(
     <
     """,
 )
+
+_CSS_ESCAPE_RE = re.compile(r"\\(?:(\r\n|[\n\r\f])|([0-9a-fA-F]{1,6})(?:\r\n|[ \t\n\r\f])?|([^\r\n\f]))")
+
+
+def _decode_css_escapes(value: str) -> str:
+    """Decode CSS escapes for security scanning only; emitted CSS stays verbatim."""
+
+    def _replace(match: re.Match[str]) -> str:
+        if match.group(1) is not None:
+            return ""
+        if match.group(2) is None:
+            return match.group(3) or ""
+        codepoint = int(match.group(2), 16)
+        if codepoint == 0 or codepoint > 0x10FFFF or 0xD800 <= codepoint <= 0xDFFF:
+            return "\N{REPLACEMENT CHARACTER}"
+        return chr(codepoint)
+
+    return _CSS_ESCAPE_RE.sub(_replace, value)
+
+
+def _has_forbidden(value: str) -> bool:
+    return _FORBIDDEN_RE.search(_decode_css_escapes(value)) is not None
 
 
 def css_string_escape(title: str) -> str:
@@ -235,13 +257,14 @@ def _split_top_level_commas(prelude: str) -> list[str]:
     return parts
 
 
-def scope_dict_css(styles_css: str, dict_title: str) -> str:
+def scope_dict_css(styles_css: str, dict_id: str, display_name: str | None = None) -> str:
     """Return ``styles_css`` scoped to one dictionary's glossary markup.
 
-    Every top-level selector is prefixed with
-    ``.yomitan-glossary [data-dictionary="<dict_title>"]``; conditional group
-    at-rules are recursed into and preserved; unsafe rules and other at-rules
-    are dropped (see module docstring).
+    Every top-level selector is prefixed with the stable-ID scope. When
+    ``display_name`` is supplied, it also gets a legacy-title scope guarded by
+    ``:not([data-dictionary-id])``. Conditional group at-rules are recursed into
+    and preserved; unsafe rules and other at-rules are dropped (see module
+    docstring).
 
     Returns ``""`` for empty input, oversized input, or input that scopes to
     nothing — callers treat that as "this dictionary contributes no styling".
@@ -249,13 +272,17 @@ def scope_dict_css(styles_css: str, dict_title: str) -> str:
     if not styles_css or not styles_css.strip():
         return ""
     if len(styles_css) > _MAX_STYLES_BYTES:
-        logger.debug("styles.css for %r exceeds %d bytes; skipping", dict_title, _MAX_STYLES_BYTES)
+        logger.debug("styles.css for %r exceeds %d bytes; skipping", dict_id, _MAX_STYLES_BYTES)
         return ""
-    scope = f'.yomitan-glossary [data-dictionary="{css_string_escape(dict_title)}"]'
-    return _scope_block(styles_css, scope)
+    scopes: tuple[str, ...] = (f'.yomitan-glossary [data-dictionary-id="{css_string_escape(dict_id)}"]',)
+    if display_name is not None:
+        scopes += (
+            f'.yomitan-glossary [data-dictionary="{css_string_escape(display_name)}"]:not([data-dictionary-id])',
+        )
+    return _scope_block(styles_css, scopes)
 
 
-def _scope_block(css: str, scope: str) -> str:
+def _scope_block(css: str, scopes: tuple[str, ...]) -> str:
     """Scope every rule in one block of CSS. Used at top level and recursively
     for the body of conditional group at-rules."""
     out: list[str] = []
@@ -264,7 +291,7 @@ def _scope_block(css: str, scope: str) -> str:
         if not stripped:
             continue
         if stripped.startswith("@"):
-            rule = _scope_at_rule(stripped, body, scope)
+            rule = _scope_at_rule(stripped, body, scopes)
             if rule:
                 out.append(rule)
             continue
@@ -274,17 +301,17 @@ def _scope_block(css: str, scope: str) -> str:
         # dropped on re-serialization (line below) so a ``<`` inside one can
         # never reach the output (Issue #89). Body is checked raw — it is emitted
         # verbatim with its comments, so a ``</style>`` in a body comment is real.
-        if _FORBIDDEN_RE.search(stripped) or _FORBIDDEN_RE.search(body):
+        if _has_forbidden(stripped) or _has_forbidden(body):
             logger.debug("Dropping dictionary CSS rule with forbidden construct: %s", stripped[:80])
             continue
         selectors = [s.strip() for s in _split_top_level_commas(stripped)]
-        scoped = ", ".join(f"{scope} {s}" for s in selectors if s)
+        scoped = ", ".join(f"{scope} {selector}" for selector in selectors if selector for scope in scopes)
         if scoped:
             out.append(f"{scoped} {{{body.strip()}}}")
     return "\n".join(out)
 
 
-def _scope_at_rule(prelude: str, body: str | None, scope: str) -> str:
+def _scope_at_rule(prelude: str, body: str | None, scopes: tuple[str, ...]) -> str:
     """Scope a single at-rule. Recurse into conditional group rules, drop the
     rest (including statement at-rules like ``@import``)."""
     name = re.match(r"@[\w-]+", prelude)
@@ -292,9 +319,9 @@ def _scope_at_rule(prelude: str, body: str | None, scope: str) -> str:
         return ""
     if body is None:
         return ""  # a group at-rule with no block is malformed — drop
-    if _FORBIDDEN_RE.search(prelude):
+    if _has_forbidden(prelude):
         return ""
-    inner = _scope_block(body, scope)
+    inner = _scope_block(body, scopes)
     if not inner:
         return ""
     return f"{prelude.strip()} {{\n{inner}\n}}"

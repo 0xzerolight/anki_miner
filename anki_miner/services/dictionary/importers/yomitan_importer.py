@@ -114,6 +114,8 @@ def import_yomitan_zip(
             index = json.loads(index_file.read_text(encoding="utf-8"))
         except json.JSONDecodeError as e:
             raise SetupError(f"Invalid index.json: {e}") from e
+        if not isinstance(index, dict):
+            raise SetupError("Invalid index.json: expected a JSON object")
 
         title = str(index.get("title", "")).strip()
         revision = str(index.get("revision", "")).strip()
@@ -530,7 +532,7 @@ def _peek_zip_title_revision(zip_path: Path) -> tuple[str, str]:
             # reports is still capped by the bounded read below).
             if info.file_size > MAX_INDEX_JSON_BYTES:
                 raise SetupError(
-                    f"index.json is implausibly large " f"({info.file_size:,} > {MAX_INDEX_JSON_BYTES:,} bytes)"
+                    f"index.json is implausibly large ({info.file_size:,} > {MAX_INDEX_JSON_BYTES:,} bytes)"
                 )
             with zf.open("index.json") as fp:
                 # Bounded read (+1 to detect overflow past the cap) so a zip that
@@ -546,6 +548,8 @@ def _peek_zip_title_revision(zip_path: Path) -> tuple[str, str]:
         index = json.loads(raw)
     except json.JSONDecodeError as e:
         raise SetupError(f"Invalid index.json: {e}") from e
+    if not isinstance(index, dict):
+        raise SetupError("Invalid index.json: expected a JSON object")
 
     title = str(index.get("title", "")).strip()
     revision = str(index.get("revision", "")).strip()

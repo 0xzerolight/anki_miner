@@ -16,7 +16,7 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Callable, Iterable
 
 import anki_miner.services._sqlite_index as _sqlite_index
 from anki_miner.services._sqlite_index import open_readonly as open_readonly
@@ -88,7 +88,13 @@ def create_index(db_path: Path) -> None:
         conn.close()
 
 
-def bulk_insert(db_path: Path, rows: Iterable[AudioPackRow], batch_size: int = 5000) -> int:
+def bulk_insert(
+    db_path: Path,
+    rows: Iterable[AudioPackRow],
+    batch_size: int = 5000,
+    *,
+    on_malformed: Callable[[int], None] | None = None,
+) -> int:
     """Insert rows in batched transactions. Returns total inserted.
 
     The sqlite3 `with` context manager commits/rolls back but does NOT close
@@ -96,10 +102,14 @@ def bulk_insert(db_path: Path, rows: Iterable[AudioPackRow], batch_size: int = 5
     across the importer's staging-dir cleanup (matters on Windows).
     """
     total = 0
+    skipped_malformed = 0
     conn = sqlite3.connect(db_path)
     try:
         batch: list[tuple] = []
         for row in rows:
+            if row is None or not _valid_row(row):
+                skipped_malformed += 1
+                continue
             batch.append(
                 (
                     row.expression,
@@ -120,8 +130,7 @@ def bulk_insert(db_path: Path, rows: Iterable[AudioPackRow], batch_size: int = 5
                 batch.clear()
         if batch:
             conn.executemany(
-                "INSERT INTO entries (expression, reading, source, speaker, display, file) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO entries (expression, reading, source, speaker, display, file) VALUES (?, ?, ?, ?, ?, ?)",
                 batch,
             )
             total += len(batch)
@@ -129,7 +138,23 @@ def bulk_insert(db_path: Path, rows: Iterable[AudioPackRow], batch_size: int = 5
         conn.commit()
     finally:
         conn.close()
+    if on_malformed is not None:
+        on_malformed(skipped_malformed)
     return total
+
+
+def _valid_row(row: AudioPackRow) -> bool:
+    return (
+        isinstance(row, AudioPackRow)
+        and isinstance(row.expression, str)
+        and bool(row.expression)
+        and (row.reading is None or isinstance(row.reading, str))
+        and isinstance(row.source, str)
+        and (row.speaker is None or isinstance(row.speaker, str))
+        and (row.display is None or isinstance(row.display, str))
+        and isinstance(row.file, str)
+        and bool(row.file)
+    )
 
 
 def read_meta_cached(db_path: Path) -> dict[str, str]:

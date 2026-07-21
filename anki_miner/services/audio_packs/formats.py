@@ -625,7 +625,9 @@ def parse_jpod_legacy(pack_dir: Path, source: str) -> Iterator[AudioPackRow]:
 # ---------------------------------------------------------------------------
 
 
-def parse_ozk5(pack_dir: Path, source: str) -> Iterator[AudioPackRow]:
+def parse_ozk5(
+    pack_dir: Path, source: str, *, on_malformed: Callable[[int], None] | None = None
+) -> Iterator[AudioPackRow]:
     """Parse an OZK5-format audio pack.
 
     Ported from local-audio-yomichan plugin/source/ozk5.py
@@ -655,22 +657,32 @@ def parse_ozk5(pack_dir: Path, source: str) -> Iterator[AudioPackRow]:
     if not isinstance(entries, list):
         raise ValueError(f"index.json 'entries' must be an array in {pack_dir}")
 
+    skipped_malformed = 0
     meta = data.get("meta")
     media_dir = meta.get("media_dir", "media") if isinstance(meta, dict) else "media"
     if not isinstance(media_dir, str) or not media_dir:
         media_dir = "media"
+        skipped_malformed += 1
+    elif meta is not None and not isinstance(meta, dict):
+        skipped_malformed += 1
 
     for entry in entries:
         if not isinstance(entry, dict):
+            skipped_malformed += 1
             continue
-        kanji = entry.get("kanji") or ""
-        kana = entry.get("kana") or ""
-        audio_file = entry.get("audio_file") or ""
+        kanji = entry.get("kanji", "")
+        kana = entry.get("kana", "")
+        audio_file = entry.get("audio_file", "")
+        if not all(isinstance(value, str) for value in (kanji, kana, audio_file)):
+            skipped_malformed += 1
+            continue
         if not audio_file:
+            skipped_malformed += 1
             continue
 
         expression = kanji or kana  # use kana if no kanji
         if not expression:
+            skipped_malformed += 1
             continue
 
         full_path = pack_dir / media_dir / audio_file
@@ -699,6 +711,8 @@ def parse_ozk5(pack_dir: Path, source: str) -> Iterator[AudioPackRow]:
                 display=None,
                 file=rel,
             )
+    if on_malformed is not None:
+        on_malformed(skipped_malformed)
 
 
 # ---------------------------------------------------------------------------

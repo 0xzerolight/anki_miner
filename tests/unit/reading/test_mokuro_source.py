@@ -5,6 +5,9 @@ import unicodedata
 import zipfile
 from pathlib import Path
 
+import pytest
+
+from anki_miner.exceptions import SetupError
 from anki_miner.models.reading import (
     ImageRef,
     ReadingDocument,
@@ -99,6 +102,41 @@ def test_per_page_version_drift_and_unknown_keys_tolerated(tmp_path):
     data = _mokuro(pages, version="0.2.4", unknown_top_level="ignore me")
     doc = load(_write_ref(tmp_path, data, None))
     assert [u.text for u in doc.units] == ["いちぺーじ", "にぺーじ"]
+
+
+def test_malformed_nested_records_skipped_import_still_usable(tmp_path):
+    pages = [
+        42,
+        {"img_path": "bad.jpg", "blocks": "not-a-list"},
+        _page("mixed.jpg", [None, {"lines": 7}, {"lines": [{"bad": "line"}, "x"]}, _block(["まとも"])]),
+    ]
+    doc = load(_write_ref(tmp_path, _mokuro(pages), None))
+
+    assert [unit.text for unit in doc.units] == ["まとも"]
+    assert any("malformed" in warning and "5" in warning for warning in doc.warnings)
+
+
+def test_malformed_nested_records_fail_when_none_usable(tmp_path):
+    ref = _write_ref(tmp_path, _mokuro([42, {"blocks": "bad"}]), None)
+    with pytest.raises(SetupError, match="usable"):
+        load(ref)
+
+
+def test_malformed_page_keeps_valid_pages_at_original_image_positions(tmp_path):
+    image_root = tmp_path / "images"
+    image_root.mkdir()
+    images = [image_root / name for name in ("001.jpg", "002.jpg", "003.jpg")]
+    for image in images:
+        image.write_bytes(_IMG_BYTES)
+    pages = [
+        _page("missing-a.jpg", [_block(["最初"])]),
+        42,
+        _page("missing-z.jpg", [_block(["最後"])]),
+    ]
+
+    doc = load(_write_ref(tmp_path, _mokuro(pages), image_root))
+
+    assert [unit.image_ref for unit in doc.units] == [ImageRef(images[0]), ImageRef(images[2])]
 
 
 def test_box_out_of_bounds_tolerated(tmp_path):

@@ -130,7 +130,7 @@ class IndexedDictProvider:
         # <style> wrapper) and exposed via `dictionary_css`; collect_dictionary_css
         # concatenates it into each card's per-card <style> block. Absent for
         # JMdict and for dicts imported before styles.css capture.
-        self._scoped_css = scope_dict_css(meta.get("styles_css", ""), self._display_name)
+        self._scoped_css = scope_dict_css(meta.get("styles_css", ""), self.dict_id, self._display_name)
         return True
 
     def lookup(self, word: str) -> str | None:
@@ -422,6 +422,7 @@ class IndexedDictProvider:
 
         dict_label = self._display_name
         escaped_attr = html.escape(dict_label, quote=True)
+        escaped_id = html.escape(self.dict_id, quote=True)
         tag_meta = self._tag_meta()
 
         # One sub-block per group: its own chips + italic tag line + gloss-list.
@@ -449,9 +450,7 @@ class IndexedDictProvider:
             escaped_italic = html.escape(", ".join(fallback_tags + [dict_label]), quote=True)
 
             blocks.append(
-                f"{chips}"
-                f"<i>({escaped_italic})</i>"
-                f'<ul class="gloss-list" data-count="{item_count}">{merged}</ul>'
+                f'{chips}<i>({escaped_italic})</i><ul class="gloss-list" data-count="{item_count}">{merged}</ul>'
             )
 
         # data-has-styles gates the base sheet's data-sc-* gap-fillers OFF for
@@ -471,7 +470,7 @@ class IndexedDictProvider:
         return (
             '<div class="yomitan-glossary">'
             '<ol data-count="1">'
-            f'<li data-dictionary="{escaped_attr}"{stamp}>'
+            f'<li data-dictionary="{escaped_attr}" data-dictionary-id="{escaped_id}"{stamp}>'
             f"{''.join(blocks)}"
             "</li>"
             "</ol>"

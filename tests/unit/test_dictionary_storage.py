@@ -947,6 +947,16 @@ class TestReadMetaCached:
         # Sidecar is rewritten with valid JSON.
         assert json.loads(sidecar.read_text(encoding="utf-8"))["source_name"] == "Test Dict"
 
+    def test_bad_sidecar_falls_back_to_sqlite_miss(self, tmp_path: Path):
+        db_path = self._setup_dict(tmp_path)
+        sidecar = db_path.parent / "meta.json"
+
+        sidecar.write_bytes(b"\xff")
+        assert read_meta_cached(db_path)["entry_count"] == "42"
+
+        sidecar.write_text(json.dumps({"entry_count": None}), encoding="utf-8")
+        assert read_meta_cached(db_path)["entry_count"] == "42"
+
     def test_cached_read_missing_db(self, tmp_path: Path):
         assert read_meta_cached(tmp_path / "nonexistent.sqlite") == {}
 

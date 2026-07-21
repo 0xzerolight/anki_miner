@@ -35,6 +35,7 @@
  */
 
 .yomitan-glossary {
+  --anki-miner-owned-style: 1;
   /* Tunables. Neutral grays so the sheet reads on both light and
    * dark note types without a hard-coded background.
    *

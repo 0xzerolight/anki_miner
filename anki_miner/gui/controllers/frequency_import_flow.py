@@ -177,6 +177,8 @@ class FrequencyImportFlow(ModalImportFlowMixin):
             def _scan() -> tuple[Path, Path | None, str | None]:
                 source_file = self._find_source_copy(source_dir)
                 existing_name = storage.read_meta(source_dir / "index.sqlite").get("source_name")
+                if not isinstance(existing_name, str):
+                    existing_name = None
                 return dest_root, source_file, existing_name
 
             def _on_done(result: object) -> None:

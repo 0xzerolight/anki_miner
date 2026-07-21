@@ -455,7 +455,7 @@ def _compute_note_changes(
     frequency_service: Any,
     definition: str | None,
     glossary: str | None,
-    dict_css_entries: list[tuple[str, str]],
+    dict_css_entries: list[tuple[str, str, str]],
 ) -> list[FieldChange]:
     """Emit FieldChanges for one note under the fill/overwrite policy."""
     anki_fields = config.anki_fields

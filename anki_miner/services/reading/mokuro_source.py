@@ -17,6 +17,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
+from anki_miner.exceptions import SetupError
 from anki_miner.models.reading import (
     ImageRef,
     ReadingDocument,
@@ -71,7 +72,9 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
     # Size-capped even though the detector normally gates first: load() trusts
     # a ref, so it must be safe standalone against a hostile multi-GB sidecar.
     data = json.loads(read_text_capped(ref.path, MAX_MOKURO_JSON_BYTES, ".mokuro file"))
-    pages = data.get("pages", []) or []
+    if not isinstance(data, dict) or not isinstance(data.get("pages"), list):
+        raise SetupError(f"Invalid .mokuro file '{ref.path.name}': pages must be an array.")
+    pages = data["pages"]
 
     doc = ReadingDocument(
         title=ref.title,
@@ -84,13 +87,27 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
     records = _list_images(image_root)
     exact_index = {r.norm_full: r for r in records}
     stem_index = _unique_stem_index(records)
-    positional = _positional_pairs(pages, records)
+    valid_pages: list[tuple[int, dict]] = []
+    positional_pages: list[dict | None] = []
+    skipped_malformed = 0
+    for page_num, page in enumerate(pages, start=1):
+        if not isinstance(page, dict):
+            positional_pages.append(None)
+            skipped_malformed += 1
+            continue
+        if not isinstance(page.get("blocks", []), list):
+            positional_pages.append(None)
+            skipped_malformed += 1
+            continue
+        valid_pages.append((page_num, page))
+        positional_pages.append(page)
+    positional = _positional_pairs(positional_pages, records)
 
     if image_root is None:
         doc.warnings.append("text-only volume: pages have no paired images")
 
     index = 0
-    for page_num, page in enumerate(pages, start=1):
+    for page_num, page in valid_pages:
         image_ref: ImageRef | None = None
         if image_root is not None:
             img_path = str(page.get("img_path") or "")
@@ -100,26 +117,42 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
             else:
                 image_ref = record.ref
         label = f"p.{page_num}"
-        for text, box in _page_unit_entries(page):
+        entries, skipped = _page_unit_entries(page)
+        skipped_malformed += skipped
+        for text, box in entries:
             doc.units.append(
                 ReadingUnit(text=text, index=index, location_label=label, image_ref=image_ref, block_box=box)
             )
             index += 1
+    if skipped_malformed:
+        doc.warnings.append(f"Skipped {skipped_malformed} malformed Mokuro record(s).")
+    if not doc.units:
+        raise SetupError(f"Invalid .mokuro file '{ref.path.name}': no usable text records.")
     return doc
 
 
 # --------------------------------------------------------------------------- #
 # Text assembly
 # --------------------------------------------------------------------------- #
-def _page_unit_entries(page: dict) -> list[tuple[str, tuple[int, int, int, int] | None]]:
+def _page_unit_entries(page: dict) -> tuple[list[tuple[str, tuple[int, int, int, int] | None]], int]:
     """Mineable (text, block_box) pairs for one page, in block order.
 
     Split units are expanded; every sentence piece of one oversized block
     shares the parent block's box.
     """
     entries: list[tuple[str, tuple[int, int, int, int] | None]] = []
-    for block in page.get("blocks", []) or []:
-        cleaned = _sanitize_block(block.get("lines", []) or [])
+    skipped = 0
+    for block in page.get("blocks", []):
+        if not isinstance(block, dict):
+            skipped += 1
+            continue
+        lines = block.get("lines", [])
+        if not isinstance(lines, list):
+            skipped += 1
+            continue
+        valid_lines = [line for line in lines if isinstance(line, str)]
+        skipped += len(lines) - len(valid_lines)
+        cleaned = _sanitize_block(valid_lines)
         if not cleaned:
             continue
         box = _block_box(block)
@@ -128,7 +161,7 @@ def _page_unit_entries(page: dict) -> list[tuple[str, tuple[int, int, int, int] 
         else:
             pieces = [cleaned]
         entries.extend((piece, box) for piece in pieces if _is_mineable(piece))
-    return entries
+    return entries, skipped
 
 
 def _block_box(block: dict) -> tuple[int, int, int, int] | None:
@@ -223,15 +256,17 @@ def _unique_stem_index(records: list[_ImageRecord]) -> dict[str, _ImageRecord]:
     return {stem: rec for stem, rec in seen.items() if rec is not None}
 
 
-def _positional_pairs(pages: list[dict], records: list[_ImageRecord]) -> dict[int, _ImageRecord]:
+def _positional_pairs(pages: list[dict | None], records: list[_ImageRecord]) -> dict[int, _ImageRecord]:
     """Tier-3 fallback: pair pages to images by natural sort when counts match."""
     if not records or len(pages) != len(records):
         return {}
+    ordered = sorted(records, key=lambda r: natural_sort_key(r.raw_key))
+    if any(page is None for page in pages):
+        return {i: ordered[i] for i, page in enumerate(pages) if page is not None}
     order = sorted(
         range(len(pages)),
-        key=lambda i: natural_sort_key(str(pages[i].get("img_path") or "")),
+        key=lambda i: natural_sort_key(str((pages[i] or {}).get("img_path") or "")),
     )
-    ordered = sorted(records, key=lambda r: natural_sort_key(r.raw_key))
     return {page_idx: ordered[pos] for pos, page_idx in enumerate(order)}
 
 

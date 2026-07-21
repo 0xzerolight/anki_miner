@@ -101,6 +101,7 @@ def _minify_css(css: str) -> str:
 # ---------------------------------------------------------------------------
 
 ALL_GROUPS = frozenset({"unstyled-chrome", "sc-gapfill", "images", "tables"})
+OWNED_STYLE_MARKER = ".yomitan-glossary{--anki-miner-owned-style: 1;"
 
 _GROUP_MARKER_RE = re.compile(r"/\*\s*@am-group:\s*([a-z-]+)\s*\*/|/\*\s*@am-endgroup\s*\*/")
 
@@ -112,7 +113,7 @@ _GROUP_MARKER_RE = re.compile(r"/\*\s*@am-group:\s*([a-z-]+)\s*\*/|/\*\s*@am-end
 # card_restyler imports this for legacy-envelope stamping; it lives here so the
 # witness and the stamper cannot drift apart (and card_restyler already imports
 # this module, so the dependency points this way).
-UNSTAMPED_ENVELOPE_RE = re.compile(r'<li data-dictionary="([^"]*)">')
+UNSTAMPED_ENVELOPE_RE = re.compile(r'<li data-dictionary="([^"]*)"(?: data-dictionary-id="([^"]*)")?>')
 
 
 def split_group_regions(css: str) -> list[tuple[str, str]]:
@@ -168,7 +169,7 @@ def base_css_variant(groups: frozenset[str]) -> str:
     if unknown:
         raise ValueError(f"unknown style groups: {sorted(unknown)}")
     css = "".join(m for g, m in _minified_regions() if g == "core" or g in groups)
-    if "\n" in css or "ol[data-count]" not in css:
+    if "\n" in css or "ol[data-count]" not in css or not css.startswith(OWNED_STYLE_MARKER):
         raise ValueError("base variant broke the newline-free/ol[data-count] contract")
     return css
 
@@ -283,14 +284,11 @@ def build_card_style_block(*, dict_css: str, card_html: str) -> str:
     return f"<style>{body}</style>"
 
 
-# Any dictionary envelope title in a field body, stamped or not (contrast
+# Dictionary envelopes in a field body, stamped or not (contrast
 # UNSTAMPED_ENVELOPE_RE, which is deliberately blind to stamped envelopes).
-# Used to filter a field's embedded dict CSS down to the dictionaries actually
-# present in it. Over-inclusion is safe and accepted: on a restyler body this
-# also matches ``[data-dictionary="…"]`` literals inside a carried legacy
-# ``<style>``, but such CSS only exists on cards whose envelope is present too,
-# and an extra scoped sheet is inert (its selectors match nothing).
-_ENVELOPE_TITLE_RE = re.compile(r'data-dictionary="([^"]*)"')
+# Restricting the probe to ``<li>`` avoids treating selectors in carried legacy
+# ``<style>`` blocks as card envelopes.
+_ENVELOPE_RE = re.compile(r'<li data-dictionary="([^"]*)"(?: data-dictionary-id="([^"]*)")?')
 
 # The miner-markup fingerprint a field must carry before any styling attaches.
 # Same probe the restyler uses to recognize miner fields; a field without it
@@ -299,26 +297,25 @@ _ENVELOPE_TITLE_RE = re.compile(r'data-dictionary="([^"]*)"')
 _MINER_MARKUP_TOKENS = ("yomitan-glossary", "data-count")
 
 
-def filter_dict_css_entries(field_html: str, entries: Iterable[tuple[str, str]]) -> str:
+def filter_dict_css_entries(field_html: str, entries: Iterable[tuple[str, str, str]]) -> str:
     """Join the scoped CSS of exactly the dictionaries present in ``field_html``.
 
     ``entries`` is ``collect_dictionary_css_entries`` output: ordered
-    ``(display_name, scoped_css)`` pairs, duplicates preserved. Membership is
-    tested against the ``html.unescape``d ``data-dictionary`` attribute values
-    in the field — the renderer writes that attribute with ``html.escape``
-    (``indexed_provider._render``), and ``display_name`` is the pre-escape
-    title, so the round-trip is exact. Deliberately NOT ``css_string_escape``
-    matching: that escaper diverges from ``html.escape`` on ``&``/quotes, and a
-    CSS-selector-form probe (``[data-dictionary="…"]``) never appears in field
-    markup at all — either would silently drop a needed stylesheet, the one
-    forbidden outcome (Issue #93 discipline: filtering may only trim bytes,
-    never styles).
+    ``(dict_id, display_name, scoped_css)`` triples, duplicates preserved. New
+    envelopes carrying ``data-dictionary-id`` match only by stable ID, preserving
+    same-title isolation. Legacy envelopes lacking that attribute match by their
+    ``html.unescape``d display title for back-compat.
     """
-    titles = {html_lib.unescape(title) for title in _ENVELOPE_TITLE_RE.findall(field_html)}
-    return "\n\n".join(css for name, css in entries if name in titles)
+    envelopes = [
+        (html_lib.unescape(title), html_lib.unescape(dict_id) if dict_id else None)
+        for title, dict_id in _ENVELOPE_RE.findall(field_html)
+    ]
+    ids = {dict_id for _, dict_id in envelopes if dict_id is not None}
+    legacy_titles = {title for title, dict_id in envelopes if dict_id is None}
+    return "\n\n".join(css for dict_id, display_name, css in entries if dict_id in ids or display_name in legacy_titles)
 
 
-def attach_card_style_block(field_html: str, *, dict_css_entries: Iterable[tuple[str, str]]) -> str:
+def attach_card_style_block(field_html: str, *, dict_css_entries: Iterable[tuple[str, str, str]]) -> str:
     """Return ``field_html`` with its self-contained TRAILING ``<style>`` block.
 
     The one sanctioned attach seam for fresh writers (mining, backfill); it

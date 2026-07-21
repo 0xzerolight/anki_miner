@@ -39,6 +39,32 @@ def _jpdb_file(tmp_path: Path, cards: list[dict], *, bom: bool = False) -> Path:
 
 
 class TestJpdb:
+    def test_non_string_and_empty_grades_are_skipped_and_tallied(self, tmp_path):
+        cards = [
+            _jpdb_card("数値", [{"timestamp": 1, "grade": 7}]),
+            _jpdb_card("ヌル", [{"timestamp": 2, "grade": None}]),
+            _jpdb_card("真偽値", [{"timestamp": 3, "grade": True}]),
+            _jpdb_card("空", [{"timestamp": 4, "grade": ""}]),
+            _jpdb_card("言葉", [{"timestamp": 5, "grade": "okay"}]),
+        ]
+
+        result = parse_known_words_file(_jpdb_file(tmp_path, cards))
+
+        assert result.words == frozenset({"言葉"})
+        assert result.skipped_malformed == 4
+
+    def test_malformed_nested_records_skipped_import_still_usable(self, tmp_path):
+        cards = [
+            _jpdb_card("壊れた履歴", 7),
+            _jpdb_card("壊れた評価", [{"timestamp": 2, "grade": []}]),
+            _jpdb_card("言葉", [{"timestamp": 3, "grade": "okay"}]),
+        ]
+
+        result = parse_known_words_file(_jpdb_file(tmp_path, cards))
+
+        assert result.words == frozenset({"言葉"})
+        assert result.skipped_malformed == 2
+
     def test_positive_last_grades_qualify(self, tmp_path):
         cards = [
             _jpdb_card(w, [{"timestamp": 100, "grade": g}])
@@ -161,7 +187,7 @@ class TestAnkiMorphs:
         assert result.total_entries == 2
 
     def test_inflections_ignored(self, tmp_path):
-        text = "Morph-Lemma,Morph-Inflection,Occurrence\n" "食べる,食べた,3\n" "食べる,食べて,2\n" "走る,走った,1\n"
+        text = "Morph-Lemma,Morph-Inflection,Occurrence\n食べる,食べた,3\n食べる,食べて,2\n走る,走った,1\n"
         result = parse_known_words_file(_write(tmp_path, "known_morphs.csv", text))
         assert result.format_key == "ankimorphs"
         assert result.words == frozenset({"食べる", "走る"})

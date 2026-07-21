@@ -26,9 +26,11 @@ touch beyond text is the bomb-safe cover peek. The single shared cover
 
 from __future__ import annotations
 
+import lzma
 import posixpath
 import re
 import zipfile
+import zlib
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
@@ -99,6 +101,21 @@ _INTERNAL_LINEBREAK = re.compile(r"[ \t]*\n[ \t]*")
 # reading archive path without the importers' validate_zip_safe total-size
 # gate — the cover peek stays separately bomb-safe (fixed 16-byte read).
 _MAX_MEMBER_BYTES = 32 * 1024 * 1024
+_OPTIONAL_MEMBER_ERRORS = (
+    KeyError,
+    zipfile.BadZipFile,
+    RuntimeError,
+    NotImplementedError,
+    OSError,
+    EOFError,
+    zlib.error,
+    lzma.LZMAError,
+)
+
+
+def _warn_once(warnings: list[str], warning: str) -> None:
+    if warning not in warnings:
+        warnings.append(warning)
 
 
 def _read_member(zf: zipfile.ZipFile, entry: str, epub_path: Path) -> bytes:
@@ -152,7 +169,7 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
         if cover_warning:
             doc.warnings.append(cover_warning)
 
-        chapter_map = _load_chapters(zf, names, manifest, spine_toc, opf_dir)
+        chapter_map = _load_chapters(zf, names, manifest, spine_toc, opf_dir, doc.warnings)
 
         index = 0
         content_i = 0
@@ -173,7 +190,10 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
                 # Mine-what-you-can: one oversized chapter degrades to a
                 # warning, unlike the structural members (container/OPF/
                 # encryption) whose oversize aborts like the DRM gate.
-                doc.warnings.append(f"Skipped oversized spine document '{posixpath.basename(entry)}'.")
+                _warn_once(doc.warnings, f"Skipped oversized spine document '{entry}'.")
+                continue
+            except _OPTIONAL_MEMBER_ERRORS:
+                _warn_once(doc.warnings, f"Skipped damaged spine document '{entry}'.")
                 continue
             body, is_cover = _parse_content(raw)
             if body is None or is_cover:
@@ -372,7 +392,7 @@ def _find_cover(
         try:
             with zf.open(entry) as fp:
                 header = fp.read(16)  # fixed-size peek: bomb-safe, never decoded
-        except (KeyError, zipfile.BadZipFile):
+        except _OPTIONAL_MEMBER_ERRORS:
             header = b""
     if _is_image_magic(header):
         return ImageRef(epub_path, entry), None
@@ -509,6 +529,7 @@ def _load_chapters(
     manifest: dict[str, tuple[str, str | None, list[str]]],
     spine_toc: str | None,
     opf_dir: str,
+    warnings: list[str],
 ) -> dict[str, str]:
     entries: list[tuple[str, str]] = []
     nav_href = None
@@ -517,11 +538,11 @@ def _load_chapters(
             nav_href = href
             break
     if nav_href:
-        entries = _parse_nav(zf, names, opf_dir, nav_href)
+        entries = _parse_nav(zf, names, opf_dir, nav_href, warnings)
     if not entries and spine_toc:
         item = manifest.get(spine_toc)
         if item is not None:
-            entries = _parse_ncx(zf, names, opf_dir, item[0])
+            entries = _parse_ncx(zf, names, opf_dir, item[0], warnings)
 
     usable = [(t, lbl) for (t, lbl) in entries if lbl and lbl not in _BOILERPLATE_LABELS]
     if len(usable) < 2:
@@ -532,13 +553,16 @@ def _load_chapters(
     return chapter_map
 
 
-def _parse_nav(zf: zipfile.ZipFile, names: set[str], opf_dir: str, nav_href: str) -> list[tuple[str, str]]:
+def _parse_nav(
+    zf: zipfile.ZipFile, names: set[str], opf_dir: str, nav_href: str, warnings: list[str]
+) -> list[tuple[str, str]]:
     nav_entry = _resolve(opf_dir, nav_href)
     if nav_entry not in names:
         return []
     try:
         raw = _read_member(zf, nav_entry, Path(nav_entry))
-    except SetupError:
+    except (SetupError, *_OPTIONAL_MEMBER_ERRORS):
+        _warn_once(warnings, f"Skipped damaged navigation document '{nav_entry}'.")
         return []  # oversized nav → chapter labels fall back to spine index
     root = _parse_xml(raw)
     if root is None:
@@ -564,13 +588,16 @@ def _parse_nav(zf: zipfile.ZipFile, names: set[str], opf_dir: str, nav_href: str
     return out
 
 
-def _parse_ncx(zf: zipfile.ZipFile, names: set[str], opf_dir: str, ncx_href: str) -> list[tuple[str, str]]:
+def _parse_ncx(
+    zf: zipfile.ZipFile, names: set[str], opf_dir: str, ncx_href: str, warnings: list[str]
+) -> list[tuple[str, str]]:
     ncx_entry = _resolve(opf_dir, ncx_href)
     if ncx_entry not in names:
         return []
     try:
         raw = _read_member(zf, ncx_entry, Path(ncx_entry))
-    except SetupError:
+    except (SetupError, *_OPTIONAL_MEMBER_ERRORS):
+        _warn_once(warnings, f"Skipped damaged navigation document '{ncx_entry}'.")
         return []  # oversized NCX → chapter labels fall back to spine index
     root = _parse_xml(raw)
     if root is None:

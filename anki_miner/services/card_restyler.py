@@ -39,6 +39,7 @@ from typing import TYPE_CHECKING
 
 from anki_miner.services.definition_service import collect_dictionary_css_entries
 from anki_miner.services.dictionary.card_style_block import (
+    OWNED_STYLE_MARKER,
     UNSTAMPED_ENVELOPE_RE,
     base_css_variant,
     css_witnesses,
@@ -65,6 +66,7 @@ _CHUNK = 500
 # unstyled-dict style groups) so stamping and witnessing can never drift apart;
 # aliased here for the stamper and its tests.
 _ENVELOPE_RE = UNSTAMPED_ENVELOPE_RE
+_LEGACY_OWNED_STYLE_MARKER = ".yomitan-glossary{--am-muted: rgba(128,128,128,0.95);"
 
 
 def _stamp_styled_envelopes(value: str, dict_css: str) -> str:
@@ -98,9 +100,12 @@ def _stamp_styled_envelopes(value: str, dict_css: str) -> str:
 
     def _stamp(match: re.Match[str]) -> str:
         title = html.unescape(match.group(1))
-        key = f'[data-dictionary="{css_string_escape(title)}"]'
-        if key in value or key in dict_css:
-            return f'<li data-dictionary="{match.group(1)}" data-has-styles="">'
+        dict_id = html.unescape(match.group(2)) if match.group(2) is not None else None
+        keys = [f'[data-dictionary="{css_string_escape(title)}"]']
+        if dict_id is not None:
+            keys.append(f'[data-dictionary-id="{css_string_escape(dict_id)}"]')
+        if any(key in value or key in dict_css for key in keys):
+            return match.group(0)[:-1] + ' data-has-styles="">'
         return match.group(0)
 
     return _ENVELOPE_RE.sub(_stamp, value)
@@ -109,7 +114,7 @@ def _stamp_styled_envelopes(value: str, dict_css: str) -> str:
 _STYLE_SPAN_RE = re.compile(r"<style>(.*?)</style>", re.DOTALL)
 
 
-def _restyle_field(value: str, entries: list[tuple[str, str]], current_dict_css: str) -> str | None:
+def _restyle_field(value: str, entries: list[tuple[str, str, str]], current_dict_css: str) -> str | None:
     """Return the field's target value under the current styling, or ``None``
     when the field must be left untouched (malformed ``<style>`` structure).
 
@@ -149,10 +154,11 @@ def _restyle_field(value: str, entries: list[tuple[str, str]], current_dict_css:
     runs), and cross-field witnessing would diverge from mining's per-field
     blocks and rewrite fresh cards forever.
     """
-    ours = [m for m in _STYLE_SPAN_RE.finditer(value) if "ol[data-count]" in m.group(1)]
+    markers = (OWNED_STYLE_MARKER, _LEGACY_OWNED_STYLE_MARKER)
+    ours = [m for m in _STYLE_SPAN_RE.finditer(value) if m.group(1).startswith(markers)]
     if len(ours) > 1:
         return None  # two base blocks — hand-edited beyond repair, leave untouched
-    if not ours and "ol[data-count]" in value:
+    if not ours and any(marker in value for marker in markers):
         return None  # ownership token outside a well-formed <style> span — malformed
     if ours:
         match = ours[0]
@@ -243,7 +249,7 @@ def restyle_mined_cards(
         return RestyleResult(0, 0, 0, 0)
 
     entries = collect_dictionary_css_entries(config)
-    current_dict_css = "\n\n".join(css for _, css in entries)
+    current_dict_css = "\n\n".join(css for _, _, css in entries)
     # No empty-block guard needed: base_css_variant itself raises if a variant
     # ever loses the newline-free/ol[data-count] contract (fail-loud beats the
     # old silent every-run-restyle failure mode).

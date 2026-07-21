@@ -10,7 +10,7 @@ from PIL import Image
 
 from anki_miner.exceptions import SetupError
 from anki_miner.models.reading import ImageRef
-from anki_miner.services.reading.images import _MAX_EDGE, prepare_card_image
+from anki_miner.services.reading.images import _MAX_EDGE, ReadingImageMemberError, prepare_card_image
 from anki_miner.utils import pil_limits
 
 
@@ -106,6 +106,25 @@ def test_archive_materialization(tmp_path: Path) -> None:
         assert img.format == "JPEG"
         assert img.mode == "RGB"
         assert img.size == (200, 100)
+
+
+def test_member_fault_normalized_but_memory_error_propagates(tmp_path: Path, monkeypatch) -> None:
+    page = _make_image(tmp_path / "page.png", (50, 50))
+    archive = _zip_with(tmp_path / "vol.cbz", {"page01.png": page})
+
+    def _not_implemented(*_args, **_kwargs):
+        raise NotImplementedError
+
+    monkeypatch.setattr(zipfile.ZipFile, "open", _not_implemented)
+    with pytest.raises(ReadingImageMemberError):
+        prepare_card_image(ImageRef(archive, "page01.png"), tmp_path / "out")
+
+    def _memory_error(*_args, **_kwargs):
+        raise MemoryError
+
+    monkeypatch.setattr(zipfile.ZipFile, "open", _memory_error)
+    with pytest.raises(MemoryError):
+        prepare_card_image(ImageRef(archive, "page01.png"), tmp_path / "out")
 
 
 def test_validate_zip_safe_invoked(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -27,6 +27,18 @@ def _seed_db(db_path: Path, rows: list[DictRow], schema_version: int = SCHEMA_VE
 
 
 class TestIndexedDictProvider:
+    def test_blob_styles_css_degrades_to_no_dictionary_css(self, tmp_path: Path):
+        db = tmp_path / "test.sqlite"
+        _seed_db(db, [DictRow(term="猫", reading="ねこ", content="cat", sequence=1)])
+        with sqlite3.connect(db) as conn:
+            conn.execute("INSERT INTO meta (key, value) VALUES ('styles_css', ?)", (sqlite3.Binary(b"broken"),))
+
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+
+        assert provider.load() is True
+        assert provider.dictionary_css == ""
+        provider.close()
+
     def test_single_hit_single_sense_composes_lapis_shape(self, tmp_path: Path):
         db = tmp_path / "test.sqlite"
         _seed_db(
@@ -51,7 +63,7 @@ class TestIndexedDictProvider:
         assert result is not None
         assert '<div class="yomitan-glossary">' in result
         assert '<ol data-count="1">' in result
-        assert '<li data-dictionary="DictName">' in result
+        assert '<li data-dictionary="DictName" data-dictionary-id="test-dict">' in result
         assert '<ul class="gloss-list" data-count="1">' in result
         assert "<i>(v1, expr, DictName)</i>" in result
         assert '<li class="gloss-item">eat</li>' in result
@@ -807,7 +819,9 @@ class TestDictionaryCss:
         assert provider.load() is True
         # Scoped CSS exposed bare (no <style> wrapper), scoped to the dict.
         assert provider.dictionary_css == (
-            '.yomitan-glossary [data-dictionary="Jitendex.org [2026-06-06]"] ' 'span[data-sc-class="tag"] {color: red}'
+            '.yomitan-glossary [data-dictionary-id="jitendex"] span[data-sc-class="tag"], '
+            '.yomitan-glossary [data-dictionary="Jitendex.org [2026-06-06]"]'
+            ':not([data-dictionary-id]) span[data-sc-class="tag"] {color: red}'
         )
         out = provider.lookup("食べる")
         assert out is not None
@@ -862,7 +876,9 @@ class TestHasStylesStamp:
         assert provider.load() is True
         out = provider.lookup("食べる")
         assert out is not None
-        assert '<li data-dictionary="Jitendex.org [2026-06-06]" data-has-styles="">' in out
+        assert (
+            '<li data-dictionary="Jitendex.org [2026-06-06]" data-dictionary-id="jitendex" data-has-styles="">' in out
+        )
 
     def test_unstamped_without_styles_css(self, tmp_path: Path):
         db = tmp_path / "t.sqlite"
@@ -871,7 +887,7 @@ class TestHasStylesStamp:
         assert provider.load() is True
         out = provider.lookup("食べる")
         assert out is not None
-        assert '<li data-dictionary="Jitendex.org [2026-06-06]">' in out
+        assert '<li data-dictionary="Jitendex.org [2026-06-06]" data-dictionary-id="jitendex">' in out
         assert "data-has-styles" not in out
 
     def test_unstamped_when_sanitizer_rejects_styles_css(self, tmp_path: Path):
@@ -881,7 +897,7 @@ class TestHasStylesStamp:
         assert provider.load() is True
         out = provider.lookup("食べる")
         assert out is not None
-        assert '<li data-dictionary="Jitendex.org [2026-06-06]">' in out
+        assert '<li data-dictionary="Jitendex.org [2026-06-06]" data-dictionary-id="jitendex">' in out
         assert "data-has-styles" not in out
 
     def test_mixed_field_stamps_exactly_the_styled_envelope(self, tmp_path: Path):
@@ -894,8 +910,8 @@ class TestHasStylesStamp:
         assert styled.load() is True
         assert plain.load() is True
         field = (styled.lookup("食べる") or "") + (plain.lookup("食べる") or "")
-        assert '<li data-dictionary="Styled Dict" data-has-styles="">' in field
-        assert '<li data-dictionary="Plain Dict">' in field
+        assert '<li data-dictionary="Styled Dict" data-dictionary-id="styled" data-has-styles="">' in field
+        assert '<li data-dictionary="Plain Dict" data-dictionary-id="plain">' in field
         assert field.count("data-has-styles") == 1
 
 

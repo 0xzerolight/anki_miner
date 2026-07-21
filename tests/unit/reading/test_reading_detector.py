@@ -377,6 +377,14 @@ def test_mokuro_unknown_keys_accepted(tmp_path):
     assert refs[0].volume == "Vol1"
 
 
+def test_mokuro_pages_must_be_an_array(tmp_path):
+    mok = tmp_path / "Vol1.mokuro"
+    _write_mokuro(mok, extra={"pages": {"bad": "container"}})
+
+    with pytest.raises(SetupError, match="pages.*array"):
+        detector.detect(mok)
+
+
 def test_mokuro_invalid_json_errors(tmp_path):
     mok = tmp_path / "Vol1.mokuro"
     mok.write_text("{not valid json", encoding="utf-8")

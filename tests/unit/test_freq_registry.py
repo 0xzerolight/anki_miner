@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig, FreqEntry
@@ -44,6 +45,23 @@ def test_is_categorical_round_trips(tmp_path: Path):
     meta = reg.get("jlpt")
     assert meta is not None
     assert meta.is_categorical is True
+
+
+def test_null_sqlite_scalars_degrade_to_defaults(tmp_path: Path):
+    _build_source(tmp_path, "broken-meta", [("猫", "ねこ", 1)])
+    db = tmp_path / "broken-meta" / "index.sqlite"
+    with sqlite3.connect(db) as conn:
+        conn.execute("UPDATE meta SET value = NULL WHERE key IN ('schema_version', 'entry_count', 'source_name')")
+    (db.parent / "meta.json").unlink()
+
+    reg = FrequencySourceRegistry(tmp_path)
+    reg.load()
+
+    meta = reg.get("broken-meta")
+    assert meta is not None
+    assert meta.entry_count == 0
+    assert meta.source_name == "broken-meta"
+    assert meta.schema_ok is False
 
 
 def test_is_categorical_zero_reads_false(tmp_path: Path):

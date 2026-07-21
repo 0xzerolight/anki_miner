@@ -7,6 +7,7 @@ real zip bytes with no on-disk sample files.
 
 from __future__ import annotations
 
+import lzma
 import zipfile
 from pathlib import Path
 
@@ -593,6 +594,60 @@ def test_oversized_spine_member_skipped_with_warning(tmp_path: Path, monkeypatch
     texts = [u.text for u in doc.units]
     assert "短い文です。" in texts
     assert not any("あああ" in t for t in texts)
+
+
+@pytest.mark.parametrize("error", [zipfile.BadZipFile("bad CRC"), lzma.LZMAError("bad stream")])
+def test_damaged_epub_member_skipped_book_still_usable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, error: Exception
+) -> None:
+    from anki_miner.services.reading import epub_source
+
+    path = _build_epub(tmp_path, _two_chapter_files("壊れた章です。", "読める章です。"))
+    real_read_member = epub_source._read_member
+
+    def _read_with_damaged_member(zf, entry, epub_path):
+        if entry == "OEBPS/ch1.xhtml":
+            raise error
+        return real_read_member(zf, entry, epub_path)
+
+    monkeypatch.setattr(epub_source, "_read_member", _read_with_damaged_member)
+
+    doc = load(_ref(path))
+
+    assert [unit.text for unit in doc.units] == ["読める章です。"]
+    assert len([warning for warning in doc.warnings if "ch1.xhtml" in warning]) == 1
+
+
+def test_distinct_damaged_members_with_same_basename_each_warn_once(tmp_path: Path, monkeypatch) -> None:
+    from anki_miner.services.reading import epub_source
+
+    files = {
+        "OEBPS/content.opf": _opf(
+            [
+                ("c1", "a/ch.xhtml", "application/xhtml+xml", ""),
+                ("c2", "b/ch.xhtml", "application/xhtml+xml", ""),
+                ("c3", "good.xhtml", "application/xhtml+xml", ""),
+            ],
+            [("c1", None), ("c2", None), ("c3", None)],
+        ),
+        "OEBPS/a/ch.xhtml": _xhtml("<p>壊れた一章です。</p>"),
+        "OEBPS/b/ch.xhtml": _xhtml("<p>壊れた二章です。</p>"),
+        "OEBPS/good.xhtml": _xhtml("<p>読める章です。</p>"),
+    }
+    path = _build_epub(tmp_path, files)
+    real_read_member = epub_source._read_member
+
+    def _read_with_damaged_members(zf, entry, epub_path):
+        if entry in {"OEBPS/a/ch.xhtml", "OEBPS/b/ch.xhtml"}:
+            raise zipfile.BadZipFile("bad CRC")
+        return real_read_member(zf, entry, epub_path)
+
+    monkeypatch.setattr(epub_source, "_read_member", _read_with_damaged_members)
+
+    doc = load(_ref(path))
+
+    assert [unit.text for unit in doc.units] == ["読める章です。"]
+    assert len([warning for warning in doc.warnings if "ch.xhtml" in warning]) == 2
 
 
 def test_oversized_opf_raises_setup_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

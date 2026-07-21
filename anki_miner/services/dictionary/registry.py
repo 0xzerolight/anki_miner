@@ -44,20 +44,24 @@ class DictionaryRegistry:
         )
 
     def _parse_meta(self, child: Path, db: Path, meta: dict[str, str]) -> DictMeta:
+        source_name = meta.get("source_name")
+        format_name = meta.get("format")
+        raw_version = meta.get("schema_version")
+        raw_count = meta.get("entry_count")
         try:
-            version = int(meta.get("schema_version", "0"))
-        except ValueError:
+            version = int(raw_version) if isinstance(raw_version, str) else 0
+        except (TypeError, ValueError):
             version = 0
         try:
-            count = int(meta.get("entry_count", "0"))
-        except ValueError:
+            count = int(raw_count) if isinstance(raw_count, str) else 0
+        except (TypeError, ValueError):
             count = 0
         # schema_ok policy: dictionaries require an exact-version match — a
         # mismatch is dropped from the chain and gated for reimport.
         return DictMeta(
             dict_id=child.name,
-            source_name=meta.get("source_name", child.name),
-            format=meta.get("format", "unknown"),
+            source_name=source_name if isinstance(source_name, str) else child.name,
+            format=format_name if isinstance(format_name, str) else "unknown",
             entry_count=count,
             schema_ok=(version == SCHEMA_VERSION),
             db_path=db,

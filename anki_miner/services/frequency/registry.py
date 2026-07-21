@@ -67,18 +67,22 @@ class FrequencySourceRegistry:
         )
 
     def _parse_meta(self, child: Path, db: Path, meta: dict[str, str]) -> FreqSourceMeta:
+        source_name = meta.get("source_name")
+        format_name = meta.get("format")
+        raw_version = meta.get("schema_version")
+        raw_count = meta.get("entry_count")
         try:
-            version = int(meta.get("schema_version", "0"))
-        except ValueError:
+            version = int(raw_version) if isinstance(raw_version, str) else 0
+        except (TypeError, ValueError):
             version = 0
         try:
-            count = int(meta.get("entry_count", "0"))
-        except ValueError:
+            count = int(raw_count) if isinstance(raw_count, str) else 0
+        except (TypeError, ValueError):
             count = 0
         return FreqSourceMeta(
             source_id=child.name,
-            source_name=meta.get("source_name", child.name),
-            format=meta.get("format", "unknown"),
+            source_name=source_name if isinstance(source_name, str) else child.name,
+            format=format_name if isinstance(format_name, str) else "unknown",
             entry_count=count,
             # schema_ok policy: additive-only migrations, so every version from
             # 1..current is readable (older = fewer columns, filled as absent by
