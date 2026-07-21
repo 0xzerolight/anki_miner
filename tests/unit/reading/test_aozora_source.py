@@ -80,6 +80,10 @@ def test_gaiji_u_plus_form():
     assert _gaiji_char("「…」、U+6F60、…") == chr(0x6F60)
 
 
+def test_surrogate_gaiji_becomes_geta():
+    assert _gaiji_char("U+D800") == "〓"
+
+
 def test_gaiji_unresolvable_becomes_geta():
     assert _gaiji_char("「変な記号」") == "〓"
 

@@ -11,7 +11,7 @@ from typing import Callable
 
 from anki_miner.exceptions import SetupError
 from anki_miner.services._staging import promote_staged_dir
-from anki_miner.services.audio_packs.formats import PARSERS, detect_pack_format
+from anki_miner.services.audio_packs.formats import PARSERS, detect_pack_format, parse_ozk5
 from anki_miner.services.audio_packs.storage import (
     SCHEMA_VERSION,
     bulk_insert,
@@ -57,6 +57,7 @@ class AudioPackImportResult:
     source_name: str  # source string stored in entries rows
     format: str  # "ajt" | "ozk5" | "nhk16" | "forvo" | "jpod_legacy"
     entry_count: int
+    skipped_malformed: int = 0
 
 
 def import_audio_pack(
@@ -129,12 +130,30 @@ def import_audio_pack(
             progress(f"Parsing {fmt} pack …")
 
         parser = PARSERS[fmt]
+        parser_skipped = 0
+        storage_skipped = 0
+
+        def _record_parser_malformed(count: int) -> None:
+            nonlocal parser_skipped
+            parser_skipped = count
+
+        def _record_storage_malformed(count: int) -> None:
+            nonlocal storage_skipped
+            storage_skipped = count
+
+        rows = (
+            parse_ozk5(pack_dir, source_name, on_malformed=_record_parser_malformed)
+            if fmt == "ozk5"
+            else parser(pack_dir, source_name)
+        )
+
         total_entries = bulk_insert(
             db_path,
             _rows_with_cancel(
-                parser(pack_dir, source_name),
+                rows,
                 cancel_check,
             ),
+            on_malformed=_record_storage_malformed,
         )
 
         if cancel_check and cancel_check():
@@ -176,6 +195,7 @@ def import_audio_pack(
         source_name=source_name,
         format=fmt,
         entry_count=total_entries,
+        skipped_malformed=parser_skipped + storage_skipped,
     )
 
 

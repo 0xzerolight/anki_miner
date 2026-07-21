@@ -7,7 +7,7 @@ import time
 from anki_miner.services.dictionary.dict_css_scope import scope_dict_css
 
 TITLE = "Jitendex.org [2026-06-06]"
-SCOPE = '.yomitan-glossary [data-dictionary="Jitendex.org [2026-06-06]"]'
+SCOPE = '.yomitan-glossary [data-dictionary-id="Jitendex.org [2026-06-06]"]'
 
 
 def test_empty_input_returns_empty():
@@ -33,7 +33,7 @@ def test_comma_inside_parens_not_split():
 
 def test_title_quotes_and_backslash_escaped():
     out = scope_dict_css("p { color: red }", 'Weird "Dict" \\ name')
-    assert out.startswith('.yomitan-glossary [data-dictionary="Weird \\"Dict\\" \\\\ name"] p')
+    assert out.startswith('.yomitan-glossary [data-dictionary-id="Weird \\"Dict\\" \\\\ name"] p')
 
 
 def test_title_angle_brackets_stripped():
@@ -71,6 +71,20 @@ def test_url_rule_dropped():
     assert f"{SCOPE} a {{color: red}}" in out
     assert "url(" not in out
     assert "evil" not in out
+
+
+def test_escaped_url_denied():
+    css = r"a { color: red } b { background: \75 rl(https://evil.example/x.png) }"
+    out = scope_dict_css(css, TITLE)
+    assert f"{SCOPE} a {{color: red}}" in out
+    assert "evil.example" not in out
+
+
+def test_escaped_line_continuation_url_denied():
+    css = "a { color: red } b { background: u\\\nrl(https://evil.example/x.png) }"
+    out = scope_dict_css(css, TITLE)
+    assert f"{SCOPE} a {{color: red}}" in out
+    assert "evil.example" not in out
 
 
 def test_import_at_rule_dropped():

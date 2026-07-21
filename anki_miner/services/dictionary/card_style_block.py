@@ -101,6 +101,7 @@ def _minify_css(css: str) -> str:
 # ---------------------------------------------------------------------------
 
 ALL_GROUPS = frozenset({"unstyled-chrome", "sc-gapfill", "images", "tables"})
+OWNED_STYLE_MARKER = ".yomitan-glossary{--anki-miner-owned-style: 1;"
 
 _GROUP_MARKER_RE = re.compile(r"/\*\s*@am-group:\s*([a-z-]+)\s*\*/|/\*\s*@am-endgroup\s*\*/")
 
@@ -112,7 +113,7 @@ _GROUP_MARKER_RE = re.compile(r"/\*\s*@am-group:\s*([a-z-]+)\s*\*/|/\*\s*@am-end
 # card_restyler imports this for legacy-envelope stamping; it lives here so the
 # witness and the stamper cannot drift apart (and card_restyler already imports
 # this module, so the dependency points this way).
-UNSTAMPED_ENVELOPE_RE = re.compile(r'<li data-dictionary="([^"]*)">')
+UNSTAMPED_ENVELOPE_RE = re.compile(r'<li data-dictionary="([^"]*)"(?: data-dictionary-id="([^"]*)")?>')
 
 
 def split_group_regions(css: str) -> list[tuple[str, str]]:
@@ -168,7 +169,7 @@ def base_css_variant(groups: frozenset[str]) -> str:
     if unknown:
         raise ValueError(f"unknown style groups: {sorted(unknown)}")
     css = "".join(m for g, m in _minified_regions() if g == "core" or g in groups)
-    if "\n" in css or "ol[data-count]" not in css:
+    if "\n" in css or "ol[data-count]" not in css or not css.startswith(OWNED_STYLE_MARKER):
         raise ValueError("base variant broke the newline-free/ol[data-count] contract")
     return css
 
@@ -291,6 +292,7 @@ def build_card_style_block(*, dict_css: str, card_html: str) -> str:
 # ``<style>``, but such CSS only exists on cards whose envelope is present too,
 # and an extra scoped sheet is inert (its selectors match nothing).
 _ENVELOPE_TITLE_RE = re.compile(r'data-dictionary="([^"]*)"')
+_ENVELOPE_ID_RE = re.compile(r'data-dictionary-id="([^"]*)"')
 
 # The miner-markup fingerprint a field must carry before any styling attaches.
 # Same probe the restyler uses to recognize miner fields; a field without it
@@ -314,8 +316,9 @@ def filter_dict_css_entries(field_html: str, entries: Iterable[tuple[str, str]])
     forbidden outcome (Issue #93 discipline: filtering may only trim bytes,
     never styles).
     """
-    titles = {html_lib.unescape(title) for title in _ENVELOPE_TITLE_RE.findall(field_html)}
-    return "\n\n".join(css for name, css in entries if name in titles)
+    ids = {html_lib.unescape(dict_id) for dict_id in _ENVELOPE_ID_RE.findall(field_html)}
+    legacy_titles = {html_lib.unescape(title) for title in _ENVELOPE_TITLE_RE.findall(field_html)}
+    return "\n\n".join(css for dict_id, css in entries if dict_id in ids or dict_id in legacy_titles)
 
 
 def attach_card_style_block(field_html: str, *, dict_css_entries: Iterable[tuple[str, str]]) -> str:

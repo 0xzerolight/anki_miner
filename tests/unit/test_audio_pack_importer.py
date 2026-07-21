@@ -99,6 +99,32 @@ def _make_jpod_pack(directory: Path, n_entries: int = 2) -> Path:
 
 
 class TestImportHappyPath:
+    def test_malformed_nested_records_skipped_import_still_usable(self, tmp_path: Path):
+        pack = tmp_path / "ozk5_files"
+        media = pack / "media"
+        media.mkdir(parents=True)
+        (media / "good.aac").touch()
+        (pack / "index.json").write_text(
+            json.dumps(
+                {
+                    "entries": [
+                        {"kanji": ["犬"], "kana": "いぬ", "audio_file": "good.aac"},
+                        {"kanji": "鳥", "kana": "とり", "audio_file": {"bad": "path"}},
+                        {"kanji": 0, "kana": "偽", "audio_file": "good.aac"},
+                        {"kanji": "偽", "kana": False, "audio_file": "good.aac"},
+                        {"kanji": "猫", "kana": "ねこ", "audio_file": "good.aac"},
+                    ],
+                    "kana_index": {},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        result = import_audio_pack(pack, tmp_path / "out")
+
+        assert result.entry_count == 2
+        assert result.skipped_malformed == 4
+
     def test_ajt_import(self, tmp_path: Path):
         pack = _make_ajt_pack(tmp_path / "my_pack")
         dest = tmp_path / "out"

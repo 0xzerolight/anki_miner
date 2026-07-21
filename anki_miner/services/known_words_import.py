@@ -76,6 +76,7 @@ class KnownWordsImportResult:
     format_key: str
     words: frozenset[str]
     total_entries: int
+    skipped_malformed: int = 0
 
 
 def parse_known_words_file(path: Path) -> KnownWordsImportResult:
@@ -106,13 +107,14 @@ def parse_known_words_file(path: Path) -> KnownWordsImportResult:
     return _parse_json(data)
 
 
-def _result(format_key: str, words: set[str], total: int) -> KnownWordsImportResult:
+def _result(format_key: str, words: set[str], total: int, skipped_malformed: int = 0) -> KnownWordsImportResult:
     if not words:
         raise KnownWordsImportError("no_known_words", format_key=format_key)
     return KnownWordsImportResult(
         format_key=format_key,
         words=frozenset(words),
         total_entries=total,
+        skipped_malformed=skipped_malformed,
     )
 
 
@@ -145,17 +147,35 @@ def _parse_json(data: Any) -> KnownWordsImportResult:
 def _parse_jpdb(cards: list[Any]) -> KnownWordsImportResult:
     words: set[str] = set()
     total = 0
+    skipped_malformed = 0
     for card in cards:
         if not isinstance(card, dict) or not _clean(card.get("spelling")):
+            skipped_malformed += 1
             continue
         total += 1
-        reviews = [r for r in card.get("reviews") or [] if isinstance(r, dict) and "grade" in r]
+        raw_reviews = card.get("reviews")
+        if raw_reviews is None:
+            raw_reviews = []
+        if not isinstance(raw_reviews, list):
+            skipped_malformed += 1
+            continue
+        reviews = []
+        for review in raw_reviews:
+            if not isinstance(review, dict) or "grade" not in review:
+                skipped_malformed += 1
+                continue
+            try:
+                hash(review["grade"])
+            except TypeError:
+                skipped_malformed += 1
+                continue
+            reviews.append(review)
         if not reviews:
             continue
         latest = max(reviews, key=_review_timestamp)
         if latest["grade"] not in _JPDB_EXCLUDED_GRADES:
             words.add(_clean(card["spelling"]))
-    return _result("jpdb", words, total)
+    return _result("jpdb", words, total, skipped_malformed)
 
 
 # ----------------------------------------------------------------------

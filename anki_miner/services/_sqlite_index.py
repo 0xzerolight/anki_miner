@@ -80,7 +80,11 @@ def read_meta(db_path: Path) -> dict[str, str]:
         return {}
     conn = sqlite3.connect(db_path)
     try:
-        return {row[0]: row[1] for row in conn.execute("SELECT key, value FROM meta")}
+        return {
+            key: value
+            for key, value in conn.execute("SELECT key, value FROM meta")
+            if isinstance(key, str) and isinstance(value, str)
+        }
     finally:
         conn.close()
 
@@ -109,9 +113,9 @@ def read_meta_cached(
     try:
         if sidecar.is_file() and sidecar.stat().st_mtime >= db_path.stat().st_mtime:
             data = json.loads(sidecar.read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                return {str(k): str(v) for k, v in data.items()}
-    except (OSError, json.JSONDecodeError) as e:
+            if isinstance(data, dict) and all(isinstance(k, str) and isinstance(v, str) for k, v in data.items()):
+                return data
+    except (OSError, UnicodeError, json.JSONDecodeError, RecursionError) as e:
         logger.debug("meta sidecar miss for %s: %s", db_path, e)
 
     meta = read_meta_fn(db_path)
@@ -125,7 +129,7 @@ def write_meta_sidecar(db_path: Path, meta: dict[str, str], *, sidecar_name: str
     sidecar = db_path.parent / sidecar_name
     try:
         sidecar.write_text(json.dumps(meta), encoding="utf-8")
-    except OSError as e:  # pragma: no cover - defensive
+    except (OSError, TypeError, ValueError, RecursionError) as e:  # pragma: no cover - defensive
         logger.debug("Failed to write meta sidecar %s: %s", sidecar, e)
 
 

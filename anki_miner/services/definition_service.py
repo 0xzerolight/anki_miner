@@ -64,7 +64,9 @@ def collect_dictionary_css_entries(config: AnkiMinerConfig) -> list[tuple[str, s
                 with contextlib.suppress(Exception):
                     closer()
         if css and css.strip():
-            entries.append((provider.name, css.strip()))
+            dict_id = getattr(provider, "dict_id", None)
+            if isinstance(dict_id, str):
+                entries.append((dict_id, css.strip()))
     return entries
 
 

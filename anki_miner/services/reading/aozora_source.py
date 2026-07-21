@@ -59,7 +59,10 @@ def _gaiji_char(control: str) -> str:
     m = _UPLUS_RE.search(norm)
     if m:
         try:
-            return chr(int(m.group(1), 16))
+            codepoint = int(m.group(1), 16)
+            if 0xD800 <= codepoint <= 0xDFFF:
+                return _GETA
+            return chr(codepoint)
         except (ValueError, OverflowError):
             return _GETA
     triples = _MENKUTEN_RE.findall(norm)

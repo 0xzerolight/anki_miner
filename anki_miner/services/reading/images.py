@@ -12,10 +12,12 @@ can never influence the written path.
 from __future__ import annotations
 
 import hashlib
+import lzma
 import zipfile
+import zlib
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 from anki_miner.models.reading import ImageRef
 from anki_miner.services.dictionary.zip_safety import validate_zip_safe
@@ -28,6 +30,27 @@ apply_pil_image_limits()
 # Long-edge cap for a card image. Larger pages/covers are downscaled (never
 # upscaled) before JPEG encode to keep Anki media small.
 _MAX_EDGE = 1280
+_MEMBER_ERRORS = (
+    KeyError,
+    zipfile.BadZipFile,
+    RuntimeError,
+    NotImplementedError,
+    OSError,
+    EOFError,
+    SyntaxError,
+    zlib.error,
+    lzma.LZMAError,
+    UnidentifiedImageError,
+    Image.DecompressionBombError,
+)
+
+
+class ReadingImageArchiveError(OSError):
+    """The image archive itself cannot be opened."""
+
+
+class ReadingImageMemberError(OSError):
+    """One optional image member cannot be read or decoded."""
 
 
 def prepare_card_image(ref: ImageRef, dest_dir: Path) -> Path:
@@ -47,13 +70,23 @@ def prepare_card_image(ref: ImageRef, dest_dir: Path) -> Path:
         return out_path
 
     if ref.entry is None:
-        with Image.open(ref.source) as img:
-            _encode_jpeg(img, out_path)
-    else:
-        with zipfile.ZipFile(ref.source) as zf:
-            validate_zip_safe(zf, dest_dir)
-            with zf.open(ref.entry) as member, Image.open(member) as img:
+        try:
+            with Image.open(ref.source) as img:
                 _encode_jpeg(img, out_path)
+        except _MEMBER_ERRORS as exc:
+            raise ReadingImageMemberError(str(exc)) from exc
+    else:
+        try:
+            zf = zipfile.ZipFile(ref.source)
+        except (OSError, zipfile.BadZipFile) as exc:
+            raise ReadingImageArchiveError(str(exc)) from exc
+        with zf:
+            validate_zip_safe(zf, dest_dir)
+            try:
+                with zf.open(ref.entry) as member, Image.open(member) as img:
+                    _encode_jpeg(img, out_path)
+            except _MEMBER_ERRORS as exc:
+                raise ReadingImageMemberError(str(exc)) from exc
     return out_path
 
 

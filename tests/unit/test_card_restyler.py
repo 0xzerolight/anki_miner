@@ -18,6 +18,7 @@ from anki_miner.config import create_default_config
 from anki_miner.services import card_restyler
 from anki_miner.services.card_restyler import RestyleResult, restyle_mined_cards
 from anki_miner.services.dictionary.card_style_block import (
+    OWNED_STYLE_MARKER,
     attach_card_style_block,
     base_css_variant,
     css_witnesses,
@@ -27,6 +28,10 @@ from anki_miner.services.dictionary.card_style_block import (
 def _variant_for(html: str) -> str:
     """The tree-shaken base head the restyler must embed for this (stamped) HTML."""
     return base_css_variant(css_witnesses([html]))
+
+
+def _owned(css: str) -> str:
+    return OWNED_STYLE_MARKER + "}" + css
 
 
 # A miner card mined bare (markup, no <style>).
@@ -43,7 +48,7 @@ DICT_STYLED = (
 # A genuine Yomitan export: yomitan-glossary wrapper but NO data-count.
 YOMITAN_EXPORT = '<div class="yomitan-glossary"><ol><li>x</li></ol></div>'
 # A v2.7.8+ single-carrier card: LEADING base sheet (ol[data-count] selector).
-LEGACY_LEADING = "<style>.yomitan-glossary ol[data-count]{margin:0}</style>" + BARE
+LEGACY_LEADING = f"<style>{_owned('.yomitan-glossary ol[data-count]{margin:0}')}</style>" + BARE
 
 
 def _cfg(**over):
@@ -71,6 +76,15 @@ def _no_disk_io(monkeypatch):
 
 
 class TestRestyleMinedCards:
+    def test_owned_style_marker_is_exact(self):
+        third_party = "<style>.vendor ol[data-count]{color:red}\n.keep{display:block}</style>"
+        value = third_party + BARE
+
+        out = card_restyler._restyle_field(value, [], "")
+
+        assert out is not None
+        assert third_party in out
+
     def test_partial_update_counts_failed_and_preserves_counter_sum(self):
         svc = _svc([_note(1, BARE), _note(2, BARE)])
         svc.update_notes_fields.side_effect = None
@@ -140,7 +154,7 @@ class TestRestyleMinedCards:
         # X is stamped the card has no unstamped envelope, so the head shrinks
         # to the CORE-ONLY variant.
         tail = '.yomitan-glossary [data-dictionary="X"]{color:red}'
-        stale = f"<style>STALE ol[data-count]{{}}\n{tail}</style>{BARE}"
+        stale = f"<style>{_owned('STALE ol[data-count]{}')}\n{tail}</style>{BARE}"
         svc = _svc([_note(1, stale)])
         result = restyle_mined_cards(svc, _cfg())
         assert result.restyled == 1
@@ -155,7 +169,7 @@ class TestRestyleMinedCards:
         # would see run 1's output stamped, pick a smaller variant, and rewrite
         # forever.
         tail = '.yomitan-glossary [data-dictionary="X"]{color:red}'
-        stale = f"<style>STALE ol[data-count]{{}}\n{tail}</style>{BARE}"
+        stale = f"<style>{_owned('STALE ol[data-count]{}')}\n{tail}</style>{BARE}"
         svc = _svc([_note(1, stale)])
         restyle_mined_cards(svc, _cfg())
         (updates,), _ = svc.update_notes_fields.call_args
@@ -288,7 +302,7 @@ class TestRestyleMinedCards:
         # CSS holds the ol[data-count] token) is replaced/moved; the per-dict
         # block survives verbatim in the body.
         v = (
-            "<style>STALE ol[data-count]{}</style>"
+            f"<style>{_owned('STALE ol[data-count]{}')}</style>"
             '<div class="yomitan-glossary"><style>.legacy{}</style>'
             '<ol data-count="1"><li data-dictionary="X">x</li></ol></div>'
         )
@@ -306,7 +320,7 @@ class TestRestyleMinedCards:
     def test_unclosed_our_style_left_untouched(self):
         # Ownership token present but no matching </style> — malformed,
         # leave untouched (skipped, never corrupts).
-        v = BARE + "<style>ol[data-count]{}"
+        v = BARE + f"<style>{_owned('ol[data-count]{}')}"
         svc = _svc([_note(1, v)])
         result = restyle_mined_cards(svc, _cfg())
         assert result.restyled == 0
@@ -316,7 +330,7 @@ class TestRestyleMinedCards:
     def test_two_base_blocks_left_untouched(self):
         # Two blocks both carrying the ownership token — hand-edited beyond
         # repair; refuse rather than guess.
-        v = "<style>A ol[data-count]{}</style><style>B ol[data-count]{}</style>" + BARE
+        v = f"<style>{_owned('A ol[data-count]{}')}</style><style>{_owned('B ol[data-count]{}')}</style>" + BARE
         svc = _svc([_note(1, v)])
         result = restyle_mined_cards(svc, _cfg())
         assert result.restyled == 0
@@ -389,7 +403,7 @@ class TestRestyleMinedCards:
             _note(1, BARE),
             _note(2, DICT_STYLED),
             _note(3, LEGACY_LEADING),
-            _note(4, f"<style>STALE ol[data-count]{{}}\n{tail}</style>{BARE}"),
+            _note(4, f"<style>{_owned('STALE ol[data-count]{}')}\n{tail}</style>{BARE}"),
         ]
         svc = _svc(notes)
         restyle_mined_cards(svc, _cfg())
@@ -448,15 +462,15 @@ class TestRestyleField:
         return card_restyler._restyle_field(value, list(entries), current_dict_css)
 
     def test_unclosed_our_style_returns_none(self):
-        assert self._restyle(BARE + "<style>ol[data-count]{}") is None
+        assert self._restyle(BARE + f"<style>{_owned('ol[data-count]{}')}") is None
 
     def test_two_base_blocks_returns_none(self):
-        v = "<style>A ol[data-count]{}</style><style>B ol[data-count]{}</style>" + BARE
+        v = f"<style>{_owned('A ol[data-count]{}')}</style><style>{_owned('B ol[data-count]{}')}</style>" + BARE
         assert self._restyle(v) is None
 
     def test_leading_migrates_to_tail_preserving_multiline_dict_tail(self):
         tail = ".dictA{}\n.dictB{}"
-        v = f"<style>OLD ol[data-count]{{}}\n{tail}</style><div>body</div>"
+        v = f"<style>{_owned('OLD ol[data-count]{}')}\n{tail}</style><div>body</div>"
         out = self._restyle(v)
         # Body preserved byte-for-byte (no envelope → nothing to stamp), block
         # at the tail with a freshly computed base + the verbatim dict tail.
@@ -471,7 +485,7 @@ class TestRestyleField:
         # stamps from the card's OWN carried CSS — entries/current config are
         # NOT consulted on the extract path.
         tail = '.yomitan-glossary [data-dictionary="X"]{color:red}'
-        v = f"<style>OLD ol[data-count]{{}}\n{tail}</style>{BARE}"
+        v = f"<style>{_owned('OLD ol[data-count]{}')}\n{tail}</style>{BARE}"
         out = self._restyle(v, entries=[("Y", ".y{}")], current_dict_css=".y{}")
         assert out == f"{BARE_STAMPED}<style>{base_css_variant(frozenset())}\n{tail}</style>"
         assert ".y{}" not in out  # carried CSS only, never re-collected
@@ -556,11 +570,11 @@ class TestLegacyEnvelopeStamping:
         # scope_dict_css from the same display name.
         import html
 
-        from anki_miner.services.dictionary.dict_css_scope import scope_dict_css
+        from anki_miner.services.dictionary.dict_css_scope import css_string_escape
 
         for name in ("A&B Dictionary", 'The "Big" Dictionary'):
             attr = html.escape(name, quote=True)
-            scoped = scope_dict_css("li { color: red }", name)
+            scoped = f'.yomitan-glossary [data-dictionary="{css_string_escape(name)}"] li {{ color: red }}'
             value = (
                 f'<div class="yomitan-glossary"><style>{scoped}</style>'
                 f'<ol data-count="1"><li data-dictionary="{attr}">x</li></ol></div>'

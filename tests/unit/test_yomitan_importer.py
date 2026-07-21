@@ -9,6 +9,7 @@ from anki_miner.services.dictionary.importers.yomitan_importer import (
     YomitanImportResult,
     derive_dict_id_from_zip,
     import_yomitan_zip,
+    read_yomitan_title,
 )
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, open_readonly, read_meta
@@ -115,6 +116,17 @@ class TestImportYomitanZip:
     def test_rejects_old_format_version(self, tmp_path: Path):
         zip_path = build_yomitan_zip(tmp_path / "src" / "old.zip", format_version=2)
         with pytest.raises(SetupError, match="Unsupported Yomitan format"):
+            import_yomitan_zip(zip_path, tmp_path / "dicts")
+
+    def test_malformed_index_raises_setup_error(self, tmp_path: Path):
+        import zipfile
+
+        zip_path = tmp_path / "bad-index.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("index.json", "[]")
+            zf.writestr("term_bank_1.json", "[]")
+
+        with pytest.raises(SetupError, match=r"index\.json.*object"):
             import_yomitan_zip(zip_path, tmp_path / "dicts")
 
     def test_rejects_missing_index_json(self, tmp_path: Path):
@@ -583,6 +595,17 @@ class TestDeriveDictIdFromZip:
             zf.writestr("index.json", json.dumps({"title": "", "revision": "v1", "format": 3}))
         with pytest.raises(SetupError, match="missing required 'title'"):
             derive_dict_id_from_zip(bad)
+
+    @pytest.mark.parametrize("reader", [derive_dict_id_from_zip, read_yomitan_title])
+    def test_non_object_index_raises_setup_error(self, tmp_path: Path, reader):
+        import zipfile
+
+        bad = tmp_path / "non-object.zip"
+        with zipfile.ZipFile(bad, "w") as zf:
+            zf.writestr("index.json", "[]")
+
+        with pytest.raises(SetupError, match="JSON object"):
+            reader(bad)
 
     def test_raises_on_corrupt_zip(self, tmp_path: Path):
         bad = tmp_path / "corrupt.zip"

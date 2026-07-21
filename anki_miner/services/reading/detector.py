@@ -277,5 +277,7 @@ def _read_mokuro_meta(mokuro_path: Path) -> dict[str, Any]:
     missing = [key for key in _MOKURO_REQUIRED_KEYS if key not in data]
     if missing:
         raise SetupError(f"Invalid .mokuro file '{mokuro_path.name}': missing required key(s): {', '.join(missing)}.")
+    if not isinstance(data["pages"], list):
+        raise SetupError(f"Invalid .mokuro file '{mokuro_path.name}': pages must be an array.")
 
     return data

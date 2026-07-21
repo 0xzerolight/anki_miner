@@ -85,6 +85,28 @@ _FORBIDDEN_RE = re.compile(
     """,
 )
 
+_CSS_ESCAPE_RE = re.compile(r"\\(?:(\r\n|[\n\r\f])|([0-9a-fA-F]{1,6})(?:\r\n|[ \t\n\r\f])?|([^\r\n\f]))")
+
+
+def _decode_css_escapes(value: str) -> str:
+    """Decode CSS escapes for security scanning only; emitted CSS stays verbatim."""
+
+    def _replace(match: re.Match[str]) -> str:
+        if match.group(1) is not None:
+            return ""
+        if match.group(2) is None:
+            return match.group(3) or ""
+        codepoint = int(match.group(2), 16)
+        if codepoint == 0 or codepoint > 0x10FFFF or 0xD800 <= codepoint <= 0xDFFF:
+            return "\N{REPLACEMENT CHARACTER}"
+        return chr(codepoint)
+
+    return _CSS_ESCAPE_RE.sub(_replace, value)
+
+
+def _has_forbidden(value: str) -> bool:
+    return _FORBIDDEN_RE.search(_decode_css_escapes(value)) is not None
+
 
 def css_string_escape(title: str) -> str:
     """Escape a dictionary title for use inside a CSS attribute-selector string.
@@ -235,7 +257,7 @@ def _split_top_level_commas(prelude: str) -> list[str]:
     return parts
 
 
-def scope_dict_css(styles_css: str, dict_title: str) -> str:
+def scope_dict_css(styles_css: str, dict_id: str) -> str:
     """Return ``styles_css`` scoped to one dictionary's glossary markup.
 
     Every top-level selector is prefixed with
@@ -249,9 +271,9 @@ def scope_dict_css(styles_css: str, dict_title: str) -> str:
     if not styles_css or not styles_css.strip():
         return ""
     if len(styles_css) > _MAX_STYLES_BYTES:
-        logger.debug("styles.css for %r exceeds %d bytes; skipping", dict_title, _MAX_STYLES_BYTES)
+        logger.debug("styles.css for %r exceeds %d bytes; skipping", dict_id, _MAX_STYLES_BYTES)
         return ""
-    scope = f'.yomitan-glossary [data-dictionary="{css_string_escape(dict_title)}"]'
+    scope = f'.yomitan-glossary [data-dictionary-id="{css_string_escape(dict_id)}"]'
     return _scope_block(styles_css, scope)
 
 
@@ -274,7 +296,7 @@ def _scope_block(css: str, scope: str) -> str:
         # dropped on re-serialization (line below) so a ``<`` inside one can
         # never reach the output (Issue #89). Body is checked raw — it is emitted
         # verbatim with its comments, so a ``</style>`` in a body comment is real.
-        if _FORBIDDEN_RE.search(stripped) or _FORBIDDEN_RE.search(body):
+        if _has_forbidden(stripped) or _has_forbidden(body):
             logger.debug("Dropping dictionary CSS rule with forbidden construct: %s", stripped[:80])
             continue
         selectors = [s.strip() for s in _split_top_level_commas(stripped)]
@@ -292,7 +314,7 @@ def _scope_at_rule(prelude: str, body: str | None, scope: str) -> str:
         return ""
     if body is None:
         return ""  # a group at-rule with no block is malformed — drop
-    if _FORBIDDEN_RE.search(prelude):
+    if _has_forbidden(prelude):
         return ""
     inner = _scope_block(body, scope)
     if not inner:

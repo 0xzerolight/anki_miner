@@ -487,11 +487,16 @@ def test_stale_dict_aborts_queue_once(qapp, mock_processor, test_config):
 
 def test_run_envelope_turns_preflight_error_into_terminal_result(qapp, mock_processor, test_config, tmp_path):
     from anki_miner.config import ChainEntry
+    from anki_miner.services.dictionary.storage import create_index, write_meta
 
     dict_dir = tmp_path / "broken"
     dict_dir.mkdir()
     db_path = dict_dir / "index.sqlite"
-    db_path.touch()
+    create_index(db_path)
+    write_meta(
+        db_path,
+        {"schema_version": "0", "source_name": "Broken", "format": "yomitan", "entry_count": "0"},
+    )
     sidecar = dict_dir / "meta.json"
     sidecar.write_bytes(b"\xff")
     sidecar.touch()
@@ -513,7 +518,7 @@ def test_run_envelope_turns_preflight_error_into_terminal_result(qapp, mock_proc
     worker.run()
 
     assert len(errors) == 1
-    assert errors[0].startswith("UnicodeDecodeError:")
+    assert "Reimport All" in errors[0]
     assert caps["started"].calls == []
     assert caps["finished"].calls == []
     assert len(caps["queue_finished"].calls) == 1

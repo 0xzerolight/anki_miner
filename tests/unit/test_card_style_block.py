@@ -231,6 +231,13 @@ MINER_FIELD = (
 
 
 class TestFilterDictCssEntries:
+    def test_stable_id_matches_when_display_title_differs(self):
+        field = MINER_FIELD.replace(
+            'data-dictionary="D"',
+            'data-dictionary="Display Title" data-dictionary-id="stable-id"',
+        )
+        assert filter_dict_css_entries(field, [("stable-id", ".d{color:red}")]) == ".d{color:red}"
+
     def test_keeps_only_dicts_present_in_field(self):
         entries = [("D", ".d{color:red}"), ("E", ".e{color:blue}")]
         assert filter_dict_css_entries(MINER_FIELD, entries) == ".d{color:red}"

@@ -1,6 +1,7 @@
 """Tests for DictionaryRegistry."""
 
 import logging
+import sqlite3
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
@@ -36,6 +37,41 @@ def _seed_dict(root: Path, dict_id: str, source_name: str):
 
 
 class TestDictionaryRegistry:
+    def test_null_sqlite_scalars_degrade_to_defaults(self, tmp_path: Path):
+        _seed_dict(tmp_path, "broken-meta", "Broken")
+        db = tmp_path / "broken-meta" / "index.sqlite"
+        with sqlite3.connect(db) as conn:
+            conn.execute("UPDATE meta SET value = NULL WHERE key IN ('schema_version', 'entry_count', 'source_name')")
+        (db.parent / "meta.json").unlink()
+
+        registry = DictionaryRegistry(tmp_path)
+        registry.load()
+
+        meta = registry.get("broken-meta")
+        assert meta is not None
+        assert meta.entry_count == 0
+        assert meta.source_name == "broken-meta"
+        assert meta.schema_ok is False
+
+    def test_blob_sqlite_scalars_degrade_to_defaults(self, tmp_path: Path):
+        _seed_dict(tmp_path, "broken-meta", "Broken")
+        db = tmp_path / "broken-meta" / "index.sqlite"
+        with sqlite3.connect(db) as conn:
+            conn.execute(
+                "UPDATE meta SET value = ? WHERE key IN ('schema_version', 'entry_count', 'source_name')",
+                (sqlite3.Binary(b"broken"),),
+            )
+        (db.parent / "meta.json").unlink()
+
+        registry = DictionaryRegistry(tmp_path)
+        registry.load()
+
+        meta = registry.get("broken-meta")
+        assert meta is not None
+        assert meta.entry_count == 0
+        assert meta.source_name == "broken-meta"
+        assert meta.schema_ok is False
+
     def test_scan_lists_installed_dicts(self, tmp_path: Path):
         _seed_dict(tmp_path, "daijirin-v1", "大辞林")
         _seed_dict(tmp_path, "jmdict-english", "JMdict (English)")

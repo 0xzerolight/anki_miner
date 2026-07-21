@@ -534,6 +534,44 @@ def test_undecodable_page_warns_once_imageless(test_config):
     assert by_lemma["猫"] == "reading_good.jpg"  # the good page still materialized
 
 
+def test_damaged_reading_image_skipped_rest_still_usable(test_config):
+    bad = ImageRef(Path("/pages/bad.png"))
+    good = ImageRef(Path("/pages/good.png"))
+    units = [_unit(0, image_ref=bad), _unit(1, image_ref=good)]
+    words = [_word("犬", 0), _word("猫", 1)]
+    counts = collections.Counter({"犬": 1, "猫": 1})
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+    anki = _make_anki_service()
+    presenter = MagicMock(name="Presenter")
+    proc = _make_processor(test_config, subtitle_parser=sp, anki_service=anki, presenter=presenter)
+
+    def _prep(ref, _dest):
+        if ref == bad:
+            raise NotImplementedError("unsupported compression")
+        return Path("/tmp/reading_good.jpg")
+
+    with patch(_IMG, side_effect=_prep):
+        result = proc.process_reading(_document(units))
+
+    assert result.cards_created == 2
+    assert presenter.show_warning.call_count == 1
+    by_lemma = {payload.word.lemma: payload.media.screenshot_filename for payload in anki.last_card_data}
+    assert by_lemma == {"犬": None, "猫": "reading_good.jpg"}
+
+
+def test_reading_image_memory_error_propagates(test_config):
+    units = [_unit(0, image_ref=ImageRef(Path("/pages/page.png")))]
+    words = [_word("犬", 0)]
+    counts = collections.Counter({"犬": 1})
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+    proc = _make_processor(test_config, subtitle_parser=sp, anki_service=_make_anki_service())
+
+    with patch(_IMG, side_effect=MemoryError("allocation failed")), pytest.raises(MemoryError):
+        proc.process_reading(_document(units))
+
+
 def test_corrupt_archive_warns_once_imageless(test_config):
     """7c. A corrupt archive (BadZipFile — NOT an OSError subclass) shared by 2
     refs → exactly one warning, all its words imageless, run completes."""

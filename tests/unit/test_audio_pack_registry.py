@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import sqlite3
 from pathlib import Path
 
 from anki_miner.config.config import AnkiMinerConfig, AudioSourceEntry
@@ -85,6 +86,18 @@ class TestLoad:
         assert meta.entry_count == 2
         assert meta.db_path == final_dir / "index.sqlite"
         assert isinstance(meta.pack_dir, Path)
+
+    def test_null_sqlite_schema_scalar_skips_pack(self, tmp_path: Path):
+        packs_root, final_dir, pack_id = _import_pack(tmp_path)
+        db = final_dir / "index.sqlite"
+        with sqlite3.connect(db) as conn:
+            conn.execute("UPDATE meta SET value = NULL WHERE key = 'schema_version'")
+        (final_dir / "meta.json").unlink()
+
+        reg = AudioPackRegistry(packs_root)
+        reg.load()
+
+        assert pack_id not in reg.packs
 
     def test_pack_dir_exists_true_when_pack_dir_present(self, tmp_path: Path):
         packs_root, _, pack_id = _import_pack(tmp_path)

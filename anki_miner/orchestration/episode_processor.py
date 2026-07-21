@@ -42,7 +42,7 @@ from anki_miner.services.pitch_accent.render import (
     render_pitch_graph_field,
     render_pitch_text_field,
 )
-from anki_miner.services.reading.images import prepare_card_image
+from anki_miner.services.reading.images import ReadingImageArchiveError, ReadingImageMemberError, prepare_card_image
 from anki_miner.utils import ensure_directory, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.timing import timed_phase
@@ -1418,6 +1418,8 @@ class EpisodeProcessor:
             partial_ids = list(self.anki_service.last_created_note_ids)
             self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
             return self._partial_failure_result(ctx, partial_ids)
+        except MemoryError:
+            raise
         except Exception as e:
             logger.exception("EpisodeProcessor unhandled exception")
             ctx.errors.append(f"Unexpected error: {e}")
@@ -1789,7 +1791,27 @@ class EpisodeProcessor:
                             )
                         )
                         image_path = None
-                    except (OSError, ValueError, zipfile.BadZipFile) as exc:
+                    except ReadingImageArchiveError:
+                        failed_archives.add(ref.source)
+                        self.presenter.show_warning(
+                            tr_format(
+                                QCoreApplication.translate(
+                                    "EpisodeProcessor",
+                                    "Skipped corrupt image archive %1 — its cards have no page image",
+                                ),
+                                ref.source.name,
+                            )
+                        )
+                        image_path = None
+                    except (
+                        ReadingImageMemberError,
+                        OSError,
+                        ValueError,
+                        zipfile.BadZipFile,
+                        RuntimeError,
+                        NotImplementedError,
+                        EOFError,
+                    ) as exc:
                         # An image failure must never abort the volume (the plan's
                         # degradation policy: keep mining imageless). A BadZipFile
                         # (NOT an OSError subclass) means the whole archive is

@@ -61,9 +61,9 @@ class TestCollectDictionaryCss:
             )
         )
         # Each scoped to its own [data-dictionary]; A precedes B (chain order).
-        assert '[data-dictionary="A"]' in css
-        assert '[data-dictionary="B"]' in css
-        assert css.index('[data-dictionary="A"]') < css.index('[data-dictionary="B"]')
+        assert '[data-dictionary-id="a-dict"]' in css
+        assert '[data-dictionary-id="b-dict"]' in css
+        assert css.index('[data-dictionary-id="a-dict"]') < css.index('[data-dictionary-id="b-dict"]')
 
     def test_skips_disabled_dict(self, tmp_path: Path):
         _seed_dict(tmp_path, "a-dict", "A", styles_css="span { color: red }")
@@ -75,8 +75,8 @@ class TestCollectDictionaryCss:
                 ChainEntry(kind="indexed", dict_id="b-dict", enabled=False),
             )
         )
-        assert '[data-dictionary="A"]' in css
-        assert '[data-dictionary="B"]' not in css
+        assert '[data-dictionary-id="a-dict"]' in css
+        assert '[data-dictionary-id="b-dict"]' not in css
 
     def test_skips_dict_without_styles(self, tmp_path: Path):
         _seed_dict(tmp_path, "a-dict", "A", styles_css=None)
@@ -93,7 +93,7 @@ class TestCollectDictionaryCss:
                 ChainEntry(kind="indexed", dict_id="a-dict", enabled=True),
             )
         )
-        assert '[data-dictionary="A"]' in css
+        assert '[data-dictionary-id="a-dict"]' in css
         # No crash from the online provider; it simply contributes nothing.
 
     def test_distinct_titles_stay_isolated(self, tmp_path: Path):
@@ -108,8 +108,24 @@ class TestCollectDictionaryCss:
         )
         # Each dict's rule is prefixed with ITS OWN [data-dictionary] scope, so a
         # rule can't leak across distinct-title dicts in the concatenated sheet.
-        assert '[data-dictionary="A"] span {color: red}' in css
-        assert '[data-dictionary="B"] span {color: blue}' in css
+        assert '[data-dictionary-id="a-dict"] span {color: red}' in css
+        assert '[data-dictionary-id="b-dict"] span {color: blue}' in css
+
+    def test_duplicate_title_dicts_isolated_by_id(self, tmp_path: Path):
+        _seed_dict(tmp_path, "a-dict", "Same", styles_css="span { color: red }")
+        _seed_dict(tmp_path, "b-dict", "Same", styles_css="span { color: blue }")
+
+        css = collect_dictionary_css(
+            _config(
+                tmp_path,
+                ChainEntry(kind="indexed", dict_id="a-dict", enabled=True),
+                ChainEntry(kind="indexed", dict_id="b-dict", enabled=True),
+            )
+        )
+
+        assert '[data-dictionary-id="a-dict"] span {color: red}' in css
+        assert '[data-dictionary-id="b-dict"] span {color: blue}' in css
+        assert '[data-dictionary="Same"]' not in css
 
 
 class TestCollectDictionaryCssEntries:
@@ -121,8 +137,8 @@ class TestCollectDictionaryCssEntries:
         entries = collect_dictionary_css_entries(
             _config(tmp_path, ChainEntry(kind="indexed", dict_id="a-dict", enabled=True))
         )
-        assert [name for name, _ in entries] == ["A"]
-        assert '[data-dictionary="A"]' in entries[0][1]
+        assert [name for name, _ in entries] == ["a-dict"]
+        assert '[data-dictionary-id="a-dict"]' in entries[0][1]
 
     def test_empty_css_providers_skipped(self, tmp_path: Path):
         # A dict with no styles.css contributes NO entry — not an ("A", "")
@@ -136,7 +152,7 @@ class TestCollectDictionaryCssEntries:
                 ChainEntry(kind="indexed", dict_id="b-dict", enabled=True),
             )
         )
-        assert [name for name, _ in entries] == ["B"]
+        assert [name for name, _ in entries] == ["b-dict"]
 
     def test_collect_dictionary_css_is_join_of_entries(self, tmp_path: Path):
         # Byte-equivalence pin: the string collector is exactly the "\n\n" join
