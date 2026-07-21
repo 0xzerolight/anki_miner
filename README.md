@@ -65,6 +65,7 @@ Grab the download for your platform from the [latest release](https://github.com
 
 ```bash
 pipx install anki-miner   # or: pip install anki-miner
+anki_miner_gui
 ```
 
 </details>
@@ -76,6 +77,7 @@ pipx install anki-miner   # or: pip install anki-miner
 git clone https://github.com/0xzerolight/anki_miner.git
 cd anki_miner
 pip install -e .
+anki_miner_gui
 ```
 
 For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -89,7 +91,7 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Audio** - mine audiobooks, podcasts, radio, songs (audio + subtitle/transcript pairs).
 - **Reading** - mine manga (mokuro), novels (`.epub`, `.txt`; single book or a whole folder), or standalone subtitle files.
 - **Analytics** - mining history, difficulty rankings, milestones, undo.
-- **Tools** - generate subtitles (local Whisper), retime subtitles (alass), condense media to dialogue-only audio.
+- **Tools** - generate subtitles (local Whisper), retime subtitles (alass), condense media to dialogue-only audio, and backfill fields on existing cards.
 - **Settings** - everything configurable.
 
 ## Other Features
@@ -175,7 +177,7 @@ List of ideas for future versions of Anki Miner. Not in priority order. Feature 
   - [x] Local subtitle creation tab: Opt-in tab to locally generate subtitles.
   - [x] Reading tab: Mine manga and books.
   - [ ] Media library: Expand Analytics tab to display local media library across all media forms.
-  - [ ] Backfill tool.
+  - [x] Backfill tool.
   - [ ] Automatic subtitle downloading.
 
 - **Long-term**:

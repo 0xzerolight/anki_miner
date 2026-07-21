@@ -1,13 +1,13 @@
 # Testing
 
-Anki Miner has a substantial test suite — ~6,800+ test functions across roughly 320 unit test files plus the integration layer. This page documents how it is organized and how to run it.
+Anki Miner has 7,949 test functions across 370 test files; parameterization expands these to 8,873 collected tests. This page documents how the suite is organized and how to run it.
 
 ## Layout
 
 ```
 tests/
 ├── conftest.py            # shared fixtures
-├── unit/                  # ~320 files, external services mocked
+├── unit/                  # 349 files, external services mocked
 │   └── gui/               # a handful of widget tests; most live in unit/ root
 ├── integration/           # 8 files, real adapters where possible
 └── e2e/                   # on-demand live harness (see E2E harness below)
@@ -60,6 +60,7 @@ HTML coverage lands in `htmlcov/`.
 | `real_ytdlp` | Exercises the real `_ytdlp_supports_js_runtimes` probe (no autouse stub). |
 | `real_probe` | Exercises the real `AnkiService._probe_duplicates` (no autouse stub). |
 | `network` | Genuinely needs real network; suppresses the socket tripwire (`tests/_network_tripwire.py`). |
+| `golden` | Android-port engine parity contract; excluded from the default gate and run on demand or in `android-engine-goldens.yml`. |
 
 Register new markers in `[tool.pytest.ini_options].markers` in `pyproject.toml`.
 
@@ -98,7 +99,7 @@ There is no enforced coverage floor today. New code should add tests where reaso
 
 1. **lint** — `ruff check .` + `black --check .` (Python 3.12).
 2. **typecheck** — `mypy anki_miner` (Python 3.12).
-3. **test** — `pytest -m "not youtube and not e2e and not asr"` on the full matrix (Python 3.11–3.13), no coverage.
+3. **test** — `pytest -m "not youtube and not e2e and not asr and not golden"` on the full matrix (Python 3.11–3.13), no coverage.
 4. **test-asr** — `pytest -m "asr and not e2e"` with the `[asr]` extra installed (Python 3.12).
 5. **wheel-assets** — builds a wheel, runs `scripts/check_wheel_assets.py`.
 
