@@ -240,6 +240,7 @@ def test_notetype_page_preselects_config_note_type(qtbot, wiz_config, monkeypatc
     _stub_anki_service(monkeypatch, wiz, notetypes=["Basic", "Lapis"])
     page = wiz.notetype_page
     page.initializePage()
+    qtbot.waitUntil(lambda: page._field_names_note_type == "Lapis", timeout=3000)
     assert page.notetype_combo.currentText() == "Lapis"
 
 

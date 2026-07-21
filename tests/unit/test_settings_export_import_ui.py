@@ -75,7 +75,7 @@ class TestImportButton:
         GUIConfigManager.export_config(config, path)
         return path
 
-    def test_import_confirm_yes_applies_and_reloads(self, tab, test_config, tmp_path, monkeypatch, messageboxes):
+    def test_import_confirm_yes_applies_and_reloads(self, tab, test_config, tmp_path, monkeypatch, messageboxes, qtbot):
         path = self._write_export(tmp_path, replace(test_config, anki_deck_name="ImportedDeck"))
         monkeypatch.setattr(QFileDialog, "getOpenFileName", staticmethod(lambda *a, **k: (str(path), "")))
         received: list[AnkiMinerConfig] = []
@@ -88,6 +88,9 @@ class TestImportButton:
         assert received[0].anki_deck_name == "ImportedDeck"
         # Machine-specific fields kept current.
         assert received[0].dicts_root == test_config.dicts_root
+        # Simulate MainWindow's config_refreshed round-trip after persistence.
+        tab.update_config(received[0])
+        qtbot.waitUntil(lambda: not tab.subtitles_panel._state_in_flight, timeout=5000)
         # Panels reloaded to show the imported values.
         assert tab.deck_input.text() == "ImportedDeck"
         assert "✓" in tab.save_status_label.text()

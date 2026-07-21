@@ -9,6 +9,8 @@ refactor that reintroduces either regression surfaces in CI.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from anki_miner.gui.resources.styles.theme import Theme
 
 
@@ -30,14 +32,14 @@ class TestStylesheetCache:
         Theme._qss_template = None
         Theme._compiled_qss = {}
 
-        original_open = open
+        original_open = Path.open
         opens: list[str] = []
 
-        def tracking_open(file, *args, **kwargs):
-            opens.append(str(file))
-            return original_open(file, *args, **kwargs)
+        def tracking_open(path, *args, **kwargs):
+            opens.append(str(path))
+            return original_open(path, *args, **kwargs)
 
-        monkeypatch.setattr("anki_miner.gui.resources.styles.theme.open", tracking_open, raising=False)
+        monkeypatch.setattr(Path, "open", tracking_open)
 
         # Two different modes; the template must be read at most once.
         Theme.get_stylesheet("light")

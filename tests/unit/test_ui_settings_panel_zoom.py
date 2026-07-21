@@ -137,23 +137,27 @@ class TestSettingsTabForwarding:
 
         tab._on_zoom_changed(1.5)
 
-        assert tab.config.ui_zoom == 1.5
         assert len(captured) == 1
         new_config = captured[0]
         assert isinstance(new_config, type(config))
         assert new_config.ui_zoom == 1.5
 
     def test_panel_signal_flows_into_config(self, qapp, qtbot, themes_dir: Path) -> None:
-        # End-to-end: panel selection → settings_tab slot → config mutated.
+        # End-to-end: panel selection → settings_tab slot → config candidate emitted.
         Theme.initialize(active="light", favorites=("light",), shipped_dir=themes_dir)
         config = replace(create_default_config(), themes_root=themes_dir)
         tab = SettingsTab(config)
         qtbot.addWidget(tab)
+        captured: list[object] = []
+        tab.config_changed.connect(captured.append)
 
         combo = tab.ui_panel.zoom_combo
         idx = combo.findData(150)
         tab.ui_panel._on_zoom_selected(idx)
-        assert tab.config.ui_zoom == pytest.approx(combo.itemData(idx) / 100.0)
+        assert len(captured) == 1
+        new_config = captured[0]
+        assert isinstance(new_config, type(config))
+        assert new_config.ui_zoom == pytest.approx(combo.itemData(idx) / 100.0)
 
     def test_panel_seeded_from_config_zoom(self, qapp, qtbot, themes_dir: Path) -> None:
         Theme.initialize(active="light", favorites=("light",), shipped_dir=themes_dir)

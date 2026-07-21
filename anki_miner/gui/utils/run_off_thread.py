@@ -54,6 +54,7 @@ def run_off_thread(
     *,
     error_prefix: str = "",
     pass_cancel_check: bool = False,
+    on_finished: Callable[[], None] | None = None,
 ) -> SingleCallWorker:
     """Run ``work`` off the GUI thread and deliver its result on the GUI thread.
 
@@ -69,6 +70,8 @@ def run_off_thread(
             ``None``, the error string is logged at WARNING instead.
         error_prefix: Prepended to the exception text on failure.
         pass_cancel_check: Pass the worker's cancellation predicate to ``work``.
+        on_finished: Called on the GUI thread for every terminal outcome,
+            including cancellation, before worker teardown.
 
     Returns:
         The started :class:`SingleCallWorker` (callers may keep it to
@@ -86,6 +89,8 @@ def run_off_thread(
         worker.error.connect(lambda msg: logger.warning("off-thread work failed: %s", msg))
     else:
         worker.error.connect(on_error)
+    if on_finished is not None:
+        worker.finished.connect(on_finished)
 
     registry = _get_registry(parent)
     registry.add(worker)
@@ -101,7 +106,8 @@ def run_off_thread(
         with contextlib.suppress(RuntimeError):
             worker.deleteLater()
 
-    # finished fires after result_ready/error, so the result slots still run.
+    # finished fires after result_ready/error, so result/error and the optional
+    # terminal callback run before teardown.
     worker.finished.connect(_teardown)
 
     worker.start()

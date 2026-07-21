@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 from collections.abc import Callable, Sequence
+from functools import wraps
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Protocol, runtime_checkable
@@ -20,6 +21,7 @@ from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.config_manager import GUIConfigManager
+from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers, still_running
 from anki_miner.gui.utils.service_factory import create_youtube_fetcher
 from anki_miner.gui.utils.stall_watchdog import install_stall_watchdog
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
@@ -33,6 +35,16 @@ from anki_miner.services.stats_service import StatsService
 from anki_miner.utils import alass_resolver
 
 logger = logging.getLogger(__name__)
+
+
+def _install_minimal_recovery() -> None:
+    """Install a stderr crash boundary before home/config/log setup."""
+
+    def _hook(exc_type, exc_value, exc_tb):
+        logger.critical("Unhandled exception during early startup", exc_info=(exc_type, exc_value, exc_tb))
+        sys.__excepthook__(exc_type, exc_value, exc_tb)
+
+    sys.excepthook = _hook
 
 
 def _scrub_pyinstaller_env() -> None:
@@ -218,13 +230,6 @@ def _configure_logging(log_path: Path) -> None:
     """
     log_path = Path(log_path)  # tolerate a str caller; .parent below needs a Path
     root = logging.getLogger()
-    # Drop the handler we previously attached so a re-point / re-call doesn't
-    # duplicate it. Tagged with a sentinel attribute to avoid removing handlers
-    # installed by anything else.
-    for existing in list(root.handlers):
-        if getattr(existing, "_anki_miner_sink", False):
-            root.removeHandler(existing)
-            existing.close()
     log_path.parent.mkdir(parents=True, exist_ok=True)
     handler = _OwnerOnlyRotatingFileHandler(
         log_path,
@@ -240,6 +245,12 @@ def _configure_logging(log_path: Path) -> None:
         datefmt="%Y-%m-%dT%H:%M:%S",
     )
     handler.setFormatter(fmt)
+    # Build the replacement completely before closing the old sink. If mkdir,
+    # handler construction, or formatter setup fails, the working sink remains.
+    for existing in list(root.handlers):
+        if getattr(existing, "_anki_miner_sink", False):
+            root.removeHandler(existing)
+            existing.close()
     # Root logger at WARNING so third-party libs (yt-dlp, fugashi, …) only
     # write WARNING+ to the file; the project namespace gets full DEBUG coverage.
     # A record must clear both its logger's effective level AND the handler's
@@ -557,8 +568,30 @@ def _install_excepthook(app: QApplication) -> None:
     sys.excepthook = _hook
 
 
+def _rollback_workers_on_startup_fault(fn: Callable[[], None]) -> Callable[[], None]:
+    """Cancel and join constructor-started workers before startup unwinds."""
+
+    @wraps(fn)
+    def wrapped() -> None:
+        try:
+            fn()
+        except Exception:
+            laggards = join_all_off_thread_workers()
+            for worker in laggards:
+                try:
+                    if still_running(worker):
+                        worker.wait()
+                except RuntimeError:
+                    pass
+            raise
+
+    return wrapped
+
+
+@_rollback_workers_on_startup_fault
 def main():
     """Launch the Anki Miner GUI application."""
+    _install_minimal_recovery()
     _scrub_pyinstaller_env()
 
     # Env-var-gated smoke path (PyInstaller bundled-binary validation).
@@ -599,7 +632,10 @@ def main():
     # in the file rather than going nowhere (F3).
     # GUIConfigManager has no Qt dependency, so it can run before QApplication.
     _default_log_path = ANKI_MINER_HOME / "anki_miner.log"
-    _configure_logging(_default_log_path)
+    try:
+        _configure_logging(_default_log_path)
+    except Exception:
+        logger.exception("Failed to configure startup log; continuing with stderr logging")
     try:
         _early_config = GUIConfigManager.load_config()
         _log_path = _early_config.log_path
@@ -612,7 +648,10 @@ def main():
     # Honour a user-customised log_path by re-pointing the handler (idempotent,
     # so no duplicate sink). No-op in the common case where it equals the default.
     if _log_path != _default_log_path:
-        _configure_logging(_log_path)
+        try:
+            _configure_logging(_log_path)
+        except Exception:
+            logger.exception("Failed to configure custom log path; keeping startup logger")
 
     # Whole-UI zoom: must be set before QApplication is constructed (Qt reads
     # QT_SCALE_FACTOR once, at construction). Restart-to-apply by nature.
@@ -641,20 +680,21 @@ def main():
     # live retranslateUi). Stash on `app` so the translators outlive this call.
     app._translators = install_translators(app, _early_config.ui_language)  # type: ignore[attr-defined]
 
-    # Seed the theme singleton from gui_config.json so the initial paint uses
-    # the right active theme and the favorites combo is correctly populated.
-    # MainWindow re-loads the same config a moment later (idempotent).
-    _initial_config = GUIConfigManager.load_config()
-    Theme.initialize(
-        active=_initial_config.theme,
-        favorites=_initial_config.theme_favorites,
-        user_dir=_initial_config.themes_root,
-        font_scale=_initial_config.ui_font_scale,
-    )
-    Theme.apply_to_app(app)
+    # Seed the theme singleton from the single decoded startup config. Optional
+    # local theme data must never block construction of the unstyled GUI.
+    try:
+        Theme.initialize(
+            active=_early_config.theme,
+            favorites=_early_config.theme_favorites,
+            user_dir=_early_config.themes_root,
+            font_scale=_early_config.ui_font_scale,
+        )
+        Theme.apply_to_app(app)
+    except Exception:
+        logger.exception("Failed to initialize theme; continuing with Qt defaults")
 
     # Create main window
-    window = MainWindow()
+    window = MainWindow(_early_config)
 
     # Initialize stats service for analytics. ``.load()`` opens the SQLite
     # file; defer to after window.show() so the empty shell paints first
@@ -808,6 +848,10 @@ def main():
     # All tabs are now registered — create the count-driven Ctrl+N shortcuts.
     # This must come AFTER all addTab calls so self.tabs.count() is final.
     window.setup_tab_shortcuts()
+
+    # Full widget composition and required version save now form one commit
+    # boundary. No startup worker is started before this returns successfully.
+    window.commit_boot()
 
     # Show window first so the user sees the UI immediately; then run the
     # deferred init (stats DB open) on the next event loop tick. The

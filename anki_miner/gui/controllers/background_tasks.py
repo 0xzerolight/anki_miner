@@ -577,5 +577,7 @@ class BackgroundTaskController(QObject):
         # refusal can't block the quit.
         with contextlib.suppress(Exception):
             self._window.release_dictionary_resources()
-        GUIConfigManager.save_config(self._window.config)
-        QApplication.quit()
+        try:
+            GUIConfigManager.save_config(self._window.config)
+        finally:
+            QApplication.quit()

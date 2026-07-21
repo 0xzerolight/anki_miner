@@ -596,7 +596,6 @@ class TestSettingsTabAudioPanelWiring:
 
         assert received, "config_changed must be emitted"
         assert received[0].expression_audio_chain == new_chain
-        assert tab.config.expression_audio_chain == new_chain
 
 
 # ---------------------------------------------------------------------------

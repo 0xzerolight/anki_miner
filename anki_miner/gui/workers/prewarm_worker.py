@@ -41,7 +41,6 @@ from PyQt6.QtCore import QThread
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils.service_factory import build_definition_service
-from anki_miner.services.tagger import get_shared_tagger
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +71,8 @@ class PrewarmWorker(QThread):
         sqlite handles close) when this method returns.
         """
         try:
+            from anki_miner.services.tagger import get_shared_tagger
+
             # Build the SHARED tagger singleton (the one mining reuses); this
             # loads unidic-lite, the dominant first-use cost. Do NOT discard it.
             # We deliberately do NOT run a warm `.parse()` here — only the

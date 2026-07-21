@@ -9,6 +9,7 @@ fake subclasses of the real tab widgets into ``window.tabs`` before triggering
 
 from __future__ import annotations
 
+import sys
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -532,6 +533,22 @@ class TestCloseEventNoActiveWorkers:
 
     def test_close_with_no_tabs(self, main_window):
         event = _trigger_close(main_window)
+        event.accept.assert_called_once()
+
+    def test_close_accepts_when_final_save_raises(self, main_window, monkeypatch):
+        from anki_miner.gui import main_window as main_window_module
+
+        monkeypatch.setattr(
+            main_window_module.GUIConfigManager,
+            "save_config",
+            MagicMock(side_effect=OSError("disk full")),
+        )
+        event = MagicMock(spec=QEvent)
+        monkeypatch.setattr(sys, "excepthook", lambda exc_type, exc, traceback: None)
+
+        with pytest.raises(OSError, match="disk full"):
+            main_window.closeEvent(event)
+
         event.accept.assert_called_once()
 
 

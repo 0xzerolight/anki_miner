@@ -160,6 +160,30 @@ class TestDiscoverThemes:
         assert len(themes) == 1
         assert "good" in themes
 
+    def test_skips_invalid_root(self, themes_dir: Path):
+        from anki_miner.gui.resources.styles.theme import discover_themes
+
+        (themes_dir / "bad.json").write_text("42", encoding="utf-8")
+
+        assert discover_themes(themes_dir) == {}
+
+    def test_skips_oversized_theme(self, themes_dir: Path):
+        from anki_miner.gui.resources.styles.theme import discover_themes
+
+        theme = _make_valid_theme("Huge")
+        theme["padding"] = "x" * 300_000
+        (themes_dir / "huge.json").write_text(json.dumps(theme), encoding="utf-8")
+
+        assert discover_themes(themes_dir) == {}
+
+    def test_caps_directory_enumeration(self, themes_dir: Path):
+        from anki_miner.gui.resources.styles.theme import discover_themes
+
+        for index in range(300):
+            (themes_dir / f"{index:03}.json").write_text(json.dumps(_make_valid_theme(str(index))))
+
+        assert len(discover_themes(themes_dir)) <= 256
+
     def test_skips_theme_with_missing_keys(self, themes_dir: Path):
         from anki_miner.gui.resources.styles.theme import discover_themes
 
@@ -267,6 +291,21 @@ class TestGetColorVariables:
         variables = get_color_variables(theme)
         for key in REQUIRED_COLOR_KEYS:
             assert f"color-{key}" in variables
+
+
+def test_oversized_qss_degrades_to_empty(tmp_path: Path, monkeypatch):
+    from anki_miner.gui.resources.styles import theme as theme_module
+
+    styles_dir = tmp_path / "styles"
+    themes_dir = styles_dir / "themes"
+    themes_dir.mkdir(parents=True)
+    (themes_dir / "light.json").write_text(json.dumps(_make_valid_theme("Light")), encoding="utf-8")
+    (styles_dir / "common.qss").write_text("x" * 3_000_000, encoding="utf-8")
+    monkeypatch.setattr(theme_module, "get_resource_dir", lambda: tmp_path)
+    monkeypatch.setattr(theme_module.Theme, "_qss_template", None)
+    theme_module.Theme.initialize(shipped_dir=themes_dir)
+
+    assert theme_module.Theme.get_stylesheet("light") == ""
 
 
 _BUILTIN_THEMES_DIR = Path(__file__).parent.parent.parent / "anki_miner" / "gui" / "resources" / "styles" / "themes"

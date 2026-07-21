@@ -25,12 +25,12 @@ def test_prewarm_worker_runs_and_finishes(test_config, qapp):
 
 def test_prewarm_swallows_tagger_failure(test_config, qapp, monkeypatch):
     """A failure inside run() is swallowed and ``finished`` still emits."""
-    import anki_miner.gui.workers.prewarm_worker as mod
+    import anki_miner.services.tagger as tagger_module
 
     def boom(*_args, **_kwargs):
         raise RuntimeError("simulated MeCab dict missing")
 
-    monkeypatch.setattr(mod, "get_shared_tagger", boom)
+    monkeypatch.setattr(tagger_module, "get_shared_tagger", boom)
 
     worker = PrewarmWorker(test_config)
     finished_count: list[int] = []

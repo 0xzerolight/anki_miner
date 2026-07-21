@@ -168,7 +168,6 @@ class TestSettingsTabForwarding:
 
             tab._on_font_scale_changed(1.5)
 
-            assert tab.config.ui_font_scale == 1.5
             assert len(captured) == 1
             new_config = captured[0]
             assert isinstance(new_config, type(config))
@@ -177,16 +176,21 @@ class TestSettingsTabForwarding:
             Theme.set_font_scale(1.0)
 
     def test_panel_signal_flows_into_config(self, qapp, qtbot, themes_dir: Path) -> None:
-        # End-to-end: panel selection → settings_tab slot → config mutated.
+        # End-to-end: panel selection → settings_tab slot → config candidate emitted.
         Theme.initialize(active="light", favorites=("light",), shipped_dir=themes_dir)
         config = replace(create_default_config(), themes_root=themes_dir)
         tab = SettingsTab(config)
         qtbot.addWidget(tab)
         try:
+            captured: list[object] = []
+            tab.config_changed.connect(captured.append)
             combo = tab.ui_panel.font_scale_combo
             idx = combo.findData(150)
             combo.setCurrentIndex(idx)
             tab.ui_panel._on_font_scale_selected(idx)
-            assert tab.config.ui_font_scale == pytest.approx(combo.itemData(idx) / 100.0)
+            assert len(captured) == 1
+            new_config = captured[0]
+            assert isinstance(new_config, type(config))
+            assert new_config.ui_font_scale == pytest.approx(combo.itemData(idx) / 100.0)
         finally:
             Theme.set_font_scale(1.0)

@@ -85,15 +85,19 @@ class TestDictChainReorderPersists:
         chain = persisted[0]
         assert chain[0].enabled is False
 
-    def test_toggle_updates_self_config(self, tab):
-        """After toggle, tab.config.dictionary_chain reflects the new state."""
+    def test_toggle_waits_for_committed_config(self, tab):
+        """After toggle, tab.config remains committed until persistence succeeds."""
         _set_two_entry_chain(tab)
+        committed = tab.config
+        emitted = []
+        tab.config_changed.connect(emitted.append)
 
         row = tab.dictionary_panel._row_widget(0)
         assert row is not None
         row.checkbox.setChecked(False)
 
-        assert tab.config.dictionary_chain[0].enabled is False
+        assert emitted[0].dictionary_chain[0].enabled is False
+        assert tab.config is committed
 
 
 class TestDictChainRemovalPersistsExactlyOnce:
@@ -128,8 +132,8 @@ class TestDictChainRemovalPersistsExactlyOnce:
         assert len(chain) == 1
         assert chain[0].kind == "jisho"
 
-    def test_remove_updates_self_config(self, tab, confirm_remove, tmp_path, qtbot):
-        """After removal, tab.config.dictionary_chain no longer includes removed entry."""
+    def test_remove_waits_for_committed_config(self, tab, confirm_remove, tmp_path, qtbot):
+        """After removal, tab.config remains committed until persistence succeeds."""
         dict_dir = tmp_path / "alpha"
         dict_dir.mkdir()
         (dict_dir / "index.sqlite").write_bytes(b"placeholder")
@@ -142,9 +146,11 @@ class TestDictChainRemovalPersistsExactlyOnce:
             )
         )
 
+        committed = tab.config
+        emitted = []
+        tab.config_changed.connect(emitted.append)
         tab.dictionary_panel.remove(0)
 
-        # remove()'s rmtree now runs off the GUI thread; wait for the config to
-        # be updated via the post-delete chain_changed persist.
-        qtbot.waitUntil(lambda: len(tab.config.dictionary_chain) == 1, timeout=3000)
-        assert tab.config.dictionary_chain[0].kind == "jisho"
+        qtbot.waitUntil(lambda: len(emitted) == 1, timeout=3000)
+        assert emitted[0].dictionary_chain[0].kind == "jisho"
+        assert tab.config is committed

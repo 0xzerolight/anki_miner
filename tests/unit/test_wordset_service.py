@@ -35,6 +35,26 @@ def test_unknown_id_is_skipped_gracefully():
     assert svc.is_excluded("田中")
 
 
+def test_oversized_wordset_degrades_cleanly(tmp_path):
+    (tmp_path / "surnames.txt").write_text("x" * 9_000_000, encoding="utf-8")
+
+    svc = WordsetService(enabled_ids=("surnames",), resource_dir=tmp_path)
+    svc.load()
+
+    assert not svc.is_available()
+    assert load_wordset_catalog(resource_dir=tmp_path) == []
+
+
+def test_invalid_wordset_degrades_cleanly(tmp_path):
+    (tmp_path / "surnames.txt").write_bytes(b"# label: broken\n\xff")
+
+    svc = WordsetService(enabled_ids=("surnames",), resource_dir=tmp_path)
+    svc.load()
+
+    assert not svc.is_available()
+    assert load_wordset_catalog(resource_dir=tmp_path) == []
+
+
 def test_repeated_load_reuses_cached_union_without_rereading(monkeypatch):
     """Second load of the same (dir, ids) returns the SAME frozenset, no re-read.
 

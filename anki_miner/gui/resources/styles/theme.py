@@ -1,7 +1,7 @@
 """Theme management system for Anki Miner GUI."""
 
-import json
 import logging
+import os
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -12,6 +12,7 @@ from PyQt6.QtGui import QColor, QPalette
 from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.resources import get_resource_dir
+from anki_miner.utils.bounded_reader import read_json_bounded, read_text_bounded
 
 from ._variables import get_variable_dict
 
@@ -72,6 +73,9 @@ REQUIRED_COLOR_KEYS = frozenset(
 # so the two clamping sites can never drift apart.
 FONT_SCALE_MIN: float = 0.5
 FONT_SCALE_MAX: float = 2.0
+_THEME_JSON_MAX_BYTES = 256 * 1024
+_QSS_MAX_BYTES = 2 * 1024 * 1024
+_THEME_DIRECTORY_ENTRY_CAP = 256
 
 
 def _clamp_font_scale(scale: float) -> float:
@@ -138,12 +142,24 @@ def _load_single_dir(themes_dir: Path, source: str) -> dict[str, dict]:
     if not themes_dir.is_dir():
         return out
 
-    for path in sorted(themes_dir.glob("*.json")):
-        try:
-            with open(path, encoding="utf-8") as f:
-                data = json.load(f)
-        except (json.JSONDecodeError, OSError) as e:
-            logger.warning("Skipping invalid theme file %s: %s", path.name, e)
+    paths: list[Path] = []
+    try:
+        with os.scandir(themes_dir) as entries:
+            for index, entry in enumerate(entries):
+                if index >= _THEME_DIRECTORY_ENTRY_CAP:
+                    logger.warning("Theme directory entry cap reached for %s", themes_dir)
+                    break
+                if entry.name.endswith(".json") and entry.is_file():
+                    paths.append(Path(entry.path))
+    except OSError as exc:
+        logger.warning("Could not enumerate theme directory %s: %s", themes_dir, exc)
+        return out
+
+    for path in sorted(paths):
+        data = read_json_bounded(path, _THEME_JSON_MAX_BYTES, None, "theme")
+        if not isinstance(data, dict):
+            if data is not None:
+                logger.warning("Skipping invalid theme file %s: expected a JSON object", path.name)
             continue
 
         errors = validate_theme_data(data)
@@ -477,8 +493,7 @@ class Theme:
         if cls._qss_template is None:
             common_path = get_resource_dir() / "styles" / "common.qss"
             if common_path.exists():
-                with open(common_path, encoding="utf-8") as f:
-                    cls._qss_template = f.read()
+                cls._qss_template = read_text_bounded(common_path, _QSS_MAX_BYTES, "", "QSS")
             else:
                 cls._qss_template = ""
 

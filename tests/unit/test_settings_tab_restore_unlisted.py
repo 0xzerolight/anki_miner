@@ -131,7 +131,7 @@ def test_restore_orphan_confirmed_inserts_before_jisho(tab_for_restore, monkeypa
 
     tab._dict_import_flow.restore_unlisted()
 
-    new_chain = tab.config.dictionary_chain
+    new_chain = config_changed_emissions[0].dictionary_chain
     dict_ids = [e.dict_id for e in new_chain]
 
     # Orphan was added
@@ -169,10 +169,13 @@ def test_restore_multiple_orphans_sorted_before_jisho(tab_for_restore, monkeypat
         lambda parent, title, body, *a, **kw: QMessageBox.StandardButton.Yes,
     )
 
+    config_changed_emissions: list[object] = []
+    tab.config_changed.connect(config_changed_emissions.append)
     tab._dict_import_flow.restore_unlisted()
 
-    dict_ids = [e.dict_id for e in tab.config.dictionary_chain]
-    jisho_idx = next(i for i, e in enumerate(tab.config.dictionary_chain) if e.kind == "jisho")
+    new_chain = config_changed_emissions[0].dictionary_chain
+    dict_ids = [e.dict_id for e in new_chain]
+    jisho_idx = next(i for i, e in enumerate(new_chain) if e.kind == "jisho")
     # Both orphans added, sorted (a before z), and both ahead of jisho.
     assert dict_ids[:jisho_idx] == ["a-dict", "z-dict"]
 
