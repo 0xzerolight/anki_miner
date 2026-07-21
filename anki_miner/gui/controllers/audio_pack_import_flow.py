@@ -244,7 +244,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             # DictionaryImportFlow.reimport_all T-09 join rationale).
             laggard = self._join_active_import_worker("audio pack import worker")
             if laggard is not None:
-                laggard.finished.connect(launch_next)
+                self._resume_once_finished(laggard, launch_next)
                 return
 
             worker = ImportWorker.for_pack(pack_dir, dest_root)

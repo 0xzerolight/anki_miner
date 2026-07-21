@@ -512,7 +512,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             # still running". wait() is at most microseconds from returning here.
             laggard = self._join_active_import_worker("dictionary import worker")
             if laggard is not None:
-                laggard.finished.connect(launch_next)
+                self._resume_once_finished(laggard, launch_next)
                 return
 
             if kind == "jmdict":

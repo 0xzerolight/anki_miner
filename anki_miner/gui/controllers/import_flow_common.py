@@ -135,12 +135,31 @@ class ModalImportFlowMixin:
             if all(retained is not laggard for retained in self._retained_import_workers):
                 self._retained_import_workers.append(laggard)
                 laggard.finished.connect(lambda w=laggard: self._forget_import_worker(w))
+                if not still_running(laggard):
+                    self._forget_import_worker(laggard)
+                    return None
             logger.warning(
                 "Lingering %s did not stop within %d ms; refusing replacement",
                 join_noun,
                 _IMPORT_JOIN_TIMEOUT_MS,
             )
         return laggard
+
+    @staticmethod
+    def _resume_once_finished(worker: ImportWorker, callback: Callable[[], None]) -> None:
+        """Run ``callback`` once after ``worker`` stops, even if its signal raced."""
+        resumed = False
+
+        def resume_once() -> None:
+            nonlocal resumed
+            if resumed:
+                return
+            resumed = True
+            callback()
+
+        worker.finished.connect(resume_once)
+        if not still_running(worker):
+            resume_once()
 
     def _iter_import_workers(self) -> tuple:
         """Return all live active and retained import workers."""

@@ -75,6 +75,31 @@ class _SignalStub:
             slot()
 
 
+class _FinishBeforeConnectSignal(_SignalStub):
+    """Finish its owner immediately before wiring one selected slot."""
+
+    def __init__(self, owner: _StuckWorker, connection_number: int) -> None:
+        super().__init__()
+        self._owner = owner
+        self._connection_number = connection_number
+        self._connection_count = 0
+
+    def connect(self, slot) -> None:
+        self._connection_count += 1
+        if self._connection_count == self._connection_number:
+            self._owner.running = False
+            self.emit()
+        super().connect(slot)
+
+
+class _ConnectGapWorker(_StuckWorker):
+    """Predecessor that finishes just before a selected slot is wired."""
+
+    def __init__(self, connection_number: int) -> None:
+        super().__init__()
+        self.finished = _FinishBeforeConnectSignal(self, connection_number)
+
+
 class _DeletedWorker:
     """Python wrapper whose underlying C++ QThread has been deleted."""
 
@@ -186,6 +211,29 @@ class TestFrequencyBoundedJoin:
         assert stuck.cancel_calls == 1
         assert any("frequency import worker did not stop" in r.message for r in caplog.records)
 
+    def test_finished_in_shared_connect_gap_starts_replacement_and_closes_modal(self, tab, monkeypatch, tmp_path):
+        new = self._patch_worker(monkeypatch)
+        src = tmp_path / "f.csv"
+        src.write_text("word,rank\n猫,5\n", encoding="utf-8")
+        monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **kw: (str(src), ""))
+        dialog = MagicMock()
+        monkeypatch.setattr(
+            "anki_miner.gui.controllers.import_flow_common.QProgressDialog",
+            MagicMock(return_value=dialog),
+        )
+
+        flow = tab._frequency_import_flow
+        predecessor = _ConnectGapWorker(connection_number=1)
+        flow._active_import_worker = predecessor
+
+        flow.add_source()
+
+        assert flow._active_import_worker is new
+        assert predecessor not in flow._retained_import_workers
+        new.start.assert_called_once()
+        new.cancelled.connect.call_args.args[0]()
+        dialog.close.assert_called_once()
+
     def test_clean_predecessor_no_warning(self, tab, monkeypatch, tmp_path, caplog):
         new = self._patch_worker(monkeypatch)
         src = tmp_path / "f.csv"
@@ -270,6 +318,26 @@ class TestAudioPackBoundedJoin:
         assert flow._active_import_worker is new
         assert stuck not in flow._retained_import_workers
         new.start.assert_called_once()
+
+    def test_add_pack_finished_in_successor_connect_gap_starts_once_and_closes_modal(self, tab, monkeypatch, tmp_path):
+        new = self._prepare_add_pack(monkeypatch, tmp_path)
+        dialog = MagicMock()
+        monkeypatch.setattr(
+            "anki_miner.gui.controllers.audio_pack_import_flow.QProgressDialog",
+            MagicMock(return_value=dialog),
+        )
+
+        flow = tab._audio_pack_import_flow
+        predecessor = _ConnectGapWorker(connection_number=2)
+        flow._active_import_worker = predecessor
+
+        flow.add_pack()
+
+        assert flow._active_import_worker is new
+        assert predecessor not in flow._retained_import_workers
+        new.start.assert_called_once()
+        new.cancelled.connect.call_args.args[0]()
+        dialog.close.assert_called_once()
 
     def test_add_pack_cancel_ignores_deleted_worker_wrapper(self, tab, monkeypatch, tmp_path):
         new = self._prepare_add_pack(monkeypatch, tmp_path)
@@ -373,6 +441,25 @@ class TestDictionaryBoundedJoin:
         assert flow._active_import_worker is new
         assert stuck not in flow._retained_import_workers
         new.start.assert_called_once()
+
+    def test_reimport_all_finished_in_successor_connect_gap_starts_once_and_closes_modal(self, tab, monkeypatch):
+        mod = "anki_miner.gui.controllers.dictionary_import_flow"
+        new = self._prepare_reimport_all(tab, monkeypatch)
+        _silence_dialogs(monkeypatch)
+        dialog = MagicMock()
+        monkeypatch.setattr(f"{mod}.QProgressDialog", MagicMock(return_value=dialog))
+
+        flow = tab._dict_import_flow
+        predecessor = _ConnectGapWorker(connection_number=2)
+        flow._active_import_worker = predecessor
+
+        flow.reimport_all()
+
+        assert flow._active_import_worker is new
+        assert predecessor not in flow._retained_import_workers
+        new.start.assert_called_once()
+        new.cancelled.connect.call_args.args[0]()
+        dialog.close.assert_called_once()
 
     def test_reimport_all_cancel_ignores_deleted_worker_wrapper(self, tab, monkeypatch):
         mod = "anki_miner.gui.controllers.dictionary_import_flow"
