@@ -58,6 +58,11 @@ def clean_subtitle_text(text: str, *, strip_annotations: bool = False) -> str:
     Returns:
         Cleaned, normalized text without formatting tags
     """
+    if strip_annotations:
+        # Keep every subtitle physical-line break until annotations have been
+        # stripped per line; strip_subtitle_markup normally flattens ASS/SSA
+        # \N and \n markers to spaces.
+        text = re.sub(r"\\[nN]|\r\n?", "\n", text)
     text = strip_subtitle_markup(text)
     if strip_annotations:
         text = strip_inline_annotations(text)

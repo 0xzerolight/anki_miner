@@ -80,6 +80,11 @@ class TestCleanSubtitleText:
         text = r"Line one\NLine two\nLine three"
         assert clean_subtitle_text(text) == "Line one Line two Line three"
 
+    def test_strips_leading_annotation_after_ass_hard_break(self):
+        text = r"猫が好き\N（案内）犬が眠る"
+
+        assert clean_subtitle_text(text, strip_annotations=True) == "猫が好き 犬が眠る"
+
     def test_removes_html_tags(self):
         """Should remove HTML tags."""
         text = "<b>Bold</b> and <i>italic</i>"

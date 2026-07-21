@@ -113,6 +113,22 @@ class TestPerFieldValidation:
         assert committed.use_subtitle_regex_filter == test_config.use_subtitle_regex_filter
         assert "⚠" in tab.save_status_label.text()
 
+    def test_invalid_regex_is_rejected_when_filter_is_disabled(self, tab, test_config, no_modals):
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+        tab.filtering_panel.set_subtitle_regex_filter("(")
+        tab.filtering_panel.set_subtitle_regex_replacement("NEW")
+        tab.filtering_panel.set_use_subtitle_regex_filter(False)
+
+        tab.commit_settings()
+
+        assert len(received) == 1
+        committed = received[0]
+        assert committed.subtitle_regex_filter == test_config.subtitle_regex_filter
+        assert committed.subtitle_regex_replacement == test_config.subtitle_regex_replacement
+        assert committed.use_subtitle_regex_filter == test_config.use_subtitle_regex_filter
+        assert "⚠" in tab.save_status_label.text()
+
     @pytest.mark.parametrize(
         ("pattern", "replacement"),
         [

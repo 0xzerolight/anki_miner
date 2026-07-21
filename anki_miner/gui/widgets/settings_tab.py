@@ -758,17 +758,14 @@ class SettingsTab(QWidget):
             kept_back.append(self.tr("cookies file (YouTube)"))
             new_config = replace(new_config, youtube_cookies_file=self.config.youtube_cookies_file)
 
-        # Validate subtitle regex filter so we never persist a pattern that
-        # crashes the parser. Only validated when the filter is enabled; an
-        # unchecked invalid pattern is harmless. The toggle, pattern AND
-        # replacement are kept back together — the replacement is folded in by
-        # the filtering panel's contribute(), so reverting only pattern+toggle
-        # would leave the last-good pattern paired with a new replacement the
-        # user never previewed.
+        # Validate subtitle regex filter before persistence, even while disabled.
+        # The toggle, pattern AND replacement are kept back together — the
+        # replacement is folded in by the filtering panel's contribute(), so
+        # reverting only pattern+toggle would leave the last-good pattern paired
+        # with a new replacement the user never previewed.
         subtitle_regex = self.filtering_panel.get_subtitle_regex_filter()
         subtitle_regex_replacement = self.filtering_panel.get_subtitle_regex_replacement()
-        use_subtitle_regex = self.filtering_panel.get_use_subtitle_regex_filter()
-        if use_subtitle_regex and subtitle_regex:
+        if subtitle_regex or subtitle_regex_replacement:
             try:
                 compile_subtitle_regex_filter(subtitle_regex, subtitle_regex_replacement)
             except ValueError:
@@ -932,10 +929,9 @@ class SettingsTab(QWidget):
             return
         # Validate an imported subtitle regex the same way the commit path does.
         # import_config applies the pattern without validation, so
-        # an invalid pattern with the filter enabled would otherwise persist and
-        # be silently disabled at parse time (only a log line). Reject it here
-        # and warn the user, so the failure is surfaced rather than swallowed.
-        if new_config.use_subtitle_regex_filter and new_config.subtitle_regex_filter:
+        # an invalid pattern would otherwise persist even while disabled. Reject
+        # it here and warn the user, so the failure is surfaced rather than stored.
+        if new_config.subtitle_regex_filter or new_config.subtitle_regex_replacement:
             try:
                 compile_subtitle_regex_filter(new_config.subtitle_regex_filter, new_config.subtitle_regex_replacement)
             except ValueError as e:
