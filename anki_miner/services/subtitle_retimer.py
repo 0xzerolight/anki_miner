@@ -19,13 +19,9 @@ alass CLI (v2.0.0) notes
 
 from __future__ import annotations
 
-import collections
 import contextlib
 import logging
 import os
-import signal
-import subprocess
-import sys
 import tempfile
 import threading
 from collections.abc import Callable
@@ -34,37 +30,13 @@ from pathlib import Path
 from anki_miner.exceptions.subtitle import AlassNotFoundError
 from anki_miner.utils.alass_resolver import resolve_alass
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
-from anki_miner.utils.subprocess_utils import no_window_kwargs
+from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
 
 logger = logging.getLogger(__name__)
 
 __all__ = ["retime_subtitle"]
 
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-
-
-def _proc_group_kwargs() -> dict:
-    """Return subprocess kwargs that isolate the child into its own process group.
-
-    On POSIX, ``start_new_session=True`` creates a new session/process-group so
-    ``os.killpg`` can reach alass *and* its ffmpeg grandchild.  On Windows we
-    use ``CREATE_NEW_PROCESS_GROUP`` for the same reason; ``CREATE_NO_WINDOW``
-    suppresses the console flash (Issue #79).  Note: on Windows, grandchild
-    reaping via the job-object is best-effort — ``proc.kill()`` sends
-    ``TerminateProcess`` to alass only; the ffmpeg grandchild may linger until
-    it detects the broken pipe, which is acceptable for this pass.
-    """
-    if sys.platform == "win32":
-        # CREATE_NO_WINDOW already implies the no-window behaviour, so the
-        # no_window_kwargs() spread would be redundant here — set creationflags
-        # directly.
-        create_no_window = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
-        create_new_process_group = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
-        return {"creationflags": create_no_window | create_new_process_group}
-    # POSIX: no_window_kwargs() returns {} but merge anyway for symmetry.
-    return {**no_window_kwargs(), "start_new_session": True}
+_ALASS_TIMEOUT_S = 60 * 60
 
 
 # ---------------------------------------------------------------------------
@@ -237,90 +209,21 @@ def _run_alass(
     env["ALASS_FFMPEG_PATH"] = resolve_ffmpeg(config)
     env["ALASS_FFPROBE_PATH"] = resolve_ffprobe(config)
 
-    # --- Launch -----------------------------------------------------------
-    try:
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            env=env,
-            **_proc_group_kwargs(),
-        )
-    except FileNotFoundError as exc:
+    result = run_supervised(
+        cmd,
+        timeout_s=_ALASS_TIMEOUT_S,
+        cancel=cancel_event,
+        env=env,
+        line_callback=log_cb,
+        combine_stderr=True,
+    )
+    if isinstance(result.error, FileNotFoundError):
         raise AlassNotFoundError(
-            f"alass binary not found: {alass_bin!r}.  " "Install alass or set its path in Settings → Subtitles."
-        ) from exc
-
-    # --- Cancellation watcher thread -------------------------------------
-    # The watcher blocks until either cancel_event fires or the work is done.
-    # A local done_event prevents it from holding the thread open after a
-    # clean exit.
-    done_event = threading.Event()
-    cancel_thread: threading.Thread | None = None
-
-    if cancel_event is not None:
-        _ce: threading.Event = cancel_event
-        _de: threading.Event = done_event
-        _proc = proc
-
-        def _watch() -> None:
-            # Block until cancel fires OR work finishes (done_event set in finally).
-            while not _ce.is_set() and not _de.is_set():
-                _ce.wait(timeout=0.05)
-            # Kill ONLY if cancel arrived while the process is still alive. Once
-            # the main thread has reaped the process (done_event set after
-            # proc.wait()), its PID may be reused — killing then could SIGKILL an
-            # unrelated process group. The contextlib.suppress below still covers
-            # the narrow race where the process exits between this check and the
-            # kill syscall.
-            if _ce.is_set() and not _de.is_set():
-                # Kill the entire process group so alass's ffmpeg child dies too.
-                if sys.platform != "win32":
-                    with contextlib.suppress(ProcessLookupError, OSError):
-                        os.killpg(os.getpgid(_proc.pid), signal.SIGKILL)
-                else:
-                    # Best-effort: TerminateProcess on alass; grandchild ffmpeg
-                    # may not be reaped on Windows (acceptable for this pass).
-                    with contextlib.suppress(OSError):
-                        _proc.kill()
-
-        cancel_thread = threading.Thread(target=_watch, daemon=True, name="alass-cancel-watcher")
-        cancel_thread.start()
-
-    # --- Stream stdout line by line --------------------------------------
-    tail: collections.deque[str] = collections.deque(maxlen=50)
-
-    if proc.stdout is None:
-        # Should never happen with stdout=PIPE, but guard rather than assert
-        # (asserts are stripped under python -O).
-        done_event.set()
-        if cancel_thread is not None:
-            cancel_thread.join()
-        return False
-
-    try:
-        for raw_line in proc.stdout:
-            line = raw_line.rstrip("\n")
-            tail.append(line)
-            if log_cb is not None:
-                log_cb(line)
-
-        proc.wait()
-    finally:
-        # Signal the watcher that work is done before joining it.
-        done_event.set()
-        if cancel_thread is not None:
-            cancel_thread.join()
+            f"alass binary not found: {alass_bin!r}.  Install alass or set its path in Settings → Subtitles."
+        ) from result.error
 
     # --- Evaluate result -------------------------------------------------
-    cancelled = cancel_event is not None and cancel_event.is_set()
-
-    # Clean up and return False on cancel — even if alass happened to exit 0
-    # before the kill reached it.
-    if cancelled:
+    if result.state in {SupervisedState.CANCELLED, SupervisedState.TIMED_OUT}:
         try:
             if tmp_out.exists():
                 tmp_out.unlink()
@@ -328,7 +231,7 @@ def _run_alass(
             pass
         return False
 
-    if proc.returncode == 0 and tmp_out.exists():
+    if result.state is SupervisedState.COMPLETED and tmp_out.exists():
         os.replace(tmp_out, out_sub)
         return True
 
@@ -340,8 +243,9 @@ def _run_alass(
         pass
 
     logger.warning(
-        "alass retiming failed (exit %s). Last output:\n%s",
-        proc.returncode,
-        "\n".join(tail),
+        "alass retiming failed (%s, exit %s). Last output:\n%s",
+        result.state.value,
+        result.returncode,
+        "\n".join(result.stdout.splitlines()[-50:]),
     )
     return False

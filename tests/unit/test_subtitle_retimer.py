@@ -5,6 +5,7 @@ All subprocess interaction is mocked — no real alass binary is required.
 
 from __future__ import annotations
 
+import io
 import os
 import signal
 import sys
@@ -17,6 +18,7 @@ import pytest
 
 from anki_miner.exceptions.subtitle import AlassNotFoundError
 from anki_miner.services.subtitle_retimer import retime_subtitle
+from anki_miner.utils.process_supervisor import SupervisedResult, SupervisedState
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -36,19 +38,25 @@ class _FakePopen:
         tmp_path_ref: list[Path] | None = None,
     ) -> None:
         self.pid = pid
-        self.returncode: int | None = None
+        self.returncode: int | None = returncode
         self._lines = lines
         self._final_returncode = returncode
         self._create_tmp = create_tmp
         self._tmp_path_ref = tmp_path_ref  # mutable list so caller can inspect
 
-        # stdout is an iterable of the provided lines (already stripped of \n
-        # by design; the implementation strips trailing newlines itself)
-        self.stdout = iter(lines)
+        output = "".join(line if line.endswith("\n") else f"{line}\n" for line in lines)
+        self.stdout = io.BytesIO(output.encode("utf-8"))
+        self.stderr = None
 
-    def wait(self) -> int:
+    def poll(self) -> int | None:
+        return self.returncode
+
+    def wait(self, timeout: float | None = None) -> int:
         self.returncode = self._final_returncode
         return self._final_returncode
+
+    def terminate(self) -> None:
+        self.returncode = -15
 
     def kill(self) -> None:  # Windows path
         self.returncode = -9
@@ -152,16 +160,21 @@ def stub_extractor():
         yield mock_cls
 
 
+@pytest.fixture(autouse=True)
+def stub_supervisor_killpg():
+    with patch("anki_miner.utils.process_supervisor.os.killpg"):
+        yield
+
+
 # ---------------------------------------------------------------------------
 # Patch targets
 # ---------------------------------------------------------------------------
 
-_POPEN = "anki_miner.services.subtitle_retimer.subprocess.Popen"
+_POPEN = "anki_miner.utils.process_supervisor.subprocess.Popen"
 _RESOLVE_ALASS = "anki_miner.services.subtitle_retimer.resolve_alass"
 _RESOLVE_FFMPEG = "anki_miner.services.subtitle_retimer.resolve_ffmpeg"
 _RESOLVE_FFPROBE = "anki_miner.services.subtitle_retimer.resolve_ffprobe"
-_OS_KILLPG = "anki_miner.services.subtitle_retimer.os.killpg"
-_OS_GETPGID = "anki_miner.services.subtitle_retimer.os.getpgid"
+_OS_KILLPG = "anki_miner.utils.process_supervisor.os.killpg"
 _OS_REPLACE = "anki_miner.services.subtitle_retimer.os.replace"
 
 
@@ -415,19 +428,7 @@ class TestLogCallback:
 
         def _factory(cmd: list[str], **kwargs: Any) -> _FakePopen:
             Path(cmd[-1]).touch()
-            fake = _FakePopen.__new__(_FakePopen)
-            fake.pid = 12345
-            fake.returncode = None
-            fake._final_returncode = 0
-            fake.stdout = iter(lines_with_nl)
-
-            def wait() -> int:
-                fake.returncode = 0
-                return 0
-
-            fake.wait = wait  # type: ignore[method-assign]
-            fake.kill = lambda: None  # type: ignore[method-assign]
-            return fake
+            return _FakePopen(lines_with_nl, returncode=0)
 
         received: list[str] = []
 
@@ -513,13 +514,7 @@ class TestCancellationPosix:
         cfg: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """Pre-set cancel: process drains & exits before any kill → returns False.
-
-        With cancel set before launch, the (mocked, instantly-finishing) process
-        drains its stdout and is reaped before the watcher could ever kill it; the
-        PID-reuse guard means no kill fires. The function must still return False
-        via the post-run ``cancel_event.is_set()`` check, with no error log.
-        """
+        """Pre-set cancel terminates supervision and returns False without an error log."""
         cancel_event = threading.Event()
         cancel_event.set()  # already cancelled before launch
 
@@ -536,7 +531,6 @@ class TestCancellationPosix:
             patch(_RESOLVE_FFMPEG, return_value="ffmpeg"),
             patch(_RESOLVE_FFPROBE, return_value="ffprobe"),
             patch(_POPEN, side_effect=_factory),
-            patch(_OS_GETPGID, return_value=99),
             patch(_OS_KILLPG),
             caplog.at_level(logging.WARNING, logger="anki_miner.services.subtitle_retimer"),
         ):
@@ -567,23 +561,32 @@ class TestCancellationPosix:
         cancel_event = threading.Event()
         killed_event = threading.Event()
 
+        fake: _FakePopen | None = None
+
         def _killpg(pgid: int, sig: int) -> None:
             # Watcher reached the kill — unblock the stdout iterator so the
             # main thread can finish draining and reap the process.
+            assert fake is not None
+            fake.returncode = -sig
             killed_event.set()
 
-        def _streaming_stdout() -> Any:
-            # First line: trigger cancel, then wait for the watcher to kill.
-            yield "info: analysing audio"
-            cancel_event.set()
-            # Block until the watcher's killpg fires (or a generous safety timeout
-            # so the test can never hang).
-            killed_event.wait(timeout=5.0)
-            yield "shifted block 1 by 300ms"
+        class _StreamingPipe:
+            def __init__(self) -> None:
+                self._read = False
+
+            def read(self, _size: int) -> bytes:
+                if self._read:
+                    return b""
+                self._read = True
+                cancel_event.set()
+                killed_event.wait(timeout=5.0)
+                return b"info: analysing audio\nshifted block 1 by 300ms\n"
 
         def _factory(cmd: list[str], **kwargs: Any) -> _FakePopen:
+            nonlocal fake
             fake = _FakePopen([], returncode=0, create_tmp=False)
-            fake.stdout = _streaming_stdout()
+            fake.returncode = None
+            fake.stdout = _StreamingPipe()  # type: ignore[assignment]
             return fake
 
         with (
@@ -591,14 +594,14 @@ class TestCancellationPosix:
             patch(_RESOLVE_FFMPEG, return_value="ffmpeg"),
             patch(_RESOLVE_FFPROBE, return_value="ffprobe"),
             patch(_POPEN, side_effect=_factory),
-            patch(_OS_GETPGID, return_value=99),
             patch(_OS_KILLPG, side_effect=_killpg) as mock_killpg,
         ):
             result = retime_subtitle(cfg, video, in_sub, out_sub, cancel_event=cancel_event)
 
         # Result must be False (cancelled) and the kill must have fired.
         assert result is False
-        mock_killpg.assert_called_once_with(99, signal.SIGKILL)
+        mock_killpg.assert_any_call(12345, signal.SIGTERM)
+        mock_killpg.assert_any_call(12345, signal.SIGKILL)
         assert killed_event.is_set()
 
 
@@ -720,3 +723,28 @@ class TestAlassNotFoundError:
             pytest.raises(AlassNotFoundError),
         ):
             retime_subtitle(cfg, video, in_sub, out_sub)
+
+
+def test_alass_hang_killed_by_deadline(
+    video: Path,
+    in_sub: Path,
+    out_sub: Path,
+    cfg: MagicMock,
+) -> None:
+    captured: dict[str, Any] = {}
+
+    def timed_out(_command: list[str], **kwargs: Any) -> SupervisedResult:
+        captured.update(kwargs)
+        return SupervisedResult(SupervisedState.TIMED_OUT, -signal.SIGKILL, "", "")
+
+    with (
+        patch(_RESOLVE_ALASS, return_value="alass"),
+        patch(_RESOLVE_FFMPEG, return_value="ffmpeg"),
+        patch(_RESOLVE_FFPROBE, return_value="ffprobe"),
+        patch("anki_miner.services.subtitle_retimer.run_supervised", side_effect=timed_out, create=True),
+    ):
+        result = retime_subtitle(cfg, video, in_sub, out_sub)
+
+    assert result is False
+    assert captured["timeout_s"] == 60 * 60
+    assert captured["combine_stderr"] is True

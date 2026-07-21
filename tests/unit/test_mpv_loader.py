@@ -15,6 +15,8 @@ import os
 import re
 import subprocess
 import sys
+import threading
+import time
 import types
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -58,6 +60,19 @@ def _fake_mpv_module(events: list | None = None) -> types.ModuleType:
 
     module.MPV = FakeMPV
     return module
+
+
+def test_mpv_teardown_bounded() -> None:
+    release = threading.Event()
+    player = MagicMock()
+    player.terminate.side_effect = lambda: release.wait(timeout=5)
+
+    started = time.monotonic()
+    try:
+        assert mpv_loader.terminate_mpv_player(player, timeout_s=0.01) is False
+        assert time.monotonic() - started < 0.5
+    finally:
+        release.set()
 
 
 class TestSearchOrder:
