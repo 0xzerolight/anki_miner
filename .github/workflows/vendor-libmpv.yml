@@ -106,7 +106,7 @@ jobs:
           tar -C out -czf libmpv-linux-x86_64.tar.gz .
           sha256sum libmpv-linux-x86_64.tar.gz
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: libmpv-linux-x86_64
           path: libmpv-linux-x86_64.tar.gz
@@ -117,7 +117,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout (for the import-table audit script)
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v5
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Mirror zhongfly mpv-winbuild libmpv-2.dll
         env:
           GH_TOKEN: ${{ github.token }}
@@ -130,14 +130,8 @@ jobs:
           TAG="$(echo "$REL_JSON" | jq -r .tag_name)"
           ASSET="$(echo "$REL_JSON" | jq -r '.assets[].name' | grep -E '^mpv-dev-x86_64-[0-9]{8}-git-[0-9a-f]+\.7z$' | head -1)"
           test -n "$ASSET"
-          gh release download "$TAG" -R zhongfly/mpv-winbuild -p "$ASSET" -p "sha256.txt" 2>/dev/null \
-            || { gh release download "$TAG" -R zhongfly/mpv-winbuild -p "$ASSET"; gh release download "$TAG" -R zhongfly/mpv-winbuild -p "*sha256*" || true; }
-          # Verify against zhongfly's published checksums when present.
-          if ls *sha256* >/dev/null 2>&1; then
-            grep "$ASSET" *sha256* | sha256sum -c -
-          else
-            echo "WARNING: no upstream sha256 asset found; recording our own hash only"
-          fi
+          gh release download "$TAG" -R zhongfly/mpv-winbuild -p "$ASSET" -p "*sha256*"
+          grep -hF "$ASSET" *sha256* | sha256sum -c -
           7z x "$ASSET" -oextracted
           DLL="$(find extracted -name 'libmpv-2.dll' | head -1)"
           test -n "$DLL"
@@ -167,7 +161,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends binutils
           python3 scripts/check_windows_libmpv_imports.py out/libmpv-2.dll
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: libmpv-windows-x86_64
           path: libmpv-windows-x86_64.zip
@@ -246,7 +240,7 @@ jobs:
           assert (v >> 16) >= 2
           EOF
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: libmpv-macos-${{ matrix.arch }}
           path: libmpv-macos-${{ matrix.arch }}.tar.gz
@@ -256,7 +250,7 @@ jobs:
     needs: [linux, windows, macos]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           merge-multiple: true
 

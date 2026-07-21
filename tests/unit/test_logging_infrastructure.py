@@ -9,6 +9,8 @@ Covers:
 from __future__ import annotations
 
 import logging
+import os
+import stat
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -169,6 +171,41 @@ class TestConfigureLogging:
             for h in added:
                 h.close()
                 root.removeHandler(h)
+
+    @pytest.mark.skipif(os.name == "nt", reason="POSIX permission bits are not enforced on Windows")
+    def test_config_and_log_files_owner_only(self, tmp_path, monkeypatch):
+        from anki_miner.config import create_default_config
+        from anki_miner.gui.utils.config_manager import GUIConfigManager
+
+        configure_logging = self._import_configure_logging()
+        config_path = tmp_path / "gui_config.json"
+        log_path = tmp_path / "anki_miner.log"
+        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", config_path)
+
+        root = logging.getLogger()
+        am_logger = logging.getLogger("anki_miner")
+        handlers_before = list(root.handlers)
+        root_level_before = root.level
+        am_level_before = am_logger.level
+        old_umask = os.umask(0)
+        added: list[logging.Handler] = []
+        try:
+            GUIConfigManager.save_config(create_default_config())
+            configure_logging(log_path)
+            added = [h for h in root.handlers if h not in handlers_before]
+            logging.getLogger("anki_miner.permission_test").error("create-log-file")
+            for handler in added:
+                handler.flush()
+        finally:
+            os.umask(old_umask)
+            root.setLevel(root_level_before)
+            am_logger.setLevel(am_level_before)
+            for handler in added:
+                handler.close()
+                root.removeHandler(handler)
+
+        assert stat.S_IMODE(config_path.stat().st_mode) == 0o600
+        assert stat.S_IMODE(log_path.stat().st_mode) == 0o600
 
     def test_root_logger_level_is_warning(self, tmp_path):
         """_configure_logging sets root logger to WARNING (not DEBUG)."""

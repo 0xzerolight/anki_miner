@@ -271,6 +271,46 @@ def test_font_obfuscation_encryption_proceeds(tmp_path: Path) -> None:
     assert [u.text for u in doc.units] == ["本文。"]
 
 
+@pytest.mark.parametrize(
+    ("algorithm", "uri", "allowed"),
+    [
+        ("http://www.idpf.org/2008/embedding", "OEBPS/fonts/gothic.otf", True),
+        ("http://www.idpf.org/2008/embedding", "OEBPS/ch1.xhtml", False),
+        ("http://www.w3.org/2001/04/xmlenc#aes256-cbc", "OEBPS/fonts/gothic.otf", False),
+        ("http://www.w3.org/2001/04/xmlenc#aes256-cbc", "OEBPS/ch1.xhtml", False),
+        (None, None, False),
+    ],
+    ids=("allowed-font", "allowed-xhtml", "other-font", "other-xhtml", "malformed-xml"),
+)
+def test_epub_encryption_requires_allowed_algorithm_and_font_uri(
+    tmp_path: Path,
+    algorithm: str | None,
+    uri: str | None,
+    allowed: bool,
+) -> None:
+    encryption = (
+        _encryption("http://www.idpf.org/2008/embedding", "OEBPS/fonts/gothic.otf").removesuffix("</encryption>\n")
+        if algorithm is None or uri is None
+        else _encryption(algorithm, uri)
+    )
+    files = {
+        "OEBPS/content.opf": _opf(
+            [("c1", "ch1.xhtml", "application/xhtml+xml", "")],
+            [("c1", None)],
+        ),
+        "OEBPS/ch1.xhtml": _xhtml("<p>本文。</p>"),
+        "OEBPS/fonts/gothic.otf": b"\x00\x01\x00\x00font",
+        "META-INF/encryption.xml": encryption,
+    }
+    epub_path = _build_epub(tmp_path, files)
+
+    if allowed:
+        assert [unit.text for unit in load(_ref(epub_path)).units] == ["本文。"]
+    else:
+        with pytest.raises(SetupError):
+            load(_ref(epub_path))
+
+
 def test_gaiji_image_contributes_no_text_and_warns(tmp_path: Path) -> None:
     files = {
         "OEBPS/content.opf": _opf(

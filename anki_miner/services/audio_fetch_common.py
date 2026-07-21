@@ -15,6 +15,7 @@ import tempfile
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import urlsplit, urlunsplit
 
 import requests
 
@@ -38,6 +39,21 @@ _BROWSER_USER_AGENT = (
 # Real word audio is ~10–100 KB. 5 MB is a generous upper bound; anything
 # larger is almost certainly an error page or CDN redirect body.
 MAX_AUDIO_BYTES = 5 * 1024 * 1024
+
+
+def redact_url_for_log(url: str) -> str:
+    """Return a URL safe to persist: scheme, host, port, and path only."""
+    try:
+        parts = urlsplit(url)
+        hostname = parts.hostname
+        port = parts.port
+    except ValueError:
+        return "<redacted-url>"
+    if not parts.scheme or hostname is None:
+        return "<redacted-url>"
+    host = f"[{hostname}]" if ":" in hostname else hostname
+    netloc = f"{host}:{port}" if port is not None else host
+    return urlunsplit((parts.scheme, netloc, parts.path, "", ""))
 
 
 def is_mp3(body: bytes) -> bool:
@@ -241,7 +257,7 @@ def download_audio_to_cache(
             response.close()
     except (requests.RequestException, OSError) as exc:
         _bump(classify_request_exception(exc))
-        logger.debug("audio download failed for %s: %s", url, exc)
+        logger.debug("audio download failed for %s: %s", redact_url_for_log(url), exc)
         return None
 
 

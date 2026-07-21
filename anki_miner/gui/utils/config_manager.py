@@ -95,11 +95,14 @@ class GUIConfigManager:
         tmp_path = cls.CONFIG_FILE.with_suffix(cls.CONFIG_FILE.suffix + ".tmp")
         bak_path = cls.CONFIG_FILE.with_name(cls.CONFIG_FILE.name + ".bak")
         try:
+            tmp_path.touch(mode=0o600, exist_ok=True)
+            os.chmod(tmp_path, 0o600)
             with tmp_path.open("w", encoding="utf-8") as f:
                 json.dump(config_dict, f, indent=2, ensure_ascii=False)
             # First-ever save has nothing to back up — skip silently.
             if cls.CONFIG_FILE.exists():
                 shutil.copy2(cls.CONFIG_FILE, bak_path)
+                os.chmod(bak_path, 0o600)
             os.replace(tmp_path, cls.CONFIG_FILE)
         except BaseException:
             tmp_path.unlink(missing_ok=True)

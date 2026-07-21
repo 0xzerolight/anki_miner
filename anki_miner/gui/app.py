@@ -198,6 +198,13 @@ def _run_whispercpp_bundled_smoke() -> int:
     return 0
 
 
+class _OwnerOnlyRotatingFileHandler(RotatingFileHandler):
+    def _open(self):
+        Path(self.baseFilename).touch(mode=0o600, exist_ok=True)
+        os.chmod(self.baseFilename, 0o600)
+        return super()._open()
+
+
 def _configure_logging(log_path: Path) -> None:
     """Attach (or re-point) a RotatingFileHandler on the root logger.
 
@@ -220,7 +227,7 @@ def _configure_logging(log_path: Path) -> None:
             root.removeHandler(existing)
             existing.close()
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    handler = RotatingFileHandler(
+    handler = _OwnerOnlyRotatingFileHandler(
         log_path,
         maxBytes=2 * 1024 * 1024,
         backupCount=2,
