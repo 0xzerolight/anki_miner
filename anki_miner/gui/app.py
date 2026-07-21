@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 from collections.abc import Callable, Sequence
+from functools import wraps
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Protocol, runtime_checkable
@@ -20,6 +21,7 @@ from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.config_manager import GUIConfigManager
+from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers, still_running
 from anki_miner.gui.utils.service_factory import create_youtube_fetcher
 from anki_miner.gui.utils.stall_watchdog import install_stall_watchdog
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
@@ -566,6 +568,27 @@ def _install_excepthook(app: QApplication) -> None:
     sys.excepthook = _hook
 
 
+def _rollback_workers_on_startup_fault(fn: Callable[[], None]) -> Callable[[], None]:
+    """Cancel and join constructor-started workers before startup unwinds."""
+
+    @wraps(fn)
+    def wrapped() -> None:
+        try:
+            fn()
+        except Exception:
+            laggards = join_all_off_thread_workers()
+            for worker in laggards:
+                try:
+                    if still_running(worker):
+                        worker.wait()
+                except RuntimeError:
+                    pass
+            raise
+
+    return wrapped
+
+
+@_rollback_workers_on_startup_fault
 def main():
     """Launch the Anki Miner GUI application."""
     _install_minimal_recovery()

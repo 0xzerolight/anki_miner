@@ -539,7 +539,7 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, self.tr("Desktop Shortcut"), message)
 
         try:
-            run_off_thread(self, work, on_done, on_error)
+            run_off_thread(self, work, on_done, on_error, on_finished=finish_attempt)
         except Exception as exc:
             on_error(str(exc))
 

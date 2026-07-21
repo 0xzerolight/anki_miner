@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from dataclasses import replace
 from unittest.mock import MagicMock
 
@@ -81,6 +82,56 @@ def test_boot_fault_after_version_save_starts_no_workers(qtbot, monkeypatch, tes
     window.deleteLater()
 
 
+def test_precommit_fault_joins_constructor_started_workers(qtbot):
+    from PyQt6.QtWidgets import QWidget
+
+    from anki_miner.gui import app as app_module
+    from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
+
+    started = threading.Event()
+    cancelled = threading.Event()
+    tabs = []
+
+    class ConstructorWorkerTab(QWidget):
+        def __init__(self) -> None:
+            super().__init__()
+
+            def scan(cancel_check):
+                started.set()
+                while not cancel_check():
+                    cancelled.wait(0.01)
+                cancelled.set()
+
+            self.worker = run_off_thread(
+                self,
+                scan,
+                lambda _result: None,
+                pass_cancel_check=True,
+            )
+
+    rollback_on_fault = getattr(app_module, "_rollback_workers_on_startup_fault", lambda fn: fn)
+
+    @rollback_on_fault
+    def construct_tabs_then_fault() -> None:
+        tab = ConstructorWorkerTab()
+        qtbot.addWidget(tab)
+        tabs.append(tab)
+        assert started.wait(1)
+        raise RuntimeError("fault before commit_boot")
+
+    try:
+        with pytest.raises(RuntimeError, match="fault before commit_boot"):
+            construct_tabs_then_fault()
+
+        assert getattr(app_module.main, "__wrapped__", None) is not None
+        assert cancelled.wait(1)
+        assert not still_running(tabs[0].worker)
+    finally:
+        if tabs and still_running(tabs[0].worker):
+            tabs[0].worker.cancel()
+            tabs[0].worker.wait(1000)
+
+
 def test_shortcut_work_off_thread_and_attempt_state_persisted_on_error(qtbot, monkeypatch, test_config):
     from anki_miner.gui import main_window as main_window_module
 
@@ -122,6 +173,51 @@ def test_shortcut_work_off_thread_and_attempt_state_persisted_on_error(qtbot, mo
     assert callable(on_error)
     on_error("disk full")
 
+    assert window.config.first_run_shortcut_done is True
+    assert window._shortcut_work_in_flight is False
+    window.deleteLater()
+
+
+def test_shortcut_cancel_finalizes_attempt_state(qtbot, monkeypatch, test_config):
+    from anki_miner.gui import main_window as main_window_module
+    from anki_miner.gui.utils.run_off_thread import still_running
+    from anki_miner.services import ShortcutResult
+
+    _patch_window_construction(monkeypatch)
+    monkeypatch.setattr(main_window_module.GUIConfigManager, "save_config", lambda config: None)
+    monkeypatch.setattr(main_window_module.ShortcutService, "shortcut_exists", lambda: False)
+    started = threading.Event()
+    release = threading.Event()
+    calls = 0
+
+    def create_shortcut() -> ShortcutResult:
+        nonlocal calls
+        calls += 1
+        started.set()
+        release.wait(1)
+        return ShortcutResult(success=True, messages=())
+
+    monkeypatch.setattr(main_window_module.ShortcutService, "create_shortcut", create_shortcut)
+    config = replace(
+        test_config,
+        last_known_version=__version__,
+        check_for_updates=False,
+        first_run_shortcut_done=False,
+        first_run_setup_done=True,
+    )
+    window = main_window_module.MainWindow(config)
+    qtbot.addWidget(window)
+
+    window._maybe_create_shortcut_on_first_run()
+    assert started.wait(1)
+    worker = next(iter(window._off_thread_workers))
+    worker.cancel()
+    release.set()
+    assert worker.wait(1000)
+    qtbot.waitUntil(lambda: not still_running(worker), timeout=1000)
+    qtbot.wait(10)
+
+    assert calls == 1
     assert window.config.first_run_shortcut_done is True
     assert window._shortcut_work_in_flight is False
     window.deleteLater()
