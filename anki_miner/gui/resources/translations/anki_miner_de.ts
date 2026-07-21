@@ -5181,6 +5181,12 @@ Importierte Werte überschreiben Ihre aktuellen Einstellungen; alles, was nicht 
         <source>Could not open the known words list: %1</source>
         <translation>Liste bekannter Wörter konnte nicht geöffnet werden: %1</translation>
     </message>
+    <message>
+        <source>The imported subtitle regex filter is invalid and has been disabled:
+%1</source>
+        <translation type="vanished">Der importierte Untertitel-Regex-Filter ist ungültig und wurde deaktiviert:
+%1</translation>
+    </message>
 </context><context>
     <name>SetupWizard</name>
     <message>

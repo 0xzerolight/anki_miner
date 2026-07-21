@@ -5170,6 +5170,12 @@ Nilai yang diimpor menggantikan pengaturan Anda saat ini; apa pun yang tidak ada
         <source>Could not open the known words list: %1</source>
         <translation>Tidak dapat membuka daftar kata yang dikenal: %1</translation>
     </message>
+    <message>
+        <source>The imported subtitle regex filter is invalid and has been disabled:
+%1</source>
+        <translation type="vanished">Filter regex subtitel yang diimpor tidak valid dan telah dinonaktifkan:
+%1</translation>
+    </message>
 </context><context>
     <name>SetupWizard</name>
     <message>

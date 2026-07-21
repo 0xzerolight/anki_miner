@@ -5181,6 +5181,12 @@ Os valores importados substituem suas configurações atuais; qualquer coisa que
         <source>Could not open the known words list: %1</source>
         <translation>Não foi possível abrir a lista de palavras conhecidas: %1</translation>
     </message>
+    <message>
+        <source>The imported subtitle regex filter is invalid and has been disabled:
+%1</source>
+        <translation type="vanished">O filtro de regex de legenda importado é inválido e foi desativado:
+%1</translation>
+    </message>
 </context><context>
     <name>SetupWizard</name>
     <message>

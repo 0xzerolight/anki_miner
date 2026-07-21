@@ -5181,6 +5181,12 @@ I valori importati sovrascrivono le impostazioni attuali; tutto ciò che non è 
         <source>Could not open the known words list: %1</source>
         <translation>Impossibile aprire l'elenco delle parole conosciute: %1</translation>
     </message>
+    <message>
+        <source>The imported subtitle regex filter is invalid and has been disabled:
+%1</source>
+        <translation type="vanished">Il filtro regex dei sottotitoli importato non è valido ed è stato disattivato:
+%1</translation>
+    </message>
 </context><context>
     <name>SetupWizard</name>
     <message>

@@ -5192,6 +5192,12 @@ Imported values override your current settings; anything not in the file is kept
         <source>Could not open the known words list: %1</source>
         <translation>Не удалось открыть список известных слов: %1</translation>
     </message>
+    <message>
+        <source>The imported subtitle regex filter is invalid and has been disabled:
+%1</source>
+        <translation type="vanished">Импортированный фильтр субтитров на основе регулярного выражения недопустим и был отключён:
+%1</translation>
+    </message>
 </context><context>
     <name>SetupWizard</name>
     <message>

@@ -5170,6 +5170,12 @@ Giá trị nhập vào ghi đè cài đặt hiện tại của bạn; bất kỳ
         <source>Could not open the known words list: %1</source>
         <translation>Không thể mở danh sách từ đã biết: %1</translation>
     </message>
+    <message>
+        <source>The imported subtitle regex filter is invalid and has been disabled:
+%1</source>
+        <translation type="vanished">Bộ lọc biểu thức chính quy phụ đề đã nhập không hợp lệ và đã bị vô hiệu hóa:
+%1</translation>
+    </message>
 </context><context>
     <name>SetupWizard</name>
     <message>

@@ -5170,6 +5170,12 @@ Imported values override your current settings; anything not in the file is kept
         <source>Could not open the known words list: %1</source>
         <translation>無法開啟已知單字清單：%1</translation>
     </message>
+    <message>
+        <source>The imported subtitle regex filter is invalid and has been disabled:
+%1</source>
+        <translation type="vanished">匯入的字幕正規表示式篩選器無效，已停用：
+%1</translation>
+    </message>
 </context><context>
     <name>SetupWizard</name>
     <message>
