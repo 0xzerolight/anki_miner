@@ -113,9 +113,7 @@ def _run_asr_bundled_smoke() -> int:
 
     try:
         if not _engine.available():
-            raise RuntimeError(
-                "faster-whisper or ctranslate2 not importable from bundle " "(available() returned False)"
-            )
+            raise RuntimeError("faster-whisper or ctranslate2 not importable from bundle (available() returned False)")
         # Importing the class exercises ctranslate2 native lib resolution.
         _engine.get_whisper_model_cls()
     except Exception as exc:
@@ -157,7 +155,7 @@ def _run_whispercpp_bundled_smoke() -> int:
     try:
         if not _engine.whisper_cpp_available():
             raise RuntimeError(
-                "pywhispercpp + ggml-vulkan not available from bundle " "(whisper_cpp_available() returned False)"
+                "pywhispercpp + ggml-vulkan not available from bundle (whisper_cpp_available() returned False)"
             )
         # DEFECT-1 fix: register the ggml DL backends (cpu + vulkan) BEFORE importing
         # pywhispercpp, so its extension binds THIS (populated) libggml instance rather
@@ -198,6 +196,14 @@ def _run_whispercpp_bundled_smoke() -> int:
     return 0
 
 
+class _OwnerOnlyRotatingFileHandler(RotatingFileHandler):
+    def _open(self):
+        Path(self.baseFilename).touch(mode=0o600, exist_ok=True)
+        if os.name == "posix":
+            os.chmod(self.baseFilename, 0o600)
+        return super()._open()
+
+
 def _configure_logging(log_path: Path) -> None:
     """Attach (or re-point) a RotatingFileHandler on the root logger.
 
@@ -220,7 +226,7 @@ def _configure_logging(log_path: Path) -> None:
             root.removeHandler(existing)
             existing.close()
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    handler = RotatingFileHandler(
+    handler = _OwnerOnlyRotatingFileHandler(
         log_path,
         maxBytes=2 * 1024 * 1024,
         backupCount=2,

@@ -89,17 +89,23 @@ class GUIConfigManager:
         # Backup rotation: right before os.replace clobbers the existing file,
         # copy the still-good current config to a sibling .bak (one-overwrite
         # recovery — config isn't in git and os.replace keeps no backup, so a
-        # bad write once nuked a user's settings with no way back). copy2 runs
+        # bad write once nuked a user's settings with no way back). The copy runs
         # inside the try, so if it fails we unlink the .tmp and re-raise without
         # touching CONFIG_FILE — the original survives intact.
         tmp_path = cls.CONFIG_FILE.with_suffix(cls.CONFIG_FILE.suffix + ".tmp")
         bak_path = cls.CONFIG_FILE.with_name(cls.CONFIG_FILE.name + ".bak")
         try:
+            tmp_path.touch(mode=0o600, exist_ok=True)
+            if os.name == "posix":
+                os.chmod(tmp_path, 0o600)
             with tmp_path.open("w", encoding="utf-8") as f:
                 json.dump(config_dict, f, indent=2, ensure_ascii=False)
             # First-ever save has nothing to back up — skip silently.
             if cls.CONFIG_FILE.exists():
-                shutil.copy2(cls.CONFIG_FILE, bak_path)
+                bak_path.touch(mode=0o600, exist_ok=True)
+                if os.name == "posix":
+                    os.chmod(bak_path, 0o600)
+                shutil.copyfile(cls.CONFIG_FILE, bak_path)
             os.replace(tmp_path, cls.CONFIG_FILE)
         except BaseException:
             tmp_path.unlink(missing_ok=True)

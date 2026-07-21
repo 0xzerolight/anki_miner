@@ -30,7 +30,7 @@ import posixpath
 import re
 import zipfile
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import unquote, urlsplit
 
 from lxml import etree, html  # type: ignore[import-untyped]
 
@@ -244,12 +244,17 @@ def _resolve(base_dir: str, href: str) -> str:
 def _check_encryption(zf: zipfile.ZipFile, names: set[str], epub_path: Path) -> None:
     if _ENCRYPTION_PATH not in names:
         return
-    root = _parse_xml(_read_member(zf, _ENCRYPTION_PATH, epub_path))
-    if root is None:
-        return
+    unsupported_message = f"'{epub_path.name}' is DRM-protected and cannot be mined."
+    parser = etree.XMLParser(resolve_entities=False, load_dtd=False, no_network=True)
+    try:
+        root = etree.fromstring(_read_member(zf, _ENCRYPTION_PATH, epub_path), parser)
+    except etree.XMLSyntaxError:
+        raise SetupError(unsupported_message) from None
+    found_encrypted_data = False
     for enc in root.iter():
         if _local(enc) != "encrypteddata":
             continue
+        found_encrypted_data = True
         algorithm = None
         uri = None
         for sub in enc.iter():
@@ -258,11 +263,17 @@ def _check_encryption(zf: zipfile.ZipFile, names: set[str], epub_path: Path) -> 
                 algorithm = sub.get("Algorithm")
             elif name == "cipherreference" and uri is None:
                 uri = sub.get("URI")
-        if algorithm in _FONT_OBFUSCATION_ALGS:
-            continue
-        if uri and unquote(uri).lower().endswith(_FONT_EXTS):
-            continue
-        raise SetupError(f"'{epub_path.name}' is DRM-protected and cannot be mined.")
+        if algorithm in _FONT_OBFUSCATION_ALGS and uri:
+            try:
+                uri_path = unquote(urlsplit(uri).path).lower()
+            except ValueError:
+                pass
+            else:
+                if uri_path.endswith(_FONT_EXTS):
+                    continue
+        raise SetupError(unsupported_message)
+    if not found_encrypted_data:
+        raise SetupError(unsupported_message)
 
 
 # --------------------------------------------------------------------------- #

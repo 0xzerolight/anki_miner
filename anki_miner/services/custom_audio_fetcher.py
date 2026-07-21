@@ -41,6 +41,9 @@ from anki_miner.services.audio_fetch_common import (
 from anki_miner.services.audio_fetch_common import (
     new_failure_counts as _new_failure_counts,
 )
+from anki_miner.services.audio_fetch_common import (
+    redact_url_for_log as _redact_url_for_log,
+)
 from anki_miner.utils.file_utils import safe_filename
 
 logger = logging.getLogger(__name__)
@@ -182,7 +185,12 @@ class CustomAudioFetcher:
         except (requests.RequestException, OSError, ValueError) as exc:
             # ValueError covers json.JSONDecodeError (non-JSON body).
             self._failure_counts["non_audio"] += 1
-            logger.debug("custom_json fetch failed for %s: %s", url, exc)
+            logger.debug(
+                "custom_json fetch failed for %s: %s: %s",
+                _redact_url_for_log(url),
+                type(exc).__name__,
+                _redact_url_for_log(str(exc)),
+            )
             return []
 
         if not isinstance(data, dict) or data.get("type") != "audioSourceList":

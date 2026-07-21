@@ -9,9 +9,12 @@ except tuple).
 from __future__ import annotations
 
 import builtins
+import os
+import stat
 import types
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -196,6 +199,39 @@ class TestAtomicSave:
 
         assert bak_path.exists()
         assert json.loads(bak_path.read_text(encoding="utf-8"))["theme"] == "dark"
+
+    @pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits are required")
+    def test_backup_is_owner_only_before_copy(self, tmp_config: Path, monkeypatch):
+        import anki_miner.gui.utils.config_manager as cm
+
+        GUIConfigManager.save_config(replace(create_default_config(), theme="dark"))
+        observed_modes: list[int | None] = []
+        real_copyfile = cm.shutil.copyfile
+
+        def inspect_mode_before_copy(src, dst, *args, **kwargs):
+            destination = Path(dst)
+            observed_modes.append(stat.S_IMODE(destination.stat().st_mode) if destination.exists() else None)
+            return real_copyfile(src, dst, *args, **kwargs)
+
+        monkeypatch.setattr(cm.shutil, "copyfile", inspect_mode_before_copy)
+        old_umask = os.umask(0)
+        try:
+            GUIConfigManager.save_config(replace(create_default_config(), theme="light"))
+        finally:
+            os.umask(old_umask)
+
+        assert observed_modes == [0o600]
+
+    def test_non_posix_save_skips_chmod(self, tmp_config: Path, monkeypatch):
+        import anki_miner.gui.utils.config_manager as cm
+
+        chmod = MagicMock()
+        monkeypatch.setattr(cm, "os", types.SimpleNamespace(name="nt", chmod=chmod, replace=os.replace))
+
+        GUIConfigManager.save_config(replace(create_default_config(), theme="dark"))
+        GUIConfigManager.save_config(replace(create_default_config(), theme="light"))
+
+        chmod.assert_not_called()
 
 
 class TestRoundTripImmutabilityAndPaths:
