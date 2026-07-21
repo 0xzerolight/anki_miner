@@ -408,6 +408,28 @@ class BackgroundTaskController(QObject):
         self.jmdict_migration_worker.start()
         return True
 
+    def cancel_jmdict_migration(self) -> None:
+        """Cancel and bounded-join an in-flight legacy JMdict XML migration.
+
+        The recommended-resource download imports into the same on-disk slot
+        the migration writes (``dicts_root/jmdict-english/``, both with
+        overwrite) — concurrent writers could leave the inferior XML build as
+        the last writer. Called before the setup wizard or the resource
+        download dialog opens so the migration worker (the only non-modal
+        writer to that slot) is out of the picture first.
+
+        ``join_or_retain`` retains the handle on a timed-out wait instead of
+        clearing it: the worker is unparented, so dropping the sole reference
+        to a still-running QThread would destroy it mid-run and abort the
+        process. A timed-out (still cancelling) worker is race-safe anyway —
+        the importer's per-entry cancel check raises before the staged dir is
+        ever promoted into the slot — and shutdown() still joins the retained
+        handle. A cancelled migration re-evaluates on the next boot.
+        """
+        if still_running(self.jmdict_migration_worker):
+            logger.info("Cancelling in-flight JMdict migration before resource download/wizard")
+        self.jmdict_migration_worker = join_or_retain(self.jmdict_migration_worker, 1000)
+
     def set_prewarm(self, worker: QThread) -> None:
         """Adopt the best-effort cache prewarm worker.
 

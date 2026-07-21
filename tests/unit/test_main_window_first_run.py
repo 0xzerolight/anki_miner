@@ -93,6 +93,42 @@ def test_tools_setup_wizard_handler_calls_run_setup_wizard(main_window, monkeypa
 
 
 # ---------------------------------------------------------------------------
+# Same-slot race guard: an in-flight legacy JMdict XML migration is stopped
+# BEFORE any dialog that can download into the same "jmdict-english" slot.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("handler", "dialog_target"),
+    [
+        (
+            "_download_recommended_resources",
+            "anki_miner.gui.widgets.dialogs.resource_download_dialog.run_resource_download",
+        ),
+        ("_run_setup_wizard_tool", "anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard"),
+        ("_maybe_offer_first_run_setup", "anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard"),
+    ],
+)
+def test_handler_cancels_jmdict_migration_before_dialog(main_window, monkeypatch, handler, dialog_target):
+    from anki_miner.gui import main_window as mw_module
+
+    order: list[str] = []
+    monkeypatch.setattr(
+        main_window.background_tasks,
+        "cancel_jmdict_migration",
+        lambda: order.append("cancel"),
+    )
+    monkeypatch.setattr(dialog_target, lambda *a, **kw: order.append("dialog") or None)
+    monkeypatch.setattr(mw_module.MainWindow, "update_config", lambda self, cfg, **kw: None)
+    main_window._first_run_setup_handled = False
+    main_window.config = replace(main_window.config, first_run_setup_done=False)
+
+    getattr(main_window, handler)()
+
+    assert order == ["cancel", "dialog"]
+
+
+# ---------------------------------------------------------------------------
 # First-run offer: launches the wizard, persists the flag in finally
 # ---------------------------------------------------------------------------
 

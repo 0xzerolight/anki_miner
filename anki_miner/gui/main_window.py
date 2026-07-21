@@ -547,6 +547,10 @@ class MainWindow(QMainWindow):
         """Tools-menu handler: run the resource download dialog, apply result."""
         from anki_miner.gui.widgets.dialogs.resource_download_dialog import run_resource_download
 
+        # The recommended dict downloads into the same slot the legacy JMdict
+        # XML migration writes; stop an in-flight migration first (same-slot
+        # concurrent-writer race, see cancel_jmdict_migration).
+        self.background_tasks.cancel_jmdict_migration()
         new_config = run_resource_download(self, self.config, release_resources=self.release_dictionary_resources)
         if new_config is not None:
             # update_config (not from_settings) propagates via config_refreshed
@@ -572,6 +576,8 @@ class MainWindow(QMainWindow):
         """
         from anki_miner.gui.widgets.dialogs.setup_wizard import run_setup_wizard
 
+        # Wizard's Resources page can download into the JMdict migration slot.
+        self.background_tasks.cancel_jmdict_migration()
         new_config = run_setup_wizard(self, self.config)
         if new_config is not None:
             self.update_config(new_config)
@@ -656,6 +662,10 @@ class MainWindow(QMainWindow):
         if self._first_run_setup_handled:
             return
         self._first_run_setup_handled = True
+
+        # Boot started the legacy JMdict XML migration just before scheduling
+        # this offer; its slot is the wizard download's target — stop it first.
+        self.background_tasks.cancel_jmdict_migration()
 
         config = self.config
         try:

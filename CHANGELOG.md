@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 ### Changed
+- **The recommended dictionary the setup wizard and Tools → Download Recommended Resources install is now JMdict** (yomidevs Yomitan build) instead of Jitendex — cleaner, simpler definitions that most users prefer. Existing Jitendex installs are untouched and keep their in-place Re-import support; re-running the download simply puts JMdict ahead of Jitendex in the dictionary chain. For long-time users still on the legacy JMdict XML index, the download upgrades it in place with the richer Yomitan build, and an in-flight legacy XML migration is stopped before the wizard or download dialog opens (it re-runs on the next launch if no Yomitan build was installed).
 
 ### Fixed
 

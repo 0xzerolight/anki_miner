@@ -26,10 +26,14 @@ from anki_miner.services.dictionary.importers.yomitan_importer import derive_dic
 from anki_miner.services.dictionary.registry import DictionaryRegistry, DictMeta
 from anki_miner.services.dictionary.storage import read_meta
 from anki_miner.services.dictionary.superseded import strip_date_bracket
-from anki_miner.services.resource_catalog import CATALOG_DICT_SLOT_IDS
+from anki_miner.services.resource_catalog import CATALOG_DICT_SLOT_IDS, LEGACY_DICT_SLOT_IDS
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
+
+# Slots whose on-disk id is pinned (stable, not title-derived): current catalog
+# dicts plus former catalog dicts existing users still have installed.
+_PINNED_DICT_SLOT_IDS = CATALOG_DICT_SLOT_IDS | LEGACY_DICT_SLOT_IDS
 
 
 class DictionaryImportFlow(ModalImportFlowMixin):
@@ -170,8 +174,10 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         Compares the picked zip's title base against the existing slot's stored
         ``source_name`` base (both stripped of a trailing ``[YYYY-MM-DD]`` tag,
         both required to have carried one). This lets a fresh Jitendex whose id
-        derives to ``jitendex-org-<newdate>`` re-import into the pinned
-        ``jitendex`` slot while still rejecting an unrelated dictionary. Any read
+        derives to a new dated id (JMdict → ``jmdict-<newdate>-...``, legacy
+        Jitendex → ``jitendex-org-<newdate>``) re-import into the pinned
+        ``jmdict-english``/``jitendex`` slot while still rejecting an
+        unrelated dictionary. Any read
         failure (bad zip, missing/corrupt slot index) → False (reject, safe).
         """
         try:
@@ -219,7 +225,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 derived_id = derive_dict_id_from_zip(zip_path)
                 base_matches = (
                     derived_id != slot_id
-                    and slot_id in CATALOG_DICT_SLOT_IDS
+                    and slot_id in _PINNED_DICT_SLOT_IDS
                     and self._catalog_slot_base_matches(slot_id, zip_path)
                 )
                 return zip_path, derived_id, base_matches
@@ -242,7 +248,8 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         zip_path, derived_id, base_matches = _scan_result
         self._set_import_buttons_enabled(True)
 
-        # A catalog slot is pinned (its on-disk id is a stable id like "jitendex",
+        # A catalog (or former-catalog) slot is pinned (its on-disk id is a
+        # stable id like "jmdict-english" or the legacy "jitendex",
         # not the title-derived one), so a fresh copy of the SAME dictionary
         # legitimately derives a different id (the title embeds a new date). Accept
         # it when its title base matches the existing slot's, but still reject a
