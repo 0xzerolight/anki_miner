@@ -307,14 +307,19 @@ class TestShutdownJoinsOffThreadWorkers:
 
 
 def test_deferred_close_finalizes_once_after_deleted_laggard(controller, monkeypatch):
-    class _Dead:
-        def isRunning(self):  # noqa: N802
-            raise RuntimeError("wrapped C/C++ object has been deleted")
+    from PyQt6 import sip
+    from PyQt6.QtCore import QThread
+
+    from anki_miner.gui.utils.run_off_thread import still_running
+
+    worker = QThread()
+    sip.delete(worker)
+    assert still_running(worker) is False
 
     window = MagicMock()
     window.config = object()
     controller._window = window
-    controller._close_laggards = [_Dead()]
+    controller._close_laggards = [worker]
     controller._close_poll_timer = MagicMock()
     save = MagicMock()
     quit_app = MagicMock()

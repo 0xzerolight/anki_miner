@@ -10,6 +10,7 @@ from anki_miner.gui.capabilities import (
     SETTINGS_SUBTABS,
     SUBTAB_KEYS,
     Capability,
+    CapabilityTarget,
     search,
 )
 
@@ -64,6 +65,12 @@ def test_search_matches_title() -> None:
 def test_search_matches_description() -> None:
     hits = search("hiragana or katakana")
     assert any(c.id == "kana-only-exclude" for c in hits)
+
+
+def test_restyle_mined_cards_is_findable() -> None:
+    hits = search("restyle mined cards")
+    capability = next(c for c in hits if c.id == "restyle-mined-cards")
+    assert capability.target == CapabilityTarget("settings", "anki")
 
 
 def test_search_preserves_registry_order() -> None:

@@ -19,6 +19,7 @@ from PyQt6.QtCore import QThread
 from PyQt6.QtWidgets import QTabWidget
 
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
+from anki_miner.gui.widgets._queue_mining_tab_base import _QueueMiningTabBase
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -45,6 +46,26 @@ class _CurationWorker(QThread):
 
     def run(self) -> None:
         self.result = self._tab._curation_bridge(self._words)
+
+
+class _LaggardWorker(QThread):
+    """Real QThread that ignores cancellation until the test releases it."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.entered = threading.Event()
+        self.release = threading.Event()
+
+    def cancel(self) -> None:
+        pass
+
+    def run(self) -> None:
+        self.entered.set()
+        self.release.wait()
+
+
+class _BareQueue(_QueueMiningTabBase):
+    """Minimal queue tab used to drive the real shutdown implementation."""
 
 
 def _drain_until(predicate, timeout_ms: int = 3000, step_ms: int = 10) -> bool:
@@ -342,6 +363,36 @@ class TestBackgroundTasksShutdownDuckTyped:
 
         # The attribute was never set to True by the controller
         assert not tab.shutdown_called
+
+    def test_queue_timeout_worker_is_returned_for_deferred_close(self, controller, qtbot, test_config, monkeypatch):
+        from anki_miner.gui.utils.run_off_thread import join_or_retain
+
+        tab = _BareQueue(test_config)
+        qtbot.addWidget(tab)
+        worker = _LaggardWorker()
+        tab.worker_thread = worker
+        worker.start()
+        monkeypatch.setattr("anki_miner.gui.widgets._queue_mining_tab_base._SHUTDOWN_WAIT_MS", 10)
+        monkeypatch.setattr(
+            "anki_miner.gui.controllers.background_tasks.join_all_off_thread_workers",
+            lambda timeout_ms=2000: [],
+        )
+        controller._join_worker_for_close.side_effect = lambda candidate, *, timeout_ms: (
+            join_or_retain(candidate, 10) is None
+        )
+        tabs = MagicMock(spec=QTabWidget)
+        tabs.count.return_value = 1
+        tabs.widget.return_value = tab
+
+        try:
+            assert worker.entered.wait(1.0)
+            laggards = controller.shutdown(tabs)
+            assert tab.worker_thread is worker
+            assert laggards == [worker]
+        finally:
+            worker.release.set()
+            assert worker.wait(1000)
+            tab.worker_thread = None
 
     def test_single_episode_tab_shutdown_called(self, controller, qapp, qtbot):
         """SingleEpisodeTab inherits MiningTabBase.shutdown() — must be called."""
