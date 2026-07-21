@@ -304,11 +304,11 @@ class AnkiMinerConfig:
     # Structural subtitle-annotation stripping (Task U1, default ON). Kills the
     # largest batch-mining junk class: parenthetical SFX captions
     # (（スマホのバイブ音）), leading speaker/style tags (（旬: 小声で）…), and inline
-    # furigana (瀕死(ひんし)) that would otherwise tokenize as dialogue. Applied at
-    # the parser choke point AFTER clean_subtitle_text and BEFORE the user regex
-    # filter, on both the mining path and the display path (curation player /
-    # timing viewer). Default-ON is deliberate: an absent key falls back to this
-    # dataclass default on config load, so the strip reaches existing users on
+    # furigana (瀕死(ひんし)) that would otherwise tokenize as dialogue. Applied per
+    # physical line before whitespace flattening on the subtitle-file path, and
+    # before the user regex filter on both mining and display paths (curation
+    # player / timing viewer). Default-ON is deliberate: an absent key falls back
+    # to this dataclass default on config load, so the strip reaches existing users on
     # upgrade with no migration; the Filtering-panel checkbox is the escape hatch.
     # See utils.text_utils.strip_inline_annotations for the three passes.
     strip_subtitle_annotations: bool = True

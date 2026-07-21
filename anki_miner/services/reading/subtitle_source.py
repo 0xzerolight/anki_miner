@@ -7,8 +7,8 @@ skip → ``clean_subtitle_text`` → drop empties) deliberately duplicates
 ``SubtitleParserService.parse_raw_entries``: reusing it would couple this
 config-free loader to a config/MeCab-bound service.
 
-Config-free by design: the annotation strip + ``config.subtitle_regex_filter``
-the video path applies are NOT run in this loader — they run downstream in
+Config-free by design: the caller supplies the structural annotation opt-in to
+``clean_subtitle_text``; the configured ``subtitle_regex_filter`` still runs in
 ``SubtitleParserService.parse_text_units`` (``subtitle_cleanup=True``), the one
 config/MeCab-bound seam. ``subtitle_offset`` never applies here (an offset is
 meaningless without media). Encoding handling is *broader* — the video path is
@@ -44,7 +44,7 @@ def _format_cue_time(seconds: float) -> str:
     return f"{minutes}:{secs:02d}"
 
 
-def load(ref: ReadingSourceRef) -> ReadingDocument:
+def load(ref: ReadingSourceRef, *, strip_annotations: bool = False) -> ReadingDocument:
     """Load a subtitle file into a per-cue :class:`ReadingDocument`.
 
     Identity mirrors the video path: series = parent folder name,
@@ -75,7 +75,7 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
         # Skip ASS/SSA Comment events (same guard as parse_raw_entries).
         if getattr(event, "is_comment", None) is True:
             continue
-        cue_text = clean_subtitle_text(event.text)
+        cue_text = clean_subtitle_text(event.text, strip_annotations=strip_annotations)
         if not cue_text:
             continue
         units.append(

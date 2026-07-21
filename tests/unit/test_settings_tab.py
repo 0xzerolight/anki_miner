@@ -346,17 +346,26 @@ class TestSubtitleRegexValidationRevert:
 
 
 class TestImportInvalidSubtitleRegex:
-    """Importing an invalid regex with the filter enabled must warn, not be silent."""
+    """Importing an invalid regex must warn and keep the previous filter."""
 
-    def test_import_invalid_regex_warns_and_disables_filter(self, test_config, monkeypatch, qtbot, tmp_path):
+    @pytest.mark.parametrize("enabled", [True, False], ids=("enabled", "disabled"))
+    def test_import_invalid_regex_warns_and_keeps_previous_filter(
+        self, enabled, test_config, monkeypatch, qtbot, tmp_path
+    ):
         import json
 
         from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
-        # A config file with an unbalanced group (re.error) + filter enabled.
+        # A config file with an unbalanced group (re.error).
         source = tmp_path / "settings.json"
         source.write_text(
-            json.dumps({"subtitle_regex_filter": "(", "use_subtitle_regex_filter": True}),
+            json.dumps(
+                {
+                    "subtitle_regex_filter": "(",
+                    "subtitle_regex_replacement": "NEW",
+                    "use_subtitle_regex_filter": enabled,
+                }
+            ),
             encoding="utf-8",
         )
 
@@ -376,8 +385,10 @@ class TestImportInvalidSubtitleRegex:
             # The invalid pattern must surface a warning, not be silently applied.
             assert len(warnings) == 1
             assert len(received) == 1
-            # And the filter must be disabled so parse-time never swallows it.
+            # The prior disabled filter stays intact; invalid imported text is not stored.
             assert received[0].use_subtitle_regex_filter is False
+            assert received[0].subtitle_regex_filter == test_config.subtitle_regex_filter
+            assert received[0].subtitle_regex_replacement == test_config.subtitle_regex_replacement
         finally:
             widget.shutdown()
             for w in widget.iter_close_workers():

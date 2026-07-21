@@ -161,6 +161,31 @@ _ELLIPSIS_CUT_CFORM: frozenset[str] = frozenset({"連用形", "未然形", "語�
 _ELLIPSIS_GROUP_RE = re.compile(r"[…‥]+")
 _ELLIPSIS_STUTTER_MIN_GROUPS: int = 2
 
+_SUBTITLE_REGEX_MAX_PATTERN_CHARS = 512
+_SUBTITLE_REGEX_MAX_REPLACEMENT_CHARS = 512
+_REGEX_ATOM = r"(?:\\.|\[(?:\\.|[^\]\\])*\]|[^()[\]\\])"
+_NESTED_UNBOUNDED_REPEAT_RE = re.compile(
+    r"\(" + _REGEX_ATOM + r"*(?:[*+]|\{\d+,\})" + _REGEX_ATOM + r"*\)(?:[*+]|\{\d+,\})"
+)
+
+
+def compile_subtitle_regex_filter(pattern: str, replacement: str) -> re.Pattern[str]:
+    """Compile a size-bounded subtitle filter and validate its replacement."""
+    if len(pattern) > _SUBTITLE_REGEX_MAX_PATTERN_CHARS:
+        raise ValueError(f"pattern exceeds {_SUBTITLE_REGEX_MAX_PATTERN_CHARS} characters")
+    if len(replacement) > _SUBTITLE_REGEX_MAX_REPLACEMENT_CHARS:
+        raise ValueError(f"replacement exceeds {_SUBTITLE_REGEX_MAX_REPLACEMENT_CHARS} characters")
+    try:
+        compiled = re.compile(pattern)
+        compiled.sub(replacement, "")
+    except (re.error, IndexError) as e:
+        raise ValueError(str(e)) from e
+    if _NESTED_UNBOUNDED_REPEAT_RE.search(pattern):
+        raise ValueError("nested unbounded repeats are not allowed")
+    # stdlib re has no wall-clock timeout. Size limits plus the obvious nested-
+    # repeat reject bound validation cost, but cannot prove every pattern safe.
+    return compiled
+
 
 def _is_katakana_surface_char(ch: str) -> bool:
     """True for any char in the katakana Unicode block U+30A0–U+30FF.
@@ -326,15 +351,10 @@ class SubtitleParserService:
         self._filter_pattern: re.Pattern[str] | None = None
         if config.use_subtitle_regex_filter and config.subtitle_regex_filter:
             try:
-                # ReDoS exposure: the compiled pattern is NOT timeout-protected.
-                # A pathological user pattern (e.g. `(a+)+$`) on a long subtitle
-                # line can cause catastrophic backtracking and hang the parser.
-                # The only victim is the user themselves — this config is local,
-                # never network-supplied. If we ever accept regex from an
-                # untrusted source, swap to the third-party `regex` module with
-                # timeout= or compile under re2.
-                self._filter_pattern = re.compile(config.subtitle_regex_filter)
-            except re.error as e:
+                self._filter_pattern = compile_subtitle_regex_filter(
+                    config.subtitle_regex_filter, config.subtitle_regex_replacement
+                )
+            except ValueError as e:
                 # Bad pattern at the boundary should not crash mining. Disable
                 # and surface in the log; GUI validation should catch this on save.
                 logger.warning(
@@ -456,18 +476,15 @@ class SubtitleParserService:
     def _clean_line_text(self, raw_text: str) -> str:
         """Full per-line text pipeline shared by the mining and display paths.
 
-        Order: ``clean_subtitle_text`` (markup strip + JP normalization) →
-        ``strip_inline_annotations`` (structural SFX-caption / speaker-tag /
-        inline-furigana strip, gated on ``config.strip_subtitle_annotations``,
-        default ON) → ``_apply_text_filter`` (the user regex, which composes on
-        top of the strip). Applied identically by ``_iter_parsed_lines`` (mining)
-        and ``parse_raw_entries`` (display) so the shown cue text matches what
-        mining tokenizes. A line that collapses to empty is skipped by each
-        caller's existing ``if not text: continue`` guard.
+        Order: markup strip → JP normalization → per-physical-line annotation
+        strip (gated on ``config.strip_subtitle_annotations``, default ON) →
+        whitespace collapse → ``_apply_text_filter``. Applied identically
+        by ``_iter_parsed_lines`` (mining) and ``parse_raw_entries`` (display) so
+        the shown cue text matches what mining tokenizes. A line that collapses
+        to empty is skipped by each caller's existing ``if not text: continue``
+        guard.
         """
-        cleaned = clean_subtitle_text(raw_text)
-        if self.config.strip_subtitle_annotations:
-            cleaned = strip_inline_annotations(cleaned)
+        cleaned = clean_subtitle_text(raw_text, strip_annotations=self.config.strip_subtitle_annotations)
         return self._apply_text_filter(cleaned)
 
     def _load_subs(self, subtitle_file: Path):
@@ -1136,12 +1153,9 @@ class SubtitleParserService:
             # subtitle-cue kind only (subtitle_cleanup).
             text = standardize_kanji_variants(normalize_for_tokenization(unit.text))
             if subtitle_cleanup:
-                # Reading→Subtitles per-cue kind: the video path's subtitle-only
-                # cleanup (annotation strip + user regex) the loader can't run
-                # (it is config-free). Order mirrors _clean_line_text (:423–426);
-                # a cue that collapses to empty is skipped, so its (empty) text
-                # never reaches _build_line_state and contributes no count or
-                # line-index entry — content-free lines are already skipped below.
+                # Reading→Subtitles per-cue cleanup remains gated here for
+                # synthetic ReadingUnit callers and is idempotent when the
+                # config-fed loader already stripped the cue.
                 if self.config.strip_subtitle_annotations:
                     text = strip_inline_annotations(text)
                 text = self._apply_text_filter(text)

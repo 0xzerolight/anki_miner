@@ -80,6 +80,22 @@ class TestCleanSubtitleText:
         text = r"Line one\NLine two\nLine three"
         assert clean_subtitle_text(text) == "Line one Line two Line three"
 
+    def test_strips_leading_annotation_after_ass_hard_break(self):
+        text = r"猫が好き\N（案内）犬が眠る"
+
+        assert clean_subtitle_text(text, strip_annotations=True) == "猫が好き 犬が眠る"
+
+    @pytest.mark.parametrize(
+        "text, expected",
+        [
+            ("漢(ｶﾝ)", "漢"),
+            ("漢(は\u3099ん)", "漢"),
+            ("⼭(やま)", "山"),
+        ],
+    )
+    def test_normalizes_before_stripping_annotations(self, text, expected):
+        assert clean_subtitle_text(text, strip_annotations=True) == expected
+
     def test_removes_html_tags(self):
         """Should remove HTML tags."""
         text = "<b>Bold</b> and <i>italic</i>"
@@ -656,6 +672,11 @@ class TestStripInlineAnnotations:
         # furigana groups (→ （水篠 旬）ん…), then pass 3 removes the leading
         # fullwidth speaker tag → ん…
         assert strip_inline_annotations("（水篠(みずしの) 旬(しゅん)）ん…") == "ん…"
+
+    def test_annotation_loop_is_bounded(self):
+        text = "漢" + "(あ)" * 40
+
+        assert strip_inline_annotations(text) == "漢" + "(あ)" * 8
 
     def test_inline_furigana_only_after_kanji(self):
         # A kana paren group NOT preceded by kanji is not furigana; it is
