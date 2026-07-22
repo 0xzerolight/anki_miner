@@ -5,11 +5,34 @@
   #define AppVersion "dev"
 #endif
 
+; Keep PE version metadata numeric; preserve a valid prefix and zero-pad it.
+; Known limitation (accepted): a non-numeric component zeroes itself and stops
+; the parse ("2.9.3rc1" -> 2.9.0.0), and >4 components reset to 0.0.0.0. The
+; release pipeline only ever passes plain X.Y.Z (release.yml validates the tag
+; against __version__) or the "dev" default, both of which expand correctly.
+#define PopNumericVersionPart(str *Tail) \
+  Local[0] = Pos(".", Tail), \
+  Local[1] = Local[0] ? Copy(Tail, 1, Local[0] - 1) : Tail, \
+  Local[2] = Int(Local[1], -1), \
+  Local[3] = (Local[1] != "") && (Local[2] >= 0) && (Local[2] <= 65535), \
+  Tail = (Local[3] && Local[0]) ? Copy(Tail, Local[0] + 1) : "", \
+  Local[3] ? Str(Local[2]) : "0"
+#define VersionTail Str(AppVersion)
+#define VersionPart1 PopNumericVersionPart(VersionTail)
+#define VersionPart2 PopNumericVersionPart(VersionTail)
+#define VersionPart3 PopNumericVersionPart(VersionTail)
+#define VersionPart4 PopNumericVersionPart(VersionTail)
+#define NumericVersionPrefix \
+  VersionPart1 + "." + VersionPart2 + "." + VersionPart3 + "." + VersionPart4
+#define NumericAppVersion (VersionTail == "") ? NumericVersionPrefix : "0.0.0.0"
+
 [Setup]
 AppId={{15B09250-AC39-4792-A15A-B73BD8E218A1}
 AppName=Anki Miner
 AppVersion={#AppVersion}
 AppVerName=Anki Miner {#AppVersion}
+; Set Setup.exe's binary version from numeric components only.
+VersionInfoVersion={#NumericAppVersion}
 AppPublisher=Anki Miner Contributors
 AppPublisherURL=https://github.com/0xzerolight/anki_miner
 DefaultDirName={autopf}\AnkiMiner
@@ -22,6 +45,10 @@ LicenseFile=..\..\LICENSE
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
+; Always capture installer diagnostics in the user's TEMP directory.
+SetupLogging=yes
+; Prevent concurrent installer instances from racing.
+SetupMutex=AnkiMinerSetup-15B09250-AC39-4792-A15A-B73BD8E218A1
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
