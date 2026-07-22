@@ -185,3 +185,116 @@ class TestDownloadToTemp:
     def test_browser_user_agent_set_on_session(self):
         ua = resource_downloader._new_session().headers["User-Agent"]
         assert not ua.lower().startswith("python-requests")
+
+
+class TestRetry:
+    """Retry-with-backoff on transient failures (Issue #100 flaky-network JMdict)."""
+
+    def _no_sleep(self):
+        return patch.object(resource_downloader.time, "sleep")
+
+    def test_retries_connection_error_then_succeeds(self, tmp_path):
+        with (
+            self._no_sleep() as sleep,
+            patch(
+                "requests.Session.get",
+                side_effect=[requests.ConnectionError("reset"), _response(content=b"ok")],
+            ),
+        ):
+            result = download_to_temp(URL, dest_dir=tmp_path)
+        assert result.read_bytes() == b"ok"
+        assert sleep.called
+
+    def test_retries_timeout_and_chunked_encoding(self, tmp_path):
+        with (
+            self._no_sleep(),
+            patch(
+                "requests.Session.get",
+                side_effect=[
+                    requests.Timeout("slow"),
+                    requests.exceptions.ChunkedEncodingError("dropped mid-stream"),
+                    _response(content=b"ok"),
+                ],
+            ),
+        ):
+            result = download_to_temp(URL, dest_dir=tmp_path)
+        assert result.read_bytes() == b"ok"
+
+    def test_retries_http_5xx_then_succeeds(self, tmp_path):
+        err = requests.HTTPError("503")
+        err.response = MagicMock(status_code=503)
+        bad = _response()
+        bad.raise_for_status.side_effect = err
+        with (
+            self._no_sleep(),
+            patch("requests.Session.get", side_effect=[bad, _response(content=b"ok")]),
+        ):
+            result = download_to_temp(URL, dest_dir=tmp_path)
+        assert result.read_bytes() == b"ok"
+
+    def test_no_retry_on_http_404(self, tmp_path):
+        # HTTPError is an OSError subclass — a naive OSError-based retry
+        # predicate would retry permanent 4xx. It must fail on attempt 1.
+        err = requests.HTTPError("404")
+        err.response = MagicMock(status_code=404)
+        bad = _response()
+        bad.raise_for_status.side_effect = err
+        with (
+            self._no_sleep() as sleep,
+            patch("requests.Session.get", side_effect=[bad]) as get,
+            pytest.raises(SetupError, match="Failed to download"),
+        ):
+            download_to_temp(URL, dest_dir=tmp_path)
+        assert get.call_count == 1
+        assert not sleep.called
+
+    def test_no_retry_on_http_error_without_response(self, tmp_path):
+        bad = _response()
+        bad.raise_for_status.side_effect = requests.HTTPError("weird")
+        with (
+            self._no_sleep(),
+            patch("requests.Session.get", side_effect=[bad]) as get,
+            pytest.raises(SetupError),
+        ):
+            download_to_temp(URL, dest_dir=tmp_path)
+        assert get.call_count == 1
+
+    def test_gives_up_after_max_attempts(self, tmp_path):
+        with (
+            self._no_sleep(),
+            patch("requests.Session.get", side_effect=requests.ConnectionError("down")) as get,
+            pytest.raises(SetupError, match="Failed to download"),
+        ):
+            download_to_temp(URL, dest_dir=tmp_path)
+        assert get.call_count == resource_downloader._MAX_ATTEMPTS
+        assert _part_files(tmp_path) == []
+
+    def test_cancel_during_backoff_aborts(self, tmp_path):
+        cancels = iter([False, False, True])  # pre-attempt-1, in-download, in-backoff
+        with (
+            patch("requests.Session.get", side_effect=requests.ConnectionError("reset")),
+            pytest.raises(SetupError, match="cancelled"),
+        ):
+            download_to_temp(URL, dest_dir=tmp_path, cancelled_check=lambda: next(cancels, True))
+
+    def test_cancel_is_never_retried(self, tmp_path):
+        cancels = iter([False, True])  # pre-attempt check passes, chunk check cancels
+        with (
+            self._no_sleep() as sleep,
+            patch("requests.Session.get", return_value=_response(content=b"data")),
+            pytest.raises(SetupError, match="cancelled"),
+        ):
+            download_to_temp(URL, dest_dir=tmp_path, cancelled_check=lambda: next(cancels, True))
+        assert not sleep.called
+
+    def test_retry_reports_progress(self, tmp_path):
+        seen: list[str] = []
+        with (
+            self._no_sleep(),
+            patch(
+                "requests.Session.get",
+                side_effect=[requests.ConnectionError("reset"), _response(content=b"ok")],
+            ),
+        ):
+            download_to_temp(URL, dest_dir=tmp_path, progress=lambda cur, total, msg: seen.append(msg))
+        assert any("Retrying download (attempt 2/3)" in m for m in seen)
