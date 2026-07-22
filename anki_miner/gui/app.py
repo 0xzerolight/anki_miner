@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from functools import wraps
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -36,6 +37,15 @@ from anki_miner.utils import alass_resolver
 from anki_miner.utils.file_utils import ensure_directory
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class ComposedApp:
+    """Main-window composition needed by the application lifecycle."""
+
+    window: MainWindow
+    stats_service: StatsService
+    analytics_tab: AnalyticsTab
 
 
 def _install_minimal_recovery() -> None:
@@ -636,117 +646,10 @@ def _rollback_workers_on_startup_fault(fn: Callable[[], None]) -> Callable[[], N
     return wrapped
 
 
-@_rollback_workers_on_startup_fault
-def main():
-    """Launch the Anki Miner GUI application."""
-    _install_minimal_recovery()
-    _scrub_pyinstaller_env()
-
-    # Env-var-gated smoke path (PyInstaller bundled-binary validation).
-    # Runs before Qt init so headless CI can verify yt-dlp extractor
-    # bundling without spinning up a display.
-    if os.environ.get("ANKI_MINER_SMOKE") == "youtube":
-        sys.exit(_run_bundled_smoke())
-
-    if os.environ.get("ANKI_MINER_SMOKE") == "asr":
-        sys.exit(_run_asr_bundled_smoke())
-
-    if os.environ.get("ANKI_MINER_SMOKE") == "whispercpp":
-        sys.exit(_run_whispercpp_bundled_smoke())
-
-    # Env-var-gated ASR Vulkan device probe. The parent process
-    # (_engine.vulkan_device_count) spawns a frozen bundle with this flag set so
-    # the cold ctypes call into ggml-vulkan runs in a throwaway child — a broken
-    # Vulkan driver can C-abort uncatchably, and isolating it here means the abort
-    # kills only this child. Must run before any Qt init. Hidden, env-var-only.
-    if os.environ.get("ANKI_MINER_ASR_VULKAN_PROBE"):
-        from anki_miner.services.asr import _vulkan_probe
-
-        raise SystemExit(_vulkan_probe.main())
-
-    # Env-var-gated libmpv bundle probe (bundle_smoke.sh). Loads the bundled
-    # libmpv through mpv_loader's resolution order and constructs a display-free
-    # core (vo=null/ao=null) — proves the shared library + its dependency
-    # closure actually dlopen inside the frozen bundle. Must run before Qt init.
-    if os.environ.get("ANKI_MINER_MPV_PROBE"):
-        from anki_miner.utils import mpv_loader
-
-        raise SystemExit(mpv_loader.mpv_probe_main())
-
-    # Attach the rotating file handler to the DEFAULT path before loading config
-    # so config-load diagnostics — including the OVH-001 .bak-recovery warnings
-    # emitted inside load_config — are captured: those warnings fire as soon as a
-    # handler exists, so attaching here (before the load) is what makes them land
-    # in the file rather than going nowhere (F3).
-    # GUIConfigManager has no Qt dependency, so it can run before QApplication.
-    _default_log_path = ANKI_MINER_HOME / "anki_miner.log"
-    try:
-        _configure_logging(_default_log_path)
-    except Exception:
-        logger.exception("Failed to configure startup log; continuing with stderr logging")
-    try:
-        _early_config = GUIConfigManager.load_config()
-        _log_path = _early_config.log_path
-    except Exception:
-        # Never leave _early_config unbound (would NameError at the zoom call
-        # and every later read) — fall back to defaults so startup can proceed.
-        logger.exception("Failed to load config at startup; using default config")
-        _early_config = create_default_config()
-        _log_path = _default_log_path
-    # Honour a user-customised log_path by re-pointing the handler (idempotent,
-    # so no duplicate sink). No-op in the common case where it equals the default.
-    if _log_path != _default_log_path:
-        try:
-            _configure_logging(_log_path)
-        except Exception:
-            logger.exception("Failed to configure custom log path; keeping startup logger")
-
-    # Clean-install nicety: make the default dicts_root exist before any
-    # settings UI validates it (Issue #100 red-border state).
-    _ensure_default_dicts_root(_early_config)
-
-    # Whole-UI zoom: must be set before QApplication is constructed (Qt reads
-    # QT_SCALE_FACTOR once, at construction). Restart-to-apply by nature.
-    _apply_ui_zoom(_early_config)
-
-    # Enable high DPI scaling
-    QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
-
-    # Create application
-    app = QApplication(sys.argv)
-    app.setApplicationName("Anki Miner")
-    app.setOrganizationName("AnkiMiner")
-
-    # Install the crash net before any widget is built so exceptions escaping a
-    # slot during tab construction are caught too (a bad path in a startup slot
-    # would otherwise abort the whole process — the trailing-space batch bug).
-    _install_excepthook(app)
-
-    # Set application icon
-    icon_path = get_resource_dir() / "icons" / "anki_miner.svg"
-    if icon_path.exists():
-        app.setWindowIcon(QIcon(str(icon_path)))
-
-    # Install UI translators BEFORE any widget is built — widgets capture their
-    # tr() strings at construction time, and language is restart-to-apply (no
-    # live retranslateUi). Stash on `app` so the translators outlive this call.
-    app._translators = install_translators(app, _early_config.ui_language)  # type: ignore[attr-defined]
-
-    # Seed the theme singleton from the single decoded startup config. Optional
-    # local theme data must never block construction of the unstyled GUI.
-    try:
-        Theme.initialize(
-            active=_early_config.theme,
-            favorites=_early_config.theme_favorites,
-            user_dir=_early_config.themes_root,
-            font_scale=_early_config.ui_font_scale,
-        )
-        Theme.apply_to_app(app)
-    except Exception:
-        logger.exception("Failed to initialize theme; continuing with Qt defaults")
-
+def compose_main_window(config: AnkiMinerConfig) -> ComposedApp:
+    """Build the main window and its production tab/service graph."""
     # Create main window
-    window = MainWindow(_early_config)
+    window = MainWindow(config)
 
     # Initialize stats service for analytics. ``.load()`` opens the SQLite
     # file; defer to after window.show() so the empty shell paints first
@@ -900,6 +803,123 @@ def main():
     # All tabs are now registered — create the count-driven Ctrl+N shortcuts.
     # This must come AFTER all addTab calls so self.tabs.count() is final.
     window.setup_tab_shortcuts()
+
+    return ComposedApp(window=window, stats_service=stats_service, analytics_tab=analytics_tab)
+
+
+@_rollback_workers_on_startup_fault
+def main():
+    """Launch the Anki Miner GUI application."""
+    _install_minimal_recovery()
+    _scrub_pyinstaller_env()
+
+    # Env-var-gated smoke path (PyInstaller bundled-binary validation).
+    # Runs before Qt init so headless CI can verify yt-dlp extractor
+    # bundling without spinning up a display.
+    if os.environ.get("ANKI_MINER_SMOKE") == "youtube":
+        sys.exit(_run_bundled_smoke())
+
+    if os.environ.get("ANKI_MINER_SMOKE") == "asr":
+        sys.exit(_run_asr_bundled_smoke())
+
+    if os.environ.get("ANKI_MINER_SMOKE") == "whispercpp":
+        sys.exit(_run_whispercpp_bundled_smoke())
+
+    # Env-var-gated ASR Vulkan device probe. The parent process
+    # (_engine.vulkan_device_count) spawns a frozen bundle with this flag set so
+    # the cold ctypes call into ggml-vulkan runs in a throwaway child — a broken
+    # Vulkan driver can C-abort uncatchably, and isolating it here means the abort
+    # kills only this child. Must run before any Qt init. Hidden, env-var-only.
+    if os.environ.get("ANKI_MINER_ASR_VULKAN_PROBE"):
+        from anki_miner.services.asr import _vulkan_probe
+
+        raise SystemExit(_vulkan_probe.main())
+
+    # Env-var-gated libmpv bundle probe (bundle_smoke.sh). Loads the bundled
+    # libmpv through mpv_loader's resolution order and constructs a display-free
+    # core (vo=null/ao=null) — proves the shared library + its dependency
+    # closure actually dlopen inside the frozen bundle. Must run before Qt init.
+    if os.environ.get("ANKI_MINER_MPV_PROBE"):
+        from anki_miner.utils import mpv_loader
+
+        raise SystemExit(mpv_loader.mpv_probe_main())
+
+    # Attach the rotating file handler to the DEFAULT path before loading config
+    # so config-load diagnostics — including the OVH-001 .bak-recovery warnings
+    # emitted inside load_config — are captured: those warnings fire as soon as a
+    # handler exists, so attaching here (before the load) is what makes them land
+    # in the file rather than going nowhere (F3).
+    # GUIConfigManager has no Qt dependency, so it can run before QApplication.
+    _default_log_path = ANKI_MINER_HOME / "anki_miner.log"
+    try:
+        _configure_logging(_default_log_path)
+    except Exception:
+        logger.exception("Failed to configure startup log; continuing with stderr logging")
+    try:
+        _early_config = GUIConfigManager.load_config()
+        _log_path = _early_config.log_path
+    except Exception:
+        # Never leave _early_config unbound (would NameError at the zoom call
+        # and every later read) — fall back to defaults so startup can proceed.
+        logger.exception("Failed to load config at startup; using default config")
+        _early_config = create_default_config()
+        _log_path = _default_log_path
+    # Honour a user-customised log_path by re-pointing the handler (idempotent,
+    # so no duplicate sink). No-op in the common case where it equals the default.
+    if _log_path != _default_log_path:
+        try:
+            _configure_logging(_log_path)
+        except Exception:
+            logger.exception("Failed to configure custom log path; keeping startup logger")
+
+    # Clean-install nicety: make the default dicts_root exist before any
+    # settings UI validates it (Issue #100 red-border state).
+    _ensure_default_dicts_root(_early_config)
+
+    # Whole-UI zoom: must be set before QApplication is constructed (Qt reads
+    # QT_SCALE_FACTOR once, at construction). Restart-to-apply by nature.
+    _apply_ui_zoom(_early_config)
+
+    # Enable high DPI scaling
+    QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+
+    # Create application
+    app = QApplication(sys.argv)
+    app.setApplicationName("Anki Miner")
+    app.setOrganizationName("AnkiMiner")
+
+    # Install the crash net before any widget is built so exceptions escaping a
+    # slot during tab construction are caught too (a bad path in a startup slot
+    # would otherwise abort the whole process — the trailing-space batch bug).
+    _install_excepthook(app)
+
+    # Set application icon
+    icon_path = get_resource_dir() / "icons" / "anki_miner.svg"
+    if icon_path.exists():
+        app.setWindowIcon(QIcon(str(icon_path)))
+
+    # Install UI translators BEFORE any widget is built — widgets capture their
+    # tr() strings at construction time, and language is restart-to-apply (no
+    # live retranslateUi). Stash on `app` so the translators outlive this call.
+    app._translators = install_translators(app, _early_config.ui_language)  # type: ignore[attr-defined]
+
+    # Seed the theme singleton from the single decoded startup config. Optional
+    # local theme data must never block construction of the unstyled GUI.
+    try:
+        Theme.initialize(
+            active=_early_config.theme,
+            favorites=_early_config.theme_favorites,
+            user_dir=_early_config.themes_root,
+            font_scale=_early_config.ui_font_scale,
+        )
+        Theme.apply_to_app(app)
+    except Exception:
+        logger.exception("Failed to initialize theme; continuing with Qt defaults")
+
+    composed = compose_main_window(_early_config)
+    window = composed.window
+    stats_service = composed.stats_service
+    analytics_tab = composed.analytics_tab
 
     # Full widget composition and required version save now form one commit
     # boundary. No startup worker is started before this returns successfully.
