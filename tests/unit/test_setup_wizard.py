@@ -8,7 +8,7 @@ monkeypatched here — no real network/Anki.
 from __future__ import annotations
 
 from dataclasses import replace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -231,6 +231,78 @@ def test_deck_page_unknown_deck_shows_autocreate_hint(qtbot, wiz_config):
 # ---------------------------------------------------------------------------
 
 
+def _set_notetype_page_state(page, *, selected, models, field_names):
+    page.notetype_combo.blockSignals(True)
+    page.notetype_combo.setCurrentText(selected)
+    page.notetype_combo.blockSignals(False)
+    page._fetched_note_types = list(models)
+    page._field_names = [] if field_names is None else list(field_names)
+    page._field_names_note_type = None if field_names is None else selected
+
+
+@pytest.mark.parametrize(
+    ("models", "field_names", "word_field", "source_field", "card_type", "marker_field", "expected"),
+    [
+        pytest.param(["Basic"], ["Expression"], "Expression", "", "", "", False, id="model-missing"),
+        pytest.param(["Lapis"], None, "Expression", "", "", "", False, id="fields-unfetched"),
+        pytest.param(["Lapis"], ["Expression"], "", "", "", "", False, id="word-unmapped"),
+        pytest.param(
+            ["Lapis"],
+            ["Expression"],
+            "Expression",
+            "MissingSource",
+            "",
+            "",
+            False,
+            id="optional-mapping-invalid",
+        ),
+        pytest.param(
+            ["Lapis"],
+            ["Expression"],
+            "Expression",
+            "",
+            "click",
+            "MissingMarker",
+            False,
+            id="active-marker-invalid",
+        ),
+        pytest.param(["Lapis"], ["Expression"], "Expression", "", "", "", True, id="valid"),
+    ],
+)
+def test_notetype_page_completeness_matrix(
+    qtbot,
+    wiz_config,
+    models,
+    field_names,
+    word_field,
+    source_field,
+    card_type,
+    marker_field,
+    expected,
+):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    mappings = dict.fromkeys(AnkiMinerConfig().anki_fields, "")
+    mappings["word"] = word_field
+    mappings["source"] = source_field
+    markers = dict(wiz_config.card_type_marker_fields)
+    if card_type:
+        markers[card_type] = marker_field
+    cfg = replace(
+        wiz_config,
+        anki_note_type="Lapis",
+        anki_fields=mappings,
+        card_type=card_type,
+        card_type_marker_fields=markers,
+    )
+    wiz = SetupWizard(cfg)
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    _set_notetype_page_state(page, selected="Lapis", models=models, field_names=field_names)
+
+    assert page.isComplete() is expected
+
+
 def test_notetype_page_preselects_config_note_type(qtbot, wiz_config, monkeypatch):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
@@ -272,42 +344,223 @@ def test_notetype_page_auto_map_stages_fields(qtbot, wiz_config):
     assert isinstance(cfg.anki_fields, _types.MappingProxyType)
 
 
-def test_late_field_fetch_does_not_map_into_new_note_type(qtbot, wiz_config):
-    """Fields fetched for A must not be auto-mapped after selection changes to B."""
+def test_field_fetch_latest_selection_runs_after_stale_fetch(qtbot, wiz_config, monkeypatch):
+    """Selecting B while A is in flight must fetch and apply B after A finishes."""
+    import threading
+
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
-    page._warn_missing_fields = MagicMock()  # type: ignore[method-assign]
+    entered_a = threading.Event()
+    release_a = threading.Event()
+    calls: list[str] = []
+
+    def get_fields(note_type: str) -> list[str]:
+        calls.append(note_type)
+        if note_type == "Type A":
+            entered_a.set()
+            release_a.wait(3.0)
+            return ["AWord", "ASentence"]
+        return ["BWord", "BSentence"]
+
+    service = MagicMock()
+    service.get_note_type_fields.side_effect = get_fields
+    monkeypatch.setattr(wiz, "anki_service", lambda: service)
+
+    try:
+        page.notetype_combo.setCurrentText("Type A")
+        page._on_notetypes_fetched(["Type A", "Type B"])
+        qtbot.waitUntil(entered_a.is_set, timeout=3000)
+
+        page.notetype_combo.setCurrentText("Type B")
+        release_a.set()
+
+        qtbot.waitUntil(lambda: page._field_names_note_type == "Type B", timeout=3000)
+        assert calls == ["Type A", "Type B"]
+        assert page._field_names == ["BWord", "BSentence"]
+        assert wiz.working_config().anki_note_type == "Type B"
+    finally:
+        release_a.set()
+        qtbot.wait(100)
+        for worker in list(wiz._workers):
+            worker.wait(5000)
+
+
+def test_field_fetch_generation_rejects_stale_same_model_result(qtbot, wiz_config, monkeypatch):
+    """A generation-1 A result must not satisfy a later A selection."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    page._fetched_note_types = ["Type A", "Type B"]
+    first_worker = MagicMock()
+    latest_worker = MagicMock()
+    workers = iter((first_worker, latest_worker))
+    factory = MagicMock(side_effect=lambda *_args: next(workers))
+    monkeypatch.setattr(pages_mod, "FetchFieldsWorker", factory)
+
+    page.notetype_combo.setCurrentText("Type A")
+    page.notetype_combo.setCurrentText("Type B")
     page.notetype_combo.setCurrentText("Type A")
 
-    worker = MagicMock()
-    worker.isRunning.return_value = False
-    with patch("anki_miner.gui.widgets.dialogs.setup_wizard.pages.FetchFieldsWorker", return_value=worker):
-        page._fetch_fields()
+    first_worker.result_ready.connect.call_args.args[0](["StaleAField"])
+    assert page._field_names_note_type is None
 
-    on_fields = worker.result_ready.connect.call_args.args[0]
-    page.notetype_combo.setCurrentText("Type B")
-    on_fields(["Expression", "Sentence"])
-    page._on_auto_map_clicked()
+    first_worker.finished.connect.call_args.args[0]()
+    assert factory.call_count == 2
+    assert factory.call_args.args[1] == "Type A"
 
-    assert wiz.working_config().anki_note_type == "Type A"
-    assert wiz.working_config().anki_fields == wiz_config.anki_fields
+    latest_worker.result_ready.connect.call_args.args[0](["FreshAField"])
+    assert page._field_names_note_type == "Type A"
+    assert page._field_names == ["FreshAField"]
+    latest_worker.finished.connect.call_args.args[0]()
 
 
-def test_auto_map_merges_over_current_fields_and_maps_pitch(qtbot, wiz_config):
-    """Auto-Map must merge only matched keys, preserving manual mappings (S3).
+def test_notetype_page_emits_complete_changed_for_field_fetch_transitions(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
 
-    A manual mapping for a key the field list can't match must survive, and
-    pitch_graph/pitch_text must be mappable (added to _FIELD_KEYWORDS).
-    """
+    mappings = dict.fromkeys(AnkiMinerConfig().anki_fields, "")
+    mappings["word"] = "Expression"
+    cfg = replace(wiz_config, anki_note_type="Lapis", anki_fields=mappings)
+    wiz = SetupWizard(cfg)
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    page._fetched_note_types = ["Lapis", "Basic"]
+    result_worker = MagicMock()
+    error_worker = MagicMock()
+    workers = iter((result_worker, error_worker))
+    monkeypatch.setattr(pages_mod, "FetchFieldsWorker", lambda *_args: next(workers))
+    changed = MagicMock()
+    page.completeChanged.connect(changed)
+
+    page.notetype_combo.setCurrentText("Lapis")
+    assert changed.call_count == 2  # selection + fetch start
+
+    changed.reset_mock()
+    on_result = result_worker.result_ready.connect.call_args.args[0]
+    on_result(["Expression"])
+    assert changed.call_count == 1
+    on_finished = result_worker.finished.connect.call_args.args[0]
+    on_finished()
+
+    changed.reset_mock()
+    page.notetype_combo.setCurrentText("Basic")
+    assert changed.call_count == 2  # selection + fetch start
+    changed.reset_mock()
+    on_error = error_worker.error.connect.call_args.args[0]
+    on_error("fetch failed")
+    assert changed.call_count == 1
+    error_worker.finished.connect.call_args.args[0]()
+
+
+def test_notetype_page_field_result_emits_for_sanitize_and_result(qtbot, wiz_config):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
-    # Seed a manual mapping for a key that won't match the field list below.
-    seeded = dict(wiz_config.anki_fields)
-    seeded["source"] = "MyCustomSource"
-    cfg = replace(wiz_config, anki_fields=seeded)
+    mappings = dict.fromkeys(AnkiMinerConfig().anki_fields, "")
+    mappings["word"] = "OldExpression"
+    cfg = replace(wiz_config, anki_note_type="Lapis", anki_fields=mappings)
+    wiz = SetupWizard(cfg)
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    page.notetype_combo.blockSignals(True)
+    page.notetype_combo.setCurrentText("Lapis")
+    page.notetype_combo.blockSignals(False)
+    changed = MagicMock()
+    page.completeChanged.connect(changed)
+
+    page._on_fields_fetched("Lapis", ["Expression"])
+
+    assert wiz.working_config().anki_fields["word"] == ""
+    assert changed.call_count == 2  # sanitize + fetch result
+
+
+def test_notetype_page_emits_complete_changed_for_model_fetch_transitions(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    worker = MagicMock()
+    monkeypatch.setattr(pages_mod, "FetchNotetypesWorker", lambda *_args: worker)
+    changed = MagicMock()
+    page.completeChanged.connect(changed)
+
+    page._on_refresh_clicked()
+    assert changed.call_count == 1
+
+    changed.reset_mock()
+    worker.result_ready.connect.call_args.args[0]([])
+    assert changed.call_count == 2  # result + blocked programmatic selection
+
+    changed.reset_mock()
+    worker.error.connect.call_args.args[0]("fetch failed")
+    assert changed.call_count == 1
+
+
+def test_model_fetch_result_records_programmatic_selection(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(wiz_config, anki_note_type="Lapis"))
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    worker = MagicMock()
+    factory = MagicMock(return_value=worker)
+    monkeypatch.setattr(pages_mod, "FetchFieldsWorker", factory)
+
+    page._on_notetypes_fetched(["Lapis"])
+
+    assert page._desired_note_type == "Lapis"
+    factory.assert_called_once()
+
+
+def test_wizard_close_does_not_launch_pending_field_fetch(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(wiz_config, anki_note_type="Type A"))
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    page._fetched_note_types = ["Type A", "Type B"]
+    worker = MagicMock()
+    worker.isRunning.return_value = True
+    factory = MagicMock(return_value=worker)
+    monkeypatch.setattr(pages_mod, "FetchFieldsWorker", factory)
+
+    page.notetype_combo.setCurrentText("Type A")
+    page.notetype_combo.setCurrentText("Type B")
+    on_finished = worker.finished.connect.call_args.args[0]
+    wiz.done(0)
+    on_finished()
+
+    factory.assert_called_once()
+
+
+def test_auto_map_uses_sanitized_base_and_preserves_valid_manual_fields(qtbot, wiz_config):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    seeded = dict.fromkeys(AnkiMinerConfig().anki_fields, "")
+    seeded.update(
+        word="ManualWord",
+        sentence="OldSentence",
+        definition="ManualDefinition",
+        source="MissingSource",
+    )
+    markers = dict(wiz_config.card_type_marker_fields)
+    markers.update(click="MissingMarker", sentence="InactiveMarker")
+    cfg = replace(
+        wiz_config,
+        anki_note_type="Lapis",
+        anki_fields=seeded,
+        card_type="click",
+        card_type_marker_fields=markers,
+    )
 
     wiz = SetupWizard(cfg)
     qtbot.addWidget(wiz)
@@ -316,19 +569,23 @@ def test_auto_map_merges_over_current_fields_and_maps_pitch(qtbot, wiz_config):
         return_value=MagicMock(check_field_names=lambda: (True, ""))
     )
     page.notetype_combo.setCurrentText("Lapis")
-    # No "source"/"origin" field here, but PitchGraph and PitchText are present.
-    page._on_fields_fetched("Lapis", ["Expression", "Sentence", "PitchGraph", "PitchText"])
+    page._on_fields_fetched(
+        "Lapis",
+        ["Expression", "ManualWord", "Sentence", "ManualDefinition", "PitchGraph", "PitchText"],
+    )
     page._on_auto_map_clicked()
 
-    fields = wiz.working_config().anki_fields
-    # Matched keys mapped.
-    assert fields["word"] == "Expression"
+    result = wiz.working_config()
+    fields = result.anki_fields
+    assert fields["word"] == "ManualWord"
     assert fields["sentence"] == "Sentence"
-    # pitch_graph/pitch_text are no longer dropped.
+    assert fields["definition"] == "ManualDefinition"
     assert fields["pitch_graph"] == "PitchGraph"
     assert fields["pitch_text"] == "PitchText"
-    # The manual, unmatched key is preserved (not clobbered to "").
-    assert fields["source"] == "MyCustomSource"
+    assert fields["source"] == ""
+    assert set(AnkiMinerConfig().anki_fields) <= set(fields)
+    assert result.card_type_marker_fields["click"] == ""
+    assert result.card_type_marker_fields["sentence"] == "InactiveMarker"
 
 
 def test_notetype_page_unsuitable_fieldlist_shows_guidance(qtbot, wiz_config):
@@ -364,8 +621,12 @@ def test_notetype_page_empty_fieldlist_shows_unreachable_guidance(qtbot, wiz_con
     qtbot.addWidget(wiz)
     page = wiz.notetype_page
     page.notetype_combo.setCurrentText("Ghost")
+    mappings_before = dict(wiz.working_config().anki_fields)
+    markers_before = dict(wiz.working_config().card_type_marker_fields)
     page._on_fields_fetched("Ghost", [])
     assert page.guidance_label.isVisibleTo(page)
+    assert wiz.working_config().anki_fields == mappings_before
+    assert wiz.working_config().card_type_marker_fields == markers_before
 
 
 # ---------------------------------------------------------------------------
