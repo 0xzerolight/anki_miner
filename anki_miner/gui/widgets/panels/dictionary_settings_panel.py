@@ -311,6 +311,10 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
             file_filter="Pitch accent (*.csv *.tsv *.txt *.zip);;All Files (*)",
             placeholder=self.tr("Select pitch accent CSV/TSV or Yomitan zip..."),
             default_dir=ANKI_MINER_HOME,
+            # Pitch is an optional resource: on a clean install the default
+            # ~/.anki_miner/pitch_accent.csv doesn't exist yet, which must
+            # read as "Not installed", not a red error border (Issue #100).
+            optional=True,
         )
         self.add_field(
             self.tr("Pitch Accent File"),
