@@ -47,6 +47,7 @@ class FileSelector(QWidget):
         placeholder: str = "",
         label_width: int | None = None,
         default_dir: Path | str | None = None,
+        optional: bool = False,
         parent=None,
     ):
         """Initialize the file selector.
@@ -60,6 +61,11 @@ class FileSelector(QWidget):
                 selector in a section can share one width so their input fields
                 line up. When None, falls back to a 100px minimum.
             default_dir: Default directory the Browse dialog opens at when the field is empty.
+            optional: When True, a non-empty but ABSENT path renders the
+                neutral state ("Not installed") instead of the red error
+                border — for optional resources whose default path simply
+                doesn't exist yet on a clean install (Issue #100). Validity
+                reporting (``path_validated``/``is_valid``) is unchanged.
             parent: Optional parent widget
         """
         super().__init__(parent)
@@ -69,6 +75,7 @@ class FileSelector(QWidget):
         self._placeholder = placeholder
         self._label_width = label_width
         self._default_dir = default_dir
+        self._optional = optional
         self._is_valid = False
 
         self._label_text = label
@@ -221,8 +228,10 @@ class FileSelector(QWidget):
 
         self._is_valid = is_valid
 
-        # Update input styling
-        self.input.setProperty("error", not is_valid)
+        # Update input styling. An optional resource whose path is simply
+        # absent shows the neutral state, not the red error border (its
+        # validity still reports False below — only the styling differs).
+        self.input.setProperty("error", not is_valid and not self._optional)
         self.input.setProperty("success", is_valid)
 
         # Force style refresh
@@ -245,6 +254,8 @@ class FileSelector(QWidget):
             self.status_label.setText(self.tr("No file selected") if self._file_mode else self.tr("No folder selected"))
         elif self._is_valid:
             self.status_label.setText(Path(path_str).name)
+        elif self._optional:
+            self.status_label.setText(self.tr("Not installed"))
         else:
             self.status_label.setText(self.tr("File not found") if self._file_mode else self.tr("Folder not found"))
 
