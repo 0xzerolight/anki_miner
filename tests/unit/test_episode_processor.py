@@ -2268,6 +2268,32 @@ class TestStatsServiceIntegration:
         mock_stats.record_session.assert_called_once()
         mock_stats.record_difficulty.assert_called_once()
 
+    def test_first_writes_reach_uninitialized_stats_service(self, test_config, mock_services, tmp_path):
+        """Caller guards must not bypass StatsService's first-write initialization."""
+        mock_stats = MagicMock()
+        mock_stats.is_available.return_value = False
+
+        word = _make_word("食べる")
+        media = _make_media()
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+        processor = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            stats_service=mock_stats,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_stats.record_difficulty.assert_called_once()
+        mock_stats.record_session.assert_called_once()
+
     def test_records_difficulty_after_phase2(self, test_config, mock_services, tmp_path):
         """Difficulty should be recorded with correct word counts."""
         mock_stats = MagicMock()

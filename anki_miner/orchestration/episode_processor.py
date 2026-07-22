@@ -991,7 +991,7 @@ class EpisodeProcessor:
                     )
                 )
 
-        # Record difficulty data if stats service available.
+        # Record difficulty data if a stats service is configured.
         # OVH-024: use the pre-filter comprehension-unknown count (all_unknown_lemmas),
         # NOT the post-filter mineable count (unknown_words). difficulty_score measures
         # how hard the episode is to comprehend; i+1/frequency filters can collapse
@@ -1001,7 +1001,7 @@ class EpisodeProcessor:
         # Do NOT let it bubble into process_episode's generic except — that would
         # report cards_created=0 with no note IDs, turning a successful run into an
         # apparent failure. Dropping one difficulty row is safe; warn and continue.
-        if self.stats_service and self.stats_service.is_available():
+        if self.stats_service:
             try:
                 self.stats_service.record_difficulty(
                     series_name=ctx.series_name,
@@ -2040,7 +2040,7 @@ class EpisodeProcessor:
 
     def _record_session(self, ctx: _EpisodeContext, result: ProcessingResult) -> None:
         """Record a mining session in the stats service if one is configured."""
-        if not (self.stats_service and self.stats_service.is_available()):
+        if not self.stats_service:
             return
         from anki_miner.models.stats import MiningSession
 

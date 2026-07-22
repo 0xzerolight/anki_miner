@@ -11,6 +11,8 @@ Builds a real ``MainWindow`` (heavy startup patched out) with a real
 
 from __future__ import annotations
 
+import logging
+
 import pytest
 
 from anki_miner.models import ValidationIssue, ValidationResult
@@ -35,6 +37,15 @@ def window_with_settings(patch_heavy_init, test_config, qtbot):
 def _badge_status(settings_tab) -> str:
     """Read the current AnkiConnect badge status string."""
     return settings_tab.anki_panel.connection_status.status
+
+
+def _startup_validation_records(caplog):
+    return [
+        record
+        for record in caplog.records
+        if record.name == "anki_miner.gui.main_window"
+        and record.getMessage().startswith("Startup validation completed:")
+    ]
 
 
 def _result(*, ankiconnect_ok: bool, issues=None) -> ValidationResult:
@@ -84,3 +95,77 @@ class TestValidationResultUpdatesBadge:
             window._on_validation_result(_result(ankiconnect_ok=True))  # no Settings tab
         finally:
             window.deleteLater()
+
+
+class TestStartupValidationLogging:
+    def test_silent_success_logs_once_at_info(self, window_with_settings, caplog, monkeypatch):
+        window, _settings_tab = window_with_settings
+        target = logging.getLogger("anki_miner.gui.main_window")
+        monkeypatch.setattr(target, "propagate", True)
+        window._validation_silent = True
+
+        with caplog.at_level(logging.INFO, logger=target.name):
+            window._on_validation_result(_result(ankiconnect_ok=True))
+
+        records = _startup_validation_records(caplog)
+        assert len(records) == 1
+        assert records[0].levelno == logging.INFO
+        assert records[0].getMessage() == "Startup validation completed: issues=0"
+
+    def test_silent_issues_log_one_sanitized_warning(self, window_with_settings, caplog, monkeypatch):
+        window, _settings_tab = window_with_settings
+        target = logging.getLogger("anki_miner.gui.main_window")
+        monkeypatch.setattr(target, "propagate", True)
+        window._validation_silent = True
+        result = _result(
+            ankiconnect_ok=False,
+            issues=[
+                ValidationIssue(
+                    component="AnkiConnect",
+                    severity="ERROR",
+                    message="failed at https://secret.invalid/api",
+                ),
+                ValidationIssue(
+                    component="Offline Dictionary",
+                    severity="WARNING",
+                    message="missing /home/secret/dict-a",
+                ),
+                ValidationIssue(
+                    component="Offline Dictionary",
+                    severity="WARNING",
+                    message="missing /home/secret/dict-b",
+                ),
+            ],
+        )
+
+        with caplog.at_level(logging.INFO, logger=target.name):
+            window._on_validation_result(result)
+
+        records = _startup_validation_records(caplog)
+        assert len(records) == 1
+        assert records[0].levelno == logging.WARNING
+        assert records[0].getMessage() == (
+            "Startup validation completed: issues=3 errors=1 warnings=2 components=AnkiConnect=1,Offline Dictionary=2"
+        )
+        assert "https://" not in records[0].getMessage()
+        assert "/home/secret" not in records[0].getMessage()
+
+    def test_manual_validation_stays_quiet(self, window_with_settings, caplog, monkeypatch):
+        from anki_miner.gui import main_window as main_window_module
+
+        window, _settings_tab = window_with_settings
+        target = logging.getLogger("anki_miner.gui.main_window")
+        monkeypatch.setattr(target, "propagate", True)
+        warning_calls = []
+        monkeypatch.setattr(main_window_module.QMessageBox, "warning", lambda *args: warning_calls.append(args))
+        window._validation_silent = False
+        result = _result(
+            ankiconnect_ok=False,
+            issues=[ValidationIssue(component="AnkiConnect", severity="ERROR", message="not reachable")],
+        )
+
+        with caplog.at_level(logging.INFO, logger=target.name):
+            window._on_validation_result(result)
+
+        assert len(warning_calls) == 1
+        assert _startup_validation_records(caplog) == []

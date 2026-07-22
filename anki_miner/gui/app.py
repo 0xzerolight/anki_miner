@@ -21,7 +21,7 @@ from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.config_manager import GUIConfigManager
-from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers, still_running
+from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers, run_off_thread, still_running
 from anki_miner.gui.utils.service_factory import create_youtube_fetcher
 from anki_miner.gui.utils.stall_watchdog import install_stall_watchdog
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
@@ -379,6 +379,30 @@ def _connect_settings_validation(window: MainWindow, settings_tab: SettingsTab) 
     standing up the whole app.
     """
     settings_tab.validation_requested.connect(window._run_validation)
+
+
+def _start_stats_load(window: QWidget, stats_service: StatsService, analytics_tab: AnalyticsTab) -> None:
+    """Initialize stats off-thread and refresh Analytics when ready."""
+
+    def on_done(result: object) -> None:
+        if result is not True:
+            logger.warning("Stats database initialization failed")
+            return
+        # closeEvent's worker sweep runs on this same GUI thread and hides the
+        # window first; a refresh delivered after it would spawn a fresh
+        # Analytics worker nothing joins (QThread destroyed-while-running
+        # abort). Visibility is therefore the closing gate.
+        try:
+            if not window.isVisible():
+                return
+        except RuntimeError:
+            return
+        analytics_tab.refresh_data(force=True)
+
+    def on_error(error_message: str) -> None:
+        logger.warning("Stats database initialization failed: %s", error_message)
+
+    run_off_thread(window, stats_service.load, on_done, on_error)
 
 
 # --- Resource download-button wiring (ARC-010) --------------------------------
@@ -881,10 +905,10 @@ def main():
     # boundary. No startup worker is started before this returns successfully.
     window.commit_boot()
 
-    # Show window first so the user sees the UI immediately; then run the
-    # deferred init (stats DB open) on the next event loop tick. The
-    # YouTube tab's episode processor is built even lazier — on first
-    # Mine click — because the dictionary chain dominates startup cost.
+    # Show window first so the user sees the UI immediately. The stats DB open
+    # runs off-thread below. The YouTube tab's episode processor is built even
+    # lazier — on first Mine click — because the dictionary chain dominates
+    # startup cost.
     window.show()
 
     # Install the main-thread stall watchdog: a heartbeat QTimer + daemon
@@ -893,7 +917,7 @@ def main():
     # stop() is hooked into MainWindow.closeEvent (daemon=True is the backstop).
     install_stall_watchdog(window)
 
-    QTimer.singleShot(0, stats_service.load)
+    _start_stats_load(window, stats_service, analytics_tab)
 
     # Pre-warm the shared MeCab tagger (get_shared_tagger) AND the dictionary
     # chain off the GUI thread, scheduled on the next event-loop tick so it

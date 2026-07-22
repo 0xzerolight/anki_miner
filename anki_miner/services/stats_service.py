@@ -2,6 +2,7 @@
 
 import logging
 import sqlite3
+import threading
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -58,6 +59,7 @@ class StatsService:
     def __init__(self, db_path: Path):
         self._db_path = db_path
         self._initialized = False
+        self._load_lock = threading.Lock()
 
     def load(self) -> bool:
         """Initialize the database, creating tables if needed."""
@@ -75,6 +77,15 @@ class StatsService:
     def is_available(self) -> bool:
         """Check if the stats service has been initialized."""
         return self._initialized
+
+    def _ensure_loaded(self) -> bool:
+        """Initialize once on the first write, including concurrent first writes."""
+        if self._initialized:
+            return True
+        with self._load_lock:
+            if self._initialized:
+                return True
+            return self.load()
 
     @contextmanager
     def _connect(self):
@@ -128,7 +139,7 @@ class StatsService:
 
     def record_session(self, session: MiningSession) -> int:
         """Record a mining session. Returns the row ID, or -1 on failure."""
-        if not self._initialized:
+        if not self._ensure_loaded():
             return -1
         with self._connect() as conn:
             cursor = conn.execute(
@@ -199,7 +210,7 @@ class StatsService:
         The difficulty_score is calculated as unknown_words / total_words.
         Skips recording if total_words is 0.
         """
-        if not self._initialized or total_words == 0:
+        if total_words == 0 or not self._ensure_loaded():
             return
         difficulty_score = unknown_words / total_words
         with self._connect() as conn:

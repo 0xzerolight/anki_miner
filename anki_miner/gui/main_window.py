@@ -1,6 +1,7 @@
 """Main window for Anki Miner GUI."""
 
 import logging
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import replace
 from typing import TYPE_CHECKING
@@ -794,6 +795,19 @@ class MainWindow(QMainWindow):
         """
         silent = self._validation_silent
         self._validation_silent = False
+
+        if silent:
+            if not result.issues:
+                logger.info("Startup validation completed: issues=0")
+            else:
+                component_counts = Counter(issue.component for issue in result.issues)
+                logger.warning(
+                    "Startup validation completed: issues=%d errors=%d warnings=%d components=%s",
+                    len(result.issues),
+                    len(result.get_errors()),
+                    len(result.get_warnings()),
+                    ",".join(f"{name}={count}" for name, count in sorted(component_counts.items())),
+                )
 
         # Update system status indicators
         ankiconnect_ok = all(issue.component != "AnkiConnect" for issue in result.issues)
