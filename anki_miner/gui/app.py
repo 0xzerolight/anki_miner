@@ -2,7 +2,9 @@
 
 import logging
 import os
+import platform
 import sys
+import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from functools import wraps
@@ -14,10 +16,12 @@ from PyQt6.QtCore import QCoreApplication, Qt, QThread, QTimer, pyqtBoundSignal
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
 
+from anki_miner import __version__
 from anki_miner.config import AnkiMinerConfig, create_default_config
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui.i18n import install_translators
-from anki_miner.gui.main_window import MainWindow
+from anki_miner.gui.launch import get_effective_log_path as _get_effective_log_path
+from anki_miner.gui.main_window import MainWindow, open_log_folder
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
@@ -35,6 +39,7 @@ from anki_miner.gui.widgets.video_tab import VideoTab
 from anki_miner.services.stats_service import StatsService
 from anki_miner.utils import alass_resolver
 from anki_miner.utils.file_utils import ensure_directory
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -46,16 +51,6 @@ class ComposedApp:
     window: MainWindow
     stats_service: StatsService
     analytics_tab: AnalyticsTab
-
-
-def _install_minimal_recovery() -> None:
-    """Install a stderr crash boundary before home/config/log setup."""
-
-    def _hook(exc_type, exc_value, exc_tb):
-        logger.critical("Unhandled exception during early startup", exc_info=(exc_type, exc_value, exc_tb))
-        sys.__excepthook__(exc_type, exc_value, exc_tb)
-
-    sys.excepthook = _hook
 
 
 def _scrub_pyinstaller_env() -> None:
@@ -232,7 +227,7 @@ def _configure_logging(log_path: Path) -> None:
 
     Called from main() so all modules that already call
     ``logging.getLogger(__name__)`` have their records captured to disk.
-    Two 2 MB backup files → at most ~6 MB on disk at any time.
+    Five 2 MB backup files → at most ~12 MB on disk at any time.
 
     Idempotent: a handler attached by a previous call is removed and replaced,
     so calling this twice — bootstrap default-path → config-path re-point (F3),
@@ -241,35 +236,67 @@ def _configure_logging(log_path: Path) -> None:
     """
     log_path = Path(log_path)  # tolerate a str caller; .parent below needs a Path
     root = logging.getLogger()
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    handler = _OwnerOnlyRotatingFileHandler(
-        log_path,
-        maxBytes=2 * 1024 * 1024,
-        backupCount=2,
-        encoding="utf-8",
-        delay=True,
-    )
-    handler.setLevel(logging.DEBUG)
-    handler._anki_miner_sink = True  # type: ignore[attr-defined]  # sentinel for idempotent replacement
-    fmt = logging.Formatter(
-        "%(asctime)s %(levelname)-8s %(name)s: %(message)s",
-        datefmt="%Y-%m-%dT%H:%M:%S",
-    )
-    handler.setFormatter(fmt)
-    # Build the replacement completely before closing the old sink. If mkdir,
-    # handler construction, or formatter setup fails, the working sink remains.
-    for existing in list(root.handlers):
-        if getattr(existing, "_anki_miner_sink", False):
-            root.removeHandler(existing)
-            existing.close()
+    old_sinks = [existing for existing in root.handlers if getattr(existing, "_anki_miner_sink", False)]
+    handler: _OwnerOnlyRotatingFileHandler | None = None
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        handler = _OwnerOnlyRotatingFileHandler(
+            log_path,
+            maxBytes=2 * 1024 * 1024,
+            backupCount=5,
+            encoding="utf-8",
+            delay=False,
+        )
+        handler.setLevel(logging.DEBUG)
+        handler._anki_miner_sink = True  # type: ignore[attr-defined]  # sentinel for idempotent replacement
+        handler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+                datefmt="%Y-%m-%dT%H:%M:%S",
+            )
+        )
+        root.addHandler(handler)
+    except Exception:
+        if handler is not None:
+            handler.close()
+        logger.warning("Failed to configure log at %s; keeping existing log sink", log_path, exc_info=True)
+        return
+
     # Root logger at WARNING so third-party libs (yt-dlp, fugashi, …) only
     # write WARNING+ to the file; the project namespace gets full DEBUG coverage.
     # A record must clear both its logger's effective level AND the handler's
     # level — setting the handler to DEBUG here means the handler itself never
     # silences anything; filtering happens at the logger level.
     root.setLevel(logging.WARNING)
-    root.addHandler(handler)
     logging.getLogger("anki_miner").setLevel(logging.DEBUG)
+    for existing in old_sinks:
+        root.removeHandler(existing)
+        try:
+            existing.close()
+        except Exception:
+            logger.warning("Failed to close replaced log sink", exc_info=True)
+
+
+def get_effective_log_path() -> Path:
+    """Return the active sink path, including any retained early fallback."""
+    return _get_effective_log_path(ANKI_MINER_HOME / "anki_miner.log")
+
+
+def _log_session_boundary() -> None:
+    """Write one searchable boundary after final log-sink selection."""
+    sinks = [handler for handler in logging.getLogger().handlers if getattr(handler, "_anki_miner_sink", False)]
+    if sinks:
+        logging.getLogger("anki_miner").setLevel(logging.DEBUG)
+        for handler in sinks:
+            handler.setLevel(logging.DEBUG)
+    logger.info(
+        "Session start session_id=%s version=%s platform=%s frozen=%s pid=%s",
+        uuid.uuid4().hex[:8],
+        __version__,
+        platform.platform(),
+        bool(getattr(sys, "frozen", False)),
+        os.getpid(),
+    )
 
 
 def _apply_ui_zoom(config: AnkiMinerConfig | None) -> None:
@@ -613,11 +640,32 @@ def _install_excepthook(app: QApplication) -> None:
             return
         _in_excepthook = True
         try:
-            QMessageBox.critical(
-                app.activeWindow(),
-                QCoreApplication.translate("app", "Anki Miner — Unexpected Error"),
-                f"{exc_type.__name__}: {exc_value}",
+            log_path = get_effective_log_path()
+            box = QMessageBox(app.activeWindow())
+            box.setIcon(QMessageBox.Icon.Critical)
+            box.setWindowTitle(QCoreApplication.translate("app", "Anki Miner — Unexpected Error"))
+            box.setTextFormat(Qt.TextFormat.PlainText)
+            box.setText(
+                tr_format(
+                    QCoreApplication.translate(
+                        "app",
+                        "%1: %2\n\nVersion: %3\nPlatform: %4\nLog file: %5",
+                    ),
+                    exc_type.__name__,
+                    exc_value,
+                    __version__,
+                    platform.platform(),
+                    log_path,
+                )
             )
+            open_button = box.addButton(
+                QCoreApplication.translate("MainWindow", "Open Log Folder"),
+                QMessageBox.ButtonRole.ActionRole,
+            )
+            box.addButton(QMessageBox.StandardButton.Ok)
+            box.exec()
+            if box.clickedButton() is open_button:
+                open_log_folder(log_path)
         except Exception:
             logger.exception("Failed to display error dialog for unhandled exception")
         finally:
@@ -810,7 +858,6 @@ def compose_main_window(config: AnkiMinerConfig) -> ComposedApp:
 @_rollback_workers_on_startup_fault
 def main():
     """Launch the Anki Miner GUI application."""
-    _install_minimal_recovery()
     _scrub_pyinstaller_env()
 
     # Env-var-gated smoke path (PyInstaller bundled-binary validation).
@@ -871,6 +918,8 @@ def main():
             _configure_logging(_log_path)
         except Exception:
             logger.exception("Failed to configure custom log path; keeping startup logger")
+
+    _log_session_boundary()
 
     # Clean-install nicety: make the default dicts_root exist before any
     # settings UI validates it (Issue #100 red-border state).

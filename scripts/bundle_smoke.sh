@@ -32,6 +32,15 @@ if [ -z "$APP" ]; then
 fi
 echo "App binary: $APP"
 
+SMOKE_HOME="$(mktemp -d)"
+cleanup_smoke_home() {
+  if [ -n "${SMOKE_HOME:-}" ] && [ -d "$SMOKE_HOME" ]; then
+    rm -rf -- "$SMOKE_HOME"
+  fi
+}
+trap cleanup_smoke_home EXIT
+export ANKI_MINER_HOME="$SMOKE_HOME"
+
 FAILED=()
 
 # --- 1. YouTube smoke: yt-dlp extractor registry survived PyInstaller ---------

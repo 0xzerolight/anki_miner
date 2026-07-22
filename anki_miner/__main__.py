@@ -2,7 +2,7 @@
 
 import sys
 
-from anki_miner.gui.app import main
+from anki_miner.gui.launch import main
 
 if __name__ == "__main__":
     sys.exit(main())

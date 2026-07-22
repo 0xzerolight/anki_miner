@@ -5,6 +5,7 @@ import sys
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import replace
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
@@ -29,6 +30,7 @@ from anki_miner.gui.constants import (
     WINDOW_MIN_WIDTH,
 )
 from anki_miner.gui.controllers import BackgroundTaskController
+from anki_miner.gui.launch import get_effective_log_path
 from anki_miner.gui.presenters import GUIPresenter
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
@@ -48,6 +50,16 @@ if TYPE_CHECKING:
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome
 
 logger = logging.getLogger(__name__)
+
+
+def open_log_folder(log_path: Path) -> None:
+    """Open the parent directory of *log_path* in the system file manager."""
+    from PyQt6.QtCore import QUrl
+    from PyQt6.QtGui import QDesktopServices
+
+    log_folder = Path(log_path).parent
+    log_folder.mkdir(parents=True, exist_ok=True)
+    QDesktopServices.openUrl(QUrl.fromLocalFile(str(log_folder)))
 
 
 class MainWindow(QMainWindow):
@@ -486,12 +498,7 @@ class MainWindow(QMainWindow):
 
     def _open_log_folder(self) -> None:
         """Open the log folder in the system file manager (Help → Open Log Folder)."""
-        from PyQt6.QtCore import QUrl
-        from PyQt6.QtGui import QDesktopServices
-
-        log_folder = self.config.log_path.parent
-        log_folder.mkdir(parents=True, exist_ok=True)
-        QDesktopServices.openUrl(QUrl.fromLocalFile(str(log_folder)))
+        open_log_folder(get_effective_log_path(self.config.log_path))
 
     def _create_desktop_shortcut(self) -> None:
         """Create a desktop shortcut via ShortcutService and report the result."""

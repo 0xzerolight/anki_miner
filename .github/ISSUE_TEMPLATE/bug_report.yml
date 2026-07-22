@@ -71,7 +71,7 @@ body:
     attributes:
       label: Anki Miner log files
       description: |
-        Windows: `%USERPROFILE%\.anki_miner\anki_miner.log`. Rotated logs use `.1` and `.2`; ZIP the `anki_miner.log*` files. Use Help → Open Log Folder to find them. Review logs for private information before uploading.
+        Windows: `%USERPROFILE%\.anki_miner\anki_miner.log`. Rotated logs use `.1` through `.5`; ZIP the `anki_miner.log*` files. Use Help → Open Log Folder to find them. Review logs for private information before uploading.
     validations:
       required: false
       accept: ".log,.txt,.zip"

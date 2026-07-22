@@ -31,7 +31,7 @@ def test_readme_exposes_first_install_recovery_and_troubleshooting() -> None:
     assert "dictionary ZIP name, source, and size" in troubleshooting
     assert "%USERPROFILE%\\.anki_miner\\anki_miner.log" in troubleshooting
     assert "~/.anki_miner/anki_miner.log" in troubleshooting
-    assert "`.1` and `.2` suffixes" in troubleshooting
+    assert "`.1` through `.5` suffixes" in troubleshooting
 
 
 def test_bug_report_collects_log_files_and_status() -> None:
@@ -43,7 +43,7 @@ def test_bug_report_collects_log_files_and_status() -> None:
     assert upload["attributes"]["label"] == "Anki Miner log files"
     upload_help = upload["attributes"]["description"]
     assert "%USERPROFILE%\\.anki_miner\\anki_miner.log" in upload_help
-    assert "Rotated logs use `.1` and `.2`" in upload_help
+    assert "Rotated logs use `.1` through `.5`" in upload_help
     assert "ZIP the `anki_miner.log*` files" in upload_help
     assert "Help → Open Log Folder" in upload_help
     assert "Review logs for private information before uploading" in upload_help
