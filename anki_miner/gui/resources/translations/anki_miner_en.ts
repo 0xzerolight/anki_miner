@@ -583,6 +583,14 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Configuration Update Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Imported %1 audio pack(s):</source>
         <translation type="unfinished" />
     </message>
@@ -624,6 +632,18 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Re-import Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -2307,6 +2327,14 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Configuration Update Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Importing dictionary…</source>
         <translation type="unfinished" />
     </message>
@@ -2316,6 +2344,18 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Import Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3013,6 +3053,10 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Not installed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>File not found</source>
         <translation type="unfinished" />
     </message>
@@ -3337,6 +3381,14 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Configuration Update Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Importing frequency source…</source>
         <translation type="unfinished" />
     </message>
@@ -3346,6 +3398,18 @@ This cannot be undone. You would need to reimport from the source zip.</source>
     </message>
     <message>
         <source>Import Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3611,6 +3675,10 @@ Add %3 word(s) to your known list?</source>
 </context><context>
     <name>MainWindow</name>
     <message>
+        <source>Open Log Folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Video</source>
         <translation type="unfinished" />
     </message>
@@ -3712,10 +3780,6 @@ Add %3 word(s) to your known list?</source>
     </message>
     <message>
         <source>Check for Updates</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Open Log Folder</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4776,6 +4840,18 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resource Download Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The download worker finished without a completion result.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>✓ %1 — %2</source>
         <translation type="unfinished" />
     </message>
@@ -4793,6 +4869,26 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Resource Download Cancelled (Some Resources Installed)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Some resources were installed before cancellation.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resource Download Cancelled</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No resources were installed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resource items not processed: %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Resources Installed</source>
         <translation type="unfinished" />
     </message>
@@ -4801,15 +4897,23 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Resource Download Failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>No resources were processed.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Resources are downloaded from their original sources; their licenses apply.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No valid pitch accent entries were found.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent validation failed: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 entries</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -4831,7 +4935,23 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Resources updated.</source>
+        <source>Download cancelled. Some resources were installed before cancellation.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download cancelled. No resources were installed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Some resources were installed; some failed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No resources were installed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources installed.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -4955,6 +5075,14 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Reset to Defaults…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset settings to defaults. Installed dictionaries, audio, frequency lists, and your theme are kept.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Export Settings…</source>
         <translation type="unfinished" />
     </message>
@@ -5065,6 +5193,20 @@ Imported values override your current settings; anything not in the file is kept
     </message>
     <message>
         <source>✓ Imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset all settings to their defaults?
+
+Your installed dictionaries, audio, frequency lists, and theme are kept.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>✓ Reset to defaults</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6602,6 +6744,14 @@ Continue with import?</source>
     <name>app</name>
     <message>
         <source>Anki Miner — Unexpected Error</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1: %2
+
+Version: %3
+Platform: %4
+Log file: %5</source>
         <translation type="unfinished" />
     </message>
 </context></TS>
