@@ -139,10 +139,11 @@ class SettingsTab(QWidget):
     def __init__(
         self,
         config: AnkiMinerConfig,
-        parent=None,
+        parent: QWidget | None = None,
         *,
         commit_config: Callable[[AnkiMinerConfig], None] | None = None,
-    ):
+        suppress_optional_startup: bool = False,
+    ) -> None:
         """Initialize the settings tab.
 
         Args:
@@ -153,6 +154,7 @@ class SettingsTab(QWidget):
         """
         super().__init__(parent)
         self.config = config
+        self._suppress_optional_startup = suppress_optional_startup
         self._commit_config: Callable[[AnkiMinerConfig], None] = (
             commit_config if commit_config is not None else self.config_changed.emit
         )
@@ -249,7 +251,7 @@ class SettingsTab(QWidget):
         self.frequency_panel = FrequencySettingsPanel(self.config.freqs_root)
         self.filtering_panel = FilteringSettingsPanel()
         self.youtube_panel = YouTubeSettingsPanel()
-        self.subtitles_panel = SubtitlesSettingsPanel()
+        self.subtitles_panel = SubtitlesSettingsPanel(suppress_optional_startup=self._suppress_optional_startup)
         self.ui_panel = UISettingsPanel(self.config.themes_root, self.config.ui_zoom, self.config.ui_language)
 
         # Add tabs with scroll areas for each panel. Stable string keys are

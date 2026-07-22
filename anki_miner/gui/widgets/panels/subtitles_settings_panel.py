@@ -135,15 +135,21 @@ class SubtitlesSettingsPanel(FormPanel):
     #: and the Silero VAD.
     vulkan_model_download_requested = pyqtSignal(str)
 
-    def __init__(self, parent=None):
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        suppress_optional_startup: bool = False,
+    ) -> None:
         """Initialize the Subtitles settings panel."""
         super().__init__(self.tr("Subtitles"), parent=parent)
+        self._suppress_optional_startup = suppress_optional_startup
         self._models_root = None
         self._bin_root: Path | None = None
         self._alass_location: Path | None = None
         self._cuda_libs_root: Path | None = None
         self._onnx_pack_root: Path | None = None
-        self._alass_supported = alass_installer.alass_install_supported()
+        self._alass_supported = False if suppress_optional_startup else alass_installer.alass_install_supported()
         # Vulkan ASR is "offerable" only where it can actually run: non-macOS AND
         # the whisper.cpp Vulkan backend lib (libggml-vulkan) is installed. That
         # lib ships only in the bundled release (built from source with the Vulkan
@@ -156,7 +162,9 @@ class SubtitlesSettingsPanel(FormPanel):
         # the option and correctly cascades to CPU at transcribe time. Computed
         # once here because device_combo is built a single time at construction,
         # before any off-thread _AsrState probe runs.
-        self._vulkan_offerable = (sys.platform != "darwin") and _engine.whisper_cpp_available()
+        self._vulkan_offerable = (
+            not suppress_optional_startup and sys.platform != "darwin" and _engine.whisper_cpp_available()
+        )
         # Device options offered here (Vulkan appended only when offerable).
         # Computed once so the dropdown, set_device/get_device, and the
         # load_from_config hygiene check all share one source of truth.
@@ -1062,7 +1070,10 @@ class SubtitlesSettingsPanel(FormPanel):
         self._alass_location = config.alass_location
         self._onnx_pack_root = config.onnx_pack_root
         # One unified off-thread probe drives every status label + button state.
-        self._refresh_state_async(config.asr_model, config.asr_models_root, config.cuda_libs_root)
+        if self._suppress_optional_startup:
+            self._show_checking_status()
+        else:
+            self._refresh_state_async(config.asr_model, config.asr_models_root, config.cuda_libs_root)
 
     def contribute(self, config):
         """Return a new config with this panel's fields applied.

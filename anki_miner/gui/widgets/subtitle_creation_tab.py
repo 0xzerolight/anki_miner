@@ -59,9 +59,16 @@ class SubtitleCreationTab(_ToolTabBase):
         parent: Optional parent widget.
     """
 
-    def __init__(self, config: AnkiMinerConfig, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        config: AnkiMinerConfig,
+        parent: QWidget | None = None,
+        *,
+        suppress_optional_startup: bool = False,
+    ) -> None:
         super().__init__(parent)
         self.config = config
+        self._suppress_optional_startup = suppress_optional_startup
         self.worker_thread = None
         self._custom_output_dir: Path | None = None
         self._total_files: int = 0
@@ -290,6 +297,8 @@ class SubtitleCreationTab(_ToolTabBase):
     def _refresh_engine_state(self) -> None:
         """Probe engine availability off-thread, then update the Generate guard."""
         self.generate_button.setEnabled(False)
+        if self._suppress_optional_startup:
+            return
 
         def _apply(result: object) -> None:
             self._engine_is_available = bool(result)

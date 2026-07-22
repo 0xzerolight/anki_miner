@@ -1,4 +1,13 @@
-"""Main GUI application entry point."""
+"""Main GUI application entry point.
+
+Hidden ``ANKI_MINER_SMOKE`` modes:
+
+* ``youtube``, ``asr``, and ``whispercpp`` validate frozen dependencies before
+  Qt starts.
+* ``installer`` runs full GUI composition while suppressing optional startup
+  work, validates installed-runtime invariants, and writes an atomic result
+  marker before exiting.
+"""
 
 import logging
 import os
@@ -38,6 +47,7 @@ from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 from anki_miner.gui.widgets.video_tab import VideoTab
 from anki_miner.services.stats_service import StatsService
 from anki_miner.utils import alass_resolver
+from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.file_utils import ensure_directory
 from anki_miner.utils.i18n import tr_format
 
@@ -608,7 +618,7 @@ def _connect_vulkan_download(window: MainWindow, settings_tab: SettingsTab) -> N
 _in_excepthook = False
 
 
-def _install_excepthook(app: QApplication) -> None:
+def _install_excepthook(app: QApplication, *, fail_fast: bool = False) -> None:
     """Route unhandled GUI-thread exceptions to the log + a dialog instead of abort().
 
     Since PyQt 5.5 an exception that escapes a Qt slot calls ``qFatal``/``abort``
@@ -635,6 +645,9 @@ def _install_excepthook(app: QApplication) -> None:
             sys.__excepthook__(exc_type, exc_value, exc_tb)
             return
         logger.critical("Unhandled exception", exc_info=(exc_type, exc_value, exc_tb))
+        if fail_fast:
+            app.exit(1)
+            return
         instance = QApplication.instance()
         if _in_excepthook or instance is None or QThread.currentThread() != instance.thread():
             return
@@ -689,12 +702,19 @@ def _rollback_workers_on_startup_fault(fn: Callable[[], None]) -> Callable[[], N
                         worker.wait()
                 except RuntimeError:
                     pass
+            if os.environ.get("ANKI_MINER_SMOKE") == "installer":
+                logger.critical("Installer smoke failed during startup", exc_info=True)
+                raise SystemExit(1) from None
             raise
 
     return wrapped
 
 
-def compose_main_window(config: AnkiMinerConfig) -> ComposedApp:
+def compose_main_window(
+    config: AnkiMinerConfig,
+    *,
+    suppress_optional_startup: bool = False,
+) -> ComposedApp:
     """Build the main window and its production tab/service graph."""
     # Create main window
     window = MainWindow(config)
@@ -788,10 +808,17 @@ def compose_main_window(config: AnkiMinerConfig) -> ComposedApp:
     # the model-downloaded guard and the worker: config_changed is auto-wired by
     # the loop below (it has update_config); config_refreshed is wired explicitly
     # near the SettingsTab refresh connection.
-    subtitles_tab = SubtitlesTab(window.get_config())
+    subtitles_tab = SubtitlesTab(
+        window.get_config(),
+        suppress_optional_startup=suppress_optional_startup,
+    )
     window.tabs.addTab(subtitles_tab, QCoreApplication.translate("MainWindow", "Tools"))
 
-    settings_tab = SettingsTab(window.get_config(), commit_config=window.update_config)
+    settings_tab = SettingsTab(
+        window.get_config(),
+        commit_config=window.update_config,
+        suppress_optional_startup=suppress_optional_startup,
+    )
     # MainWindow stamps + saves the config, then config_refreshed fans the
     # POST-SAVE committed object out to every tab. This prevents a scan worker's
     # stale pre-save config snapshot from regaining authority after save.
@@ -855,10 +882,90 @@ def compose_main_window(config: AnkiMinerConfig) -> ComposedApp:
     return ComposedApp(window=window, stats_service=stats_service, analytics_tab=analytics_tab)
 
 
+def _schedule_installer_smoke(app: QApplication, window: MainWindow) -> None:
+    """Run installed-artifact assertions over two event-loop ticks."""
+
+    def fail(stage: str) -> None:
+        logger.critical("Installer smoke failed during %s", stage, exc_info=True)
+        app.exit(1)
+
+    def finish() -> None:
+        try:
+            required_files = (
+                ANKI_MINER_HOME / "gui_config.json",
+                ANKI_MINER_HOME / "anki_miner.log",
+            )
+            missing = [str(path) for path in required_files if not path.is_file()]
+            dicts_root = ANKI_MINER_HOME / "dicts"
+            if not dicts_root.is_dir():
+                missing.append(str(dicts_root))
+            if missing:
+                raise RuntimeError(f"installed smoke outputs missing: {', '.join(missing)}")
+
+            result_value = os.environ.get("ANKI_MINER_SMOKE_RESULT")
+            if not result_value:
+                raise RuntimeError("ANKI_MINER_SMOKE_RESULT is required")
+            result_path = Path(result_value)
+            result_path.parent.mkdir(parents=True, exist_ok=True)
+            with atomic_write_path(result_path) as staged:
+                staged.write_bytes(f"ANKI_MINER_INSTALLER_READY {__version__}\n".encode())
+        except Exception:
+            fail("post-close checks")
+            return
+        app.exit(0)
+
+    def validate_and_close() -> None:
+        try:
+            platform_name = app.platformName()
+            frozen_windows = bool(getattr(sys, "frozen", False) and sys.platform == "win32")
+            expected_platform = "windows" if frozen_windows else os.environ.get("QT_QPA_PLATFORM", platform_name)
+            if platform_name != expected_platform:
+                raise RuntimeError(f"Qt platform mismatch: expected {expected_platform!r}, got {platform_name!r}")
+
+            expected_titles = [
+                QCoreApplication.translate("MainWindow", "Video"),
+                QCoreApplication.translate("MainWindow", "Deck Builder"),
+                QCoreApplication.translate("MainWindow", "Audio"),
+                QCoreApplication.translate("MainWindow", "Reading"),
+                QCoreApplication.translate("MainWindow", "Analytics"),
+                QCoreApplication.translate("MainWindow", "Tools"),
+                QCoreApplication.translate("MainWindow", "Settings"),
+            ]
+            actual_titles = [window.tabs.tabText(index) for index in range(window.tabs.count())]
+            if actual_titles != expected_titles:
+                raise RuntimeError(f"main tab mismatch: expected {expected_titles!r}, got {actual_titles!r}")
+
+            expected_version = os.environ.get("ANKI_MINER_SMOKE_EXPECTED_VERSION")
+            if expected_version and __version__ != expected_version:
+                raise RuntimeError(f"version mismatch: expected {expected_version!r}, got {__version__!r}")
+
+            from anki_miner.services.tagger import get_shared_tagger
+
+            source = "日本語"
+            reconstructed = "".join(str(token.surface) for token in get_shared_tagger()(source))
+            if reconstructed != source:
+                raise RuntimeError(f"tagger surface mismatch: expected {source!r}, got {reconstructed!r}")
+
+            if frozen_windows:
+                from anki_miner.gui import launch
+
+                if not launch.TRUSTSTORE_INJECTED:
+                    raise RuntimeError("Windows trust store was not injected")
+
+            if not window.close():
+                raise RuntimeError("main window refused installer-smoke close")
+            QTimer.singleShot(0, finish)
+        except Exception:
+            fail("GUI checks")
+
+    QTimer.singleShot(0, validate_and_close)
+
+
 @_rollback_workers_on_startup_fault
 def main():
     """Launch the Anki Miner GUI application."""
     _scrub_pyinstaller_env()
+    installer_smoke = os.environ.get("ANKI_MINER_SMOKE") == "installer"
 
     # Env-var-gated smoke path (PyInstaller bundled-binary validation).
     # Runs before Qt init so headless CI can verify yt-dlp extractor
@@ -908,6 +1015,8 @@ def main():
     except Exception:
         # Never leave _early_config unbound (would NameError at the zoom call
         # and every later read) — fall back to defaults so startup can proceed.
+        if installer_smoke:
+            raise
         logger.exception("Failed to load config at startup; using default config")
         _early_config = create_default_config()
         _log_path = _default_log_path
@@ -940,7 +1049,7 @@ def main():
     # Install the crash net before any widget is built so exceptions escaping a
     # slot during tab construction are caught too (a bad path in a startup slot
     # would otherwise abort the whole process — the trailing-space batch bug).
-    _install_excepthook(app)
+    _install_excepthook(app, fail_fast=installer_smoke)
 
     # Set application icon
     icon_path = get_resource_dir() / "icons" / "anki_miner.svg"
@@ -963,22 +1072,33 @@ def main():
         )
         Theme.apply_to_app(app)
     except Exception:
+        if installer_smoke:
+            raise
         logger.exception("Failed to initialize theme; continuing with Qt defaults")
 
-    composed = compose_main_window(_early_config)
+    composed = compose_main_window(
+        _early_config,
+        suppress_optional_startup=installer_smoke,
+    )
     window = composed.window
     stats_service = composed.stats_service
     analytics_tab = composed.analytics_tab
 
     # Full widget composition and required version save now form one commit
     # boundary. No startup worker is started before this returns successfully.
-    window.commit_boot()
+    window.commit_boot(suppress_optional=installer_smoke)
 
     # Show window first so the user sees the UI immediately. The stats DB open
     # runs off-thread below. The YouTube tab's episode processor is built even
     # lazier — on first Mine click — because the dictionary chain dominates
     # startup cost.
+    if installer_smoke:
+        app.setQuitOnLastWindowClosed(False)
     window.show()
+
+    if installer_smoke:
+        _schedule_installer_smoke(app, window)
+        sys.exit(app.exec())
 
     # Install the main-thread stall watchdog: a heartbeat QTimer + daemon
     # monitor that logs a WARNING with the GUI stack whenever the event loop

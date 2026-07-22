@@ -134,21 +134,22 @@ class MainWindow(QMainWindow):
 
         self._update_banner: UpdateBanner | None = None
 
-    def commit_boot(self) -> None:
-        """Commit startup state, then start every boot background task."""
+    def commit_boot(self, *, suppress_optional: bool = False) -> None:
+        """Commit startup state, then start boot work unless suppressed."""
         if self._boot_committed:
             return
 
-        self._run_optional_boot_step(
-            "legacy frequency-source repair",
-            self._maybe_repair_legacy_frequency_source_name,
-        )
+        if not suppress_optional:
+            self._run_optional_boot_step(
+                "legacy frequency-source repair",
+                self._maybe_repair_legacy_frequency_source_name,
+            )
 
         previous = self.config.last_known_version
         if previous != __version__:
             self.update_config(replace(self.config, last_known_version=__version__))
 
-        if previous and previous != __version__:
+        if not suppress_optional and previous and previous != __version__:
             QMessageBox.information(
                 self,
                 self.tr("Anki Miner updated"),
@@ -164,6 +165,9 @@ class MainWindow(QMainWindow):
             )
 
         self._boot_committed = True
+        if suppress_optional:
+            return
+
         self._validation_silent = True
         self._run_optional_boot_step("startup validation", self._run_validation)
         if self.config.check_for_updates:

@@ -107,3 +107,20 @@ def test_reentrancy_is_log_only(qapp, monkeypatch, caplog, restore_excepthook):
 
     assert calls == []  # reentrancy guard suppressed the dialog
     assert any(r.levelno == logging.CRITICAL for r in caplog.records)
+
+
+def test_fail_fast_logs_and_exits_without_dialog(qapp, monkeypatch, caplog, restore_excepthook):
+    exit_codes: list[int] = []
+
+    def _capture_exit(_app: object, code: int = 0) -> None:
+        exit_codes.append(code)
+
+    monkeypatch.setattr(type(qapp), "exit", _capture_exit)
+    monkeypatch.setattr(QMessageBox, "exec", lambda *a, **k: pytest.fail("dialog shown"))
+
+    app_module._install_excepthook(qapp, fail_fast=True)
+    with caplog.at_level(logging.CRITICAL, logger="anki_miner.gui.app"):
+        sys.excepthook(RuntimeError, RuntimeError("fail fast"), None)
+
+    assert exit_codes == [1]
+    assert any(r.levelno == logging.CRITICAL for r in caplog.records)

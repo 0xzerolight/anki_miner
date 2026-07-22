@@ -112,9 +112,16 @@ class CondenseTab(_ToolTabBase):
 
     config_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
 
-    def __init__(self, config: AnkiMinerConfig, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        config: AnkiMinerConfig,
+        parent: QWidget | None = None,
+        *,
+        suppress_optional_startup: bool = False,
+    ) -> None:
         super().__init__(parent)
         self.config = config
+        self._suppress_optional_startup = suppress_optional_startup
         # Suppresses the persist slot while _apply_config_defaults programmatically
         # seeds the option widgets (setValue/setChecked would otherwise feed back
         # through config_changed and re-persist during a refresh).
@@ -520,6 +527,8 @@ class CondenseTab(_ToolTabBase):
         """Probe ffmpeg availability off-thread, then update the Condense guard."""
         config = self.config
         self.condense_button.setEnabled(False)
+        if self._suppress_optional_startup:
+            return
 
         def _apply(result: object) -> None:
             self._ffmpeg_is_available = bool(result)

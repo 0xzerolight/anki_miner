@@ -42,13 +42,19 @@ class SubtitlesTab(QWidget):
         parent: Optional parent widget.
     """
 
-    def __init__(self, config: AnkiMinerConfig, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        config: AnkiMinerConfig,
+        parent: QWidget | None = None,
+        *,
+        suppress_optional_startup: bool = False,
+    ) -> None:
         super().__init__(parent)
         self.config = config
 
-        self.generate_tab = SubtitleCreationTab(config)
-        self.retime_tab = SubtitleRetimeTab(config)
-        self.condense_tab = CondenseTab(config)
+        self.generate_tab = SubtitleCreationTab(config, suppress_optional_startup=suppress_optional_startup)
+        self.retime_tab = SubtitleRetimeTab(config, suppress_optional_startup=suppress_optional_startup)
+        self.condense_tab = CondenseTab(config, suppress_optional_startup=suppress_optional_startup)
 
         self._inner_tabs = QTabWidget()
         self._inner_tabs.addTab(
