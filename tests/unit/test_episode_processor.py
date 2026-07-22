@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
+from anki_miner.config import ChainEntry
 from anki_miner.exceptions import AnkiConnectionError, SetupError, SubtitleParseError
 from anki_miner.models import CardPayload, LineLemmas, MediaData, TokenizedWord
 from anki_miner.models.youtube import FetchedMedia
@@ -3819,6 +3820,7 @@ class TestPreflightCardTarget:
     def test_setup_error_propagates_and_aborts_pipeline(self, processor, mock_services, tmp_path):
         """SetupError from verify_card_target raises out of process_episode; Phase 1 never starts."""
         mock_services["anki_service"].verify_card_target.side_effect = SetupError("bad note type")
+        mock_services["definition_service"].has_usable_offline_provider.return_value = False
 
         with patch.object(processor, "_allocate_run_temp_folder") as mock_alloc:
             with pytest.raises(SetupError, match="bad note type"):
@@ -3828,6 +3830,7 @@ class TestPreflightCardTarget:
         mock_services["subtitle_parser"].parse_subtitle_file.assert_not_called()
         mock_services["media_extractor"].extract_media_batch.assert_not_called()
         mock_services["anki_service"].create_cards_batch.assert_not_called()
+        mock_services["definition_service"].has_usable_offline_provider.assert_not_called()
 
     def test_anki_connection_error_propagates(self, processor, mock_services, tmp_path):
         """AnkiConnectionError from verify_card_target raises out of process_episode."""
@@ -3870,6 +3873,63 @@ class TestPreflightCardTarget:
         assert preflight_idx < parse_idx
 
         mock_services["anki_service"].verify_card_target.assert_called_once()
+
+    def test_missing_offline_provider_raises_after_card_target_before_parsing(
+        self, test_config, mock_services, tmp_path
+    ):
+        mock_services["definition_service"].has_usable_offline_provider.return_value = False
+        parent = MagicMock()
+        parent.attach_mock(mock_services["anki_service"], "anki_service")
+        parent.attach_mock(mock_services["definition_service"], "definition_service")
+        parent.attach_mock(mock_services["subtitle_parser"], "subtitle_parser")
+        processor = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+        with pytest.raises(SetupError) as exc_info:
+            processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        message = str(exc_info.value)
+        assert "Tools → Download Recommended Resources" in message
+        assert "Settings → Dictionaries" in message
+        call_names = [call[0] for call in parent.mock_calls]
+        assert call_names.index("anki_service.verify_card_target") < call_names.index(
+            "definition_service.has_usable_offline_provider"
+        )
+        assert "subtitle_parser.parse_subtitle_file" not in call_names
+
+    def test_valid_offline_provider_with_zero_new_words_remains_success(self, test_config, mock_services, tmp_path):
+        mock_services["definition_service"].has_usable_offline_provider.return_value = True
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = []
+        processor = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.success is True
+        assert result.cards_created == 0
+        assert result.errors == []
+        mock_services["definition_service"].has_usable_offline_provider.assert_called_once_with()
+
+    def test_deck_builder_bypass_does_not_require_offline_provider(self, test_config, mock_services, tmp_path):
+        config = replace(test_config, bypass_optional_filters=True)
+        mock_services["definition_service"].has_usable_offline_provider.return_value = False
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = []
+        processor = build_processor(
+            config=config,
+            presenter=NullPresenter(),
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.success is True
+        mock_services["definition_service"].has_usable_offline_provider.assert_not_called()
 
     # --- process_youtube_url pre-flight tests ---
 
@@ -3915,6 +3975,27 @@ class TestPreflightCardTarget:
                 cancel_event=threading.Event(),
             )
 
+        mock_fetcher.fetch_video.assert_not_called()
+
+    def test_jisho_only_chain_aborts_before_youtube_fetch(self, test_config, mock_services, tmp_path):
+        config = replace(
+            test_config,
+            dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
+        )
+        mock_services["definition_service"].has_usable_offline_provider.return_value = False
+        mock_fetcher = MagicMock()
+        processor = self._make_youtube_processor(config, mock_services, mock_fetcher)
+
+        with pytest.raises(SetupError) as exc_info:
+            processor.process_youtube_url(
+                url="https://youtu.be/abc",
+                video_id="abc",
+                workspace=tmp_path,
+                sub_mode="manual_only",
+                cancel_event=threading.Event(),
+            )
+
+        assert "Settings → Dictionaries" in str(exc_info.value)
         mock_fetcher.fetch_video.assert_not_called()
 
     def test_youtube_preflight_called_before_fetch(self, test_config, mock_services, tmp_path):

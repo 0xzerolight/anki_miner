@@ -33,6 +33,7 @@ from typing import TYPE_CHECKING, Generic, TypeVar
 
 from PyQt6.QtCore import pyqtSignal
 
+from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 
 if TYPE_CHECKING:
@@ -44,6 +45,19 @@ logger = logging.getLogger(__name__)
 # Queue item type — the concrete dataclass a subclass drives (all three are
 # ``@dataclass(eq=False)`` so the skip set keys on identity).
 ItemT = TypeVar("ItemT")
+
+
+def queue_preflight_error(
+    card_target_check: Callable[[], None],
+    offline_dictionary_check: Callable[[], None],
+) -> str | None:
+    """Run ordered queue-level setup checks and return an actionable error."""
+    try:
+        card_target_check()
+        offline_dictionary_check()
+    except SetupError as exc:
+        return str(exc)
+    return None
 
 
 class SequentialQueueWorker(ProcessorOwningWorker, Generic[ItemT]):
@@ -182,6 +196,14 @@ class SequentialQueueWorker(ProcessorOwningWorker, Generic[ItemT]):
                 self.error.emit(f"{type(exc).__name__}: {exc}")
                 self.queue_finished.emit()
                 return
+        preflight_error = queue_preflight_error(
+            self._processor._preflight_card_target,
+            self._processor.check_offline_dictionary,
+        )
+        if preflight_error is not None:
+            self.error.emit(preflight_error)
+            self.queue_finished.emit()
+            return
         for idx, item in enumerate(self._items):
             if self.is_cancelled:
                 break

@@ -138,7 +138,7 @@ def build_definition_service(
     if registry is None:
         registry = _load_dict_registry(config, load_result)
     providers = registry.build_provider_chain(config)
-    definition_service = DefinitionService(config, providers=providers)
+    definition_service = DefinitionService(config, providers=providers, registry=registry)
 
     if any(e.kind == "indexed" and e.enabled for e in config.dictionary_chain):
         try:

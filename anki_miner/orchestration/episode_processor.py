@@ -96,6 +96,21 @@ _ARR_METADATA_RE = re.compile(r"\s*(?:\[[^\]]*\]\s*)+(?:-\S+)?\s*$")
 # Bug-F5 ordering (filter before dedup) is unchanged.
 MIN_EPISODE_APPEARANCES = 2
 
+_OFFLINE_DICTIONARY_REQUIRED_MESSAGE = (
+    "No usable offline dictionary is installed. Use Tools → Download Recommended Resources or Settings → Dictionaries."
+)
+
+
+def require_usable_offline_provider(
+    config: AnkiMinerConfig,
+    definition_service: DefinitionService,
+) -> None:
+    """Fail standard mining when no non-empty offline dictionary can serve it."""
+    if config.bypass_optional_filters:
+        return
+    if not definition_service.has_usable_offline_provider():
+        raise SetupError(_OFFLINE_DICTIONARY_REQUIRED_MESSAGE)
+
 
 def _sanitize_source_label(label: str) -> str:
     """Remove *arr release metadata (e.g. ``[WEBRip-1080p][JA]-Trix``) from a
@@ -1379,8 +1394,8 @@ class EpisodeProcessor:
         """Shared run skeleton for :meth:`process_episode` / :meth:`process_reading`.
 
         Owns ONLY the machinery both entry points share verbatim: the pre-flight
-        gates (staleness backstop then card-target verify, both *outside* the
-        try so a ``SetupError`` propagates instead of collapsing into a
+        gates (staleness backstop, card-target verify, then offline dictionary),
+        all *outside* the try so a ``SetupError`` propagates instead of collapsing into a
         "completed" result and *before* temp allocation so no dir leaks on
         failure), the per-run temp folder, the partial-IDs reset, the per-run
         ``_external_cancel`` bridge, and the try/except/finally tail (partial-card
@@ -1393,6 +1408,7 @@ class EpisodeProcessor:
         """
         self.check_dictionary_staleness()
         self._preflight_card_target()
+        self.check_offline_dictionary()
         run_temp_folder = self._allocate_run_temp_folder()
         keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
 
@@ -1547,7 +1563,8 @@ class EpisodeProcessor:
             ProcessingResult with statistics.
 
         Raises:
-            SetupError: note type or field mapping is misconfigured.
+            SetupError: note type / field mapping is misconfigured, or no usable
+                offline dictionary is installed.
             AnkiConnectionError: AnkiConnect is unreachable.
         """
         series_name = _resolve_identity(series_name_override, video_file.parent.name)
@@ -1894,8 +1911,8 @@ class EpisodeProcessor:
             ProcessingResult with statistics.
 
         Raises:
-            SetupError: note type / field mapping misconfigured, or a stale dict
-                index needs reimport.
+            SetupError: note type / field mapping misconfigured, a stale dict
+                index needs reimport, or no usable offline dictionary is installed.
             AnkiConnectionError: AnkiConnect is unreachable.
         """
         # Manga and subtitle sources carry a meaningful series (mokuro title /
@@ -2055,6 +2072,10 @@ class EpisodeProcessor:
         """Fail fast on a misconfigured Anki target; auto-create the deck (Issue #52)."""
         self.anki_service.verify_card_target()
 
+    def check_offline_dictionary(self) -> None:
+        """Fail fast when standard filtering has no usable offline provider."""
+        require_usable_offline_provider(self.config, self.definition_service)
+
     def check_dictionary_staleness(self) -> None:
         """Raise SetupError if any enabled indexed dict slot needs reimport (4.0).
 
@@ -2135,7 +2156,8 @@ class EpisodeProcessor:
 
         Raises:
             RuntimeError: if no YouTubeFetcherService was injected.
-            SetupError: note type or field mapping is misconfigured.
+            SetupError: note type / field mapping is misconfigured, or no usable
+                offline dictionary is installed.
             AnkiConnectionError: AnkiConnect is unreachable.
             Any fetcher exception propagates unchanged (no workspace cleanup
             happens here — the worker handles it).
@@ -2154,6 +2176,7 @@ class EpisodeProcessor:
         # download when an enabled index needs reimport.
         self.check_dictionary_staleness()
         self._preflight_card_target()
+        self.check_offline_dictionary()
 
         # The fetch stage consults cancel_event directly (fetch_video gets it
         # verbatim and the post-fetch check below polls it); the mining stage

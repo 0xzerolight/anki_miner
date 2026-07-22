@@ -2,7 +2,7 @@
 
 import dataclasses
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -126,6 +126,20 @@ def test_create_episode_processor_default_builds_fresh_anki_service(base_config)
     p1 = service_factory.create_episode_processor(base_config, _NullPresenter())
     p2 = service_factory.create_episode_processor(base_config, _NullPresenter())
     assert p1.anki_service is not p2.anki_service
+
+
+def test_build_definition_service_reuses_loaded_registry(base_config):
+    registry = MagicMock(name="registry")
+    providers = [MagicMock(name="provider")]
+    registry.build_provider_chain.return_value = providers
+
+    with (
+        patch.object(service_factory, "_load_dict_registry", return_value=registry),
+        patch.object(service_factory, "DefinitionService") as service_cls,
+    ):
+        service_factory.build_definition_service(base_config)
+
+    service_cls.assert_called_once_with(base_config, providers=providers, registry=registry)
 
 
 # ---------------------------------------------------------------------------
