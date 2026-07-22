@@ -342,8 +342,10 @@ def _confirm_second_instance(parent: QWidget | None = None) -> bool:
         )
     )
     box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Close)
-    box.button(QMessageBox.StandardButton.Yes).setText(QCoreApplication.translate("App", "Continue anyway"))
-    box.button(QMessageBox.StandardButton.Close).setText(QCoreApplication.translate("App", "Quit"))
+    if (yes_btn := box.button(QMessageBox.StandardButton.Yes)) is not None:
+        yes_btn.setText(QCoreApplication.translate("App", "Continue anyway"))
+    if (close_btn := box.button(QMessageBox.StandardButton.Close)) is not None:
+        close_btn.setText(QCoreApplication.translate("App", "Quit"))
     box.setDefaultButton(QMessageBox.StandardButton.Close)
     return box.exec() == QMessageBox.StandardButton.Yes
 

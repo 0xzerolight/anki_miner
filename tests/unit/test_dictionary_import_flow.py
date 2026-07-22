@@ -43,7 +43,7 @@ def test_add_dict_dialog_defaults_to_dicts_dir():
 
     with (
         patch(f"{MOD}.resolve_start_dir", return_value=str(dicts_root)) as rsd,
-        patch(f"{MOD}.QFileDialog.getOpenFileName", return_value=("", "")),
+        patch(f"{MOD}.file_dialogs.get_open_file_name", return_value=("", "")),
     ):
         flow.add_dict()  # empty selection → early return after the dialog
 
@@ -57,7 +57,7 @@ def test_reimport_dict_dialog_defaults_to_dicts_dir():
 
     with (
         patch(f"{MOD}.resolve_start_dir", return_value=str(dicts_root)) as rsd,
-        patch(f"{MOD}.QFileDialog.getOpenFileName", return_value=("", "")),
+        patch(f"{MOD}.file_dialogs.get_open_file_name", return_value=("", "")),
     ):
         flow.reimport_dict("some-dict")  # empty selection → early return
 
@@ -127,7 +127,7 @@ class TestReimportDictCatalogGuard:
         fresh = build_yomitan_zip(tmp_path / "src" / "j.zip", title="Jitendex.org [2026-06-06]")
 
         with (
-            patch(f"{MOD}.QFileDialog.getOpenFileName", return_value=(str(fresh), "")),
+            patch(f"{MOD}.file_dialogs.get_open_file_name", return_value=(str(fresh), "")),
             patch(f"{MOD}.QMessageBox.warning") as warn,
         ):
             flow.reimport_dict("jitendex")
@@ -148,7 +148,7 @@ class TestReimportDictCatalogGuard:
         fresh = build_yomitan_zip(tmp_path / "src" / "jm.zip", title="JMdict [2026-08-01]")
 
         with (
-            patch(f"{MOD}.QFileDialog.getOpenFileName", return_value=(str(fresh), "")),
+            patch(f"{MOD}.file_dialogs.get_open_file_name", return_value=(str(fresh), "")),
             patch(f"{MOD}.QMessageBox.warning") as warn,
         ):
             flow.reimport_dict("jmdict-english")
@@ -164,7 +164,7 @@ class TestReimportDictCatalogGuard:
         wrong = build_yomitan_zip(tmp_path / "src" / "d.zip", title="Daijirin [2026-01-01]")
 
         with (
-            patch(f"{MOD}.QFileDialog.getOpenFileName", return_value=(str(wrong), "")),
+            patch(f"{MOD}.file_dialogs.get_open_file_name", return_value=(str(wrong), "")),
             patch(f"{MOD}.QMessageBox.warning") as warn,
         ):
             flow.reimport_dict("jitendex")
@@ -180,7 +180,7 @@ class TestReimportDictCatalogGuard:
         other = build_yomitan_zip(tmp_path / "src" / "o.zip", title="Other Dict", revision="v1")
 
         with (
-            patch(f"{MOD}.QFileDialog.getOpenFileName", return_value=(str(other), "")),
+            patch(f"{MOD}.file_dialogs.get_open_file_name", return_value=(str(other), "")),
             patch(f"{MOD}.QMessageBox.warning") as warn,
         ):
             flow.reimport_dict("some-slot")  # not a catalog slot
