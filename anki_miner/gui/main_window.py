@@ -1,6 +1,7 @@
 """Main window for Anki Miner GUI."""
 
 import logging
+import sys
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import replace
@@ -39,6 +40,7 @@ from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
 from anki_miner.models import ProcessingResult, ValidationResult
 from anki_miner.services import ShortcutResult, ShortcutService, ValidationService
 from anki_miner.services.anki_service import AnkiService
+from anki_miner.utils.bundled_binary import frozen_state
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -493,18 +495,36 @@ class MainWindow(QMainWindow):
 
     def _create_desktop_shortcut(self) -> None:
         """Create a desktop shortcut via ShortcutService and report the result."""
-        self._run_shortcut_work(show_result=True, skip_if_exists=False)
+        self._run_shortcut_work(show_result=True, skip_if_exists=False, include_start_menu=False)
 
     def _maybe_create_shortcut_on_first_run(self) -> None:
         """Auto-create a desktop shortcut on first launch; persist the flag."""
-        self._run_shortcut_work(show_result=False, skip_if_exists=True)
+        if sys.platform == "win32" and frozen_state()[0]:
+            if not self.config.first_run_shortcut_done:
+                try:
+                    self.update_config(replace(self.config, first_run_shortcut_done=True))
+                except Exception:
+                    logger.exception("Could not persist desktop shortcut attempt state")
+            return
+        self._run_shortcut_work(show_result=False, skip_if_exists=True, include_start_menu=True)
 
-    def _run_shortcut_work(self, *, show_result: bool, skip_if_exists: bool) -> None:
+    def _run_shortcut_work(
+        self,
+        *,
+        show_result: bool,
+        skip_if_exists: bool,
+        include_start_menu: bool,
+    ) -> None:
         if self._shortcut_work_in_flight:
             return
         self._shortcut_work_in_flight = True
 
         def work() -> ShortcutResult | None:
+            if sys.platform == "win32":
+                return ShortcutService.create_shortcut(
+                    skip_if_exists=skip_if_exists,
+                    include_start_menu=include_start_menu,
+                )
             if skip_if_exists and ShortcutService.shortcut_exists():
                 return None
             return ShortcutService.create_shortcut()
@@ -553,11 +573,11 @@ class MainWindow(QMainWindow):
         # XML migration writes; stop an in-flight migration first (same-slot
         # concurrent-writer race, see cancel_jmdict_migration).
         self.background_tasks.cancel_jmdict_migration()
-        new_config = run_resource_download(self, self.config, release_resources=self.release_dictionary_resources)
-        if new_config is not None:
+        outcome = run_resource_download(self, self.config, release_resources=self.release_dictionary_resources)
+        if outcome is not None and outcome.summary.succeeded:
             # update_config (not from_settings) propagates via config_refreshed
             # to all tabs incl. Settings, and persists to disk.
-            self.update_config(new_config)
+            self.update_config(outcome.config)
 
     def _run_capability_browser_tool(self) -> None:
         """Tools-menu handler: open the Find a Feature browser.

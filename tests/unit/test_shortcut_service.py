@@ -47,24 +47,25 @@ class TestShortcutExists:
         with patch("sys.platform", "linux"):
             assert ShortcutService.shortcut_exists() is True
 
-    def test_returns_true_when_windows_lnk_exists(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(Path, "home", lambda: tmp_path)
-        desktop = tmp_path / "Desktop"
-        desktop.mkdir()
-        (desktop / f"{APP_NAME}.lnk").write_text("dummy")
-
-        with patch("sys.platform", "win32"):
+    def test_returns_true_when_windows_lnk_exists(self):
+        completed = subprocess.CompletedProcess(args=[], returncode=0, stdout="True\n", stderr="")
+        with patch("sys.platform", "win32"), patch("subprocess.run", return_value=completed) as mock_run:
             assert ShortcutService.shortcut_exists() is True
 
-    def test_windows_exists_checks_home_fallback_when_no_desktop(self, tmp_path, monkeypatch):
-        """Creation falls back to Path.home() when ~/Desktop is absent (OneDrive
-        redirect); shortcut_exists must check the same fallback location."""
+        ps_script = mock_run.call_args.args[0][3]
+        assert "$ws.SpecialFolders.Item('Desktop')" in ps_script
+
+    def test_windows_exists_does_not_treat_home_root_link_as_desktop_link(self, tmp_path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
-        # No ~/Desktop directory; shortcut lives directly in home.
         (tmp_path / f"{APP_NAME}.lnk").write_text("dummy")
+        completed = subprocess.CompletedProcess(args=[], returncode=0, stdout="False\n", stderr="")
 
-        with patch("sys.platform", "win32"):
-            assert ShortcutService.shortcut_exists() is True
+        with patch("sys.platform", "win32"), patch("subprocess.run", return_value=completed) as mock_run:
+            assert ShortcutService.shortcut_exists() is False
+
+        ps_script = mock_run.call_args.args[0][3]
+        assert "$ws.SpecialFolders.Item('Desktop')" in ps_script
+        assert str(tmp_path / f"{APP_NAME}.lnk") not in ps_script
 
     def test_returns_false_on_unsupported_platform(self, tmp_path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
@@ -201,24 +202,110 @@ class TestCreateShortcut:
         assert result.success is True
         assert any("macOS" in m for m in result.messages)
 
-    def test_windows_invokes_powershell(self, tmp_path, monkeypatch):
+    def test_windows_uses_redirected_desktop_in_one_powershell_process(self, tmp_path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)
-        (tmp_path / "Desktop").mkdir()
+        start_menu = tmp_path / "AppData" / "Roaming" / "Microsoft" / "Windows" / "Start Menu" / "Programs"
+        start_menu.mkdir(parents=True)
         fake_exe = tmp_path / "anki_miner_gui.exe"
         fake_exe.touch()
+        shortcut_path = Path(r"C:\Users\José\OneDrive\Desktop\Anki Miner.lnk")
 
-        completed = MagicMock(returncode=0, stderr="")
+        completed = MagicMock(returncode=0, stdout=f"CREATED\t{shortcut_path}\n", stderr="")
         with (
             patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
             patch("sys.platform", "win32"),
             patch("subprocess.run", return_value=completed) as mock_run,
         ):
-            result = ShortcutService.create_shortcut()
+            result = ShortcutService.create_shortcut(include_start_menu=False)
 
         assert result.success is True
-        assert mock_run.called
-        first_call_args = mock_run.call_args_list[0].args[0]
-        assert first_call_args[0] == "powershell"
+        assert result.paths_created == [shortcut_path]
+        assert mock_run.call_count == 1
+        command = mock_run.call_args.args[0]
+        assert command[0] == "powershell"
+        ps_script = command[3]
+        assert "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8" in ps_script
+        assert "$ws.SpecialFolders.Item('Desktop')" in ps_script
+        assert str(tmp_path / f"{APP_NAME}.lnk") not in ps_script
+        assert "Start Menu" not in ps_script
+        assert "Programs" not in ps_script
+        assert mock_run.call_args.kwargs["encoding"] == "utf-8"
+
+    def test_windows_skip_existing_is_folded_into_creation_process(self, tmp_path):
+        fake_exe = tmp_path / "anki_miner_gui.exe"
+        fake_exe.touch()
+        shortcut_path = Path(r"C:\Users\test\OneDrive\Desktop\Anki Miner.lnk")
+        completed = MagicMock(returncode=0, stdout=f"EXISTS\t{shortcut_path}\n", stderr="")
+
+        with (
+            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch("sys.platform", "win32"),
+            patch("subprocess.run", return_value=completed) as mock_run,
+        ):
+            result = ShortcutService.create_shortcut(skip_if_exists=True, include_start_menu=True)
+
+        assert result.success is True
+        assert result.paths_created == []
+        assert mock_run.call_count == 1
+        ps_script = mock_run.call_args.args[0][3]
+        assert "$ErrorActionPreference = 'Stop'" in ps_script
+        assert "[string]::IsNullOrWhiteSpace($desktop)" in ps_script
+        assert "throw" in ps_script
+        assert "Test-Path -LiteralPath $shortcutPath" in ps_script
+        assert ps_script.index("exit 0") < ps_script.index("$ws.CreateShortcut($shortcutPath)")
+        assert "$ws.SpecialFolders.Item('Programs')" in ps_script
+
+    def test_windows_auto_start_menu_creation_shares_desktop_process(self, tmp_path):
+        fake_exe = tmp_path / "anki_miner_gui.exe"
+        fake_exe.touch()
+        desktop_shortcut = Path(r"C:\Users\test\Desktop\Anki Miner.lnk")
+        start_shortcut = Path(r"C:\Users\test\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Anki Miner.lnk")
+        completed = MagicMock(
+            returncode=0,
+            stdout=f"CREATED\t{desktop_shortcut}\nCREATED\t{start_shortcut}\n",
+            stderr="",
+        )
+
+        with (
+            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch("sys.platform", "win32"),
+            patch("subprocess.run", return_value=completed) as mock_run,
+        ):
+            result = ShortcutService.create_shortcut(include_start_menu=True)
+
+        assert result.success is True
+        assert result.paths_created == [desktop_shortcut, start_shortcut]
+        assert mock_run.call_count == 1
+        ps_script = mock_run.call_args.args[0][3]
+        assert "$ws.SpecialFolders.Item('Programs')" in ps_script
+        assert "$ws.CreateShortcut($startShortcutPath)" in ps_script
+
+    def test_windows_resolution_failure_is_logged_without_home_fallback(self, tmp_path, monkeypatch, caplog):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        fake_exe = tmp_path / "anki_miner_gui.exe"
+        fake_exe.touch()
+        failure = subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["powershell"],
+            stderr="Failed to create desktop shortcut.",
+        )
+
+        with (
+            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch("sys.platform", "win32"),
+            patch("subprocess.run", side_effect=failure) as mock_run,
+            caplog.at_level("WARNING", logger="anki_miner.services.shortcut_service"),
+        ):
+            result = ShortcutService.create_shortcut()
+
+        assert result.success is False
+        assert result.error is not None
+        assert result.paths_created == []
+        assert not (tmp_path / f"{APP_NAME}.lnk").exists()
+        assert "Windows shortcut creation failed" in caplog.text
+        ps_script = mock_run.call_args.args[0][3]
+        assert "$ws.SpecialFolders.Item('Desktop')" in ps_script
+        assert str(tmp_path / f"{APP_NAME}.lnk") not in ps_script
 
 
 class TestWindowsPowerShellQuoting:
@@ -229,7 +316,8 @@ class TestWindowsPowerShellQuoting:
         (tmp_path / "Desktop").mkdir()
         fake_exe = Path(r"C:\Users\j$on\anki_miner_gui.exe")
 
-        completed = MagicMock(returncode=0, stderr="")
+        shortcut_path = Path(r"C:\Users\test\Desktop\Anki Miner.lnk")
+        completed = MagicMock(returncode=0, stdout=f"CREATED\t{shortcut_path}\n", stderr="")
         with (
             patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
             patch("sys.platform", "win32"),
@@ -247,7 +335,8 @@ class TestWindowsPowerShellQuoting:
         (tmp_path / "Desktop").mkdir()
         fake_exe = Path("/home/o'brien/anki_miner_gui")
 
-        completed = MagicMock(returncode=0, stderr="")
+        shortcut_path = Path(r"C:\Users\test\Desktop\Anki Miner.lnk")
+        completed = MagicMock(returncode=0, stdout=f"CREATED\t{shortcut_path}\n", stderr="")
         with (
             patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
             patch("sys.platform", "win32"),
@@ -302,7 +391,8 @@ class TestSubprocessTimeouts:
         fake_exe = tmp_path / "anki_miner_gui.exe"
         fake_exe.touch()
 
-        completed = MagicMock(returncode=0, stderr="")
+        shortcut_path = Path(r"C:\Users\test\Desktop\Anki Miner.lnk")
+        completed = MagicMock(returncode=0, stdout=f"CREATED\t{shortcut_path}\n", stderr="")
         with (
             patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
             patch("sys.platform", "win32"),
@@ -329,6 +419,29 @@ class TestSubprocessTimeouts:
 
         assert result.success is False
         assert result.error is not None
+
+    def test_windows_start_menu_timeout_preserves_created_desktop(self, tmp_path, caplog):
+        fake_exe = tmp_path / "anki_miner_gui.exe"
+        fake_exe.touch()
+        desktop_shortcut = Path(r"C:\Users\José\OneDrive\Desktop\Anki Miner.lnk")
+        timeout = subprocess.TimeoutExpired(
+            cmd="powershell",
+            timeout=5,
+            output=f"CREATED\t{desktop_shortcut}\n".encode(),
+        )
+
+        with (
+            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch("sys.platform", "win32"),
+            patch("subprocess.run", side_effect=timeout),
+            caplog.at_level("WARNING", logger="anki_miner.services.shortcut_service"),
+        ):
+            result = ShortcutService.create_shortcut(include_start_menu=True)
+
+        assert result.success is True
+        assert result.error is None
+        assert result.paths_created == [desktop_shortcut]
+        assert "timed out after creating a shortcut" in caplog.text
 
 
 @pytest.fixture(autouse=True)
