@@ -11,7 +11,6 @@ from typing import Protocol, runtime_checkable
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
-    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -30,6 +29,7 @@ from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFl
 from anki_miner.gui.controllers.frequency_import_flow import FrequencyImportFlow
 from anki_miner.gui.controllers.zip_import_flow import YomitanCsvLabels, ZipImportFlow
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.qt_helpers import install_no_scroll_on_inputs
@@ -238,7 +238,12 @@ class SettingsTab(QWidget):
         self.filtering_panel = FilteringSettingsPanel()
         self.youtube_panel = YouTubeSettingsPanel()
         self.subtitles_panel = SubtitlesSettingsPanel()
-        self.ui_panel = UISettingsPanel(self.config.themes_root, self.config.ui_zoom, self.config.ui_language)
+        self.ui_panel = UISettingsPanel(
+            self.config.themes_root,
+            self.config.ui_zoom,
+            self.config.ui_language,
+            self.config.use_native_file_dialogs,
+        )
 
         # Add tabs with scroll areas for each panel. Stable string keys are
         # captured into _subtab_index so callers (MainWindow.reveal_capability,
@@ -387,6 +392,7 @@ class SettingsTab(QWidget):
         self.ui_panel.state_changed.connect(self._on_theme_state_changed)
         self.ui_panel.font_scale_changed.connect(self._on_font_scale_changed)
         self.ui_panel.zoom_changed.connect(self._on_zoom_changed)
+        self.ui_panel.native_dialogs_changed.connect(self._on_native_dialogs_changed)
         self.ui_panel.language_changed.connect(self._on_language_changed)
 
         # YouTube panel: manual "Update yt-dlp now" → re-emit to MainWindow
@@ -696,6 +702,15 @@ class SettingsTab(QWidget):
         new_config = replace(self.config, ui_language=language)
         self.config_changed.emit(new_config)
 
+    def _on_native_dialogs_changed(self, use_native: bool) -> None:
+        """Persist the file-dialog mode immediately (applies to the next dialog).
+
+        The live module state is re-seeded by ``MainWindow.update_config`` on
+        the committed config, so no direct ``file_dialogs`` call here.
+        """
+        new_config = replace(self.config, use_native_file_dialogs=use_native)
+        self.config_changed.emit(new_config)
+
     def commit_settings(self, skip_zip_import: bool = False) -> None:
         """Commit the save-path panels into the config and emit ``config_changed``.
 
@@ -892,7 +907,7 @@ class SettingsTab(QWidget):
 
     def _on_export_settings(self) -> None:
         """Export a portable settings file (machine-specific fields stripped)."""
-        target, _ = QFileDialog.getSaveFileName(
+        target, _ = file_dialogs.get_save_file_name(
             self,
             self.tr("Export Settings"),
             str(Path(resolve_start_dir(None, file_mode=True)) / "anki_miner_settings.json"),
@@ -923,7 +938,7 @@ class SettingsTab(QWidget):
         strips — keeps its current value. Applies via the same
         ``config_changed`` path as a commit, then reloads every panel.
         """
-        source, _ = QFileDialog.getOpenFileName(
+        source, _ = file_dialogs.get_open_file_name(
             self,
             self.tr("Import Settings"),
             resolve_start_dir(None, file_mode=True),

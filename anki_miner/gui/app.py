@@ -20,6 +20,7 @@ from anki_miner.gui.main_window import MainWindow
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers, still_running
 from anki_miner.gui.utils.service_factory import create_youtube_fetcher
@@ -301,6 +302,17 @@ def _ensure_default_dicts_root(config: AnkiMinerConfig | None) -> None:
         ensure_directory(config.dicts_root)
     except OSError:
         logger.warning("Could not create default dicts_root at %s", config.dicts_root, exc_info=True)
+
+
+def _seed_file_dialog_mode(config: AnkiMinerConfig | None) -> None:
+    """Seed the app-wide file-dialog mode from config (Issue #100).
+
+    Non-native Qt dialogs are the default; ``use_native_file_dialogs`` restores
+    the OS pickers. A failed config load (``None``) keeps the safe default.
+    """
+    if config is None:
+        return
+    file_dialogs.set_use_native(config.use_native_file_dialogs)
 
 
 @runtime_checkable
@@ -680,6 +692,9 @@ def main():
     # Clean-install nicety: make the default dicts_root exist before any
     # settings UI validates it (Issue #100 red-border state).
     _ensure_default_dicts_root(_early_config)
+
+    # File pickers default to Qt's non-native dialogs (Issue #100 freeze).
+    _seed_file_dialog_mode(_early_config)
 
     # Whole-UI zoom: must be set before QApplication is constructed (Qt reads
     # QT_SCALE_FACTOR once, at construction). Restart-to-apply by nature.

@@ -32,9 +32,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator
 
-from PyQt6.QtWidgets import QFileDialog, QFrame, QLabel, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QLabel, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
@@ -140,7 +141,7 @@ class _ToolTabBase(QWidget):
     # ------------------------------------------------------------------
 
     def _on_choose_output(self) -> None:
-        folder = QFileDialog.getExistingDirectory(
+        folder = file_dialogs.get_existing_directory(
             self,
             self._strings.select_output_folder,
             str(Path.home()),

@@ -35,7 +35,6 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
-    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -47,6 +46,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
@@ -263,7 +263,7 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
 
     def _on_add_files_clicked(self) -> None:
         """Multi-select subtitle files into the list."""
-        files, _ = QFileDialog.getOpenFileNames(
+        files, _ = file_dialogs.get_open_file_names(
             self,
             self.tr("Add Subtitle Files"),
             "",
