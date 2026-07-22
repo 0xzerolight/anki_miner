@@ -13,6 +13,7 @@ fetcher, this function RAISES on failure (the worker catches per item).
 
 import logging
 import tempfile
+import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -37,6 +38,35 @@ MAX_DOWNLOAD_BYTES = 600 * 1024 * 1024
 _TIMEOUT = (10, 60)
 
 _CHUNK_SIZE = 8192
+
+# Transient-failure retry policy (Issue #100: the reporter's JMdict download
+# failed once on a flaky network and the wizard left them with no dictionary).
+_MAX_ATTEMPTS = 3
+_BACKOFF_SECONDS = (2.0, 5.0)  # sleep before attempt 2, attempt 3
+# Cancellation poll granularity while backing off.
+_BACKOFF_POLL_SECONDS = 0.2
+
+
+def _is_retryable(exc: Exception) -> bool:
+    """Whether *exc* is a transient failure worth another attempt.
+
+    Ordering matters: ``HTTPError ⊂ RequestException ⊂ OSError``, so a naive
+    ``isinstance(exc, OSError)`` predicate would retry permanent 4xx responses.
+    Only 5xx HTTP errors and the transient transport set retry; everything
+    else (4xx, malformed responses, local OS errors) fails immediately.
+    """
+    if isinstance(exc, requests.HTTPError):
+        return exc.response is not None and exc.response.status_code >= 500
+    return isinstance(
+        exc,
+        (
+            requests.ConnectionError,
+            requests.Timeout,
+            # Mid-stream connection drop on a large transfer — NOT a
+            # ConnectionError subclass despite the name.
+            requests.exceptions.ChunkedEncodingError,
+        ),
+    )
 
 
 def _new_session() -> requests.Session:
@@ -98,9 +128,63 @@ def download_to_temp(
 
     dest_dir.mkdir(parents=True, exist_ok=True)
 
-    if cancelled_check is not None and cancelled_check():
-        raise SetupError("Download cancelled")
+    last_exc: Exception | None = None
+    for attempt in range(1, _MAX_ATTEMPTS + 1):
+        if cancelled_check is not None and cancelled_check():
+            raise SetupError("Download cancelled")
+        try:
+            return _download_once(
+                url,
+                dest_dir=dest_dir,
+                progress=progress,
+                cancelled_check=cancelled_check,
+                max_bytes=max_bytes,
+                timeout=timeout,
+            )
+        except SetupError:
+            # Cancel / size-cap / truncation — never retried.
+            raise
+        except (requests.RequestException, OSError) as exc:
+            if attempt < _MAX_ATTEMPTS and _is_retryable(exc):
+                last_exc = exc
+                logger.debug(
+                    "resource download attempt %d/%d failed for %s: %s",
+                    attempt,
+                    _MAX_ATTEMPTS,
+                    url,
+                    exc,
+                )
+                if progress is not None:
+                    progress(0, 0, f"Retrying download (attempt {attempt + 1}/{_MAX_ATTEMPTS})")
+                _sleep_with_cancel(_BACKOFF_SECONDS[attempt - 1], cancelled_check)
+                continue
+            logger.debug("resource download failed for %s: %s", url, exc)
+            raise SetupError(f"Failed to download {url}: {exc}") from exc
 
+    # Unreachable: the final attempt either returned or raised above.
+    raise SetupError(f"Failed to download {url}: {last_exc}")
+
+
+def _sleep_with_cancel(seconds: float, cancelled_check: CancelledCheck | None) -> None:
+    """Back off for *seconds*, polling ``cancelled_check`` along the way."""
+    waited = 0.0
+    while waited < seconds:
+        if cancelled_check is not None and cancelled_check():
+            raise SetupError("Download cancelled")
+        time.sleep(_BACKOFF_POLL_SECONDS)
+        waited += _BACKOFF_POLL_SECONDS
+
+
+def _download_once(
+    url: str,
+    *,
+    dest_dir: Path,
+    progress: DownloadProgressFn | None,
+    cancelled_check: CancelledCheck | None,
+    max_bytes: int,
+    timeout: tuple[float, float] = _TIMEOUT,
+) -> Path:
+    """Single download attempt; raises raw transport exceptions for the retry loop."""
     tmp_path: Path | None = None
     try:
         with _new_session() as session:
@@ -135,15 +219,12 @@ def download_to_temp(
                         raise SetupError(f"Download truncated: got {downloaded} of {total} bytes from {url}")
             finally:
                 response.close()
-    except SetupError:
+    except BaseException:
+        # Clean the staged .part on ANY failure, but re-raise RAW: the retry
+        # loop in download_to_temp owns the retry decision and the terminal
+        # SetupError wrapping.
         cleanup_part(tmp_path)
         raise
-    except (requests.RequestException, OSError) as exc:
-        cleanup_part(tmp_path)
-        if cancelled_check is not None and cancelled_check():
-            raise SetupError("Download cancelled") from exc
-        logger.debug("resource download failed for %s: %s", url, exc)
-        raise SetupError(f"Failed to download {url}: {exc}") from exc
 
     # tmp_path is always set here: NamedTemporaryFile assigns it before any
     # statement that could leave the try block without raising.

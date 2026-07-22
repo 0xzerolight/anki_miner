@@ -140,6 +140,11 @@ def build_definition_service(
     providers = registry.build_provider_chain(config)
     definition_service = DefinitionService(config, providers=providers, registry=registry)
 
+    # Fully-disabled chain: nothing below the indexed gate can fire, so warn
+    # here — otherwise mining silently produces definition-less cards.
+    if load_result is not None and not any(e.enabled for e in config.dictionary_chain):
+        load_result.warnings.append(_no_dictionary_warning())
+
     if any(e.kind == "indexed" and e.enabled for e in config.dictionary_chain):
         try:
             definition_service.ensure_loaded()
@@ -158,10 +163,30 @@ def build_definition_service(
                     load_result.warnings.append(
                         tr_format(_tr("Skipping unavailable provider(s): %1"), ", ".join(failed))
                     )
-                if not available and not failed:
-                    load_result.warnings.append(_tr("No offline dictionary index; using Jisho only"))
+                # Key the empty-definitions outcome on OFFLINE availability:
+                # JishoProvider.is_available() is hard-True and Jisho sits in
+                # the same providers list, so `available` alone can never
+                # distinguish "Jisho only" from "nothing at all" (Issue #100:
+                # the reporter's missing-JMdict state warned "using Jisho
+                # only" while Jisho was disabled — and mined empty cards).
+                offline_available = [p for p in providers if p.is_available() and not p.is_online]
+                if not offline_available:
+                    jisho_enabled = any(e.kind == "jisho" and e.enabled for e in config.dictionary_chain)
+                    if jisho_enabled:
+                        load_result.warnings.append(_tr("No offline dictionary index; using Jisho only"))
+                    else:
+                        load_result.warnings.append(_no_dictionary_warning())
 
     return definition_service
+
+
+def _no_dictionary_warning() -> str:
+    """The actionable no-definition-source warning (Issue #100)."""
+    return _tr(
+        "No dictionary is installed or available — cards will have empty definitions. "
+        "Add one in Settings → Dictionaries → Add Dictionary, or rerun the setup wizard "
+        "from the Tools menu."
+    )
 
 
 def _build_pitch_service(

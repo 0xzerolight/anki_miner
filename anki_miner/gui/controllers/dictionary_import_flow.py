@@ -14,7 +14,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from PyQt6.QtCore import QCoreApplication, Qt
-from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog, QWidget
+from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QWidget
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.controllers.import_flow_common import (
@@ -24,6 +24,7 @@ from anki_miner.gui.controllers.import_flow_common import (
     _log_import_picker_enter,
     _log_import_picker_return,
 )
+from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.panels import DictionarySettingsPanel
@@ -137,7 +138,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         """Prompt for a Yomitan zip and run the import worker."""
         trace_id = _begin_import_trace("dictionary add")
         picker_started = _log_import_picker_enter(trace_id, "dictionary zip")
-        zip_path_str, _ = QFileDialog.getOpenFileName(
+        zip_path_str, _ = file_dialogs.get_open_file_name(
             self._parent,
             QCoreApplication.translate("DictionaryImportFlow", "Choose Yomitan dictionary zip"),
             resolve_start_dir(None, file_mode=True, default_dir=self._get_config().dicts_root),
@@ -245,7 +246,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         trace_id = _trace_id or _begin_import_trace("dictionary reimport")
         if _scan_result is None:
             picker_started = _log_import_picker_enter(trace_id, "dictionary zip")
-            zip_path_str, _ = QFileDialog.getOpenFileName(
+            zip_path_str, _ = file_dialogs.get_open_file_name(
                 self._parent,
                 QCoreApplication.translate("DictionaryImportFlow", "Choose Yomitan dictionary zip"),
                 resolve_start_dir(None, file_mode=True, default_dir=self._get_config().dicts_root),

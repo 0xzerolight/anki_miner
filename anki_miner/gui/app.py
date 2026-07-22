@@ -21,7 +21,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
-from PyQt6.QtCore import QCoreApplication, Qt, QThread, QTimer, pyqtBoundSignal
+from PyQt6.QtCore import QCoreApplication, QLockFile, Qt, QThread, QTimer, pyqtBoundSignal
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
 
@@ -34,6 +34,7 @@ from anki_miner.gui.main_window import MainWindow, open_log_folder
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers, run_off_thread, still_running
 from anki_miner.gui.utils.service_factory import create_youtube_fetcher
@@ -348,6 +349,63 @@ def _ensure_default_dicts_root(config: AnkiMinerConfig | None) -> None:
         ensure_directory(config.dicts_root)
     except OSError:
         logger.warning("Could not create default dicts_root at %s", config.dicts_root, exc_info=True)
+
+
+def _acquire_instance_lock(
+    lock_path: Path,
+    on_conflict: Callable[[], bool],
+) -> tuple[QLockFile | None, bool]:
+    """Try to take the single-instance lock; ask ``on_conflict`` on failure.
+
+    Two concurrent app processes share ``known_words.db``/``stats.db`` (both
+    default rollback-journal sqlite), so a second instance risks
+    "database is locked" errors and lost writes — the reporter's log shows a
+    double launch (Issue #100). The guard WARNS, never hard-blocks:
+    ``on_conflict()`` (production: a QMessageBox) returns True to proceed
+    anyway, so a stale-detection false positive can never lock users out.
+
+    Returns ``(lock_or_None, proceed)``. The caller must keep the returned
+    lock referenced for the process lifetime; it is released on exit.
+    """
+    lock = QLockFile(str(lock_path))
+    # A crashed instance leaves a lock QLockFile auto-reclaims once its PID is
+    # gone (built-in stale detection); 0 ms try = never block startup.
+    if lock.tryLock(0):
+        return lock, True
+    return None, on_conflict()
+
+
+def _confirm_second_instance(parent: QWidget | None = None) -> bool:
+    """Production ``on_conflict``: warn and let the user decide."""
+    box = QMessageBox(parent)
+    box.setIcon(QMessageBox.Icon.Warning)
+    box.setWindowTitle(QCoreApplication.translate("App", "Anki Miner Is Already Running"))
+    box.setText(
+        QCoreApplication.translate(
+            "App",
+            "Another copy of Anki Miner appears to be running. Running two copies at once "
+            "can corrupt the known-words and statistics databases.\n\n"
+            "Continue anyway?",
+        )
+    )
+    box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Close)
+    if (yes_btn := box.button(QMessageBox.StandardButton.Yes)) is not None:
+        yes_btn.setText(QCoreApplication.translate("App", "Continue anyway"))
+    if (close_btn := box.button(QMessageBox.StandardButton.Close)) is not None:
+        close_btn.setText(QCoreApplication.translate("App", "Quit"))
+    box.setDefaultButton(QMessageBox.StandardButton.Close)
+    return box.exec() == QMessageBox.StandardButton.Yes
+
+
+def _seed_file_dialog_mode(config: AnkiMinerConfig | None) -> None:
+    """Seed the app-wide file-dialog mode from config (Issue #100).
+
+    Non-native Qt dialogs are the default; ``use_native_file_dialogs`` restores
+    the OS pickers. A failed config load (``None``) keeps the safe default.
+    """
+    if config is None:
+        return
+    file_dialogs.set_use_native(config.use_native_file_dialogs)
 
 
 @runtime_checkable
@@ -1034,6 +1092,9 @@ def main():
     # settings UI validates it (Issue #100 red-border state).
     _ensure_default_dicts_root(_early_config)
 
+    # File pickers default to Qt's non-native dialogs (Issue #100 freeze).
+    _seed_file_dialog_mode(_early_config)
+
     # Whole-UI zoom: must be set before QApplication is constructed (Qt reads
     # QT_SCALE_FACTOR once, at construction). Restart-to-apply by nature.
     _apply_ui_zoom(_early_config)
@@ -1075,6 +1136,16 @@ def main():
         if installer_smoke:
             raise
         logger.exception("Failed to initialize theme; continuing with Qt defaults")
+
+    # Single-instance guard (Issue #100: double launch observed; two processes
+    # contend on the shared sqlite DBs). Warn-not-block; skipped in the
+    # installer smoke (no modal may ever open there). Keep the lock object
+    # referenced on `app` so it lives (and auto-releases) with the process.
+    if not installer_smoke:
+        _instance_lock, _proceed = _acquire_instance_lock(ANKI_MINER_HOME / "instance.lock", _confirm_second_instance)
+        if not _proceed:
+            return
+        app._instance_lock = _instance_lock  # type: ignore[attr-defined]
 
     composed = compose_main_window(
         _early_config,

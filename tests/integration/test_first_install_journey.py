@@ -196,7 +196,7 @@ def test_first_install_journey(
         assert picker_paths, "unexpected extra native picker request"
         return str(picker_paths.popleft()), "Yomitan zip (*.zip)"
 
-    monkeypatch.setattr(dictionary_import_flow.QFileDialog, "getOpenFileName", choose_fixture)
+    monkeypatch.setattr(dictionary_import_flow.file_dialogs, "get_open_file_name", choose_fixture)
 
     real_progress_dialog = QProgressDialog
 

@@ -14,7 +14,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from PyQt6.QtCore import QCoreApplication, Qt
-from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog, QWidget
+from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QWidget
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.gui.controllers.import_flow_common import (
@@ -23,6 +23,7 @@ from anki_miner.gui.controllers.import_flow_common import (
     _log_import_picker_enter,
     _log_import_picker_return,
 )
+from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
@@ -123,7 +124,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
     def add_pack(self, *, _scan_result: tuple[str, list[tuple[Path, str]]] | None = None) -> None:
         """Prompt for a directory and import all detectable audio packs in it."""
         if _scan_result is None:
-            chosen_dir = QFileDialog.getExistingDirectory(
+            chosen_dir = file_dialogs.get_existing_directory(
                 self._parent,
                 QCoreApplication.translate("AudioPackImportFlow", "Choose audio pack folder"),
                 resolve_start_dir(None, file_mode=False),
@@ -335,7 +336,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
         """
         trace_id = _begin_import_trace("audio pack reimport")
         picker_started = _log_import_picker_enter(trace_id, "audio pack folder")
-        chosen_dir = QFileDialog.getExistingDirectory(
+        chosen_dir = file_dialogs.get_existing_directory(
             self._parent,
             QCoreApplication.translate("AudioPackImportFlow", "Choose audio pack folder to re-import"),
             resolve_start_dir(None, file_mode=False),
