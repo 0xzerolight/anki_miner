@@ -30,6 +30,7 @@ from anki_miner.gui.controllers import BackgroundTaskController
 from anki_miner.gui.presenters import GUIPresenter
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
@@ -910,6 +911,9 @@ class MainWindow(QMainWindow):
         )
         GUIConfigManager.save_config(committed_config)
         self.config = committed_config
+        # Re-seed the app-wide file-dialog mode so a toggled setting applies to
+        # the very next dialog without restart (Issue #100).
+        file_dialogs.set_use_native(committed_config.use_native_file_dialogs)
         # Rebuild config-bound services so AnkiConnect URL/port edits take
         # effect: validation and the undo-delete AnkiService were frozen to the
         # startup config and would otherwise keep hitting the old endpoint.

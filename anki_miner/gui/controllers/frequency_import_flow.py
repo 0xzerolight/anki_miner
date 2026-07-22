@@ -17,10 +17,11 @@ from collections.abc import Callable
 from pathlib import Path
 
 from PyQt6.QtCore import QCoreApplication
-from PyQt6.QtWidgets import QFileDialog, QMessageBox, QWidget
+from PyQt6.QtWidgets import QMessageBox, QWidget
 
 from anki_miner.config import AnkiMinerConfig, FreqEntry
 from anki_miner.gui.controllers.import_flow_common import ModalImportFlowMixin
+from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.panels.frequency_settings_panel import FrequencySettingsPanel
 from anki_miner.gui.workers.import_worker import ImportWorker
@@ -100,7 +101,7 @@ class FrequencyImportFlow(ModalImportFlowMixin):
 
     def add_source(self) -> None:
         """Prompt for a frequency file and import it as a new source."""
-        chosen, _ = QFileDialog.getOpenFileName(
+        chosen, _ = file_dialogs.get_open_file_name(
             self._parent,
             QCoreApplication.translate("FrequencyImportFlow", "Choose frequency source"),
             resolve_start_dir(None, file_mode=True),
@@ -199,7 +200,7 @@ class FrequencyImportFlow(ModalImportFlowMixin):
         dest_root, source_file, existing_name = _scan_result
         self._set_import_buttons_enabled(True)
         if source_file is None:
-            chosen, _ = QFileDialog.getOpenFileName(
+            chosen, _ = file_dialogs.get_open_file_name(
                 self._parent,
                 QCoreApplication.translate("FrequencyImportFlow", "Choose frequency source to re-import"),
                 resolve_start_dir(None, file_mode=True),

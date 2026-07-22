@@ -809,6 +809,35 @@ class TestExtractAudio:
         map_index = cmd.index("-map")
         assert cmd[map_index + 1] == "0:a:0"
 
+    def test_first_stream_fallback_warns_once_per_file(self, service, video_file, tmp_path, caplog):
+        """The fallback warning fires once per file, not once per clip (Issue #100)."""
+        output_path = tmp_path / "output.mp3"
+        output_path.write_bytes(b"\xff\xfbfake-mp3")
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen", side_effect=lambda *a, **k: _popen_mock()),
+            patch.object(service, "_get_japanese_audio_stream", return_value=None),
+            caplog.at_level("WARNING", logger="anki_miner.services.media_extractor"),
+        ):
+            service._extract_audio(video_file, 1.0, 2.0, output_path)
+            service._extract_audio(video_file, 3.0, 4.0, output_path)
+            service._extract_audio(video_file, 5.0, 6.0, output_path)
+
+        warnings = [r for r in caplog.records if "using first audio stream" in r.message]
+        assert len(warnings) == 1
+
+        # Cache invalidation (start of the next episode run) re-arms the warning.
+        service.invalidate_audio_stream_cache(video_file)
+        with (
+            patch(f"{MODULE}.subprocess.Popen", side_effect=lambda *a, **k: _popen_mock()),
+            patch.object(service, "_get_japanese_audio_stream", return_value=None),
+            caplog.at_level("WARNING", logger="anki_miner.services.media_extractor"),
+        ):
+            service._extract_audio(video_file, 1.0, 2.0, output_path)
+
+        warnings = [r for r in caplog.records if "using first audio stream" in r.message]
+        assert len(warnings) == 2
+
     def test_returns_false_on_nonzero_exit(self, service, video_file, tmp_path):
         """Should return False when ffmpeg exits with non-zero code."""
         output_path = tmp_path / "output.mp3"

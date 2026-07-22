@@ -7,7 +7,6 @@ from PyQt6.QtWidgets import (
     QButtonGroup,
     QComboBox,
     QDialog,
-    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -19,6 +18,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.utils.run_off_thread import run_off_thread
@@ -203,7 +203,7 @@ class ExportDialog(QDialog):
         file_filter = _FILE_FILTERS.get(fmt_id, "All Files (*)")
         default_name = _DEFAULT_NAMES.get(fmt_id, "export.txt")
 
-        path, _ = QFileDialog.getSaveFileName(
+        path, _ = file_dialogs.get_save_file_name(
             self,
             self.tr("Export Words"),
             str(Path(resolve_start_dir(None, file_mode=True)) / default_name),

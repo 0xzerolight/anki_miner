@@ -5,7 +5,6 @@ from pathlib import Path
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
-    QFileDialog,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -16,6 +15,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.base import ElidingLabel, make_label_fit_text
 from anki_miner.utils.i18n import tr_format
@@ -186,7 +186,7 @@ class FileSelector(QWidget):
         start_dir = resolve_start_dir(self.input.text(), file_mode=self._file_mode, default_dir=self._default_dir)
         if self._file_mode:
             # File selection
-            file_path, _ = QFileDialog.getOpenFileName(
+            file_path, _ = file_dialogs.get_open_file_name(
                 self,
                 tr_format(self.tr("Select %1"), self._label_text),
                 start_dir,
@@ -198,7 +198,7 @@ class FileSelector(QWidget):
                 self.input.setToolTip(file_path)
         else:
             # Folder selection
-            folder_path = QFileDialog.getExistingDirectory(
+            folder_path = file_dialogs.get_existing_directory(
                 self,
                 tr_format(self.tr("Select %1"), self._label_text),
                 start_dir,

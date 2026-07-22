@@ -155,6 +155,10 @@ class MediaExtractorService:
         ensure_directory(config.media_temp_folder)
         self._audio_stream_cache: dict[Path, int | None] = {}
         self._audio_stream_list_cache: dict[Path, list[AudioStream]] = {}
+        # Files already warned about missing Japanese audio. The probe result
+        # is cached per file, but the fallback WARNING fired per clip — one
+        # line per mined word, hundreds per episode (Issue #100 log).
+        self._no_jp_audio_warned: set[Path] = set()
         self._cache_lock = threading.Lock()
         # Lazy, cached encoder-availability probe for animated screenshots.
         # Keyed by ffmpeg encoder name (e.g. "libsvtav1", "libwebp_anim").
@@ -598,7 +602,7 @@ class MediaExtractorService:
             logger.debug("extract_full_audio: using audio stream %d", global_index)
         else:
             cmd.extend(["-map", "0:a:0"])
-            logger.warning("extract_full_audio: no Japanese audio found, using first audio stream")
+            self._warn_no_japanese_audio_once(video_file)
 
         cmd.extend(
             [
@@ -977,9 +981,19 @@ class MediaExtractorService:
             if video_file is None:
                 self._audio_stream_list_cache.clear()
                 self._audio_stream_cache.clear()
+                self._no_jp_audio_warned.clear()
             else:
                 self._audio_stream_list_cache.pop(video_file, None)
                 self._audio_stream_cache.pop(video_file, None)
+                self._no_jp_audio_warned.discard(video_file)
+
+    def _warn_no_japanese_audio_once(self, video_file: Path) -> None:
+        """Warn about the first-audio-stream fallback once per file per run."""
+        with self._cache_lock:
+            if video_file in self._no_jp_audio_warned:
+                return
+            self._no_jp_audio_warned.add(video_file)
+        logger.warning("No Japanese audio found in %s, using first audio stream", video_file)
 
     def _list_audio_streams_cached(self, video_file: Path) -> list[AudioStream]:
         """Return full audio stream list for *video_file*, probing once and caching.
@@ -1076,7 +1090,7 @@ class MediaExtractorService:
             logger.debug(f"Using audio stream {global_index}")
         else:
             cmd.extend(["-map", "0:a:0"])  # First audio stream
-            logger.warning("No Japanese audio found, using first audio stream")
+            self._warn_no_japanese_audio_once(video_file)
 
         cmd.extend(
             [
