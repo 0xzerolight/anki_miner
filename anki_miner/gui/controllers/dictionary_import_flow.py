@@ -2,7 +2,7 @@
 
 Extracted from ``SettingsTab`` (T-66). Owns the ``ImportWorker``
 lifecycles and every dialog in the import flows — including the Reimport-All
-chained state machine and its predecessor-join (T-09). The tab keeps the
+chained state machine and its predecessor deferral (T-09). The tab keeps the
 panel widgets, the signal wiring, and the narrow chain persist
 (``_persist_chain_change``), injected here as callables so the dependency
 stays one-way: tab → controller → workers/services.
@@ -17,7 +17,13 @@ from PyQt6.QtCore import QCoreApplication, Qt
 from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog, QWidget
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
-from anki_miner.gui.controllers.import_flow_common import ModalImportFlowMixin
+from anki_miner.gui.controllers.import_flow_common import (
+    ModalImportFlowMixin,
+    _begin_import_trace,
+    _log_import_persist,
+    _log_import_picker_enter,
+    _log_import_picker_return,
+)
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.panels import DictionarySettingsPanel
@@ -129,18 +135,29 @@ class DictionaryImportFlow(ModalImportFlowMixin):
 
     def add_dict(self) -> None:
         """Prompt for a Yomitan zip and run the import worker."""
+        trace_id = _begin_import_trace("dictionary add")
+        picker_started = _log_import_picker_enter(trace_id, "dictionary zip")
         zip_path_str, _ = QFileDialog.getOpenFileName(
             self._parent,
             QCoreApplication.translate("DictionaryImportFlow", "Choose Yomitan dictionary zip"),
             resolve_start_dir(None, file_mode=True, default_dir=self._get_config().dicts_root),
             QCoreApplication.translate("DictionaryImportFlow", "Yomitan zip (*.zip)"),
         )
+        _log_import_picker_return(trace_id, "dictionary zip", picker_started, zip_path_str)
         if not zip_path_str:
             return
 
         worker = ImportWorker.for_yomitan(Path(zip_path_str), self._get_config().dicts_root)
 
         def on_success(dict_id: str, meta: dict) -> None:
+            new_chain = self._with_dict_at_top(dict_id)
+            # New dict folder on disk — invalidate the panel's cached registry
+            # scan so the row picks up the entry_count + source_name.
+            self._panel.refresh_registry()
+            self._panel.set_chain(new_chain)
+            _log_import_persist(trace_id, "start")
+            self._persist_chain(new_chain)
+            _log_import_persist(trace_id, "done")
             QMessageBox.information(
                 self._parent,
                 QCoreApplication.translate("DictionaryImportFlow", "Dictionary added"),
@@ -151,12 +168,19 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 )
                 + self._import_notes(meta),
             )
-            new_chain = self._with_dict_at_top(dict_id)
-            # New dict folder on disk — invalidate the panel's cached registry
-            # scan so the row picks up the entry_count + source_name.
-            self._panel.refresh_registry()
-            self._panel.set_chain(new_chain)
-            self._persist_chain(new_chain)
+
+        def on_success_error(exc: Exception) -> None:
+            QMessageBox.warning(
+                self._parent,
+                QCoreApplication.translate("DictionaryImportFlow", "Configuration Update Failed"),
+                tr_format(
+                    QCoreApplication.translate(
+                        "DictionaryImportFlow",
+                        "Import completed, but the configuration update failed: %1",
+                    ),
+                    str(exc),
+                ),
+            )
 
         self._run_modal_import(
             worker=worker,
@@ -165,7 +189,16 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             determinate=True,
             join_noun="dictionary import worker",
             failure_title=QCoreApplication.translate("DictionaryImportFlow", "Import Failed"),
+            refusal_message=QCoreApplication.translate(
+                "DictionaryImportFlow", "Another import is still finishing. Wait for it to finish and try again."
+            ),
+            cancelling_label=QCoreApplication.translate("DictionaryImportFlow", "Cancelling…"),
+            missing_result_message=QCoreApplication.translate(
+                "DictionaryImportFlow", "The import worker finished without a completion result."
+            ),
+            trace_id=trace_id,
             on_success=on_success,
+            on_success_error=on_success_error,
         )
 
     def _catalog_slot_base_matches(self, slot_id: str, zip_path: Path) -> bool:
@@ -200,6 +233,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         slot_id: str,
         *,
         _scan_result: tuple[Path, str, bool] | None = None,
+        _trace_id: str | None = None,
     ) -> None:
         """Prompt for a matching Yomitan zip and re-import into an existing slot.
 
@@ -208,13 +242,16 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         ``overwrite=True``. Picking a different zip would orphan the stale slot
         and silently create a new one — we abort with a warning instead.
         """
+        trace_id = _trace_id or _begin_import_trace("dictionary reimport")
         if _scan_result is None:
+            picker_started = _log_import_picker_enter(trace_id, "dictionary zip")
             zip_path_str, _ = QFileDialog.getOpenFileName(
                 self._parent,
                 QCoreApplication.translate("DictionaryImportFlow", "Choose Yomitan dictionary zip"),
                 resolve_start_dir(None, file_mode=True, default_dir=self._get_config().dicts_root),
                 QCoreApplication.translate("DictionaryImportFlow", "Yomitan zip (*.zip)"),
             )
+            _log_import_picker_return(trace_id, "dictionary zip", picker_started, zip_path_str)
             if not zip_path_str:
                 return
 
@@ -232,7 +269,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
 
             def _on_done(result: object) -> None:
                 assert isinstance(result, tuple)
-                self.reimport_dict(slot_id, _scan_result=result)
+                self.reimport_dict(slot_id, _scan_result=result, _trace_id=trace_id)
 
             def _on_error(message: str) -> None:
                 self._set_import_buttons_enabled(True)
@@ -290,6 +327,15 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         worker = ImportWorker.for_yomitan(zip_path, self._get_config().dicts_root, overwrite=True, dict_id=slot_id)
 
         def on_success(dict_id: str, meta: dict) -> None:
+            # Refresh registry so the stale-flag warning clears on the row.
+            current_chain = self._panel.get_chain()
+            self._panel.refresh_registry()
+            self._panel.set_chain(current_chain)
+            # Notify listeners so cached DefinitionService instances rebuild
+            # with the freshly-rebuilt SQLite index.
+            _log_import_persist(trace_id, "start")
+            self._notify_config_changed()
+            _log_import_persist(trace_id, "done")
             QMessageBox.information(
                 self._parent,
                 QCoreApplication.translate("DictionaryImportFlow", "Dictionary re-imported"),
@@ -300,13 +346,6 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 )
                 + self._import_notes(meta),
             )
-            # Refresh registry so the stale-flag warning clears on the row.
-            current_chain = self._panel.get_chain()
-            self._panel.refresh_registry()
-            self._panel.set_chain(current_chain)
-            # Notify listeners so cached DefinitionService instances rebuild
-            # with the freshly-rebuilt SQLite index.
-            self._notify_config_changed()
 
         self._run_modal_import(
             worker=worker,
@@ -315,11 +354,20 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             determinate=True,
             join_noun="dictionary import worker",
             failure_title=QCoreApplication.translate("DictionaryImportFlow", "Re-import Failed"),
+            refusal_message=QCoreApplication.translate(
+                "DictionaryImportFlow", "Another import is still finishing. Wait for it to finish and try again."
+            ),
+            cancelling_label=QCoreApplication.translate("DictionaryImportFlow", "Cancelling…"),
+            missing_result_message=QCoreApplication.translate(
+                "DictionaryImportFlow", "The import worker finished without a completion result."
+            ),
+            trace_id=trace_id,
             on_success=on_success,
         )
 
     def reimport_jmdict(self) -> None:
         """Reimport JMdict from the configured XML path."""
+        trace_id = _begin_import_trace("JMdict reimport")
         xml = self._get_config().jmdict_path
         if not xml.exists():
             QMessageBox.warning(
@@ -356,7 +404,9 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             self._panel.set_chain(current_chain)
             # Notify listeners so cached DefinitionService instances rebuild
             # with the freshly-rebuilt SQLite index.
+            _log_import_persist(trace_id, "start")
             self._notify_config_changed()
+            _log_import_persist(trace_id, "done")
 
         self._run_modal_import(
             worker=worker,
@@ -365,6 +415,14 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             determinate=True,
             join_noun="dictionary import worker",
             failure_title=QCoreApplication.translate("DictionaryImportFlow", "Reimport Failed"),
+            refusal_message=QCoreApplication.translate(
+                "DictionaryImportFlow", "Another import is still finishing. Wait for it to finish and try again."
+            ),
+            cancelling_label=QCoreApplication.translate("DictionaryImportFlow", "Cancelling…"),
+            missing_result_message=QCoreApplication.translate(
+                "DictionaryImportFlow", "The import worker finished without a completion result."
+            ),
+            trace_id=trace_id,
             on_success=on_success,
         )
 
@@ -558,13 +616,9 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             dlg.setMaximum(100)
             dlg.setValue(0)
 
-            # Join the predecessor before dropping its reference (T-09). This
-            # closure runs inside the previous worker's queued finished slot,
-            # emitted from run() just before the OS thread exits — so its
-            # QThread may still be technically running. Reassigning
-            # _active_import_worker without waiting drops the only reference to a
-            # live, unparented QThread → "QThread: Destroyed while thread is
-            # still running". wait() is at most microseconds from returning here.
+            # Never replace a live predecessor (T-09). Retain it and resume
+            # this pump only from its native ``finished`` signal, without a
+            # GUI wait.
             laggard = self._join_active_import_worker("dictionary import worker")
             if laggard is not None:
                 self._resume_once_finished(laggard, launch_next)

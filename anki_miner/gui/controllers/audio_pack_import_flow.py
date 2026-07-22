@@ -17,7 +17,12 @@ from PyQt6.QtCore import QCoreApplication, Qt
 from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog, QWidget
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
-from anki_miner.gui.controllers.import_flow_common import ModalImportFlowMixin
+from anki_miner.gui.controllers.import_flow_common import (
+    ModalImportFlowMixin,
+    _begin_import_trace,
+    _log_import_picker_enter,
+    _log_import_picker_return,
+)
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
@@ -207,7 +212,21 @@ class AudioPackImportFlow(ModalImportFlowMixin):
                 new_chain = self._chain_with_new_packs_inserted(imported)
                 self._panel.refresh_registry()
                 self._panel.set_chain(new_chain)
-                self._persist_chain(new_chain)
+                try:
+                    self._persist_chain(new_chain)
+                except Exception as exc:  # noqa: BLE001 — imported files remain usable
+                    QMessageBox.warning(
+                        self._parent,
+                        QCoreApplication.translate("AudioPackImportFlow", "Configuration Update Failed"),
+                        tr_format(
+                            QCoreApplication.translate(
+                                "AudioPackImportFlow",
+                                "Import completed, but the configuration update failed: %1",
+                            ),
+                            str(exc),
+                        ),
+                    )
+                    return
 
             if len(packs) == 1 and not errors:
                 # Single pack — no summary needed; the registry refresh is feedback enough.
@@ -256,8 +275,8 @@ class AudioPackImportFlow(ModalImportFlowMixin):
                 )
             )
 
-            # Join the predecessor before dropping its reference (same as
-            # DictionaryImportFlow.reimport_all T-09 join rationale).
+            # Never replace a live predecessor. Retain it and resume this pump
+            # only from its native ``finished`` signal, without a GUI wait.
             laggard = self._join_active_import_worker("audio pack import worker")
             if laggard is not None:
                 self._resume_once_finished(laggard, launch_next)
@@ -314,11 +333,14 @@ class AudioPackImportFlow(ModalImportFlowMixin):
         importer overwrites the existing index in-place, preserving the
         pack_id so the chain entry keeps pointing at it correctly.
         """
+        trace_id = _begin_import_trace("audio pack reimport")
+        picker_started = _log_import_picker_enter(trace_id, "audio pack folder")
         chosen_dir = QFileDialog.getExistingDirectory(
             self._parent,
             QCoreApplication.translate("AudioPackImportFlow", "Choose audio pack folder to re-import"),
             resolve_start_dir(None, file_mode=False),
         )
+        _log_import_picker_return(trace_id, "audio pack folder", picker_started, chosen_dir)
         if not chosen_dir:
             return
 
@@ -327,6 +349,9 @@ class AudioPackImportFlow(ModalImportFlowMixin):
         )
 
         def on_success(imported_id: str, _meta: dict) -> None:
+            current_chain = self._panel.get_chain()
+            self._panel.refresh_registry()
+            self._panel.set_chain(current_chain)
             QMessageBox.information(
                 self._parent,
                 QCoreApplication.translate("AudioPackImportFlow", "Audio Pack Re-imported"),
@@ -334,9 +359,6 @@ class AudioPackImportFlow(ModalImportFlowMixin):
                     QCoreApplication.translate("AudioPackImportFlow", "Re-imported %1 successfully."), imported_id
                 ),
             )
-            current_chain = self._panel.get_chain()
-            self._panel.refresh_registry()
-            self._panel.set_chain(current_chain)
 
         # Busy/indeterminate bar (determinate=False) like add_pack — the pack
         # importer reports only progress messages, no percentage granularity.
@@ -347,5 +369,13 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             determinate=False,
             join_noun="audio pack import worker",
             failure_title=QCoreApplication.translate("AudioPackImportFlow", "Re-import Failed"),
+            refusal_message=QCoreApplication.translate(
+                "AudioPackImportFlow", "Another import is still finishing. Wait for it to finish and try again."
+            ),
+            cancelling_label=QCoreApplication.translate("AudioPackImportFlow", "Cancelling…"),
+            missing_result_message=QCoreApplication.translate(
+                "AudioPackImportFlow", "The import worker finished without a completion result."
+            ),
+            trace_id=trace_id,
             on_success=on_success,
         )

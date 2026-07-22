@@ -26,6 +26,21 @@ def test_yomitan_import_emits_finished(tmp_path: Path, qapp):
     assert finished_dict_ids == ["test-dict-v1"]
 
 
+def test_trace_logs_input_size_from_worker(tmp_path: Path, qapp, caplog):
+    zip_path = build_yomitan_zip(tmp_path / "src" / "trace.zip")
+    worker = ImportWorker.for_yomitan(zip_path, tmp_path / "dicts")
+    worker.set_trace_id("abc12345")
+
+    with caplog.at_level("INFO", logger="anki_miner.gui.workers.import_worker"):
+        worker.run()
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert any(
+        "abc12345" in message and "suffix=.zip" in message and f"size_bytes={zip_path.stat().st_size}" in message
+        for message in messages
+    )
+
+
 def test_failed_emit_on_corrupt_zip(tmp_path: Path, qapp):
     bad = tmp_path / "bad.zip"
     bad.write_bytes(b"not a zip")

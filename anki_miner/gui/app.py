@@ -743,7 +743,7 @@ def compose_main_window(config: AnkiMinerConfig) -> ComposedApp:
     subtitles_tab = SubtitlesTab(window.get_config())
     window.tabs.addTab(subtitles_tab, QCoreApplication.translate("MainWindow", "Tools"))
 
-    settings_tab = SettingsTab(window.get_config())
+    settings_tab = SettingsTab(window.get_config(), commit_config=window.update_config)
     # MainWindow stamps + saves the config, then config_refreshed fans the
     # POST-SAVE committed object out to every tab. This prevents a scan worker's
     # stale pre-save config snapshot from regaining authority after save.

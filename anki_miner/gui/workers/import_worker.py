@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from stat import S_ISREG
 from typing import Any, Callable
 
 from PyQt6.QtCore import pyqtSignal
@@ -72,9 +73,32 @@ class ImportWorker(CancellableWorker):
     # error message
     failed = pyqtSignal(str)
 
-    def __init__(self, runner: Runner, parent: Any = None) -> None:
+    def __init__(self, runner: Runner, parent: Any = None, *, source_path: Path | None = None) -> None:
         super().__init__(parent)
         self._runner = runner
+        self._source_path = source_path
+        self._trace_id: str | None = None
+
+    def set_trace_id(self, trace_id: str) -> None:
+        """Attach the GUI flow correlation id before :meth:`start`."""
+        self._trace_id = trace_id
+
+    def _log_trace_input(self) -> None:
+        """Log source size from the worker thread, never from the GUI picker."""
+        if self._trace_id is None or self._source_path is None:
+            return
+        try:
+            source_stat = self._source_path.stat()
+        except OSError:
+            size: int | str = "unknown"
+        else:
+            size = source_stat.st_size if S_ISREG(source_stat.st_mode) else "n/a"
+        logger.info(
+            "Import trace %s worker input suffix=%s size_bytes=%s",
+            self._trace_id,
+            self._source_path.suffix.lower() or "<none>",
+            size,
+        )
 
     @classmethod
     def for_yomitan(
@@ -108,7 +132,7 @@ class ImportWorker(CancellableWorker):
             }
             return result.dict_id, meta
 
-        return cls(runner)
+        return cls(runner, source_path=zip_path)
 
     @classmethod
     def for_jmdict(cls, xml_path: Path, dest_root: Path) -> ImportWorker:
@@ -129,7 +153,7 @@ class ImportWorker(CancellableWorker):
             }
             return result.dict_id, meta
 
-        return cls(runner)
+        return cls(runner, source_path=xml_path)
 
     @classmethod
     def for_source(
@@ -165,7 +189,7 @@ class ImportWorker(CancellableWorker):
             }
             return result.source_id, meta
 
-        return cls(runner)
+        return cls(runner, source_path=input_path)
 
     @classmethod
     def for_pack(
@@ -199,10 +223,11 @@ class ImportWorker(CancellableWorker):
             }
             return result.pack_id, meta
 
-        return cls(runner)
+        return cls(runner, source_path=pack_dir)
 
     def run(self) -> None:
         """Run the importer and emit progress/import_finished/cancelled/failed."""
+        self._log_trace_input()
         try:
             resource_id, meta = self._runner(
                 lambda cur, total, msg: self.progress.emit(cur, total, msg),

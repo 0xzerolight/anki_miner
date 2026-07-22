@@ -95,6 +95,7 @@ def stubbed_workers(monkeypatch):
         inst.import_finished = MagicMock()
         inst.failed = MagicMock()
         inst.cancelled = MagicMock()
+        inst.finished = MagicMock()
         inst.cancel = MagicMock()
         inst.start = MagicMock()
         inst.isRunning = MagicMock(return_value=True)
@@ -131,16 +132,24 @@ def _silence_dialogs(monkeypatch) -> list[tuple[str, str]]:
 
 
 def _complete_in_flight_worker(stubbed_workers, idx: int = -1) -> None:
-    """Trigger the import_finished callback on the last (or indexed) stubbed worker."""
+    """Emit the domain result, then the worker's native-finished barrier."""
     worker = stubbed_workers["instances"][idx]
     on_done = worker.import_finished.connect.call_args.args[0]
     on_done("dict_id_ignored", {"entry_count": 0})
+    _emit_native_finished(worker)
+
+
+def _emit_native_finished(worker: MagicMock) -> None:
+    worker.isRunning.return_value = False
+    for connect_call in tuple(worker.finished.connect.call_args_list):
+        connect_call.args[0]()
 
 
 def _fail_in_flight_worker(stubbed_workers, msg: str, idx: int = -1) -> None:
     worker = stubbed_workers["instances"][idx]
     on_failed = worker.failed.connect.call_args.args[0]
     on_failed(msg)
+    _emit_native_finished(worker)
 
 
 def test_reimport_all_two_yomitan(tab_for_reimport_all, monkeypatch, stubbed_workers):
@@ -356,12 +365,10 @@ def test_reimport_all_release_refusal_blocks_workers(tab_for_reimport_all, monke
     assert any(title == "Re-import Blocked" for title, _ in warnings), warnings
 
 
-def test_reimport_all_joins_predecessor_before_reassign(tab_for_reimport_all, monkeypatch, stubbed_workers):
-    """T-09: launch_next runs inside the predecessor's queued finished slot.
-    Reassigning _active_import_worker there drops the only reference to a still-
-    running QThread → "QThread: Destroyed while thread is still running". The
-    predecessor must be joined (.wait()) BEFORE the new worker is assigned.
-    """
+def test_reimport_all_defers_reassignment_until_native_finished_without_wait(
+    tab_for_reimport_all, monkeypatch, stubbed_workers
+):
+    """A domain result cannot replace its still-running predecessor."""
     tab = tab_for_reimport_all
     dicts_root = tab.config.dicts_root
     _make_dict_on_disk(dicts_root, "dict-a", fmt="yomitan", source_name="Dict A")
@@ -377,26 +384,17 @@ def test_reimport_all_joins_predecessor_before_reassign(tab_for_reimport_all, mo
     tab._dict_import_flow.reimport_all()
     assert stubbed_workers["yomitan_factory"].call_count == 1
     first = stubbed_workers["instances"][0]
-    # The predecessor is still running when its queued finished slot fires.
-    first.isRunning.return_value = True
 
-    # Record the active worker at the instant wait() is called on the predecessor.
-    active_at_wait: list[object] = []
+    on_done = first.import_finished.connect.call_args.args[0]
+    on_done("dict_id_ignored", {"entry_count": 0})
 
-    def record_active_and_join(*_args, **_kwargs) -> bool:
-        active_at_wait.append(tab._dict_import_flow._active_import_worker)
-        return True
+    assert stubbed_workers["yomitan_factory"].call_count == 1
+    assert tab._dict_import_flow._active_import_worker is first
+    first.wait.assert_not_called()
+    first.cancel.assert_not_called()
 
-    first.wait.side_effect = record_active_and_join
+    _emit_native_finished(first)
 
-    # Fire the predecessor's finished slot — this synchronously calls launch_next.
-    _complete_in_flight_worker(stubbed_workers, idx=0)
-
-    # Predecessor joined.
-    assert first.wait.called, "predecessor QThread must be joined before reassignment"
-    # And it was joined BEFORE the second worker replaced it as _active_import_worker.
-    assert active_at_wait == [first], "wait() must run while the predecessor is still the active worker"
-    # Sanity: the second worker did get launched and is now active.
     assert stubbed_workers["yomitan_factory"].call_count == 2
     assert tab._dict_import_flow._active_import_worker is stubbed_workers["instances"][1]
 

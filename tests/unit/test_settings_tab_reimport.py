@@ -52,6 +52,7 @@ def stub_worker(monkeypatch):
         instance.import_finished = MagicMock()
         instance.failed = MagicMock()
         instance.cancelled = MagicMock()
+        instance.finished = MagicMock()
         instance.cancel = MagicMock()
         instance.start = MagicMock()
         return instance
@@ -136,11 +137,12 @@ def test_refresh_registry_called_on_success(tab, monkeypatch, stub_worker, tmp_p
     tab._dict_import_flow.reimport_dict("test-dict-v1")
 
     # The flow keeps the worker alive on `_active_import_worker`; grab the
-    # on_done callback it wired to `import_finished` and invoke it directly so
-    # we can verify the post-success refresh without spinning up a QThread.
+    # domain and native-finished callbacks and invoke both directly so we can
+    # verify the post-success refresh without spinning up a QThread.
     captured_worker = tab._dict_import_flow._active_import_worker
     on_done = captured_worker.import_finished.connect.call_args.args[0]
     on_done("test-dict-v1", {"entry_count": 42})
+    captured_worker.finished.connect.call_args.args[0]()
 
     assert refresh_called == [True]
 
@@ -171,6 +173,7 @@ def test_add_dict_user_cancel_closes_without_warning(tab, monkeypatch, stub_work
     worker = tab._dict_import_flow._active_import_worker
     on_cancelled = worker.cancelled.connect.call_args.args[0]
     on_cancelled()
+    worker.finished.connect.call_args.args[0]()
 
     assert warnings == [], "user cancel must not surface an Import Failed dialog"
     assert tab.dictionary_panel._add_btn.isEnabled() is True, "buttons re-enabled after cancel"
