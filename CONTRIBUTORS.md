@@ -27,5 +27,8 @@ This list is generated automatically — see [.github/workflows/contributors.yml
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/trnfree"><img src="https://avatars.githubusercontent.com/u/291092965?s=80&u=fc8863d8d20883cbc4ca5671141e1ae0affa841f&v=4" width="80" height="80" alt="@trnfree"/><br/><sub><b>trnfree</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/trnkobayashi"><img src="https://avatars.githubusercontent.com/u/117138163?s=80&v=4" width="80" height="80" alt="@trnkobayashi"/><br/><sub><b>trnkobayashi</b></sub></a></td>
   </tr>
+  <tr>
+    <td align="center" valign="top" width="12.50%"><a href="https://github.com/ViniciusTaborda"><img src="https://avatars.githubusercontent.com/u/72284753?s=80&u=121f2d4302b1be7c9116a29d86df5b2a3282e0cb&v=4" width="80" height="80" alt="@ViniciusTaborda"/><br/><sub><b>ViniciusTaborda</b></sub></a></td>
+  </tr>
 </table>
 <!-- contributors:end -->
