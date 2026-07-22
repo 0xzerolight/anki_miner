@@ -51,14 +51,11 @@ Grab the download for your platform from the [latest release](https://github.com
 
 ¹ Excludes local Whisper subtitle generation and AVIF screenshots. For full functionality: `pipx install "anki-miner[asr]"`.
 
-<details>
-<summary><strong>First-run notes (unsigned builds)</strong></summary>
+### First-run notes (unsigned builds)
 
 - **macOS**: Gatekeeper blocks the app. Extract first, then `xattr -dr com.apple.quarantine AnkiMiner/`
 - **Windows SmartScreen**: **More info** -> **Run anyway**.
 - **Windows Defender false positive**: restore from **Protection history** or [report to Microsoft](https://www.microsoft.com/en-us/wdsi/filesubmission).
-
-</details>
 
 <details>
 <summary><strong>Install from PyPI (Python 3.11+)</strong></summary>
@@ -163,6 +160,10 @@ Uses bundled name wordsets derived from [JMnedict](https://www.edrdg.org/enamdic
 | "Note type not found"    | Configure your note type's field names in Settings -> Anki.                       |
 | "ffmpeg not found"       | Install ffmpeg and add it to PATH.                                               |
 | No definitions found     | Add a Yomitan dictionary in Settings -> Add Dictionary… (recommended), or enable the Jisho fallback (slower, rate-limited). |
+| Windows installer will not open / SmartScreen warning | See [First-run notes](#first-run-notes-unsigned-builds): select **More info** -> **Run anyway**; restore Defender false positives from **Protection history**. |
+| Fresh install has no definitions | Run Tools -> Setup Wizard or Tools -> Download Recommended Resources. For manual import, keep the Yomitan ZIP intact (do not unzip it). |
+| Add Dictionary stalls or fails | Note the last visible stage and attach logs (see "Where are the logs?" below). Include the dictionary ZIP name, source, and size in the report. |
+| Where are the logs?      | Use Help -> Open Log Folder, or open `%USERPROFILE%\.anki_miner\anki_miner.log` on Windows or `~/.anki_miner/anki_miner.log` on macOS/Linux. Rotated logs use the `.1` through `.5` suffixes. |
 | Audio is wrong language  | The tool tries Japanese audio tracks first, then falls back to the default.      |
 | Subtitles out of sync    | Use the subtitle offset control in the GUI (range ±300 seconds).                 |
 

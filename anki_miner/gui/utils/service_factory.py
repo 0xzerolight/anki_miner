@@ -138,7 +138,7 @@ def build_definition_service(
     if registry is None:
         registry = _load_dict_registry(config, load_result)
     providers = registry.build_provider_chain(config)
-    definition_service = DefinitionService(config, providers=providers)
+    definition_service = DefinitionService(config, providers=providers, registry=registry)
 
     # Fully-disabled chain: nothing below the indexed gate can fire, so warn
     # here — otherwise mining silently produces definition-less cards.

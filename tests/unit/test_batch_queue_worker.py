@@ -4,11 +4,27 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread
 from anki_miner.models.batch_queue import BatchQueue, QueueItem, QueueItemStatus
 from anki_miner.models.processing import ProcessingResult
+from anki_miner.services.anki_service import AnkiService
+from anki_miner.services.definition_service import DefinitionService
+
+
+@pytest.fixture(autouse=True)
+def _usable_offline_dictionary(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _verify_card_target(_service: AnkiService) -> None:
+        return None
+
+    def _has_usable_offline_provider(_service: DefinitionService) -> bool:
+        return True
+
+    monkeypatch.setattr(AnkiService, "verify_card_target", _verify_card_target)
+    monkeypatch.setattr(DefinitionService, "has_usable_offline_provider", _has_usable_offline_provider)
 
 
 def test_curation_attrs_use_item_offset_and_callback_forwarded(tmp_path):
@@ -925,6 +941,60 @@ def test_stale_dict_aborts_queue_once(qapp):
     queue.get_next_pending.assert_not_called()
     assert item_started == [] and item_completed == [] and item_failed == []
     assert finished == [0]  # queue_finished(total_cards=0)
+
+
+def test_missing_offline_dictionary_aborts_queue_once(qapp):
+    queue = MagicMock()
+    queue.pending_count = 3
+    queue.total_cards_created = 0
+    queue.get_next_pending.return_value = None
+    worker = BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock(), None)
+    bundle = _bundle_mock()
+    preflight_order: list[str] = []
+
+    def _verify_card_target(_service: AnkiService) -> None:
+        preflight_order.append("card-target")
+
+    def _has_usable_offline_provider() -> bool:
+        preflight_order.append("offline-dictionary")
+        return False
+
+    bundle.definition_service.has_usable_offline_provider.side_effect = _has_usable_offline_provider
+    errors: list[str] = []
+    started: list[tuple[str, str]] = []
+    failed: list[tuple[str, str]] = []
+    finished: list[int] = []
+    worker.error.connect(errors.append)
+
+    def _record_started(item_id: str, display_name: str) -> None:
+        started.append((item_id, display_name))
+
+    def _record_failed(item_id: str, message: str) -> None:
+        failed.append((item_id, message))
+
+    worker.item_started.connect(_record_started)
+    worker.item_failed.connect(_record_failed)
+    worker.queue_finished.connect(finished.append)
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_shared_lookup_services",
+            return_value=bundle,
+        ),
+        patch.object(AnkiService, "verify_card_target", autospec=True, side_effect=_verify_card_target),
+    ):
+        worker.run()
+
+    assert len(errors) == 1
+    assert preflight_order == ["card-target", "offline-dictionary"]
+    assert "Tools → Download Recommended Resources" in errors[0]
+    assert "Settings → Dictionaries" in errors[0]
+    assert started == []
+    assert failed == []
+    assert finished == [0]
+    queue.get_next_pending.assert_not_called()
+    bundle.definition_service.has_usable_offline_provider.assert_called_once_with()
+    bundle.close.assert_called_once_with()
 
 
 # ---------------------------------------------------------------------------

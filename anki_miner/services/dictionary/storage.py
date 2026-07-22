@@ -17,9 +17,10 @@ import re
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, NamedTuple
+from typing import Callable, Iterable, NamedTuple
 
 import anki_miner.services._sqlite_index as _sqlite_index
+from anki_miner.exceptions import SetupError
 from anki_miner.services._sqlite_index import open_readonly as open_readonly
 from anki_miner.services._sqlite_index import read_meta as read_meta
 from anki_miner.utils.text_utils import _is_kana_only, _is_kanji, katakana_to_hiragana
@@ -273,8 +274,19 @@ def create_index(db_path: Path) -> None:
         conn.close()
 
 
-def bulk_insert(db_path: Path, rows: Iterable[DictRow], batch_size: int = 5000) -> int:
+def bulk_insert(
+    db_path: Path,
+    rows: Iterable[DictRow],
+    batch_size: int = 5000,
+    *,
+    progress: Callable[[int], None] | None = None,
+    cancel_check: Callable[[], bool] | None = None,
+) -> int:
     """Insert rows in batched transactions. Returns total inserted.
+
+    ``progress`` receives the cumulative inserted-row count after each
+    ``executemany``. ``cancel_check`` is polled before each batch and aborts
+    with ``SetupError("Import cancelled")`` when true.
 
     The sqlite3 `with` context manager commits/rolls back but does NOT close
     the connection — we close explicitly so the db file is not held open
@@ -284,6 +296,23 @@ def bulk_insert(db_path: Path, rows: Iterable[DictRow], batch_size: int = 5000) 
     conn = sqlite3.connect(db_path)
     try:
         batch: list[tuple] = []
+
+        def flush_batch() -> None:
+            nonlocal total
+            if not batch:
+                return
+            if cancel_check is not None and cancel_check():
+                raise SetupError("Import cancelled")
+            conn.executemany(
+                "INSERT INTO entries (term, reading, content, tags, rules, score, sequence) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                batch,
+            )
+            total += len(batch)
+            batch.clear()
+            if progress is not None:
+                progress(total)
+
         for row in rows:
             # reading is stored hiragana-folded so katakana/hiragana readings
             # collate to one key (schema v3); lookup folds the query side too.
@@ -299,20 +328,8 @@ def bulk_insert(db_path: Path, rows: Iterable[DictRow], batch_size: int = 5000) 
                 )
             )
             if len(batch) >= batch_size:
-                conn.executemany(
-                    "INSERT INTO entries (term, reading, content, tags, rules, score, sequence) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    batch,
-                )
-                total += len(batch)
-                batch.clear()
-        if batch:
-            conn.executemany(
-                "INSERT INTO entries (term, reading, content, tags, rules, score, sequence) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                batch,
-            )
-            total += len(batch)
+                flush_batch()
+        flush_batch()
         conn.commit()
     finally:
         conn.close()

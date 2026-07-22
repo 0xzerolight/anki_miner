@@ -6,6 +6,7 @@ CLI-driven `create-shortcut` command with a pure service the GUI can call.
 """
 
 import contextlib
+import logging
 import os
 import shutil
 import subprocess
@@ -13,7 +14,11 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from PyQt6.QtCore import QCoreApplication
+
 from anki_miner.utils.subprocess_utils import no_window_kwargs
+
+logger = logging.getLogger(__name__)
 
 APP_NAME = "Anki Miner"
 APP_ID = "anki-miner"
@@ -61,23 +66,24 @@ class ShortcutService:
     """Create and detect desktop shortcuts for the GUI app."""
 
     @staticmethod
-    def _windows_desktop_dir() -> Path:
-        """Resolve where a Windows shortcut lives.
-
-        Falls back to ``Path.home()`` when ``~/Desktop`` is absent (e.g. a
-        OneDrive-redirected desktop). Shared by creation and existence checks so
-        they never diverge.
-        """
-        desktop = Path.home() / "Desktop"
-        return desktop if desktop.exists() else Path.home()
-
-    @staticmethod
     def shortcut_exists() -> bool:
         """Check whether a shortcut already exists for the current platform."""
         if sys.platform == "linux":
             return (Path.home() / ".local" / "share" / "applications" / f"{APP_ID}.desktop").exists()
         if sys.platform == "win32":
-            return (ShortcutService._windows_desktop_dir() / f"{APP_NAME}.lnk").exists()
+            ps_script = ShortcutService._windows_shortcut_path_script() + (
+                "Write-Output (Test-Path -LiteralPath $shortcutPath)"
+            )
+            try:
+                completed = ShortcutService._run_powershell(ps_script)
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError) as exc:
+                logger.warning("Windows shortcut existence check failed: %s", exc)
+                return False
+            exists = completed.stdout.strip().casefold()
+            if exists not in {"true", "false"}:
+                logger.warning("Windows shortcut existence check returned unexpected output: %r", completed.stdout)
+                return False
+            return exists == "true"
         return False
 
     @staticmethod
@@ -110,7 +116,12 @@ class ShortcutService:
         return None
 
     @classmethod
-    def create_shortcut(cls) -> ShortcutResult:
+    def create_shortcut(
+        cls,
+        *,
+        skip_if_exists: bool = False,
+        include_start_menu: bool = True,
+    ) -> ShortcutResult:
         """Create a desktop shortcut on the current platform."""
         result = ShortcutResult()
 
@@ -127,11 +138,16 @@ class ShortcutService:
         if sys.platform == "linux":
             cls._create_linux_shortcut(exe_path, result)
         elif sys.platform == "win32":
-            cls._create_windows_shortcut(exe_path, result)
+            cls._create_windows_shortcut(
+                exe_path,
+                result,
+                skip_if_exists=skip_if_exists,
+                include_start_menu=include_start_menu,
+            )
         elif sys.platform == "darwin":
             result.success = True
             result.messages.append(
-                f"Automatic shortcut creation is not supported on macOS. " f"To launch {APP_NAME}, run:\n  {exe_path}"
+                f"Automatic shortcut creation is not supported on macOS. To launch {APP_NAME}, run:\n  {exe_path}"
             )
         else:
             result.error = f"Unsupported platform: {sys.platform}"
@@ -195,68 +211,123 @@ StartupWMClass=anki_miner
         return "'" + value.replace("'", "''") + "'"
 
     @staticmethod
-    def _create_windows_shortcut(exe_path: Path, result: ShortcutResult) -> None:
-        desktop = ShortcutService._windows_desktop_dir()
-        if desktop == Path.home():
-            result.messages.append(f"Desktop folder not found, using {desktop}")
-
-        shortcut_path = desktop / f"{APP_NAME}.lnk"
-
-        ps_script = (
-            "$ws = New-Object -ComObject WScript.Shell; "
-            f"$s = $ws.CreateShortcut({ShortcutService._ps_quote(str(shortcut_path))}); "
-            f"$s.TargetPath = {ShortcutService._ps_quote(str(exe_path))}; "
-            f"$s.WorkingDirectory = {ShortcutService._ps_quote(str(exe_path.parent))}; "
-            f"$s.IconLocation = {ShortcutService._ps_quote(f'{exe_path}, 0')}; "
-            f"$s.Description = {ShortcutService._ps_quote(APP_COMMENT)}; "
-            "$s.Save()"
+    def _run_powershell(ps_script: str) -> subprocess.CompletedProcess[str]:
+        """Run one bounded, hidden PowerShell command."""
+        return subprocess.run(
+            ["powershell", "-NoProfile", "-Command", ps_script],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=_SUBPROCESS_TIMEOUT_SECONDS,
+            **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
         )
 
-        try:
-            subprocess.run(
-                ["powershell", "-NoProfile", "-Command", ps_script],
-                check=True,
-                capture_output=True,
-                text=True,
-                timeout=_SUBPROCESS_TIMEOUT_SECONDS,
-                **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
+    @classmethod
+    def _windows_shortcut_path_script(cls) -> str:
+        """Build PowerShell that resolves the real Windows Desktop shortcut path."""
+        resolution_error = QCoreApplication.translate("MainWindow", "Failed to create desktop shortcut.")
+        return (
+            "$ErrorActionPreference = 'Stop'; "
+            "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
+            "$ws = New-Object -ComObject WScript.Shell; "
+            "$desktop = $ws.SpecialFolders.Item('Desktop'); "
+            "if ([string]::IsNullOrWhiteSpace($desktop)) { "
+            f"throw {cls._ps_quote(resolution_error)} "
+            "}; "
+            f"$shortcutPath = Join-Path -Path $desktop -ChildPath {cls._ps_quote(f'{APP_NAME}.lnk')}; "
+        )
+
+    @classmethod
+    def _create_windows_shortcut(
+        cls,
+        exe_path: Path,
+        result: ShortcutResult,
+        *,
+        skip_if_exists: bool,
+        include_start_menu: bool,
+    ) -> None:
+        ps_script = cls._windows_shortcut_path_script()
+        if skip_if_exists:
+            ps_script += (
+                "if (Test-Path -LiteralPath $shortcutPath) { "
+                "Write-Output ('EXISTS' + [char]9 + $shortcutPath); "
+                "exit 0 "
+                "}; "
             )
-            result.messages.append(f"Desktop shortcut created: {shortcut_path}")
-            result.paths_created.append(shortcut_path)
+
+        ps_script += (
+            "$s = $ws.CreateShortcut($shortcutPath); "
+            f"$s.TargetPath = {cls._ps_quote(str(exe_path))}; "
+            f"$s.WorkingDirectory = {cls._ps_quote(str(exe_path.parent))}; "
+            f"$s.IconLocation = {cls._ps_quote(f'{exe_path}, 0')}; "
+            f"$s.Description = {cls._ps_quote(APP_COMMENT)}; "
+            "$s.Save(); "
+            "[Console]::Out.WriteLine(('CREATED' + [char]9 + $shortcutPath)); "
+            "[Console]::Out.Flush(); "
+        )
+        if include_start_menu:
+            ps_script += (
+                "try { "
+                "$programs = $ws.SpecialFolders.Item('Programs'); "
+                "if (-not [string]::IsNullOrWhiteSpace($programs)) { "
+                f"$startShortcutPath = Join-Path -Path $programs -ChildPath {cls._ps_quote(f'{APP_NAME}.lnk')}; "
+                "$s = $ws.CreateShortcut($startShortcutPath); "
+                f"$s.TargetPath = {cls._ps_quote(str(exe_path))}; "
+                f"$s.WorkingDirectory = {cls._ps_quote(str(exe_path.parent))}; "
+                f"$s.IconLocation = {cls._ps_quote(f'{exe_path}, 0')}; "
+                f"$s.Description = {cls._ps_quote(APP_COMMENT)}; "
+                "$s.Save(); "
+                "[Console]::Out.WriteLine(('CREATED' + [char]9 + $startShortcutPath)); "
+                "[Console]::Out.Flush() "
+                "} "
+                "} catch { }"
+            )
+
+        try:
+            completed = cls._run_powershell(ps_script)
         except subprocess.CalledProcessError as exc:
             result.error = f"Error creating shortcut: {exc.stderr}"
+            logger.warning("Windows shortcut creation failed: %s", exc.stderr or exc)
             return
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as exc:
+            partial_output = exc.stdout or ""
+            if isinstance(partial_output, bytes):
+                partial_output = partial_output.decode("utf-8", errors="replace")
+            if cls._record_windows_shortcut_output(partial_output, result):
+                result.success = True
+                logger.warning("Windows shortcut creation timed out after creating a shortcut")
+                return
             result.error = "PowerShell timed out while creating the shortcut."
+            logger.warning("Windows shortcut creation failed: PowerShell timed out")
             return
         except FileNotFoundError:
             result.error = "PowerShell not found. Cannot create shortcut."
+            logger.warning("Windows shortcut creation failed: PowerShell not found")
             return
 
-        start_menu = Path.home() / "AppData" / "Roaming" / "Microsoft" / "Windows" / "Start Menu" / "Programs"
-        if start_menu.exists():
-            start_shortcut = start_menu / f"{APP_NAME}.lnk"
-            ps_script_start = (
-                "$ws = New-Object -ComObject WScript.Shell; "
-                f"$s = $ws.CreateShortcut({ShortcutService._ps_quote(str(start_shortcut))}); "
-                f"$s.TargetPath = {ShortcutService._ps_quote(str(exe_path))}; "
-                f"$s.WorkingDirectory = {ShortcutService._ps_quote(str(exe_path.parent))}; "
-                f"$s.IconLocation = {ShortcutService._ps_quote(f'{exe_path}, 0')}; "
-                f"$s.Description = {ShortcutService._ps_quote(APP_COMMENT)}; "
-                "$s.Save()"
-            )
-            try:
-                subprocess.run(
-                    ["powershell", "-NoProfile", "-Command", ps_script_start],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                    timeout=_SUBPROCESS_TIMEOUT_SECONDS,
-                    **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
-                )
-                result.messages.append(f"Start Menu shortcut created: {start_shortcut}")
-                result.paths_created.append(start_shortcut)
-            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-                pass  # optional
+        if not cls._record_windows_shortcut_output(completed.stdout, result):
+            result.error = QCoreApplication.translate("MainWindow", "Failed to create desktop shortcut.")
+            logger.warning("Windows shortcut creation failed: PowerShell returned no shortcut path")
+            return
 
         result.success = True
+
+    @staticmethod
+    def _record_windows_shortcut_output(output: str, result: ShortcutResult) -> bool:
+        """Record resolved shortcut paths emitted by the PowerShell command."""
+        saw_shortcut = False
+        for line in output.splitlines():
+            status, separator, raw_path = line.partition("\t")
+            if not separator or not raw_path or status not in {"CREATED", "EXISTS"}:
+                continue
+            saw_shortcut = True
+            if status == "EXISTS":
+                continue
+            shortcut_path = Path(raw_path)
+            if result.paths_created:
+                result.messages.append(f"Start Menu shortcut created: {shortcut_path}")
+            else:
+                result.messages.append(f"Desktop shortcut created: {shortcut_path}")
+            result.paths_created.append(shortcut_path)
+        return saw_shortcut

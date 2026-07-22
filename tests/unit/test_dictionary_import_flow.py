@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 
 from PyQt6.QtWidgets import QWidget
 
+from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
 
 MOD = "anki_miner.gui.controllers.dictionary_import_flow"
@@ -63,6 +64,61 @@ def test_reimport_dict_dialog_defaults_to_dicts_dir():
 
     rsd.assert_called_once()
     assert rsd.call_args.kwargs.get("default_dir") == dicts_root
+
+
+def test_add_dict_persist_failure_reports_partial_success_after_chain_commit(wired_window, monkeypatch, tmp_path):
+    from anki_miner.gui.utils.config_manager import GUIConfigManager
+
+    _window, _titles, tabs = wired_window
+    flow = tabs["Settings"]._dict_import_flow
+    events: list[str] = []
+    monkeypatch.setattr(flow._panel, "get_chain", lambda: ())
+    monkeypatch.setattr(flow._panel, "refresh_registry", lambda: None)
+    monkeypatch.setattr(flow._panel, "set_chain", lambda _chain: events.append("chain"))
+
+    def fail_persist(_config: AnkiMinerConfig) -> None:
+        events.append("persist")
+        raise RuntimeError("disk full")
+
+    original_save_config = GUIConfigManager.save_config
+    monkeypatch.setattr(GUIConfigManager, "save_config", fail_persist)
+    worker = MagicMock(name="ImportWorker")
+    worker.progress = MagicMock()
+    worker.import_finished = MagicMock()
+    worker.failed = MagicMock()
+    worker.cancelled = MagicMock()
+    worker.finished = MagicMock()
+    worker.isRunning.return_value = False
+    dialog = MagicMock()
+
+    try:
+        with (
+            patch(f"{MOD}.file_dialogs.get_open_file_name", return_value=(str(tmp_path / "picked.zip"), "")),
+            patch(f"{MOD}.ImportWorker.for_yomitan", return_value=worker),
+            patch("anki_miner.gui.controllers.import_flow_common.QProgressDialog", return_value=dialog),
+            patch("anki_miner.gui.controllers.import_flow_common.QTimer", return_value=MagicMock()),
+            patch(f"{MOD}.QMessageBox.information") as info,
+            patch(f"{MOD}.QMessageBox.warning", side_effect=lambda *a, **k: events.append("warning")) as warning,
+        ):
+            flow.add_dict()
+            worker.import_finished.connect.call_args[0][0]("promoted", {"entry_count": 7})
+
+            assert events == []
+            assert info.call_count == 0
+            assert warning.call_count == 0
+
+            worker.finished.connect.call_args[0][0]()
+    finally:
+        monkeypatch.setattr(GUIConfigManager, "save_config", original_save_config)
+
+    assert events == ["chain", "persist", "warning"]
+    assert info.call_count == 0
+    assert warning.call_count == 1
+    warning_text = warning.call_args.args[2].lower()
+    assert "import completed" in warning_text
+    assert "configuration update failed" in warning_text
+    assert "disk full" in warning_text
+    assert flow._panel._add_btn.isEnabled()
 
 
 def test_import_notes_empty_when_clean():

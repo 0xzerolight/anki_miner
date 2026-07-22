@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
+import pytest
+
+from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers import resource_download_worker
 from anki_miner.gui.workers.resource_download_worker import (
     ResourceDownloadResult,
@@ -57,6 +61,8 @@ PITCH_SPEC = ResourceSpec(
     license_note="note",
 )
 
+VALID_PITCH = "たべる\t食べる\t0\n".encode()
+
 
 def _make_worker(specs, tmp_path: Path) -> ResourceDownloadWorker:
     return ResourceDownloadWorker(
@@ -83,10 +89,11 @@ def test_happy_path_all_three_kinds(tmp_path, monkeypatch):
     download_dir.mkdir()
     download_calls: list[str] = []
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None):
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
         download_calls.append(url)
+        assert read_timeout_seconds == 1.0
         temp = Path(dest_dir) / f"{Path(url).name}.part"
-        temp.write_bytes(b"PITCHBYTES" if url.endswith(".txt") else b"ZIP")
+        temp.write_bytes(VALID_PITCH if url.endswith(".txt") else b"ZIP")
         if progress is not None:
             progress(1, 1, "done")
         return temp
@@ -141,9 +148,9 @@ def test_per_item_failure_isolation(tmp_path, monkeypatch):
     download_dir = tmp_path / "downloads"
     download_dir.mkdir()
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None):
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
         temp = Path(dest_dir) / f"{Path(url).name}.part"
-        temp.write_bytes(b"DATA")
+        temp.write_bytes(VALID_PITCH if url.endswith(".txt") else b"DATA")
         return temp
 
     def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
@@ -174,17 +181,19 @@ def test_per_item_failure_isolation(tmp_path, monkeypatch):
     assert ("jpdb-freq", False, freq_result.detail) in done
 
 
-def test_pitch_routing_moves_temp_to_dest(tmp_path, monkeypatch):
+def test_valid_pitch_download_atomically_replaces_existing_file(tmp_path, monkeypatch):
     # download_dir and pitch_csv live under separate subdirs to mirror the real
-    # cross-filesystem layout (temp dir vs ~/.anki_miner). The route uses
-    # shutil.move (not os.replace), which handles cross-device moves; this
-    # exercises its normal in-tree path and documents that intent.
+    # cross-filesystem layout (temp dir vs ~/.anki_miner). Promotion copies to
+    # an atomic-write staging path beside the destination before replacement.
     download_dir = tmp_path / "downloads"
     download_dir.mkdir()
     pitch_csv = tmp_path / "anki_miner_home" / "pitch_accent.csv"
-    expected = b"PITCH ACCENT TSV CONTENT"
+    pitch_csv.parent.mkdir()
+    pitch_csv.write_bytes("ふるい\t古い\t1\n".encode())
+    old_hash = hashlib.sha256(pitch_csv.read_bytes()).hexdigest()
+    expected = VALID_PITCH
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None):
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
         temp = Path(dest_dir) / "accents.txt.part"
         temp.write_bytes(expected)
         return temp
@@ -202,9 +211,120 @@ def test_pitch_routing_moves_temp_to_dest(tmp_path, monkeypatch):
 
     worker.run()
 
-    assert pitch_csv.exists()  # parent dir created + file moved into place
+    assert pitch_csv.exists()
     assert pitch_csv.read_bytes() == expected
-    assert summaries[0].succeeded[0].detail == "downloaded"
+    assert hashlib.sha256(pitch_csv.read_bytes()).hexdigest() != old_hash
+    assert "1" in summaries[0].succeeded[0].detail
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        pytest.param(b"\xff\xfe", id="malformed-utf8"),
+        pytest.param(b"not enough columns\n", id="zero-valid-rows"),
+    ],
+)
+def test_invalid_pitch_download_preserves_existing_file_byte_identical(tmp_path, monkeypatch, payload):
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+    pitch_csv = tmp_path / "anki_miner_home" / "pitch_accent.csv"
+    pitch_csv.parent.mkdir()
+    pitch_csv.write_bytes("ふるい\t古い\t1\n".encode())
+    old_hash = hashlib.sha256(pitch_csv.read_bytes()).hexdigest()
+
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+        temp = Path(dest_dir) / "accents.txt.part"
+        temp.write_bytes(payload)
+        return temp
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    worker = ResourceDownloadWorker(
+        [PITCH_SPEC],
+        dicts_root=tmp_path / "dicts",
+        freqs_root=tmp_path / "freqs",
+        pitch_csv=pitch_csv,
+        download_dir=download_dir,
+    )
+    _done, _progress, summaries = _connect_capture(worker)
+
+    worker.run()
+
+    assert summaries[0].succeeded == []
+    assert "validation" in summaries[0].failed[0].detail.lower()
+    assert hashlib.sha256(pitch_csv.read_bytes()).hexdigest() == old_hash
+
+
+def test_pitch_copy_failure_preserves_existing_file_byte_identical(tmp_path, monkeypatch):
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+    pitch_csv = tmp_path / "anki_miner_home" / "pitch_accent.csv"
+    pitch_csv.parent.mkdir()
+    pitch_csv.write_bytes("ふるい\t古い\t1\n".encode())
+    old_hash = hashlib.sha256(pitch_csv.read_bytes()).hexdigest()
+
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+        temp = Path(dest_dir) / "accents.txt.part"
+        temp.write_bytes(VALID_PITCH)
+        return temp
+
+    def fail_copy(_source, destination):
+        Path(destination).write_bytes(b"partial copy")
+        raise OSError("copy fault")
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    monkeypatch.setattr(resource_download_worker.shutil, "copyfile", fail_copy)
+    worker = ResourceDownloadWorker(
+        [PITCH_SPEC],
+        dicts_root=tmp_path / "dicts",
+        freqs_root=tmp_path / "freqs",
+        pitch_csv=pitch_csv,
+        download_dir=download_dir,
+    )
+    _done, _progress, summaries = _connect_capture(worker)
+
+    worker.run()
+
+    assert summaries[0].succeeded == []
+    assert "validation" in summaries[0].failed[0].detail.lower()
+    assert "copy fault" in summaries[0].failed[0].detail
+    assert hashlib.sha256(pitch_csv.read_bytes()).hexdigest() == old_hash
+    assert list(pitch_csv.parent.iterdir()) == [pitch_csv]
+
+
+def test_pitch_replace_failure_preserves_existing_file_byte_identical(tmp_path, monkeypatch):
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+    pitch_csv = tmp_path / "anki_miner_home" / "pitch_accent.csv"
+    pitch_csv.parent.mkdir()
+    pitch_csv.write_bytes("ふるい\t古い\t1\n".encode())
+    old_hash = hashlib.sha256(pitch_csv.read_bytes()).hexdigest()
+
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+        temp = Path(dest_dir) / "accents.txt.part"
+        temp.write_bytes(VALID_PITCH)
+        return temp
+
+    def fail_replace(_source, _destination):
+        raise OSError("replace fault")
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    monkeypatch.setattr("anki_miner.utils.atomic_io.os.replace", fail_replace)
+    worker = ResourceDownloadWorker(
+        [PITCH_SPEC],
+        dicts_root=tmp_path / "dicts",
+        freqs_root=tmp_path / "freqs",
+        pitch_csv=pitch_csv,
+        download_dir=download_dir,
+    )
+    _done, _progress, summaries = _connect_capture(worker)
+
+    worker.run()
+
+    assert summaries[0].succeeded == []
+    assert "validation" in summaries[0].failed[0].detail.lower()
+    assert "replace fault" in summaries[0].failed[0].detail
+    assert hashlib.sha256(pitch_csv.read_bytes()).hexdigest() == old_hash
+    assert list(pitch_csv.parent.iterdir()) == [pitch_csv]
 
 
 def test_cancellation_stops_loop_early(tmp_path, monkeypatch):
@@ -212,7 +332,7 @@ def test_cancellation_stops_loop_early(tmp_path, monkeypatch):
     download_dir.mkdir()
     download_calls: list[str] = []
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None):
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
         download_calls.append(url)
         temp = Path(dest_dir) / f"{Path(url).name}.part"
         temp.write_bytes(b"DATA")
@@ -233,7 +353,64 @@ def test_cancellation_stops_loop_early(tmp_path, monkeypatch):
     # Loop stopped before any item ran; no crash; summary still emitted.
     assert download_calls == []
     assert len(summaries) == 1
-    assert summaries[0].results == []
+    summary = summaries[0]
+    assert summary.cancelled is True
+    assert summary.requested_count == 3
+    assert summary.completed_count == 0
+    assert summary.not_processed_count == 3
+    assert summary.results == []
+    assert summary.failed == []
+
+
+def test_cancellation_after_completed_item_keeps_success_and_marks_rest_not_processed(tmp_path, monkeypatch):
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+    worker = _make_worker([DICT_SPEC, FREQ_SPEC, PITCH_SPEC], tmp_path)
+    download_calls: list[str] = []
+
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+        download_calls.append(url)
+        temp = Path(dest_dir) / f"{Path(url).name}.part"
+        temp.write_bytes(b"ZIP")
+        return temp
+
+    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
+        worker.cancel()
+        return _FakeYomitanResult()
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    monkeypatch.setattr(resource_download_worker, "import_yomitan_zip", fake_dict)
+    _done, _progress, summaries = _connect_capture(worker)
+
+    worker.run()
+
+    summary = summaries[0]
+    assert download_calls == [DICT_SPEC.url]
+    assert summary.cancelled is True
+    assert [result.spec_id for result in summary.succeeded] == [DICT_SPEC.id]
+    assert summary.failed == []
+    assert summary.completed_count == 1
+    assert summary.not_processed_count == 2
+
+
+def test_cancellation_exception_is_not_recorded_as_failure(tmp_path, monkeypatch):
+    worker = _make_worker([DICT_SPEC, FREQ_SPEC], tmp_path)
+
+    def cancel_during_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+        worker.cancel()
+        raise SetupError("Failed to download: read timed out")
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", cancel_during_download)
+    done, _progress, summaries = _connect_capture(worker)
+
+    worker.run()
+
+    summary = summaries[0]
+    assert summary.cancelled is True
+    assert summary.failed == []
+    assert summary.completed_count == 0
+    assert summary.not_processed_count == 2
+    assert done == []
 
 
 def test_leftover_temp_cleanup_when_importer_fails(tmp_path, monkeypatch):
@@ -241,7 +418,7 @@ def test_leftover_temp_cleanup_when_importer_fails(tmp_path, monkeypatch):
     download_dir.mkdir()
     created_temps: list[Path] = []
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None):
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
         temp = Path(dest_dir) / f"{Path(url).name}.part"
         temp.write_bytes(b"DATA")
         created_temps.append(temp)
@@ -269,7 +446,7 @@ def test_freq_route_imports_real_source_into_freqs_root(tmp_path, monkeypatch):
     download_dir = tmp_path / "downloads"
     download_dir.mkdir()
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None):
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
         # download_to_temp always stages a ``.part`` file; the worker re-suffixes
         # it to .zip from the catalog URL before handing it to the importer.
         temp = Path(dest_dir) / "freq-download.part"
@@ -306,10 +483,13 @@ def test_summary_properties_filter_results():
         results=[
             ResourceDownloadResult("a", "dict", "A", "u", ok=True, detail="ok"),
             ResourceDownloadResult("b", "freq", "B", "u", ok=False, detail="bad"),
-        ]
+        ],
+        requested_count=3,
     )
     assert [r.spec_id for r in summary.succeeded] == ["a"]
     assert [r.spec_id for r in summary.failed] == ["b"]
+    assert summary.completed_count == 2
+    assert summary.not_processed_count == 1
 
 
 def _seed_dict_dir(dicts_root: Path, dict_id: str, source_name: str) -> None:
@@ -327,7 +507,7 @@ def _run_dict_download(tmp_path, monkeypatch, *, imported_source_name: str):
     download_dir = tmp_path / "downloads"
     download_dir.mkdir(exist_ok=True)
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None):
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
         temp = Path(dest_dir) / f"{Path(url).name}.part"
         temp.write_bytes(b"ZIP")
         return temp
@@ -396,9 +576,9 @@ def test_sweep_not_invoked_on_freq_or_pitch(tmp_path, monkeypatch):
     download_dir = tmp_path / "downloads"
     download_dir.mkdir()
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None):
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
         temp = Path(dest_dir) / f"{Path(url).name}.part"
-        temp.write_bytes(b"PITCH" if url.endswith(".txt") else b"ZIP")
+        temp.write_bytes(VALID_PITCH if url.endswith(".txt") else b"ZIP")
         return temp
 
     def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None, source_id=None):

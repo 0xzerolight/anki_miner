@@ -202,12 +202,15 @@ class TestEpisodePipeline:
                 side_effect=lambda lemmas: dict.fromkeys(lemmas, True),
             ),
             patch(
+                "anki_miner.services.definition_service.DefinitionService.has_usable_offline_provider",
+                return_value=True,
+            ),
+            patch(
                 "anki_miner.services.definition_service.DefinitionService.get_glossaries_batch",
                 side_effect=lambda words, *a, **kw: [None] * len(words),
             ),
             patch("anki_miner.services.anki_service.requests.post", side_effect=_anki_responder),
         ):
-
             # Build services with real instances
             subtitle_parser = SubtitleParserService(config)
             word_filter = WordFilterService(config)
@@ -275,13 +278,16 @@ class TestEpisodePipeline:
             patch("anki_miner.services.media_extractor.subprocess.Popen") as mock_popen,
             patch("anki_miner.services.media_extractor.ensure_directory"),
             patch(
+                "anki_miner.services.definition_service.DefinitionService.has_usable_offline_provider",
+                return_value=True,
+            ),
+            patch(
                 "anki_miner.services.anki_service.requests.post",
                 side_effect=self._make_ankiconnect_responder(
                     config, post_preflight_side_effect=[find_resp, notes_resp]
                 ),
             ),
         ):
-
             subtitle_parser = SubtitleParserService(config)
             word_filter = WordFilterService(config)
             media_extractor = MediaExtractorService(config)
@@ -408,6 +414,10 @@ class TestIPlusOneFilterIntegration:
             patch(
                 "anki_miner.services.definition_service.DefinitionService.has_offline_definitions",
                 side_effect=lambda lemmas: dict.fromkeys(lemmas, True),
+            ),
+            patch(
+                "anki_miner.services.definition_service.DefinitionService.has_usable_offline_provider",
+                return_value=True,
             ),
         ):
             subtitle_parser = SubtitleParserService(config)

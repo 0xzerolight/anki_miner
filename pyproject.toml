@@ -29,6 +29,7 @@ classifiers = [
 dependencies = [
     "pysubs2>=1.8.0",
     "requests>=2.34.0",
+    "truststore>=0.10",
     "fugashi>=1.5.0",
     "unidic-lite>=1.0.8",
     "PyQt6>=6.10.0",
@@ -106,7 +107,7 @@ i18n = [
 ]
 
 [project.scripts]
-anki_miner_gui = "anki_miner.gui.app:main"
+anki_miner_gui = "anki_miner.gui.launch:main"
 
 [project.urls]
 Homepage = "https://github.com/0xzerolight/anki_miner"

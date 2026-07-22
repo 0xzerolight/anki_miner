@@ -65,11 +65,11 @@
     </message>
     <message>
         <source>Analytics Tab</source>
-        <translation type="unfinished" />
+        <translation>Tab Phân tích</translation>
     </message>
     <message>
         <source>View mining statistics, series difficulty rankings, and progress milestones</source>
-        <translation type="unfinished" />
+        <translation>Xem thống kê khai thác, xếp hạng độ khó theo loạt phim, và các mốc tiến độ</translation>
     </message>
     <message>
         <source>Overview</source>
@@ -586,6 +586,14 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Hủy</translation>
     </message>
     <message>
+        <source>Configuration Update Failed</source>
+        <translation>Cập nhật cấu hình thất bại</translation>
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation>Nhập xong, nhưng cập nhật cấu hình thất bại: %1</translation>
+    </message>
+    <message>
         <source>Imported %1 audio pack(s):</source>
         <translation>Đã nhập %1 gói âm thanh:</translation>
     </message>
@@ -629,6 +637,18 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <source>Re-import Failed</source>
         <translation>Nhập lại thất bại</translation>
     </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Một lượt nhập khác vẫn đang hoàn tất. Vui lòng đợi rồi thử lại.</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>Tiến trình nhập đã kết thúc mà không có kết quả hoàn tất.</translation>
+    </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
@@ -671,7 +691,7 @@ Gói âm thanh chưa được xóa.</translation>
     </message>
     <message>
         <source>Move up</source>
-        <translation type="unfinished" />
+        <translation>Di chuyển lên</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -679,7 +699,7 @@ Gói âm thanh chưa được xóa.</translation>
     </message>
     <message>
         <source>Move down</source>
-        <translation type="unfinished">Di chuyển xuống</translation>
+        <translation>Di chuyển xuống</translation>
     </message>
     <message>
         <source>Move down in priority</source>
@@ -1239,11 +1259,11 @@ Tổng số thẻ đã tạo: %2</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
-        <translation type="unfinished" />
+        <translation>Định dạng lại thẻ đã khai thác</translation>
     </message>
     <message>
         <source>Re-apply the latest Anki Miner styling to cards you mined earlier.</source>
-        <translation type="unfinished" />
+        <translation>Áp dụng lại kiểu định dạng Anki Miner mới nhất cho các thẻ bạn đã khai thác trước đó.</translation>
     </message>
     <message>
         <source>View mining history &amp; stats</source>
@@ -1641,7 +1661,7 @@ Tổng số thẻ đã tạo: %2</translation>
     </message>
     <message>
         <source>Settings changed since this scan; re-scan before applying.</source>
-        <translation type="unfinished" />
+        <translation>Cài đặt đã thay đổi kể từ lần quét này; hãy quét lại trước khi áp dụng.</translation>
     </message>
     <message>
         <source>Apply backfill?</source>
@@ -1677,7 +1697,7 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     </message>
     <message>
         <source>Cancelled.</source>
-        <translation type="unfinished">Đã hủy.</translation>
+        <translation>Đã hủy.</translation>
     </message>
 </context><context>
     <name>CondenseTab</name>
@@ -1715,7 +1735,7 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Thất bại — xem nhật ký</translation>
+        <translation>Thất bại — xem nhật ký</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -2322,6 +2342,14 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
         <translation>Đã nhập %1 (%2 mục)</translation>
     </message>
     <message>
+        <source>Configuration Update Failed</source>
+        <translation>Cập nhật cấu hình thất bại</translation>
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation>Nhập xong, nhưng cập nhật cấu hình thất bại: %1</translation>
+    </message>
+    <message>
         <source>Importing dictionary…</source>
         <translation>Đang nhập từ điển…</translation>
     </message>
@@ -2332,6 +2360,18 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     <message>
         <source>Import Failed</source>
         <translation>Nhập thất bại</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Một lượt nhập khác vẫn đang hoàn tất. Vui lòng đợi rồi thử lại.</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>Tiến trình nhập đã kết thúc mà không có kết quả hoàn tất.</translation>
     </message>
     <message>
         <source>Invalid Zip</source>
@@ -2387,7 +2427,7 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     </message>
     <message>
         <source>Scan Failed</source>
-        <translation type="unfinished">Quét thất bại</translation>
+        <translation>Quét thất bại</translation>
     </message>
     <message>
         <source>No dictionaries with saved sources were found.
@@ -2525,7 +2565,7 @@ Từ điển chưa được xóa.</translation>
     </message>
     <message>
         <source>Move up</source>
-        <translation type="unfinished" />
+        <translation>Di chuyển lên</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -2533,7 +2573,7 @@ Từ điển chưa được xóa.</translation>
     </message>
     <message>
         <source>Move down</source>
-        <translation type="unfinished">Di chuyển xuống</translation>
+        <translation>Di chuyển xuống</translation>
     </message>
     <message>
         <source>Move down in priority</source>
@@ -3001,31 +3041,31 @@ Hành động này không thể hoàn tác. Bạn sẽ cần nhập lại từ z
     </message>
     <message>
         <source>file</source>
-        <translation type="unfinished" />
+        <translation>tệp</translation>
     </message>
     <message>
         <source>folder</source>
-        <translation type="unfinished" />
+        <translation>thư mục</translation>
     </message>
     <message>
         <source>Select a %1 by typing path, browsing, or dragging</source>
-        <translation type="unfinished" />
+        <translation>Chọn %1 bằng cách nhập đường dẫn, duyệt tìm, hoặc kéo thả</translation>
     </message>
     <message>
         <source>%1 path</source>
-        <translation type="unfinished" />
+        <translation>Đường dẫn %1</translation>
     </message>
     <message>
         <source>Path to %1. Type or paste a path, or use browse button</source>
-        <translation type="unfinished" />
+        <translation>Đường dẫn đến %1. Nhập hoặc dán đường dẫn, hoặc dùng nút duyệt tìm</translation>
     </message>
     <message>
         <source>Browse for %1</source>
-        <translation type="unfinished" />
+        <translation>Duyệt tìm %1</translation>
     </message>
     <message>
         <source>Opens file dialog to select %1</source>
-        <translation type="unfinished" />
+        <translation>Mở hộp thoại tệp để chọn %1</translation>
     </message>
     <message>
         <source>Select %1</source>
@@ -3038,6 +3078,10 @@ Hành động này không thể hoàn tác. Bạn sẽ cần nhập lại từ z
     <message>
         <source>No folder selected</source>
         <translation>Chưa chọn thư mục</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Chưa cài đặt</translation>
     </message>
     <message>
         <source>File not found</source>
@@ -3364,6 +3408,14 @@ Hành động này không thể hoàn tác. Bạn sẽ cần nhập lại từ z
         <translation>Đã nhập %1 mục từ '%2'.</translation>
     </message>
     <message>
+        <source>Configuration Update Failed</source>
+        <translation>Cập nhật cấu hình thất bại</translation>
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation>Nhập xong, nhưng cập nhật cấu hình thất bại: %1</translation>
+    </message>
+    <message>
         <source>Importing frequency source…</source>
         <translation>Đang nhập nguồn tần suất…</translation>
     </message>
@@ -3376,8 +3428,20 @@ Hành động này không thể hoàn tác. Bạn sẽ cần nhập lại từ z
         <translation>Nhập thất bại</translation>
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Một lượt nhập khác vẫn đang hoàn tất. Vui lòng đợi rồi thử lại.</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>Tiến trình nhập đã kết thúc mà không có kết quả hoàn tất.</translation>
+    </message>
+    <message>
         <source>Scan Failed</source>
-        <translation type="unfinished">Quét thất bại</translation>
+        <translation>Quét thất bại</translation>
     </message>
     <message>
         <source>Choose frequency source to re-import</source>
@@ -3433,7 +3497,7 @@ Nguồn tần suất chưa được gỡ bỏ.</translation>
     </message>
     <message>
         <source>Move up</source>
-        <translation type="unfinished" />
+        <translation>Di chuyển lên</translation>
     </message>
     <message>
         <source>Move up (breaks rank ties first)</source>
@@ -3650,6 +3714,10 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
 </context><context>
     <name>MainWindow</name>
     <message>
+        <source>Open Log Folder</source>
+        <translation>Mở thư mục nhật ký</translation>
+    </message>
+    <message>
         <source>Video</source>
         <translation>Video</translation>
     </message>
@@ -3687,35 +3755,35 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
     </message>
     <message>
         <source>Anki Miner Main Window</source>
-        <translation type="unfinished" />
+        <translation>Cửa sổ chính Anki Miner</translation>
     </message>
     <message>
         <source>Japanese vocabulary mining tool for creating Anki flashcards from video subtitles</source>
-        <translation type="unfinished" />
+        <translation>Công cụ khai thác từ vựng tiếng Nhật để tạo thẻ Anki từ phụ đề video</translation>
     </message>
     <message>
         <source>Main Tabs</source>
-        <translation type="unfinished" />
+        <translation>Các tab chính</translation>
     </message>
     <message>
         <source>Navigate between Video, Deck Builder, Audio, Reading, Analytics, Tools, and Settings</source>
-        <translation type="unfinished" />
+        <translation>Điều hướng giữa Video, Trình tạo bộ thẻ, Âm thanh, Đọc, Phân tích, Công cụ, và Cài đặt</translation>
     </message>
     <message>
         <source>Application Header</source>
-        <translation type="unfinished" />
+        <translation>Tiêu đề ứng dụng</translation>
     </message>
     <message>
         <source>Application title and theme selector</source>
-        <translation type="unfinished" />
+        <translation>Tiêu đề ứng dụng và bộ chọn giao diện</translation>
     </message>
     <message>
         <source>Status Bar</source>
-        <translation type="unfinished" />
+        <translation>Thanh trạng thái</translation>
     </message>
     <message>
         <source>Shows current operation, statistics, and system status</source>
-        <translation type="unfinished" />
+        <translation>Hiển thị thao tác hiện tại, thống kê, và trạng thái hệ thống</translation>
     </message>
     <message>
         <source>&amp;Tools</source>
@@ -3752,10 +3820,6 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
     <message>
         <source>Check for Updates</source>
         <translation>Kiểm tra cập nhật</translation>
-    </message>
-    <message>
-        <source>Open Log Folder</source>
-        <translation>Mở thư mục nhật ký</translation>
     </message>
     <message>
         <source>Open the log folder in your file manager</source>
@@ -4229,7 +4293,7 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     </message>
     <message>
         <source>ETA ~</source>
-        <translation type="unfinished" />
+        <translation>Còn lại ~</translation>
     </message>
 </context><context>
     <name>QueueItemWidget</name>
@@ -4567,7 +4631,7 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     </message>
     <message>
         <source>Cancelled %1.</source>
-        <translation type="unfinished">Đã hủy %1.</translation>
+        <translation>Đã hủy %1.</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
@@ -4822,6 +4886,18 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation>thất bại</translation>
     </message>
     <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Resource Download Failed</source>
+        <translation>Tải xuống tài nguyên thất bại</translation>
+    </message>
+    <message>
+        <source>The download worker finished without a completion result.</source>
+        <translation>Tiến trình tải xuống đã kết thúc mà không có kết quả hoàn tất.</translation>
+    </message>
+    <message>
         <source>✓ %1 — %2</source>
         <translation>✓ %1 — %2</translation>
     </message>
@@ -4840,6 +4916,26 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
    Tải xuống thủ công: %3</translation>
     </message>
     <message>
+        <source>Resource Download Cancelled (Some Resources Installed)</source>
+        <translation>Đã hủy tải xuống tài nguyên (một số tài nguyên đã được cài đặt)</translation>
+    </message>
+    <message>
+        <source>Some resources were installed before cancellation.</source>
+        <translation>Một số tài nguyên đã được cài đặt trước khi hủy.</translation>
+    </message>
+    <message>
+        <source>Resource Download Cancelled</source>
+        <translation>Đã hủy tải xuống tài nguyên</translation>
+    </message>
+    <message>
+        <source>No resources were installed.</source>
+        <translation>Không có tài nguyên nào được cài đặt.</translation>
+    </message>
+    <message>
+        <source>Resource items not processed: %1.</source>
+        <translation>Các mục tài nguyên chưa được xử lý: %1.</translation>
+    </message>
+    <message>
         <source>Resources Installed</source>
         <translation>Đã cài đặt tài nguyên</translation>
     </message>
@@ -4848,16 +4944,24 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation>Đã cài đặt một phần tài nguyên</translation>
     </message>
     <message>
-        <source>Resource Download Failed</source>
-        <translation>Tải xuống tài nguyên thất bại</translation>
-    </message>
-    <message>
         <source>No resources were processed.</source>
         <translation>Không có tài nguyên nào được xử lý.</translation>
     </message>
     <message>
         <source>Resources are downloaded from their original sources; their licenses apply.</source>
         <translation>Tài nguyên được tải xuống từ nguồn gốc của chúng; giấy phép của chúng được áp dụng.</translation>
+    </message>
+    <message>
+        <source>No valid pitch accent entries were found.</source>
+        <translation>Không tìm thấy mục trọng âm cao độ hợp lệ nào.</translation>
+    </message>
+    <message>
+        <source>Pitch accent validation failed: %1</source>
+        <translation>Xác thực trọng âm cao độ thất bại: %1</translation>
+    </message>
+    <message>
+        <source>%1 entries</source>
+        <translation>%1 mục</translation>
     </message>
 </context><context>
     <name>ResourcesPage</name>
@@ -4878,8 +4982,24 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation>Tải các tài nguyên được đề xuất</translation>
     </message>
     <message>
-        <source>Resources updated.</source>
-        <translation>Đã cập nhật tài nguyên.</translation>
+        <source>Download cancelled. Some resources were installed before cancellation.</source>
+        <translation>Đã hủy tải xuống. Một số tài nguyên đã được cài đặt trước khi hủy.</translation>
+    </message>
+    <message>
+        <source>Download cancelled. No resources were installed.</source>
+        <translation>Đã hủy tải xuống. Không có tài nguyên nào được cài đặt.</translation>
+    </message>
+    <message>
+        <source>Some resources were installed; some failed.</source>
+        <translation>Một số tài nguyên đã được cài đặt; một số thất bại.</translation>
+    </message>
+    <message>
+        <source>No resources were installed.</source>
+        <translation>Không có tài nguyên nào được cài đặt.</translation>
+    </message>
+    <message>
+        <source>Resources installed.</source>
+        <translation>Đã cài đặt tài nguyên.</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>
@@ -5002,6 +5122,14 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation>Khi bật, Anki Miner sẽ truy vấn GitHub tìm bản phát hành mới lúc khởi chạy.</translation>
     </message>
     <message>
+        <source>Reset to Defaults…</source>
+        <translation>Đặt lại về mặc định…</translation>
+    </message>
+    <message>
+        <source>Reset settings to defaults. Installed dictionaries, audio, frequency lists, and your theme are kept.</source>
+        <translation>Đặt lại cài đặt về mặc định. Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao diện của bạn vẫn được giữ nguyên.</translation>
+    </message>
+    <message>
         <source>Export Settings…</source>
         <translation>Xuất cài đặt…</translation>
     </message>
@@ -5112,11 +5240,28 @@ Giá trị nhập vào ghi đè cài đặt hiện tại của bạn; bất kỳ
     <message>
         <source>The imported subtitle regex filter was rejected; the previous filter was kept:
 %1</source>
-        <translation type="unfinished" />
+        <translation>Bộ lọc regex phụ đề đã nhập bị từ chối; bộ lọc trước đó vẫn được giữ nguyên:
+%1</translation>
     </message>
     <message>
         <source>✓ Imported</source>
         <translation>✓ Đã nhập</translation>
+    </message>
+    <message>
+        <source>Reset Settings</source>
+        <translation>Đặt lại cài đặt</translation>
+    </message>
+    <message>
+        <source>Reset all settings to their defaults?
+
+Your installed dictionaries, audio, frequency lists, and theme are kept.</source>
+        <translation>Đặt lại tất cả cài đặt về mặc định?
+
+Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao diện của bạn vẫn được giữ nguyên.</translation>
+    </message>
+    <message>
+        <source>✓ Reset to defaults</source>
+        <translation>✓ Đã đặt lại về mặc định</translation>
     </message>
     <message>
         <source>Importing pitch accent dictionary…</source>
@@ -5169,12 +5314,6 @@ Giá trị nhập vào ghi đè cài đặt hiện tại của bạn; bất kỳ
     <message>
         <source>Could not open the known words list: %1</source>
         <translation>Không thể mở danh sách từ đã biết: %1</translation>
-    </message>
-    <message>
-        <source>The imported subtitle regex filter is invalid and has been disabled:
-%1</source>
-        <translation type="vanished">Bộ lọc biểu thức chính quy phụ đề đã nhập không hợp lệ và đã bị vô hiệu hóa:
-%1</translation>
     </message>
 </context><context>
     <name>SetupWizard</name>
@@ -5234,11 +5373,11 @@ Giá trị nhập vào ghi đè cài đặt hiện tại của bạn; bất kỳ
     </message>
     <message>
         <source>Episode Mining Tab</source>
-        <translation type="unfinished" />
+        <translation>Tab khai thác tập</translation>
     </message>
     <message>
         <source>Process a single video episode to create vocabulary flashcards</source>
-        <translation type="unfinished" />
+        <translation>Xử lý một tập video để tạo thẻ từ vựng</translation>
     </message>
     <message>
         <source>File Selection</source>
@@ -5420,7 +5559,7 @@ Giá trị nhập vào ghi đè cài đặt hiện tại của bạn; bất kỳ
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Thất bại — xem nhật ký</translation>
+        <translation>Thất bại — xem nhật ký</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -5610,7 +5749,7 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>
-        <translation type="unfinished" />
+        <translation>Không thể xem trước video: không thể tải thành phần video đi kèm (libmpv) trên máy tính này. Hãy thử cài đặt lại Anki Miner; nếu vấn đề vẫn tiếp diễn, hãy báo cáo và đính kèm nhật ký của bạn từ %USERPROFILE%\.anki_miner\anki_miner.log.</translation>
     </message>
     <message>
         <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
@@ -5668,7 +5807,7 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Thất bại — xem nhật ký</translation>
+        <translation>Thất bại — xem nhật ký</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -6202,11 +6341,11 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     </message>
     <message>
         <source>Unfavorite</source>
-        <translation type="unfinished" />
+        <translation>Bỏ yêu thích</translation>
     </message>
     <message>
         <source>Favorite</source>
-        <translation type="unfinished" />
+        <translation>Yêu thích</translation>
     </message>
     <message>
         <source>Click to add to / remove from favorites.</source>
@@ -6232,7 +6371,7 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     </message>
     <message>
         <source>Close</source>
-        <translation type="unfinished">Đóng</translation>
+        <translation>Đóng</translation>
     </message>
     <message>
         <source>Anki Miner v%1 is available!</source>
@@ -6665,5 +6804,17 @@ Tiếp tục nhập?</translation>
     <message>
         <source>Anki Miner — Unexpected Error</source>
         <translation>Anki Miner — Lỗi Không Mong Đợi</translation>
+    </message>
+    <message>
+        <source>%1: %2
+
+Version: %3
+Platform: %4
+Log file: %5</source>
+        <translation>%1: %2
+
+Phiên bản: %3
+Nền tảng: %4
+Tệp nhật ký: %5</translation>
     </message>
 </context></TS>

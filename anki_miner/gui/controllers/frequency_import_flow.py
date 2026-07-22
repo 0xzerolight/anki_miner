@@ -20,7 +20,13 @@ from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtWidgets import QMessageBox, QWidget
 
 from anki_miner.config import AnkiMinerConfig, FreqEntry
-from anki_miner.gui.controllers.import_flow_common import ModalImportFlowMixin
+from anki_miner.gui.controllers.import_flow_common import (
+    ModalImportFlowMixin,
+    _begin_import_trace,
+    _log_import_persist,
+    _log_import_picker_enter,
+    _log_import_picker_return,
+)
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.panels.frequency_settings_panel import FrequencySettingsPanel
@@ -101,12 +107,15 @@ class FrequencyImportFlow(ModalImportFlowMixin):
 
     def add_source(self) -> None:
         """Prompt for a frequency file and import it as a new source."""
+        trace_id = _begin_import_trace("frequency add")
+        picker_started = _log_import_picker_enter(trace_id, "frequency source")
         chosen, _ = file_dialogs.get_open_file_name(
             self._parent,
             QCoreApplication.translate("FrequencyImportFlow", "Choose frequency source"),
             resolve_start_dir(None, file_mode=True),
             QCoreApplication.translate("FrequencyImportFlow", "Frequency source (*.zip *.csv *.tsv);;All Files (*)"),
         )
+        _log_import_picker_return(trace_id, "frequency source", picker_started, chosen)
         if not chosen:
             return
 
@@ -116,7 +125,9 @@ class FrequencyImportFlow(ModalImportFlowMixin):
             new_chain = self._chain_with_new_source_appended(source_id)
             self._panel.refresh_registry()
             self._panel.set_chain(new_chain)
+            _log_import_persist(trace_id, "start")
             self._persist_chain(new_chain)
+            _log_import_persist(trace_id, "done")
             skipped = meta.get("skipped_malformed", 0)
             skipped_note = (
                 tr_format(
@@ -147,6 +158,19 @@ class FrequencyImportFlow(ModalImportFlowMixin):
                 + self._categorical_note(meta),
             )
 
+        def on_success_error(exc: Exception) -> None:
+            QMessageBox.warning(
+                self._parent,
+                QCoreApplication.translate("FrequencyImportFlow", "Configuration Update Failed"),
+                tr_format(
+                    QCoreApplication.translate(
+                        "FrequencyImportFlow",
+                        "Import completed, but the configuration update failed: %1",
+                    ),
+                    str(exc),
+                ),
+            )
+
         self._run_modal_import(
             worker=worker,
             progress_label=QCoreApplication.translate("FrequencyImportFlow", "Importing frequency source…"),
@@ -154,7 +178,16 @@ class FrequencyImportFlow(ModalImportFlowMixin):
             determinate=False,
             join_noun="frequency import worker",
             failure_title=QCoreApplication.translate("FrequencyImportFlow", "Import Failed"),
+            refusal_message=QCoreApplication.translate(
+                "FrequencyImportFlow", "Another import is still finishing. Wait for it to finish and try again."
+            ),
+            cancelling_label=QCoreApplication.translate("FrequencyImportFlow", "Cancelling…"),
+            missing_result_message=QCoreApplication.translate(
+                "FrequencyImportFlow", "The import worker finished without a completion result."
+            ),
+            trace_id=trace_id,
             on_success=on_success,
+            on_success_error=on_success_error,
         )
 
     def reimport_source(
@@ -162,6 +195,7 @@ class FrequencyImportFlow(ModalImportFlowMixin):
         source_id: str,
         *,
         _scan_result: tuple[Path, Path | None, str | None] | None = None,
+        _trace_id: str | None = None,
     ) -> None:
         """Re-import an existing source into the same id.
 
@@ -170,6 +204,7 @@ class FrequencyImportFlow(ModalImportFlowMixin):
         user re-picking the file. If that copy is gone (older import / moved
         folder), prompt the user to re-pick.
         """
+        trace_id = _trace_id or _begin_import_trace("frequency reimport")
         if _scan_result is None:
             dest_root = self._get_config().freqs_root
             source_dir = dest_root / source_id
@@ -184,7 +219,7 @@ class FrequencyImportFlow(ModalImportFlowMixin):
 
             def _on_done(result: object) -> None:
                 assert isinstance(result, tuple)
-                self.reimport_source(source_id, _scan_result=result)
+                self.reimport_source(source_id, _scan_result=result, _trace_id=trace_id)
 
             def _on_error(message: str) -> None:
                 self._set_import_buttons_enabled(True)
@@ -200,6 +235,7 @@ class FrequencyImportFlow(ModalImportFlowMixin):
         dest_root, source_file, existing_name = _scan_result
         self._set_import_buttons_enabled(True)
         if source_file is None:
+            picker_started = _log_import_picker_enter(trace_id, "frequency source")
             chosen, _ = file_dialogs.get_open_file_name(
                 self._parent,
                 QCoreApplication.translate("FrequencyImportFlow", "Choose frequency source to re-import"),
@@ -208,6 +244,7 @@ class FrequencyImportFlow(ModalImportFlowMixin):
                     "FrequencyImportFlow", "Frequency source (*.zip *.csv *.tsv);;All Files (*)"
                 ),
             )
+            _log_import_picker_return(trace_id, "frequency source", picker_started, chosen)
             if not chosen:
                 return
             source_file = Path(chosen)
@@ -239,6 +276,14 @@ class FrequencyImportFlow(ModalImportFlowMixin):
             determinate=False,
             join_noun="frequency import worker",
             failure_title=QCoreApplication.translate("FrequencyImportFlow", "Re-import Failed"),
+            refusal_message=QCoreApplication.translate(
+                "FrequencyImportFlow", "Another import is still finishing. Wait for it to finish and try again."
+            ),
+            cancelling_label=QCoreApplication.translate("FrequencyImportFlow", "Cancelling…"),
+            missing_result_message=QCoreApplication.translate(
+                "FrequencyImportFlow", "The import worker finished without a completion result."
+            ),
+            trace_id=trace_id,
             on_success=on_success,
         )
 

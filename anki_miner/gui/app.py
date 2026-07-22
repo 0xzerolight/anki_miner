@@ -1,9 +1,21 @@
-"""Main GUI application entry point."""
+"""Main GUI application entry point.
+
+Hidden ``ANKI_MINER_SMOKE`` modes:
+
+* ``youtube``, ``asr``, and ``whispercpp`` validate frozen dependencies before
+  Qt starts.
+* ``installer`` runs full GUI composition while suppressing optional startup
+  work, validates installed-runtime invariants, and writes an atomic result
+  marker before exiting.
+"""
 
 import logging
 import os
+import platform
 import sys
+import uuid
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from functools import wraps
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -13,16 +25,18 @@ from PyQt6.QtCore import QCoreApplication, QLockFile, Qt, QThread, QTimer, pyqtB
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
 
+from anki_miner import __version__
 from anki_miner.config import AnkiMinerConfig, create_default_config
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui.i18n import install_translators
-from anki_miner.gui.main_window import MainWindow
+from anki_miner.gui.launch import get_effective_log_path as _get_effective_log_path
+from anki_miner.gui.main_window import MainWindow, open_log_folder
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.config_manager import GUIConfigManager
-from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers, still_running
+from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers, run_off_thread, still_running
 from anki_miner.gui.utils.service_factory import create_youtube_fetcher
 from anki_miner.gui.utils.stall_watchdog import install_stall_watchdog
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
@@ -34,19 +48,20 @@ from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 from anki_miner.gui.widgets.video_tab import VideoTab
 from anki_miner.services.stats_service import StatsService
 from anki_miner.utils import alass_resolver
+from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.file_utils import ensure_directory
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
 
-def _install_minimal_recovery() -> None:
-    """Install a stderr crash boundary before home/config/log setup."""
+@dataclass(frozen=True)
+class ComposedApp:
+    """Main-window composition needed by the application lifecycle."""
 
-    def _hook(exc_type, exc_value, exc_tb):
-        logger.critical("Unhandled exception during early startup", exc_info=(exc_type, exc_value, exc_tb))
-        sys.__excepthook__(exc_type, exc_value, exc_tb)
-
-    sys.excepthook = _hook
+    window: MainWindow
+    stats_service: StatsService
+    analytics_tab: AnalyticsTab
 
 
 def _scrub_pyinstaller_env() -> None:
@@ -223,7 +238,7 @@ def _configure_logging(log_path: Path) -> None:
 
     Called from main() so all modules that already call
     ``logging.getLogger(__name__)`` have their records captured to disk.
-    Two 2 MB backup files → at most ~6 MB on disk at any time.
+    Five 2 MB backup files → at most ~12 MB on disk at any time.
 
     Idempotent: a handler attached by a previous call is removed and replaced,
     so calling this twice — bootstrap default-path → config-path re-point (F3),
@@ -232,35 +247,67 @@ def _configure_logging(log_path: Path) -> None:
     """
     log_path = Path(log_path)  # tolerate a str caller; .parent below needs a Path
     root = logging.getLogger()
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    handler = _OwnerOnlyRotatingFileHandler(
-        log_path,
-        maxBytes=2 * 1024 * 1024,
-        backupCount=2,
-        encoding="utf-8",
-        delay=True,
-    )
-    handler.setLevel(logging.DEBUG)
-    handler._anki_miner_sink = True  # type: ignore[attr-defined]  # sentinel for idempotent replacement
-    fmt = logging.Formatter(
-        "%(asctime)s %(levelname)-8s %(name)s: %(message)s",
-        datefmt="%Y-%m-%dT%H:%M:%S",
-    )
-    handler.setFormatter(fmt)
-    # Build the replacement completely before closing the old sink. If mkdir,
-    # handler construction, or formatter setup fails, the working sink remains.
-    for existing in list(root.handlers):
-        if getattr(existing, "_anki_miner_sink", False):
-            root.removeHandler(existing)
-            existing.close()
+    old_sinks = [existing for existing in root.handlers if getattr(existing, "_anki_miner_sink", False)]
+    handler: _OwnerOnlyRotatingFileHandler | None = None
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        handler = _OwnerOnlyRotatingFileHandler(
+            log_path,
+            maxBytes=2 * 1024 * 1024,
+            backupCount=5,
+            encoding="utf-8",
+            delay=False,
+        )
+        handler.setLevel(logging.DEBUG)
+        handler._anki_miner_sink = True  # type: ignore[attr-defined]  # sentinel for idempotent replacement
+        handler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+                datefmt="%Y-%m-%dT%H:%M:%S",
+            )
+        )
+        root.addHandler(handler)
+    except Exception:
+        if handler is not None:
+            handler.close()
+        logger.warning("Failed to configure log at %s; keeping existing log sink", log_path, exc_info=True)
+        return
+
     # Root logger at WARNING so third-party libs (yt-dlp, fugashi, …) only
     # write WARNING+ to the file; the project namespace gets full DEBUG coverage.
     # A record must clear both its logger's effective level AND the handler's
     # level — setting the handler to DEBUG here means the handler itself never
     # silences anything; filtering happens at the logger level.
     root.setLevel(logging.WARNING)
-    root.addHandler(handler)
     logging.getLogger("anki_miner").setLevel(logging.DEBUG)
+    for existing in old_sinks:
+        root.removeHandler(existing)
+        try:
+            existing.close()
+        except Exception:
+            logger.warning("Failed to close replaced log sink", exc_info=True)
+
+
+def get_effective_log_path() -> Path:
+    """Return the active sink path, including any retained early fallback."""
+    return _get_effective_log_path(ANKI_MINER_HOME / "anki_miner.log")
+
+
+def _log_session_boundary() -> None:
+    """Write one searchable boundary after final log-sink selection."""
+    sinks = [handler for handler in logging.getLogger().handlers if getattr(handler, "_anki_miner_sink", False)]
+    if sinks:
+        logging.getLogger("anki_miner").setLevel(logging.DEBUG)
+        for handler in sinks:
+            handler.setLevel(logging.DEBUG)
+    logger.info(
+        "Session start session_id=%s version=%s platform=%s frozen=%s pid=%s",
+        uuid.uuid4().hex[:8],
+        __version__,
+        platform.platform(),
+        bool(getattr(sys, "frozen", False)),
+        os.getpid(),
+    )
 
 
 def _apply_ui_zoom(config: AnkiMinerConfig | None) -> None:
@@ -439,6 +486,30 @@ def _connect_settings_validation(window: MainWindow, settings_tab: SettingsTab) 
     settings_tab.validation_requested.connect(window._run_validation)
 
 
+def _start_stats_load(window: QWidget, stats_service: StatsService, analytics_tab: AnalyticsTab) -> None:
+    """Initialize stats off-thread and refresh Analytics when ready."""
+
+    def on_done(result: object) -> None:
+        if result is not True:
+            logger.warning("Stats database initialization failed")
+            return
+        # closeEvent's worker sweep runs on this same GUI thread and hides the
+        # window first; a refresh delivered after it would spawn a fresh
+        # Analytics worker nothing joins (QThread destroyed-while-running
+        # abort). Visibility is therefore the closing gate.
+        try:
+            if not window.isVisible():
+                return
+        except RuntimeError:
+            return
+        analytics_tab.refresh_data(force=True)
+
+    def on_error(error_message: str) -> None:
+        logger.warning("Stats database initialization failed: %s", error_message)
+
+    run_off_thread(window, stats_service.load, on_done, on_error)
+
+
 # --- Resource download-button wiring (ARC-010) --------------------------------
 #
 # The five in-app resource downloads (ASR model, alass, CUDA pack, VAD pack,
@@ -605,7 +676,7 @@ def _connect_vulkan_download(window: MainWindow, settings_tab: SettingsTab) -> N
 _in_excepthook = False
 
 
-def _install_excepthook(app: QApplication) -> None:
+def _install_excepthook(app: QApplication, *, fail_fast: bool = False) -> None:
     """Route unhandled GUI-thread exceptions to the log + a dialog instead of abort().
 
     Since PyQt 5.5 an exception that escapes a Qt slot calls ``qFatal``/``abort``
@@ -632,16 +703,40 @@ def _install_excepthook(app: QApplication) -> None:
             sys.__excepthook__(exc_type, exc_value, exc_tb)
             return
         logger.critical("Unhandled exception", exc_info=(exc_type, exc_value, exc_tb))
+        if fail_fast:
+            app.exit(1)
+            return
         instance = QApplication.instance()
         if _in_excepthook or instance is None or QThread.currentThread() != instance.thread():
             return
         _in_excepthook = True
         try:
-            QMessageBox.critical(
-                app.activeWindow(),
-                QCoreApplication.translate("app", "Anki Miner — Unexpected Error"),
-                f"{exc_type.__name__}: {exc_value}",
+            log_path = get_effective_log_path()
+            box = QMessageBox(app.activeWindow())
+            box.setIcon(QMessageBox.Icon.Critical)
+            box.setWindowTitle(QCoreApplication.translate("app", "Anki Miner — Unexpected Error"))
+            box.setTextFormat(Qt.TextFormat.PlainText)
+            box.setText(
+                tr_format(
+                    QCoreApplication.translate(
+                        "app",
+                        "%1: %2\n\nVersion: %3\nPlatform: %4\nLog file: %5",
+                    ),
+                    exc_type.__name__,
+                    exc_value,
+                    __version__,
+                    platform.platform(),
+                    log_path,
+                )
             )
+            open_button = box.addButton(
+                QCoreApplication.translate("MainWindow", "Open Log Folder"),
+                QMessageBox.ButtonRole.ActionRole,
+            )
+            box.addButton(QMessageBox.StandardButton.Ok)
+            box.exec()
+            if box.clickedButton() is open_button:
+                open_log_folder(log_path)
         except Exception:
             logger.exception("Failed to display error dialog for unhandled exception")
         finally:
@@ -665,133 +760,22 @@ def _rollback_workers_on_startup_fault(fn: Callable[[], None]) -> Callable[[], N
                         worker.wait()
                 except RuntimeError:
                     pass
+            if os.environ.get("ANKI_MINER_SMOKE") == "installer":
+                logger.critical("Installer smoke failed during startup", exc_info=True)
+                raise SystemExit(1) from None
             raise
 
     return wrapped
 
 
-@_rollback_workers_on_startup_fault
-def main():
-    """Launch the Anki Miner GUI application."""
-    _install_minimal_recovery()
-    _scrub_pyinstaller_env()
-
-    # Env-var-gated smoke path (PyInstaller bundled-binary validation).
-    # Runs before Qt init so headless CI can verify yt-dlp extractor
-    # bundling without spinning up a display.
-    if os.environ.get("ANKI_MINER_SMOKE") == "youtube":
-        sys.exit(_run_bundled_smoke())
-
-    if os.environ.get("ANKI_MINER_SMOKE") == "asr":
-        sys.exit(_run_asr_bundled_smoke())
-
-    if os.environ.get("ANKI_MINER_SMOKE") == "whispercpp":
-        sys.exit(_run_whispercpp_bundled_smoke())
-
-    # Env-var-gated ASR Vulkan device probe. The parent process
-    # (_engine.vulkan_device_count) spawns a frozen bundle with this flag set so
-    # the cold ctypes call into ggml-vulkan runs in a throwaway child — a broken
-    # Vulkan driver can C-abort uncatchably, and isolating it here means the abort
-    # kills only this child. Must run before any Qt init. Hidden, env-var-only.
-    if os.environ.get("ANKI_MINER_ASR_VULKAN_PROBE"):
-        from anki_miner.services.asr import _vulkan_probe
-
-        raise SystemExit(_vulkan_probe.main())
-
-    # Env-var-gated libmpv bundle probe (bundle_smoke.sh). Loads the bundled
-    # libmpv through mpv_loader's resolution order and constructs a display-free
-    # core (vo=null/ao=null) — proves the shared library + its dependency
-    # closure actually dlopen inside the frozen bundle. Must run before Qt init.
-    if os.environ.get("ANKI_MINER_MPV_PROBE"):
-        from anki_miner.utils import mpv_loader
-
-        raise SystemExit(mpv_loader.mpv_probe_main())
-
-    # Attach the rotating file handler to the DEFAULT path before loading config
-    # so config-load diagnostics — including the OVH-001 .bak-recovery warnings
-    # emitted inside load_config — are captured: those warnings fire as soon as a
-    # handler exists, so attaching here (before the load) is what makes them land
-    # in the file rather than going nowhere (F3).
-    # GUIConfigManager has no Qt dependency, so it can run before QApplication.
-    _default_log_path = ANKI_MINER_HOME / "anki_miner.log"
-    try:
-        _configure_logging(_default_log_path)
-    except Exception:
-        logger.exception("Failed to configure startup log; continuing with stderr logging")
-    try:
-        _early_config = GUIConfigManager.load_config()
-        _log_path = _early_config.log_path
-    except Exception:
-        # Never leave _early_config unbound (would NameError at the zoom call
-        # and every later read) — fall back to defaults so startup can proceed.
-        logger.exception("Failed to load config at startup; using default config")
-        _early_config = create_default_config()
-        _log_path = _default_log_path
-    # Honour a user-customised log_path by re-pointing the handler (idempotent,
-    # so no duplicate sink). No-op in the common case where it equals the default.
-    if _log_path != _default_log_path:
-        try:
-            _configure_logging(_log_path)
-        except Exception:
-            logger.exception("Failed to configure custom log path; keeping startup logger")
-
-    # Clean-install nicety: make the default dicts_root exist before any
-    # settings UI validates it (Issue #100 red-border state).
-    _ensure_default_dicts_root(_early_config)
-
-    # File pickers default to Qt's non-native dialogs (Issue #100 freeze).
-    _seed_file_dialog_mode(_early_config)
-
-    # Whole-UI zoom: must be set before QApplication is constructed (Qt reads
-    # QT_SCALE_FACTOR once, at construction). Restart-to-apply by nature.
-    _apply_ui_zoom(_early_config)
-
-    # Enable high DPI scaling
-    QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
-
-    # Create application
-    app = QApplication(sys.argv)
-    app.setApplicationName("Anki Miner")
-    app.setOrganizationName("AnkiMiner")
-
-    # Install the crash net before any widget is built so exceptions escaping a
-    # slot during tab construction are caught too (a bad path in a startup slot
-    # would otherwise abort the whole process — the trailing-space batch bug).
-    _install_excepthook(app)
-
-    # Set application icon
-    icon_path = get_resource_dir() / "icons" / "anki_miner.svg"
-    if icon_path.exists():
-        app.setWindowIcon(QIcon(str(icon_path)))
-
-    # Install UI translators BEFORE any widget is built — widgets capture their
-    # tr() strings at construction time, and language is restart-to-apply (no
-    # live retranslateUi). Stash on `app` so the translators outlive this call.
-    app._translators = install_translators(app, _early_config.ui_language)  # type: ignore[attr-defined]
-
-    # Seed the theme singleton from the single decoded startup config. Optional
-    # local theme data must never block construction of the unstyled GUI.
-    try:
-        Theme.initialize(
-            active=_early_config.theme,
-            favorites=_early_config.theme_favorites,
-            user_dir=_early_config.themes_root,
-            font_scale=_early_config.ui_font_scale,
-        )
-        Theme.apply_to_app(app)
-    except Exception:
-        logger.exception("Failed to initialize theme; continuing with Qt defaults")
-
-    # Single-instance guard (Issue #100: double launch observed; two processes
-    # contend on the shared sqlite DBs). Warn-not-block; keep the lock object
-    # referenced on `app` so it lives (and auto-releases) with the process.
-    _instance_lock, _proceed = _acquire_instance_lock(ANKI_MINER_HOME / "instance.lock", _confirm_second_instance)
-    if not _proceed:
-        return
-    app._instance_lock = _instance_lock  # type: ignore[attr-defined]
-
+def compose_main_window(
+    config: AnkiMinerConfig,
+    *,
+    suppress_optional_startup: bool = False,
+) -> ComposedApp:
+    """Build the main window and its production tab/service graph."""
     # Create main window
-    window = MainWindow(_early_config)
+    window = MainWindow(config)
 
     # Initialize stats service for analytics. ``.load()`` opens the SQLite
     # file; defer to after window.show() so the empty shell paints first
@@ -882,10 +866,17 @@ def main():
     # the model-downloaded guard and the worker: config_changed is auto-wired by
     # the loop below (it has update_config); config_refreshed is wired explicitly
     # near the SettingsTab refresh connection.
-    subtitles_tab = SubtitlesTab(window.get_config())
+    subtitles_tab = SubtitlesTab(
+        window.get_config(),
+        suppress_optional_startup=suppress_optional_startup,
+    )
     window.tabs.addTab(subtitles_tab, QCoreApplication.translate("MainWindow", "Tools"))
 
-    settings_tab = SettingsTab(window.get_config())
+    settings_tab = SettingsTab(
+        window.get_config(),
+        commit_config=window.update_config,
+        suppress_optional_startup=suppress_optional_startup,
+    )
     # MainWindow stamps + saves the config, then config_refreshed fans the
     # POST-SAVE committed object out to every tab. This prevents a scan worker's
     # stale pre-save config snapshot from regaining authority after save.
@@ -946,15 +937,239 @@ def main():
     # This must come AFTER all addTab calls so self.tabs.count() is final.
     window.setup_tab_shortcuts()
 
+    return ComposedApp(window=window, stats_service=stats_service, analytics_tab=analytics_tab)
+
+
+def _schedule_installer_smoke(app: QApplication, window: MainWindow) -> None:
+    """Run installed-artifact assertions over two event-loop ticks."""
+
+    def fail(stage: str) -> None:
+        logger.critical("Installer smoke failed during %s", stage, exc_info=True)
+        app.exit(1)
+
+    def finish() -> None:
+        try:
+            required_files = (
+                ANKI_MINER_HOME / "gui_config.json",
+                ANKI_MINER_HOME / "anki_miner.log",
+            )
+            missing = [str(path) for path in required_files if not path.is_file()]
+            dicts_root = ANKI_MINER_HOME / "dicts"
+            if not dicts_root.is_dir():
+                missing.append(str(dicts_root))
+            if missing:
+                raise RuntimeError(f"installed smoke outputs missing: {', '.join(missing)}")
+
+            result_value = os.environ.get("ANKI_MINER_SMOKE_RESULT")
+            if not result_value:
+                raise RuntimeError("ANKI_MINER_SMOKE_RESULT is required")
+            result_path = Path(result_value)
+            result_path.parent.mkdir(parents=True, exist_ok=True)
+            with atomic_write_path(result_path) as staged:
+                staged.write_bytes(f"ANKI_MINER_INSTALLER_READY {__version__}\n".encode())
+        except Exception:
+            fail("post-close checks")
+            return
+        app.exit(0)
+
+    def validate_and_close() -> None:
+        try:
+            platform_name = app.platformName()
+            frozen_windows = bool(getattr(sys, "frozen", False) and sys.platform == "win32")
+            expected_platform = "windows" if frozen_windows else os.environ.get("QT_QPA_PLATFORM", platform_name)
+            if platform_name != expected_platform:
+                raise RuntimeError(f"Qt platform mismatch: expected {expected_platform!r}, got {platform_name!r}")
+
+            expected_titles = [
+                QCoreApplication.translate("MainWindow", "Video"),
+                QCoreApplication.translate("MainWindow", "Deck Builder"),
+                QCoreApplication.translate("MainWindow", "Audio"),
+                QCoreApplication.translate("MainWindow", "Reading"),
+                QCoreApplication.translate("MainWindow", "Analytics"),
+                QCoreApplication.translate("MainWindow", "Tools"),
+                QCoreApplication.translate("MainWindow", "Settings"),
+            ]
+            actual_titles = [window.tabs.tabText(index) for index in range(window.tabs.count())]
+            if actual_titles != expected_titles:
+                raise RuntimeError(f"main tab mismatch: expected {expected_titles!r}, got {actual_titles!r}")
+
+            expected_version = os.environ.get("ANKI_MINER_SMOKE_EXPECTED_VERSION")
+            if expected_version and __version__ != expected_version:
+                raise RuntimeError(f"version mismatch: expected {expected_version!r}, got {__version__!r}")
+
+            from anki_miner.services.tagger import get_shared_tagger
+
+            source = "日本語"
+            reconstructed = "".join(str(token.surface) for token in get_shared_tagger()(source))
+            if reconstructed != source:
+                raise RuntimeError(f"tagger surface mismatch: expected {source!r}, got {reconstructed!r}")
+
+            if frozen_windows:
+                from anki_miner.gui import launch
+
+                if not launch.TRUSTSTORE_INJECTED:
+                    raise RuntimeError("Windows trust store was not injected")
+
+            if not window.close():
+                raise RuntimeError("main window refused installer-smoke close")
+            QTimer.singleShot(0, finish)
+        except Exception:
+            fail("GUI checks")
+
+    QTimer.singleShot(0, validate_and_close)
+
+
+@_rollback_workers_on_startup_fault
+def main():
+    """Launch the Anki Miner GUI application."""
+    _scrub_pyinstaller_env()
+    installer_smoke = os.environ.get("ANKI_MINER_SMOKE") == "installer"
+
+    # Env-var-gated smoke path (PyInstaller bundled-binary validation).
+    # Runs before Qt init so headless CI can verify yt-dlp extractor
+    # bundling without spinning up a display.
+    if os.environ.get("ANKI_MINER_SMOKE") == "youtube":
+        sys.exit(_run_bundled_smoke())
+
+    if os.environ.get("ANKI_MINER_SMOKE") == "asr":
+        sys.exit(_run_asr_bundled_smoke())
+
+    if os.environ.get("ANKI_MINER_SMOKE") == "whispercpp":
+        sys.exit(_run_whispercpp_bundled_smoke())
+
+    # Env-var-gated ASR Vulkan device probe. The parent process
+    # (_engine.vulkan_device_count) spawns a frozen bundle with this flag set so
+    # the cold ctypes call into ggml-vulkan runs in a throwaway child — a broken
+    # Vulkan driver can C-abort uncatchably, and isolating it here means the abort
+    # kills only this child. Must run before any Qt init. Hidden, env-var-only.
+    if os.environ.get("ANKI_MINER_ASR_VULKAN_PROBE"):
+        from anki_miner.services.asr import _vulkan_probe
+
+        raise SystemExit(_vulkan_probe.main())
+
+    # Env-var-gated libmpv bundle probe (bundle_smoke.sh). Loads the bundled
+    # libmpv through mpv_loader's resolution order and constructs a display-free
+    # core (vo=null/ao=null) — proves the shared library + its dependency
+    # closure actually dlopen inside the frozen bundle. Must run before Qt init.
+    if os.environ.get("ANKI_MINER_MPV_PROBE"):
+        from anki_miner.utils import mpv_loader
+
+        raise SystemExit(mpv_loader.mpv_probe_main())
+
+    # Attach the rotating file handler to the DEFAULT path before loading config
+    # so config-load diagnostics — including the OVH-001 .bak-recovery warnings
+    # emitted inside load_config — are captured: those warnings fire as soon as a
+    # handler exists, so attaching here (before the load) is what makes them land
+    # in the file rather than going nowhere (F3).
+    # GUIConfigManager has no Qt dependency, so it can run before QApplication.
+    _default_log_path = ANKI_MINER_HOME / "anki_miner.log"
+    try:
+        _configure_logging(_default_log_path)
+    except Exception:
+        logger.exception("Failed to configure startup log; continuing with stderr logging")
+    try:
+        _early_config = GUIConfigManager.load_config()
+        _log_path = _early_config.log_path
+    except Exception:
+        # Never leave _early_config unbound (would NameError at the zoom call
+        # and every later read) — fall back to defaults so startup can proceed.
+        if installer_smoke:
+            raise
+        logger.exception("Failed to load config at startup; using default config")
+        _early_config = create_default_config()
+        _log_path = _default_log_path
+    # Honour a user-customised log_path by re-pointing the handler (idempotent,
+    # so no duplicate sink). No-op in the common case where it equals the default.
+    if _log_path != _default_log_path:
+        try:
+            _configure_logging(_log_path)
+        except Exception:
+            logger.exception("Failed to configure custom log path; keeping startup logger")
+
+    _log_session_boundary()
+
+    # Clean-install nicety: make the default dicts_root exist before any
+    # settings UI validates it (Issue #100 red-border state).
+    _ensure_default_dicts_root(_early_config)
+
+    # File pickers default to Qt's non-native dialogs (Issue #100 freeze).
+    _seed_file_dialog_mode(_early_config)
+
+    # Whole-UI zoom: must be set before QApplication is constructed (Qt reads
+    # QT_SCALE_FACTOR once, at construction). Restart-to-apply by nature.
+    _apply_ui_zoom(_early_config)
+
+    # Enable high DPI scaling
+    QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+
+    # Create application
+    app = QApplication(sys.argv)
+    app.setApplicationName("Anki Miner")
+    app.setOrganizationName("AnkiMiner")
+
+    # Install the crash net before any widget is built so exceptions escaping a
+    # slot during tab construction are caught too (a bad path in a startup slot
+    # would otherwise abort the whole process — the trailing-space batch bug).
+    _install_excepthook(app, fail_fast=installer_smoke)
+
+    # Set application icon
+    icon_path = get_resource_dir() / "icons" / "anki_miner.svg"
+    if icon_path.exists():
+        app.setWindowIcon(QIcon(str(icon_path)))
+
+    # Install UI translators BEFORE any widget is built — widgets capture their
+    # tr() strings at construction time, and language is restart-to-apply (no
+    # live retranslateUi). Stash on `app` so the translators outlive this call.
+    app._translators = install_translators(app, _early_config.ui_language)  # type: ignore[attr-defined]
+
+    # Seed the theme singleton from the single decoded startup config. Optional
+    # local theme data must never block construction of the unstyled GUI.
+    try:
+        Theme.initialize(
+            active=_early_config.theme,
+            favorites=_early_config.theme_favorites,
+            user_dir=_early_config.themes_root,
+            font_scale=_early_config.ui_font_scale,
+        )
+        Theme.apply_to_app(app)
+    except Exception:
+        if installer_smoke:
+            raise
+        logger.exception("Failed to initialize theme; continuing with Qt defaults")
+
+    # Single-instance guard (Issue #100: double launch observed; two processes
+    # contend on the shared sqlite DBs). Warn-not-block; skipped in the
+    # installer smoke (no modal may ever open there). Keep the lock object
+    # referenced on `app` so it lives (and auto-releases) with the process.
+    if not installer_smoke:
+        _instance_lock, _proceed = _acquire_instance_lock(ANKI_MINER_HOME / "instance.lock", _confirm_second_instance)
+        if not _proceed:
+            return
+        app._instance_lock = _instance_lock  # type: ignore[attr-defined]
+
+    composed = compose_main_window(
+        _early_config,
+        suppress_optional_startup=installer_smoke,
+    )
+    window = composed.window
+    stats_service = composed.stats_service
+    analytics_tab = composed.analytics_tab
+
     # Full widget composition and required version save now form one commit
     # boundary. No startup worker is started before this returns successfully.
-    window.commit_boot()
+    window.commit_boot(suppress_optional=installer_smoke)
 
-    # Show window first so the user sees the UI immediately; then run the
-    # deferred init (stats DB open) on the next event loop tick. The
-    # YouTube tab's episode processor is built even lazier — on first
-    # Mine click — because the dictionary chain dominates startup cost.
+    # Show window first so the user sees the UI immediately. The stats DB open
+    # runs off-thread below. The YouTube tab's episode processor is built even
+    # lazier — on first Mine click — because the dictionary chain dominates
+    # startup cost.
+    if installer_smoke:
+        app.setQuitOnLastWindowClosed(False)
     window.show()
+
+    if installer_smoke:
+        _schedule_installer_smoke(app, window)
+        sys.exit(app.exec())
 
     # Install the main-thread stall watchdog: a heartbeat QTimer + daemon
     # monitor that logs a WARNING with the GUI stack whenever the event loop
@@ -962,7 +1177,7 @@ def main():
     # stop() is hooked into MainWindow.closeEvent (daemon=True is the backstop).
     install_stall_watchdog(window)
 
-    QTimer.singleShot(0, stats_service.load)
+    _start_stats_load(window, stats_service, analytics_tab)
 
     # Pre-warm the shared MeCab tagger (get_shared_tagger) AND the dictionary
     # chain off the GUI thread, scheduled on the next event-loop tick so it

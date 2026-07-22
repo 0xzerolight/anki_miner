@@ -65,11 +65,11 @@
     </message>
     <message>
         <source>Analytics Tab</source>
-        <translation type="unfinished" />
+        <translation>分析タブ</translation>
     </message>
     <message>
         <source>View mining statistics, series difficulty rankings, and progress milestones</source>
-        <translation type="unfinished" />
+        <translation>マイニング統計、シリーズ別難易度ランキング、進捗のマイルストーンを表示します</translation>
     </message>
     <message>
         <source>Overview</source>
@@ -586,6 +586,14 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>キャンセル</translation>
     </message>
     <message>
+        <source>Configuration Update Failed</source>
+        <translation>設定の更新に失敗しました</translation>
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation>インポートは完了しましたが、設定の更新に失敗しました：%1</translation>
+    </message>
+    <message>
         <source>Imported %1 audio pack(s):</source>
         <translation>%1 個の音声パックをインポートしました:</translation>
     </message>
@@ -629,6 +637,18 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <source>Re-import Failed</source>
         <translation>再インポートに失敗しました</translation>
     </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>別のインポートがまだ完了していません。完了してから再度お試しください。</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>インポート処理が完了結果を返さずに終了しました。</translation>
+    </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
@@ -671,7 +691,7 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>Move up</source>
-        <translation type="unfinished" />
+        <translation>上へ移動</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -679,7 +699,7 @@ The audio pack was not removed.</source>
     </message>
     <message>
         <source>Move down</source>
-        <translation type="unfinished">下へ移動</translation>
+        <translation>下へ移動</translation>
     </message>
     <message>
         <source>Move down in priority</source>
@@ -1239,11 +1259,11 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>Restyle mined cards</source>
-        <translation type="unfinished" />
+        <translation>マイニングしたカードのスタイルを再適用</translation>
     </message>
     <message>
         <source>Re-apply the latest Anki Miner styling to cards you mined earlier.</source>
-        <translation type="unfinished" />
+        <translation>以前にマイニングしたカードに、最新のAnki Minerスタイルを再適用します。</translation>
     </message>
     <message>
         <source>View mining history &amp; stats</source>
@@ -1641,7 +1661,7 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>Settings changed since this scan; re-scan before applying.</source>
-        <translation type="unfinished" />
+        <translation>このスキャン以降に設定が変更されました。適用する前に再スキャンしてください。</translation>
     </message>
     <message>
         <source>Apply backfill?</source>
@@ -1677,7 +1697,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Cancelled.</source>
-        <translation type="unfinished">キャンセルしました。</translation>
+        <translation>キャンセルしました。</translation>
     </message>
 </context><context>
     <name>CondenseTab</name>
@@ -1715,7 +1735,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">失敗しました — ログを確認してください</translation>
+        <translation>失敗しました — ログを確認してください</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -2322,6 +2342,14 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>%1 をインポートしました（%2 件）</translation>
     </message>
     <message>
+        <source>Configuration Update Failed</source>
+        <translation>設定の更新に失敗しました</translation>
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation>インポートは完了しましたが、設定の更新に失敗しました：%1</translation>
+    </message>
+    <message>
         <source>Importing dictionary…</source>
         <translation>辞書をインポートしています…</translation>
     </message>
@@ -2332,6 +2360,18 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Import Failed</source>
         <translation>インポート失敗</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>別のインポートがまだ完了していません。完了してから再度お試しください。</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>インポート処理が完了結果を返さずに終了しました。</translation>
     </message>
     <message>
         <source>Invalid Zip</source>
@@ -2387,7 +2427,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Scan Failed</source>
-        <translation type="unfinished">スキャンに失敗しました</translation>
+        <translation>スキャンに失敗しました</translation>
     </message>
     <message>
         <source>No dictionaries with saved sources were found.
@@ -2525,7 +2565,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Move up</source>
-        <translation type="unfinished" />
+        <translation>上へ移動</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -2533,7 +2573,7 @@ The dictionary was not removed.</source>
     </message>
     <message>
         <source>Move down</source>
-        <translation type="unfinished">下へ移動</translation>
+        <translation>下へ移動</translation>
     </message>
     <message>
         <source>Move down in priority</source>
@@ -3001,31 +3041,31 @@ This cannot be undone. You would need to reimport from the source zip.</source>
     </message>
     <message>
         <source>file</source>
-        <translation type="unfinished" />
+        <translation>ファイル</translation>
     </message>
     <message>
         <source>folder</source>
-        <translation type="unfinished" />
+        <translation>フォルダ</translation>
     </message>
     <message>
         <source>Select a %1 by typing path, browsing, or dragging</source>
-        <translation type="unfinished" />
+        <translation>パスの入力、参照、またはドラッグで %1 を選択してください</translation>
     </message>
     <message>
         <source>%1 path</source>
-        <translation type="unfinished" />
+        <translation>%1 のパス</translation>
     </message>
     <message>
         <source>Path to %1. Type or paste a path, or use browse button</source>
-        <translation type="unfinished" />
+        <translation>%1 へのパス。パスを入力または貼り付けるか、参照ボタンを使用してください</translation>
     </message>
     <message>
         <source>Browse for %1</source>
-        <translation type="unfinished" />
+        <translation>%1 を参照</translation>
     </message>
     <message>
         <source>Opens file dialog to select %1</source>
-        <translation type="unfinished" />
+        <translation>%1 を選択するファイルダイアログを開きます</translation>
     </message>
     <message>
         <source>Select %1</source>
@@ -3038,6 +3078,10 @@ This cannot be undone. You would need to reimport from the source zip.</source>
     <message>
         <source>No folder selected</source>
         <translation>フォルダが選択されていません</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>未インストール</translation>
     </message>
     <message>
         <source>File not found</source>
@@ -3364,6 +3408,14 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation>'%2' から %1 件のエントリをインポートしました。</translation>
     </message>
     <message>
+        <source>Configuration Update Failed</source>
+        <translation>設定の更新に失敗しました</translation>
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation>インポートは完了しましたが、設定の更新に失敗しました：%1</translation>
+    </message>
+    <message>
         <source>Importing frequency source…</source>
         <translation>頻度ソースをインポートしています…</translation>
     </message>
@@ -3376,8 +3428,20 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation>インポート失敗</translation>
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>別のインポートがまだ完了していません。完了してから再度お試しください。</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>インポート処理が完了結果を返さずに終了しました。</translation>
+    </message>
+    <message>
         <source>Scan Failed</source>
-        <translation type="unfinished">スキャンに失敗しました</translation>
+        <translation>スキャンに失敗しました</translation>
     </message>
     <message>
         <source>Choose frequency source to re-import</source>
@@ -3433,7 +3497,7 @@ The frequency source was not removed.</source>
     </message>
     <message>
         <source>Move up</source>
-        <translation type="unfinished" />
+        <translation>上へ移動</translation>
     </message>
     <message>
         <source>Move up (breaks rank ties first)</source>
@@ -3650,6 +3714,10 @@ Add %3 word(s) to your known list?</source>
 </context><context>
     <name>MainWindow</name>
     <message>
+        <source>Open Log Folder</source>
+        <translation>ログフォルダを開く</translation>
+    </message>
+    <message>
         <source>Video</source>
         <translation>動画</translation>
     </message>
@@ -3687,35 +3755,35 @@ Add %3 word(s) to your known list?</source>
     </message>
     <message>
         <source>Anki Miner Main Window</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner メインウィンドウ</translation>
     </message>
     <message>
         <source>Japanese vocabulary mining tool for creating Anki flashcards from video subtitles</source>
-        <translation type="unfinished" />
+        <translation>動画の字幕からAnkiフラッシュカードを作成する日本語語彙マイニングツール</translation>
     </message>
     <message>
         <source>Main Tabs</source>
-        <translation type="unfinished" />
+        <translation>メインタブ</translation>
     </message>
     <message>
         <source>Navigate between Video, Deck Builder, Audio, Reading, Analytics, Tools, and Settings</source>
-        <translation type="unfinished" />
+        <translation>動画、デッキビルダー、音声、読み、分析、ツール、設定の間を移動します</translation>
     </message>
     <message>
         <source>Application Header</source>
-        <translation type="unfinished" />
+        <translation>アプリケーションヘッダー</translation>
     </message>
     <message>
         <source>Application title and theme selector</source>
-        <translation type="unfinished" />
+        <translation>アプリ名とテーマ選択</translation>
     </message>
     <message>
         <source>Status Bar</source>
-        <translation type="unfinished" />
+        <translation>ステータスバー</translation>
     </message>
     <message>
         <source>Shows current operation, statistics, and system status</source>
-        <translation type="unfinished" />
+        <translation>現在の処理、統計、システムの状態を表示します</translation>
     </message>
     <message>
         <source>&amp;Tools</source>
@@ -3752,10 +3820,6 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Check for Updates</source>
         <translation>アップデートを確認</translation>
-    </message>
-    <message>
-        <source>Open Log Folder</source>
-        <translation>ログフォルダを開く</translation>
     </message>
     <message>
         <source>Open the log folder in your file manager</source>
@@ -4229,7 +4293,7 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>ETA ~</source>
-        <translation type="unfinished" />
+        <translation>残り ~</translation>
     </message>
 </context><context>
     <name>QueueItemWidget</name>
@@ -4567,7 +4631,7 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Cancelled %1.</source>
-        <translation type="unfinished">%1 をキャンセルしました。</translation>
+        <translation>%1 をキャンセルしました。</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
@@ -4822,6 +4886,18 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>失敗</translation>
     </message>
     <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Resource Download Failed</source>
+        <translation>リソースのダウンロードに失敗しました</translation>
+    </message>
+    <message>
+        <source>The download worker finished without a completion result.</source>
+        <translation>ダウンロード処理が完了結果を返さずに終了しました。</translation>
+    </message>
+    <message>
         <source>✓ %1 — %2</source>
         <translation>✓ %1 — %2</translation>
     </message>
@@ -4840,6 +4916,26 @@ You can fine-tune these later in Settings → Anki.</source>
    手動でダウンロード: %3</translation>
     </message>
     <message>
+        <source>Resource Download Cancelled (Some Resources Installed)</source>
+        <translation>リソースのダウンロードをキャンセルしました（一部のリソースはインストール済み）</translation>
+    </message>
+    <message>
+        <source>Some resources were installed before cancellation.</source>
+        <translation>キャンセルする前に、一部のリソースがインストールされました。</translation>
+    </message>
+    <message>
+        <source>Resource Download Cancelled</source>
+        <translation>リソースのダウンロードをキャンセルしました</translation>
+    </message>
+    <message>
+        <source>No resources were installed.</source>
+        <translation>リソースはインストールされませんでした。</translation>
+    </message>
+    <message>
+        <source>Resource items not processed: %1.</source>
+        <translation>処理されなかったリソース項目：%1。</translation>
+    </message>
+    <message>
         <source>Resources Installed</source>
         <translation>リソースをインストールしました</translation>
     </message>
@@ -4848,16 +4944,24 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>リソースを一部インストールしました</translation>
     </message>
     <message>
-        <source>Resource Download Failed</source>
-        <translation>リソースのダウンロードに失敗しました</translation>
-    </message>
-    <message>
         <source>No resources were processed.</source>
         <translation>処理されたリソースはありません。</translation>
     </message>
     <message>
         <source>Resources are downloaded from their original sources; their licenses apply.</source>
         <translation>リソースは元の配布元からダウンロードされ、それぞれのライセンスが適用されます。</translation>
+    </message>
+    <message>
+        <source>No valid pitch accent entries were found.</source>
+        <translation>有効なピッチアクセントのエントリが見つかりませんでした。</translation>
+    </message>
+    <message>
+        <source>Pitch accent validation failed: %1</source>
+        <translation>ピッチアクセントの検証に失敗しました：%1</translation>
+    </message>
+    <message>
+        <source>%1 entries</source>
+        <translation>%1 件のエントリ</translation>
     </message>
 </context><context>
     <name>ResourcesPage</name>
@@ -4878,8 +4982,24 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>推奨リソースをダウンロード</translation>
     </message>
     <message>
-        <source>Resources updated.</source>
-        <translation>リソースを更新しました。</translation>
+        <source>Download cancelled. Some resources were installed before cancellation.</source>
+        <translation>ダウンロードをキャンセルしました。キャンセルする前に、一部のリソースがインストールされました。</translation>
+    </message>
+    <message>
+        <source>Download cancelled. No resources were installed.</source>
+        <translation>ダウンロードをキャンセルしました。リソースはインストールされませんでした。</translation>
+    </message>
+    <message>
+        <source>Some resources were installed; some failed.</source>
+        <translation>一部のリソースはインストールされましたが、一部は失敗しました。</translation>
+    </message>
+    <message>
+        <source>No resources were installed.</source>
+        <translation>リソースはインストールされませんでした。</translation>
+    </message>
+    <message>
+        <source>Resources installed.</source>
+        <translation>リソースをインストールしました。</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>
@@ -5002,6 +5122,14 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>有効にすると、Anki Miner は起動時に GitHub で新しいリリースを確認します。</translation>
     </message>
     <message>
+        <source>Reset to Defaults…</source>
+        <translation>初期設定に戻す…</translation>
+    </message>
+    <message>
+        <source>Reset settings to defaults. Installed dictionaries, audio, frequency lists, and your theme are kept.</source>
+        <translation>設定を初期状態に戻します。インストール済みの辞書、音声、頻度リスト、テーマは保持されます。</translation>
+    </message>
+    <message>
         <source>Export Settings…</source>
         <translation>設定をエクスポート…</translation>
     </message>
@@ -5112,11 +5240,28 @@ Imported values override your current settings; anything not in the file is kept
     <message>
         <source>The imported subtitle regex filter was rejected; the previous filter was kept:
 %1</source>
-        <translation type="unfinished" />
+        <translation>インポートした字幕の正規表現フィルターは無効と判断されたため、以前のフィルターを保持しました：
+%1</translation>
     </message>
     <message>
         <source>✓ Imported</source>
         <translation>✓ インポートしました</translation>
+    </message>
+    <message>
+        <source>Reset Settings</source>
+        <translation>設定のリセット</translation>
+    </message>
+    <message>
+        <source>Reset all settings to their defaults?
+
+Your installed dictionaries, audio, frequency lists, and theme are kept.</source>
+        <translation>すべての設定を初期状態に戻しますか？
+
+インストール済みの辞書、音声、頻度リスト、テーマは保持されます。</translation>
+    </message>
+    <message>
+        <source>✓ Reset to defaults</source>
+        <translation>✓ 初期設定に戻しました</translation>
     </message>
     <message>
         <source>Importing pitch accent dictionary…</source>
@@ -5169,12 +5314,6 @@ Imported values override your current settings; anything not in the file is kept
     <message>
         <source>Could not open the known words list: %1</source>
         <translation>既知単語リストを開けませんでした: %1</translation>
-    </message>
-    <message>
-        <source>The imported subtitle regex filter is invalid and has been disabled:
-%1</source>
-        <translation type="vanished">インポートした字幕の正規表現フィルターが無効なため、無効化されました:
-%1</translation>
     </message>
 </context><context>
     <name>SetupWizard</name>
@@ -5234,11 +5373,11 @@ Imported values override your current settings; anything not in the file is kept
     </message>
     <message>
         <source>Episode Mining Tab</source>
-        <translation type="unfinished" />
+        <translation>エピソードマイニングタブ</translation>
     </message>
     <message>
         <source>Process a single video episode to create vocabulary flashcards</source>
-        <translation type="unfinished" />
+        <translation>1つの動画エピソードを処理して語彙フラッシュカードを作成します</translation>
     </message>
     <message>
         <source>File Selection</source>
@@ -5420,7 +5559,7 @@ Imported values override your current settings; anything not in the file is kept
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">失敗しました — ログを確認してください</translation>
+        <translation>失敗しました — ログを確認してください</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -5610,7 +5749,7 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>
-        <translation type="unfinished" />
+        <translation>動画プレビューを利用できません：このPCでは同梱の動画コンポーネント（libmpv）を読み込めませんでした。Anki Minerの再インストールをお試しください。問題が解決しない場合は、%USERPROFILE%\.anki_miner\anki_miner.log からログを添付して報告してください。</translation>
     </message>
     <message>
         <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
@@ -5668,7 +5807,7 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">失敗しました — ログを確認してください</translation>
+        <translation>失敗しました — ログを確認してください</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -6202,11 +6341,11 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Unfavorite</source>
-        <translation type="unfinished" />
+        <translation>お気に入り解除</translation>
     </message>
     <message>
         <source>Favorite</source>
-        <translation type="unfinished" />
+        <translation>お気に入り</translation>
     </message>
     <message>
         <source>Click to add to / remove from favorites.</source>
@@ -6232,7 +6371,7 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Close</source>
-        <translation type="unfinished">閉じる</translation>
+        <translation>閉じる</translation>
     </message>
     <message>
         <source>Anki Miner v%1 is available!</source>
@@ -6665,5 +6804,17 @@ Continue with import?</source>
     <message>
         <source>Anki Miner — Unexpected Error</source>
         <translation>Anki Miner — 予期しないエラー</translation>
+    </message>
+    <message>
+        <source>%1: %2
+
+Version: %3
+Platform: %4
+Log file: %5</source>
+        <translation>%1：%2
+
+バージョン：%3
+プラットフォーム：%4
+ログファイル：%5</translation>
     </message>
 </context></TS>

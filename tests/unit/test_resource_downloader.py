@@ -37,9 +37,10 @@ def _part_files(d):
 
 class TestDownloadToTemp:
     def test_success_writes_part_temp_and_returns_it(self, tmp_path):
-        with patch("requests.Session.get", return_value=_response(content=b"abc123")):
+        with patch("requests.Session.get", return_value=_response(content=b"abc123")) as get:
             result = download_to_temp(URL, dest_dir=tmp_path)
 
+        assert get.call_args.kwargs["timeout"] == (10, 60)
         assert result.parent == tmp_path
         assert result.suffix == ".part"
         assert result.exists()
@@ -96,20 +97,53 @@ class TestDownloadToTemp:
 
     def test_cancellation_mid_stream_cleans_up_and_raises(self, tmp_path):
         chunks = [b"aaaa", b"bbbb", b"cccc"]
-        # Cancel on the second chunk-iteration check.
+        progress_calls: list[tuple[int, int, str]] = []
+        # Allow the pre-request check and first chunk write, then cancel.
         state = {"calls": 0}
 
         def cancel():
             state["calls"] += 1
-            return state["calls"] >= 2
+            return state["calls"] >= 3
 
         with (
             patch("requests.Session.get", return_value=_response(chunks=chunks)),
             pytest.raises(SetupError, match="cancelled"),
         ):
-            download_to_temp(URL, dest_dir=tmp_path, cancelled_check=cancel)
+            download_to_temp(
+                URL,
+                dest_dir=tmp_path,
+                cancelled_check=cancel,
+                progress=lambda d, t, m: progress_calls.append((d, t, m)),
+            )
+
+        assert [downloaded for downloaded, _total, _message in progress_calls] == [0, 4]
+        assert _part_files(tmp_path) == []
+
+    def test_read_timeout_override_only_changes_read_component(self, tmp_path):
+        with patch("requests.Session.get", return_value=_response(content=b"abc123")) as get:
+            result = download_to_temp(URL, dest_dir=tmp_path, read_timeout_seconds=1.0)
+
+        assert result.read_bytes() == b"abc123"
+        assert get.call_args.kwargs["timeout"] == (10, 1.0)
+
+    def test_stream_read_timeout_after_cancel_request_is_classified_as_cancelled(self, tmp_path):
+        cancel_checks = iter((False, True))
+        response = _response(content=b"unused")
+        response.iter_content.side_effect = requests.ReadTimeout("read stalled")
+
+        with (
+            patch("requests.Session.get", return_value=response),
+            pytest.raises(SetupError, match="Download cancelled"),
+        ):
+            download_to_temp(
+                URL,
+                dest_dir=tmp_path,
+                cancelled_check=lambda: next(cancel_checks),
+                read_timeout_seconds=1.0,
+            )
 
         assert _part_files(tmp_path) == []
+        response.close.assert_called_once()
 
     def test_http_error_raises_setup_error_no_temp(self, tmp_path):
         with (

@@ -102,6 +102,9 @@ and fix until green before tagging.
 
 8. **Smoke-test one installer.** Run the installer for at least one OS (typically the AppImage on Linux for speed). Confirm the GUI launches and a sample mine completes end-to-end.
 
+   > **Windows installer.** With `SetupLogging=yes`, logs are written to `%TEMP%\Setup Log*.txt`.
+   > `SetupMutex` blocks a second Anki Miner installer while one is already running.
+
 9. **Announce.** Wherever you announce releases (Discussions, social, etc.). The in-app update banner picks the new release up automatically on every user's next launch.
 
 ## Vendored libmpv (video preview)
@@ -118,7 +121,7 @@ The Windows build is an unsigned PyInstaller bundle shipping `yt-dlp` and `ffmpe
 2. Submit it at <https://www.microsoft.com/en-us/wdsi/filesubmission> under "software developer" / incorrectly detected as malware. Microsoft threat researchers re-evaluate and de-list, usually within hours to a couple of days.
 3. For other engines reported (ESET, Avast, etc.), submit to that vendor's false-positive portal.
 
-The build is already hardened against the common heuristics — no UPX, embedded PE version metadata, and a source-built PyInstaller bootloader (see `anki_miner.spec` and `release.yml`). The durable fix is Authenticode code signing (planned via SignPath Foundation's free OSS program); signed builds accrue Defender/SmartScreen reputation so the flagging stops recurring per release.
+The build is already hardened against the common heuristics — no UPX, embedded PE version metadata, and a PyInstaller bootloader forced to rebuild from source by `PYINSTALLER_COMPILE_BOOTLOADER=1` (see `anki_miner.spec` and `release.yml`). The durable fix is Authenticode code signing (planned via SignPath Foundation's free OSS program); signed builds accrue Defender/SmartScreen reputation so the flagging stops recurring per release.
 
 ## Recovering from a bad release
 

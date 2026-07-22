@@ -3,6 +3,7 @@
 import dataclasses
 import json
 import os
+from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
 from pathlib import Path
@@ -135,15 +136,28 @@ class SettingsTab(QWidget):
         {"theme", "theme_favorites", "ui_font_scale", "ui_zoom", "ui_language"}
     )
 
-    def __init__(self, config: AnkiMinerConfig, parent=None):
+    def __init__(
+        self,
+        config: AnkiMinerConfig,
+        parent: QWidget | None = None,
+        *,
+        commit_config: Callable[[AnkiMinerConfig], None] | None = None,
+        suppress_optional_startup: bool = False,
+    ) -> None:
         """Initialize the settings tab.
 
         Args:
             config: Current configuration
             parent: Optional parent widget
+            commit_config: Synchronous config commit used by import flows.
+                Defaults to ``config_changed.emit`` for standalone tabs.
         """
         super().__init__(parent)
         self.config = config
+        self._suppress_optional_startup = suppress_optional_startup
+        self._commit_config: Callable[[AnkiMinerConfig], None] = (
+            commit_config if commit_config is not None else self.config_changed.emit
+        )
         # True between a manual "Update yt-dlp now" click and its result, so the
         # shared result signal can surface a dialog on the manual path only.
         self._ytdlp_manual_pending = False
@@ -164,7 +178,7 @@ class SettingsTab(QWidget):
         # the tab keeps the per-flow wrappers + save-time ordering.
         self._zip_import_flow = ZipImportFlow(self)
         # Dictionary add/reimport orchestration, incl. the Reimport-All
-        # chained state machine and its predecessor-join (T-09).
+        # chained state machine and its predecessor deferral (T-09).
         self._dict_import_flow = DictionaryImportFlow(
             parent=self,
             panel=self.dictionary_panel,
@@ -237,7 +251,7 @@ class SettingsTab(QWidget):
         self.frequency_panel = FrequencySettingsPanel(self.config.freqs_root)
         self.filtering_panel = FilteringSettingsPanel()
         self.youtube_panel = YouTubeSettingsPanel()
-        self.subtitles_panel = SubtitlesSettingsPanel()
+        self.subtitles_panel = SubtitlesSettingsPanel(suppress_optional_startup=self._suppress_optional_startup)
         self.ui_panel = UISettingsPanel(
             self.config.themes_root,
             self.config.ui_zoom,
@@ -1150,7 +1164,7 @@ class SettingsTab(QWidget):
         needs to sync to Anki here.
         """
         new_config = replace(self.config, dictionary_chain=new_chain)
-        self.config_changed.emit(new_config)
+        self._commit_config(new_config)
 
     def _persist_audio_chain_change(self, new_chain: tuple[AudioSourceEntry, ...]) -> None:
         """Save an audio chain mutation to disk and notify listeners.
@@ -1160,7 +1174,7 @@ class SettingsTab(QWidget):
         requiring the user to click Save in Settings.
         """
         new_config = replace(self.config, expression_audio_chain=new_chain)
-        self.config_changed.emit(new_config)
+        self._commit_config(new_config)
 
     def _persist_reading_tts_change(self) -> None:
         """Save the sentence-TTS toggles immediately (no Save click needed)."""
@@ -1219,7 +1233,7 @@ class SettingsTab(QWidget):
         run without requiring the user to click Save in Settings.
         """
         new_config = replace(self.config, frequency_chain=new_chain)
-        self.config_changed.emit(new_config)
+        self._commit_config(new_config)
 
     # === Known words handlers (Issues #38 / #42) ===
 

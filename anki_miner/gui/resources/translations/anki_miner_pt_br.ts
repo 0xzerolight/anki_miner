@@ -65,11 +65,11 @@
     </message>
     <message>
         <source>Analytics Tab</source>
-        <translation type="unfinished" />
+        <translation>Aba de análises</translation>
     </message>
     <message>
         <source>View mining statistics, series difficulty rankings, and progress milestones</source>
-        <translation type="unfinished" />
+        <translation>Visualizar estatísticas de mineração, classificações de dificuldade das séries e marcos de progresso</translation>
     </message>
     <message>
         <source>Overview</source>
@@ -586,6 +586,14 @@ Formatos suportados: AJT (index.json + media/), NHK16 (entries.json + audio/), F
         <translation>Cancelar</translation>
     </message>
     <message>
+        <source>Configuration Update Failed</source>
+        <translation>Falha na atualização da configuração</translation>
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation>Importação concluída, mas a atualização da configuração falhou: %1</translation>
+    </message>
+    <message>
         <source>Imported %1 audio pack(s):</source>
         <translation>%1 pacote(s) de áudio importado(s):</translation>
     </message>
@@ -629,6 +637,18 @@ Formatos suportados: AJT (index.json + media/), NHK16 (entries.json + audio/), F
         <source>Re-import Failed</source>
         <translation>Falha na reimportação</translation>
     </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Outra importação ainda está sendo concluída. Aguarde a conclusão e tente novamente.</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Cancelando…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>O processo de importação terminou sem retornar um resultado.</translation>
+    </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
@@ -671,7 +691,7 @@ O pacote de áudio não foi removido.</translation>
     </message>
     <message>
         <source>Move up</source>
-        <translation type="unfinished" />
+        <translation>Mover para cima</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -679,7 +699,7 @@ O pacote de áudio não foi removido.</translation>
     </message>
     <message>
         <source>Move down</source>
-        <translation type="unfinished">Mover para baixo</translation>
+        <translation>Mover para baixo</translation>
     </message>
     <message>
         <source>Move down in priority</source>
@@ -1239,11 +1259,11 @@ Total de cartões criados: %2</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
-        <translation type="unfinished" />
+        <translation>Reestilizar cartões minerados</translation>
     </message>
     <message>
         <source>Re-apply the latest Anki Miner styling to cards you mined earlier.</source>
-        <translation type="unfinished" />
+        <translation>Reaplique o estilo mais recente do Anki Miner aos cartões que você minerou anteriormente.</translation>
     </message>
     <message>
         <source>View mining history &amp; stats</source>
@@ -1641,7 +1661,7 @@ Total de cartões criados: %2</translation>
     </message>
     <message>
         <source>Settings changed since this scan; re-scan before applying.</source>
-        <translation type="unfinished" />
+        <translation>As configurações mudaram desde esta varredura; refaça a varredura antes de aplicar.</translation>
     </message>
     <message>
         <source>Apply backfill?</source>
@@ -1677,7 +1697,7 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
     </message>
     <message>
         <source>Cancelled.</source>
-        <translation type="unfinished">Cancelado.</translation>
+        <translation>Cancelado.</translation>
     </message>
 </context><context>
     <name>CondenseTab</name>
@@ -1715,7 +1735,7 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Falhou — consulte o log</translation>
+        <translation>Falhou — consulte o log</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -2322,6 +2342,14 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
         <translation>%1 importado (%2 entradas)</translation>
     </message>
     <message>
+        <source>Configuration Update Failed</source>
+        <translation>Falha na atualização da configuração</translation>
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation>Importação concluída, mas a atualização da configuração falhou: %1</translation>
+    </message>
+    <message>
         <source>Importing dictionary…</source>
         <translation>Importando dicionário…</translation>
     </message>
@@ -2332,6 +2360,18 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
     <message>
         <source>Import Failed</source>
         <translation>Falha na Importação</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Outra importação ainda está sendo concluída. Aguarde a conclusão e tente novamente.</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Cancelando…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>O processo de importação terminou sem retornar um resultado.</translation>
     </message>
     <message>
         <source>Invalid Zip</source>
@@ -2387,7 +2427,7 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
     </message>
     <message>
         <source>Scan Failed</source>
-        <translation type="unfinished">Falha na varredura</translation>
+        <translation>Falha na varredura</translation>
     </message>
     <message>
         <source>No dictionaries with saved sources were found.
@@ -2525,7 +2565,7 @@ O dicionário não foi removido.</translation>
     </message>
     <message>
         <source>Move up</source>
-        <translation type="unfinished" />
+        <translation>Mover para cima</translation>
     </message>
     <message>
         <source>Move up in priority</source>
@@ -2533,7 +2573,7 @@ O dicionário não foi removido.</translation>
     </message>
     <message>
         <source>Move down</source>
-        <translation type="unfinished">Mover para baixo</translation>
+        <translation>Mover para baixo</translation>
     </message>
     <message>
         <source>Move down in priority</source>
@@ -3012,31 +3052,31 @@ Isso não pode ser desfeito. Você precisaria reimportar a partir do zip de orig
     </message>
     <message>
         <source>file</source>
-        <translation type="unfinished" />
+        <translation>arquivo</translation>
     </message>
     <message>
         <source>folder</source>
-        <translation type="unfinished" />
+        <translation>pasta</translation>
     </message>
     <message>
         <source>Select a %1 by typing path, browsing, or dragging</source>
-        <translation type="unfinished" />
+        <translation>Selecione %1 digitando o caminho, navegando ou arrastando</translation>
     </message>
     <message>
         <source>%1 path</source>
-        <translation type="unfinished" />
+        <translation>Caminho de %1</translation>
     </message>
     <message>
         <source>Path to %1. Type or paste a path, or use browse button</source>
-        <translation type="unfinished" />
+        <translation>Caminho de %1. Digite ou cole um caminho, ou use o botão de navegação</translation>
     </message>
     <message>
         <source>Browse for %1</source>
-        <translation type="unfinished" />
+        <translation>Procurar %1</translation>
     </message>
     <message>
         <source>Opens file dialog to select %1</source>
-        <translation type="unfinished" />
+        <translation>Abre a caixa de diálogo de arquivo para selecionar %1</translation>
     </message>
     <message>
         <source>Select %1</source>
@@ -3049,6 +3089,10 @@ Isso não pode ser desfeito. Você precisaria reimportar a partir do zip de orig
     <message>
         <source>No folder selected</source>
         <translation>Nenhuma pasta selecionada</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Não instalado</translation>
     </message>
     <message>
         <source>File not found</source>
@@ -3375,6 +3419,14 @@ Isso não pode ser desfeito. Você precisaria reimportar a partir do zip de orig
         <translation>%1 entradas importadas de '%2'.</translation>
     </message>
     <message>
+        <source>Configuration Update Failed</source>
+        <translation>Falha na atualização da configuração</translation>
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation>Importação concluída, mas a atualização da configuração falhou: %1</translation>
+    </message>
+    <message>
         <source>Importing frequency source…</source>
         <translation>Importando fonte de frequência…</translation>
     </message>
@@ -3387,8 +3439,20 @@ Isso não pode ser desfeito. Você precisaria reimportar a partir do zip de orig
         <translation>Falha na Importação</translation>
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Outra importação ainda está sendo concluída. Aguarde a conclusão e tente novamente.</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Cancelando…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>O processo de importação terminou sem retornar um resultado.</translation>
+    </message>
+    <message>
         <source>Scan Failed</source>
-        <translation type="unfinished">Falha na varredura</translation>
+        <translation>Falha na varredura</translation>
     </message>
     <message>
         <source>Choose frequency source to re-import</source>
@@ -3444,7 +3508,7 @@ A fonte de frequência não foi removida.</translation>
     </message>
     <message>
         <source>Move up</source>
-        <translation type="unfinished" />
+        <translation>Mover para cima</translation>
     </message>
     <message>
         <source>Move up (breaks rank ties first)</source>
@@ -3661,6 +3725,10 @@ Adicionar %3 palavra(s) à sua lista de conhecidas?</translation>
 </context><context>
     <name>MainWindow</name>
     <message>
+        <source>Open Log Folder</source>
+        <translation>Abrir Pasta de Registros</translation>
+    </message>
+    <message>
         <source>Video</source>
         <translation>Vídeo</translation>
     </message>
@@ -3698,35 +3766,35 @@ Adicionar %3 palavra(s) à sua lista de conhecidas?</translation>
     </message>
     <message>
         <source>Anki Miner Main Window</source>
-        <translation type="unfinished" />
+        <translation>Janela principal do Anki Miner</translation>
     </message>
     <message>
         <source>Japanese vocabulary mining tool for creating Anki flashcards from video subtitles</source>
-        <translation type="unfinished" />
+        <translation>Ferramenta de mineração de vocabulário japonês para criar cartões do Anki a partir de legendas de vídeo</translation>
     </message>
     <message>
         <source>Main Tabs</source>
-        <translation type="unfinished" />
+        <translation>Abas principais</translation>
     </message>
     <message>
         <source>Navigate between Video, Deck Builder, Audio, Reading, Analytics, Tools, and Settings</source>
-        <translation type="unfinished" />
+        <translation>Navegue entre Vídeo, Criador de Baralhos, Áudio, Leitura, Análises, Ferramentas e Configurações</translation>
     </message>
     <message>
         <source>Application Header</source>
-        <translation type="unfinished" />
+        <translation>Cabeçalho do aplicativo</translation>
     </message>
     <message>
         <source>Application title and theme selector</source>
-        <translation type="unfinished" />
+        <translation>Título do aplicativo e seletor de tema</translation>
     </message>
     <message>
         <source>Status Bar</source>
-        <translation type="unfinished" />
+        <translation>Barra de status</translation>
     </message>
     <message>
         <source>Shows current operation, statistics, and system status</source>
-        <translation type="unfinished" />
+        <translation>Mostra a operação atual, estatísticas e o status do sistema</translation>
     </message>
     <message>
         <source>&amp;Tools</source>
@@ -3763,10 +3831,6 @@ Adicionar %3 palavra(s) à sua lista de conhecidas?</translation>
     <message>
         <source>Check for Updates</source>
         <translation>Verificar Atualizações</translation>
-    </message>
-    <message>
-        <source>Open Log Folder</source>
-        <translation>Abrir Pasta de Registros</translation>
     </message>
     <message>
         <source>Open the log folder in your file manager</source>
@@ -4240,7 +4304,7 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
     </message>
     <message>
         <source>ETA ~</source>
-        <translation type="unfinished" />
+        <translation>Tempo restante ~</translation>
     </message>
 </context><context>
     <name>QueueItemWidget</name>
@@ -4578,7 +4642,7 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
     </message>
     <message>
         <source>Cancelled %1.</source>
-        <translation type="unfinished">%1 cancelado.</translation>
+        <translation>%1 cancelado.</translation>
     </message>
     <message>
         <source>Failed %1: %2.</source>
@@ -4833,6 +4897,18 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
         <translation>falhou</translation>
     </message>
     <message>
+        <source>Cancelling…</source>
+        <translation>Cancelando…</translation>
+    </message>
+    <message>
+        <source>Resource Download Failed</source>
+        <translation>Falha no Download de Recursos</translation>
+    </message>
+    <message>
+        <source>The download worker finished without a completion result.</source>
+        <translation>O processo de download terminou sem retornar um resultado.</translation>
+    </message>
+    <message>
         <source>✓ %1 — %2</source>
         <translation>✓ %1 — %2</translation>
     </message>
@@ -4851,6 +4927,26 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
    Baixe manualmente: %3</translation>
     </message>
     <message>
+        <source>Resource Download Cancelled (Some Resources Installed)</source>
+        <translation>Download de recursos cancelado (alguns recursos foram instalados)</translation>
+    </message>
+    <message>
+        <source>Some resources were installed before cancellation.</source>
+        <translation>Alguns recursos foram instalados antes do cancelamento.</translation>
+    </message>
+    <message>
+        <source>Resource Download Cancelled</source>
+        <translation>Download de recursos cancelado</translation>
+    </message>
+    <message>
+        <source>No resources were installed.</source>
+        <translation>Nenhum recurso foi instalado.</translation>
+    </message>
+    <message>
+        <source>Resource items not processed: %1.</source>
+        <translation>Itens de recursos não processados: %1.</translation>
+    </message>
+    <message>
         <source>Resources Installed</source>
         <translation>Recursos Instalados</translation>
     </message>
@@ -4859,16 +4955,24 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
         <translation>Recursos Parcialmente Instalados</translation>
     </message>
     <message>
-        <source>Resource Download Failed</source>
-        <translation>Falha no Download de Recursos</translation>
-    </message>
-    <message>
         <source>No resources were processed.</source>
         <translation>Nenhum recurso foi processado.</translation>
     </message>
     <message>
         <source>Resources are downloaded from their original sources; their licenses apply.</source>
         <translation>Os recursos são baixados de suas fontes originais; aplicam-se as respectivas licenças.</translation>
+    </message>
+    <message>
+        <source>No valid pitch accent entries were found.</source>
+        <translation>Nenhuma entrada válida de acento tonal foi encontrada.</translation>
+    </message>
+    <message>
+        <source>Pitch accent validation failed: %1</source>
+        <translation>Falha na validação do acento tonal: %1</translation>
+    </message>
+    <message>
+        <source>%1 entries</source>
+        <translation>%1 entradas</translation>
     </message>
 </context><context>
     <name>ResourcesPage</name>
@@ -4889,8 +4993,24 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
         <translation>Baixar recursos recomendados</translation>
     </message>
     <message>
-        <source>Resources updated.</source>
-        <translation>Recursos atualizados.</translation>
+        <source>Download cancelled. Some resources were installed before cancellation.</source>
+        <translation>Download cancelado. Alguns recursos foram instalados antes do cancelamento.</translation>
+    </message>
+    <message>
+        <source>Download cancelled. No resources were installed.</source>
+        <translation>Download cancelado. Nenhum recurso foi instalado.</translation>
+    </message>
+    <message>
+        <source>Some resources were installed; some failed.</source>
+        <translation>Alguns recursos foram instalados; outros falharam.</translation>
+    </message>
+    <message>
+        <source>No resources were installed.</source>
+        <translation>Nenhum recurso foi instalado.</translation>
+    </message>
+    <message>
+        <source>Resources installed.</source>
+        <translation>Recursos instalados.</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>
@@ -5013,6 +5133,14 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
         <translation>Quando ativado, o Anki Miner consulta o GitHub por novas versões ao iniciar.</translation>
     </message>
     <message>
+        <source>Reset to Defaults…</source>
+        <translation>Redefinir para o padrão…</translation>
+    </message>
+    <message>
+        <source>Reset settings to defaults. Installed dictionaries, audio, frequency lists, and your theme are kept.</source>
+        <translation>Redefine as configurações para o padrão. Dicionários instalados, áudio, listas de frequência e seu tema são mantidos.</translation>
+    </message>
+    <message>
         <source>Export Settings…</source>
         <translation>Exportar Configurações…</translation>
     </message>
@@ -5123,11 +5251,28 @@ Os valores importados substituem suas configurações atuais; qualquer coisa que
     <message>
         <source>The imported subtitle regex filter was rejected; the previous filter was kept:
 %1</source>
-        <translation type="unfinished" />
+        <translation>O filtro de expressão regular de legendas importado foi rejeitado; o filtro anterior foi mantido:
+%1</translation>
     </message>
     <message>
         <source>✓ Imported</source>
         <translation>✓ Importado</translation>
+    </message>
+    <message>
+        <source>Reset Settings</source>
+        <translation>Redefinir configurações</translation>
+    </message>
+    <message>
+        <source>Reset all settings to their defaults?
+
+Your installed dictionaries, audio, frequency lists, and theme are kept.</source>
+        <translation>Redefinir todas as configurações para o padrão?
+
+Seus dicionários instalados, áudio, listas de frequência e tema são mantidos.</translation>
+    </message>
+    <message>
+        <source>✓ Reset to defaults</source>
+        <translation>✓ Redefinido para o padrão</translation>
     </message>
     <message>
         <source>Importing pitch accent dictionary…</source>
@@ -5180,12 +5325,6 @@ Os valores importados substituem suas configurações atuais; qualquer coisa que
     <message>
         <source>Could not open the known words list: %1</source>
         <translation>Não foi possível abrir a lista de palavras conhecidas: %1</translation>
-    </message>
-    <message>
-        <source>The imported subtitle regex filter is invalid and has been disabled:
-%1</source>
-        <translation type="vanished">O filtro de regex de legenda importado é inválido e foi desativado:
-%1</translation>
     </message>
 </context><context>
     <name>SetupWizard</name>
@@ -5245,11 +5384,11 @@ Os valores importados substituem suas configurações atuais; qualquer coisa que
     </message>
     <message>
         <source>Episode Mining Tab</source>
-        <translation type="unfinished" />
+        <translation>Aba de mineração de episódios</translation>
     </message>
     <message>
         <source>Process a single video episode to create vocabulary flashcards</source>
-        <translation type="unfinished" />
+        <translation>Processe um único episódio de vídeo para criar cartões de vocabulário</translation>
     </message>
     <message>
         <source>File Selection</source>
@@ -5432,7 +5571,7 @@ Os valores importados substituem suas configurações atuais; qualquer coisa que
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Falhou — consulte o log</translation>
+        <translation>Falhou — consulte o log</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -5622,7 +5761,7 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>
-        <translation type="unfinished" />
+        <translation>A pré-visualização de vídeo não está disponível: o componente de vídeo incluído (libmpv) não pôde ser carregado neste PC. Tente reinstalar o Anki Miner; se o problema persistir, relate-o e anexe seu log de %USERPROFILE%\.anki_miner\anki_miner.log.</translation>
     </message>
     <message>
         <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
@@ -5680,7 +5819,7 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Falhou — consulte o log</translation>
+        <translation>Falhou — consulte o log</translation>
     </message>
     <message>
         <source>Complete — %1 files processed</source>
@@ -6214,11 +6353,11 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
     </message>
     <message>
         <source>Unfavorite</source>
-        <translation type="unfinished" />
+        <translation>Desfavoritar</translation>
     </message>
     <message>
         <source>Favorite</source>
-        <translation type="unfinished" />
+        <translation>Favoritar</translation>
     </message>
     <message>
         <source>Click to add to / remove from favorites.</source>
@@ -6244,7 +6383,7 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
     </message>
     <message>
         <source>Close</source>
-        <translation type="unfinished">Fechar</translation>
+        <translation>Fechar</translation>
     </message>
     <message>
         <source>Anki Miner v%1 is available!</source>
@@ -6677,5 +6816,17 @@ Continuar com a importação?</translation>
     <message>
         <source>Anki Miner — Unexpected Error</source>
         <translation>Anki Miner — Erro inesperado</translation>
+    </message>
+    <message>
+        <source>%1: %2
+
+Version: %3
+Platform: %4
+Log file: %5</source>
+        <translation>%1: %2
+
+Versão: %3
+Plataforma: %4
+Arquivo de log: %5</translation>
     </message>
 </context></TS>

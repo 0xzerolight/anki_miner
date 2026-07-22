@@ -4,6 +4,7 @@ import contextlib
 import logging
 from collections.abc import Callable
 from dataclasses import replace
+from functools import partial
 from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
@@ -14,11 +15,12 @@ from anki_miner.gui.utils.service_factory import (
     create_episode_processor,
     create_shared_lookup_services,
 )
+from anki_miner.gui.workers._queue_worker_base import queue_preflight_error
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.models.batch_queue import BatchQueue, QueueItemStatus
-from anki_miner.orchestration.episode_processor import EpisodeProcessor
+from anki_miner.orchestration.episode_processor import EpisodeProcessor, require_usable_offline_provider
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.dictionary.registry import stale_dict_reimport_error
 
@@ -163,6 +165,17 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
         for msg in shared_lookup.load_result.warnings:
             self.presenter.show_warning(msg)
         try:
+            preflight_error = queue_preflight_error(
+                shared_anki_service.verify_card_target,
+                partial(
+                    require_usable_offline_provider,
+                    self.config,
+                    shared_lookup.definition_service,
+                ),
+            )
+            if preflight_error is not None:
+                self.error.emit(preflight_error)
+                return total_cards
             total_cards = self._process_items(total_cards, shared_anki_service, shared_lookup)
         finally:
             try:

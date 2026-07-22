@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.manual_pair_worker import ManualPairWorkerThread
 from anki_miner.models.processing import ProcessingResult
 
@@ -184,6 +185,46 @@ def test_outer_exception_emitted_on_error_signal(tmp_path, qapp):
 
     proc.process_episode.assert_not_called()
     assert errors == ["callback exploded"]
+
+
+def test_missing_offline_dictionary_aborts_manual_run_once(tmp_path, qapp):
+    proc = _ok_processor()
+    message = (
+        "No usable offline dictionary is installed. "
+        "Use Tools → Download Recommended Resources or Settings → Dictionaries."
+    )
+    preflight_order: list[str] = []
+
+    def _check_card_target() -> None:
+        preflight_order.append("card-target")
+
+    def _check_offline_dictionary() -> None:
+        preflight_order.append("offline-dictionary")
+        raise SetupError(message)
+
+    proc._preflight_card_target.side_effect = _check_card_target
+    proc.check_offline_dictionary.side_effect = _check_offline_dictionary
+    worker = ManualPairWorkerThread(
+        proc,
+        [_pair(tmp_path, 1), _pair(tmp_path, 2)],
+        progress_callback=None,
+    )
+    errors: list[str] = []
+    results: list[list[ProcessingResult]] = []
+    started: list[int] = []
+    worker.error.connect(errors.append)
+    worker.result_ready.connect(results.append)
+    worker.batch_started.connect(started.append)
+
+    worker.run()
+
+    assert errors == [message]
+    assert preflight_order == ["card-target", "offline-dictionary"]
+    assert results == []
+    assert started == []
+    proc._preflight_card_target.assert_called_once_with()
+    proc.check_offline_dictionary.assert_called_once_with()
+    proc.process_episode.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

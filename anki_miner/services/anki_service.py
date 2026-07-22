@@ -22,6 +22,7 @@ from anki_miner.services.anki_note_builder import (
 from anki_miner.services.anki_note_builder import (
     _strip_for_dedup,
     build_note,
+    configured_target_field_names,
 )
 from anki_miner.utils.i18n import tr_format
 
@@ -226,14 +227,7 @@ class AnkiService:
             )
             or []
         )
-        required = {v for v in self.config.anki_fields.values() if v}
-        # Validate only the active card-type marker (build_note writes just that
-        # one). Inactive markers stay unvalidated so a non-JPMN note type without
-        # them still passes pre-flight.
-        if self.config.card_type:
-            marker = self.config.card_type_marker_fields.get(self.config.card_type, "")
-            if marker:
-                required.add(marker)
+        required = configured_target_field_names(self.config)
         missing = required - actual
         if missing:
             _sorted_actual = sorted(actual)

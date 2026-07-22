@@ -37,6 +37,17 @@ OPTIONAL_FIELD_KEYS = {
     "expression_audio",
 }
 
+
+def configured_target_field_names(config: AnkiMinerConfig) -> set[str]:
+    """Return non-empty note fields written for the configured card target."""
+    field_names = {value for value in config.anki_fields.values() if value}
+    if config.card_type:
+        marker_field = config.card_type_marker_fields.get(config.card_type, "")
+        if marker_field:
+            field_names.add(marker_field)
+    return field_names
+
+
 # Optional fields whose value is pre-rendered HTML/SVG inserted verbatim (like
 # glossary), NOT html.escape()d by the OPTIONAL pass — escaping would turn the
 # tags into literal text. They follow the skip-when-empty contract: an absent

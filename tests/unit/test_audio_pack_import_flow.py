@@ -113,6 +113,7 @@ def stub_worker(monkeypatch):
         instance.import_finished = MagicMock()
         instance.failed = MagicMock()
         instance.cancelled = MagicMock()
+        instance.finished = MagicMock()
         instance.cancel = MagicMock()
         instance.start = MagicMock()
         instance.isRunning = MagicMock(return_value=False)
@@ -236,6 +237,42 @@ class TestAddPackNoPacks:
 
 
 class TestAddPackSingleHappyPath:
+    def test_save_failure_reports_partial_success_at_real_boundary(
+        self, wired_window, monkeypatch, stub_worker, tmp_path
+    ):
+        from anki_miner.gui.utils.config_manager import GUIConfigManager
+
+        _window, _titles, tabs = wired_window
+        tab = tabs["Settings"]
+        flow = tab._audio_pack_import_flow
+        pack_dir = tmp_path / "forvo"
+        pack_dir.mkdir()
+        warnings = _capture_warnings(monkeypatch)
+        infos = _capture_infos(monkeypatch)
+        monkeypatch.setattr(tab.audio_panel, "refresh_registry", lambda: None)
+        monkeypatch.setattr(
+            "anki_miner.gui.controllers.audio_pack_import_flow.QProgressDialog",
+            MagicMock(return_value=MagicMock()),
+        )
+
+        def fail_persist(_config: AnkiMinerConfig) -> None:
+            raise RuntimeError("audio config write failed")
+
+        original_save = GUIConfigManager.save_config
+        monkeypatch.setattr(GUIConfigManager, "save_config", fail_persist)
+        try:
+            flow.add_pack(_scan_result=(str(pack_dir), [(pack_dir, "forvo")]))
+            instance = stub_worker.instances[0]
+            instance.import_finished.connect.call_args[0][0]("forvo-pack", {})
+        finally:
+            monkeypatch.setattr(GUIConfigManager, "save_config", original_save)
+
+        assert tab.audio_panel._add_btn.isEnabled()
+        assert infos == []
+        assert len(warnings) == 1
+        assert "import completed" in warnings[0][1].lower()
+        assert "audio config write failed" in warnings[0][1]
+
     def test_worker_called_and_chain_updated_on_success(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = tmp_path / "forvo_pack"
         pack_dir.mkdir()
@@ -490,6 +527,7 @@ class TestReimportPack:
         inst = stub_worker.instances[0]
         on_done = inst.import_finished.connect.call_args[0][0]
         on_done("my-pack-id", {"entry_count": 3})
+        inst.finished.connect.call_args[0][0]()
 
         assert infos, "success dialog must appear"
         # reimport does not change the chain — only refreshes the panel view

@@ -797,7 +797,7 @@ class TestCloseEventFlushesSettingsAutosave:
         """Insert a REAL SettingsTab (tab composition normally lives in app.py)
         and mirror app.py's config_changed → update_config wiring so a flushed
         commit actually reaches MainWindow.config."""
-        tab = SettingsTab(test_config)
+        tab = SettingsTab(test_config, commit_config=main_window.update_config)
         qtbot.addWidget(tab)
         main_window.tabs.addTab(tab, "Settings")
         tab.config_changed.connect(lambda cfg: main_window.update_config(cfg))

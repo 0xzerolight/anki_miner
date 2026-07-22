@@ -98,20 +98,61 @@ class TestImportYomitanZip:
         finally:
             conn.close()
 
-    def test_progress_callback_fires(self, tmp_path: Path):
+    def test_progress_reaches_total_only_after_commit_and_promotion(self, tmp_path: Path):
         zip_path = build_yomitan_zip(tmp_path / "src" / "test.zip")
         dest_root = tmp_path / "dicts"
-        events: list[tuple[int, int, str]] = []
+        final_db = dest_root / "test-dict-v1" / "index.sqlite"
+        events: list[tuple[int, int, str, bool, int | None]] = []
+
+        def record_progress(cur: int, total: int, msg: str) -> None:
+            promoted = final_db.exists()
+            committed_count: int | None = None
+            if promoted:
+                conn = open_readonly(final_db)
+                try:
+                    committed_count = conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
+                finally:
+                    conn.close()
+            events.append((cur, total, msg, promoted, committed_count))
 
         import_yomitan_zip(
             zip_path,
             dest_root,
+            progress=record_progress,
+        )
+
+        completion_events = [event for event in events if event[1] > 0 and event[0] == event[1]]
+        assert [(msg, promoted, count) for _, _, msg, promoted, count in completion_events] == [("Done", True, 2)]
+
+        stage_positions: list[int] = []
+        for stage in ("validating", "extracting", "inserting", "finalizing"):
+            position, event = next(
+                (position, event) for position, event in enumerate(events) if stage in event[2].lower()
+            )
+            assert event[:2] == (0, 0)
+            stage_positions.append(position)
+        assert stage_positions == sorted(stage_positions)
+
+    def test_large_bank_reports_monotonic_progress_between_batches(self, tmp_path: Path):
+        term_bank = [[f"term-{i}", f"reading-{i}", "", "", 0, [f"definition-{i}"], i, ""] for i in range(5001)]
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "large.zip",
+            term_banks=[term_bank],
+            tag_banks=[],
+        )
+        events: list[tuple[int, int, str]] = []
+
+        import_yomitan_zip(
+            zip_path,
+            tmp_path / "dicts",
             progress=lambda cur, total, msg: events.append((cur, total, msg)),
         )
 
-        assert events  # at least one progress event
-        final_cur, final_total, _ = events[-1]
-        assert final_cur == final_total
+        batch_events = [event for event in events if event[0] > 0 and event[1] == 0]
+        assert len(batch_events) >= 2
+        inserted_counts = [cur for cur, _, _ in batch_events]
+        assert inserted_counts == sorted(inserted_counts)
+        assert inserted_counts[:2] == [5000, 5001]
 
     def test_rejects_old_format_version(self, tmp_path: Path):
         zip_path = build_yomitan_zip(tmp_path / "src" / "old.zip", format_version=2)
@@ -248,6 +289,117 @@ class TestImportYomitanZip:
         # dest_root must not contain a partial dict folder
         assert not any(dest_root.iterdir()) if dest_root.exists() else True
 
+    def test_cancel_between_batches_cleans_staging_without_promotion(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import tempfile
+
+        term_bank = [[f"term-{i}", f"reading-{i}", "", "", 0, [f"definition-{i}"], i, ""] for i in range(5001)]
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "large.zip",
+            term_banks=[term_bank],
+            tag_banks=[],
+        )
+        dest_root = tmp_path / "dicts"
+        scratch = tmp_path / "scratch"
+        scratch.mkdir()
+        monkeypatch.setattr(tempfile, "tempdir", str(scratch))
+        events: list[tuple[int, int, str]] = []
+
+        def cancel_check() -> bool:
+            return any(cur >= 5000 and total == 0 for cur, total, _ in events)
+
+        with pytest.raises(SetupError, match="Import cancelled"):
+            import_yomitan_zip(
+                zip_path,
+                dest_root,
+                progress=lambda cur, total, msg: events.append((cur, total, msg)),
+                cancel_check=cancel_check,
+            )
+
+        assert any(cur == 5000 and total == 0 for cur, total, _ in events)
+        assert not (dest_root / "test-dict-v1").exists()
+        assert list(scratch.iterdir()) == []
+
+    def test_cancel_during_extraction_cleans_partial_temp_dir(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import tempfile
+        import zipfile
+
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "extract.zip",
+            media_files={f"filler/{i}.bin": b"x" for i in range(3)},
+        )
+        dest_root = tmp_path / "dicts"
+        scratch = tmp_path / "scratch"
+        scratch.mkdir()
+        monkeypatch.setattr(tempfile, "tempdir", str(scratch))
+        extracted: list[str] = []
+        original_extract = zipfile.ZipFile.extract
+
+        def extract_member(
+            archive: zipfile.ZipFile,
+            member: str | zipfile.ZipInfo,
+            path: str | Path | None = None,
+            pwd: bytes | None = None,
+        ) -> str:
+            result = original_extract(archive, member, path, pwd)
+            extracted.append(member.filename if isinstance(member, zipfile.ZipInfo) else member)
+            return result
+
+        monkeypatch.setattr(zipfile.ZipFile, "extract", extract_member)
+
+        with pytest.raises(SetupError, match="Import cancelled"):
+            import_yomitan_zip(
+                zip_path,
+                dest_root,
+                cancel_check=lambda: bool(extracted),
+            )
+
+        assert len(extracted) == 1
+        assert not (dest_root / "test-dict-v1").exists()
+        assert list(scratch.iterdir()) == []
+
+    def test_cancel_during_finalization_stops_before_promotion(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        import shutil
+
+        zip_path = build_yomitan_zip(tmp_path / "src" / "test.zip")
+        dest_root = tmp_path / "dicts"
+        cancel_requested = False
+        original_copy2 = shutil.copy2
+
+        def copy2_and_cancel(
+            src: str | Path,
+            dst: str | Path,
+            *,
+            follow_symlinks: bool = True,
+        ) -> str | Path:
+            nonlocal cancel_requested
+            copied = original_copy2(src, dst, follow_symlinks=follow_symlinks)
+            cancel_requested = True
+            return copied
+
+        monkeypatch.setattr(shutil, "copy2", copy2_and_cancel)
+
+        with pytest.raises(SetupError, match="Import cancelled"):
+            import_yomitan_zip(
+                zip_path,
+                dest_root,
+                cancel_check=lambda: cancel_requested,
+            )
+
+        assert cancel_requested
+        assert not (dest_root / "test-dict-v1").exists()
+
     def test_duplicate_import_fails_before_any_staging_work(self, tmp_path: Path):
         """4.7a: a re-add of an existing dict (overwrite=False) must fail right
         after deriving dict_id — before any per-file rendering/progress."""
@@ -262,8 +414,10 @@ class TestImportYomitanZip:
                 dest_root,
                 progress=lambda c, t, m: events.append((c, t, m)),
             )
-        # No staging/render work happened: the progress callback never fired.
-        assert events == []
+        messages = [message.lower() for _, _, message in events]
+        assert any("validating" in message for message in messages)
+        assert any("extracting" in message for message in messages)
+        assert not any("insert" in message or "finaliz" in message or message == "done" for message in messages)
 
     def test_nested_index_json_raises_rezip_diagnostic(self, tmp_path: Path):
         """4.7b: a zip whose index.json is nested under a redundant directory

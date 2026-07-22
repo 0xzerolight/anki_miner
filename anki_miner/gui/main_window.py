@@ -1,8 +1,11 @@
 """Main window for Anki Miner GUI."""
 
 import logging
+import sys
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import replace
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
@@ -27,6 +30,7 @@ from anki_miner.gui.constants import (
     WINDOW_MIN_WIDTH,
 )
 from anki_miner.gui.controllers import BackgroundTaskController
+from anki_miner.gui.launch import get_effective_log_path
 from anki_miner.gui.presenters import GUIPresenter
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
@@ -39,12 +43,24 @@ from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
 from anki_miner.models import ProcessingResult, ValidationResult
 from anki_miner.services import ShortcutResult, ShortcutService, ValidationService
 from anki_miner.services.anki_service import AnkiService
+from anki_miner.utils.bundled_binary import frozen_state
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.gui.capabilities import CapabilityTarget
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome
 
 logger = logging.getLogger(__name__)
+
+
+def open_log_folder(log_path: Path) -> None:
+    """Open the parent directory of *log_path* in the system file manager."""
+    from PyQt6.QtCore import QUrl
+    from PyQt6.QtGui import QDesktopServices
+
+    log_folder = Path(log_path).parent
+    log_folder.mkdir(parents=True, exist_ok=True)
+    QDesktopServices.openUrl(QUrl.fromLocalFile(str(log_folder)))
 
 
 class MainWindow(QMainWindow):
@@ -119,21 +135,22 @@ class MainWindow(QMainWindow):
 
         self._update_banner: UpdateBanner | None = None
 
-    def commit_boot(self) -> None:
-        """Commit startup state, then start every boot background task."""
+    def commit_boot(self, *, suppress_optional: bool = False) -> None:
+        """Commit startup state, then start boot work unless suppressed."""
         if self._boot_committed:
             return
 
-        self._run_optional_boot_step(
-            "legacy frequency-source repair",
-            self._maybe_repair_legacy_frequency_source_name,
-        )
+        if not suppress_optional:
+            self._run_optional_boot_step(
+                "legacy frequency-source repair",
+                self._maybe_repair_legacy_frequency_source_name,
+            )
 
         previous = self.config.last_known_version
         if previous != __version__:
             self.update_config(replace(self.config, last_known_version=__version__))
 
-        if previous and previous != __version__:
+        if not suppress_optional and previous and previous != __version__:
             QMessageBox.information(
                 self,
                 self.tr("Anki Miner updated"),
@@ -149,6 +166,9 @@ class MainWindow(QMainWindow):
             )
 
         self._boot_committed = True
+        if suppress_optional:
+            return
+
         self._validation_silent = True
         self._run_optional_boot_step("startup validation", self._run_validation)
         if self.config.check_for_updates:
@@ -483,27 +503,40 @@ class MainWindow(QMainWindow):
 
     def _open_log_folder(self) -> None:
         """Open the log folder in the system file manager (Help → Open Log Folder)."""
-        from PyQt6.QtCore import QUrl
-        from PyQt6.QtGui import QDesktopServices
-
-        log_folder = self.config.log_path.parent
-        log_folder.mkdir(parents=True, exist_ok=True)
-        QDesktopServices.openUrl(QUrl.fromLocalFile(str(log_folder)))
+        open_log_folder(get_effective_log_path(self.config.log_path))
 
     def _create_desktop_shortcut(self) -> None:
         """Create a desktop shortcut via ShortcutService and report the result."""
-        self._run_shortcut_work(show_result=True, skip_if_exists=False)
+        self._run_shortcut_work(show_result=True, skip_if_exists=False, include_start_menu=False)
 
     def _maybe_create_shortcut_on_first_run(self) -> None:
         """Auto-create a desktop shortcut on first launch; persist the flag."""
-        self._run_shortcut_work(show_result=False, skip_if_exists=True)
+        if sys.platform == "win32" and frozen_state()[0]:
+            if not self.config.first_run_shortcut_done:
+                try:
+                    self.update_config(replace(self.config, first_run_shortcut_done=True))
+                except Exception:
+                    logger.exception("Could not persist desktop shortcut attempt state")
+            return
+        self._run_shortcut_work(show_result=False, skip_if_exists=True, include_start_menu=True)
 
-    def _run_shortcut_work(self, *, show_result: bool, skip_if_exists: bool) -> None:
+    def _run_shortcut_work(
+        self,
+        *,
+        show_result: bool,
+        skip_if_exists: bool,
+        include_start_menu: bool,
+    ) -> None:
         if self._shortcut_work_in_flight:
             return
         self._shortcut_work_in_flight = True
 
         def work() -> ShortcutResult | None:
+            if sys.platform == "win32":
+                return ShortcutService.create_shortcut(
+                    skip_if_exists=skip_if_exists,
+                    include_start_menu=include_start_menu,
+                )
             if skip_if_exists and ShortcutService.shortcut_exists():
                 return None
             return ShortcutService.create_shortcut()
@@ -552,11 +585,11 @@ class MainWindow(QMainWindow):
         # XML migration writes; stop an in-flight migration first (same-slot
         # concurrent-writer race, see cancel_jmdict_migration).
         self.background_tasks.cancel_jmdict_migration()
-        new_config = run_resource_download(self, self.config, release_resources=self.release_dictionary_resources)
-        if new_config is not None:
+        outcome = run_resource_download(self, self.config, release_resources=self.release_dictionary_resources)
+        if outcome is not None and outcome.summary.succeeded:
             # update_config (not from_settings) propagates via config_refreshed
             # to all tabs incl. Settings, and persists to disk.
-            self.update_config(new_config)
+            self.update_config(outcome.config)
 
     def _run_capability_browser_tool(self) -> None:
         """Tools-menu handler: open the Find a Feature browser.
@@ -579,9 +612,28 @@ class MainWindow(QMainWindow):
 
         # Wizard's Resources page can download into the JMdict migration slot.
         self.background_tasks.cancel_jmdict_migration()
-        new_config = run_setup_wizard(self, self.config)
-        if new_config is not None:
-            self.update_config(new_config)
+        outcome = run_setup_wizard(self, self.config)
+        self._commit_setup_wizard_outcome(outcome, first_run_offer=False)
+
+    def _commit_setup_wizard_outcome(
+        self,
+        outcome: "SetupWizardOutcome",
+        *,
+        first_run_offer: bool,
+    ) -> None:
+        """Merge live one-way flags, then persist one wizard outcome."""
+        live_config = self.config
+        setup_done = (
+            live_config.first_run_setup_done or outcome.consumes_first_run_offer
+            if first_run_offer
+            else live_config.first_run_setup_done
+        )
+        merged = replace(
+            outcome.config,
+            first_run_shortcut_done=(live_config.first_run_shortcut_done or outcome.config.first_run_shortcut_done),
+            first_run_setup_done=setup_done,
+        )
+        self.update_config(merged)
 
     def _restyle_mined_cards(self) -> None:
         """Tools-menu handler: re-apply the built-in glossary styling to already-mined cards.
@@ -646,14 +698,13 @@ class MainWindow(QMainWindow):
         self.background_tasks.start_restyle_cards(service, self.config, on_progress, on_result, on_error)
 
     def _maybe_offer_first_run_setup(self) -> None:
-        """Offer the guided setup wizard on first launch; persist the flag.
+        """Offer guided setup and consume the offer only on finish or Skip.
 
         Broadened (Task 3): the wizard is offered whenever the run hasn't been
         completed (``not first_run_setup_done``) — no longer gated on freq/pitch
         file presence, since the wizard's Resources step covers those. The
-        wizard's returned (possibly partial) config is folded in via
-        ``update_config``. The ``finally`` guarantees ``first_run_setup_done`` is
-        set even if the wizard raises, so it never re-fires on the next launch.
+        wizard's returned partial config is always persisted. Dismissal leaves
+        the offer unconsumed; failures are logged and re-offered next launch.
         """
         from anki_miner.gui.widgets.dialogs.setup_wizard import run_setup_wizard
 
@@ -668,17 +719,12 @@ class MainWindow(QMainWindow):
         # this offer; its slot is the wizard download's target — stop it first.
         self.background_tasks.cancel_jmdict_migration()
 
-        config = self.config
         try:
-            returned = run_setup_wizard(self, config)
-            if returned is not None:
-                config = returned
-        finally:
-            # Persist once, combining any wizard mutations with the flag so we
-            # don't double-save or clobber them. The finally guarantees the flag
-            # is set even if the wizard raises, so it never re-fires. `config` is
-            # the wizard's returned config when it completed, else the original.
-            self.update_config(replace(config, first_run_setup_done=True))
+            outcome = run_setup_wizard(self, self.config)
+        except Exception:
+            logger.exception("Setup wizard failed")
+            return
+        self._commit_setup_wizard_outcome(outcome, first_run_offer=True)
 
     def _maybe_prompt_stale_dictionaries(self) -> None:
         """Dispatch the schema-staleness scan off-thread; prompt in the callback (4.0).
@@ -795,6 +841,19 @@ class MainWindow(QMainWindow):
         """
         silent = self._validation_silent
         self._validation_silent = False
+
+        if silent:
+            if not result.issues:
+                logger.info("Startup validation completed: issues=0")
+            else:
+                component_counts = Counter(issue.component for issue in result.issues)
+                logger.warning(
+                    "Startup validation completed: issues=%d errors=%d warnings=%d components=%s",
+                    len(result.issues),
+                    len(result.get_errors()),
+                    len(result.get_warnings()),
+                    ",".join(f"{name}={count}" for name, count in sorted(component_counts.items())),
+                )
 
         # Update system status indicators
         ankiconnect_ok = all(issue.component != "AnkiConnect" for issue in result.issues)

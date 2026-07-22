@@ -77,6 +77,7 @@ setuptools==82.0.1
 shellingham==1.5.4
 tokenizers==0.23.1
 tqdm==4.68.3
+truststore==0.10.4
 typer==0.26.7
 typing_extensions==4.15.0
 unidic-lite==1.0.8
