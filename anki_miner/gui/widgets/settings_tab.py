@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, ChainEntry, FreqEntry
+from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, ChainEntry, FreqEntry, create_default_config
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
 from anki_miner.gui.controllers.audio_pack_import_flow import AudioPackImportFlow
@@ -32,6 +32,7 @@ from anki_miner.gui.controllers.zip_import_flow import YomitanCsvLabels, ZipImpo
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
+from anki_miner.gui.utils.qt_helpers import install_no_scroll_on_inputs
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels import (
@@ -121,6 +122,17 @@ class SettingsTab(QWidget):
             "first_run_setup_done",
             "config_version",
         }
+    )
+
+    # UI-appearance fields kept by Reset to Defaults (Issue #99) IN ADDITION to
+    # GUIConfigManager.machine_specific_fields().  These are portable (so not
+    # machine-specific), but they are applied live by the UI panel / Theme
+    # singleton, not repainted by _load_config — resetting them would leave the
+    # running session's theme/font unchanged yet persist defaults, silently
+    # wiping the user's theme on the next launch.  Preserving them (as
+    # _on_import_settings already does) keeps Reset safe and predictable.
+    _RESET_PRESERVE_UI: frozenset[str] = frozenset(
+        {"theme", "theme_favorites", "ui_font_scale", "ui_zoom", "ui_language"}
     )
 
     def __init__(self, config: AnkiMinerConfig, parent=None):
@@ -264,11 +276,27 @@ class SettingsTab(QWidget):
 
         # Status row at bottom. The Save Settings button is gone — settings
         # auto-save (debounced) — but its inline "✓ Saved" confirmation stays
-        # so each auto-commit is still visible. The Reset to Defaults button
-        # was removed deliberately: an accidental press destroyed the whole
-        # user config for near-zero utility; do not reintroduce it.
+        # so each auto-commit is still visible.
+        #
+        # Reset to Defaults (Issue #99) is back but deliberately hard to
+        # mis-fire: it sits far-left, separated from Export/Import by a wide
+        # stretch; its confirm defaults to No; it has no keyboard shortcut; and
+        # it preserves installed resources + theme (see
+        # _on_reset_to_defaults_clicked). The earlier version was removed
+        # because a stray Ctrl+R wiped the whole config in one keystroke.
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.sm)
+
+        self.reset_settings_button = ModernButton(self.tr("Reset to Defaults…"), variant="secondary")
+        self.reset_settings_button.setToolTip(
+            self.tr(
+                "Reset settings to defaults. Installed dictionaries, audio, "
+                "frequency lists, and your theme are kept."
+            )
+        )
+        self.reset_settings_button.clicked.connect(self._on_reset_to_defaults_clicked)
+        button_layout.addWidget(self.reset_settings_button)
+
         button_layout.addStretch()
 
         self.export_settings_button = ModernButton(self.tr("Export Settings…"), variant="secondary")
@@ -540,6 +568,8 @@ class SettingsTab(QWidget):
         scroll_area.setFrameShape(QFrame.Shape.NoFrame)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll_area.setWidget(widget)
+        # Issue #99: keep hover-scroll from mutating spin/combo values in the panel.
+        install_no_scroll_on_inputs(widget)
         return scroll_area
 
     def _load_config(self) -> None:
@@ -953,6 +983,39 @@ class SettingsTab(QWidget):
         self.config_changed.emit(new_config)
         self._load_config()
         self._flash_save_status(self.tr("✓ Imported"))
+
+    def _on_reset_to_defaults_clicked(self) -> None:
+        """Reset settings to defaults after an explicit confirm (Issue #99).
+
+        Deliberately safe: cancels any pending debounced edit first, confirms
+        with No as the default button, and preserves machine-specific fields
+        (installed dictionary/audio/frequency chains, paths, first-run state)
+        plus the UI-appearance fields (theme/font/zoom/language) — so a reset
+        can neither wipe installed resources nor silently drop the user's theme
+        on the next launch. Only the behavioural settings that Issue #99's
+        scroll-through can corrupt are returned to defaults.
+        """
+        if self._debounce_timer.isActive():
+            # A pending edit would re-commit ~1s later and clobber the reset.
+            self._debounce_timer.stop()
+        reply = QMessageBox.question(
+            self,
+            self.tr("Reset Settings"),
+            self.tr(
+                "Reset all settings to their defaults?\n\n"
+                "Your installed dictionaries, audio, frequency lists, and theme are kept."
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,  # safe default focus / Enter target
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        preserve = GUIConfigManager.machine_specific_fields() | self._RESET_PRESERVE_UI
+        preserved = {name: getattr(self.config, name) for name in preserve}
+        self.config = replace(create_default_config(), **preserved)
+        self._load_config()  # repaint the reset panels (under the _loading guard)
+        self.config_changed.emit(self.config)  # persist via MainWindow.update_config
+        self._flash_save_status(self.tr("✓ Reset to defaults"))
 
     def _flash_save_status(self, text: str) -> None:
         """Show a transient, non-modal confirmation beside the Save button.
