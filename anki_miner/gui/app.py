@@ -33,6 +33,7 @@ from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 from anki_miner.gui.widgets.video_tab import VideoTab
 from anki_miner.services.stats_service import StatsService
 from anki_miner.utils import alass_resolver
+from anki_miner.utils.file_utils import ensure_directory
 
 logger = logging.getLogger(__name__)
 
@@ -277,6 +278,29 @@ def _apply_ui_zoom(config: AnkiMinerConfig | None) -> None:
         return
     if config.ui_zoom != 1.0:
         os.environ["QT_SCALE_FACTOR"] = repr(float(config.ui_zoom))
+
+
+def _ensure_default_dicts_root(config: AnkiMinerConfig | None) -> None:
+    """Create the default ``dicts_root`` so a clean install starts valid.
+
+    Nothing else creates ``~/.anki_miner/dicts`` before the first dictionary
+    import, so on a clean install the Settings → Dictionaries storage-folder
+    selector renders a red "Folder not found" border until then (Issue #100).
+
+    Deliberately limited to the DEFAULT location: a user-relocated
+    ``dicts_root`` (e.g. an external drive) that is missing/unmounted must
+    stay visibly invalid — eagerly creating it here would plant a phantom
+    local directory at the mount point and mask the misconfiguration.
+    Creation failure only warns; it must never block boot.
+    """
+    if config is None:
+        return
+    if config.dicts_root != ANKI_MINER_HOME / "dicts":
+        return
+    try:
+        ensure_directory(config.dicts_root)
+    except OSError:
+        logger.warning("Could not create default dicts_root at %s", config.dicts_root, exc_info=True)
 
 
 @runtime_checkable
@@ -652,6 +676,10 @@ def main():
             _configure_logging(_log_path)
         except Exception:
             logger.exception("Failed to configure custom log path; keeping startup logger")
+
+    # Clean-install nicety: make the default dicts_root exist before any
+    # settings UI validates it (Issue #100 red-border state).
+    _ensure_default_dicts_root(_early_config)
 
     # Whole-UI zoom: must be set before QApplication is constructed (Qt reads
     # QT_SCALE_FACTOR once, at construction). Restart-to-apply by nature.
