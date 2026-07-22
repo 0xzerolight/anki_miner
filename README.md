@@ -176,13 +176,15 @@ List of ideas for future versions of Anki Miner. Not in priority order. Feature 
   - [x] UI language selection.
   - [x] Local subtitle creation tab: Opt-in tab to locally generate subtitles.
   - [x] Reading tab: Mine manga and books.
-  - [ ] Media library: Expand Analytics tab to display local media library across all media forms.
   - [x] Backfill tool.
+  - [ ] Media library: Expand Analytics tab to display local media library across all media forms.
   - [ ] Automatic subtitle downloading.
 
 - **Long-term**:
+  - [x] Android port -- https://github.com/0xzerolight/anki_miner_android
   - [ ] Beyond Japanese: Mining other languages.
-  - [ ] Android port.
+  - [ ] Anki Miner browser extension.
+
 
 ## Contributing
 
