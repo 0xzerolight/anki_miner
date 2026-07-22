@@ -2,9 +2,8 @@
 
 Fetches a URL to a uniquely-named ``.part`` temp file inside a caller-provided
 directory and returns that temp path. It NEVER writes the final destination —
-the caller routes the file to the right importer (dict/freq through their
-importers, the raw pitch TSV via ``shutil.move``). GUI-free and importer-free
-by design.
+the caller routes the file to the right importer or validated destination.
+GUI-free and importer-free by design.
 
 The download pattern (browser User-Agent, ``raise_for_status``, chunked
 ``iter_content`` with a size cap, atomic staging via ``NamedTemporaryFile``)
@@ -63,13 +62,14 @@ def download_to_temp(
     progress: DownloadProgressFn | None = None,
     cancelled_check: CancelledCheck | None = None,
     max_bytes: int | None = None,
+    read_timeout_seconds: float | None = None,
 ) -> Path:
     """Download *url* to a ``.part`` temp file in *dest_dir* and return it.
 
     Args:
         url: The resource URL to download.
         dest_dir: Directory to stage the temp file in (created if missing).
-            Never the final destination — the caller renames the returned path.
+            Never the final destination — the caller routes the returned path.
         progress: Optional callback ``(downloaded_bytes, total_bytes_or_0,
             message)`` invoked periodically. ``total`` is 0 when the server
             sends no Content-Length.
@@ -81,6 +81,9 @@ def download_to_temp(
             once this many bytes have been received. ``None`` (the default)
             uses ``MAX_DOWNLOAD_BYTES`` (600 MB); callers fetching larger
             assets (e.g. multi-hundred-MB CUDA wheels) pass a higher value.
+        read_timeout_seconds: Optional per-call read timeout. ``None`` keeps the
+            shared 60-second default; cancellation-sensitive callers may pass a
+            shorter interval so stalled reads return to their cancel check.
 
     Returns:
         Path to the staged ``.part`` temp file.
@@ -91,6 +94,7 @@ def download_to_temp(
     """
     if max_bytes is None:
         max_bytes = MAX_DOWNLOAD_BYTES
+    timeout = _TIMEOUT if read_timeout_seconds is None else (_TIMEOUT[0], read_timeout_seconds)
 
     dest_dir.mkdir(parents=True, exist_ok=True)
 
@@ -100,7 +104,7 @@ def download_to_temp(
     tmp_path: Path | None = None
     try:
         with _new_session() as session:
-            response = session.get(url, timeout=_TIMEOUT, stream=True)
+            response = session.get(url, timeout=timeout, stream=True)
             try:
                 response.raise_for_status()
 
@@ -135,8 +139,10 @@ def download_to_temp(
         cleanup_part(tmp_path)
         raise
     except (requests.RequestException, OSError) as exc:
-        logger.debug("resource download failed for %s: %s", url, exc)
         cleanup_part(tmp_path)
+        if cancelled_check is not None and cancelled_check():
+            raise SetupError("Download cancelled") from exc
+        logger.debug("resource download failed for %s: %s", url, exc)
         raise SetupError(f"Failed to download {url}: {exc}") from exc
 
     # tmp_path is always set here: NamedTemporaryFile assigns it before any

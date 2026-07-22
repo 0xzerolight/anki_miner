@@ -21,6 +21,7 @@ from anki_miner.config import create_default_config
 from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.dialogs import resource_download_dialog as mod
 from anki_miner.gui.widgets.dialogs.resource_download_dialog import (
+    ResourceDownloadOutcome,
     _show_results_dialog,
     run_resource_download,
 )
@@ -188,10 +189,12 @@ def test_release_true_proceeds_to_modal():
     ran_modal.assert_called_once()
 
 
-def test_partial_success_then_cancel_updates_config_without_results_dialog():
+def test_partial_success_then_cancel_returns_summary_and_shows_honest_results():
     config = create_default_config()
     parent = MagicMock()
     summary = _successful_summary()
+    summary.cancelled = True
+    summary.requested_count = 3
     updated = create_default_config()
 
     with (
@@ -201,9 +204,14 @@ def test_partial_success_then_cancel_updates_config_without_results_dialog():
     ):
         returned = run_resource_download(parent, config)
 
-    assert returned is updated
+    assert returned is not None
+    assert isinstance(returned, ResourceDownloadOutcome)
+    assert returned.config is updated
+    assert returned.summary.cancelled is True
+    assert returned.summary.completed_count == 1
+    assert returned.summary.not_processed_count == 2
     apply_summary.assert_called_once_with(config, summary)
-    show_results.assert_not_called()
+    show_results.assert_called_once_with(parent, returned.summary)
 
 
 def test_parent_close_unwind_retains_worker_and_defers_download_dir_cleanup(tmp_path: Path, monkeypatch, qtbot):
@@ -236,6 +244,7 @@ def test_parent_close_unwind_retains_worker_and_defers_download_dir_cleanup(tmp_
     assert QThread.wait(worker, 3000)
 
     assert result is None
+    assert worker.cancel_calls == 1
     assert running_after_return
     assert wait_calls_after_return == 0
     assert marker_exists_after_return
@@ -367,11 +376,16 @@ def test_cancel_during_set_value_preserves_locked_label(tmp_path: Path, monkeypa
 
 
 @pytest.mark.parametrize("cancel_action", ["button", "title_bar"])
-def test_cancel_keeps_locked_modal_and_silently_returns_none(tmp_path: Path, monkeypatch, qtbot, cancel_action: str):
+def test_cancel_keeps_locked_modal_and_returns_cancelled_summary(
+    tmp_path: Path, monkeypatch, qtbot, cancel_action: str
+):
     config = create_default_config()
     parent = QWidget()
     qtbot.addWidget(parent)
-    worker = _CancelDownloadWorker()
+    summary = ResourceDownloadSummary()
+    summary.cancelled = True
+    summary.requested_count = 3
+    worker = _CancelDownloadWorker(summary)
     monkeypatch.setattr(mod, "ResourceDownloadWorker", lambda *a, **kw: worker)
     dialogs = _capture_progress_dialog(monkeypatch, qtbot)
     observed: dict[str, object] = {}
@@ -413,7 +427,10 @@ def test_cancel_keeps_locked_modal_and_silently_returns_none(tmp_path: Path, mon
     assert QThread.wait(worker, 3000)
     qtbot.wait(10)
 
-    assert result.summary is None
+    assert result.summary is summary
+    assert result.summary.cancelled is True
+    assert result.summary.completed_count == 0
+    assert result.summary.not_processed_count == 3
     assert result.cancelled is True
     assert worker.cancel_calls == 1
     assert observed["locked"] is True
@@ -449,7 +466,7 @@ def test_native_finish_without_summary_shows_failure(tmp_path: Path, monkeypatch
     assert "completion result" in warnings[0][1].lower()
 
 
-def _results_body(summary: ResourceDownloadSummary) -> str:
+def _results_dialog(summary: ResourceDownloadSummary) -> tuple[str, str]:
     captured: dict[str, str] = {}
 
     class _FakeBox:
@@ -459,8 +476,8 @@ def _results_body(summary: ResourceDownloadSummary) -> str:
         def setIcon(self, *_a):
             pass
 
-        def setWindowTitle(self, *_a):
-            pass
+        def setWindowTitle(self, title):
+            captured["title"] = title
 
         def setText(self, text):
             captured["text"] = text
@@ -470,7 +487,36 @@ def _results_body(summary: ResourceDownloadSummary) -> str:
 
     with patch(f"{MOD}.QMessageBox", MagicMock(side_effect=_FakeBox)):
         _show_results_dialog(MagicMock(), summary)
-    return captured["text"]
+    return captured["title"], captured["text"]
+
+
+def _results_body(summary: ResourceDownloadSummary) -> str:
+    return _results_dialog(summary)[1]
+
+
+def test_cancel_before_first_item_wording_does_not_imply_installation():
+    summary = ResourceDownloadSummary()
+    summary.cancelled = True
+    summary.requested_count = 3
+
+    title, body = _results_dialog(summary)
+
+    assert title == "Resource Download Cancelled"
+    assert "No resources were installed" in body
+    assert "Resource items not processed: 3" in body
+    assert "Resources Installed" not in title
+
+
+def test_cancelled_partial_wording_reports_prior_install_and_unprocessed_count():
+    summary = _successful_summary()
+    summary.cancelled = True
+    summary.requested_count = 3
+
+    title, body = _results_dialog(summary)
+
+    assert title == "Resource Download Cancelled (Some Resources Installed)"
+    assert "Some resources were installed before cancellation" in body
+    assert "Resource items not processed: 2" in body
 
 
 def test_results_dialog_lists_replaced_copy():

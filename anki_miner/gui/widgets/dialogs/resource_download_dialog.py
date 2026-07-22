@@ -15,7 +15,7 @@ import contextlib
 import shutil
 import tempfile
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from threading import Lock
 from typing import TYPE_CHECKING
@@ -53,6 +53,14 @@ class _DownloadModalResult:
     cleanup_deferred: bool = False
 
 
+@dataclass(frozen=True)
+class ResourceDownloadOutcome:
+    """Applied config and full worker summary for one download attempt."""
+
+    config: AnkiMinerConfig
+    summary: ResourceDownloadSummary
+
+
 _RETAINED_DOWNLOAD_WORKERS: set[ResourceDownloadWorker] = set()
 
 
@@ -61,12 +69,12 @@ def run_resource_download(
     config: AnkiMinerConfig,
     *,
     release_resources: Callable[[], bool] | None = None,
-) -> AnkiMinerConfig | None:
+) -> ResourceDownloadOutcome | None:
     """Download + import the recommended resources behind a modal dialog.
 
-    Returns the (possibly mutated) config on completion, or ``None`` if the user
-    cancelled before anything downloaded. Per-item failures are isolated by the
-    worker; a partial summary still returns an updated config for what succeeded.
+    Returns the applied config plus the complete worker summary. ``None`` is
+    reserved for a blocked launch or an abnormal worker exit without a summary.
+    Per-item failures are isolated; completed successes survive cancellation.
 
     ``release_resources`` drops live dictionary sqlite handles before the worker
     runs (like the reimport flows). The import now overwrites a pinned slot in
@@ -95,10 +103,11 @@ def run_resource_download(
         summary = modal_result.summary
         if summary is None:
             return None
+        if modal_result.cancelled and not summary.cancelled:
+            summary = replace(summary, cancelled=True)
         new_config = apply_download_summary(config, summary)
-        if not modal_result.cancelled:
-            _show_results_dialog(parent, summary)
-        return new_config
+        _show_results_dialog(parent, summary)
+        return ResourceDownloadOutcome(config=new_config, summary=summary)
     finally:
         if not cleanup_deferred:
             shutil.rmtree(download_dir, ignore_errors=True)
@@ -107,9 +116,8 @@ def run_resource_download(
 def _run_download_modal(parent: QWidget, config: AnkiMinerConfig, download_dir: Path) -> _DownloadModalResult:
     """Drive the worker behind a modal progress dialog; return its outcome.
 
-    A cancelled run retains a partial summary only when at least one item
-    succeeded, allowing the caller to commit those results without showing a
-    terminal dialog.
+    Cancelled runs retain their full summary so callers can distinguish applied,
+    failed, and not-processed items after the native thread-finish barrier.
     """
     dlg = QProgressDialog(
         QCoreApplication.translate("ResourceDownloadDialog", "Preparing download…"),
@@ -258,10 +266,7 @@ def _run_download_modal(parent: QWidget, config: AnkiMinerConfig, download_dir: 
         release_ui()
         return _DownloadModalResult(summary=None, cancelled=True, cleanup_deferred=True)
 
-    summary = state.summary
-    if state.cancel_requested and (summary is None or not summary.succeeded):
-        summary = None
-    return _DownloadModalResult(summary=summary, cancelled=state.cancel_requested)
+    return _DownloadModalResult(summary=state.summary, cancelled=state.cancel_requested)
 
 
 def _show_results_dialog(parent: QWidget, summary: ResourceDownloadSummary) -> None:
@@ -304,7 +309,30 @@ def _show_results_dialog(parent: QWidget, summary: ResourceDownloadSummary) -> N
                 )
             )
 
-    if not summary.failed:
+    if summary.cancelled:
+        if lines:
+            lines.append("")
+        if summary.succeeded:
+            title = QCoreApplication.translate(
+                "ResourceDownloadDialog", "Resource Download Cancelled (Some Resources Installed)"
+            )
+            lines.append(
+                QCoreApplication.translate(
+                    "ResourceDownloadDialog", "Some resources were installed before cancellation."
+                )
+            )
+        else:
+            title = QCoreApplication.translate("ResourceDownloadDialog", "Resource Download Cancelled")
+            lines.append(QCoreApplication.translate("ResourceDownloadDialog", "No resources were installed."))
+        if summary.not_processed_count:
+            lines.append(
+                tr_format(
+                    QCoreApplication.translate("ResourceDownloadDialog", "Resource items not processed: %1."),
+                    summary.not_processed_count,
+                )
+            )
+        icon = QMessageBox.Icon.Warning
+    elif summary.succeeded and not summary.failed:
         title = QCoreApplication.translate("ResourceDownloadDialog", "Resources Installed")
         icon = QMessageBox.Icon.Information
     elif summary.succeeded:

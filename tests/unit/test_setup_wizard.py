@@ -934,6 +934,72 @@ def test_notetype_page_empty_fieldlist_shows_unreachable_guidance(qtbot, wiz_con
 
 
 # ---------------------------------------------------------------------------
+# ResourcesPage
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("state", "expected_status"),
+    [
+        pytest.param("success", "Resources installed.", id="success"),
+        pytest.param("partial", "Some resources were installed; some failed.", id="partial"),
+        pytest.param("cancelled", "Download cancelled. No resources were installed.", id="cancelled"),
+        pytest.param(
+            "cancelled-partial",
+            "Download cancelled. Some resources were installed before cancellation.",
+            id="cancelled-partial",
+        ),
+        pytest.param("failed", "No resources were installed.", id="failed"),
+    ],
+)
+def test_resources_page_reports_download_outcome(qtbot, wiz_config, monkeypatch, state, expected_status):
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.workers.resource_download_worker import (  # noqa: PLC0415
+        ResourceDownloadResult,
+        ResourceDownloadSummary,
+    )
+
+    success = ResourceDownloadResult("dict", "dict", "Dictionary", "u", True, "10 entries", dict_id="dict")
+    failure = ResourceDownloadResult("freq", "freq", "Frequency", "u", False, "network failed")
+    results = {
+        "success": [success],
+        "partial": [success, failure],
+        "cancelled": [],
+        "cancelled-partial": [success],
+        "failed": [failure],
+    }[state]
+    summary = ResourceDownloadSummary(results=results)
+    summary.cancelled = state.startswith("cancelled")
+    summary.requested_count = 3 if summary.cancelled else len(results)
+    updated = replace(wiz_config, anki_deck_name="Resources outcome applied")
+    outcome = ResourceDownloadOutcome(config=updated, summary=summary)
+    monkeypatch.setattr(dialog_mod, "run_resource_download", lambda *_args, **_kwargs: outcome)
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+
+    wiz.resources_page._on_download_clicked()
+
+    assert wiz.working_config() == (updated if summary.succeeded else wiz_config)
+    assert wiz.resources_page.status_label.text() == expected_status
+
+
+def test_resources_page_clears_stale_status_when_download_does_not_start(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    monkeypatch.setattr(dialog_mod, "run_resource_download", lambda *_args, **_kwargs: None)
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    wiz.resources_page.status_label.setText("Resources installed.")
+
+    wiz.resources_page._on_download_clicked()
+
+    assert wiz.resources_page.status_label.text() == ""
+
+
+# ---------------------------------------------------------------------------
 # DonePage
 # ---------------------------------------------------------------------------
 

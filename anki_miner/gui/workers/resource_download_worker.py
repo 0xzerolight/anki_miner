@@ -2,8 +2,8 @@
 
 Given a list of :class:`ResourceSpec`, downloads each artifact to a temp file
 then routes it to the right importer based on ``kind`` (``dict`` → Yomitan
-dictionary importer, ``freq`` → per-source frequency importer, ``pitch`` → raw
-drop-in TSV write). Each item is wrapped in its own ``try/except`` so one
+dictionary importer, ``freq`` → per-source frequency importer, ``pitch`` →
+validated atomic TSV promotion). Each item is wrapped in its own ``try/except`` so one
 failure never aborts the batch; the per-item outcomes are collected into a
 :class:`ResourceDownloadSummary` emitted at the end.
 
@@ -29,13 +29,17 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import QCoreApplication, pyqtSignal
 
+from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
 from anki_miner.services.dictionary.superseded import sweep_superseded_dicts
 from anki_miner.services.frequency.source_importer import import_frequency_source
+from anki_miner.services.pitch_accent_service import PitchAccentService
 from anki_miner.services.resource_downloader import download_to_temp
+from anki_miner.utils.atomic_io import atomic_write_path
+from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -70,6 +74,30 @@ def _retype_for_suffix(temp: Path, url: str) -> Path:
     return retyped
 
 
+def _promote_pitch_download(staged_download: Path, pitch_csv: Path) -> int:
+    """Validate a staged pitch file, then atomically copy it into place."""
+    try:
+        service = PitchAccentService(staged_download)
+        service.load()
+        if service.entry_count <= 0:
+            raise SetupError(
+                QCoreApplication.translate("ResourceDownloadDialog", "No valid pitch accent entries were found.")
+            )
+
+        pitch_csv.parent.mkdir(parents=True, exist_ok=True)
+        with atomic_write_path(pitch_csv) as staged_pitch:
+            shutil.copyfile(staged_download, staged_pitch)
+    except Exception as exc:
+        raise SetupError(
+            tr_format(
+                QCoreApplication.translate("ResourceDownloadDialog", "Pitch accent validation failed: %1"),
+                str(exc),
+            )
+        ) from exc
+
+    return service.entry_count
+
+
 @dataclass
 class ResourceDownloadResult:
     """Outcome of downloading + importing one recommended resource."""
@@ -95,6 +123,8 @@ class ResourceDownloadSummary:
     """Aggregate of all per-item results from a worker run."""
 
     results: list[ResourceDownloadResult] = field(default_factory=list)
+    cancelled: bool = False
+    requested_count: int = 0
 
     @property
     def succeeded(self) -> list[ResourceDownloadResult]:
@@ -105,6 +135,16 @@ class ResourceDownloadSummary:
     def failed(self) -> list[ResourceDownloadResult]:
         """Results that failed at download or import."""
         return [r for r in self.results if not r.ok]
+
+    @property
+    def completed_count(self) -> int:
+        """Number of items that reached a success or failure outcome."""
+        return len(self.results)
+
+    @property
+    def not_processed_count(self) -> int:
+        """Number of requested items left without an outcome."""
+        return max(self.requested_count - self.completed_count, 0)
 
 
 class ResourceDownloadWorker(CancellableWorker):
@@ -145,10 +185,11 @@ class ResourceDownloadWorker(CancellableWorker):
 
     def run(self) -> None:
         """Download + import each spec in order, isolating per-item failures."""
-        summary = ResourceDownloadSummary()
+        summary = ResourceDownloadSummary(requested_count=len(self._specs))
 
         for spec in self._specs:
             if self.check_cancelled():
+                summary.cancelled = True
                 break
 
             temp: Path | None = None
@@ -158,7 +199,14 @@ class ResourceDownloadWorker(CancellableWorker):
                     dest_dir=self._download_dir,
                     progress=self._progress_for(spec.id),
                     cancelled_check=lambda: self.is_cancelled,
+                    read_timeout_seconds=1.0,
                 )
+
+                if self.check_cancelled():
+                    summary.cancelled = True
+                    with contextlib.suppress(OSError):
+                        temp.unlink()
+                    break
 
                 dict_id: str | None = None
                 source_id: str | None = None
@@ -202,13 +250,14 @@ class ResourceDownloadWorker(CancellableWorker):
                     source_id = freq_result.source_id
                     detail = f"{freq_result.entry_count} entries"
                 elif spec.kind == "pitch":
-                    self._pitch_csv.parent.mkdir(parents=True, exist_ok=True)
-                    # shutil.move (not os.replace): download_dir and pitch_csv may
-                    # be on different filesystems (download_dir under the system
-                    # temp dir / tmpfs), where os.replace raises a cross-device
-                    # link error. shutil.move falls back to copy+unlink.
-                    shutil.move(str(temp), str(self._pitch_csv))
-                    detail = "downloaded"
+                    entry_count = _promote_pitch_download(temp, self._pitch_csv)
+                    with contextlib.suppress(OSError):
+                        temp.unlink()
+                    temp = None
+                    detail = tr_format(
+                        QCoreApplication.translate("ResourceDownloadDialog", "%1 entries"),
+                        entry_count,
+                    )
                 else:  # pragma: no cover — catalog kinds are constrained
                     raise ValueError(f"Unknown resource kind: {spec.kind!r}")
 
@@ -228,13 +277,15 @@ class ResourceDownloadWorker(CancellableWorker):
                 )
                 self.item_done.emit(spec.id, True, detail)
             except Exception as exc:  # noqa: BLE001 — isolate per-item failures
-                # Reached only when the route raised: download succeeded but the
-                # importer / pitch move failed, so the temp still exists (the
-                # downloader cleans up only when IT raises; a successful move or
-                # import never reaches here). Best-effort unlink.
+                # The downloader returned a staged file but its route failed.
+                # Downloader-owned failures clean themselves; route failures need
+                # this best-effort unlink.
                 if temp is not None:
                     with contextlib.suppress(OSError):
                         temp.unlink()
+                if self.is_cancelled:
+                    summary.cancelled = True
+                    break
                 logger.debug("resource %s failed: %s", spec.id, exc, exc_info=True)
                 summary.results.append(
                     ResourceDownloadResult(
@@ -248,4 +299,6 @@ class ResourceDownloadWorker(CancellableWorker):
                 )
                 self.item_done.emit(spec.id, False, str(exc))
 
+        if self.is_cancelled:
+            summary.cancelled = True
         self.finished_summary.emit(summary)

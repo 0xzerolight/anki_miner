@@ -110,6 +110,46 @@ def test_tools_setup_wizard_handler_calls_run_setup_wizard(main_window, monkeypa
     assert applied["cfg"].first_run_setup_done == captured["config"].first_run_setup_done
 
 
+@pytest.mark.parametrize(
+    ("state", "should_apply"),
+    [
+        pytest.param("success", True, id="success"),
+        pytest.param("partial", True, id="partial"),
+        pytest.param("cancelled", False, id="cancelled"),
+        pytest.param("cancelled-partial", True, id="cancelled-partial"),
+        pytest.param("failed", False, id="failed"),
+    ],
+)
+def test_tools_resource_download_applies_only_successful_outcomes(main_window, monkeypatch, state, should_apply):
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod
+    from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome
+    from anki_miner.gui.workers.resource_download_worker import ResourceDownloadResult, ResourceDownloadSummary
+
+    success = ResourceDownloadResult("dict", "dict", "Dictionary", "u", True, "10 entries", dict_id="dict")
+    failure = ResourceDownloadResult("freq", "freq", "Frequency", "u", False, "network failed")
+    results = {
+        "success": [success],
+        "partial": [success, failure],
+        "cancelled": [],
+        "cancelled-partial": [success],
+        "failed": [failure],
+    }[state]
+    summary = ResourceDownloadSummary(
+        results=results,
+        cancelled=state.startswith("cancelled"),
+        requested_count=3 if state.startswith("cancelled") else len(results),
+    )
+    updated = replace(main_window.config, anki_deck_name="Resources outcome applied")
+    outcome = ResourceDownloadOutcome(config=updated, summary=summary)
+    monkeypatch.setattr(dialog_mod, "run_resource_download", lambda *_args, **_kwargs: outcome)
+    applied = []
+    monkeypatch.setattr(main_window, "update_config", lambda config, **_kwargs: applied.append(config))
+
+    main_window._download_recommended_resources()
+
+    assert applied == ([updated] if should_apply else [])
+
+
 # ---------------------------------------------------------------------------
 # Same-slot race guard: an in-flight legacy JMdict XML migration is stopped
 # BEFORE any dialog that can download into the same "jmdict-english" slot.
