@@ -25,6 +25,8 @@ from __future__ import annotations
 
 import logging
 import sys
+import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -85,6 +87,12 @@ class SubtitlePlayerWidget(QWidget):
         self.player: Any = None
 
         self._mpv_available: bool = mpv_available()
+        # Warn-level mpv log dedup (Issue #100: libmpv_render can emit the
+        # same GL error per frame — hundreds of identical lines). Guarded by
+        # a lock: _on_mpv_log runs on python-mpv's log thread.
+        self._mpv_log_lock = threading.Lock()
+        self._mpv_log_last: dict[tuple[str, str, str], float] = {}
+        self._mpv_log_suppressed: dict[tuple[str, str, str], int] = {}
         # Set on mpv's file-loaded event; gates seeks (mpv errors on a seek
         # before the file is loaded) and audio-track selection.
         self._file_loaded: bool = False
@@ -515,16 +523,36 @@ class SubtitlePlayerWidget(QWidget):
         # (failed) render context still loads — audio + overlay work without it.
         self._flush_pending_load()
 
+    # Identical warn-level mpv lines within this window collapse into one
+    # record carrying a repeat count on the next allowed emit.
+    _MPV_LOG_DEDUP_WINDOW_S = 10.0
+
     def _on_mpv_log(self, level: str, component: str, message: str) -> None:
-        """Forward mpv warn/error log lines to the app logger.
+        """Forward mpv warn/error log lines to the app logger, deduplicated.
 
         Runs on python-mpv's log thread — logging is thread-safe, widgets are
-        not; never touch UI here.
+        not; never touch UI here. mpv can emit the same render error per frame
+        (Issue #100 log spam), so identical warn-level lines are suppressed
+        within ``_MPV_LOG_DEDUP_WINDOW_S`` and summarized on the next emit.
         """
-        if level in ("fatal", "error"):
-            logger.warning("mpv [%s] %s: %s", level, component, message.strip())
+        text = message.strip()
+        if level not in ("fatal", "error"):
+            logger.debug("mpv [%s] %s: %s", level, component, text)
+            return
+
+        key = (level, component, text)
+        now = time.monotonic()
+        with self._mpv_log_lock:
+            last = self._mpv_log_last.get(key)
+            if last is not None and now - last < self._MPV_LOG_DEDUP_WINDOW_S:
+                self._mpv_log_suppressed[key] = self._mpv_log_suppressed.get(key, 0) + 1
+                return
+            self._mpv_log_last[key] = now
+            suppressed = self._mpv_log_suppressed.pop(key, 0)
+        if suppressed:
+            logger.warning("mpv [%s] %s: %s (repeated %d times)", level, component, text, suppressed)
         else:
-            logger.debug("mpv [%s] %s: %s", level, component, message.strip())
+            logger.warning("mpv [%s] %s: %s", level, component, text)
 
     def _on_slider_moved(self, position: int) -> None:
         """Handle slider manual move.
