@@ -202,13 +202,43 @@ jobs:
 
       # PyInstaller bootloader handling. The prebuilt PyPI wheel ships a bootloader
       # binary whose hash AV vendors flag (malware reuses it), a major source of the
-      # Defender false positives. On Windows, build it from source (--no-binary) so
-      # the bootloader gets a fresh, unflagged hash; windows-latest has the MSVC
-      # toolchain preinstalled. Other OSes keep the prebuilt wheel. Pin for
+      # Defender false positives. On Windows, PYINSTALLER_COMPILE_BOOTLOADER=1
+      # forces the sdist (--no-binary) to rebuild via waf; windows-latest has the
+      # MSVC toolchain preinstalled. Other OSes keep the prebuilt wheel. Pin for
       # reproducible bundles; bump deliberately.
       - name: Install PyInstaller (Windows, bootloader from source)
         if: runner.os == 'Windows'
-        run: pip install --no-binary pyinstaller pyinstaller==6.20.0
+        env:
+          PYINSTALLER_COMPILE_BOOTLOADER: "1"
+        run: |
+          $ErrorActionPreference = 'Stop'
+          pip install --verbose --no-cache-dir --no-binary=pyinstaller pyinstaller==6.20.0 2>&1 | Tee-Object -FilePath pyinstaller-install.log
+          $pipExit = $LASTEXITCODE
+          if ($pipExit -ne 0) {
+            exit $pipExit
+          }
+
+      - name: Assert bootloader built from source
+        if: runner.os == 'Windows'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $log = Get-Content -LiteralPath pyinstaller-install.log -Raw
+          if ($log -notmatch 'waf' -or $log -notmatch 'bootloader') {
+            throw 'PyInstaller install log lacks bootloader compilation evidence.'
+          }
+
+          $runw = python -c "from pathlib import Path; import PyInstaller; print(Path(PyInstaller.PACKAGEPATH) / 'bootloader' / PyInstaller.PLATFORM / 'runw.exe')"
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+          # Waf evidence proves this install compiled; existence verifies installed
+          # output. mtime is unreliable after pip wheel staging/copying.
+          if (-not (Test-Path -LiteralPath $runw -PathType Leaf)) {
+            throw "No installed Windows-64bit runw.exe found at $runw."
+          }
+          $hash = (Get-FileHash -LiteralPath $runw -Algorithm SHA256).Hash
+          Write-Output "Bootloader path: $runw"
+          Write-Output "Bootloader SHA-256: $hash"
 
       - name: Install PyInstaller (Linux/macOS)
         if: runner.os != 'Windows'
