@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
+from anki_miner.exceptions import SetupError
 from anki_miner.services.dictionary.storage import (
     _BIND_CHUNK,
     _LOOKUP_LIMIT,
@@ -229,6 +230,38 @@ class TestReadingNormalization:
 
 
 class TestBulkInsertAndLookup:
+    def test_bulk_insert_reports_progress_after_each_batch(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        progress: list[int] = []
+        rows = (DictRow(term=f"term-{i}", reading=None, content=f"<div>{i}</div>", sequence=i) for i in range(5001))
+
+        count = bulk_insert(db_path, rows, progress=progress.append)
+
+        assert count == 5001
+        assert progress == [5000, 5001]
+
+    def test_bulk_insert_cancels_before_next_batch_and_rolls_back(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        progress: list[int] = []
+        rows = (DictRow(term=f"term-{i}", reading=None, content=f"<div>{i}</div>", sequence=i) for i in range(5001))
+
+        def cancel_check() -> bool:
+            return bool(progress)
+
+        with pytest.raises(SetupError, match="Import cancelled"):
+            bulk_insert(
+                db_path,
+                rows,
+                progress=progress.append,
+                cancel_check=cancel_check,
+            )
+
+        assert progress == [5000]
+        with sqlite3.connect(db_path) as conn:
+            assert conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0] == 0
+
     def test_insert_and_lookup_by_term(self, tmp_path: Path):
         db_path = tmp_path / "test.sqlite"
         create_index(db_path)
