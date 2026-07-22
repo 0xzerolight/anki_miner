@@ -43,6 +43,7 @@ from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.gui.capabilities import CapabilityTarget
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome
 
 logger = logging.getLogger(__name__)
 
@@ -579,9 +580,28 @@ class MainWindow(QMainWindow):
 
         # Wizard's Resources page can download into the JMdict migration slot.
         self.background_tasks.cancel_jmdict_migration()
-        new_config = run_setup_wizard(self, self.config)
-        if new_config is not None:
-            self.update_config(new_config)
+        outcome = run_setup_wizard(self, self.config)
+        self._commit_setup_wizard_outcome(outcome, first_run_offer=False)
+
+    def _commit_setup_wizard_outcome(
+        self,
+        outcome: "SetupWizardOutcome",
+        *,
+        first_run_offer: bool,
+    ) -> None:
+        """Merge live one-way flags, then persist one wizard outcome."""
+        live_config = self.config
+        setup_done = (
+            live_config.first_run_setup_done or outcome.consumes_first_run_offer
+            if first_run_offer
+            else live_config.first_run_setup_done
+        )
+        merged = replace(
+            outcome.config,
+            first_run_shortcut_done=(live_config.first_run_shortcut_done or outcome.config.first_run_shortcut_done),
+            first_run_setup_done=setup_done,
+        )
+        self.update_config(merged)
 
     def _restyle_mined_cards(self) -> None:
         """Tools-menu handler: re-apply the built-in glossary styling to already-mined cards.
@@ -646,14 +666,13 @@ class MainWindow(QMainWindow):
         self.background_tasks.start_restyle_cards(service, self.config, on_progress, on_result, on_error)
 
     def _maybe_offer_first_run_setup(self) -> None:
-        """Offer the guided setup wizard on first launch; persist the flag.
+        """Offer guided setup and consume the offer only on finish or Skip.
 
         Broadened (Task 3): the wizard is offered whenever the run hasn't been
         completed (``not first_run_setup_done``) — no longer gated on freq/pitch
         file presence, since the wizard's Resources step covers those. The
-        wizard's returned (possibly partial) config is folded in via
-        ``update_config``. The ``finally`` guarantees ``first_run_setup_done`` is
-        set even if the wizard raises, so it never re-fires on the next launch.
+        wizard's returned partial config is always persisted. Dismissal leaves
+        the offer unconsumed; failures are logged and re-offered next launch.
         """
         from anki_miner.gui.widgets.dialogs.setup_wizard import run_setup_wizard
 
@@ -668,17 +687,12 @@ class MainWindow(QMainWindow):
         # this offer; its slot is the wizard download's target — stop it first.
         self.background_tasks.cancel_jmdict_migration()
 
-        config = self.config
         try:
-            returned = run_setup_wizard(self, config)
-            if returned is not None:
-                config = returned
-        finally:
-            # Persist once, combining any wizard mutations with the flag so we
-            # don't double-save or clobber them. The finally guarantees the flag
-            # is set even if the wizard raises, so it never re-fires. `config` is
-            # the wizard's returned config when it completed, else the original.
-            self.update_config(replace(config, first_run_setup_done=True))
+            outcome = run_setup_wizard(self, self.config)
+        except Exception:
+            logger.exception("Setup wizard failed")
+            return
+        self._commit_setup_wizard_outcome(outcome, first_run_offer=True)
 
     def _maybe_prompt_stale_dictionaries(self) -> None:
         """Dispatch the schema-staleness scan off-thread; prompt in the callback (4.0).

@@ -27,7 +27,6 @@ from PyQt6.QtWidgets import (
     QWizardPage,
 )
 
-from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import StatusBadge
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels.anki_settings_panel import _FIELD_KEYWORDS, auto_map_fields
@@ -121,6 +120,10 @@ class AnkiConnectPage(QWizardPage):
         if url and url != self._wizard.working_config().ankiconnect_url:
             self._wizard.update_working_config(replace(self._wizard.working_config(), ankiconnect_url=url))
 
+    def stage_current_edits(self) -> None:
+        """Stage editor state without starting an AnkiConnect check."""
+        self._write_url_to_config()
+
     def _recheck_work(self) -> tuple[bool, str]:
         """Blocking AnkiConnect check (runs off the GUI thread)."""
         # The URL is staged into the working config by _write_url_to_config() on the
@@ -206,6 +209,10 @@ class DeckPage(QWizardPage):
         name = self.deck_combo.currentText().strip()
         if name and name != self._wizard.working_config().anki_deck_name:
             self._wizard.update_working_config(replace(self._wizard.working_config(), anki_deck_name=name))
+
+    def stage_current_edits(self) -> None:
+        """Stage editor state without fetching decks."""
+        self._write_deck_to_config()
 
     def validatePage(self) -> bool:
         self._write_deck_to_config()
@@ -348,6 +355,10 @@ class NoteTypePage(QWizardPage):
         if name and name != self._wizard.working_config().anki_note_type:
             self._wizard.update_working_config(replace(self._wizard.working_config(), anki_note_type=name))
 
+    def stage_current_edits(self) -> None:
+        """Stage editor state without fetching note-type fields."""
+        self._write_notetype_to_config()
+
     # --- note-type list fetch ---
 
     def _on_refresh_clicked(self) -> None:
@@ -434,10 +445,15 @@ class NoteTypePage(QWizardPage):
         if generation != self._fields_generation or note_type != self._desired_note_type:
             self._fetch_fields()
 
-    def _on_wizard_finished(self, _result: int) -> None:
+    def prepare_for_close(self) -> None:
+        if not self._accept_field_fetches:
+            return
         self._accept_field_fetches = False
         self._fields_generation += 1
         self._desired_note_type = ""
+
+    def _on_wizard_finished(self, _result: int) -> None:
+        self.prepare_for_close()
 
     def _on_fields_fetched(self, note_type: str, field_names: object) -> None:
         try:
@@ -582,15 +598,16 @@ class NoteTypePage(QWizardPage):
             # Anki unreachable/slow: surface the failure but never raise.
             _set_warning(message)
 
-        worker = run_off_thread(
-            self,
-            work=validation.check_field_names,
-            on_done=_on_done,
-            on_error=_on_error,
+        worker = SingleCallWorker(
+            validation.check_field_names,
             error_prefix=self.tr("Could not check note type fields: "),
+            parent=self,
         )
         self._warn_worker = worker
         self._wizard.register_worker(worker)
+        worker.result_ready.connect(_on_done)
+        worker.error.connect(_on_error)
+        worker.start()
 
 
 class ResourcesPage(QWizardPage):

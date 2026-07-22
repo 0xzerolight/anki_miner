@@ -7,12 +7,37 @@ monkeypatched here — no real network/Anki.
 
 from __future__ import annotations
 
+import threading
 from dataclasses import replace
 from unittest.mock import MagicMock
 
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.workers.base_worker import CancellableWorker
+
+
+class _StubbornWorker(CancellableWorker):
+    """Real worker that records cancellation but exits only when released."""
+
+    def __init__(self, release: threading.Event, parent=None) -> None:
+        super().__init__(parent)
+        self.release = release
+        self.entered = threading.Event()
+        self.cancel_calls = 0
+        self.wait_calls = 0
+
+    def cancel(self) -> None:
+        self.cancel_calls += 1
+        super().cancel()
+
+    def run(self) -> None:
+        self.entered.set()
+        self.release.wait(10.0)
+
+    def wait(self, msecs: int) -> bool:
+        self.wait_calls += 1
+        return super().wait(msecs)
 
 
 @pytest.fixture
@@ -79,20 +104,299 @@ def test_wizard_adds_five_pages(qtbot, wiz_config):
     assert len(wiz.pageIds()) == 5
 
 
-def test_wizard_done_joins_workers(qtbot, wiz_config):
-    """done() must cancel + wait on every owned worker so no QThread outlives the modal."""
+def test_wizard_done_defers_close_without_blocking_for_stubborn_worker(qtbot, wiz_config):
+    from PyQt6.QtCore import QTimer  # noqa: PLC0415
+    from PyQt6.QtWidgets import QDialog, QWizard  # noqa: PLC0415
+
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    release = threading.Event()
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    worker = _StubbornWorker(release, wiz)
+    wiz.register_worker(worker)
+    worker.start()
+    finished: list[int] = []
+    wiz.finished.connect(finished.append)
+    close_returned = threading.Event()
+
+    try:
+        qtbot.waitUntil(worker.entered.is_set, timeout=3000)
+
+        def request_close() -> None:
+            wiz.done(QDialog.DialogCode.Rejected.value)
+            close_returned.set()
+
+        QTimer.singleShot(0, request_close)
+        qtbot.waitUntil(close_returned.is_set, timeout=1000)
+
+        assert worker.isRunning()
+        assert worker.wait_calls == 0
+        assert finished == []
+        assert worker.cancel_calls == 1
+        for button_id in (
+            QWizard.WizardButton.BackButton,
+            QWizard.WizardButton.NextButton,
+            QWizard.WizardButton.CommitButton,
+            QWizard.WizardButton.FinishButton,
+            QWizard.WizardButton.CancelButton,
+            QWizard.WizardButton.CustomButton1,
+        ):
+            assert not wiz.button(button_id).isEnabled()
+
+        release.set()
+        qtbot.waitUntil(lambda: finished == [QDialog.DialogCode.Rejected.value], timeout=3000)
+    finally:
+        release.set()
+        assert worker.wait(3000)
+
+
+def test_wizard_closes_only_after_all_workers_finish(qtbot, wiz_config):
+    from PyQt6.QtWidgets import QDialog  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    releases = [threading.Event(), threading.Event()]
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    workers = [_StubbornWorker(release, wiz) for release in releases]
+    for worker in workers:
+        wiz.register_worker(worker)
+        worker.start()
+    finished: list[int] = []
+    wiz.finished.connect(finished.append)
+
+    try:
+        for worker in workers:
+            qtbot.waitUntil(worker.entered.is_set, timeout=3000)
+        wiz.done(QDialog.DialogCode.Accepted.value)
+        assert [worker.cancel_calls for worker in workers] == [1, 1]
+
+        releases[0].set()
+        assert workers[0].wait(3000)
+        qtbot.wait(50)
+        assert finished == []
+
+        releases[1].set()
+        qtbot.waitUntil(lambda: finished == [QDialog.DialogCode.Accepted.value], timeout=3000)
+    finally:
+        for release in releases:
+            release.set()
+        for worker in workers:
+            assert worker.wait(3000)
+
+
+def test_wizard_tracks_worker_registered_while_closing(qtbot, wiz_config):
+    from PyQt6.QtWidgets import QDialog  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    first_release = threading.Event()
+    late_release = threading.Event()
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    first = _StubbornWorker(first_release, wiz)
+    late = _StubbornWorker(late_release, wiz)
+    wiz.register_worker(first)
+    first.start()
+    finished: list[int] = []
+    wiz.finished.connect(finished.append)
+
+    try:
+        qtbot.waitUntil(first.entered.is_set, timeout=3000)
+        wiz.done(QDialog.DialogCode.Rejected.value)
+
+        wiz.register_worker(late)
+        late.start()
+        qtbot.waitUntil(late.entered.is_set, timeout=3000)
+        assert late.cancel_calls == 1
+
+        first_release.set()
+        assert first.wait(3000)
+        qtbot.wait(50)
+        assert finished == []
+
+        late_release.set()
+        qtbot.waitUntil(lambda: finished == [QDialog.DialogCode.Rejected.value], timeout=3000)
+    finally:
+        first_release.set()
+        late_release.set()
+        assert first.wait(3000)
+        assert late.wait(3000)
+
+
+def test_wizard_waits_for_worker_registered_by_later_finished_slot(qtbot, wiz_config):
+    from PyQt6.QtCore import QObject, pyqtSlot  # noqa: PLC0415
+    from PyQt6.QtWidgets import QDialog  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    first_release = threading.Event()
+    successor_release = threading.Event()
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    first = _StubbornWorker(first_release, wiz)
+    successor = _StubbornWorker(successor_release, wiz)
+
+    class _SuccessorRegistrar(QObject):
+        @pyqtSlot()
+        def register_and_start(self) -> None:
+            wiz.register_worker(successor)
+            successor.start()
+
+    registrar = _SuccessorRegistrar(wiz)
+    wiz.register_worker(first)
+    first.finished.connect(registrar.register_and_start)
+    first.start()
+    finished: list[int] = []
+    wiz.finished.connect(finished.append)
+
+    try:
+        qtbot.waitUntil(first.entered.is_set, timeout=3000)
+        wiz.done(QDialog.DialogCode.Rejected.value)
+
+        first_release.set()
+        qtbot.waitUntil(successor.entered.is_set, timeout=3000)
+
+        assert finished == []
+        assert successor.cancel_calls == 1
+
+        successor_release.set()
+        qtbot.waitUntil(lambda: finished == [QDialog.DialogCode.Rejected.value], timeout=3000)
+    finally:
+        first_release.set()
+        successor_release.set()
+        assert first.wait(3000)
+        assert successor.wait(3000)
+
+
+def test_wizard_close_survives_empty_worker_set_generation_change(qtbot, wiz_config):
+    from PyQt6.QtWidgets import QDialog  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    release = threading.Event()
+    release.set()
+    already_finished = _StubbornWorker(release)
+    already_finished.start()
+    assert already_finished.wait(3000)
 
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
+    finished: list[int] = []
+    wiz.finished.connect(finished.append)
 
-    fake = MagicMock()
-    fake.isRunning.return_value = True
-    wiz.register_worker(fake)
-    wiz.done(0)
+    wiz.done(QDialog.DialogCode.Rejected.value)
+    stale_generation = wiz._worker_set_generation
+    wiz.register_worker(already_finished)
+    fresh_generation = wiz._worker_set_generation
 
-    fake.cancel.assert_called_once()
-    fake.wait.assert_called_once()
+    assert finished == []
+    assert fresh_generation != stale_generation
+    wiz._finalize_close(stale_generation)
+    assert finished == []
+    qtbot.waitUntil(lambda: finished == [QDialog.DialogCode.Rejected.value], timeout=3000)
+    qtbot.wait(10)
+    assert finished == [QDialog.DialogCode.Rejected.value]
+
+
+def test_complete_changed_cannot_reenable_navigation_while_closing(qtbot, wiz_config, monkeypatch):
+    from PyQt6.QtWidgets import QDialog, QWizard  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    release = threading.Event()
+    monkeypatch.setattr(pages_mod.AnkiConnectPage, "initializePage", lambda _self: None)
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    wiz.show()
+    worker = _StubbornWorker(release, wiz)
+    wiz.register_worker(worker)
+    worker.start()
+    page = wiz.ankiconnect_page
+
+    try:
+        qtbot.waitUntil(worker.entered.is_set, timeout=3000)
+        page._reachable = True
+        page.completeChanged.emit()
+        qtbot.wait(0)
+        assert wiz.button(QWizard.WizardButton.NextButton).isEnabled()
+
+        wiz.done(QDialog.DialogCode.Rejected.value)
+        page.completeChanged.emit()
+        qtbot.wait(0)
+
+        for button_id in (
+            QWizard.WizardButton.BackButton,
+            QWizard.WizardButton.NextButton,
+            QWizard.WizardButton.CommitButton,
+            QWizard.WizardButton.FinishButton,
+            QWizard.WizardButton.CancelButton,
+            QWizard.WizardButton.CustomButton1,
+        ):
+            assert not wiz.button(button_id).isEnabled()
+    finally:
+        release.set()
+        assert worker.wait(3000)
+
+
+def test_wizard_prunes_worker_that_finished_before_registration(qtbot, wiz_config):
+    from PyQt6.QtWidgets import QDialog  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    release = threading.Event()
+    release.set()
+    worker = _StubbornWorker(release)
+    worker.start()
+    assert worker.wait(3000)
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    finished: list[int] = []
+    wiz.finished.connect(finished.append)
+    wiz.register_worker(worker)
+    wiz.done(QDialog.DialogCode.Rejected.value)
+
+    qtbot.waitUntil(lambda: finished == [QDialog.DialogCode.Rejected.value], timeout=3000)
+    assert worker.cancel_calls == 0
+
+
+def test_repeated_escape_while_closing_keeps_first_result_and_cancels_once(qtbot, wiz_config, monkeypatch):
+    from PyQt6.QtCore import Qt  # noqa: PLC0415
+    from PyQt6.QtWidgets import QDialog  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    release = threading.Event()
+    # First page's initializePage starts a real AnkiConnect probe (tripwire).
+    monkeypatch.setattr(pages_mod.AnkiConnectPage, "initializePage", lambda _self: None)
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    wiz.show()
+    worker = _StubbornWorker(release, wiz)
+    wiz.register_worker(worker)
+    worker.start()
+    finished: list[int] = []
+    wiz.finished.connect(finished.append)
+
+    try:
+        qtbot.waitUntil(worker.entered.is_set, timeout=3000)
+        qtbot.keyClick(wiz, Qt.Key.Key_Escape)
+        qtbot.keyClick(wiz, Qt.Key.Key_Escape)
+        wiz.done(QDialog.DialogCode.Accepted.value)
+
+        assert finished == []
+        assert worker.cancel_calls == 1
+        release.set()
+        qtbot.waitUntil(lambda: finished == [QDialog.DialogCode.Rejected.value], timeout=3000)
+        wiz.done(QDialog.DialogCode.Accepted.value)
+        assert finished == [QDialog.DialogCode.Rejected.value]
+    finally:
+        release.set()
+        assert worker.wait(3000)
 
 
 # ---------------------------------------------------------------------------
@@ -662,21 +966,96 @@ def test_done_page_is_final(qtbot, wiz_config):
 # ---------------------------------------------------------------------------
 
 
-def test_run_setup_wizard_returns_working_config_on_skip(qtbot, wiz_config, monkeypatch):
-    """A skip (reject) still returns the (possibly partial) working config."""
-    from anki_miner.gui.widgets.dialogs.setup_wizard import run_setup_wizard  # noqa: PLC0415
+@pytest.mark.parametrize(
+    ("action", "expected_consumes"),
+    [
+        pytest.param("accept", True, id="accept"),
+        pytest.param("skip", True, id="explicit-skip"),
+        pytest.param("x", False, id="window-close"),
+        pytest.param("escape", False, id="escape"),
+    ],
+)
+def test_run_setup_wizard_outcome_matrix(qtbot, wiz_config, monkeypatch, action, expected_consumes):
+    """Every close path returns partial config and the correct consumption bit."""
+    from PyQt6.QtWidgets import QDialog, QWizard  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome, run_setup_wizard  # noqa: PLC0415
     from anki_miner.gui.widgets.dialogs.setup_wizard import setup_wizard as sw_mod  # noqa: PLC0415
 
-    # Don't actually spin a modal loop: stub exec() and mutate the working config first.
     def fake_exec(self):
+        qtbot.addWidget(self)
         self.update_working_config(replace(self.working_config(), anki_deck_name="Touched"))
-        return 0  # Rejected
+        if action == "accept":
+            self.accept()
+            return QDialog.DialogCode.Accepted.value
+        if action == "skip":
+            self.customButtonClicked.emit(QWizard.WizardButton.CustomButton1.value)
+        elif action == "x":
+            self.close()
+        else:
+            self.reject()
+        return QDialog.DialogCode.Rejected.value
 
     monkeypatch.setattr(sw_mod.SetupWizard, "exec", fake_exec)
 
-    result = run_setup_wizard(None, wiz_config)
-    assert isinstance(result, AnkiMinerConfig)
-    assert result.anki_deck_name == "Touched"
+    outcome = run_setup_wizard(None, wiz_config)
+    assert isinstance(outcome, SetupWizardOutcome)
+    assert outcome.config.anki_deck_name == "Touched"
+    assert outcome.consumes_first_run_offer is expected_consumes
+
+
+@pytest.mark.parametrize("action", ["skip", "x", "escape"])
+def test_close_stages_typed_editor_values(qtbot, wiz_config, action, monkeypatch):
+    from PyQt6.QtCore import Qt  # noqa: PLC0415
+    from PyQt6.QtWidgets import QDialog, QWizard  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    finished: list[int] = []
+    wiz.finished.connect(finished.append)
+    anki_service = MagicMock()
+    validation_service = MagicMock()
+    wiz.anki_service = anki_service  # type: ignore[method-assign]
+    wiz.validation_service = validation_service  # type: ignore[method-assign]
+    wiz.ankiconnect_page.url_input.setText(" http://localhost:9999 ")
+    wiz.deck_page.deck_combo.setCurrentText(" Typed Deck ")
+    wiz.notetype_page.notetype_combo.blockSignals(True)
+    wiz.notetype_page.notetype_combo.setCurrentText(" Typed Note Type ")
+    wiz.notetype_page.notetype_combo.blockSignals(False)
+
+    if action == "skip":
+        wiz.customButtonClicked.emit(QWizard.WizardButton.CustomButton1.value)
+    elif action == "x":
+        monkeypatch.setattr(type(wiz.ankiconnect_page), "initializePage", lambda _self: None)
+        wiz.show()
+        qtbot.wait(0)
+        wiz.close()
+    else:
+        qtbot.keyClick(wiz, Qt.Key.Key_Escape)
+
+    config = wiz.working_config()
+    assert config.ankiconnect_url == "http://localhost:9999"
+    assert config.anki_deck_name == "Typed Deck"
+    assert config.anki_note_type == "Typed Note Type"
+    anki_service.assert_not_called()
+    validation_service.assert_not_called()
+    qtbot.waitUntil(lambda: finished == [QDialog.DialogCode.Rejected.value], timeout=3000)
+
+
+def test_run_setup_wizard_propagates_exception(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import run_setup_wizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import setup_wizard as sw_mod  # noqa: PLC0415
+
+    def fake_exec(self):
+        qtbot.addWidget(self)
+        raise RuntimeError("wizard exploded")
+
+    monkeypatch.setattr(sw_mod.SetupWizard, "exec", fake_exec)
+
+    with pytest.raises(RuntimeError, match="wizard exploded"):
+        run_setup_wizard(None, wiz_config)
 
 
 # ---------------------------------------------------------------------------

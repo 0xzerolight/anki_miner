@@ -8,13 +8,17 @@ action while the wizard inspects, explains, links, and re-checks.
 
 The wizard owns one working :class:`AnkiMinerConfig` (mutated only via
 :meth:`update_working_config`) and a lazily-rebuilt shared :class:`AnkiService`.
-``run_setup_wizard`` returns the working config on BOTH Accepted and Rejected,
-so partial progress (including a Skip) is preserved.
+``run_setup_wizard`` returns the working config plus whether the close path
+consumes the one-time first-run offer.
 """
 
 from __future__ import annotations
 
-from PyQt6.QtWidgets import QWidget, QWizard
+from dataclasses import dataclass
+from typing import cast
+
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import QDialog, QWidget, QWizard
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.workers.base_worker import CancellableWorker
@@ -29,11 +33,21 @@ from .pages import (
     ResourcesPage,
 )
 
-__all__ = ["SetupWizard", "run_setup_wizard"]
+__all__ = ["SetupWizard", "SetupWizardOutcome", "run_setup_wizard"]
+
+
+@dataclass(frozen=True)
+class SetupWizardOutcome:
+    """Working config and first-run-offer consumption decision."""
+
+    config: AnkiMinerConfig
+    consumes_first_run_offer: bool
 
 
 class SetupWizard(QWizard):
     """Multi-step guided first-run setup wizard (detect & guide only)."""
+
+    _close_check_requested = pyqtSignal(int)
 
     def __init__(self, config: AnkiMinerConfig, parent: QWidget | None = None) -> None:
         """Build the wizard around a copy of ``config``.
@@ -44,6 +58,10 @@ class SetupWizard(QWizard):
             parent: Optional Qt parent.
         """
         super().__init__(parent)
+        self._close_check_requested.connect(  # type: ignore[call-arg]
+            self._finalize_close,
+            Qt.ConnectionType.QueuedConnection,
+        )
         # Start from a copy so a zero-touch skip returns an equivalent config.
         self._working_config = config
         # MainWindow's dict-handle release, passed to the resource download so
@@ -56,8 +74,16 @@ class SetupWizard(QWizard):
         # AnkiConnect URL the cached service was built for; rebuild on change.
         self._service_url: str | None = None
         self._service_note_type: str | None = None
-        # Live worker handles the wizard owns — joined in done().
-        self._workers: list[CancellableWorker] = []
+        # A worker remains live until its native QThread.finished signal reaches
+        # the GUI thread. This also orders result/error callbacks before close.
+        self._workers: set[CancellableWorker] = set()
+        self._worker_set_generation = 0
+        self._cancelled_workers: set[CancellableWorker] = set()
+        self._closing = False
+        self._pending_done_result: int | None = None
+        self._scheduled_close_generation: int | None = None
+        self._base_done_called = False
+        self._explicit_skip_requested = False
 
         self.setWindowTitle(self.tr("Anki Miner Setup"))
         self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
@@ -119,8 +145,95 @@ class SetupWizard(QWizard):
     # --- worker ownership ------------------------------------------------
 
     def register_worker(self, worker: CancellableWorker) -> None:
-        """Track ``worker`` so :meth:`done` cancels + joins it before closing."""
-        self._workers.append(worker)
+        """Own ``worker`` through its native finish, including during close."""
+        if worker in self._workers:
+            return
+        try:
+            worker.finished.connect(self._on_worker_finished)
+        except RuntimeError:
+            self._finish_close_if_ready()
+            return
+        self._workers.add(worker)
+        self._worker_set_generation += 1
+        try:
+            already_finished = worker.isFinished()
+        except RuntimeError:
+            already_finished = True
+        if already_finished:
+            # The native signal may have fired before registration. Do not leave
+            # an ownership entry that can never be pruned.
+            self._discard_worker(worker)
+            self._finish_close_if_ready()
+            return
+        if self._closing:
+            self._cancel_worker_once(worker)
+
+    def _on_worker_finished(self) -> None:
+        """Prune the sender only after QThread's native terminal signal."""
+        worker = self.sender()
+        if isinstance(worker, CancellableWorker):
+            self._discard_worker(worker)
+            self._cancelled_workers.discard(worker)
+        self._finish_close_if_ready()
+
+    def _discard_worker(self, worker: CancellableWorker) -> None:
+        if worker not in self._workers:
+            return
+        self._workers.remove(worker)
+        self._worker_set_generation += 1
+
+    def _cancel_worker_once(self, worker: CancellableWorker) -> None:
+        if worker in self._cancelled_workers:
+            return
+        self._cancelled_workers.add(worker)
+        try:
+            worker.cancel()
+        except RuntimeError:
+            self._discard_worker(worker)
+            self._finish_close_if_ready()
+
+    def _disable_navigation(self) -> None:
+        for button_id in (
+            QWizard.WizardButton.BackButton,
+            QWizard.WizardButton.NextButton,
+            QWizard.WizardButton.CommitButton,
+            QWizard.WizardButton.FinishButton,
+            QWizard.WizardButton.CancelButton,
+            QWizard.WizardButton.CustomButton1,
+        ):
+            button = self.button(button_id)
+            if button is not None:
+                button.setEnabled(False)
+
+    def _finish_close_if_ready(self) -> None:
+        if not self._closing or self._workers or self._base_done_called or self._pending_done_result is None:
+            return
+        generation = self._worker_set_generation
+        if self._scheduled_close_generation == generation:
+            return
+        self._scheduled_close_generation = generation
+        self._close_check_requested.emit(generation)
+
+    def _finalize_close(self, generation: int) -> None:
+        if self._scheduled_close_generation != generation:
+            return
+        self._scheduled_close_generation = None
+        if (
+            not self._closing
+            or self._workers
+            or self._base_done_called
+            or self._pending_done_result is None
+            or self._worker_set_generation != generation
+        ):
+            self._finish_close_if_ready()
+            return
+        self._base_done_called = True
+        super().done(self._pending_done_result)
+
+    def _stage_current_edits(self) -> None:
+        self.ankiconnect_page.stage_current_edits()
+        self.deck_page.stage_current_edits()
+        self.notetype_page.stage_current_edits()
 
     def _on_custom_button(self, which: int) -> None:
         """Skip Setup → reject (return the partial working config).
@@ -129,44 +242,43 @@ class SetupWizard(QWizard):
         against the enum member's integer value (CustomButton1 is the only custom
         button this wizard registers).
         """
-        if which == QWizard.WizardButton.CustomButton1:  # type: ignore[comparison-overlap]
+        if which == cast(int, QWizard.WizardButton.CustomButton1.value):
+            self._explicit_skip_requested = True
             self.reject()
 
     def done(self, result: int) -> None:
-        """Cancel + join every owned worker before closing the modal.
+        """Request cancellation and close after every owned worker finishes.
 
-        Mirrors ``resource_download_dialog``'s ``.wait()`` join discipline and
-        ``AnkiProbeController.iter_close_workers`` rationale: no QThread may
-        outlive the modal, or Qt aborts with "QThread: Destroyed while thread
-        is still running".
+        Never joins on the GUI thread. Workers that register after close starts
+        join the same dynamic barrier and are cancelled immediately.
         """
-        for worker in self._workers:
-            try:
-                if worker.isRunning():
-                    worker.cancel()
-                    worker.wait(5000)
-            except RuntimeError:
-                # Underlying C++ object already gone — nothing to join.
-                pass
-        self._workers.clear()
-        super().done(result)
+        if self._closing:
+            return
+        self._stage_current_edits()
+        self.notetype_page.prepare_for_close()
+        self._closing = True
+        self._pending_done_result = result
+        self._disable_navigation()
+        self.setEnabled(False)
+        for worker in tuple(self._workers):
+            self._cancel_worker_once(worker)
+        self._finish_close_if_ready()
 
 
-def run_setup_wizard(parent: QWidget | None, config: AnkiMinerConfig) -> AnkiMinerConfig | None:
-    """Run the setup wizard modally; return the (possibly partial) working config.
+def run_setup_wizard(parent: QWidget | None, config: AnkiMinerConfig) -> SetupWizardOutcome:
+    """Run the wizard and return partial config plus offer consumption.
 
-    Same call shape as ``run_resource_download``. Returns the working config on
-    BOTH Accepted and Rejected (so partial progress / a Skip persists). A
-    zero-touch skip returns a config equivalent to the input.
+    Accepted and explicit Skip consume the first-run offer. Window close, Esc,
+    and other rejection paths do not. Exceptions propagate to the caller.
 
     Args:
         parent: Optional Qt parent for the modal.
         config: The current configuration.
 
     Returns:
-        The wizard's working config (never ``None`` in practice — the signature
-        matches ``run_resource_download`` for caller symmetry).
+        The wizard's typed outcome.
     """
     wizard = SetupWizard(config, parent)
-    wizard.exec()
-    return wizard.working_config()
+    result = wizard.exec()
+    consumes = result == QDialog.DialogCode.Accepted.value or wizard._explicit_skip_requested
+    return SetupWizardOutcome(config=wizard.working_config(), consumes_first_run_offer=consumes)
