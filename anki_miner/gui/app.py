@@ -9,7 +9,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
-from PyQt6.QtCore import QCoreApplication, Qt, QThread, QTimer, pyqtBoundSignal
+from PyQt6.QtCore import QCoreApplication, QLockFile, Qt, QThread, QTimer, pyqtBoundSignal
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
 
@@ -302,6 +302,50 @@ def _ensure_default_dicts_root(config: AnkiMinerConfig | None) -> None:
         ensure_directory(config.dicts_root)
     except OSError:
         logger.warning("Could not create default dicts_root at %s", config.dicts_root, exc_info=True)
+
+
+def _acquire_instance_lock(
+    lock_path: Path,
+    on_conflict: Callable[[], bool],
+) -> tuple[QLockFile | None, bool]:
+    """Try to take the single-instance lock; ask ``on_conflict`` on failure.
+
+    Two concurrent app processes share ``known_words.db``/``stats.db`` (both
+    default rollback-journal sqlite), so a second instance risks
+    "database is locked" errors and lost writes — the reporter's log shows a
+    double launch (Issue #100). The guard WARNS, never hard-blocks:
+    ``on_conflict()`` (production: a QMessageBox) returns True to proceed
+    anyway, so a stale-detection false positive can never lock users out.
+
+    Returns ``(lock_or_None, proceed)``. The caller must keep the returned
+    lock referenced for the process lifetime; it is released on exit.
+    """
+    lock = QLockFile(str(lock_path))
+    # A crashed instance leaves a lock QLockFile auto-reclaims once its PID is
+    # gone (built-in stale detection); 0 ms try = never block startup.
+    if lock.tryLock(0):
+        return lock, True
+    return None, on_conflict()
+
+
+def _confirm_second_instance(parent: QWidget | None = None) -> bool:
+    """Production ``on_conflict``: warn and let the user decide."""
+    box = QMessageBox(parent)
+    box.setIcon(QMessageBox.Icon.Warning)
+    box.setWindowTitle(QCoreApplication.translate("App", "Anki Miner Is Already Running"))
+    box.setText(
+        QCoreApplication.translate(
+            "App",
+            "Another copy of Anki Miner appears to be running. Running two copies at once "
+            "can corrupt the known-words and statistics databases.\n\n"
+            "Continue anyway?",
+        )
+    )
+    box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Close)
+    box.button(QMessageBox.StandardButton.Yes).setText(QCoreApplication.translate("App", "Continue anyway"))
+    box.button(QMessageBox.StandardButton.Close).setText(QCoreApplication.translate("App", "Quit"))
+    box.setDefaultButton(QMessageBox.StandardButton.Close)
+    return box.exec() == QMessageBox.StandardButton.Yes
 
 
 def _seed_file_dialog_mode(config: AnkiMinerConfig | None) -> None:
@@ -735,6 +779,14 @@ def main():
         Theme.apply_to_app(app)
     except Exception:
         logger.exception("Failed to initialize theme; continuing with Qt defaults")
+
+    # Single-instance guard (Issue #100: double launch observed; two processes
+    # contend on the shared sqlite DBs). Warn-not-block; keep the lock object
+    # referenced on `app` so it lives (and auto-releases) with the process.
+    _instance_lock, _proceed = _acquire_instance_lock(ANKI_MINER_HOME / "instance.lock", _confirm_second_instance)
+    if not _proceed:
+        return
+    app._instance_lock = _instance_lock  # type: ignore[attr-defined]
 
     # Create main window
     window = MainWindow(_early_config)
