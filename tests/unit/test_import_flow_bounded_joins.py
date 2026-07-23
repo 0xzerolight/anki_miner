@@ -176,6 +176,8 @@ def _stub_import_worker() -> MagicMock:
     instance.finished = MagicMock()
     instance.cancel = MagicMock()
     instance.start = MagicMock()
+    instance.set_trace_id = MagicMock()
+    instance.is_cancelled = False
     instance.isRunning = MagicMock(return_value=False)
     return instance
 
@@ -356,12 +358,13 @@ class TestAudioPackBoundedJoin:
         new.start.assert_called_once()
 
     def test_add_pack_finished_in_successor_connect_gap_starts_once_and_closes_modal(self, tab, monkeypatch, tmp_path):
+        from anki_miner.gui.controllers import import_flow_common
+
         new = self._prepare_add_pack(monkeypatch, tmp_path)
+        _silence_dialogs(monkeypatch)
         dialog = MagicMock()
-        monkeypatch.setattr(
-            "anki_miner.gui.controllers.audio_pack_import_flow.QProgressDialog",
-            MagicMock(return_value=dialog),
-        )
+        monkeypatch.setattr(import_flow_common, "QProgressDialog", MagicMock(return_value=dialog))
+        monkeypatch.setattr(import_flow_common, "QTimer", MagicMock(return_value=MagicMock()))
 
         flow = tab._audio_pack_import_flow
         predecessor = _ConnectGapWorker(connection_number=2)
@@ -373,15 +376,18 @@ class TestAudioPackBoundedJoin:
         assert predecessor not in flow._retained_import_workers
         new.start.assert_called_once()
         new.cancelled.connect.call_args.args[0]()
+        dialog.close.assert_not_called()
+        new.finished.connect.call_args.args[0]()
         dialog.close.assert_called_once()
 
     def test_add_pack_cancel_ignores_deleted_worker_wrapper(self, tab, monkeypatch, tmp_path):
+        from anki_miner.gui.controllers import import_flow_common
+
         new = self._prepare_add_pack(monkeypatch, tmp_path)
+        _silence_dialogs(monkeypatch)
         dialog = MagicMock()
-        monkeypatch.setattr(
-            "anki_miner.gui.controllers.audio_pack_import_flow.QProgressDialog",
-            MagicMock(return_value=dialog),
-        )
+        monkeypatch.setattr(import_flow_common, "QProgressDialog", MagicMock(return_value=dialog))
+        monkeypatch.setattr(import_flow_common, "QTimer", MagicMock(return_value=MagicMock()))
 
         flow = tab._audio_pack_import_flow
         flow.add_pack()
@@ -393,6 +399,9 @@ class TestAudioPackBoundedJoin:
 
         new.start.assert_called_once()
         assert deleted.cancel_calls == 0
+        new.cancel.assert_called_once()
+        new.cancelled.connect.call_args.args[0]()
+        new.finished.connect.call_args.args[0]()
 
     def test_reimport_pack_stuck_predecessor_blocks_replacement(self, tab, monkeypatch, tmp_path, caplog):
         new = self._patch_worker(monkeypatch)
@@ -484,11 +493,13 @@ class TestDictionaryBoundedJoin:
         new.start.assert_called_once()
 
     def test_reimport_all_finished_in_successor_connect_gap_starts_once_and_closes_modal(self, tab, monkeypatch):
-        mod = "anki_miner.gui.controllers.dictionary_import_flow"
+        from anki_miner.gui.controllers import import_flow_common
+
         new = self._prepare_reimport_all(tab, monkeypatch)
         _silence_dialogs(monkeypatch)
         dialog = MagicMock()
-        monkeypatch.setattr(f"{mod}.QProgressDialog", MagicMock(return_value=dialog))
+        monkeypatch.setattr(import_flow_common, "QProgressDialog", MagicMock(return_value=dialog))
+        monkeypatch.setattr(import_flow_common, "QTimer", MagicMock(return_value=MagicMock()))
 
         flow = tab._dict_import_flow
         predecessor = _ConnectGapWorker(connection_number=2)
@@ -500,13 +511,18 @@ class TestDictionaryBoundedJoin:
         assert predecessor not in flow._retained_import_workers
         new.start.assert_called_once()
         new.cancelled.connect.call_args.args[0]()
+        dialog.close.assert_not_called()
+        new.finished.connect.call_args.args[0]()
         dialog.close.assert_called_once()
 
     def test_reimport_all_cancel_ignores_deleted_worker_wrapper(self, tab, monkeypatch):
-        mod = "anki_miner.gui.controllers.dictionary_import_flow"
+        from anki_miner.gui.controllers import import_flow_common
+
         new = self._prepare_reimport_all(tab, monkeypatch)
+        _silence_dialogs(monkeypatch)
         dialog = MagicMock()
-        monkeypatch.setattr(f"{mod}.QProgressDialog", MagicMock(return_value=dialog))
+        monkeypatch.setattr(import_flow_common, "QProgressDialog", MagicMock(return_value=dialog))
+        monkeypatch.setattr(import_flow_common, "QTimer", MagicMock(return_value=MagicMock()))
 
         flow = tab._dict_import_flow
         flow.reimport_all()
@@ -518,6 +534,9 @@ class TestDictionaryBoundedJoin:
 
         new.start.assert_called_once()
         assert deleted.cancel_calls == 0
+        new.cancel.assert_called_once()
+        new.cancelled.connect.call_args.args[0]()
+        new.finished.connect.call_args.args[0]()
 
 
 # ===========================================================================

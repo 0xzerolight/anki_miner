@@ -1152,10 +1152,11 @@ class SettingsTab(QWidget):
         )
 
     def shutdown(self) -> None:
-        """Cancel every running AnkiConnect worker (cancel only, no wait).
+        """Cancel active import batches and AnkiConnect workers without waiting.
 
-        Explicit-teardown entry point mirroring the YouTube tab; delegates to
-        :class:`AnkiProbeController`, which owns the workers (T-66).
+        Explicit-teardown entry point mirroring the YouTube tab. Import batch
+        cancellation runs before the shared close policy enumerates and joins
+        workers; probe cancellation delegates to :class:`AnkiProbeController`.
 
         Also stops the auto-save debounce so an armed timer can never fire
         into a torn-down widget (the pytest-qt ``_drain_qt_deletes`` segfault
@@ -1164,6 +1165,8 @@ class SettingsTab(QWidget):
         this method.
         """
         self._debounce_timer.stop()
+        self._dict_import_flow.cancel_active_batch()
+        self._audio_pack_import_flow.cancel_active_batch()
         self._anki_probe.shutdown()
 
     # === Expose panel inputs for backward compatibility ===

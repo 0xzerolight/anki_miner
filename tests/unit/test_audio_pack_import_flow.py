@@ -116,6 +116,8 @@ def stub_worker(monkeypatch):
         instance.finished = MagicMock()
         instance.cancel = MagicMock()
         instance.start = MagicMock()
+        instance.set_trace_id = MagicMock()
+        instance.is_cancelled = False
         instance.isRunning = MagicMock(return_value=False)
         instances.append(instance)
         return instance
@@ -147,6 +149,22 @@ def _capture_infos(monkeypatch) -> list[tuple[str, str]]:
         lambda parent, title, body, *a, **kw: captured.append((title, body)) or 0,
     )
     return captured
+
+
+def _emit_native_finished(instance: MagicMock) -> None:
+    instance.isRunning.return_value = False
+    for connect_call in tuple(instance.finished.connect.call_args_list):
+        connect_call.args[0]()
+
+
+def _complete_worker(instance: MagicMock, resource_id: str, meta: dict | None = None) -> None:
+    instance.import_finished.connect.call_args.args[0](resource_id, meta or {})
+    _emit_native_finished(instance)
+
+
+def _fail_worker(instance: MagicMock, message: str) -> None:
+    instance.failed.connect.call_args.args[0](message)
+    _emit_native_finished(instance)
 
 
 # ---------------------------------------------------------------------------
@@ -250,10 +268,6 @@ class TestAddPackSingleHappyPath:
         warnings = _capture_warnings(monkeypatch)
         infos = _capture_infos(monkeypatch)
         monkeypatch.setattr(tab.audio_panel, "refresh_registry", lambda: None)
-        monkeypatch.setattr(
-            "anki_miner.gui.controllers.audio_pack_import_flow.QProgressDialog",
-            MagicMock(return_value=MagicMock()),
-        )
 
         def fail_persist(_config: AnkiMinerConfig) -> None:
             raise RuntimeError("audio config write failed")
@@ -264,6 +278,9 @@ class TestAddPackSingleHappyPath:
             flow.add_pack(_scan_result=(str(pack_dir), [(pack_dir, "forvo")]))
             instance = stub_worker.instances[0]
             instance.import_finished.connect.call_args[0][0]("forvo-pack", {})
+            assert tab.audio_panel._add_btn.isEnabled() is False
+            assert warnings == []
+            _emit_native_finished(instance)
         finally:
             monkeypatch.setattr(GUIConfigManager, "save_config", original_save)
 
@@ -280,6 +297,7 @@ class TestAddPackSingleHappyPath:
 
         monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(pack_dir))
         _capture_warnings(monkeypatch)
+        infos = _capture_infos(monkeypatch)
 
         persist_calls: list[tuple[AudioSourceEntry, ...]] = []
         tab._audio_pack_import_flow._persist_chain = persist_calls.append
@@ -293,11 +311,16 @@ class TestAddPackSingleHappyPath:
         on_done = instance.import_finished.connect.call_args[0][0]
         on_done("forvo-pack", {"entry_count": 2, "source_name": "forvo_pack", "format": "forvo"})
 
+        assert persist_calls == []
+        assert tab.audio_panel._add_btn.isEnabled() is False
+        _emit_native_finished(instance)
+
         # persist_chain must have been called with the new chain.
         assert persist_calls, "persist_chain must be called on success"
         new_chain = persist_calls[-1]
         pack_ids = [e.pack_id for e in new_chain if e.kind == "pack"]
         assert "forvo-pack" in pack_ids, f"Expected forvo-pack in chain; got {new_chain}"
+        assert infos == []
 
     def test_new_pack_inserted_before_jpod101(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = tmp_path / "forvo_pack"
@@ -314,6 +337,8 @@ class TestAddPackSingleHappyPath:
         instance = stub_worker.instances[0]
         on_done = instance.import_finished.connect.call_args[0][0]
         on_done("forvo-pack", {})
+        assert persist_calls == []
+        _emit_native_finished(instance)
 
         assert persist_calls
         new_chain = persist_calls[-1]
@@ -330,7 +355,7 @@ class TestAddPackSingleHappyPath:
 
         monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(pack_dir))
         _capture_warnings(monkeypatch)
-        _capture_infos(monkeypatch)
+        infos = _capture_infos(monkeypatch)
 
         persist_calls: list = []
         tab._audio_pack_import_flow._persist_chain = persist_calls.append
@@ -340,8 +365,36 @@ class TestAddPackSingleHappyPath:
         on_fail = instance.failed.connect.call_args[0][0]
         on_fail("something went wrong")
 
+        assert infos == []
+        assert tab.audio_panel._add_btn.isEnabled() is False
+        _emit_native_finished(instance)
+
         # No persist on failure (nothing imported).
         assert persist_calls == [], "persist must not be called when import fails"
+        assert len(infos) == 1
+        assert "something went wrong" in infos[0][1]
+
+    def test_cancelled_single_pack_shows_summary_after_native_finish(self, tab, monkeypatch, stub_worker, tmp_path):
+        pack_dir = tmp_path / "forvo_pack"
+        pack_dir.mkdir()
+        _make_forvo_pack(pack_dir)
+        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(pack_dir))
+        infos = _capture_infos(monkeypatch)
+        _capture_warnings(monkeypatch)
+        persist_calls: list[tuple[AudioSourceEntry, ...]] = []
+        tab._audio_pack_import_flow._persist_chain = persist_calls.append
+
+        tab._audio_pack_import_flow.add_pack()
+        instance = stub_worker.instances[0]
+        instance.cancelled.connect.call_args.args[0]()
+
+        assert infos == []
+        assert tab.audio_panel._add_btn.isEnabled() is False
+        _emit_native_finished(instance)
+
+        assert persist_calls == []
+        assert len(infos) == 1
+        assert "Cancelled" in infos[0][1]
 
 
 # ---------------------------------------------------------------------------
@@ -376,10 +429,17 @@ class TestAddPackMultiPack:
         on_done0 = inst0.import_finished.connect.call_args[0][0]
         on_done0("pack-a", {})
 
+        assert len(stub_worker.instances) == 1
+        assert persist_calls == []
+        assert infos == []
+        _emit_native_finished(inst0)
         assert len(stub_worker.instances) == 2, "second worker created after first completes"
         inst1 = stub_worker.instances[1]
         on_done1 = inst1.import_finished.connect.call_args[0][0]
         on_done1("pack-b", {})
+        assert persist_calls == []
+        assert infos == []
+        _emit_native_finished(inst1)
 
         # After all done, persist was called once with both packs.
         assert persist_calls, "persist must be called"
@@ -390,6 +450,9 @@ class TestAddPackMultiPack:
 
         # Summary dialog shown for multi-pack batch.
         assert infos, "summary dialog must appear for multi-pack batch"
+        assert "Cancelled" not in infos[0][1]
+        inst0.cancel.assert_not_called()
+        inst1.cancel.assert_not_called()
 
     def test_cancel_after_first_pack_done_no_second_worker(self, tab, monkeypatch, stub_worker, tmp_path):
         """Cancel emitted before first on_done fires → no second worker; summary mentions cancellation.
@@ -409,7 +472,7 @@ class TestAddPackMultiPack:
                 captured_dlg.append(self)
 
         monkeypatch.setattr(
-            "anki_miner.gui.controllers.audio_pack_import_flow.QProgressDialog",
+            "anki_miner.gui.controllers.import_flow_common.QProgressDialog",
             _CaptureDlg,
         )
 
@@ -439,11 +502,12 @@ class TestAddPackMultiPack:
         assert captured_dlg, "dialog must have been captured"
         captured_dlg[0].canceled.emit()
 
-        # Now fire the first pack's completion: launch_next sees cancelled, calls finish().
+        # Domain completion remains latched until the native finish.
         on_done0("pack-a", {})
 
-        # No second worker should have been created.
         assert len(stub_worker.instances) == 1, "no second worker must be started after cancel"
+        assert infos == []
+        _emit_native_finished(inst0)
 
         # Summary dialog must mention cancellation (multi-pack batch always shows summary).
         assert infos, "summary dialog must appear"
@@ -471,11 +535,16 @@ class TestAddPackMultiPack:
         on_fail0 = inst0.failed.connect.call_args[0][0]
         on_fail0("disk full")
 
+        assert len(stub_worker.instances) == 1
+        assert infos == []
+        _emit_native_finished(inst0)
         # Second pack still launched.
         assert len(stub_worker.instances) == 2, "second pack must still be launched after first fails"
         inst1 = stub_worker.instances[1]
         on_done1 = inst1.import_finished.connect.call_args[0][0]
         on_done1("pack-b", {})
+        assert infos == []
+        _emit_native_finished(inst1)
 
         # Summary dialog mentions the failure.
         assert infos, "summary dialog must appear"
@@ -667,6 +736,40 @@ class TestAddPackPriorityOrdering:
     forvo_files < nhk16_files < shinmeikai8_files — opposite of desired priority.
     """
 
+    def test_unknown_pack_priority_is_stable(self, tab, monkeypatch, stub_worker, tmp_path):
+        first_dir = tmp_path / "unknown_first"
+        second_dir = tmp_path / "unknown_second"
+        packs = [(first_dir, "forvo"), (second_dir, "forvo")]
+        monkeypatch.setattr(
+            "anki_miner.gui.controllers.audio_pack_import_flow.derive_pack_id",
+            lambda name: f"unknown-{name}",
+        )
+        _capture_infos(monkeypatch)
+        _capture_warnings(monkeypatch)
+
+        tab._audio_pack_import_flow.add_pack(_scan_result=(str(tmp_path), packs))
+
+        assert stub_worker.call_args.args[0] == first_dir
+        _complete_worker(stub_worker.instances[0], "unknown-first")
+        assert stub_worker.call_args.args[0] == second_dir
+        _complete_worker(stub_worker.instances[1], "unknown-second")
+
+    def test_duplicate_pack_is_reinserted_once_before_enabled_jpod101(self, tab):
+        tab.audio_panel.set_chain(
+            (
+                AudioSourceEntry(kind="pack", pack_id="duplicate", enabled=False),
+                AudioSourceEntry(kind="jpod101", enabled=True),
+            )
+        )
+
+        result = tab._audio_pack_import_flow._chain_with_new_packs_inserted(["duplicate"])
+
+        duplicates = [entry for entry in result if entry.pack_id == "duplicate"]
+        assert duplicates == [AudioSourceEntry(kind="pack", pack_id="duplicate", enabled=True)]
+        duplicate_pos = result.index(duplicates[0])
+        jpod_pos = next(i for i, entry in enumerate(result) if entry.kind == "jpod101")
+        assert duplicate_pos < jpod_pos
+
     def test_nhk16_before_forvo_in_chain(self, tab, monkeypatch, stub_worker, tmp_path):
         """forvo_files + nhk16_files: nhk16 must appear before forvo in chain."""
         parent = tmp_path / "user_files"
@@ -694,10 +797,12 @@ class TestAddPackPriorityOrdering:
         assert len(stub_worker.instances) == 1
         on_done0 = stub_worker.instances[0].import_finished.connect.call_args[0][0]
         on_done0("nhk16", {})
+        _emit_native_finished(stub_worker.instances[0])
 
         assert len(stub_worker.instances) == 2
         on_done1 = stub_worker.instances[1].import_finished.connect.call_args[0][0]
         on_done1("forvo", {})
+        _emit_native_finished(stub_worker.instances[1])
 
         assert persist_calls, "persist_chain must be called"
         final_chain = persist_calls[-1]
@@ -737,13 +842,13 @@ class TestAddPackPriorityOrdering:
 
         # Fire three workers in creation order (= priority order after sort).
         assert len(stub_worker.instances) == 1
-        stub_worker.instances[0].import_finished.connect.call_args[0][0]("nhk16", {})
+        _complete_worker(stub_worker.instances[0], "nhk16")
 
         assert len(stub_worker.instances) == 2
-        stub_worker.instances[1].import_finished.connect.call_args[0][0]("shinmeikai8", {})
+        _complete_worker(stub_worker.instances[1], "shinmeikai8")
 
         assert len(stub_worker.instances) == 3
-        stub_worker.instances[2].import_finished.connect.call_args[0][0]("forvo", {})
+        _complete_worker(stub_worker.instances[2], "forvo")
 
         assert persist_calls, "persist_chain must be called"
         final_chain = persist_calls[-1]
@@ -752,12 +857,11 @@ class TestAddPackPriorityOrdering:
         for pid in ("nhk16", "shinmeikai8", "forvo"):
             assert pid in pack_ids, f"{pid} missing from chain {pack_ids}"
 
-        assert pack_ids.index("nhk16") < pack_ids.index(
-            "shinmeikai8"
-        ), f"nhk16 must precede shinmeikai8; got {pack_ids}"
-        assert pack_ids.index("shinmeikai8") < pack_ids.index(
-            "forvo"
-        ), f"shinmeikai8 must precede forvo; got {pack_ids}"
+        nhk16_pos = pack_ids.index("nhk16")
+        shinmeikai8_pos = pack_ids.index("shinmeikai8")
+        forvo_pos = pack_ids.index("forvo")
+        assert nhk16_pos < shinmeikai8_pos, f"nhk16 must precede shinmeikai8; got {pack_ids}"
+        assert shinmeikai8_pos < forvo_pos, f"shinmeikai8 must precede forvo; got {pack_ids}"
 
     def test_all_new_packs_above_jpod101(self, tab, monkeypatch, stub_worker, tmp_path):
         """nhk16 and forvo packs must both appear above the jpod101 chain entry."""
@@ -781,8 +885,8 @@ class TestAddPackPriorityOrdering:
 
         tab._audio_pack_import_flow.add_pack()
 
-        stub_worker.instances[0].import_finished.connect.call_args[0][0]("nhk16", {})
-        stub_worker.instances[1].import_finished.connect.call_args[0][0]("forvo", {})
+        _complete_worker(stub_worker.instances[0], "nhk16")
+        _complete_worker(stub_worker.instances[1], "forvo")
 
         assert persist_calls
         final_chain = persist_calls[-1]
