@@ -540,6 +540,28 @@
         <translation>找不到筆記類型</translation>
     </message>
 </context><context>
+    <name>App</name>
+    <message>
+        <source>Anki Miner Is Already Running</source>
+        <translation>Anki Miner 已在執行中</translation>
+    </message>
+    <message>
+        <source>Another copy of Anki Miner appears to be running. Running two copies at once can corrupt the known-words and statistics databases.
+
+Continue anyway?</source>
+        <translation>另一個 Anki Miner 似乎正在執行中。同時執行兩個副本可能會損毀已知單字資料庫與統計資料庫。
+
+仍要繼續嗎？</translation>
+    </message>
+    <message>
+        <source>Continue anyway</source>
+        <translation>仍要繼續</translation>
+    </message>
+    <message>
+        <source>Quit</source>
+        <translation>結束</translation>
+    </message>
+</context><context>
     <name>AsrModelDownloadWorker</name>
     <message>
         <source>Downloading %1…</source>
@@ -5244,6 +5266,22 @@ Imported values override your current settings; anything not in the file is kept
 %1</translation>
     </message>
     <message>
+        <source>Invalid imported fields were ignored; current values were kept: %1</source>
+        <translation>已忽略無效的匯入欄位，並保留目前的值：%1</translation>
+    </message>
+    <message>
+        <source>Auto-update of yt-dlp was disabled (settings imported from an older version).</source>
+        <translation>已停用 yt-dlp 的自動更新（設定是從較舊版本匯入的）。</translation>
+    </message>
+    <message>
+        <source>Settings from version 2.8.3 were mapped conservatively to schema 2.</source>
+        <translation>已將 2.8.3 版的設定保守地對應至結構描述 2。</translation>
+    </message>
+    <message>
+        <source>Settings Imported</source>
+        <translation>設定已匯入</translation>
+    </message>
+    <message>
         <source>✓ Imported</source>
         <translation>✓ 已匯入</translation>
     </message>
@@ -6308,6 +6346,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>縮放所有 UI 文字。即時套用到整個應用程式。</translation>
     </message>
     <message>
+        <source>Use system file dialogs</source>
+        <translation>使用系統檔案對話方塊</translation>
+    </message>
+    <message>
+        <source>Use the operating system's native file pickers instead of the app's built-in ones. Native dialogs can freeze the app on some Windows systems with flaky network drives or cloud storage, which is why this is off by default.</source>
+        <translation>使用作業系統的原生檔案選擇器，而非應用程式內建的選擇器。在部分 Windows 系統上，若網路磁碟機或雲端儲存不穩定，原生對話方塊可能導致應用程式凍結，因此此選項預設為關閉。</translation>
+    </message>
+    <message>
         <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
         <translation>為主題加上星號即可將它加入右上角的選擇器。點按任一列即可預覽——變更會即時套用到整個應用程式。按 &lt;b&gt;還原&lt;/b&gt; 即可取消您的預覽。</translation>
     </message>
@@ -6794,6 +6840,10 @@ Continue with import?</source>
     <message>
         <source>%1 entries</source>
         <translation>%1 個項目</translation>
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation>⚠ 需要重新匯入（應用程式已升級）</translation>
     </message>
     <message>
         <source>⚠ folder missing — re-import</source>
