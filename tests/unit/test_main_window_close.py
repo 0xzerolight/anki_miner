@@ -228,6 +228,9 @@ class _FakeSettingsTab(SettingsTab):
 
         self._debounce_timer = QTimer(self)
         self._debounce_timer.setSingleShot(True)
+        # Real SettingsTab shape: flush_pending_settings consults the explicit
+        # dirty flag (wave-2 review fix) before touching the timer.
+        self._settings_dirty = False
 
 
 def _trigger_close(window) -> MagicMock:
