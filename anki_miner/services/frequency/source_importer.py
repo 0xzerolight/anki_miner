@@ -37,6 +37,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services._sqlite_index import (
+    prove_owned_slot,
+    resolve_managed_slot,
+    write_ownership_marker,
+)
 from anki_miner.services._staging import promote_staged_dir
 from anki_miner.services.frequency import mode_probe, storage
 from anki_miner.services.frequency.csv_parse import (
@@ -54,12 +59,14 @@ from anki_miner.services.yomitan_meta_bank import (
     open_yomitan_meta_banks,
 )
 from anki_miner.utils.csv_utils import detect_delimiter, is_header_row
+from anki_miner.utils.robust_fs import robust_rmtree
 from anki_miner.utils.slug import slugify
 
 logger = logging.getLogger(__name__)
 
-_ZIP_SUFFIXES = {".zip"}
-_CSV_SUFFIXES = {".csv", ".tsv", ".txt"}
+FREQUENCY_SOURCE_SUFFIXES = (".zip", ".csv", ".tsv", ".txt")
+_ZIP_SUFFIXES = frozenset(FREQUENCY_SOURCE_SUFFIXES[:1])
+_CSV_SUFFIXES = frozenset(FREQUENCY_SOURCE_SUFFIXES[1:])
 
 
 def _rank_preference(row: tuple[int, str | None]) -> tuple[bool, int]:
@@ -153,6 +160,7 @@ def import_frequency_source(
             dest_root,
             source_id=source_id,
             source_name=source_name,
+            cancel_check=cancel_check,
             overwrite=overwrite,
         )
     raise SetupError(
@@ -267,6 +275,7 @@ def _import_zip(
             skipped_malformed=banks.skipped_malformed,
             converted_to_ranks=converted,
             is_categorical=is_categorical,
+            cancel_check=cancel_check,
             overwrite=overwrite,
         )
 
@@ -288,6 +297,7 @@ def _import_csv(
     *,
     source_id: str | None,
     source_name: str | None = None,
+    cancel_check: Callable[[], bool] | None,
     overwrite: bool,
 ) -> FreqSourceImportResult:
     stem = csv_path.stem
@@ -313,6 +323,8 @@ def _import_csv(
             first_row = True
             word_first = False
             for row in reader:
+                if cancel_check is not None and cancel_check():
+                    raise SetupError("Import cancelled")
                 if len(row) < 2:
                     continue
                 if first_row:
@@ -355,6 +367,7 @@ def _import_csv(
         entry_count=len(ranks),
         skipped_display_only=0,
         converted_to_ranks=converted,
+        cancel_check=cancel_check,
         overwrite=overwrite,
     )
     logger.info(
@@ -452,6 +465,7 @@ def _finalize(
     skipped_malformed: int = 0,
     converted_to_ranks: bool = False,
     is_categorical: bool = False,
+    cancel_check: Callable[[], bool] | None,
     overwrite: bool,
 ) -> FreqSourceImportResult:
     """Build the index under a staging dir, then atomically promote it.
@@ -459,13 +473,23 @@ def _finalize(
     Copies the original input alongside ``index.sqlite`` (``source.zip`` /
     ``source.csv``) for later reimport.
     """
-    dest_root.mkdir(parents=True, exist_ok=True)
-    final_path = dest_root / source_id
-    if os.path.lexists(final_path) and not overwrite:
-        raise SetupError(f"Frequency source '{source_id}' already exists")
-
-    staging = Path(tempfile.mkdtemp(prefix=".staging-", dir=dest_root))
     try:
+        final_path = resolve_managed_slot(dest_root, source_id)
+    except ValueError as exc:
+        raise SetupError(str(exc)) from exc
+    final_path.parent.mkdir(parents=True, exist_ok=True)
+    if os.path.lexists(final_path):
+        if not overwrite:
+            raise SetupError(f"Frequency source '{source_id}' already exists")
+        if not prove_owned_slot(final_path.parent, source_id, "frequency"):
+            raise SetupError(
+                f"Frequency source '{source_id}' exists but is not an Anki Miner-managed frequency source; "
+                "refusing to overwrite it"
+            )
+
+    staging = Path(tempfile.mkdtemp(prefix=".staging-", dir=final_path.parent))
+    try:
+        write_ownership_marker(staging, source_id, "frequency")
         db_path = staging / "index.sqlite"
         meta = {
             "schema_version": str(storage.SCHEMA_VERSION),
@@ -485,6 +509,9 @@ def _finalize(
         source_copy_name = "source" + input_path.suffix.lower()
         shutil.copy2(input_path, staging / source_copy_name)
 
+        if cancel_check is not None and cancel_check():
+            raise SetupError("Import cancelled")
+
         try:
             promote_staged_dir(staging, final_path, mover=shutil.move, overwrite=overwrite)
         except FileExistsError as exc:
@@ -492,8 +519,7 @@ def _finalize(
     finally:
         # On success the staging dir was moved away; clean up on any failure
         # so a partial import does not orphan a .staging-* dir in dest_root.
-        if staging.exists():
-            shutil.rmtree(staging, ignore_errors=True)
+        robust_rmtree(staging, mode="outcome")
 
     return FreqSourceImportResult(
         source_id=source_id,

@@ -513,6 +513,9 @@ class TestAddPackMultiPack:
         assert infos, "summary dialog must appear"
         body = infos[0][1]
         assert "Cancelled" in body or "cancelled" in body, f"summary must mention cancellation; got: {body}"
+        assert persist_calls, "completed pack must be persisted after native worker completion"
+        persisted_pack_ids = [entry.pack_id for entry in persist_calls[-1] if entry.kind == "pack"]
+        assert "pack-a" in persisted_pack_ids
 
     def test_failure_mid_batch_continues_remaining_packs(self, tab, monkeypatch, stub_worker, tmp_path):
         """Failing the first pack must not abort the second; both tracked in summary."""

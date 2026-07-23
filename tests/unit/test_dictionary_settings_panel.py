@@ -1,5 +1,6 @@
 """Smoke tests for DictionarySettingsPanel."""
 
+import errno
 import os
 import shutil
 import stat
@@ -14,7 +15,9 @@ from PyQt6.QtWidgets import QMessageBox
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.widgets.panels import dictionary_settings_panel as dsp_mod
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
+from anki_miner.services._sqlite_index import write_ownership_marker
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, create_index, write_meta
+from anki_miner.utils import robust_fs
 
 
 def _make_dict_on_disk(
@@ -58,6 +61,7 @@ def confirm_remove(monkeypatch):
         "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.question",
         lambda *a, **kw: QMessageBox.StandardButton.Yes,
     )
+    monkeypatch.setattr(dsp_mod, "prove_owned_slot", lambda *_args: True)
 
 
 def test_panel_renders_default_chain(qapp, qtbot, monkeypatch, tmp_path):
@@ -335,6 +339,63 @@ def test_remove_tolerates_missing_dict_folder(qapp, qtbot, tmp_path, confirm_rem
 
     chain = panel.get_chain()
     assert [e.kind for e in chain] == ["jisho"]
+
+
+def test_remove_foreign_same_name_is_chain_only(qtbot, monkeypatch, tmp_path):
+    foreign = tmp_path / "foreign"
+    foreign.mkdir()
+    payload = foreign / "keep.txt"
+    payload.write_text("foreign", encoding="utf-8")
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.question",
+        lambda *a, **kw: QMessageBox.StandardButton.Yes,
+    )
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
+        lambda _parent, _title, body, *a, **kw: warnings.append(body),
+    )
+    panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((ChainEntry(kind="indexed", dict_id="foreign", enabled=True),))
+
+    panel.remove(0)
+    qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
+
+    assert panel.get_chain() == ()
+    assert payload.read_text(encoding="utf-8") == "foreign"
+    assert any("left untouched" in body for body in warnings)
+
+
+def test_remove_symlink_slot_is_chain_only(qtbot, monkeypatch, tmp_path):
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    payload = outside / "keep.txt"
+    payload.write_text("owned target", encoding="utf-8")
+    write_ownership_marker(outside, "linked", "dictionary")
+    root = tmp_path / "dicts"
+    root.mkdir()
+    link = root / "linked"
+    link.symlink_to(outside, target_is_directory=True)
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.question",
+        lambda *a, **kw: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
+        lambda *a, **kw: QMessageBox.StandardButton.Ok,
+    )
+    panel = DictionarySettingsPanel(root)
+    qtbot.addWidget(panel)
+    panel.set_chain((ChainEntry(kind="indexed", dict_id="linked", enabled=True),))
+
+    panel.remove(0)
+    qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
+
+    assert panel.get_chain() == ()
+    assert link.is_symlink()
+    assert payload.read_text(encoding="utf-8") == "owned target"
+    link.unlink()
 
 
 def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, qtbot, tmp_path):
@@ -631,9 +692,8 @@ def test_remove_cancelled_does_not_emit_chain_changed(qapp, qtbot, monkeypatch, 
     assert changed == []
 
 
-def test_remove_failed_rmtree_does_not_emit_chain_changed(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
-    """If rmtree exhausts its retries we abort early; chain_changed must not fire
-    because the chain mutation also did not happen."""
+def test_remove_failed_tombstone_cleanup_keeps_durable_chain_change(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
+    """Post-commit cleanup failure leaves a tombstone without reversing remove."""
     dict_dir = tmp_path / "a"
     dict_dir.mkdir()
     (dict_dir / "index.sqlite").write_bytes(b"placeholder")
@@ -645,11 +705,9 @@ def test_remove_failed_rmtree_does_not_emit_chain_changed(qapp, qtbot, monkeypat
     )
 
     def _always_fail(*args, **kwargs):
-        raise PermissionError("simulated locked file")
+        return False, PermissionError("simulated locked file")
 
-    monkeypatch.setattr(dsp_mod.shutil, "rmtree", _always_fail)
-    # Speed up the retry loop — the helper sleeps between attempts.
-    monkeypatch.setattr(dsp_mod.time, "sleep", lambda _s: None)
+    monkeypatch.setattr(dsp_mod, "robust_rmtree", _always_fail)
 
     panel = DictionarySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
@@ -664,12 +722,11 @@ def test_remove_failed_rmtree_does_not_emit_chain_changed(qapp, qtbot, monkeypat
     panel.chain_changed.connect(lambda: changed.append(None))
 
     panel.remove(0)
-    # The off-thread rmtree fails; wait for the error handler to re-enable the
-    # Remove button (proof the error callback ran on the GUI thread).
-    qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
-    assert changed == []
+    qtbot.waitUntil(lambda: not panel.has_active_mutation(), timeout=3000)
+    assert changed == [None]
     chain = panel.get_chain()
-    assert [e.dict_id for e in chain[:1]] == ["a"], "failed remove must leave chain intact"
+    assert [e.kind for e in chain] == ["jisho"]
+    assert len(list(tmp_path.glob("a.tomb-*"))) == 1
 
 
 def test_remove_retries_transient_oserror(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
@@ -688,8 +745,7 @@ def test_remove_retries_transient_oserror(qapp, qtbot, monkeypatch, tmp_path, co
             raise PermissionError("[WinError 32] simulated transient lock")
         return real_rmtree(path, *args, **kwargs)
 
-    monkeypatch.setattr(dsp_mod.shutil, "rmtree", _flaky)
-    monkeypatch.setattr(dsp_mod.time, "sleep", lambda _s: None)
+    monkeypatch.setattr(robust_fs.shutil, "rmtree", _flaky)
 
     warned: list[None] = []
     monkeypatch.setattr(
@@ -711,8 +767,9 @@ def test_remove_retries_transient_oserror(qapp, qtbot, monkeypatch, tmp_path, co
 
     panel.remove(0)
 
-    # rmtree (with its retry loop) now runs off the GUI thread.
-    qtbot.waitUntil(lambda: changed == [None], timeout=3000)
+    # Tombstone cleanup (with its retry loop) runs off the GUI thread.
+    qtbot.waitUntil(lambda: not panel.has_active_mutation(), timeout=3000)
+    assert changed == [None]
     assert calls["n"] >= 2, "retry loop should have triggered at least once"
     assert not dict_dir.exists(), "second attempt must complete the rmtree"
     assert warned == [], "successful retry must not show an error dialog"
@@ -728,7 +785,8 @@ def test_on_rmtree_error_clears_readonly_then_retries(tmp_path):
     # First call simulates the rmtree-internal failure; the handler should
     # chmod the file then re-invoke os.unlink, which now succeeds on Windows
     # (and is harmless on POSIX since the parent dir is writable).
-    dsp_mod._on_rmtree_error(os.unlink, str(target), None)
+    error = PermissionError(errno.EACCES, "readonly", str(target))
+    robust_fs._on_rmtree_error(os.unlink, str(target), (PermissionError, error, None))
 
     assert not target.exists()
 
@@ -738,11 +796,9 @@ def test_on_rmtree_error_reraises_non_permission(tmp_path):
     them — we only special-case the read-only bit, nothing else."""
     target = tmp_path / "missing"
 
-    def _always_oserror(_path):
-        raise FileNotFoundError(target)
-
     with pytest.raises(OSError):
-        dsp_mod._on_rmtree_error(_always_oserror, str(target), None)
+        error = FileNotFoundError(errno.ENOENT, "missing", str(target))
+        robust_fs._on_rmtree_error(os.unlink, str(target), (FileNotFoundError, error, None))
 
 
 def test_release_callback_returning_false_aborts_remove(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
@@ -753,7 +809,7 @@ def test_release_callback_returning_false_aborts_remove(qapp, qtbot, monkeypatch
     (dict_dir / "index.sqlite").write_bytes(b"placeholder")
 
     rmtree_calls: list[Path] = []
-    monkeypatch.setattr(dsp_mod.shutil, "rmtree", lambda p, *a, **kw: rmtree_calls.append(Path(p)))
+    monkeypatch.setattr(dsp_mod, "robust_rmtree", lambda p, **_kw: rmtree_calls.append(Path(p)))
 
     warned: list[str] = []
     monkeypatch.setattr(
@@ -797,13 +853,13 @@ def test_release_callback_runs_before_rmtree(qapp, qtbot, monkeypatch, tmp_path,
         events.append("release")
         return True
 
-    real_rmtree = dsp_mod.shutil.rmtree
+    real_rmtree = dsp_mod.robust_rmtree
 
     def _spy_rmtree(path, *args, **kwargs):
         events.append("rmtree")
         return real_rmtree(path, *args, **kwargs)
 
-    monkeypatch.setattr(dsp_mod.shutil, "rmtree", _spy_rmtree)
+    monkeypatch.setattr(dsp_mod, "robust_rmtree", _spy_rmtree)
 
     panel = DictionarySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
@@ -817,9 +873,8 @@ def test_release_callback_runs_before_rmtree(qapp, qtbot, monkeypatch, tmp_path,
 
     panel.remove(0)
 
-    # release fires synchronously on the GUI thread before the off-thread
-    # rmtree is dispatched; wait for the delete to land.
-    qtbot.waitUntil(lambda: not dict_dir.exists(), timeout=3000)
+    # release fires synchronously before rename; cleanup follows off-thread.
+    qtbot.waitUntil(lambda: len(events) == 2, timeout=3000)
     assert events == ["release", "rmtree"], events
 
 
@@ -846,24 +901,19 @@ def test_remove_without_release_callback_still_works(qapp, qtbot, tmp_path, conf
     assert [e.kind for e in panel.get_chain()] == ["jisho"]
 
 
-def test_robust_rmtree_exhausts_retries_and_raises(monkeypatch, tmp_path):
-    """After ``retries`` failures the helper must surface the last OSError."""
+def test_robust_rmtree_wrapper_uses_shared_outcome_mode(monkeypatch, tmp_path):
+    """Panel-local seam delegates to non-raising post-commit cleanup."""
     target = tmp_path / "doomed"
     target.mkdir()
+    calls: list[tuple[Path, str]] = []
 
-    attempts = {"n": 0}
+    def shared(path: Path, *, mode: str):
+        calls.append((path, mode))
+        return True, None
 
-    def _always_fail(*args, **kwargs):
-        attempts["n"] += 1
-        raise PermissionError("simulated")
-
-    monkeypatch.setattr(dsp_mod.shutil, "rmtree", _always_fail)
-    monkeypatch.setattr(dsp_mod.time, "sleep", lambda _s: None)
-
-    with pytest.raises(PermissionError):
-        dsp_mod._robust_rmtree(target, retries=3, delay_s=0)
-
-    assert attempts["n"] == 3
+    monkeypatch.setattr(dsp_mod, "robust_rmtree", shared)
+    dsp_mod._robust_rmtree(target)
+    assert calls == [(target, "outcome")]
 
 
 def test_right_click_jisho_row_shows_no_menu(qapp, qtbot, monkeypatch, tmp_path):
@@ -1099,13 +1149,13 @@ class TestOffThreadDiskWork:
 
         main_id = threading.get_ident()
         rmtree_threads: list[int] = []
-        real_rmtree = dsp_mod.shutil.rmtree
+        real_rmtree = dsp_mod.robust_rmtree
 
         def _spy_rmtree(path, *a, **kw):
             rmtree_threads.append(threading.get_ident())
             return real_rmtree(path, *a, **kw)
 
-        monkeypatch.setattr(dsp_mod.shutil, "rmtree", _spy_rmtree)
+        monkeypatch.setattr(dsp_mod, "robust_rmtree", _spy_rmtree)
 
         dict_dir = tmp_path / "a"
         dict_dir.mkdir()
@@ -1121,7 +1171,7 @@ class TestOffThreadDiskWork:
         )
 
         panel.remove(0)
-        qtbot.waitUntil(lambda: not dict_dir.exists(), timeout=3000)
+        qtbot.waitUntil(lambda: bool(rmtree_threads), timeout=3000)
         assert rmtree_threads and all(t != main_id for t in rmtree_threads), rmtree_threads
 
     def test_refresh_registry_scans_off_gui_thread(self, qapp, qtbot, tmp_path, monkeypatch):

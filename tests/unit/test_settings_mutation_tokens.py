@@ -9,12 +9,15 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from anki_miner.config import AudioSourceEntry, ChainEntry, FreqEntry
+from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, ChainEntry, FreqEntry
 from anki_miner.gui.controllers import import_flow_common as import_flow_common_module
+from anki_miner.gui.controllers.background_tasks import BackgroundTaskController
+from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.widgets.panels import chain_settings_panel_base as base_module
 from anki_miner.gui.widgets.panels import frequency_settings_panel as frequency_panel_module
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
+from anki_miner.services._sqlite_index import write_ownership_marker
 
 
 @pytest.fixture
@@ -101,6 +104,7 @@ def test_context_menu_refuses_while_mutation_token_is_held(tab, monkeypatch):
 def test_remove_completion_rebases_on_current_chain(qtbot, monkeypatch, tmp_path):
     target = tmp_path / "remove-me"
     target.mkdir()
+    write_ownership_marker(target, "remove-me", "dictionary")
     panel = DictionarySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     panel.set_chain(
@@ -135,7 +139,7 @@ def test_remove_completion_rebases_on_current_chain(qtbot, monkeypatch, tmp_path
         )
     )
 
-    remove_done(None)
+    remove_done((True, None))
 
     assert [entry.dict_id for entry in panel.get_chain()] == ["added-during-remove", None]
 
@@ -235,6 +239,80 @@ def test_mutation_preflight_refuses_when_config_commit_fails(test_config, qtbot,
                 worker.wait(3000)
 
 
+def test_post_save_removal_sync_prevents_later_chain_resurrection(
+    test_config,
+    qtbot,
+) -> None:
+    persisted: list[AnkiMinerConfig] = []
+
+    def commit(config: AnkiMinerConfig) -> None:
+        persisted.append(config)
+        if len(persisted) == 1:
+            raise ConfigCommitError(ConfigCommitResult.post_save_failure(RuntimeError("refresh failed")))
+
+    config = replace(
+        test_config,
+        dictionary_chain=(
+            ChainEntry(kind="indexed", dict_id="remove-me", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        ),
+    )
+    widget = SettingsTab(config, commit_config=commit)
+    qtbot.addWidget(widget)
+    try:
+        result = widget._commit_dictionary_removal((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
+        widget._persist_audio_chain_change(widget.config.expression_audio_chain)
+
+        assert result.persisted is True
+        assert [entry.kind for entry in widget.config.dictionary_chain] == ["jisho"]
+        assert [entry.kind for entry in persisted[-1].dictionary_chain] == ["jisho"]
+    finally:
+        widget.shutdown()
+        for worker in widget.iter_close_workers():
+            if worker is not None:
+                worker.wait(3000)
+
+
+def test_post_save_pitch_failure_keeps_promoted_bytes_and_committed_path(
+    test_config,
+    qtbot,
+    tmp_path,
+    monkeypatch,
+) -> None:
+    pitch_csv = tmp_path / "pitch.csv"
+    pitch_csv.write_bytes(b"old pitch")
+    pending_pitch_csv = tmp_path / "pitch.csv.pending"
+    pending_pitch_csv.write_bytes(b"new pitch")
+    config = replace(test_config, pitch_accent_path=pitch_csv)
+
+    def fail_refresh(_config: AnkiMinerConfig) -> None:
+        raise ConfigCommitError(ConfigCommitResult.post_save_failure(RuntimeError("refresh failed")))
+
+    widget = SettingsTab(config, commit_config=fail_refresh)
+    qtbot.addWidget(widget)
+    pitch_zip = tmp_path / "pitch.zip"
+    pitch_zip.write_bytes(b"zip")
+    widget.dictionary_panel.pitch_accent_selector.set_path(str(pitch_zip))
+    monkeypatch.setattr(widget, "_resolve_pitch_accent_path", lambda: pitch_csv)
+
+    def promote_pitch() -> None:
+        os.replace(pending_pitch_csv, pitch_csv)
+
+    widget._zip_import_flow._pending_pitch_commit = promote_pitch
+
+    try:
+        assert widget.commit_pending_settings_for_mutation() is False
+        assert widget.config.pitch_accent_path == pitch_csv
+        assert widget.dictionary_panel.pitch_accent_selector.get_path() == str(pitch_csv)
+        assert pitch_csv.read_bytes() == b"new pitch"
+        assert list(tmp_path.glob(".pitch.csv.rollback-*")) == []
+    finally:
+        widget.shutdown()
+        for worker in widget.iter_close_workers():
+            if worker is not None:
+                worker.wait(3000)
+
+
 def test_root_edit_is_committed_before_immediate_add(tab, monkeypatch, tmp_path):
     new_root = tmp_path / "new-root"
     new_root.mkdir()
@@ -264,6 +342,65 @@ def test_root_edit_is_committed_before_immediate_add(tab, monkeypatch, tmp_path)
 
     assert captured_roots == [new_root]
     assert tab.config.dicts_root == new_root
+
+
+@pytest.mark.parametrize(
+    "entry_point",
+    ["add", "reimport", "reimport-all", "remove", "restore"],
+)
+def test_retained_migration_worker_refuses_every_settings_dictionary_entry_point(
+    tab,
+    monkeypatch,
+    entry_point,
+):
+    class RetainedMigrationWorker:
+        def __init__(self) -> None:
+            self.cancel_calls = 0
+            self.wait_calls: list[int] = []
+
+        def isRunning(self) -> bool:  # noqa: N802
+            return True
+
+        def cancel(self) -> None:
+            self.cancel_calls += 1
+
+        def wait(self, timeout_ms: int) -> bool:
+            self.wait_calls.append(timeout_ms)
+            return False
+
+    controller = BackgroundTaskController(tab)  # type: ignore[arg-type]
+    worker = RetainedMigrationWorker()
+    controller.jmdict_migration_worker = worker  # type: ignore[assignment]
+    tab.set_dictionary_mutation_preflight(controller.prepare_dictionary_mutation)
+    tab.dictionary_panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="slot", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
+    unexpected = MagicMock(side_effect=AssertionError("mutation continued after refused preflight"))
+    monkeypatch.setattr(
+        "anki_miner.gui.controllers.dictionary_import_flow.file_dialogs.get_open_file_name",
+        unexpected,
+    )
+    monkeypatch.setattr(tab.dictionary_panel, "_confirm_remove", unexpected)
+    monkeypatch.setattr(tab._dict_import_flow, "_run_latest_scan", unexpected)
+
+    if entry_point == "add":
+        tab._dict_import_flow.add_dict()
+    elif entry_point == "reimport":
+        tab._dict_import_flow.reimport_dict("slot")
+    elif entry_point == "reimport-all":
+        tab._dict_import_flow.reimport_all()
+    elif entry_point == "remove":
+        tab.dictionary_panel.remove(0)
+    else:
+        tab._dict_import_flow.restore_unlisted()
+
+    assert worker.cancel_calls == 1
+    assert worker.wait_calls == [1000]
+    assert controller.jmdict_migration_worker is worker
+    unexpected.assert_not_called()
 
 
 def test_scan_dispatch_failure_releases_mutation_token(tab, monkeypatch):

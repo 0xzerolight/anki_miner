@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services._sqlite_index import read_ownership_marker
 from anki_miner.services.audio_packs import importer as audio_pack_importer
 from anki_miner.services.audio_packs.importer import (
     AudioPackImportResult,
@@ -319,6 +321,31 @@ class TestExistsOverwrite:
         backups = [p for p in dest.iterdir() if ".bak" in p.name]
         assert backups == []
 
+    def test_overwrite_refuses_foreign_same_name_with_plausible_meta(self, tmp_path: Path):
+        pack = _make_ajt_pack(tmp_path / "pack")
+        dest = tmp_path / "out"
+        foreign = dest / "pack"
+        foreign.mkdir(parents=True)
+        db_path = foreign / "index.sqlite"
+        conn = sqlite3.connect(db_path)
+        try:
+            conn.execute("CREATE TABLE entries (payload TEXT)")
+            conn.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)")
+            conn.executemany(
+                "INSERT INTO meta (key, value) VALUES (?, ?)",
+                (("schema_version", str(SCHEMA_VERSION)), ("pack_id", "pack")),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        payload = foreign / "keep.txt"
+        payload.write_text("foreign", encoding="utf-8")
+
+        with pytest.raises(SetupError, match="not an Anki Miner-managed audio pack"):
+            import_audio_pack(pack, dest, overwrite=True)
+
+        assert payload.read_text(encoding="utf-8") == "foreign"
+
     def test_overwrite_updates_entry_count_in_meta(self, tmp_path: Path):
         pack_v1 = _make_ajt_pack(tmp_path / "pack", n_entries=2)
         dest = tmp_path / "out"
@@ -337,6 +364,24 @@ class TestExistsOverwrite:
 
 
 class TestZeroEntriesAndBadInput:
+    def test_rejects_source_under_managed_root(self, tmp_path: Path):
+        dest = tmp_path / "out"
+        pack = _make_ajt_pack(dest / "pack")
+
+        with pytest.raises(SetupError, match="overlaps the managed audio-pack root"):
+            import_audio_pack(pack, dest)
+
+        assert (pack / "index.json").is_file()
+
+    def test_rejects_destination_under_source(self, tmp_path: Path):
+        pack = _make_ajt_pack(tmp_path / "pack")
+        dest = pack / "managed"
+
+        with pytest.raises(SetupError, match="overlaps the audio source"):
+            import_audio_pack(pack, dest)
+
+        assert not dest.exists()
+
     def test_zero_entry_pack_raises_setup_error(self, tmp_path: Path):
         """A valid AJT structure with no referenced media → zero entries → SetupError."""
         pack = tmp_path / "empty_pack"
@@ -416,6 +461,32 @@ class TestCancellation:
             staging_leftovers = [p for p in dest.iterdir() if p.name.startswith(".staging-")]
             assert staging_leftovers == []
 
+    def test_cancel_after_metadata_aborts_before_promotion(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from anki_miner.services.audio_packs import importer
+
+        pack = _make_ajt_pack(tmp_path / "pack", n_entries=2)
+        dest = tmp_path / "out"
+        metadata_written = False
+        real_write_meta = importer.write_meta
+
+        def write_meta(*args, **kwargs):
+            nonlocal metadata_written
+            result = real_write_meta(*args, **kwargs)
+            metadata_written = True
+            return result
+
+        monkeypatch.setattr(importer, "write_meta", write_meta)
+
+        with pytest.raises(SetupError, match="cancelled"):
+            import_audio_pack(pack, dest, cancel_check=lambda: metadata_written)
+
+        assert metadata_written is True
+        assert not (dest / derive_pack_id(pack.name)).exists()
+
 
 # ---------------------------------------------------------------------------
 # Staging filesystem placement
@@ -451,10 +522,11 @@ class TestStagingPlacement:
         pack = _make_ajt_pack(tmp_path / "pack")
         dest = tmp_path / "out"
 
-        import_audio_pack(pack, dest)
+        result = import_audio_pack(pack, dest)
 
         staging_leftovers = [p for p in dest.iterdir() if p.name.startswith(".staging-")]
         assert staging_leftovers == []
+        assert read_ownership_marker(dest / result.pack_id) == ("audio", result.pack_id)
 
     def test_no_staging_leftovers_after_error(self, tmp_path: Path):
         """No .staging-* dirs should remain under dest_root after a zero-entry error."""

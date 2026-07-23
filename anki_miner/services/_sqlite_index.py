@@ -31,9 +31,11 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sqlite3
-from pathlib import Path
-from typing import Callable, TypeVar
+import stat
+from pathlib import Path, PureWindowsPath
+from typing import Callable, Literal, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +45,211 @@ _T = TypeVar("_T")
 # ``meta`` rows as JSON so a registry ``load()`` can skip the SQLite open on
 # every app startup. Refreshed whenever ``write_meta`` runs.
 _META_SIDECAR = "meta.json"
+_OWNERSHIP_MARKER = ".anki-miner-owned.json"
+
+StoreFamily = Literal["dictionary", "frequency", "audio"]
+
+_DICTIONARY_ENTRY_COLUMNS = frozenset(("term", "content", "tags", "rules", "sequence"))
+_DICTIONARY_TAG_COLUMNS = frozenset(("name", "category", "ord", "notes", "score"))
+_FREQUENCY_V1_COLUMNS = frozenset(("term", "reading", "rank"))
+_FREQUENCY_V2_COLUMNS = _FREQUENCY_V1_COLUMNS | {"display_value"}
+_AUDIO_ENTRY_COLUMNS = frozenset(("expression", "file", "source", "speaker"))
+
+
+def validate_store_id(store_id: str) -> None:
+    """Require one portable, non-traversing filesystem path component."""
+    if (
+        not isinstance(store_id, str)
+        or not store_id
+        or store_id in (".", "..")
+        or "/" in store_id
+        or "\\" in store_id
+        or "\x00" in store_id
+        or Path(store_id).is_absolute()
+        or bool(PureWindowsPath(store_id).drive)
+    ):
+        raise ValueError(f"Invalid managed store id: {store_id!r}")
+
+
+def resolve_managed_slot(root: Path, store_id: str) -> Path:
+    """Resolve *root* and return its direct, unresolved child *store_id*.
+
+    Generated-artifact syntax is reserved for recovery files. Existing legacy
+    slots with such names remain addressable, but no new slot may claim one.
+    """
+    validate_store_id(store_id)
+    try:
+        resolved_root = root.resolve()
+        final = resolved_root / store_id
+        if final.parent.resolve() != resolved_root:
+            raise ValueError(f"Managed store escapes root: {store_id!r}")
+        if is_generated_store_artifact(store_id) and not os.path.lexists(final):
+            raise ValueError(f"Invalid managed store id: {store_id!r}")
+    except (OSError, RuntimeError) as exc:
+        raise ValueError(f"Could not resolve managed store id {store_id!r}") from exc
+    return final
+
+
+def is_generated_store_artifact(name: str) -> bool:
+    """Return whether *name* is a generated backup/recovery/staging entry."""
+    return name.startswith(".") or any(marker in name for marker in (".bak-", ".tomb-", ".corrupt-", ".staging-"))
+
+
+def write_ownership_marker(directory: Path, slot_id: str, family: StoreFamily) -> None:
+    """Mark a staged/generated directory as owned by one managed slot."""
+    validate_store_id(slot_id)
+    if family not in ("dictionary", "frequency", "audio"):
+        raise ValueError(f"Unknown managed store family: {family!r}")
+    directory.mkdir(parents=True, exist_ok=True)
+    marker = directory / _OWNERSHIP_MARKER
+    marker.write_text(
+        json.dumps({"family": family, "slot_id": slot_id}, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def read_ownership_marker(directory: Path) -> tuple[StoreFamily, str] | None:
+    """Read a strict ownership marker without following a marker symlink."""
+    marker = directory / _OWNERSHIP_MARKER
+    try:
+        if marker.is_symlink() or not marker.is_file():
+            return None
+        payload = json.loads(marker.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError, RecursionError):
+        return None
+    if not isinstance(payload, dict) or set(payload) != {"family", "slot_id"}:
+        return None
+    family = payload.get("family")
+    slot_id = payload.get("slot_id")
+    if family not in ("dictionary", "frequency", "audio") or not isinstance(slot_id, str):
+        return None
+    try:
+        validate_store_id(slot_id)
+    except ValueError:
+        return None
+    return family, slot_id
+
+
+def _supported_schema_version(family: StoreFamily, version: int) -> bool:
+    if family == "dictionary":
+        from anki_miner.services.dictionary.storage import SCHEMA_VERSION
+
+        return version == SCHEMA_VERSION
+    if family == "frequency":
+        from anki_miner.services.frequency.storage import SCHEMA_VERSION
+
+        return 1 <= version <= SCHEMA_VERSION
+    from anki_miner.services.audio_packs.storage import SCHEMA_VERSION
+
+    return version == SCHEMA_VERSION
+
+
+def _supported_ownership_schema_version(family: StoreFamily, version: int) -> bool:
+    if family == "dictionary":
+        from anki_miner.services.dictionary.storage import SCHEMA_VERSION
+
+        return version in (3, SCHEMA_VERSION)
+    return _supported_schema_version(family, version)
+
+
+def _is_regular_file_nofollow(path: Path) -> bool:
+    try:
+        return stat.S_ISREG(path.lstat().st_mode)
+    except OSError:
+        return False
+
+
+def _validated_index_meta_with_policy(
+    db_path: Path,
+    family: StoreFamily,
+    supports_version: Callable[[StoreFamily, int], bool],
+) -> dict[str, str] | None:
+    if family not in ("dictionary", "frequency", "audio") or not _is_regular_file_nofollow(db_path):
+        return None
+    try:
+        conn = open_readonly(db_path)
+        try:
+            meta = {
+                key: value
+                for key, value in conn.execute("SELECT key, value FROM meta")
+                if isinstance(key, str) and isinstance(value, str)
+            }
+            version = int(meta.get("schema_version", ""))
+            if not supports_version(family, version):
+                return None
+            entry_columns = {row[1] for row in conn.execute("PRAGMA table_info(entries)") if isinstance(row[1], str)}
+            if family == "dictionary":
+                tag_columns = {row[1] for row in conn.execute("PRAGMA table_info(tags)") if isinstance(row[1], str)}
+                if not entry_columns >= _DICTIONARY_ENTRY_COLUMNS:
+                    return None
+                if not tag_columns >= _DICTIONARY_TAG_COLUMNS:
+                    return None
+            elif family == "frequency":
+                required = _FREQUENCY_V1_COLUMNS if version == 1 else _FREQUENCY_V2_COLUMNS
+                if not required <= entry_columns:
+                    return None
+            elif not entry_columns >= _AUDIO_ENTRY_COLUMNS:
+                return None
+            return meta
+        finally:
+            conn.close()
+    except (OSError, sqlite3.Error, TypeError, ValueError):
+        return None
+
+
+def _validated_index_meta(db_path: Path, family: StoreFamily) -> dict[str, str] | None:
+    return _validated_index_meta_with_policy(db_path, family, _supported_schema_version)
+
+
+def _validated_ownership_index_meta(db_path: Path, family: StoreFamily) -> dict[str, str] | None:
+    return _validated_index_meta_with_policy(db_path, family, _supported_ownership_schema_version)
+
+
+def validate_index_schema(db_path: Path, family: StoreFamily) -> bool:
+    """Validate one family's supported version and queried physical columns."""
+    return _validated_index_meta(db_path, family) is not None
+
+
+def _prove_owned_directory(directory: Path, slot_id: str, family: StoreFamily) -> bool:
+    if directory.is_symlink() or not directory.is_dir():
+        return False
+    marker_path = directory / _OWNERSHIP_MARKER
+    if os.path.lexists(marker_path):
+        return read_ownership_marker(directory) == (family, slot_id)
+    meta = _validated_ownership_index_meta(directory / "index.sqlite", family)
+    if meta is None:
+        return False
+    if family == "dictionary":
+        return "source_name" in meta and "schema_version" in meta
+    if family == "frequency":
+        return "schema_version" in meta
+    return meta.get("pack_id") == slot_id
+
+
+def prove_owned_slot(root: Path, slot_id: str, family: StoreFamily) -> bool:
+    """Prove canonical slot ownership by exact marker or legacy physical schema."""
+    try:
+        slot = resolve_managed_slot(root, slot_id)
+    except ValueError:
+        return False
+    return _prove_owned_directory(slot, slot_id, family)
+
+
+def prove_owned_generation(
+    root: Path,
+    slot_id: str,
+    family: StoreFamily,
+    generation: Path,
+) -> bool:
+    """Prove one direct generated sibling belongs to *slot_id* and *family*."""
+    try:
+        resolved_root = root.resolve()
+        validate_store_id(slot_id)
+        if generation.parent.resolve() != resolved_root:
+            return False
+    except (OSError, RuntimeError, ValueError):
+        return False
+    return _prove_owned_directory(generation, slot_id, family)
 
 
 def write_meta(
@@ -195,10 +402,13 @@ def scan_index_root(
     for child in children:
         if not child.is_dir():
             continue
-        if child_prefilter is not None and not child_prefilter(child):
+        if child_prefilter is None:
+            if is_generated_store_artifact(child.name):
+                continue
+        elif not child_prefilter(child):
             continue
         db = child / "index.sqlite"
-        if not db.exists():
+        if not _is_regular_file_nofollow(db):
             continue
         try:
             meta = read_meta_cached(db, read_meta)

@@ -24,6 +24,7 @@ from typing import Any, Callable
 
 from PyQt6.QtCore import pyqtSignal
 
+from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.audio_packs.importer import import_audio_pack
 from anki_miner.services.dictionary.importers.jmdict_importer import import_jmdict_xml
@@ -135,7 +136,13 @@ class ImportWorker(CancellableWorker):
         return cls(runner, source_path=zip_path)
 
     @classmethod
-    def for_jmdict(cls, xml_path: Path, dest_root: Path) -> ImportWorker:
+    def for_jmdict(
+        cls,
+        xml_path: Path,
+        dest_root: Path,
+        *,
+        overwrite: bool = True,
+    ) -> ImportWorker:
         """Build a worker that imports JMdict XML."""
 
         def runner(progress_fn: ProgressFn, cancel_fn: CancelFn) -> tuple[str, dict[str, Any]]:
@@ -144,6 +151,7 @@ class ImportWorker(CancellableWorker):
                 dest_root,
                 progress=progress_fn,
                 cancel_check=cancel_fn,
+                overwrite=overwrite,
             )
             meta: dict[str, Any] = {
                 "entry_count": getattr(result, "entry_count", 0),
@@ -241,7 +249,7 @@ class ImportWorker(CancellableWorker):
             # A cancel aborts the importer with an exception too; route it to the
             # distinct ``cancelled`` signal so callers never confuse it with a
             # genuine error whose message merely contains the word "cancel".
-            if self.check_cancelled():
+            if self.check_cancelled() and isinstance(exc, SetupError) and str(exc) == "Import cancelled":
                 self.cancelled.emit()
             else:
                 logger.exception("ImportWorker unhandled exception")

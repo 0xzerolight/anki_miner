@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import os
-import shutil
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services._sqlite_index import (
+    prove_owned_slot,
+    resolve_managed_slot,
+    write_ownership_marker,
+)
 from anki_miner.services._staging import promote_staged_dir
 from anki_miner.services.audio_packs.formats import PARSERS, detect_pack_format, parse_ozk5
 from anki_miner.services.audio_packs.storage import (
@@ -18,6 +22,7 @@ from anki_miner.services.audio_packs.storage import (
     create_index,
     write_meta,
 )
+from anki_miner.utils.robust_fs import robust_rmtree
 from anki_miner.utils.slug import slugify
 
 # Canonical folder name → canonical pack_id mapping for known local-audio-yomichan packs.
@@ -92,13 +97,6 @@ def import_audio_pack(
     """
     pack_dir = pack_dir.resolve()
 
-    # --- format detection ---
-    if progress:
-        progress(f"Detecting format of {pack_dir.name} …")
-    fmt = detect_pack_format(pack_dir)
-    if fmt is None:
-        raise SetupError(f"Not a recognised audio pack: {pack_dir}")
-
     # --- pack_id derivation ---
     if pack_id is None:
         pack_id = derive_pack_id(pack_dir.name)
@@ -109,20 +107,43 @@ def import_audio_pack(
         raise SetupError("Pack id 'jpod101' is reserved for the online JPod101 source; rename the folder")
     source_name = pack_id
 
+    try:
+        final_path = resolve_managed_slot(dest_root, pack_id)
+    except ValueError as exc:
+        raise SetupError(str(exc)) from exc
+    managed_root = final_path.parent
+    if pack_dir == managed_root or pack_dir.is_relative_to(managed_root):
+        raise SetupError(f"Audio source '{pack_dir}' overlaps the managed audio-pack root '{managed_root}'")
+    if final_path == pack_dir or final_path.is_relative_to(pack_dir):
+        raise SetupError(f"Audio destination '{final_path}' overlaps the audio source '{pack_dir}'")
+
+    # --- format detection ---
+    if progress:
+        progress(f"Detecting format of {pack_dir.name} …")
+    fmt = detect_pack_format(pack_dir)
+    if fmt is None:
+        raise SetupError(f"Not a recognised audio pack: {pack_dir}")
+
     # --- exists check (before staging so we fail fast) ---
-    dest_root.mkdir(parents=True, exist_ok=True)
-    final_path = dest_root / pack_id
-    if os.path.lexists(final_path) and not overwrite:
-        raise SetupError(f"Audio pack '{pack_id}' already exists")
+    managed_root.mkdir(parents=True, exist_ok=True)
+    if os.path.lexists(final_path):
+        if not overwrite:
+            raise SetupError(f"Audio pack '{pack_id}' already exists")
+        if not prove_owned_slot(managed_root, pack_id, "audio"):
+            raise SetupError(
+                f"Audio pack '{pack_id}' exists but is not an Anki Miner-managed audio pack; refusing to overwrite it"
+            )
 
     # --- staging ---
     # Stage under dest_root so os.replace stays on the same filesystem
     # (avoids EXDEV on Linux when dest_root is on a different device than /tmp).
     # Hidden prefix ensures registry directory scans skip incomplete staging dirs.
-    staging_parent = Path(tempfile.mkdtemp(prefix=".staging-", dir=dest_root))
+    staging_parent = Path(tempfile.mkdtemp(prefix=".staging-", dir=managed_root))
     try:
+        write_ownership_marker(staging_parent, pack_id, "audio")
         staging = staging_parent / pack_id
         staging.mkdir(parents=True, exist_ok=True)
+        write_ownership_marker(staging, pack_id, "audio")
         db_path = staging / "index.sqlite"
         create_index(db_path)
 
@@ -179,6 +200,9 @@ def import_audio_pack(
             },
         )
 
+        if cancel_check and cancel_check():
+            raise SetupError("Import cancelled")
+
         # --- promote staging → final atomically ---
         try:
             promote_staged_dir(staging, final_path, mover=os.replace, overwrite=overwrite)
@@ -186,8 +210,8 @@ def import_audio_pack(
             raise SetupError(f"Audio pack '{pack_id}' already exists") from exc
 
     finally:
-        # staging_parent may already be gone via os.replace; ignore errors.
-        shutil.rmtree(staging_parent, ignore_errors=True)
+        # staging_parent may already be gone via os.replace.
+        robust_rmtree(staging_parent, mode="outcome")
 
     if progress:
         progress(f"Finalised '{pack_id}' ({total_entries:,} entries)")

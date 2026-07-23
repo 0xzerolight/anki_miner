@@ -88,6 +88,7 @@ def confirm_remove(monkeypatch):
         "anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.question",
         lambda *a, **kw: QMessageBox.StandardButton.Yes,
     )
+    monkeypatch.setattr(asp_mod, "prove_owned_slot", lambda *_args: True)
 
 
 def _patch_menu_exec(monkeypatch, action_label: str | None):
@@ -594,7 +595,33 @@ def test_remove_tolerates_missing_index_folder(qapp, qtbot, tmp_path, confirm_re
     assert [e.kind for e in panel.get_chain()] == ["jpod101"]
 
 
-def test_remove_failed_rmtree_does_not_emit_chain_changed(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
+def test_remove_foreign_same_name_is_chain_only(qtbot, monkeypatch, tmp_path):
+    foreign = tmp_path / "foreign"
+    foreign.mkdir()
+    payload = foreign / "keep.txt"
+    payload.write_text("foreign", encoding="utf-8")
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.question",
+        lambda *a, **kw: QMessageBox.StandardButton.Yes,
+    )
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
+        lambda _parent, _title, body, *a, **kw: warnings.append(body),
+    )
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((AudioSourceEntry(kind="pack", pack_id="foreign", enabled=True),))
+
+    panel.remove(0)
+    qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
+
+    assert panel.get_chain() == ()
+    assert payload.read_text(encoding="utf-8") == "foreign"
+    assert any("left untouched" in body for body in warnings)
+
+
+def test_remove_failed_tombstone_cleanup_keeps_durable_chain_change(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
     pack_dir = tmp_path / "a"
     pack_dir.mkdir()
     (pack_dir / "index.sqlite").write_bytes(b"placeholder")
@@ -605,7 +632,7 @@ def test_remove_failed_rmtree_does_not_emit_chain_changed(qapp, qtbot, monkeypat
     )
 
     def _always_fail(*args, **kwargs):
-        raise PermissionError("simulated locked file")
+        return False, PermissionError("simulated locked file")
 
     monkeypatch.setattr(asp_mod, "_robust_rmtree", _always_fail)
 
@@ -622,31 +649,24 @@ def test_remove_failed_rmtree_does_not_emit_chain_changed(qapp, qtbot, monkeypat
     panel.chain_changed.connect(lambda: changed.append(None))
 
     panel.remove(0)
-    # The off-thread rmtree fails; wait for the error handler to re-enable the
-    # Remove button (proof the error callback ran on the GUI thread).
-    qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
-    assert changed == []
-    assert [e.pack_id for e in panel.get_chain()[:1]] == ["a"], "failed remove must leave chain intact"
+    qtbot.waitUntil(lambda: not panel.has_active_mutation(), timeout=3000)
+    assert changed == [None]
+    assert [e.kind for e in panel.get_chain()] == ["jpod101"]
+    assert len(list(tmp_path.glob("a.tomb-*"))) == 1
 
 
-def test_remove_retries_on_transient_permission_error(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
-    """_robust_rmtree retry path: first call raises PermissionError, second succeeds."""
+def test_remove_consumes_successful_cleanup_outcome(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
     pack_dir = tmp_path / "a"
     pack_dir.mkdir()
     (pack_dir / "index.sqlite").write_bytes(b"placeholder")
 
-    call_count = [0]
-
-    def _fail_once(target, **kwargs):
-        call_count[0] += 1
-        if call_count[0] == 1:
-            raise PermissionError("simulated transient lock")
-        # Second call: actually remove so pack_dir.exists() becomes False.
+    def _succeed(target):
         import shutil as _shutil
 
         _shutil.rmtree(target)
+        return True, None
 
-    monkeypatch.setattr(asp_mod, "_robust_rmtree", _fail_once)
+    monkeypatch.setattr(asp_mod, "_robust_rmtree", _succeed)
     monkeypatch.setattr(
         "anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.warning",
         lambda *a, **kw: QMessageBox.StandardButton.Ok,
@@ -664,15 +684,9 @@ def test_remove_retries_on_transient_permission_error(qapp, qtbot, monkeypatch, 
     changed: list[None] = []
     panel.chain_changed.connect(lambda: changed.append(None))
 
-    # First remove → _robust_rmtree raises off-thread → pack stays, no signal.
     panel.remove(0)
-    qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
-    assert changed == [], "first attempt raised — chain_changed must not fire"
-    assert [e.pack_id for e in panel.get_chain()[:1]] == ["a"]
-
-    # Second remove → _robust_rmtree succeeds off-thread → pack gone, signal fires.
-    panel.remove(0)
-    qtbot.waitUntil(lambda: changed == [None], timeout=3000)
+    qtbot.waitUntil(lambda: not panel.has_active_mutation(), timeout=3000)
+    assert changed == [None]
     assert [e.kind for e in panel.get_chain()] == ["jpod101"]
 
 
@@ -849,8 +863,8 @@ def test_right_click_remove_action_removes_pack(qapp, qtbot, monkeypatch, tmp_pa
     pos = panel._list.visualItemRect(item).center()
     panel._on_row_context_menu(pos)
 
-    # Remove delegates to self.remove(), whose rmtree runs off-thread.
-    qtbot.waitUntil(lambda: changed == [None], timeout=3000)
+    qtbot.waitUntil(lambda: not panel.has_active_mutation(), timeout=3000)
+    assert changed == [None]
     assert panel._list.count() == 0
 
 
@@ -874,7 +888,8 @@ def test_right_click_stale_pack_remove_action_removes_pack(qapp, qtbot, monkeypa
     pos = panel._list.visualItemRect(item).center()
     panel._on_row_context_menu(pos)
 
-    qtbot.waitUntil(lambda: changed == [None], timeout=3000)
+    qtbot.waitUntil(lambda: not panel.has_active_mutation(), timeout=3000)
+    assert changed == [None]
     assert panel._list.count() == 0
     assert not (tmp_path / "old-pack").exists()
 
@@ -1098,7 +1113,7 @@ class TestOffThreadDiskWork:
         )
 
         panel.remove(0)
-        qtbot.waitUntil(lambda: not pack_dir.exists(), timeout=3000)
+        qtbot.waitUntil(lambda: bool(rmtree_threads), timeout=3000)
         assert rmtree_threads and all(t != main_id for t in rmtree_threads), rmtree_threads
 
     def test_remove_disables_then_reenables_button(self, qapp, qtbot, tmp_path, confirm_remove):

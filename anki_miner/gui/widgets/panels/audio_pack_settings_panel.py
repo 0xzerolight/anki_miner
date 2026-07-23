@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import shutil
-import stat
-import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -33,47 +29,18 @@ from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
     _ChainPanelStrings,
     _RegistryView,
 )
+from anki_miner.services._sqlite_index import prove_owned_slot, resolve_managed_slot
 from anki_miner.services.audio_packs.registry import AudioPackMeta, AudioPackRegistry
+from anki_miner.utils import robust_fs
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.robust_fs import RmtreeOutcome, robust_rmtree
+
+shutil = robust_fs.shutil
 
 
-# Windows-lock robustness helpers — duplicated across the chain panels (same
-# pattern, deliberate copy rather than cross-panel import per audio_packs
-# deliberate-decoupling precedent; kept module-local so the panel tests'
-# ``shutil`` / ``_robust_rmtree`` monkeypatch seams resolve here).
-def _on_rmtree_error(func, path, _exc_info):
-    """rmtree onerror handler: clear the read-only bit then retry once.
-
-    Windows refuses to delete read-only files; sqlite-backed index dirs sometimes
-    inherit that attribute. Clearing S_IWRITE and re-invoking the failing op
-    (unlink / rmdir) lets the walk continue. Any other failure re-raises.
-    """
-    try:
-        os.chmod(path, stat.S_IWRITE)
-        func(path)
-    except OSError:
-        raise
-
-
-def _robust_rmtree(target: Path, *, retries: int = 3, delay_s: float = 0.1) -> None:
-    """rmtree with Windows-aware retry.
-
-    Two failure modes seen on Win11: read-only file attributes (handled inline by
-    ``_on_rmtree_error``) and transient ``[WinError 32] file in use`` from sqlite
-    handles still being released by GC. The retry loop absorbs the second case
-    best-effort; final failure surfaces to the caller as the last OSError so the
-    UI can show the same dialog as before.
-    """
-    last_exc: OSError | None = None
-    for _ in range(retries):
-        try:
-            shutil.rmtree(target, onerror=_on_rmtree_error)
-            return
-        except OSError as e:
-            last_exc = e
-            time.sleep(delay_s)
-    assert last_exc is not None
-    raise last_exc
+def _robust_rmtree(target: Path) -> RmtreeOutcome:
+    """Panel-local seam for post-commit cleanup."""
+    return robust_rmtree(target, mode="outcome")
 
 
 class _PackRow(QWidget):
@@ -219,6 +186,29 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
             loading=self.tr("Loading…"),
             remove_failed_title=self.tr("Remove failed"),
             could_not_delete_template=self.tr("Could not delete %1:\n%2\n\nThe audio pack was not removed."),
+            files_left_title=self.tr("Files left untouched"),
+            files_left_template=self.tr(
+                "The chain entry was removed, but files at %1 were left untouched because "
+                "the folder could not be proven to belong to Anki Miner."
+            ),
+            intact_failure_template=self.tr("Could not remove %1:\n%2\n\nThe files are intact. Try again."),
+            partial_failure_template=self.tr(
+                "Could not complete removal of %1:\n%2\n\nThe files were partially changed. "
+                "Re-import or repair this audio pack before retrying."
+            ),
+            config_pending_failure_template=self.tr(
+                "Could not restore %1 after its configuration update failed:\n%2\n\n"
+                "The files are no longer in the installed location; a configuration update "
+                "is pending. Restart Anki Miner before retrying."
+            ),
+            post_save_warning_template=self.tr(
+                "Removal of %1 was saved, but Anki Miner could not refresh it:\n%2\n\n"
+                "The removal was saved and will remain after restart."
+            ),
+            cleanup_pending_template=self.tr(
+                "%1 was removed, but its tombstone at %2 could not be deleted:\n%3\n\n"
+                "The removal is saved; cleanup is pending and will be retried at startup."
+            ),
         )
         self._setup_fields()
 
@@ -487,7 +477,16 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         return self._describe_entry(entry, self._view)[0]
 
     def _entry_disk_dir(self, entry: AudioSourceEntry) -> Path | None:
-        return (self._packs_root / entry.pack_id) if entry.pack_id else None
+        if not entry.pack_id:
+            return None
+        try:
+            return resolve_managed_slot(self._packs_root, entry.pack_id)
+        except ValueError:
+            return None
+
+    def _owns_entry_disk_dir(self, entry: AudioSourceEntry, target: Path) -> bool:
+        pack_id = entry.pack_id
+        return pack_id is not None and prove_owned_slot(target.parent, pack_id, "audio")
 
     def _confirm_remove(self, display: str) -> bool:
         reply = QMessageBox.question(
@@ -517,8 +516,8 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
             return False
         return True
 
-    def _rmtree_dir(self, target: Path) -> None:
-        _robust_rmtree(target)
+    def _rmtree_dir(self, target: Path) -> RmtreeOutcome:
+        return _robust_rmtree(target)
 
     def _on_row_context_menu(self, pos: QPoint) -> None:
         """Right-click a pack row to re-import it.

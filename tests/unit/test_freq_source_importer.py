@@ -12,6 +12,7 @@ from typing import Any
 import pytest
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services._sqlite_index import read_ownership_marker
 from anki_miner.services.frequency import storage
 from anki_miner.services.frequency.mode_probe import LESS_COMMON_TERMS, MORE_COMMON_TERMS
 from anki_miner.services.frequency.source_importer import (
@@ -635,6 +636,7 @@ class TestSourceIdAndAtomicity:
         result = import_frequency_source(csv_path, tmp_path / "sources", source_id="custom-id")
         assert result.source_id == "custom-id"
         assert (tmp_path / "sources" / "custom-id" / "index.sqlite").is_file()
+        assert read_ownership_marker(tmp_path / "sources" / "custom-id") == ("frequency", "custom-id")
 
     def test_source_file_copied_for_reimport_zip(self, tmp_path: Path) -> None:
         zip_path = _write_zip(tmp_path / "f.zip")
@@ -648,6 +650,48 @@ class TestSourceIdAndAtomicity:
         dest = tmp_path / "sources"
         result = import_frequency_source(csv_path, dest)
         assert (dest / result.source_id / "source.csv").is_file()
+
+    def test_cancel_during_txt_row_loop_aborts_before_promotion(self, tmp_path: Path) -> None:
+        source = tmp_path / "f.txt"
+        source.write_text("term,rank\n猫,5\n犬,3\n鳥,7\n", encoding="utf-8")
+        dest = tmp_path / "sources"
+        checks = 0
+
+        def cancel_check() -> bool:
+            nonlocal checks
+            checks += 1
+            return checks == 3
+
+        with pytest.raises(SetupError, match="cancelled"):
+            import_frequency_source(source, dest, cancel_check=cancel_check)
+
+        assert checks == 3
+        assert not (dest / "f").exists()
+
+    def test_cancel_after_index_build_aborts_before_promotion(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        source = tmp_path / "f.csv"
+        source.write_text("term,rank\n猫,5\n", encoding="utf-8")
+        dest = tmp_path / "sources"
+        built = False
+        real_build_index = storage.build_index
+
+        def build_index(*args, **kwargs):
+            nonlocal built
+            result = real_build_index(*args, **kwargs)
+            built = True
+            return result
+
+        monkeypatch.setattr(storage, "build_index", build_index)
+
+        with pytest.raises(SetupError, match="cancelled"):
+            import_frequency_source(source, dest, cancel_check=lambda: built)
+
+        assert built is True
+        assert not (dest / "f").exists()
 
     def test_meta_json_sidecar_written(self, tmp_path: Path) -> None:
         csv_path = tmp_path / "f.csv"
@@ -704,6 +748,32 @@ class TestSourceIdAndAtomicity:
         # No leftover staging or backup dirs.
         leftover = [p.name for p in dest.iterdir() if p.name != "same"]
         assert leftover == []
+
+    def test_overwrite_refuses_foreign_same_name_with_plausible_meta(self, tmp_path: Path) -> None:
+        dest = tmp_path / "sources"
+        foreign = dest / "same"
+        foreign.mkdir(parents=True)
+        db_path = foreign / "index.sqlite"
+        conn = sqlite3.connect(db_path)
+        try:
+            conn.execute("CREATE TABLE entries (payload TEXT)")
+            conn.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)")
+            conn.execute(
+                "INSERT INTO meta (key, value) VALUES (?, ?)",
+                ("schema_version", str(storage.SCHEMA_VERSION)),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        payload = foreign / "keep.txt"
+        payload.write_text("foreign", encoding="utf-8")
+        source = tmp_path / "source.csv"
+        source.write_text("term,rank\n猫,5\n", encoding="utf-8")
+
+        with pytest.raises(SetupError, match="not an Anki Miner-managed frequency source"):
+            import_frequency_source(source, dest, source_id="same", overwrite=True)
+
+        assert payload.read_text(encoding="utf-8") == "foreign"
 
 
 class TestDispatchErrors:

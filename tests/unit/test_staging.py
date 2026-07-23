@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from anki_miner.services import _staging as staging_module
+from anki_miner.services._sqlite_index import read_ownership_marker, write_ownership_marker
 from anki_miner.services._staging import promote_staged_dir
 
 
@@ -19,9 +20,11 @@ def test_promote_staged_dir_is_crash_safe(tmp_path: Path, monkeypatch) -> None:
     final = tmp_path / "resource"
     final.mkdir()
     (final / "payload").write_bytes(b"old")
+    write_ownership_marker(final, "resource", "dictionary")
     staging = tmp_path / ".staging-resource"
     staging.mkdir()
     (staging / "payload").write_bytes(b"new")
+    write_ownership_marker(staging, "resource", "dictionary")
     real_replace = os.replace
 
     def crash_during_promotion(src, dst):
@@ -41,9 +44,11 @@ def test_promote_staged_dir_falls_back_on_cross_filesystem_move(tmp_path: Path, 
     final = tmp_path / "resource"
     final.mkdir()
     (final / "payload").write_bytes(b"old")
+    write_ownership_marker(final, "resource", "dictionary")
     staging = tmp_path / "system-temp-staging"
     staging.mkdir()
     (staging / "payload").write_bytes(b"new")
+    write_ownership_marker(staging, "resource", "dictionary")
     real_replace = os.replace
 
     def cross_filesystem_promotion(src, dst):
@@ -155,10 +160,12 @@ def test_promote_without_overwrite_copies_to_destination_local_staging(tmp_path:
     staging = tmp_path / "system-temp-staging"
     staging.mkdir()
     (staging / "payload").write_bytes(b"new")
+    write_ownership_marker(staging, "resource", "dictionary")
     move_destinations: list[Path] = []
 
     def cross_filesystem_mover(src: str, dst: str) -> None:
         move_destinations.append(Path(dst))
+        assert read_ownership_marker(Path(dst).parent) == ("dictionary", "resource")
         shutil.move(src, dst)
 
     promote_staged_dir(staging, final, mover=cross_filesystem_mover, overwrite=False)
@@ -170,6 +177,22 @@ def test_promote_without_overwrite_copies_to_destination_local_staging(tmp_path:
     assert local_staging.parent.parent == final.parent
     assert local_staging.parent.name.startswith(".staging-resource-")
     assert list(tmp_path.glob(".staging-resource-*")) == []
+
+
+def test_promote_with_overwrite_refuses_unowned_existing_target(tmp_path: Path) -> None:
+    final = tmp_path / "resource"
+    final.mkdir()
+    (final / "payload").write_bytes(b"foreign")
+    staging = tmp_path / ".staging-resource"
+    staging.mkdir()
+    (staging / "payload").write_bytes(b"managed")
+    write_ownership_marker(staging, "resource", "dictionary")
+
+    with pytest.raises(FileExistsError, match="not an owned"):
+        promote_staged_dir(staging, final, mover=os.replace, overwrite=True)
+
+    assert (final / "payload").read_bytes() == b"foreign"
+    assert (staging / "payload").read_bytes() == b"managed"
 
 
 def test_promote_without_overwrite_copy_fault_never_exposes_partial_final(tmp_path: Path) -> None:
@@ -190,6 +213,32 @@ def test_promote_without_overwrite_copy_fault_never_exposes_partial_final(tmp_pa
     assert not final.exists()
     assert (staging / "payload").read_bytes() == b"complete"
     assert list(tmp_path.glob(".staging-resource-*")) == []
+
+
+def test_cleanup_failure_does_not_mask_primary_promotion_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    final = tmp_path / "resource"
+    staging = tmp_path / "system-temp-staging"
+    staging.mkdir()
+    cleanup_error = OSError(errno.EACCES, "cleanup locked")
+    cleanup_modes: list[str] = []
+
+    def faulting_mover(_src: str, _dst: str) -> None:
+        raise OSError(errno.ENOSPC, "disk full")
+
+    def failed_cleanup(_path: Path, *, mode: str) -> tuple[bool, OSError]:
+        cleanup_modes.append(mode)
+        return False, cleanup_error
+
+    monkeypatch.setattr(staging_module, "robust_rmtree", failed_cleanup)
+
+    with pytest.raises(OSError, match="disk full") as exc_info:
+        promote_staged_dir(staging, final, mover=faulting_mover, overwrite=False)
+
+    assert exc_info.value.errno == errno.ENOSPC
+    assert cleanup_modes == ["outcome"]
 
 
 def test_promotion_lock_registry_reclaims_unused_roots(tmp_path: Path) -> None:

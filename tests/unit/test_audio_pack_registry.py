@@ -187,11 +187,27 @@ class TestLoad:
                 "pack_dir": str(bak),
             },
         )
+        tomb = packs_root / "nhk16.tomb-124"
+        tomb.mkdir()
+        tomb_db = tomb / "index.sqlite"
+        create_index(tomb_db)
+        write_meta(
+            tomb_db,
+            {
+                "pack_id": "nhk16",
+                "source": "nhk16",
+                "format": "nhk16",
+                "entry_count": "1",
+                "schema_version": str(SCHEMA_VERSION),
+                "pack_dir": str(tomb),
+            },
+        )
 
         reg = AudioPackRegistry(packs_root)
         reg.load()
         assert pack_id in reg.packs
         assert "nhk16.bak-123" not in reg.packs
+        assert "nhk16.tomb-124" not in reg.packs
         assert "nhk16" not in reg.packs  # backup must not masquerade as the pack
 
     def test_corrupt_meta_skipped_with_warning(self, tmp_path: Path, caplog):

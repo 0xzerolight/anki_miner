@@ -16,14 +16,19 @@ from __future__ import annotations
 
 import errno
 import os
-import shutil
 import tempfile
 import threading
 import weakref
 from pathlib import Path
 from typing import Callable
 
+from anki_miner.services._sqlite_index import (
+    prove_owned_slot,
+    read_ownership_marker,
+    write_ownership_marker,
+)
 from anki_miner.utils.atomic_io import atomic_replace_dir
+from anki_miner.utils.robust_fs import robust_rmtree
 
 _promotion_locks_guard = threading.Lock()
 _promotion_locks: weakref.WeakValueDictionary[Path, threading.Lock] = weakref.WeakValueDictionary()
@@ -62,28 +67,53 @@ def promote_staged_dir(
     cross-process atomicity.
     """
     with _promotion_lock(final):
+        ownership = read_ownership_marker(staging)
         if not overwrite:
             if os.path.lexists(final):
-                shutil.rmtree(staging, ignore_errors=True)
+                robust_rmtree(staging, mode="outcome")
                 raise FileExistsError(errno.EEXIST, "Destination already exists", str(final))
             local_parent = Path(tempfile.mkdtemp(prefix=f".staging-{final.name}-", dir=final.parent))
             try:
+                if ownership is not None:
+                    write_ownership_marker(local_parent, ownership[1], ownership[0])
                 local_staging = local_parent / final.name
                 mover(str(staging), str(local_staging))
                 os.replace(local_staging, final)
             finally:
-                shutil.rmtree(local_parent, ignore_errors=True)
+                robust_rmtree(local_parent, mode="outcome")
             return
 
+        def place_owned(source: Path) -> None:
+            if os.path.lexists(final):
+                if (
+                    ownership is None
+                    or ownership[1] != final.name
+                    or not prove_owned_slot(
+                        final.parent,
+                        final.name,
+                        ownership[0],
+                    )
+                ):
+                    raise FileExistsError(
+                        errno.EEXIST,
+                        "Destination is not an owned Anki Miner slot",
+                        str(final),
+                    )
+                atomic_replace_dir(source, final)
+                return
+            os.replace(source, final)
+
         try:
-            atomic_replace_dir(staging, final)
+            place_owned(staging)
         except OSError as exc:
             if exc.errno != errno.EXDEV:
                 raise
             local_parent = Path(tempfile.mkdtemp(prefix=f".staging-{final.name}-", dir=final.parent))
             try:
+                if ownership is not None:
+                    write_ownership_marker(local_parent, ownership[1], ownership[0])
                 local_staging = local_parent / final.name
                 mover(str(staging), str(local_staging))
-                atomic_replace_dir(local_staging, final)
+                place_owned(local_staging)
             finally:
-                shutil.rmtree(local_parent, ignore_errors=True)
+                robust_rmtree(local_parent, mode="outcome")

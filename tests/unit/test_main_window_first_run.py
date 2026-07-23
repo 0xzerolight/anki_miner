@@ -10,6 +10,7 @@ monkeypatched so no Qt modal / AnkiConnect runs.
 from __future__ import annotations
 
 from dataclasses import replace
+from unittest.mock import MagicMock
 
 import pytest
 from PyQt6.QtWidgets import QWidget
@@ -152,8 +153,8 @@ def test_tools_resource_download_applies_only_successful_outcomes(main_window, m
 
 
 # ---------------------------------------------------------------------------
-# Same-slot race guard: an in-flight legacy JMdict XML migration is stopped
-# BEFORE any dialog that can download into the same "jmdict-english" slot.
+# Same-slot race guard: a timed-out legacy JMdict XML migration refuses every
+# dialog that can download into the same "jmdict-english" slot.
 # ---------------------------------------------------------------------------
 
 
@@ -168,30 +169,26 @@ def test_tools_resource_download_applies_only_successful_outcomes(main_window, m
         ("_maybe_offer_first_run_setup", "anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard"),
     ],
 )
-def test_handler_cancels_jmdict_migration_before_dialog(main_window, monkeypatch, handler, dialog_target):
+def test_handler_refuses_when_jmdict_migration_does_not_stop(main_window, monkeypatch, handler, dialog_target):
     from anki_miner.gui import main_window as mw_module
 
-    order: list[str] = []
     monkeypatch.setattr(
         main_window.background_tasks,
-        "cancel_jmdict_migration",
-        lambda: order.append("cancel"),
+        "prepare_dictionary_mutation",
+        lambda: False,
     )
-
-    def fake_dialog(*args, **kwargs):
-        order.append("dialog")
-        if "setup_wizard" in dialog_target:
-            return _wizard_outcome(args[1], consumes=False)
-        return None
-
-    monkeypatch.setattr(dialog_target, fake_dialog)
+    dialog = MagicMock()
+    monkeypatch.setattr(dialog_target, dialog)
+    warning = MagicMock()
+    monkeypatch.setattr(mw_module.QMessageBox, "warning", warning)
     monkeypatch.setattr(mw_module.MainWindow, "update_config", lambda self, cfg, **kw: None)
     main_window._first_run_setup_handled = False
     main_window.config = replace(main_window.config, first_run_setup_done=False)
 
     getattr(main_window, handler)()
 
-    assert order == ["cancel", "dialog"]
+    dialog.assert_not_called()
+    warning.assert_called_once()
 
 
 @pytest.mark.parametrize(

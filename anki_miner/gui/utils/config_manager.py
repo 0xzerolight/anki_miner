@@ -335,10 +335,15 @@ class GUIConfigManager:
             If the file exists but is invalid, attempts recovery from the .bak
             file before falling back to default configuration.
         """
+        return cls.load_config_with_provenance()[0]
+
+    @classmethod
+    def load_config_with_provenance(cls) -> tuple[AnkiMinerConfig, bool]:
+        """Load config plus whether usable persisted chain provenance exists."""
         bak_path = cls.CONFIG_FILE.with_name(cls.CONFIG_FILE.name + ".bak")
         if cls.CONFIG_FILE.exists():
             try:
-                return cls._parse_and_migrate(cls.CONFIG_FILE)
+                return cls._parse_and_migrate(cls.CONFIG_FILE), True
             except (_ConfigReadError, TypeError, ValueError) as e:
                 logger.warning("gui_config.json invalid (%s); attempting .bak recovery", e)
             except OSError as e:
@@ -346,7 +351,7 @@ class GUIConfigManager:
                 # crash startup — try .bak before falling back to defaults.
                 logger.warning("gui_config.json unreadable (%s); attempting .bak recovery", e)
         elif not bak_path.exists():
-            return create_default_config()
+            return create_default_config(), False
         else:
             logger.warning("gui_config.json missing; attempting .bak recovery")
 
@@ -355,10 +360,10 @@ class GUIConfigManager:
             config = cls._parse_and_migrate(bak_path)
             cls._repair_primary_from_backup(bak_path)
             logger.warning("gui_config.json recovered from .bak")
-            return config
+            return config, True
         except (_ConfigReadError, TypeError, ValueError, OSError) as bak_err:
             logger.warning("gui_config.json.bak also unusable (%s); using defaults", bak_err)
-            return create_default_config()
+            return create_default_config(), False
 
     @classmethod
     def _repair_primary_from_backup(cls, bak_path: Path) -> None:

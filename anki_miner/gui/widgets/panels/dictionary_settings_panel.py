@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import shutil
-import stat
-import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -29,43 +25,15 @@ from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
     ChainSettingsPanelBase,
     _ChainPanelStrings,
 )
+from anki_miner.services._sqlite_index import prove_owned_slot, resolve_managed_slot
 from anki_miner.services.dictionary.registry import DictionaryRegistry, DictMeta
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.robust_fs import RmtreeOutcome, robust_rmtree
 
 
-def _on_rmtree_error(func, path, _exc_info):
-    """rmtree onerror handler: clear the read-only bit then retry once.
-
-    Windows refuses to delete read-only files; Yomitan zip extractions sometimes
-    inherit that attribute. Clearing S_IWRITE and re-invoking the failing op
-    (unlink / rmdir) lets the walk continue. Any other failure re-raises.
-    """
-    try:
-        os.chmod(path, stat.S_IWRITE)
-        func(path)
-    except OSError:
-        raise
-
-
-def _robust_rmtree(target: Path, *, retries: int = 3, delay_s: float = 0.1) -> None:
-    """rmtree with Windows-aware retry.
-
-    Two failure modes seen on Win11: read-only file attributes (handled inline by
-    ``_on_rmtree_error``) and transient ``[WinError 32] file in use`` from sqlite
-    read-only handles still being released by GC. The retry loop absorbs the
-    second case best-effort; final failure surfaces to the caller as the last
-    OSError so the UI can show the same dialog as before.
-    """
-    last_exc: OSError | None = None
-    for _ in range(retries):
-        try:
-            shutil.rmtree(target, onerror=_on_rmtree_error)
-            return
-        except OSError as e:
-            last_exc = e
-            time.sleep(delay_s)
-    assert last_exc is not None
-    raise last_exc
+def _robust_rmtree(target: Path) -> RmtreeOutcome:
+    """Panel-local seam for post-commit cleanup."""
+    return robust_rmtree(target, mode="outcome")
 
 
 class _ChainRow(QWidget):
@@ -147,6 +115,29 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
             loading=self.tr("Loading…"),
             remove_failed_title=self.tr("Remove failed"),
             could_not_delete_template=self.tr("Could not delete %1:\n%2\n\nThe dictionary was not removed."),
+            files_left_title=self.tr("Files left untouched"),
+            files_left_template=self.tr(
+                "The chain entry was removed, but files at %1 were left untouched because "
+                "the folder could not be proven to belong to Anki Miner."
+            ),
+            intact_failure_template=self.tr("Could not remove %1:\n%2\n\nThe files are intact. Try again."),
+            partial_failure_template=self.tr(
+                "Could not complete removal of %1:\n%2\n\nThe files were partially changed. "
+                "Re-import or repair this dictionary before retrying."
+            ),
+            config_pending_failure_template=self.tr(
+                "Could not restore %1 after its configuration update failed:\n%2\n\n"
+                "The files are no longer in the installed location; a configuration update "
+                "is pending. Restart Anki Miner before retrying."
+            ),
+            post_save_warning_template=self.tr(
+                "Removal of %1 was saved, but Anki Miner could not refresh it:\n%2\n\n"
+                "The removal was saved and will remain after restart."
+            ),
+            cleanup_pending_template=self.tr(
+                "%1 was removed, but its tombstone at %2 could not be deleted:\n%3\n\n"
+                "The removal is saved; cleanup is pending and will be retried at startup."
+            ),
         )
         self._setup_fields()
 
@@ -399,7 +390,16 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         return meta.source_name if meta else (dict_id or "(missing)")
 
     def _entry_disk_dir(self, entry: ChainEntry) -> Path | None:
-        return (self._dicts_root / entry.dict_id) if entry.dict_id else None
+        if not entry.dict_id:
+            return None
+        try:
+            return resolve_managed_slot(self._dicts_root, entry.dict_id)
+        except ValueError:
+            return None
+
+    def _owns_entry_disk_dir(self, entry: ChainEntry, target: Path) -> bool:
+        dict_id = entry.dict_id
+        return dict_id is not None and prove_owned_slot(target.parent, dict_id, "dictionary")
 
     def _confirm_remove(self, display: str) -> bool:
         reply = QMessageBox.question(
@@ -433,8 +433,8 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
             return False
         return True
 
-    def _rmtree_dir(self, target: Path) -> None:
-        _robust_rmtree(target)
+    def _rmtree_dir(self, target: Path) -> RmtreeOutcome:
+        return _robust_rmtree(target)
 
     def _on_row_context_menu(self, pos: QPoint) -> None:
         """Right-click a dictionary row to re-import or remove it.

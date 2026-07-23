@@ -36,6 +36,7 @@ from anki_miner.gui.presenters import GUIPresenter
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils import file_dialogs
+from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
@@ -421,6 +422,9 @@ class MainWindow(QMainWindow):
     @contextmanager
     def _dictionary_mutation_guard(self, kind: str) -> Iterator[bool]:
         """Commit pending Settings, then own dictionary mutation controls."""
+        if not self.prepare_dictionary_mutation():
+            yield False
+            return
         settings_idx = self._settings_tab_index()
         if settings_idx < 0:
             yield True
@@ -439,6 +443,17 @@ class MainWindow(QMainWindow):
             yield True
         finally:
             panel.release(token)
+
+    def prepare_dictionary_mutation(self) -> bool:
+        """Stop startup JMdict migration or show the shared refusal dialog."""
+        if self.background_tasks.prepare_dictionary_mutation():
+            return True
+        QMessageBox.warning(
+            self,
+            self.tr("Dictionary Change Blocked"),
+            self.tr("The startup JMdict migration is still stopping. Wait for it to finish and try again."),
+        )
+        return False
 
     # Stable capability key -> the widget class name registered as that main tab.
     # Matched by class name (not index/label) so it survives tab reorder and i18n.
@@ -1000,16 +1015,29 @@ class MainWindow(QMainWindow):
             config,
             config_version=max(self.config.config_version, config.config_version) + 1,
         )
-        GUIConfigManager.save_config(committed_config)
+        try:
+            GUIConfigManager.save_config(committed_config)
+        except Exception as error:
+            raise ConfigCommitError(ConfigCommitResult.pre_save_failure(error)) from error
         self.config = committed_config
-        # Re-seed the app-wide file-dialog mode so a toggled setting applies to
-        # the very next dialog without restart (Issue #100).
-        file_dialogs.set_use_native(committed_config.use_native_file_dialogs)
-        # Rebuild config-bound services so AnkiConnect URL/port edits take
-        # effect: validation and the undo-delete AnkiService were frozen to the
-        # startup config and would otherwise keep hitting the old endpoint.
-        self._build_config_bound_services()
-        self.config_refreshed.emit(committed_config)
+        refresh_error: Exception | None = None
+        try:
+            # Re-seed the app-wide file-dialog mode so a toggled setting applies to
+            # the very next dialog without restart (Issue #100).
+            file_dialogs.set_use_native(committed_config.use_native_file_dialogs)
+            # Rebuild config-bound services so AnkiConnect URL/port edits take
+            # effect: validation and the undo-delete AnkiService were frozen to the
+            # startup config and would otherwise keep hitting the old endpoint.
+            self._build_config_bound_services()
+        except Exception as error:
+            refresh_error = error
+        try:
+            self.config_refreshed.emit(committed_config)
+        except Exception as error:
+            if refresh_error is None:
+                refresh_error = error
+        if refresh_error is not None:
+            raise ConfigCommitError(ConfigCommitResult.post_save_failure(refresh_error)) from refresh_error
 
     def _build_config_bound_services(self) -> None:
         """(Re)create services bound to the current ``self.config``.
