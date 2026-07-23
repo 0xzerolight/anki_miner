@@ -149,10 +149,13 @@ class TestSweepSupersededDicts:
 
         import anki_miner.services.dictionary.superseded as mod
 
-        def boom(_path):
-            raise OSError("Access denied")
+        error = OSError("Access denied")
 
-        monkeypatch.setattr(mod.shutil, "rmtree", boom)
+        def failed_outcome(_path: Path, *, mode: str):
+            assert mode == "outcome"
+            return False, error
+
+        monkeypatch.setattr(mod, "robust_rmtree", failed_outcome)
 
         swept, failed = sweep_superseded_dicts(
             dicts, keep_id="jitendex", imported_source_name="Jitendex.org [2026-06-06]"

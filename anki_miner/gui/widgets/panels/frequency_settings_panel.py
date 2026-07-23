@@ -12,10 +12,6 @@ feature on (``config.frequency_active``). There is no separate on/off checkbox.
 
 from __future__ import annotations
 
-import os
-import shutil
-import stat
-import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -41,33 +37,12 @@ from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
 from anki_miner.services._sqlite_index import prove_owned_slot, resolve_managed_slot
 from anki_miner.services.frequency.registry import FreqSourceMeta, FrequencySourceRegistry
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.robust_fs import robust_rmtree
 
 
-# Windows-lock robustness helpers — duplicated from audio_pack_settings_panel.py
-# (same pattern, deliberate copy rather than cross-panel import per the
-# panels' deliberate-decoupling precedent; kept module-local so the panel tests'
-# ``shutil`` / ``_robust_rmtree`` monkeypatch seams resolve here).
-def _on_rmtree_error(func, path, _exc_info):
-    """rmtree onerror handler: clear the read-only bit then retry once."""
-    try:
-        os.chmod(path, stat.S_IWRITE)
-        func(path)
-    except OSError:
-        raise
-
-
-def _robust_rmtree(target: Path, *, retries: int = 3, delay_s: float = 0.1) -> None:
-    """rmtree with Windows-aware retry (read-only attrs + transient locks)."""
-    last_exc: OSError | None = None
-    for _ in range(retries):
-        try:
-            shutil.rmtree(target, onerror=_on_rmtree_error)
-            return
-        except OSError as e:
-            last_exc = e
-            time.sleep(delay_s)
-    assert last_exc is not None
-    raise last_exc
+def _robust_rmtree(target: Path) -> None:
+    """Panel-local seam for required deletion."""
+    robust_rmtree(target, mode="raise")
 
 
 # Human-readable format labels keyed by the importer's ``format`` value.

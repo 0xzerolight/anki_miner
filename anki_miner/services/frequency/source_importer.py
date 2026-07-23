@@ -59,6 +59,7 @@ from anki_miner.services.yomitan_meta_bank import (
     open_yomitan_meta_banks,
 )
 from anki_miner.utils.csv_utils import detect_delimiter, is_header_row
+from anki_miner.utils.robust_fs import robust_rmtree
 from anki_miner.utils.slug import slugify
 
 logger = logging.getLogger(__name__)
@@ -507,8 +508,7 @@ def _finalize(
     finally:
         # On success the staging dir was moved away; clean up on any failure
         # so a partial import does not orphan a .staging-* dir in dest_root.
-        if staging.exists():
-            shutil.rmtree(staging, ignore_errors=True)
+        robust_rmtree(staging, mode="outcome")
 
     return FreqSourceImportResult(
         source_id=source_id,

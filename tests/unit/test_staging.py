@@ -215,6 +215,32 @@ def test_promote_without_overwrite_copy_fault_never_exposes_partial_final(tmp_pa
     assert list(tmp_path.glob(".staging-resource-*")) == []
 
 
+def test_cleanup_failure_does_not_mask_primary_promotion_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    final = tmp_path / "resource"
+    staging = tmp_path / "system-temp-staging"
+    staging.mkdir()
+    cleanup_error = OSError(errno.EACCES, "cleanup locked")
+    cleanup_modes: list[str] = []
+
+    def faulting_mover(_src: str, _dst: str) -> None:
+        raise OSError(errno.ENOSPC, "disk full")
+
+    def failed_cleanup(_path: Path, *, mode: str) -> tuple[bool, OSError]:
+        cleanup_modes.append(mode)
+        return False, cleanup_error
+
+    monkeypatch.setattr(staging_module, "robust_rmtree", failed_cleanup)
+
+    with pytest.raises(OSError, match="disk full") as exc_info:
+        promote_staged_dir(staging, final, mover=faulting_mover, overwrite=False)
+
+    assert exc_info.value.errno == errno.ENOSPC
+    assert cleanup_modes == ["outcome"]
+
+
 def test_promotion_lock_registry_reclaims_unused_roots(tmp_path: Path) -> None:
     root = tmp_path.resolve()
     lock = staging_module._promotion_lock(root / "resource")

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import shutil
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +22,7 @@ from anki_miner.services.audio_packs.storage import (
     create_index,
     write_meta,
 )
+from anki_miner.utils.robust_fs import robust_rmtree
 from anki_miner.utils.slug import slugify
 
 # Canonical folder name → canonical pack_id mapping for known local-audio-yomichan packs.
@@ -207,8 +207,8 @@ def import_audio_pack(
             raise SetupError(f"Audio pack '{pack_id}' already exists") from exc
 
     finally:
-        # staging_parent may already be gone via os.replace; ignore errors.
-        shutil.rmtree(staging_parent, ignore_errors=True)
+        # staging_parent may already be gone via os.replace.
+        robust_rmtree(staging_parent, mode="outcome")
 
     if progress:
         progress(f"Finalised '{pack_id}' ({total_entries:,} entries)")

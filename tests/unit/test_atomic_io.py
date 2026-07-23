@@ -80,6 +80,32 @@ def test_atomic_replace_dir_fault_restores_exact_target_not_stale_backup(tmp_pat
     assert (stale / "payload").read_bytes() == b"stale"
 
 
+def test_atomic_replace_success_is_not_reversed_by_backup_cleanup_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dest = tmp_path / "resource"
+    dest.mkdir()
+    (dest / "payload").write_bytes(b"old")
+    staged = tmp_path / ".staging-resource"
+    staged.mkdir()
+    (staged / "payload").write_bytes(b"new")
+    cleanup_error = OSError("cleanup locked")
+    cleanup_modes: list[str] = []
+
+    def failed_cleanup(_path: Path, *, mode: str) -> tuple[bool, OSError]:
+        cleanup_modes.append(mode)
+        return False, cleanup_error
+
+    monkeypatch.setattr(atomic_io, "robust_rmtree", failed_cleanup)
+
+    atomic_replace_dir(staged, dest)
+
+    assert (dest / "payload").read_bytes() == b"new"
+    assert cleanup_modes == ["outcome"]
+    assert len(list(tmp_path.glob("resource.bak-*"))) == 1
+
+
 def test_reconcile_dir_restores_newest_valid_backup(tmp_path: Path) -> None:
     dest = tmp_path / "resource"
     dest.mkdir()

@@ -1,5 +1,6 @@
 """Smoke tests for DictionarySettingsPanel."""
 
+import errno
 import os
 import shutil
 import stat
@@ -16,6 +17,7 @@ from anki_miner.gui.widgets.panels import dictionary_settings_panel as dsp_mod
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
 from anki_miner.services._sqlite_index import write_ownership_marker
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, create_index, write_meta
+from anki_miner.utils import robust_fs
 
 
 def _make_dict_on_disk(
@@ -706,9 +708,7 @@ def test_remove_failed_rmtree_does_not_emit_chain_changed(qapp, qtbot, monkeypat
     def _always_fail(*args, **kwargs):
         raise PermissionError("simulated locked file")
 
-    monkeypatch.setattr(dsp_mod.shutil, "rmtree", _always_fail)
-    # Speed up the retry loop — the helper sleeps between attempts.
-    monkeypatch.setattr(dsp_mod.time, "sleep", lambda _s: None)
+    monkeypatch.setattr(dsp_mod, "robust_rmtree", _always_fail)
 
     panel = DictionarySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
@@ -747,8 +747,7 @@ def test_remove_retries_transient_oserror(qapp, qtbot, monkeypatch, tmp_path, co
             raise PermissionError("[WinError 32] simulated transient lock")
         return real_rmtree(path, *args, **kwargs)
 
-    monkeypatch.setattr(dsp_mod.shutil, "rmtree", _flaky)
-    monkeypatch.setattr(dsp_mod.time, "sleep", lambda _s: None)
+    monkeypatch.setattr(robust_fs.shutil, "rmtree", _flaky)
 
     warned: list[None] = []
     monkeypatch.setattr(
@@ -787,7 +786,8 @@ def test_on_rmtree_error_clears_readonly_then_retries(tmp_path):
     # First call simulates the rmtree-internal failure; the handler should
     # chmod the file then re-invoke os.unlink, which now succeeds on Windows
     # (and is harmless on POSIX since the parent dir is writable).
-    dsp_mod._on_rmtree_error(os.unlink, str(target), None)
+    error = PermissionError(errno.EACCES, "readonly", str(target))
+    robust_fs._on_rmtree_error(os.unlink, str(target), (PermissionError, error, None))
 
     assert not target.exists()
 
@@ -797,11 +797,9 @@ def test_on_rmtree_error_reraises_non_permission(tmp_path):
     them — we only special-case the read-only bit, nothing else."""
     target = tmp_path / "missing"
 
-    def _always_oserror(_path):
-        raise FileNotFoundError(target)
-
     with pytest.raises(OSError):
-        dsp_mod._on_rmtree_error(_always_oserror, str(target), None)
+        error = FileNotFoundError(errno.ENOENT, "missing", str(target))
+        robust_fs._on_rmtree_error(os.unlink, str(target), (FileNotFoundError, error, None))
 
 
 def test_release_callback_returning_false_aborts_remove(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
@@ -812,7 +810,7 @@ def test_release_callback_returning_false_aborts_remove(qapp, qtbot, monkeypatch
     (dict_dir / "index.sqlite").write_bytes(b"placeholder")
 
     rmtree_calls: list[Path] = []
-    monkeypatch.setattr(dsp_mod.shutil, "rmtree", lambda p, *a, **kw: rmtree_calls.append(Path(p)))
+    monkeypatch.setattr(dsp_mod, "robust_rmtree", lambda p, **_kw: rmtree_calls.append(Path(p)))
 
     warned: list[str] = []
     monkeypatch.setattr(
@@ -856,13 +854,13 @@ def test_release_callback_runs_before_rmtree(qapp, qtbot, monkeypatch, tmp_path,
         events.append("release")
         return True
 
-    real_rmtree = dsp_mod.shutil.rmtree
+    real_rmtree = dsp_mod.robust_rmtree
 
     def _spy_rmtree(path, *args, **kwargs):
         events.append("rmtree")
         return real_rmtree(path, *args, **kwargs)
 
-    monkeypatch.setattr(dsp_mod.shutil, "rmtree", _spy_rmtree)
+    monkeypatch.setattr(dsp_mod, "robust_rmtree", _spy_rmtree)
 
     panel = DictionarySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
@@ -905,24 +903,18 @@ def test_remove_without_release_callback_still_works(qapp, qtbot, tmp_path, conf
     assert [e.kind for e in panel.get_chain()] == ["jisho"]
 
 
-def test_robust_rmtree_exhausts_retries_and_raises(monkeypatch, tmp_path):
-    """After ``retries`` failures the helper must surface the last OSError."""
+def test_robust_rmtree_wrapper_uses_shared_raising_mode(monkeypatch, tmp_path):
+    """Panel-local seam delegates to the shared required-delete mode."""
     target = tmp_path / "doomed"
     target.mkdir()
+    calls: list[tuple[Path, str]] = []
 
-    attempts = {"n": 0}
+    def shared(path: Path, *, mode: str) -> None:
+        calls.append((path, mode))
 
-    def _always_fail(*args, **kwargs):
-        attempts["n"] += 1
-        raise PermissionError("simulated")
-
-    monkeypatch.setattr(dsp_mod.shutil, "rmtree", _always_fail)
-    monkeypatch.setattr(dsp_mod.time, "sleep", lambda _s: None)
-
-    with pytest.raises(PermissionError):
-        dsp_mod._robust_rmtree(target, retries=3, delay_s=0)
-
-    assert attempts["n"] == 3
+    monkeypatch.setattr(dsp_mod, "robust_rmtree", shared)
+    dsp_mod._robust_rmtree(target)
+    assert calls == [(target, "raise")]
 
 
 def test_right_click_jisho_row_shows_no_menu(qapp, qtbot, monkeypatch, tmp_path):
@@ -1158,13 +1150,13 @@ class TestOffThreadDiskWork:
 
         main_id = threading.get_ident()
         rmtree_threads: list[int] = []
-        real_rmtree = dsp_mod.shutil.rmtree
+        real_rmtree = dsp_mod.robust_rmtree
 
         def _spy_rmtree(path, *a, **kw):
             rmtree_threads.append(threading.get_ident())
             return real_rmtree(path, *a, **kw)
 
-        monkeypatch.setattr(dsp_mod.shutil, "rmtree", _spy_rmtree)
+        monkeypatch.setattr(dsp_mod, "robust_rmtree", _spy_rmtree)
 
         dict_dir = tmp_path / "a"
         dict_dir.mkdir()

@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import shutil
-import stat
-import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -35,46 +31,16 @@ from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
 )
 from anki_miner.services._sqlite_index import prove_owned_slot, resolve_managed_slot
 from anki_miner.services.audio_packs.registry import AudioPackMeta, AudioPackRegistry
+from anki_miner.utils import robust_fs
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.robust_fs import robust_rmtree
+
+shutil = robust_fs.shutil
 
 
-# Windows-lock robustness helpers — duplicated across the chain panels (same
-# pattern, deliberate copy rather than cross-panel import per audio_packs
-# deliberate-decoupling precedent; kept module-local so the panel tests'
-# ``shutil`` / ``_robust_rmtree`` monkeypatch seams resolve here).
-def _on_rmtree_error(func, path, _exc_info):
-    """rmtree onerror handler: clear the read-only bit then retry once.
-
-    Windows refuses to delete read-only files; sqlite-backed index dirs sometimes
-    inherit that attribute. Clearing S_IWRITE and re-invoking the failing op
-    (unlink / rmdir) lets the walk continue. Any other failure re-raises.
-    """
-    try:
-        os.chmod(path, stat.S_IWRITE)
-        func(path)
-    except OSError:
-        raise
-
-
-def _robust_rmtree(target: Path, *, retries: int = 3, delay_s: float = 0.1) -> None:
-    """rmtree with Windows-aware retry.
-
-    Two failure modes seen on Win11: read-only file attributes (handled inline by
-    ``_on_rmtree_error``) and transient ``[WinError 32] file in use`` from sqlite
-    handles still being released by GC. The retry loop absorbs the second case
-    best-effort; final failure surfaces to the caller as the last OSError so the
-    UI can show the same dialog as before.
-    """
-    last_exc: OSError | None = None
-    for _ in range(retries):
-        try:
-            shutil.rmtree(target, onerror=_on_rmtree_error)
-            return
-        except OSError as e:
-            last_exc = e
-            time.sleep(delay_s)
-    assert last_exc is not None
-    raise last_exc
+def _robust_rmtree(target: Path) -> None:
+    """Panel-local seam for required deletion."""
+    robust_rmtree(target, mode="raise")
 
 
 class _PackRow(QWidget):

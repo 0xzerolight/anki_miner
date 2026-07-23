@@ -22,11 +22,11 @@ from __future__ import annotations
 
 import logging
 import re
-import shutil
 from pathlib import Path
 
 from anki_miner.services._sqlite_index import is_generated_store_artifact, prove_owned_slot
 from anki_miner.services.dictionary.storage import read_meta
+from anki_miner.utils.robust_fs import robust_rmtree
 
 logger = logging.getLogger(__name__)
 
@@ -103,10 +103,10 @@ def sweep_superseded_dicts(
 
         cand_base, cand_had = strip_date_bracket(cand_name)
         if cand_had and cand_base == base:
-            try:
-                shutil.rmtree(child)
+            deleted, error = robust_rmtree(child, mode="outcome")
+            if deleted:
                 swept.append((child.name, cand_name))
-            except OSError as e:
-                logger.warning("could not remove superseded dict %s: %s", child.name, e)
+            else:
+                logger.warning("could not remove superseded dict %s: %s", child.name, error)
                 failed.append((child.name, cand_name))
     return swept, failed

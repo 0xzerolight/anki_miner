@@ -463,13 +463,13 @@ class TestOffThreadDiskWork:
 
         main_id = threading.get_ident()
         rmtree_threads: list[int] = []
-        real_rmtree = fsp_mod.shutil.rmtree
+        real_rmtree = fsp_mod.robust_rmtree
 
         def _spy_rmtree(path, *a, **kw):
             rmtree_threads.append(threading.get_ident())
             return real_rmtree(path, *a, **kw)
 
-        monkeypatch.setattr(fsp_mod.shutil, "rmtree", _spy_rmtree)
+        monkeypatch.setattr(fsp_mod, "robust_rmtree", _spy_rmtree)
 
         _make_source_on_disk(tmp_path, "jpdb")
         panel = FrequencySettingsPanel(tmp_path)
