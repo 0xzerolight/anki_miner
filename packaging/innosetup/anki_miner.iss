@@ -91,6 +91,9 @@ Filename: "{app}\AnkiMiner.exe"; Description: "Launch Anki Miner"; Flags: nowait
 
 [Code]
 ; A nonempty result blocks a downgrade at PrepareToInstall (Setup exit code 7).
+; GetPackedVersion failure (missing/damaged AnkiMiner.exe) deliberately fails
+; open so rerunning any installer can repair a broken installation; this guard
+; only blocks verifiable downgrades.
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   Incoming, Installed: Int64;

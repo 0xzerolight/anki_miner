@@ -216,6 +216,28 @@ class TestImportProvenance:
         assert result.config.auto_update_ytdlp is expected_ytdlp
         assert (self._OLDER_YTDLP_NOTICE in result.notices) is expects_notice
 
+    def test_legacy_envelope_keeps_absent_seed_fields_current(self, tmp_path):
+        path = _write_import_file(
+            tmp_path,
+            {
+                "anki_miner_settings": 1,
+                "config_schema_version": 1,
+                "settings": {"anki_deck_name": "Imported"},
+            },
+        )
+        current = replace(
+            AnkiMinerConfig(),
+            excluded_wordsets=("place-names",),
+            auto_update_ytdlp=True,
+        )
+
+        result = GUIConfigManager.import_config(path, current)
+
+        assert result.config.anki_deck_name == "Imported"
+        assert result.config.excluded_wordsets == ("place-names",)
+        assert result.config.auto_update_ytdlp is True
+        assert result.notices == []
+
     @pytest.mark.parametrize(
         ("app_version", "expected_wordsets", "expected_ytdlp", "conservative"),
         [

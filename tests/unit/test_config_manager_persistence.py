@@ -179,6 +179,24 @@ class TestLoadResilience:
 
 
 class TestBackupRecoveryRepair:
+    def test_missing_primary_recovers_from_bak_and_repairs_primary(self, tmp_config: Path):
+        bak_path = tmp_config.with_name(tmp_config.name + ".bak")
+        corrupt_path = tmp_config.with_name(tmp_config.name + ".corrupt")
+        bak_bytes = json.dumps(
+            {
+                "config_schema_version": GUIConfigManager.CONFIG_SCHEMA_VERSION,
+                "theme": "dark",
+            }
+        ).encode()
+        bak_path.write_bytes(bak_bytes)
+
+        loaded = GUIConfigManager.load_config()
+
+        assert loaded.theme == "dark"
+        assert tmp_config.read_bytes() == bak_bytes
+        assert bak_path.read_bytes() == bak_bytes
+        assert not corrupt_path.exists()
+
     def test_recovery_repairs_primary_and_preserves_bak_and_corrupt_bytes(self, tmp_config: Path):
         bak_path = tmp_config.with_name(tmp_config.name + ".bak")
         corrupt_path = tmp_config.with_name(tmp_config.name + ".corrupt")
@@ -265,6 +283,45 @@ class TestFutureSchemaArchival:
         assert tmp_config.with_name(f"gui_config.from-schema-{future_schema}.json").read_bytes() == first_bytes
         assert tmp_config.with_name(f"gui_config.from-schema-{future_schema}.2.json").read_bytes() == second_bytes
 
+    def test_future_schema_backup_recovery_archives_backup_bytes(self, tmp_config: Path):
+        future_schema = GUIConfigManager.CONFIG_SCHEMA_VERSION + 5
+        bak_path = tmp_config.with_name(tmp_config.name + ".bak")
+        bak_bytes = json.dumps(
+            {
+                "config_schema_version": future_schema,
+                "theme": "dark",
+            },
+            indent=3,
+        ).encode()
+        archive = tmp_config.with_name(f"gui_config.from-schema-{future_schema}.json")
+        tmp_config.write_bytes(b"{BROKEN PRIMARY")
+        bak_path.write_bytes(bak_bytes)
+
+        loaded = GUIConfigManager.load_config()
+
+        assert loaded.theme == "dark"
+        assert archive.read_bytes() == bak_bytes
+
+    def test_identical_numbered_future_schema_archive_is_reused(self, tmp_config: Path):
+        future_schema = GUIConfigManager.CONFIG_SCHEMA_VERSION + 6
+        future_bytes = json.dumps(
+            {
+                "config_schema_version": future_schema,
+                "anki_deck_name": "Future",
+            }
+        ).encode()
+        base = tmp_config.with_name(f"gui_config.from-schema-{future_schema}.json")
+        numbered = tmp_config.with_name(f"gui_config.from-schema-{future_schema}.2.json")
+        tmp_config.write_bytes(future_bytes)
+        base.write_bytes(b"different")
+        numbered.write_bytes(future_bytes)
+
+        GUIConfigManager.load_config()
+
+        assert base.read_bytes() == b"different"
+        assert numbered.read_bytes() == future_bytes
+        assert not tmp_config.with_name(f"gui_config.from-schema-{future_schema}.3.json").exists()
+
     def test_normal_saves_never_modify_future_schema_archives(self, tmp_config: Path):
         future_schema = GUIConfigManager.CONFIG_SCHEMA_VERSION + 3
         future_bytes = json.dumps({"config_schema_version": future_schema, "theme": "dark"}).encode()
@@ -339,6 +396,27 @@ class TestAtomicSave:
 
         assert bak_path.exists()
         assert json.loads(bak_path.read_text(encoding="utf-8"))["theme"] == "dark"
+
+    def test_save_skips_backup_rotation_for_unparseable_primary(self, tmp_config: Path, caplog):
+        bak_path = tmp_config.with_name(tmp_config.name + ".bak")
+        bak_bytes = json.dumps(
+            {
+                "config_schema_version": GUIConfigManager.CONFIG_SCHEMA_VERSION,
+                "theme": "dark",
+            }
+        ).encode()
+        tmp_config.write_bytes(b"{BROKEN PRIMARY")
+        bak_path.write_bytes(bak_bytes)
+
+        with caplog.at_level("WARNING"):
+            GUIConfigManager.save_config(replace(create_default_config(), theme="light"))
+
+        assert bak_path.read_bytes() == bak_bytes
+        assert json.loads(tmp_config.read_bytes())["theme"] == "light"
+        assert any(
+            "rotation" in record.message.lower() and "unparseable" in record.message.lower()
+            for record in caplog.records
+        )
 
     @pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits are required")
     def test_backup_is_owner_only_before_copy(self, tmp_config: Path, monkeypatch):

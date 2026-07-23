@@ -587,7 +587,7 @@ class TestWordsetSeedMigration:
 
 
 class TestWordsetSeedImportPath:
-    """Import must NOT seed — an imported all-off must survive."""
+    """Markerless imports stay neutral; marked raw configs carry provenance."""
 
     def test_import_empty_list_not_seeded(self, tmp_path: Path):
         path = tmp_path / "import.json"
@@ -609,6 +609,25 @@ class TestWordsetSeedImportPath:
         current = replace(AnkiMinerConfig(), excluded_wordsets=("place-names",))
         result = GUIConfigManager.import_config(path, current).config
         assert result.excluded_wordsets == ("place-names",)
+
+    def test_flat_v1_marker_seeds_only_present_wordsets(self, tmp_path: Path):
+        path = tmp_path / "import.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "config_schema_version": 1,
+                    "excluded_wordsets": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+        current = replace(AnkiMinerConfig(), auto_update_ytdlp=True)
+
+        result = GUIConfigManager.import_config(path, current)
+
+        assert result.config.excluded_wordsets == _ALL_WORDSETS
+        assert result.config.auto_update_ytdlp is True
+        assert result.notices == []
 
 
 class TestWordsetSeedIdempotence:

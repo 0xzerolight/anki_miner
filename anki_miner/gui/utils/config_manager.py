@@ -120,10 +120,19 @@ class GUIConfigManager:
                 json.dump(config_dict, f, indent=2, ensure_ascii=False)
             # First-ever save has nothing to back up — skip silently.
             if cls.CONFIG_FILE.exists():
-                bak_path.touch(mode=0o600, exist_ok=True)
-                if os.name == "posix":
-                    os.chmod(bak_path, 0o600)
-                shutil.copyfile(cls.CONFIG_FILE, bak_path)
+                try:
+                    json.loads(cls.CONFIG_FILE.read_bytes())
+                except Exception as e:
+                    logger.warning(
+                        "Backup rotation skipped for unparseable primary %s: %s",
+                        cls.CONFIG_FILE,
+                        e,
+                    )
+                else:
+                    bak_path.touch(mode=0o600, exist_ok=True)
+                    if os.name == "posix":
+                        os.chmod(bak_path, 0o600)
+                    shutil.copyfile(cls.CONFIG_FILE, bak_path)
             os.replace(tmp_path, cls.CONFIG_FILE)
         except BaseException:
             tmp_path.unlink(missing_ok=True)
@@ -148,16 +157,15 @@ class GUIConfigManager:
 
         schema_version = config_dict.get("config_schema_version")
         if (
-            path == cls.CONFIG_FILE
-            and isinstance(schema_version, int)
+            isinstance(schema_version, int)
             and not isinstance(schema_version, bool)
             and schema_version > cls.CONFIG_SCHEMA_VERSION
         ):
             cls._archive_future_schema_config(path, schema_version)
 
         # LOAD path runs schema migrations for existing gui_config.json files.
-        # Import enables the two version-gated shims only when its envelope
-        # supplies trustworthy provenance; first-run seeding remains load-only.
+        # Import handles its provenance-aware shims after this shared migration
+        # so absent overlay keys cannot be synthesized.
         migrated = cls._migrate_dict(
             config_dict,
             seed_wordsets=True,
@@ -168,10 +176,11 @@ class GUIConfigManager:
 
     @classmethod
     def _archive_future_schema_config(cls, path: Path, schema_version: int) -> None:
-        """Best-effort byte archive of a primary config from a future schema."""
+        """Best-effort byte archive of a loaded config from a future schema."""
         try:
-            primary_bytes = path.read_bytes()
-            base = path.with_name(f"{path.stem}.from-schema-{schema_version}{path.suffix}")
+            source_bytes = path.read_bytes()
+            archive_root = cls.CONFIG_FILE
+            base = archive_root.with_name(f"{archive_root.stem}.from-schema-{schema_version}{archive_root.suffix}")
             candidate = base
             collision_index = 2
 
@@ -179,18 +188,22 @@ class GUIConfigManager:
                 try:
                     fd = os.open(candidate, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
                 except FileExistsError:
-                    if candidate == base and candidate.read_bytes() == primary_bytes:
+                    try:
+                        identical = candidate.read_bytes() == source_bytes
+                    except OSError:
+                        identical = False
+                    if identical:
                         archive = candidate
                         break
-                    candidate = path.with_name(
-                        f"{path.stem}.from-schema-{schema_version}.{collision_index}{path.suffix}"
+                    candidate = archive_root.with_name(
+                        f"{archive_root.stem}.from-schema-{schema_version}.{collision_index}{archive_root.suffix}"
                     )
                     collision_index += 1
                     continue
 
                 try:
                     with os.fdopen(fd, "wb") as archive_file:
-                        archive_file.write(primary_bytes)
+                        archive_file.write(source_bytes)
                 except OSError:
                     candidate.unlink(missing_ok=True)
                     raise
@@ -236,12 +249,10 @@ class GUIConfigManager:
                 would otherwise clobber unlisted current sub-keys with
                 defaults.
             seed_wordsets: When True, seed the default-ON name wordsets on a
-                schema < 2 config that has none enabled. Used for loads and
-                provenance-aware imports only.
+                schema < 2 config that has none enabled. Used for loads.
             disable_legacy_ytdlp_update: When True, force the updater off for
-                configs written under schema < 3. Used for loads and
-                provenance-aware imports; schema 3+ preserves an explicit
-                opt-in.
+                configs written under schema < 3. Used for loads; schema 3+
+                preserves an explicit opt-in.
             seed_first_run_flags: When True (LOAD path only), mark first-run
                 flows done when their keys are absent from an existing config.
                 Explicit stored values are preserved.
@@ -318,24 +329,26 @@ class GUIConfigManager:
             If the file exists but is invalid, attempts recovery from the .bak
             file before falling back to default configuration.
         """
-        if not cls.CONFIG_FILE.exists():
+        bak_path = cls.CONFIG_FILE.with_name(cls.CONFIG_FILE.name + ".bak")
+        if cls.CONFIG_FILE.exists():
+            try:
+                return cls._parse_and_migrate(cls.CONFIG_FILE)
+            except (_ConfigReadError, TypeError, ValueError) as e:
+                logger.warning("gui_config.json invalid (%s); attempting .bak recovery", e)
+            except OSError as e:
+                # An unreadable file (permissions, transient I/O error) must not
+                # crash startup — try .bak before falling back to defaults.
+                logger.warning("gui_config.json unreadable (%s); attempting .bak recovery", e)
+        elif not bak_path.exists():
             return create_default_config()
-
-        try:
-            return cls._parse_and_migrate(cls.CONFIG_FILE)
-        except (_ConfigReadError, TypeError, ValueError) as e:
-            logger.warning("gui_config.json invalid (%s); attempting .bak recovery", e)
-        except OSError as e:
-            # An unreadable file (permissions, transient I/O error) must not
-            # crash startup — try .bak before falling back to defaults.
-            logger.warning("gui_config.json unreadable (%s); attempting .bak recovery", e)
+        else:
+            logger.warning("gui_config.json missing; attempting .bak recovery")
 
         # One .bak attempt — no loop.
-        bak_path = cls.CONFIG_FILE.with_name(cls.CONFIG_FILE.name + ".bak")
         try:
             config = cls._parse_and_migrate(bak_path)
             cls._repair_primary_from_backup(bak_path)
-            logger.warning("gui_config.json corrupt; recovered from .bak")
+            logger.warning("gui_config.json recovered from .bak")
             return config
         except (_ConfigReadError, TypeError, ValueError, OSError) as bak_err:
             logger.warning("gui_config.json.bak also unusable (%s); using defaults", bak_err)
@@ -345,12 +358,11 @@ class GUIConfigManager:
     def _repair_primary_from_backup(cls, bak_path: Path) -> None:
         """Best-effort write-through repair after a successful backup parse."""
         corrupt_path = cls.CONFIG_FILE.with_name(cls.CONFIG_FILE.name + ".corrupt")
-        try:
-            # Copy, not move: a missing primary is never consulted against .bak
-            # on the next load, so the primary must exist at every instant.
-            shutil.copyfile(cls.CONFIG_FILE, corrupt_path)
-        except OSError as e:
-            logger.warning("Could not preserve corrupt gui_config.json at %s: %s", corrupt_path, e)
+        if cls.CONFIG_FILE.exists():
+            try:
+                shutil.copyfile(cls.CONFIG_FILE, corrupt_path)
+            except OSError as e:
+                logger.warning("Could not preserve corrupt gui_config.json at %s: %s", corrupt_path, e)
 
         tmp_path = cls.CONFIG_FILE.with_suffix(cls.CONFIG_FILE.suffix + ".tmp")
         try:
@@ -468,6 +480,10 @@ class GUIConfigManager:
                 elif app_version == "2.8.3":
                     source_schema = 2
                     conservative_283_mapping = True
+        elif isinstance(raw, dict):
+            marker = raw.get("config_schema_version")
+            if isinstance(marker, int) and not isinstance(marker, bool):
+                source_schema = marker
         if not isinstance(data, dict):
             raise ValueError("Not a settings file: expected a JSON object of config fields")
 
@@ -477,9 +493,14 @@ class GUIConfigManager:
         incoming = cls._migrate_dict(
             migration_input,
             backfill_anki_fields=False,
-            seed_wordsets=source_schema is not None,
-            disable_legacy_ytdlp_update=source_schema is not None,
         )
+        legacy_ytdlp_forced = False
+        if source_schema is not None:
+            if source_schema < 2 and "excluded_wordsets" in data and not data.get("excluded_wordsets"):
+                incoming["excluded_wordsets"] = create_default_config().excluded_wordsets
+            if source_schema < 3 and "auto_update_ytdlp" in data:
+                incoming["auto_update_ytdlp"] = False
+                legacy_ytdlp_forced = True
         excluded = cls.machine_specific_fields()
         incoming = {k: v for k, v in incoming.items() if k not in excluded}
 
@@ -505,7 +526,7 @@ class GUIConfigManager:
                 del incoming[key]
 
         notices: list[str] = []
-        if source_schema is not None and source_schema < 3:
+        if legacy_ytdlp_forced:
             notices.append(cls._OLDER_YTDLP_IMPORT_NOTICE)
         if conservative_283_mapping:
             notices.append(cls._LEGACY_283_IMPORT_NOTICE)
