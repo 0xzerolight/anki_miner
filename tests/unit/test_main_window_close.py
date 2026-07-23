@@ -212,12 +212,14 @@ class _FakeSettingsTab(SettingsTab):
             panel=MagicMock(),
             get_config=MagicMock(),
             persist_chain=MagicMock(),
+            notify_config_changed=MagicMock(),
         )
         self._frequency_import_flow = FrequencyImportFlow(
             parent=self,
             panel=MagicMock(),
             get_config=MagicMock(),
             persist_chain=MagicMock(),
+            notify_config_changed=MagicMock(),
         )
         self._zip_import_flow = ZipImportFlow(self)
         # Real SettingsTab shape: shutdown()/flush_pending_settings touch the

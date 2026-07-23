@@ -105,8 +105,8 @@ def test_happy_path_all_three_kinds(tmp_path, monkeypatch):
         dict_calls.append({"zip_path": zip_path, "dest_root": dest_root, "overwrite": overwrite, "dict_id": dict_id})
         return _FakeYomitanResult()
 
-    def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None):
-        freq_calls.append({"input_path": input_path, "dest_root": dest_root})
+    def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None, overwrite=False):
+        freq_calls.append({"input_path": input_path, "dest_root": dest_root, "overwrite": overwrite})
         return _FakeFreqResult()
 
     monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
@@ -133,6 +133,7 @@ def test_happy_path_all_three_kinds(tmp_path, monkeypatch):
 
     # freq routed to the configured freqs_root; result carries source_id.
     assert freq_calls[0]["dest_root"] == tmp_path / "freqs"
+    assert freq_calls[0]["overwrite"] is True
     # The .part temp was re-suffixed to .zip (matches the catalog URL) before import.
     assert freq_calls[0]["input_path"].suffix == ".zip"
     freq_result = next(r for r in summary.results if r.spec_id == "jpdb-freq")
@@ -156,7 +157,7 @@ def test_per_item_failure_isolation(tmp_path, monkeypatch):
     def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
         return _FakeYomitanResult()
 
-    def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None):
+    def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None, overwrite=False):
         raise RuntimeError("freq boom")
 
     monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
@@ -581,7 +582,7 @@ def test_sweep_not_invoked_on_freq_or_pitch(tmp_path, monkeypatch):
         temp.write_bytes(VALID_PITCH if url.endswith(".txt") else b"ZIP")
         return temp
 
-    def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None, source_id=None):
+    def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None, source_id=None, overwrite=False):
         return _FakeFreqResult()
 
     sweep_calls: list[tuple] = []

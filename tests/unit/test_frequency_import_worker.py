@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import patch
 
@@ -93,6 +94,29 @@ def test_source_id_override(tmp_path: Path, qapp):
 
     assert finished == ["custom-id"]
     assert (dest / "custom-id" / "index.sqlite").exists()
+
+
+@pytest.mark.parametrize("overwrite", [False, True])
+def test_overwrite_forwarded_to_importer(tmp_path: Path, qapp, overwrite: bool):
+    zip_path = _write_zip(tmp_path / "freq.zip")
+    result = SimpleNamespace(
+        source_id="test-freq",
+        source_name="Test Freq",
+        entry_count=2,
+        format="yomitan-freq",
+        skipped_malformed=0,
+        converted_to_ranks=False,
+        is_categorical=False,
+    )
+
+    with patch(
+        "anki_miner.gui.workers.import_worker.import_frequency_source",
+        return_value=result,
+    ) as importer:
+        worker = ImportWorker.for_source(zip_path, tmp_path / "freqs", overwrite=overwrite)
+        worker.run()
+
+    assert importer.call_args.kwargs["overwrite"] is overwrite
 
 
 def test_progress_strings_observed(tmp_path: Path, qapp):

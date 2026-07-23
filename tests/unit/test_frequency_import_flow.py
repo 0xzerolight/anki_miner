@@ -192,6 +192,7 @@ class TestAddSource:
         assert stub_worker.called
 
         instance = stub_worker.instances[0]
+        assert instance._kwargs.get("overwrite") is False
         _fire_done(instance, "mylist", {"entry_count": 1, "source_name": "mylist", "format": "csv"})
 
         assert persist_calls, "persist_chain must be called on success"
@@ -580,6 +581,19 @@ class TestAddSource:
 
 
 class TestReimportSource:
+    def test_reimport_refused_while_mining_active(self, tab, monkeypatch, stub_worker):
+        source_dir = tab.config.freqs_root / "jpdb"
+        source_dir.mkdir(parents=True)
+        (source_dir / "source.csv").write_text("word,rank\n猫,5\n", encoding="utf-8")
+        monkeypatch.setattr(tab.frequency_panel, "request_resource_release", lambda: False, raising=False)
+        warnings = _capture_warnings(monkeypatch)
+
+        tab._frequency_import_flow.reimport_source("jpdb")
+
+        stub_worker.assert_not_called()
+        assert any("A mining run is in progress" in body for _title, body in warnings)
+        assert tab.frequency_panel._add_btn.isEnabled()
+
     def test_wrong_typed_source_name_uses_normal_default(self, tab, monkeypatch, stub_worker):
         from anki_miner.services.frequency import storage
 
@@ -605,11 +619,31 @@ class TestReimportSource:
 
         assert stub_worker.called
         instance = stub_worker.instances[0]
-        # for_source(input_path, dest_root, source_id="jpdb")
+        # for_source(input_path, dest_root, source_id="jpdb", overwrite=True)
         args, kwargs = instance._args, instance._kwargs
         assert args[0] == source_dir / "source.csv"
         assert args[1] == freqs_root
         assert kwargs.get("source_id") == "jpdb"
+        assert kwargs.get("overwrite") is True
+
+    def test_reimport_success_notifies_config_changed(self, tab, monkeypatch, stub_worker):
+        source_dir = tab.config.freqs_root / "jpdb"
+        source_dir.mkdir(parents=True)
+        (source_dir / "source.csv").write_text("word,rank\n猫,5\n", encoding="utf-8")
+        _capture_infos(monkeypatch)
+        monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
+        notify_calls: list[None] = []
+        monkeypatch.setattr(
+            tab._frequency_import_flow,
+            "_notify_config_changed",
+            lambda: notify_calls.append(None),
+            raising=False,
+        )
+
+        tab._frequency_import_flow.reimport_source("jpdb")
+        _fire_done(stub_worker.instances[0], "jpdb", {"entry_count": 1})
+
+        assert notify_calls == [None]
 
     def test_reimport_forwards_existing_source_name(self, tab, monkeypatch, stub_worker):
         # Existing index carries a display name; reimport must read it from the

@@ -6,6 +6,7 @@ import os
 import shutil
 import stat
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 from PyQt6.QtCore import QPoint, Qt, pyqtSignal
@@ -213,12 +214,23 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
     def __init__(self, packs_root: Path, parent=None):
         super().__init__("Audio Pack Settings", parent=parent)
         self._packs_root = packs_root
+        self._release_callback: Callable[[], bool] | None = None
         self._strings = _ChainPanelStrings(
             loading=self.tr("Loading…"),
             remove_failed_title=self.tr("Remove failed"),
             could_not_delete_template=self.tr("Could not delete %1:\n%2\n\nThe audio pack was not removed."),
         )
         self._setup_fields()
+
+    def set_release_callback(self, cb: Callable[[], bool] | None) -> None:
+        """Wire the pre-remove resource-release hook."""
+        self._release_callback = cb
+
+    def request_resource_release(self) -> bool:
+        """Ask the app to close cached resource handles before replacement."""
+        if self._release_callback is None:
+            return True
+        return self._release_callback()
 
     def _setup_fields(self) -> None:
         self.add_section(self.tr("Active Audio Sources"))
@@ -491,6 +503,16 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
             QMessageBox.StandardButton.No,
         )
         return reply == QMessageBox.StandardButton.Yes
+
+    def _acquire_release_for_remove(self) -> bool:
+        if not self.request_resource_release():
+            QMessageBox.warning(
+                self,
+                self.tr("Remove failed"),
+                self.tr("A mining run is in progress. Stop it before removing audio packs."),
+            )
+            return False
+        return True
 
     def _rmtree_dir(self, target: Path) -> None:
         _robust_rmtree(target)

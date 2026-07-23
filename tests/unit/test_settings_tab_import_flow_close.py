@@ -73,6 +73,7 @@ class TestAudioPackImportFlowIterCloseWorkers:
             panel=MagicMock(),
             get_config=MagicMock(),
             persist_chain=MagicMock(),
+            notify_config_changed=MagicMock(),
         )
 
     def test_idle_flow_returns_none_entry(self):
@@ -263,12 +264,14 @@ class _FakeRealSettingsTab:
             panel=MagicMock(),
             get_config=MagicMock(),
             persist_chain=MagicMock(),
+            notify_config_changed=MagicMock(),
         )
         self._frequency_import_flow = FrequencyImportFlow(
             parent=parent,
             panel=MagicMock(),
             get_config=MagicMock(),
             persist_chain=MagicMock(),
+            notify_config_changed=MagicMock(),
         )
         parent_widget = MagicMock(spec=QWidget)
         self._zip_import_flow = ZipImportFlow(parent_widget)

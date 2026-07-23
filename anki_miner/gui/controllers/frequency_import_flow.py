@@ -63,11 +63,13 @@ class FrequencyImportFlow(ModalImportFlowMixin):
         panel: FrequencySettingsPanel,
         get_config: Callable[[], AnkiMinerConfig],
         persist_chain: Callable[[tuple[FreqEntry, ...]], None],
+        notify_config_changed: Callable[[], None],
     ) -> None:
         self._parent = parent
         self._panel = panel
         self._get_config = get_config
         self._persist_chain = persist_chain
+        self._notify_config_changed = notify_config_changed
         # Long-lived worker reference: ImportWorker is a QThread and would be
         # destroyed mid-run if it fell out of scope before joining.
         self._active_import_worker: ImportWorker | None = None
@@ -137,7 +139,7 @@ class FrequencyImportFlow(ModalImportFlowMixin):
             return
 
         try:
-            worker = ImportWorker.for_source(Path(chosen), self._get_config().freqs_root)
+            worker = ImportWorker.for_source(Path(chosen), self._get_config().freqs_root, overwrite=False)
         except Exception:
             self._set_import_buttons_enabled(True)
             raise
@@ -275,12 +277,25 @@ class FrequencyImportFlow(ModalImportFlowMixin):
         # CSV path re-derives the name from the generic "source.csv" persisted
         # copy's stem and collapses the label to "source". Read the authoritative
         # SQLite meta (not the sidecar); None for a zip / missing index is fine.
+        if not self._panel.request_resource_release():
+            QMessageBox.warning(
+                self._parent,
+                QCoreApplication.translate("FrequencyImportFlow", "Re-import Blocked"),
+                QCoreApplication.translate(
+                    "FrequencyImportFlow",
+                    "A mining run is in progress. Stop it before re-importing frequency sources.",
+                ),
+            )
+            self._set_import_buttons_enabled(True)
+            return
+
         try:
             worker = ImportWorker.for_source(
                 source_file,
                 dest_root,
                 source_id=source_id,
                 source_name=existing_name,
+                overwrite=True,
             )
         except Exception:
             self._set_import_buttons_enabled(True)
@@ -290,6 +305,9 @@ class FrequencyImportFlow(ModalImportFlowMixin):
             current_chain = self._panel.get_chain()
             self._panel.refresh_registry()
             self._panel.set_chain(current_chain)
+            _log_import_persist(trace_id, "start")
+            self._notify_config_changed()
+            _log_import_persist(trace_id, "done")
             QMessageBox.information(
                 self._parent,
                 QCoreApplication.translate("FrequencyImportFlow", "Frequency Source Re-imported"),

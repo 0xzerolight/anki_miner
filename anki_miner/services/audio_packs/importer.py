@@ -112,7 +112,7 @@ def import_audio_pack(
     # --- exists check (before staging so we fail fast) ---
     dest_root.mkdir(parents=True, exist_ok=True)
     final_path = dest_root / pack_id
-    if final_path.exists() and not overwrite:
+    if os.path.lexists(final_path) and not overwrite:
         raise SetupError(f"Audio pack '{pack_id}' already exists")
 
     # --- staging ---
@@ -180,8 +180,10 @@ def import_audio_pack(
         )
 
         # --- promote staging → final atomically ---
-        # overwrite=True was already verified above (pre-check near the top).
-        promote_staged_dir(staging, final_path, mover=os.replace, overwrite=True)
+        try:
+            promote_staged_dir(staging, final_path, mover=os.replace, overwrite=overwrite)
+        except FileExistsError as exc:
+            raise SetupError(f"Audio pack '{pack_id}' already exists") from exc
 
     finally:
         # staging_parent may already be gone via os.replace; ignore errors.

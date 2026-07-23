@@ -194,6 +194,7 @@ class SettingsTab(QWidget):
             panel=self.audio_panel,
             get_config=lambda: self.config,
             persist_chain=self._persist_audio_chain_change,
+            notify_config_changed=lambda: self.config_changed.emit(self.config),
         )
         # Frequency source add/reimport orchestration.
         self._frequency_import_flow = FrequencyImportFlow(
@@ -201,6 +202,7 @@ class SettingsTab(QWidget):
             panel=self.frequency_panel,
             get_config=lambda: self.config,
             persist_chain=self._persist_frequency_chain_change,
+            notify_config_changed=lambda: self.config_changed.emit(self.config),
         )
         # AnkiConnect probe workers (fetch fields / fetch decks / styling);
         # their live handles surface through iter_close_workers (T-12).
