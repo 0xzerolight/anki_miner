@@ -651,6 +651,48 @@ class TestSourceIdAndAtomicity:
         result = import_frequency_source(csv_path, dest)
         assert (dest / result.source_id / "source.csv").is_file()
 
+    def test_cancel_during_txt_row_loop_aborts_before_promotion(self, tmp_path: Path) -> None:
+        source = tmp_path / "f.txt"
+        source.write_text("term,rank\n猫,5\n犬,3\n鳥,7\n", encoding="utf-8")
+        dest = tmp_path / "sources"
+        checks = 0
+
+        def cancel_check() -> bool:
+            nonlocal checks
+            checks += 1
+            return checks == 3
+
+        with pytest.raises(SetupError, match="cancelled"):
+            import_frequency_source(source, dest, cancel_check=cancel_check)
+
+        assert checks == 3
+        assert not (dest / "f").exists()
+
+    def test_cancel_after_index_build_aborts_before_promotion(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        source = tmp_path / "f.csv"
+        source.write_text("term,rank\n猫,5\n", encoding="utf-8")
+        dest = tmp_path / "sources"
+        built = False
+        real_build_index = storage.build_index
+
+        def build_index(*args, **kwargs):
+            nonlocal built
+            result = real_build_index(*args, **kwargs)
+            built = True
+            return result
+
+        monkeypatch.setattr(storage, "build_index", build_index)
+
+        with pytest.raises(SetupError, match="cancelled"):
+            import_frequency_source(source, dest, cancel_check=lambda: built)
+
+        assert built is True
+        assert not (dest / "f").exists()
+
     def test_meta_json_sidecar_written(self, tmp_path: Path) -> None:
         csv_path = tmp_path / "f.csv"
         csv_path.write_text("term,rank\n猫,5\n", encoding="utf-8")

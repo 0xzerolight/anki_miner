@@ -207,3 +207,55 @@ def test_cancel_before_run_no_import_finished(tmp_path: Path, qapp):
     # Cancellation fires the distinct ``cancelled`` signal, never ``failed``.
     assert cancelled == [1]
     assert failed == []
+
+
+def test_cancel_after_promotion_emits_success_and_keeps_generation(
+    tmp_path: Path,
+    qapp,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from anki_miner.services.frequency import source_importer
+
+    source = tmp_path / "freq.csv"
+    source.write_text("term,rank\n猫,5\n", encoding="utf-8")
+    dest = tmp_path / "freqs"
+    real_promote = source_importer.promote_staged_dir
+    worker: ImportWorker | None = None
+
+    def promote_then_cancel(*args, **kwargs):
+        real_promote(*args, **kwargs)
+        assert worker is not None
+        worker.cancel()
+
+    monkeypatch.setattr(source_importer, "promote_staged_dir", promote_then_cancel)
+    worker = ImportWorker.for_source(source, dest)
+    finished: list[str] = []
+    cancelled: list[None] = []
+    worker.import_finished.connect(lambda source_id, _meta: finished.append(source_id))
+    worker.cancelled.connect(lambda: cancelled.append(None))
+
+    worker.run()
+
+    assert finished == ["freq"]
+    assert cancelled == []
+    assert (dest / "freq" / "index.sqlite").is_file()
+
+
+def test_cancel_flag_does_not_hide_non_cancel_failure(qapp):
+    worker: ImportWorker | None = None
+
+    def runner(_progress, _cancel):
+        assert worker is not None
+        worker.cancel()
+        raise RuntimeError("failure after promotion")
+
+    worker = ImportWorker(runner)
+    failed: list[str] = []
+    cancelled: list[None] = []
+    worker.failed.connect(failed.append)
+    worker.cancelled.connect(lambda: cancelled.append(None))
+
+    worker.run()
+
+    assert failed == ["failure after promotion"]
+    assert cancelled == []

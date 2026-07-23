@@ -668,6 +668,10 @@ class SettingsTab(QWidget):
         self.open_subtab("dictionaries")
         self._dict_import_flow.reimport_all(only_ids=only_ids)
 
+    def set_dictionary_mutation_preflight(self, callback: Callable[[], bool] | None) -> None:
+        """Install the startup-migration preflight for dictionary mutations."""
+        self.dictionary_panel.set_external_mutation_preflight(callback)
+
     def open_ui_subtab(self) -> None:
         """Switch the settings sub-tab to UI (language, zoom, text size, themes).
 

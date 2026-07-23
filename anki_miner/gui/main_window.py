@@ -422,6 +422,9 @@ class MainWindow(QMainWindow):
     @contextmanager
     def _dictionary_mutation_guard(self, kind: str) -> Iterator[bool]:
         """Commit pending Settings, then own dictionary mutation controls."""
+        if not self.prepare_dictionary_mutation():
+            yield False
+            return
         settings_idx = self._settings_tab_index()
         if settings_idx < 0:
             yield True
@@ -440,6 +443,17 @@ class MainWindow(QMainWindow):
             yield True
         finally:
             panel.release(token)
+
+    def prepare_dictionary_mutation(self) -> bool:
+        """Stop startup JMdict migration or show the shared refusal dialog."""
+        if self.background_tasks.prepare_dictionary_mutation():
+            return True
+        QMessageBox.warning(
+            self,
+            self.tr("Dictionary Change Blocked"),
+            self.tr("The startup JMdict migration is still stopping. Wait for it to finish and try again."),
+        )
+        return False
 
     # Stable capability key -> the widget class name registered as that main tab.
     # Matched by class name (not index/label) so it survives tab reorder and i18n.

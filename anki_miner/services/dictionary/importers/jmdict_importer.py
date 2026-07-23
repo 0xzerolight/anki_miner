@@ -68,10 +68,11 @@ def import_jmdict_xml(
     *,
     progress: ProgressFn | None = None,
     cancel_check: Callable[[], bool] | None = None,
+    overwrite: bool = True,
 ) -> JMdictImportResult:
     """Import JMdict XML into ``dest_root/jmdict-english/index.sqlite``.
 
-    Always overwrites the target — JMdict only has one canonical dict_id.
+    Overwrites by default; startup migration uses no-clobber publication.
     """
     if not xml_path.exists():
         raise SetupError(f"JMdict XML not found: {xml_path}")
@@ -80,11 +81,14 @@ def import_jmdict_xml(
         final = resolve_managed_slot(dest_root, JMDICT_DICT_ID)
     except ValueError as exc:
         raise SetupError(str(exc)) from exc
-    if os.path.lexists(final) and not prove_owned_slot(final.parent, JMDICT_DICT_ID, "dictionary"):
-        raise SetupError(
-            f"Dictionary '{JMDICT_DICT_ID}' exists but is not an Anki Miner-managed dictionary; "
-            "refusing to overwrite it"
-        )
+    if os.path.lexists(final):
+        if not overwrite:
+            raise SetupError(f"Dictionary '{JMDICT_DICT_ID}' already exists")
+        if not prove_owned_slot(final.parent, JMDICT_DICT_ID, "dictionary"):
+            raise SetupError(
+                f"Dictionary '{JMDICT_DICT_ID}' exists but is not an Anki Miner-managed dictionary; "
+                "refusing to overwrite it"
+            )
 
     try:
         tree = ET.parse(str(xml_path))  # noqa: S314 - see module docstring
@@ -181,6 +185,9 @@ def import_jmdict_xml(
 
         row_count = bulk_insert(db_path, rows())
 
+        if cancel_check and cancel_check():
+            raise SetupError("Import cancelled")
+
         write_meta(
             db_path,
             {
@@ -193,10 +200,14 @@ def import_jmdict_xml(
             },
         )
 
+        if cancel_check and cancel_check():
+            raise SetupError("Import cancelled")
+
         final.parent.mkdir(parents=True, exist_ok=True)
 
-        # JMdict has one canonical dict_id, so always overwrite.
-        promote_staged_dir(staging, final, mover=shutil.move, overwrite=True)
+        if cancel_check and cancel_check():
+            raise SetupError("Import cancelled")
+        promote_staged_dir(staging, final, mover=shutil.move, overwrite=overwrite)
 
         if progress:
             progress(total_entries, total_entries, "Done")

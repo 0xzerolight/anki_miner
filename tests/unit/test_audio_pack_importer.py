@@ -461,6 +461,32 @@ class TestCancellation:
             staging_leftovers = [p for p in dest.iterdir() if p.name.startswith(".staging-")]
             assert staging_leftovers == []
 
+    def test_cancel_after_metadata_aborts_before_promotion(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from anki_miner.services.audio_packs import importer
+
+        pack = _make_ajt_pack(tmp_path / "pack", n_entries=2)
+        dest = tmp_path / "out"
+        metadata_written = False
+        real_write_meta = importer.write_meta
+
+        def write_meta(*args, **kwargs):
+            nonlocal metadata_written
+            result = real_write_meta(*args, **kwargs)
+            metadata_written = True
+            return result
+
+        monkeypatch.setattr(importer, "write_meta", write_meta)
+
+        with pytest.raises(SetupError, match="cancelled"):
+            import_audio_pack(pack, dest, cancel_check=lambda: metadata_written)
+
+        assert metadata_written is True
+        assert not (dest / derive_pack_id(pack.name)).exists()
+
 
 # ---------------------------------------------------------------------------
 # Staging filesystem placement

@@ -33,11 +33,8 @@ from anki_miner.gui.widgets.panels.chain_settings_panel_base import MutationToke
 from anki_miner.gui.widgets.panels.frequency_settings_panel import FrequencySettingsPanel
 from anki_miner.gui.workers.import_worker import ImportWorker
 from anki_miner.services.frequency import storage
+from anki_miner.services.frequency.source_importer import FREQUENCY_SOURCE_SUFFIXES
 from anki_miner.utils.i18n import tr_format
-
-# Suffixes the per-source dir may hold for the persisted original input,
-# checked in order when locating the file to re-import from.
-_SOURCE_COPY_SUFFIXES = (".zip", ".csv", ".tsv", ".txt")
 
 
 class FrequencyImportFlow(ModalImportFlowMixin):
@@ -131,7 +128,7 @@ class FrequencyImportFlow(ModalImportFlowMixin):
             self._parent,
             QCoreApplication.translate("FrequencyImportFlow", "Choose frequency source"),
             resolve_start_dir(None, file_mode=True),
-            QCoreApplication.translate("FrequencyImportFlow", "Frequency source (*.zip *.csv *.tsv);;All Files (*)"),
+            self._source_picker_filter(),
         )
         _log_import_picker_return(trace_id, "frequency source", picker_started, chosen)
         if not chosen:
@@ -263,9 +260,7 @@ class FrequencyImportFlow(ModalImportFlowMixin):
                 self._parent,
                 QCoreApplication.translate("FrequencyImportFlow", "Choose frequency source to re-import"),
                 resolve_start_dir(None, file_mode=True),
-                QCoreApplication.translate(
-                    "FrequencyImportFlow", "Frequency source (*.zip *.csv *.tsv);;All Files (*)"
-                ),
+                self._source_picker_filter(),
             )
             _log_import_picker_return(trace_id, "frequency source", picker_started, chosen)
             if not chosen:
@@ -340,8 +335,16 @@ class FrequencyImportFlow(ModalImportFlowMixin):
     @staticmethod
     def _find_source_copy(source_dir: Path) -> Path | None:
         """Return the persisted ``source.<ext>`` original input, if present."""
-        for suffix in _SOURCE_COPY_SUFFIXES:
+        for suffix in FREQUENCY_SOURCE_SUFFIXES:
             candidate = source_dir / ("source" + suffix)
             if candidate.is_file():
                 return candidate
         return None
+
+    @staticmethod
+    def _source_picker_filter() -> str:
+        suffix_globs = " ".join(f"*{suffix}" for suffix in FREQUENCY_SOURCE_SUFFIXES)
+        return tr_format(
+            QCoreApplication.translate("FrequencyImportFlow", "Frequency source (%1);;All Files (*)"),
+            suffix_globs,
+        )

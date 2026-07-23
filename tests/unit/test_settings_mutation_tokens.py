@@ -11,6 +11,7 @@ import pytest
 
 from anki_miner.config import AudioSourceEntry, ChainEntry, FreqEntry
 from anki_miner.gui.controllers import import_flow_common as import_flow_common_module
+from anki_miner.gui.controllers.background_tasks import BackgroundTaskController
 from anki_miner.gui.widgets.panels import chain_settings_panel_base as base_module
 from anki_miner.gui.widgets.panels import frequency_settings_panel as frequency_panel_module
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
@@ -266,6 +267,65 @@ def test_root_edit_is_committed_before_immediate_add(tab, monkeypatch, tmp_path)
 
     assert captured_roots == [new_root]
     assert tab.config.dicts_root == new_root
+
+
+@pytest.mark.parametrize(
+    "entry_point",
+    ["add", "reimport", "reimport-all", "remove", "restore"],
+)
+def test_retained_migration_worker_refuses_every_settings_dictionary_entry_point(
+    tab,
+    monkeypatch,
+    entry_point,
+):
+    class RetainedMigrationWorker:
+        def __init__(self) -> None:
+            self.cancel_calls = 0
+            self.wait_calls: list[int] = []
+
+        def isRunning(self) -> bool:  # noqa: N802
+            return True
+
+        def cancel(self) -> None:
+            self.cancel_calls += 1
+
+        def wait(self, timeout_ms: int) -> bool:
+            self.wait_calls.append(timeout_ms)
+            return False
+
+    controller = BackgroundTaskController(tab)  # type: ignore[arg-type]
+    worker = RetainedMigrationWorker()
+    controller.jmdict_migration_worker = worker  # type: ignore[assignment]
+    tab.set_dictionary_mutation_preflight(controller.prepare_dictionary_mutation)
+    tab.dictionary_panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="slot", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        )
+    )
+    unexpected = MagicMock(side_effect=AssertionError("mutation continued after refused preflight"))
+    monkeypatch.setattr(
+        "anki_miner.gui.controllers.dictionary_import_flow.file_dialogs.get_open_file_name",
+        unexpected,
+    )
+    monkeypatch.setattr(tab.dictionary_panel, "_confirm_remove", unexpected)
+    monkeypatch.setattr(tab._dict_import_flow, "_run_latest_scan", unexpected)
+
+    if entry_point == "add":
+        tab._dict_import_flow.add_dict()
+    elif entry_point == "reimport":
+        tab._dict_import_flow.reimport_dict("slot")
+    elif entry_point == "reimport-all":
+        tab._dict_import_flow.reimport_all()
+    elif entry_point == "remove":
+        tab.dictionary_panel.remove(0)
+    else:
+        tab._dict_import_flow.restore_unlisted()
+
+    assert worker.cancel_calls == 1
+    assert worker.wait_calls == [1000]
+    assert controller.jmdict_migration_worker is worker
+    unexpected.assert_not_called()
 
 
 def test_scan_dispatch_failure_releases_mutation_token(tab, monkeypatch):

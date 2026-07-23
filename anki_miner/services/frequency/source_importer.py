@@ -64,8 +64,9 @@ from anki_miner.utils.slug import slugify
 
 logger = logging.getLogger(__name__)
 
-_ZIP_SUFFIXES = {".zip"}
-_CSV_SUFFIXES = {".csv", ".tsv", ".txt"}
+FREQUENCY_SOURCE_SUFFIXES = (".zip", ".csv", ".tsv", ".txt")
+_ZIP_SUFFIXES = frozenset(FREQUENCY_SOURCE_SUFFIXES[:1])
+_CSV_SUFFIXES = frozenset(FREQUENCY_SOURCE_SUFFIXES[1:])
 
 
 def _rank_preference(row: tuple[int, str | None]) -> tuple[bool, int]:
@@ -159,6 +160,7 @@ def import_frequency_source(
             dest_root,
             source_id=source_id,
             source_name=source_name,
+            cancel_check=cancel_check,
             overwrite=overwrite,
         )
     raise SetupError(
@@ -273,6 +275,7 @@ def _import_zip(
             skipped_malformed=banks.skipped_malformed,
             converted_to_ranks=converted,
             is_categorical=is_categorical,
+            cancel_check=cancel_check,
             overwrite=overwrite,
         )
 
@@ -294,6 +297,7 @@ def _import_csv(
     *,
     source_id: str | None,
     source_name: str | None = None,
+    cancel_check: Callable[[], bool] | None,
     overwrite: bool,
 ) -> FreqSourceImportResult:
     stem = csv_path.stem
@@ -319,6 +323,8 @@ def _import_csv(
             first_row = True
             word_first = False
             for row in reader:
+                if cancel_check is not None and cancel_check():
+                    raise SetupError("Import cancelled")
                 if len(row) < 2:
                     continue
                 if first_row:
@@ -361,6 +367,7 @@ def _import_csv(
         entry_count=len(ranks),
         skipped_display_only=0,
         converted_to_ranks=converted,
+        cancel_check=cancel_check,
         overwrite=overwrite,
     )
     logger.info(
@@ -458,6 +465,7 @@ def _finalize(
     skipped_malformed: int = 0,
     converted_to_ranks: bool = False,
     is_categorical: bool = False,
+    cancel_check: Callable[[], bool] | None,
     overwrite: bool,
 ) -> FreqSourceImportResult:
     """Build the index under a staging dir, then atomically promote it.
@@ -500,6 +508,9 @@ def _finalize(
         # user re-picking it (mirrors the dict importer's source.zip).
         source_copy_name = "source" + input_path.suffix.lower()
         shutil.copy2(input_path, staging / source_copy_name)
+
+        if cancel_check is not None and cancel_check():
+            raise SetupError("Import cancelled")
 
         try:
             promote_staged_dir(staging, final_path, mover=shutil.move, overwrite=overwrite)

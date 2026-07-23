@@ -892,6 +892,8 @@ def compose_main_window(
         commit_config=window.update_config,
         suppress_optional_startup=suppress_optional_startup,
     )
+    window.background_tasks.set_dictionary_mutation_panel(settings_tab.dictionary_panel)
+    settings_tab.set_dictionary_mutation_preflight(window.prepare_dictionary_mutation)
     # MainWindow stamps + saves the config, then config_refreshed fans the
     # POST-SAVE committed object out to every tab. This prevents a scan worker's
     # stale pre-save config snapshot from regaining authority after save.

@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox, QProgressDialog, QPushButt
 from anki_miner.config import AnkiMinerConfig, FreqEntry
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.workers.import_worker import ImportWorker
+from anki_miner.services.frequency.source_importer import FREQUENCY_SOURCE_SUFFIXES
 
 
 def _run_scan_sync(work, on_done, on_error):
@@ -172,6 +173,29 @@ def _capture_progress_dialog(monkeypatch, qtbot) -> list[QProgressDialog]:
 
 
 class TestAddSource:
+    def test_add_and_reimport_pickers_include_all_shared_suffixes(self, tab, monkeypatch):
+        filters: list[str] = []
+
+        def cancel_picker(*args, **kwargs):
+            filters.append(args[3])
+            return "", ""
+
+        monkeypatch.setattr(QFileDialog, "getOpenFileName", cancel_picker)
+
+        tab._frequency_import_flow.add_source()
+        tab._frequency_import_flow.reimport_source(
+            "missing",
+            _scan_result=(tab.config.freqs_root, None, None),
+        )
+
+        expected_globs = " ".join(f"*{suffix}" for suffix in FREQUENCY_SOURCE_SUFFIXES)
+        assert filters == [
+            f"Frequency source ({expected_globs});;All Files (*)",
+            f"Frequency source ({expected_globs});;All Files (*)",
+        ]
+        assert "*.txt" in filters[0]
+        assert "*.txt" in filters[1]
+
     def test_cancelled_dialog_skips_import(self, tab, monkeypatch, stub_worker):
         monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **kw: ("", ""))
         tab._frequency_import_flow.add_source()

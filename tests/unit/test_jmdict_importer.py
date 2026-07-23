@@ -236,6 +236,46 @@ class TestImportJmdictXmlEdgeCases:
         finally:
             conn.close()
 
+    def test_no_clobber_mode_preserves_existing_index(self, tmp_path: Path):
+        xml1 = tmp_path / "first.xml"
+        xml1.write_text(MINI_JMDICT_XML, encoding="utf-8")
+        xml2 = tmp_path / "second.xml"
+        xml2.write_text(KANA_ONLY_XML, encoding="utf-8")
+        dest = tmp_path / "dicts"
+        import_jmdict_xml(xml1, dest)
+
+        with pytest.raises(SetupError, match="already exists"):
+            import_jmdict_xml(xml2, dest, overwrite=False)
+
+        db = dest / JMDICT_DICT_ID / "index.sqlite"
+        conn = open_readonly(db)
+        try:
+            assert conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0] == 4
+        finally:
+            conn.close()
+
+    @pytest.mark.parametrize("cancel_on_check", [3, 4, 5])
+    def test_cancel_at_finalization_checkpoints_aborts_before_promotion(
+        self,
+        tmp_path: Path,
+        cancel_on_check: int,
+    ) -> None:
+        xml = tmp_path / "JMdict_e"
+        xml.write_text(MINI_JMDICT_XML, encoding="utf-8")
+        dest = tmp_path / "dicts"
+        checks = 0
+
+        def cancel_check() -> bool:
+            nonlocal checks
+            checks += 1
+            return checks == cancel_on_check
+
+        with pytest.raises(SetupError, match="cancelled"):
+            import_jmdict_xml(xml, dest, cancel_check=cancel_check)
+
+        assert checks == cancel_on_check
+        assert not (dest / JMDICT_DICT_ID).exists()
+
     def test_refuses_to_overwrite_foreign_canonical_slot(self, tmp_path: Path):
         xml = tmp_path / "JMdict_e"
         xml.write_text(MINI_JMDICT_XML, encoding="utf-8")

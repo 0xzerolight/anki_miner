@@ -146,6 +146,7 @@ class ChainSettingsPanelBase(FormPanel):
         self._rescan_pending: bool = False
         self._mutation_counts: dict[str, int] = {}
         self._mutation_tokens: set[MutationToken] = set()
+        self._external_mutation_preflight: Callable[[], bool] | None = None
         self._mutation_preflight: Callable[[], bool] | None = None
         self._remove_mutation_token: MutationToken | None = None
         self._remove_chain_commit: Callable[[tuple[Any, ...]], ConfigCommitResult] | None = None
@@ -290,6 +291,10 @@ class ChainSettingsPanelBase(FormPanel):
         """Set the synchronous settings commit required before a mutation."""
         self._mutation_preflight = callback
 
+    def set_external_mutation_preflight(self, callback: Callable[[], bool] | None) -> None:
+        """Set a preflight that must finish before mutation ownership is checked."""
+        self._external_mutation_preflight = callback
+
     def set_remove_chain_commit(
         self,
         callback: Callable[[tuple[Any, ...]], ConfigCommitResult] | None,
@@ -299,6 +304,8 @@ class ChainSettingsPanelBase(FormPanel):
 
     def prepare_for_mutation(self) -> bool:
         """Commit pending settings, refusing overlap with an active mutation."""
+        if self._external_mutation_preflight is not None and not self._external_mutation_preflight():
+            return False
         if self.has_active_mutation():
             return False
         return self._mutation_preflight is None or self._mutation_preflight()

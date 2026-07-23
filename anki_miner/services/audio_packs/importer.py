@@ -200,6 +200,9 @@ def import_audio_pack(
             },
         )
 
+        if cancel_check and cancel_check():
+            raise SetupError("Import cancelled")
+
         # --- promote staging → final atomically ---
         try:
             promote_staged_dir(staging, final_path, mover=os.replace, overwrite=overwrite)

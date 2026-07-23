@@ -11,6 +11,7 @@ start_validation() and check_for_updates().  Three behaviours are pinned:
 
 from __future__ import annotations
 
+from dataclasses import replace
 from unittest.mock import MagicMock
 
 import pytest
@@ -428,6 +429,70 @@ class TestCancelJmdictMigration:
         controller.jmdict_migration_worker = None
         controller.cancel_jmdict_migration()
         assert controller.jmdict_migration_worker is None
+
+    def test_prepare_timeout_returns_false_and_retains_worker(self, controller):
+        worker = self._FakeMigrationWorker(exits_on_wait=False)
+        controller.jmdict_migration_worker = worker
+
+        assert controller.prepare_dictionary_mutation() is False
+
+        worker.cancel.assert_called_once()
+        assert worker.wait_calls == [1000]
+        assert controller.jmdict_migration_worker is worker
+
+
+@pytest.mark.parametrize("stale_field", ["root", "version"])
+def test_jmdict_migration_holds_root_token_uses_no_clobber_and_drops_stale_result(
+    controller,
+    test_config,
+    tmp_path,
+    monkeypatch,
+    stale_field,
+):
+    from anki_miner.config import ChainEntry
+
+    xml = tmp_path / "JMdict_e"
+    xml.write_text("<JMdict/>", encoding="utf-8")
+    config = replace(
+        test_config,
+        jmdict_path=xml,
+        dicts_root=tmp_path / "dicts",
+        config_version=41,
+        dictionary_chain=(ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),),
+    )
+    controller._window.config = config
+    token = object()
+    panel = MagicMock()
+    panel.hold_mutation.return_value = token
+    controller.set_dictionary_mutation_panel(panel)
+    worker = MagicMock()
+    worker.import_finished = MagicMock()
+    worker.failed = MagicMock()
+    worker.finished = MagicMock()
+    worker.start = MagicMock()
+    worker.deleteLater = MagicMock()
+    worker.isRunning.return_value = True
+    factory = MagicMock(return_value=worker)
+    monkeypatch.setattr("anki_miner.gui.workers.import_worker.ImportWorker.for_jmdict", factory)
+    forwarded: list[tuple[str, dict]] = []
+    controller.jmdict_migration_finished.connect(lambda dict_id, meta: forwarded.append((dict_id, meta)))
+
+    assert controller.maybe_migrate_jmdict(config) is True
+
+    panel.hold_mutation.assert_called_once_with("jmdict-migration")
+    factory.assert_called_once_with(xml, config.dicts_root, overwrite=False)
+    worker.start.assert_called_once()
+
+    controller._window.config = (
+        replace(config, dicts_root=tmp_path / "other-dicts")
+        if stale_field == "root"
+        else replace(config, config_version=42)
+    )
+    worker.import_finished.connect.call_args.args[0]("jmdict-english", {"entry_count": 2})
+    assert forwarded == []
+
+    worker.finished.connect.call_args.args[0]()
+    panel.release.assert_called_once_with(token)
 
 
 class TestStartYtdlpUpdate:
