@@ -74,6 +74,8 @@ and fix until green before tagging.
 
    Each Linux/Windows/macOS build runs `scripts/bundle_smoke.sh` — four bundle smokes (youtube extractor registry, offline ASR native-lib resolution, ffmpeg encoder set, and a whisper.cpp/pywhispercpp Vulkan import-loadability gate — a Linux+Windows-only native loadability check, skipped on macOS), the same script the preflight runs. Artifacts upload to the GitHub Release for the tag.
 
+   Windows installer CI also runs three legs: leg 1 clean-installs with no optional tasks, leg 2 clean-installs with default tasks, and leg 3 overlays the new installer onto the newest eligible older release before probing a blocked downgrade. Leg 3 may emit `no-releases` only when the release listing is empty, or `no-eligible-version` when no published stable older `vX.Y.Z` release has the exact matching Windows installer asset (including asset-name drift); these skips are legitimate for forks or an initial release, while the `0xzerolight/anki_miner` dry-run requires a pass.
+
 6. **PyPI publish runs.** `.github/workflows/publish.yml` builds and publishes the sdist + wheel to PyPI via trusted publishing on the same tag.
 
 7. **Verify the Release page.** Check that all expected assets attached:

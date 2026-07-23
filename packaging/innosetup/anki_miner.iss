@@ -42,8 +42,14 @@ OutputDir=..\..\dist
 OutputBaseFilename=AnkiMiner-{#AppVersion}-Windows-x86_64-Setup
 SetupIconFile=..\..\anki_miner\gui\resources\icons\anki_miner.ico
 LicenseFile=..\..\LICENSE
+#ifdef ProbeBuild
+; CI downgrade-probe build only, never shipped.
+Compression=none
+SolidCompression=no
+#else
 Compression=lzma2/ultra64
 SolidCompression=yes
+#endif
 WizardStyle=modern
 ; Always capture installer diagnostics in the user's TEMP directory.
 SetupLogging=yes
