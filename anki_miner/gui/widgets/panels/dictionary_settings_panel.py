@@ -368,16 +368,8 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         row = _ChainRow(entry, display, fmt, count, stale=stale)
         row.toggled.connect(self._on_row_toggled)
         if stale and row.reimport_button is not None and meta is not None:
-            # JMdict per-row Re-import fires the existing global signal so users
-            # land in the same import flow regardless of where they clicked.
-            # Other formats use the per-dict signal.
-            if meta.format == "jmdict":
-                row.reimport_button.clicked.connect(self.reimport_jmdict_requested.emit)
-            else:
-                dict_id = meta.dict_id
-                row.reimport_button.clicked.connect(
-                    lambda _checked=False, d=dict_id: self.reimport_dict_requested.emit(d)
-                )
+            dict_id = meta.dict_id
+            row.reimport_button.clicked.connect(lambda _checked=False, d=dict_id: self.reimport_dict_requested.emit(d))
         return row
 
     def _is_protected_entry(self, entry: ChainEntry) -> bool:
@@ -442,8 +434,8 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         Reuses the stale-row re-import signals so the same handler
         (`DictionaryImportFlow.reimport_dict`) drives the import flow regardless
         of entry point. Jisho rows have no menu — the online fallback can't be
-        re-imported. Missing meta (dict files vanished from disk) also skip
-        because we can't decide between yomitan and jmdict dispatch.
+        re-imported. The controller selects a recoverable source from the slot
+        id even when registry metadata is missing or corrupt.
         """
         # While an async scan is in flight the list shows a single disabled
         # "Loading…" placeholder, not real rows. Resolving a right-click through
@@ -461,11 +453,6 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         entry = self._chain[index]
         if entry.kind == "jisho" or entry.dict_id is None:
             return
-        registry = self._view
-        meta = registry.get(entry.dict_id) if registry is not None else None
-        if meta is None:
-            return
-
         menu = QMenu(self._list)
         reimport_action = menu.addAction(self.tr("Re-import…"))
         remove_action = menu.addAction(self.tr("Remove"))
@@ -473,9 +460,6 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         global_pos = viewport.mapToGlobal(pos) if viewport is not None else self._list.mapToGlobal(pos)
         chosen = menu.exec(global_pos)
         if chosen is reimport_action:
-            if meta.format == "jmdict":
-                self.reimport_jmdict_requested.emit()
-            else:
-                self.reimport_dict_requested.emit(entry.dict_id)
+            self.reimport_dict_requested.emit(entry.dict_id)
         elif chosen is remove_action:
             self.remove(index)

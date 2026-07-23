@@ -18,27 +18,102 @@ import errno
 import os
 import tempfile
 import threading
+import time
+import uuid
 import weakref
 from pathlib import Path
-from typing import Callable
+from typing import Callable, TypeVar
 
 from anki_miner.services._sqlite_index import (
+    StoreFamily,
     prove_owned_slot,
     read_ownership_marker,
+    resolve_managed_slot,
+    validate_index_schema,
     write_ownership_marker,
 )
 from anki_miner.utils.atomic_io import atomic_replace_dir
 from anki_miner.utils.robust_fs import robust_rmtree
 
 _promotion_locks_guard = threading.Lock()
-_promotion_locks: weakref.WeakValueDictionary[Path, threading.Lock] = weakref.WeakValueDictionary()
+_promotion_locks: weakref.WeakValueDictionary[Path, threading.RLock] = weakref.WeakValueDictionary()
+_RepairResult = TypeVar("_RepairResult")
 
 
-def _promotion_lock(final: Path) -> threading.Lock:
+def _promotion_lock(final: Path) -> threading.RLock:
     """Return the in-process promotion lock for ``final``'s resolved root."""
     root = final.parent.resolve()
     with _promotion_locks_guard:
-        return _promotion_locks.setdefault(root, threading.Lock())
+        return _promotion_locks.setdefault(root, threading.RLock())
+
+
+def _unique_repair_path(final: Path, marker: str) -> Path:
+    while True:
+        candidate = final.with_name(f"{final.name}.{marker}-{time.time_ns()}-{uuid.uuid4().hex}")
+        if not os.path.lexists(candidate):
+            return candidate
+
+
+def _restore_repair_quarantine(
+    final: Path,
+    quarantine: Path,
+    *,
+    slot_id: str,
+    family: StoreFamily,
+) -> None:
+    failed_generation: Path | None = None
+    if os.path.lexists(final):
+        if not prove_owned_slot(final.parent, slot_id, family):
+            raise FileExistsError(errno.EEXIST, "Repair destination changed ownership", str(final))
+        failed_generation = _unique_repair_path(final, "staging-repair-failed")
+        os.replace(final, failed_generation)
+    try:
+        os.replace(quarantine, final)
+    except BaseException:
+        if failed_generation is not None and not os.path.lexists(final):
+            os.replace(failed_generation, final)
+        raise
+    if failed_generation is not None:
+        robust_rmtree(failed_generation, mode="outcome")
+
+
+def repair_managed_slot(
+    source: Path,
+    root: Path,
+    slot_id: str,
+    family: StoreFamily,
+    import_slot: Callable[[Path, bool], _RepairResult],
+) -> _RepairResult:
+    """Run an explicit repair, quarantining invalid slots before no-clobber promotion."""
+    final = resolve_managed_slot(root, slot_id)
+    with _promotion_lock(final):
+        if not os.path.lexists(final):
+            return import_slot(source, False)
+        if prove_owned_slot(final.parent, slot_id, family) and validate_index_schema(
+            final / "index.sqlite",
+            family,
+        ):
+            return import_slot(source, True)
+
+        quarantine = _unique_repair_path(final, "corrupt")
+        os.replace(final, quarantine)
+        try:
+            try:
+                relative_source = source.relative_to(final)
+            except ValueError:
+                repair_source = source
+            else:
+                repair_source = quarantine / relative_source
+            result = import_slot(repair_source, False)
+        except BaseException:
+            _restore_repair_quarantine(
+                final,
+                quarantine,
+                slot_id=slot_id,
+                family=family,
+            )
+            raise
+        return result
 
 
 def promote_staged_dir(

@@ -535,11 +535,6 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         entry = self._chain[index]
         if entry.kind in ("jpod101", "googletts") or entry.pack_id is None:
             return
-        # _view is always set after _rebuild_list; guard is belt-and-suspenders.
-        meta = self._view.get(entry.pack_id) if self._view is not None else None
-        if meta is None:
-            return
-
         menu = QMenu(self._list)
         reimport_action = menu.addAction(self.tr("Re-import…"))
         remove_action = menu.addAction(self.tr("Remove"))

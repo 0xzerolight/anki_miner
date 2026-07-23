@@ -18,7 +18,7 @@ from anki_miner.services._sqlite_index import (
     resolve_managed_slot,
     write_ownership_marker,
 )
-from anki_miner.services._staging import promote_staged_dir
+from anki_miner.services._staging import promote_staged_dir, repair_managed_slot
 from anki_miner.services.dictionary.schema_validation import (
     ensure_bank_array,
     is_valid_term_bank_entry,
@@ -335,6 +335,31 @@ def import_yomitan_zip(
         completed = max(total_entries, 1)
         progress(completed, completed, "Done")
     return result
+
+
+def repair_yomitan_zip(
+    zip_path: Path,
+    dest_root: Path,
+    *,
+    dict_id: str,
+    progress: ProgressFn | None = None,
+    cancel_check: Callable[[], bool] | None = None,
+) -> YomitanImportResult:
+    """Explicitly repair ``dict_id``, retaining an invalid prior slot as quarantine."""
+    return repair_managed_slot(
+        zip_path,
+        dest_root,
+        dict_id,
+        "dictionary",
+        lambda source, overwrite: import_yomitan_zip(
+            source,
+            dest_root,
+            progress=progress,
+            overwrite=overwrite,
+            cancel_check=cancel_check,
+            dict_id=dict_id,
+        ),
+    )
 
 
 # Informational index.json fields surfaced verbatim to the user. Stored when

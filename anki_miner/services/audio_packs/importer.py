@@ -14,7 +14,7 @@ from anki_miner.services._sqlite_index import (
     resolve_managed_slot,
     write_ownership_marker,
 )
-from anki_miner.services._staging import promote_staged_dir
+from anki_miner.services._staging import promote_staged_dir, repair_managed_slot
 from anki_miner.services.audio_packs.formats import PARSERS, detect_pack_format, parse_ozk5
 from anki_miner.services.audio_packs.storage import (
     SCHEMA_VERSION,
@@ -222,6 +222,31 @@ def import_audio_pack(
         format=fmt,
         entry_count=total_entries,
         skipped_malformed=parser_skipped + storage_skipped,
+    )
+
+
+def repair_audio_pack(
+    pack_dir: Path,
+    dest_root: Path,
+    *,
+    pack_id: str,
+    progress: Callable[[str], None] | None = None,
+    cancel_check: Callable[[], bool] | None = None,
+) -> AudioPackImportResult:
+    """Explicitly repair ``pack_id``, retaining an invalid prior slot as quarantine."""
+    return repair_managed_slot(
+        pack_dir,
+        dest_root,
+        pack_id,
+        "audio",
+        lambda source, overwrite: import_audio_pack(
+            source,
+            dest_root,
+            pack_id=pack_id,
+            progress=progress,
+            cancel_check=cancel_check,
+            overwrite=overwrite,
+        ),
     )
 
 

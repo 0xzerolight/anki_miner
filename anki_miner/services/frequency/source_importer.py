@@ -42,7 +42,7 @@ from anki_miner.services._sqlite_index import (
     resolve_managed_slot,
     write_ownership_marker,
 )
-from anki_miner.services._staging import promote_staged_dir
+from anki_miner.services._staging import promote_staged_dir, repair_managed_slot
 from anki_miner.services.frequency import mode_probe, storage
 from anki_miner.services.frequency.csv_parse import (
     _extract_word_rank,
@@ -165,6 +165,33 @@ def import_frequency_source(
         )
     raise SetupError(
         f"Unsupported frequency source '{input_path.name}'. Provide a Yomitan .zip or a .csv/.tsv/.txt rank list."
+    )
+
+
+def repair_frequency_source(
+    input_path: Path,
+    dest_root: Path,
+    *,
+    source_id: str,
+    source_name: str,
+    progress: ProgressFn | None = None,
+    cancel_check: Callable[[], bool] | None = None,
+) -> FreqSourceImportResult:
+    """Explicitly repair ``source_id``, retaining an invalid prior slot as quarantine."""
+    return repair_managed_slot(
+        input_path,
+        dest_root,
+        source_id,
+        "frequency",
+        lambda source, overwrite: import_frequency_source(
+            source,
+            dest_root,
+            source_id=source_id,
+            source_name=source_name,
+            progress=progress,
+            cancel_check=cancel_check,
+            overwrite=overwrite,
+        ),
     )
 
 

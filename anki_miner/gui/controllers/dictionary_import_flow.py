@@ -30,7 +30,8 @@ from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.panels import DictionarySettingsPanel
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import MutationToken
 from anki_miner.gui.workers.import_worker import ImportWorker
-from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip, read_yomitan_title
+from anki_miner.services._sqlite_index import prove_owned_slot, resolve_managed_slot
+from anki_miner.services.dictionary.importers.yomitan_importer import read_yomitan_title
 from anki_miner.services.dictionary.registry import DictionaryRegistry, DictMeta
 from anki_miner.services.dictionary.storage import read_meta
 from anki_miner.services.dictionary.superseded import strip_date_bracket
@@ -254,39 +255,24 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         _scan_result: tuple[Path, str, bool] | None = None,
         _trace_id: str | None = None,
     ) -> None:
-        """Prompt for a matching Yomitan zip and re-import into an existing slot.
-
-        Slot identity is preserved by validating that the chosen zip's derived
-        `dict_id` equals ``slot_id`` before invoking the importer with
-        ``overwrite=True``. Picking a different zip would orphan the stale slot
-        and silently create a new one — we abort with a warning instead.
-        """
+        """Re-import one slot from its saved source, preferring Yomitan."""
         trace_id = _trace_id or _begin_import_trace("dictionary reimport")
         if _scan_result is None:
             if not self._begin_mutation("reimport"):
                 return
-            picker_started = _log_import_picker_enter(trace_id, "dictionary zip")
-            zip_path_str, _ = file_dialogs.get_open_file_name(
-                self._parent,
-                QCoreApplication.translate("DictionaryImportFlow", "Choose Yomitan dictionary zip"),
-                resolve_start_dir(None, file_mode=True, default_dir=self._get_config().dicts_root),
-                QCoreApplication.translate("DictionaryImportFlow", "Yomitan zip (*.zip)"),
-            )
-            _log_import_picker_return(trace_id, "dictionary zip", picker_started, zip_path_str)
-            if not zip_path_str:
-                self._set_import_buttons_enabled(True)
-                return
-
-            zip_path = Path(zip_path_str)
+            config = self._get_config()
 
             def _scan() -> tuple[Path, str, bool]:
-                derived_id = derive_dict_id_from_zip(zip_path)
-                base_matches = (
-                    derived_id != slot_id
-                    and slot_id in _PINNED_DICT_SLOT_IDS
-                    and self._catalog_slot_base_matches(slot_id, zip_path)
-                )
-                return zip_path, derived_id, base_matches
+                try:
+                    slot = resolve_managed_slot(config.dicts_root, slot_id)
+                except ValueError:
+                    return config.dicts_root, "", False
+                source_zip = slot / "source.zip"
+                if source_zip.is_file():
+                    return source_zip, "yomitan", True
+                if slot_id == "jmdict-english" and config.jmdict_path.is_file():
+                    return config.jmdict_path, "jmdict", True
+                return source_zip, "", False
 
             def _on_done(result: object) -> None:
                 assert isinstance(result, tuple)
@@ -303,35 +289,22 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             self._run_latest_scan(_scan, _on_done, _on_error)
             return
 
-        zip_path, derived_id, base_matches = _scan_result
-
-        # A catalog (or former-catalog) slot is pinned (its on-disk id is a
-        # stable id like "jmdict-english" or the legacy "jitendex",
-        # not the title-derived one), so a fresh copy of the SAME dictionary
-        # legitimately derives a different id (the title embeds a new date). Accept
-        # it when its title base matches the existing slot's, but still reject a
-        # genuinely different dictionary — otherwise picking the wrong zip would
-        # silently overwrite the slot with unrelated content.
-        if derived_id != slot_id and not base_matches:
+        source_path, source_kind, recoverable = _scan_result
+        if not recoverable:
             QMessageBox.warning(
                 self._parent,
-                QCoreApplication.translate("DictionaryImportFlow", "Zip does not match slot"),
+                QCoreApplication.translate("DictionaryImportFlow", "No Recoverable Source"),
                 tr_format(
                     QCoreApplication.translate(
                         "DictionaryImportFlow",
-                        "This zip is for '%1', but you are re-importing '%2'. Pick the matching zip.",
+                        "No recoverable source was found for '%1'. Restore its saved source.zip or configured JMdict XML and try again.",
                     ),
-                    derived_id,
                     slot_id,
                 ),
             )
             self._set_import_buttons_enabled(True)
             return
 
-        # Drop sqlite handles before the importer renames the dict folder.
-        # On Windows the rename fails with "Access denied" while any
-        # DefinitionService still holds its read-only connection open
-        # (Issue #32). The remove flow uses the same hook (Issue #30).
         if not self._panel.request_resource_release():
             QMessageBox.warning(
                 self._parent,
@@ -345,16 +318,15 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             self._set_import_buttons_enabled(True)
             return
 
-        # Pin the existing slot so a same-dictionary zip with a newer date
-        # rebuilds in place (dict_id=slot_id is a no-op for non-catalog slots,
-        # where derived_id already equals slot_id).
         try:
-            worker = ImportWorker.for_yomitan(
-                zip_path,
-                self._get_config().dicts_root,
-                overwrite=True,
-                dict_id=slot_id,
-            )
+            if source_kind == "yomitan":
+                worker = ImportWorker.for_yomitan_repair(
+                    source_path,
+                    self._get_config().dicts_root,
+                    dict_id=slot_id,
+                )
+            else:
+                worker = ImportWorker.for_jmdict_repair(source_path, self._get_config().dicts_root)
         except Exception:
             self._set_import_buttons_enabled(True)
             raise
@@ -478,20 +450,18 @@ class DictionaryImportFlow(ModalImportFlowMixin):
     ) -> None:
         """Reimport dictionaries in the chain from their saved sources.
 
-        For each indexed ChainEntry, dispatch based on format:
-        - jmdict format → reimport from ``config.jmdict_path`` (the XML stays
-          on disk between sessions, no copy needed).
-        - yomitan format → reimport from ``<dicts_root>/<dict_id>/source.zip``
-          if present.
+        For each indexed ChainEntry, prefer an owned slot's ``source.zip``.
+        The fixed ``jmdict-english`` slot falls back to ``config.jmdict_path``
+        when its registry metadata proves it is a raw JMdict import. Slots
+        without ownership proof are reported but never auto-repaired.
 
         ``only_ids`` scopes upgrade repair to dictionary IDs found stale by the
         startup scan. ``None`` preserves the manual Reimport All behavior,
         including disabled chain entries. Missing-source reporting follows the
         same scope.
 
-        Dicts with no saved source are skipped and surfaced in the final
-        summary dialog. The user can seed them via the per-row stale-reimport
-        button (which prompts for the zip and now persists it on success).
+        Dicts ineligible for automatic repair are skipped and surfaced in the
+        final summary dialog.
 
         Runs sequentially: each worker's native finish chains the next dispatch
         so a single ApplicationModal QProgressDialog tracks the whole batch.
@@ -516,21 +486,28 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                         continue
                     if only_ids is not None and entry.dict_id not in only_ids:
                         continue
-                    meta = registry.get(entry.dict_id)
-                    if meta is None:
+                    try:
+                        slot = resolve_managed_slot(config.dicts_root, entry.dict_id)
+                    except ValueError:
                         missing_legacy.append(entry.dict_id)
                         continue
-                    if meta.format == "jmdict":
-                        if config.jmdict_path.exists():
-                            jobs.append(("jmdict", meta.dict_id, meta.source_name, config.jmdict_path))
-                        else:
-                            missing_legacy.append(meta.source_name)
+                    meta = registry.get(entry.dict_id)
+                    display_name = meta.source_name if meta is not None else entry.dict_id
+                    owned = prove_owned_slot(config.dicts_root, entry.dict_id, "dictionary")
+                    source_zip = slot / "source.zip"
+                    if owned and source_zip.is_file():
+                        jobs.append(("yomitan", entry.dict_id, display_name, source_zip))
                         continue
-                    source_zip = config.dicts_root / meta.dict_id / "source.zip"
-                    if source_zip.exists():
-                        jobs.append(("yomitan", meta.dict_id, meta.source_name, source_zip))
-                    else:
-                        missing_legacy.append(meta.source_name)
+                    if (
+                        meta is not None
+                        and entry.dict_id == "jmdict-english"
+                        and meta.format == "jmdict"
+                        and config.jmdict_path.is_file()
+                        and owned
+                    ):
+                        jobs.append(("jmdict", entry.dict_id, display_name, config.jmdict_path))
+                        continue
+                    missing_legacy.append(display_name)
                 return jobs, missing_legacy
 
             def _on_done(result: object) -> None:
@@ -554,8 +531,8 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             if missing_legacy:
                 body = QCoreApplication.translate(
                     "DictionaryImportFlow",
-                    "No dictionaries with saved sources were found.\n\n"
-                    "Skipped (no saved source — right-click a dictionary row → Re-import… to seed):\n",
+                    "No dictionaries eligible for automatic repair were found.\n\n"
+                    "Skipped (not eligible for automatic repair; use per-row Re-import…):\n",
                 ) + "\n".join(f"  • {n}" for n in missing_legacy)
             else:
                 body = QCoreApplication.translate("DictionaryImportFlow", "No dictionaries in the chain.")
@@ -636,7 +613,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 lines.append(
                     QCoreApplication.translate(
                         "DictionaryImportFlow",
-                        "Skipped (no saved source — right-click a dictionary row → Re-import… to seed):",
+                        "Skipped (not eligible for automatic repair; use per-row Re-import…):",
                     )
                 )
                 lines.extend(f"  • {n}" for n in missing_legacy)

@@ -16,6 +16,7 @@ from anki_miner.services.audio_packs.importer import (
     AudioPackImportResult,
     derive_pack_id,
     import_audio_pack,
+    repair_audio_pack,
 )
 from anki_miner.services.audio_packs.storage import SCHEMA_VERSION, read_meta_cached
 
@@ -356,6 +357,60 @@ class TestExistsOverwrite:
 
         meta = read_meta_cached(dest / second.pack_id / "index.sqlite")
         assert meta["entry_count"] == "3"
+
+
+class TestExplicitRepair:
+    @staticmethod
+    def _corrupt_slot(dest: Path, pack_id: str) -> Path:
+        slot = dest / pack_id
+        slot.mkdir(parents=True)
+        (slot / "index.sqlite").write_bytes(b"not sqlite")
+        (slot / "old.txt").write_text("old", encoding="utf-8")
+        return slot
+
+    def test_cancel_restores_corrupt_slot(self, tmp_path: Path):
+        pack = _make_ajt_pack(tmp_path / "source")
+        dest = tmp_path / "out"
+        slot = self._corrupt_slot(dest, "pack")
+
+        with pytest.raises(SetupError, match="cancelled"):
+            repair_audio_pack(pack, dest, pack_id="pack", cancel_check=lambda: True)
+
+        assert (slot / "old.txt").read_text(encoding="utf-8") == "old"
+        assert list(dest.glob("pack.corrupt-*")) == []
+
+    def test_promotion_failure_restores_corrupt_slot(self, tmp_path: Path, monkeypatch):
+        pack = _make_ajt_pack(tmp_path / "source")
+        dest = tmp_path / "out"
+        slot = self._corrupt_slot(dest, "pack")
+
+        def fail_promote(*_args, **_kwargs):
+            raise OSError("promotion failed")
+
+        monkeypatch.setattr(audio_pack_importer, "promote_staged_dir", fail_promote)
+
+        with pytest.raises(OSError, match="promotion failed"):
+            repair_audio_pack(pack, dest, pack_id="pack")
+
+        assert (slot / "old.txt").read_text(encoding="utf-8") == "old"
+        assert list(dest.glob("pack.corrupt-*")) == []
+
+    def test_success_retains_invisible_quarantine(self, tmp_path: Path):
+        from anki_miner.services.audio_packs.registry import AudioPackRegistry
+
+        pack = _make_ajt_pack(tmp_path / "source")
+        dest = tmp_path / "out"
+        self._corrupt_slot(dest, "pack")
+
+        result = repair_audio_pack(pack, dest, pack_id="pack")
+
+        assert result.pack_id == "pack"
+        quarantines = list(dest.glob("pack.corrupt-*"))
+        assert len(quarantines) == 1
+        assert (quarantines[0] / "old.txt").read_text(encoding="utf-8") == "old"
+        registry = AudioPackRegistry(dest)
+        registry.load()
+        assert set(registry.packs) == {"pack"}
 
 
 # ---------------------------------------------------------------------------

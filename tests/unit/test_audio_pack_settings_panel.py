@@ -894,8 +894,7 @@ def test_right_click_stale_pack_remove_action_removes_pack(qapp, qtbot, monkeypa
     assert not (tmp_path / "old-pack").exists()
 
 
-def test_right_click_pack_row_no_meta_shows_no_menu(qapp, qtbot, monkeypatch, tmp_path):
-    """Context menu is skipped when registry meta lookup returns None for the pack."""
+def test_right_click_pack_row_no_meta_exposes_reimport_and_remove(qtbot, monkeypatch, tmp_path):
     # Use registry_meta={} so the pack_id has no entry — meta lookup returns None.
     panel = AudioPackSettingsPanel(tmp_path)
     qtbot.addWidget(panel)
@@ -913,8 +912,9 @@ def test_right_click_pack_row_no_meta_shows_no_menu(qapp, qtbot, monkeypatch, tm
     pos = panel._list.visualItemRect(item).center()
     panel._on_row_context_menu(pos)
 
-    assert constructed == [], "no meta → context menu must not open"
-    assert emitted == []
+    assert len(constructed) == 1
+    assert [action.text() for action in constructed[0].actions()] == ["Re-import…", "Remove"]
+    assert emitted == ["unknown-pack"]
 
 
 # ---------------------------------------------------------------------------

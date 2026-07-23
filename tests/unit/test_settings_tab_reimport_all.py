@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.widgets.settings_tab import SettingsTab
+from anki_miner.services._sqlite_index import write_ownership_marker
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, create_index, write_meta
 
 
@@ -343,6 +344,39 @@ def test_reimport_all_jmdict_skipped_when_xml_missing(tab_for_reimport_all, monk
     _, body = summaries[-1]
     assert "JMdict (English)" in body
     assert "Skipped" in body or "No dictionaries with saved sources" in body
+
+
+def test_reimport_all_repairs_only_owned_metadata_less_slot(
+    tab_for_reimport_all,
+    monkeypatch,
+    stubbed_workers,
+):
+    tab = tab_for_reimport_all
+    root = tab.config.dicts_root
+    owned = root / "owned"
+    owned.mkdir()
+    write_ownership_marker(owned, "owned", "dictionary")
+    (owned / "source.zip").write_bytes(b"PK\x03\x04")
+    foreign = root / "foreign"
+    foreign.mkdir()
+    (foreign / "source.zip").write_bytes(b"PK\x03\x04")
+    tab.dictionary_panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="owned", enabled=True),
+            ChainEntry(kind="indexed", dict_id="foreign", enabled=True),
+        )
+    )
+    summaries = _silence_dialogs(monkeypatch)
+
+    tab._dict_import_flow.reimport_all()
+    _complete_in_flight_worker(stubbed_workers)
+
+    stubbed_workers["yomitan_factory"].assert_called_once()
+    args, kwargs = stubbed_workers["yomitan_factory"].call_args
+    assert args[0] == owned / "source.zip"
+    assert kwargs["dict_id"] == "owned"
+    assert kwargs["overwrite"] is True
+    assert "foreign" in summaries[-1][1]
 
 
 def test_reimport_all_cancel_stops_chain(tab_for_reimport_all, monkeypatch, stubbed_workers):
