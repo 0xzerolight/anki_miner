@@ -540,6 +540,28 @@
         <translation>Không tìm thấy loại ghi chú</translation>
     </message>
 </context><context>
+    <name>App</name>
+    <message>
+        <source>Anki Miner Is Already Running</source>
+        <translation>Anki Miner đang chạy</translation>
+    </message>
+    <message>
+        <source>Another copy of Anki Miner appears to be running. Running two copies at once can corrupt the known-words and statistics databases.
+
+Continue anyway?</source>
+        <translation>Có vẻ một bản Anki Miner khác đang chạy. Chạy hai bản cùng lúc có thể làm hỏng CSDL từ đã biết và CSDL thống kê.
+
+Vẫn tiếp tục?</translation>
+    </message>
+    <message>
+        <source>Continue anyway</source>
+        <translation>Vẫn tiếp tục</translation>
+    </message>
+    <message>
+        <source>Quit</source>
+        <translation>Thoát</translation>
+    </message>
+</context><context>
     <name>AsrModelDownloadWorker</name>
     <message>
         <source>Downloading %1…</source>
@@ -5244,6 +5266,22 @@ Giá trị nhập vào ghi đè cài đặt hiện tại của bạn; bất kỳ
 %1</translation>
     </message>
     <message>
+        <source>Invalid imported fields were ignored; current values were kept: %1</source>
+        <translation>Các trường nhập vào không hợp lệ đã bị bỏ qua; giá trị hiện tại được giữ nguyên: %1</translation>
+    </message>
+    <message>
+        <source>Auto-update of yt-dlp was disabled (settings imported from an older version).</source>
+        <translation>Tự động cập nhật yt-dlp đã bị tắt (cài đặt được nhập từ phiên bản cũ hơn).</translation>
+    </message>
+    <message>
+        <source>Settings from version 2.8.3 were mapped conservatively to schema 2.</source>
+        <translation>Cài đặt từ phiên bản 2.8.3 đã được ánh xạ thận trọng sang schema 2.</translation>
+    </message>
+    <message>
+        <source>Settings Imported</source>
+        <translation>Đã nhập cài đặt</translation>
+    </message>
+    <message>
         <source>✓ Imported</source>
         <translation>✓ Đã nhập</translation>
     </message>
@@ -6308,6 +6346,14 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>Điều chỉnh tỷ lệ toàn bộ chữ giao diện. Áp dụng trực tiếp trên toàn ứng dụng.</translation>
     </message>
     <message>
+        <source>Use system file dialogs</source>
+        <translation>Dùng hộp thoại tệp của hệ thống</translation>
+    </message>
+    <message>
+        <source>Use the operating system's native file pickers instead of the app's built-in ones. Native dialogs can freeze the app on some Windows systems with flaky network drives or cloud storage, which is why this is off by default.</source>
+        <translation>Dùng trình chọn tệp gốc của hệ điều hành thay cho trình chọn tích hợp của ứng dụng. Hộp thoại gốc có thể làm treo ứng dụng trên một số hệ thống Windows có ổ đĩa mạng hoặc lưu trữ đám mây không ổn định, vì vậy tùy chọn này mặc định tắt.</translation>
+    </message>
+    <message>
         <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
         <translation>Đánh dấu sao các chủ đề để thêm chúng vào bộ chọn ở góc trên bên phải. Nhấp vào bất kỳ hàng nào để xem trước — thay đổi được áp dụng trực tiếp trên toàn ứng dụng. Nhấn &lt;b&gt;Hoàn tác&lt;/b&gt; để hủy bản xem trước.</translation>
     </message>
@@ -6794,6 +6840,10 @@ Tiếp tục nhập?</translation>
     <message>
         <source>%1 entries</source>
         <translation>%1 mục</translation>
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation>⚠ cần nhập lại (ứng dụng đã nâng cấp)</translation>
     </message>
     <message>
         <source>⚠ folder missing — re-import</source>

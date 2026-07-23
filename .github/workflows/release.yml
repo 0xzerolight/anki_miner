@@ -922,9 +922,49 @@ jobs:
           BUNDLE_SMOKE_GGML_MODEL: ${{ env.SMOKE_GGML_MODEL_PATH }}
         run: scripts/bundle_smoke.sh dist/AnkiMiner
 
+      - name: Install Inno Setup (pinned)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # Chocolatey's innosetup package lags (6.x); install the official
+          # 7.0.2 from the immutable jrsoftware/issrc release asset, pinned by
+          # SHA-256 (hash cross-checked against the GitHub API asset digest).
+          $url = 'https://github.com/jrsoftware/issrc/releases/download/is-7_0_2/innosetup-7.0.2-x64.exe'
+          $expectedSha = '5ad54ca3def786f8f4212552e54cc6d8d61329e2d24a1cfee0571d42c2684ff1'
+          $setup = Join-Path $env:RUNNER_TEMP 'innosetup-7.0.2-x64.exe'
+          Invoke-WebRequest -Uri $url -OutFile $setup
+          $actualSha = (Get-FileHash -Algorithm SHA256 $setup).Hash.ToLowerInvariant()
+          if ($actualSha -ne $expectedSha) {
+            throw "Inno Setup download hash mismatch: expected $expectedSha, got $actualSha"
+          }
+          $installDir = 'C:\InnoSetup7'
+          $proc = Start-Process -FilePath $setup -ArgumentList @(
+            '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$installDir"
+          ) -Wait -PassThru
+          if ($proc.ExitCode -ne 0) {
+            throw "Inno Setup installer exited with $($proc.ExitCode)"
+          }
+          $iscc = Join-Path $installDir 'ISCC.exe'
+          if (-not (Test-Path $iscc)) {
+            throw "ISCC.exe not found at $iscc after install"
+          }
+          $version = (Get-Item $iscc).VersionInfo.ProductVersion
+          if (-not $version.StartsWith('7.0.2')) {
+            throw "Expected Inno Setup 7.0.2, found $version at $iscc"
+          }
+          $installDir | Out-File -FilePath $env:GITHUB_PATH -Append
+
       - name: Build Windows installer
         if: runner.os == 'Windows'
-        run: iscc /DAppVersion=${{ steps.version.outputs.version }} packaging\innosetup\anki_miner.iss
+        shell: pwsh
+        run: |
+          iscc /DAppVersion=${{ steps.version.outputs.version }} packaging\innosetup\anki_miner.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Fast, guard-bearing CI probe. Explicit Windows artifact upload below
+          # names only EXPECTED_VERSION, so this 0.0.1 installer is never shipped.
+          iscc /DAppVersion=0.0.1 /DProbeBuild=1 /Odist packaging\innosetup\anki_miner.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Smoke Windows installer
         if: runner.os == 'Windows'
@@ -936,306 +976,32 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           Set-StrictMode -Version Latest
+          . (Join-Path $PWD 'scripts/windows_installer_smoke_lib.ps1')
+          Invoke-WindowsInstallerSmokeLegs12 `
+            -InstallerPath $env:INSTALLER_PATH `
+            -ExpectedVersion $env:EXPECTED_VERSION `
+            -RepoRoot $PWD.Path
 
-          function Assert-Condition {
-            param([bool] $Condition, [string] $Message)
-            if (-not $Condition) {
-              throw $Message
-            }
-          }
-
-          function Invoke-BoundedProcess {
-            param(
-              [Parameter(Mandatory)] [string] $Label,
-              [Parameter(Mandatory)] [string] $FilePath,
-              [string] $Arguments = '',
-              [Parameter(Mandatory)] [string] $WorkingDirectory,
-              [Parameter(Mandatory)] [int] $TimeoutSeconds
-            )
-
-            $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
-            $startInfo.FileName = $FilePath
-            $startInfo.Arguments = $Arguments
-            $startInfo.WorkingDirectory = $WorkingDirectory
-            $startInfo.UseShellExecute = $false
-            $startInfo.CreateNoWindow = $true
-            $startInfo.RedirectStandardOutput = $true
-            $startInfo.RedirectStandardError = $true
-
-            $process = [System.Diagnostics.Process]::new()
-            $process.StartInfo = $startInfo
-            try {
-              Assert-Condition ($process.Start()) "$Label failed to start."
-              $stdoutTask = $process.StandardOutput.ReadToEndAsync()
-              $stderrTask = $process.StandardError.ReadToEndAsync()
-              if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
-                try {
-                  $process.Kill($true)
-                } catch {
-                  Write-Warning "$Label process-tree kill failed: $($_.Exception.Message)"
-                }
-                [void] $process.WaitForExit(10000)
-                throw "$Label timed out after $TimeoutSeconds seconds."
-              }
-              $process.WaitForExit()
-              $stdout = $stdoutTask.GetAwaiter().GetResult()
-              $stderr = $stderrTask.GetAwaiter().GetResult()
-              if ($process.ExitCode -ne 0) {
-                throw "$Label exited $($process.ExitCode).`nstdout:`n$stdout`nstderr:`n$stderr"
-              }
-              return [pscustomobject]@{ StdOut = $stdout; StdErr = $stderr }
-            } finally {
-              $process.Dispose()
-            }
-          }
-
-          function Invoke-InstalledAppSmoke {
-            param(
-              [Parameter(Mandatory)] [string] $FilePath,
-              [Parameter(Mandatory)] [string] $WorkingDirectory,
-              [Parameter(Mandatory)] [string] $SmokeHome,
-              [Parameter(Mandatory)] [string] $ResultPath,
-              [Parameter(Mandatory)] [string] $Version
-            )
-
-            $savedEnvironment = @{}
-            foreach ($item in [Environment]::GetEnvironmentVariables('Process').GetEnumerator()) {
-              $savedEnvironment[[string] $item.Key] = [string] $item.Value
-            }
-            $process = $null
-            try {
-              foreach ($name in @([Environment]::GetEnvironmentVariables('Process').Keys)) {
-                if (
-                  $name -like 'PYTHON*' -or
-                  $name -ieq 'VIRTUAL_ENV' -or
-                  $name -like 'QT_*' -or
-                  $name -ieq 'VULKAN_SDK' -or
-                  $name -like 'ANKI_MINER_*' -or
-                  $name -in @('REQUESTS_CA_BUNDLE', 'SSL_CERT_FILE', 'CURL_CA_BUNDLE')
-                ) {
-                  [Environment]::SetEnvironmentVariable([string] $name, $null, 'Process')
-                }
-              }
-              [Environment]::SetEnvironmentVariable('PATH', "$env:SystemRoot\System32;$env:SystemRoot", 'Process')
-              [Environment]::SetEnvironmentVariable('ANKI_MINER_HOME', $SmokeHome, 'Process')
-              [Environment]::SetEnvironmentVariable('ANKI_MINER_SMOKE', 'installer', 'Process')
-              [Environment]::SetEnvironmentVariable('ANKI_MINER_SMOKE_RESULT', $ResultPath, 'Process')
-              [Environment]::SetEnvironmentVariable('ANKI_MINER_SMOKE_EXPECTED_VERSION', $Version, 'Process')
-
-              $process = Start-Process -FilePath $FilePath -WorkingDirectory $WorkingDirectory -PassThru
-              Assert-Condition ($null -ne $process) 'Installed app failed to start.'
-              if (-not $process.WaitForExit(120000)) {
-                try {
-                  $process.Kill($true)
-                } catch {
-                  Write-Warning "Installed app process-tree kill failed: $($_.Exception.Message)"
-                }
-                [void] $process.WaitForExit(10000)
-                throw 'Installed app timed out after 120 seconds.'
-              }
-              $process.WaitForExit()
-              if ($process.ExitCode -ne 0) {
-                throw "Installed app exited $($process.ExitCode)."
-              }
-            } finally {
-              if ($null -ne $process) {
-                $process.Dispose()
-              }
-              foreach ($name in @([Environment]::GetEnvironmentVariables('Process').Keys)) {
-                if (-not $savedEnvironment.ContainsKey([string] $name)) {
-                  [Environment]::SetEnvironmentVariable([string] $name, $null, 'Process')
-                }
-              }
-              foreach ($item in $savedEnvironment.GetEnumerator()) {
-                [Environment]::SetEnvironmentVariable([string] $item.Key, [string] $item.Value, 'Process')
-              }
-            }
-          }
-
-          $repoRoot = [System.IO.Path]::GetFullPath($PWD.Path)
-          $installer = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $env:INSTALLER_PATH))
-          $version = $env:EXPECTED_VERSION
-          $installDir = Join-Path $env:LOCALAPPDATA 'Programs\AnkiMiner'
-          $installedExe = Join-Path $installDir 'AnkiMiner.exe'
-          $desktopDir = [Environment]::GetFolderPath('Desktop')
-          Assert-Condition (-not [string]::IsNullOrWhiteSpace($desktopDir)) 'Windows Desktop folder did not resolve.'
-          $desktopShortcut = Join-Path $desktopDir 'Anki Miner.lnk'
-          $programsDir = [Environment]::GetFolderPath([Environment+SpecialFolder]::Programs)
-          Assert-Condition (-not [string]::IsNullOrWhiteSpace($programsDir)) 'Windows Programs folder did not resolve.'
-          $startMenuGroup = Join-Path $programsDir 'Anki Miner'
-          $uninstallRoot = 'Registry::HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Uninstall'
-          $uninstallKeyName = '{15B09250-AC39-4792-A15A-B73BD8E218A1}_is1'
-          $uninstallKeyPath = Join-Path $uninstallRoot $uninstallKeyName
-          $smokeHome = Join-Path $env:RUNNER_TEMP 'am home 日本語'
-          $resultPath = Join-Path $smokeHome 'installer-result.txt'
-          $setup1Log = Join-Path $env:RUNNER_TEMP 'setup1.log'
-          $uninstall1Log = Join-Path $env:RUNNER_TEMP 'uninstall1.log'
-          $setup2Log = Join-Path $env:RUNNER_TEMP 'setup2.log'
-          $uninstall2Log = Join-Path $env:RUNNER_TEMP 'uninstall2.log'
-          $cleanupLog = Join-Path $env:RUNNER_TEMP 'uninstall-cleanup.log'
-
-          Assert-Condition ([Environment]::Is64BitProcess) 'Installer smoke requires x64 PowerShell for the 64-bit HKCU uninstall view.'
-
-          function Get-AppUninstallKeys {
-            if (-not (Test-Path -LiteralPath $uninstallRoot)) {
-              return
-            }
-            Get-ChildItem -LiteralPath $uninstallRoot |
-              Where-Object { $_.PSChildName -eq $uninstallKeyName }
-          }
-
-          function Assert-Installed {
-            Assert-Condition (Test-Path -LiteralPath $installedExe -PathType Leaf) "Installed executable missing: $installedExe"
-            $keys = @(Get-AppUninstallKeys)
-            Assert-Condition ($keys.Count -eq 1) "Expected exactly one HKCU uninstall entry for $uninstallKeyName; found $($keys.Count)."
-            $entry = Get-ItemProperty -LiteralPath $keys[0].PSPath
-            $actualDir = [System.IO.Path]::TrimEndingDirectorySeparator(
-              [System.IO.Path]::GetFullPath([string] $entry.InstallLocation)
-            )
-            $expectedDir = [System.IO.Path]::TrimEndingDirectorySeparator(
-              [System.IO.Path]::GetFullPath($installDir)
-            )
-            Assert-Condition ($actualDir -ieq $expectedDir) "Unexpected InstallLocation: $actualDir"
-            $actualVersion = [string] $entry.DisplayVersion
-            Assert-Condition ($actualVersion -eq $version) "Unexpected DisplayVersion: $actualVersion"
-            return $entry
-          }
-
-          function Invoke-RegisteredUninstall {
-            param([Parameter(Mandatory)] [string] $LogPath)
-
-            $entry = Assert-Installed
-            $uninstallers = @(
-              Get-ChildItem -LiteralPath $installDir -Filter 'unins*.exe' -File |
-                Where-Object { $_.Name -match '^unins[0-9]+\.exe$' }
-            )
-            Assert-Condition ($uninstallers.Count -eq 1) "Expected one registered unins*.exe; found $($uninstallers.Count)."
-            $uninstaller = $uninstallers[0].FullName
-            $command = [string] $entry.UninstallString
-            Assert-Condition (
-              $command.IndexOf($uninstaller, [StringComparison]::OrdinalIgnoreCase) -ge 0
-            ) "UninstallString does not register $uninstaller`: $command"
-            $arguments = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG="{0}"' -f $LogPath
-            [void] (Invoke-BoundedProcess -Label 'Uninstall' -FilePath $uninstaller -Arguments $arguments -WorkingDirectory $installDir -TimeoutSeconds 180)
-          }
-
-          function Assert-Uninstalled {
-            Assert-Condition (-not (Test-Path -LiteralPath $installDir)) "Install directory survived uninstall: $installDir"
-            $keys = @(Get-AppUninstallKeys)
-            Assert-Condition ($keys.Count -eq 0) "HKCU uninstall entry survived uninstall: $uninstallKeyName"
-          }
-
-          function Assert-InstallerResult {
-            Assert-Condition (Test-Path -LiteralPath $resultPath -PathType Leaf) "Installer smoke result missing: $resultPath"
-            $utf8 = [System.Text.UTF8Encoding]::new($false)
-            $expected = $utf8.GetBytes("ANKI_MINER_INSTALLER_READY $version`n")
-            $actual = [System.IO.File]::ReadAllBytes($resultPath)
-            Assert-Condition (
-              [Convert]::ToBase64String($actual) -ceq [Convert]::ToBase64String($expected)
-            ) 'Installer smoke result was not the exact expected UTF-8 payload.'
-          }
-
-          function Get-SmokeHomeSnapshot {
-            Assert-Condition (Test-Path -LiteralPath $smokeHome -PathType Container) 'ANKI_MINER_HOME is missing.'
-            $root = [System.IO.Path]::GetFullPath($smokeHome)
-            foreach ($item in @(Get-ChildItem -LiteralPath $root -Recurse -Force | Sort-Object FullName)) {
-              $relative = [System.IO.Path]::GetRelativePath($root, $item.FullName).Replace('\', '/')
-              if ($item.PSIsContainer) {
-                "D`t$relative"
-              } else {
-                $bytes = [System.IO.File]::ReadAllBytes($item.FullName)
-                $hash = [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData($bytes))
-                "F`t$relative`t$($bytes.Length)`t$hash"
-              }
-            }
-          }
-
-          function Assert-SmokeHomeSnapshot {
-            param([Parameter(Mandatory)] [string[]] $Expected)
-
-            $actual = @(Get-SmokeHomeSnapshot)
-            Assert-Condition ($actual.Count -eq $Expected.Count) "ANKI_MINER_HOME item count changed: expected $($Expected.Count), got $($actual.Count)."
-            for ($index = 0; $index -lt $Expected.Count; $index++) {
-              Assert-Condition (
-                [string]::Equals($actual[$index], $Expected[$index], [StringComparison]::Ordinal)
-              ) "ANKI_MINER_HOME changed at snapshot item $index."
-            }
-          }
-
-          Assert-Condition (Test-Path -LiteralPath $installer -PathType Leaf) "Installer missing: $installer"
-          Assert-Condition (-not (Test-Path -LiteralPath $installDir)) "Dirty runner install directory: $installDir"
-          Assert-Condition (@(Get-AppUninstallKeys).Count -eq 0) "Dirty runner uninstall entry: $uninstallKeyName"
-          Assert-Condition (-not (Test-Path -LiteralPath $desktopShortcut)) "Dirty runner desktop shortcut: $desktopShortcut"
-          Assert-Condition (-not (Test-Path -LiteralPath $startMenuGroup)) "Dirty runner Start Menu group: $startMenuGroup"
-          Assert-Condition (-not (Test-Path -LiteralPath $smokeHome)) "Dirty runner smoke home: $smokeHome"
-
-          $primaryFailure = $null
-          $cleanupFailures = [System.Collections.Generic.List[string]]::new()
-          try {
-            $setupCommon = '/CURRENTUSER /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-'
-
-            # Leg 1: explicitly select no optional tasks.
-            $setup1Args = '{0} /TASKS="" /LOG="{1}"' -f $setupCommon, $setup1Log
-            [void] (Invoke-BoundedProcess -Label 'Setup leg 1' -FilePath $installer -Arguments $setup1Args -WorkingDirectory $repoRoot -TimeoutSeconds 300)
-            [void] (Assert-Installed)
-            Assert-Condition (-not (Test-Path -LiteralPath $desktopShortcut)) 'Desktop shortcut exists after /TASKS="" install.'
-
-            Invoke-InstalledAppSmoke -FilePath $installedExe -WorkingDirectory $installDir -SmokeHome $smokeHome -ResultPath $resultPath -Version $version
-            Assert-InstallerResult
-            $homeSnapshot = @(Get-SmokeHomeSnapshot)
-
-            Invoke-RegisteredUninstall -LogPath $uninstall1Log
-            Assert-Uninstalled
-            Assert-Condition (-not (Test-Path -LiteralPath $desktopShortcut)) 'Desktop shortcut appeared or survived leg 1 uninstall.'
-            Assert-SmokeHomeSnapshot -Expected $homeSnapshot
-            Assert-InstallerResult
-            Write-Host 'INSTALLER_SMOKE_PASS leg1'
-
-            # Leg 2: omit /TASKS so the script's default desktop task is exercised.
-            $setup2Args = '{0} /LOG="{1}"' -f $setupCommon, $setup2Log
-            [void] (Invoke-BoundedProcess -Label 'Setup leg 2' -FilePath $installer -Arguments $setup2Args -WorkingDirectory $repoRoot -TimeoutSeconds 300)
-            [void] (Assert-Installed)
-            Assert-Condition (Test-Path -LiteralPath $desktopShortcut -PathType Leaf) 'Default desktop shortcut was not created.'
-
-            Invoke-RegisteredUninstall -LogPath $uninstall2Log
-            Assert-Uninstalled
-            Assert-Condition (-not (Test-Path -LiteralPath $desktopShortcut)) 'Desktop shortcut survived leg 2 uninstall.'
-            Assert-SmokeHomeSnapshot -Expected $homeSnapshot
-            Assert-InstallerResult
-            Write-Host 'INSTALLER_SMOKE_PASS leg2'
-          } catch {
-            $primaryFailure = $_
-          } finally {
-            # Best-effort emergency uninstall, then remove only paths this clean
-            # hosted runner proved absent before the smoke.
-            try {
-              $keys = @(Get-AppUninstallKeys)
-              if ($keys.Count -eq 1 -and (Test-Path -LiteralPath $installDir)) {
-                Invoke-RegisteredUninstall -LogPath $cleanupLog
-              }
-            } catch {
-              [void] $cleanupFailures.Add("Emergency uninstall: $($_.Exception.Message)")
-            }
-            foreach ($target in @($desktopShortcut, $startMenuGroup, $installDir, $uninstallKeyPath, $smokeHome)) {
-              try {
-                if (Test-Path -LiteralPath $target) {
-                  Remove-Item -LiteralPath $target -Recurse -Force
-                }
-              } catch {
-                [void] $cleanupFailures.Add("Remove ${target}: $($_.Exception.Message)")
-              }
-            }
-          }
-
-          foreach ($cleanupFailure in $cleanupFailures) {
-            Write-Warning $cleanupFailure
-          }
-          if ($null -ne $primaryFailure) {
-            throw $primaryFailure
-          }
-          if ($cleanupFailures.Count -ne 0) {
-            throw 'Windows installer smoke cleanup failed.'
-          }
+      - name: Smoke Windows installer upgrade (leg3)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        timeout-minutes: 30
+        env:
+          INSTALLER_PATH: dist/AnkiMiner-${{ steps.version.outputs.version }}-Windows-x86_64-Setup.exe
+          PROBE_INSTALLER_PATH: dist/AnkiMiner-0.0.1-Windows-x86_64-Setup.exe
+          EXPECTED_VERSION: ${{ steps.version.outputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          . (Join-Path $PWD 'scripts/windows_installer_smoke_lib.ps1')
+          Invoke-WindowsInstallerSmokeLeg3 `
+            -InstallerPath $env:INSTALLER_PATH `
+            -ProbeInstallerPath $env:PROBE_INSTALLER_PATH `
+            -ExpectedVersion $env:EXPECTED_VERSION `
+            -Repository $env:GITHUB_REPOSITORY `
+            -RepoRoot $PWD.Path
 
       - name: Upload Windows installer smoke logs
         if: ${{ failure() && runner.os == 'Windows' }}
@@ -1249,6 +1015,10 @@ jobs:
             ${{ runner.temp }}/setup2.log
             ${{ runner.temp }}/uninstall2.log
             ${{ runner.temp }}/uninstall-cleanup.log
+            ${{ runner.temp }}/setup-old.log
+            ${{ runner.temp }}/setup-upgrade.log
+            ${{ runner.temp }}/setup-downgrade-probe.log
+            ${{ runner.temp }}/uninstall-upgrade.log
 
       - name: Build AppImage (Linux)
         if: runner.os == 'Linux'

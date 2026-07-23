@@ -540,6 +540,26 @@
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>App</name>
+    <message>
+        <source>Anki Miner Is Already Running</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another copy of Anki Miner appears to be running. Running two copies at once can corrupt the known-words and statistics databases.
+
+Continue anyway?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Continue anyway</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Quit</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>AsrModelDownloadWorker</name>
     <message>
         <source>Downloading %1…</source>
@@ -5192,6 +5212,22 @@ Imported values override your current settings; anything not in the file is kept
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Invalid imported fields were ignored; current values were kept: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Auto-update of yt-dlp was disabled (settings imported from an older version).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings from version 2.8.3 were mapped conservatively to schema 2.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings Imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>✓ Imported</source>
         <translation type="unfinished" />
     </message>
@@ -6253,6 +6289,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Use system file dialogs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Use the operating system's native file pickers instead of the app's built-in ones. Native dialogs can freeze the app on some Windows systems with flaky network drives or cloud storage, which is why this is off by default.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
         <translation type="unfinished" />
     </message>
@@ -6734,6 +6778,10 @@ Continue with import?</source>
     <name>_PackRow</name>
     <message>
         <source>%1 entries</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
         <translation type="unfinished" />
     </message>
     <message>

@@ -540,6 +540,28 @@
         <translation>Тип заметки не найден</translation>
     </message>
 </context><context>
+    <name>App</name>
+    <message>
+        <source>Anki Miner Is Already Running</source>
+        <translation>Anki Miner уже запущен</translation>
+    </message>
+    <message>
+        <source>Another copy of Anki Miner appears to be running. Running two copies at once can corrupt the known-words and statistics databases.
+
+Continue anyway?</source>
+        <translation>Похоже, уже запущена другая копия Anki Miner. Одновременная работа двух копий может повредить базы данных известных слов и статистики.
+
+Всё равно продолжить?</translation>
+    </message>
+    <message>
+        <source>Continue anyway</source>
+        <translation>Всё равно продолжить</translation>
+    </message>
+    <message>
+        <source>Quit</source>
+        <translation>Выйти</translation>
+    </message>
+</context><context>
     <name>AsrModelDownloadWorker</name>
     <message>
         <source>Downloading %1…</source>
@@ -5266,6 +5288,22 @@ Imported values override your current settings; anything not in the file is kept
 %1</translation>
     </message>
     <message>
+        <source>Invalid imported fields were ignored; current values were kept: %1</source>
+        <translation>Недопустимые импортированные поля были проигнорированы; текущие значения сохранены: %1</translation>
+    </message>
+    <message>
+        <source>Auto-update of yt-dlp was disabled (settings imported from an older version).</source>
+        <translation>Автообновление yt-dlp было отключено (настройки импортированы из более старой версии).</translation>
+    </message>
+    <message>
+        <source>Settings from version 2.8.3 were mapped conservatively to schema 2.</source>
+        <translation>Настройки версии 2.8.3 были консервативно сопоставлены со схемой 2.</translation>
+    </message>
+    <message>
+        <source>Settings Imported</source>
+        <translation>Настройки импортированы</translation>
+    </message>
+    <message>
         <source>✓ Imported</source>
         <translation>✓ Импортировано</translation>
     </message>
@@ -6332,6 +6370,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Масштабировать весь текст интерфейса. Применяется вживую во всём приложении.</translation>
     </message>
     <message>
+        <source>Use system file dialogs</source>
+        <translation>Использовать системные диалоги выбора файлов</translation>
+    </message>
+    <message>
+        <source>Use the operating system's native file pickers instead of the app's built-in ones. Native dialogs can freeze the app on some Windows systems with flaky network drives or cloud storage, which is why this is off by default.</source>
+        <translation>Использовать стандартные диалоги выбора файлов операционной системы вместо встроенных в приложение. Системные диалоги могут вызывать зависание приложения на некоторых системах Windows с нестабильными сетевыми дисками или облачными хранилищами, поэтому по умолчанию эта функция отключена.</translation>
+    </message>
+    <message>
         <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
         <translation>Отметьте темы звёздочкой, чтобы добавить их в селектор в правом верхнем углу. Нажмите на любую строку для предпросмотра — изменение применяется вживую во всём приложении. Нажмите &lt;b&gt;Вернуть&lt;/b&gt;, чтобы отменить предпросмотр.</translation>
     </message>
@@ -6818,6 +6864,10 @@ Continue with import?</source>
     <message>
         <source>%1 entries</source>
         <translation>%1 записей</translation>
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation>⚠ требуется повторный импорт (обновление приложения)</translation>
     </message>
     <message>
         <source>⚠ folder missing — re-import</source>

@@ -23,6 +23,7 @@ class AudioPackMeta:
     source: str
     format: str
     entry_count: int
+    schema_ok: bool
     pack_dir: Path
     pack_dir_exists: bool
     db_path: Path
@@ -51,13 +52,13 @@ class AudioPackRegistry:
         directories (covers ``.staging-*`` importer staging) and names
         containing ``.bak-`` (importer overwrite backups like
         ``<pack>.bak-<timestamp>``) are explicitly skipped.  Packs with
-        unreadable/corrupt meta or a schema_version mismatch are skipped
-        with a warning.
+        unreadable/corrupt meta are skipped with a warning. Schema-mismatched
+        packs are retained with ``schema_ok=False`` so settings can offer
+        repair, but runtime chain assembly excludes them.
         """
         # Audio widens the meta-read guard to (sqlite3.Error, OSError) and
         # pre-filters staging/backup dirs before the meta read (both preserved
-        # via scan_index_root's params); schema-mismatch drop-at-scan stays in
-        # _parse_meta (returns None to skip, unlike dict/freq's schema_ok flag).
+        # via scan_index_root's params).
         self._packs = scan_index_root(
             self._root,
             self._parse_meta,
@@ -73,7 +74,7 @@ class AudioPackRegistry:
         # not surface a stale staging dir or backup as a pack.
         return not child.name.startswith(".") and ".bak-" not in child.name
 
-    def _parse_meta(self, child: Path, db: Path, meta: dict[str, str]) -> AudioPackMeta | None:
+    def _parse_meta(self, child: Path, db: Path, meta: dict[str, str]) -> AudioPackMeta:
         # Schema version check — mismatch means the pack needs re-import.
         try:
             version = int(meta.get("schema_version", "0"))
@@ -81,12 +82,11 @@ class AudioPackRegistry:
             version = 0
         if version != SCHEMA_VERSION:
             logger.warning(
-                "Audio pack '%s' has schema_version=%s, expected %s — needs re-import; skipping",
+                "Audio pack '%s' has schema_version=%s, expected %s — needs re-import",
                 child.name,
                 version,
                 SCHEMA_VERSION,
             )
-            return None
 
         try:
             count = int(meta.get("entry_count", "0"))
@@ -101,6 +101,7 @@ class AudioPackRegistry:
             source=meta.get("source", child.name),
             format=meta.get("format", "unknown"),
             entry_count=count,
+            schema_ok=(version == SCHEMA_VERSION),
             pack_dir=pack_dir,
             pack_dir_exists=pack_dir.is_dir(),
             db_path=db,
@@ -126,6 +127,7 @@ class AudioPackRegistry:
         * Disabled entries are skipped silently.
         * ``kind="pack"`` entries whose pack_id is unknown on disk are skipped
           with a warning (pack was removed since config was written).
+        * Packs with a stale index schema are skipped with a warning.
         * Packs whose ``pack_dir`` is missing on disk are skipped with a
           warning (audio files moved or external drive unplugged).
         * Non-pack entries (``kind="jpod101"``, ``kind="googletts"``) are
@@ -153,6 +155,13 @@ class AudioPackRegistry:
                     "Audio pack '%s' referenced in config but not found in %s",
                     entry.pack_id,
                     self._root,
+                )
+                continue
+            # A stale index must never reach the runtime fetcher chain.
+            if not meta.schema_ok:
+                logger.warning(
+                    "Audio pack '%s' has wrong schema_version; needs reimport",
+                    entry.pack_id,
                 )
                 continue
             if not meta.pack_dir_exists:

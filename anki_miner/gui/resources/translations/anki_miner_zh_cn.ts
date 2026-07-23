@@ -540,6 +540,28 @@
         <translation>未找到笔记类型</translation>
     </message>
 </context><context>
+    <name>App</name>
+    <message>
+        <source>Anki Miner Is Already Running</source>
+        <translation>Anki Miner 已在运行</translation>
+    </message>
+    <message>
+        <source>Another copy of Anki Miner appears to be running. Running two copies at once can corrupt the known-words and statistics databases.
+
+Continue anyway?</source>
+        <translation>似乎有另一个 Anki Miner 实例正在运行。同时运行两个实例可能会损坏已知单词数据库和统计数据库。
+
+仍要继续吗？</translation>
+    </message>
+    <message>
+        <source>Continue anyway</source>
+        <translation>仍要继续</translation>
+    </message>
+    <message>
+        <source>Quit</source>
+        <translation>退出</translation>
+    </message>
+</context><context>
     <name>AsrModelDownloadWorker</name>
     <message>
         <source>Downloading %1…</source>
@@ -5244,6 +5266,22 @@ Imported values override your current settings; anything not in the file is kept
 %1</translation>
     </message>
     <message>
+        <source>Invalid imported fields were ignored; current values were kept: %1</source>
+        <translation>已忽略无效的导入字段，并保留了当前值：%1</translation>
+    </message>
+    <message>
+        <source>Auto-update of yt-dlp was disabled (settings imported from an older version).</source>
+        <translation>已禁用 yt-dlp 自动更新（设置从旧版本导入）。</translation>
+    </message>
+    <message>
+        <source>Settings from version 2.8.3 were mapped conservatively to schema 2.</source>
+        <translation>版本 2.8.3 的设置已保守地映射到架构 2。</translation>
+    </message>
+    <message>
+        <source>Settings Imported</source>
+        <translation>设置已导入</translation>
+    </message>
+    <message>
         <source>✓ Imported</source>
         <translation>✓ 已导入</translation>
     </message>
@@ -6308,6 +6346,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>缩放所有界面文字。在整个应用中实时生效。</translation>
     </message>
     <message>
+        <source>Use system file dialogs</source>
+        <translation>使用系统文件对话框</translation>
+    </message>
+    <message>
+        <source>Use the operating system's native file pickers instead of the app's built-in ones. Native dialogs can freeze the app on some Windows systems with flaky network drives or cloud storage, which is why this is off by default.</source>
+        <translation>使用操作系统的原生文件选择器，而非应用内置的选择器。在某些网络驱动器或云存储不稳定的 Windows 系统上，原生对话框可能导致应用冻结，因此该选项默认关闭。</translation>
+    </message>
+    <message>
         <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
         <translation>为主题加星标可将其添加到右上角的选择器。点击任意行进行预览——更改会在整个应用中实时生效。按 &lt;b&gt;还原&lt;/b&gt; 撤销你的预览。</translation>
     </message>
@@ -6794,6 +6840,10 @@ Continue with import?</source>
     <message>
         <source>%1 entries</source>
         <translation>%1 个条目</translation>
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation>⚠ 需要重新导入（应用升级）</translation>
     </message>
     <message>
         <source>⚠ folder missing — re-import</source>

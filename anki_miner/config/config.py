@@ -360,11 +360,13 @@ class AnkiMinerConfig:
     skipped_update_version: str = ""
     last_known_version: str = ""
 
-    # First-run flags (GUI-persisted; used to auto-create desktop shortcut once)
+    # First-run flags (GUI-persisted; used to auto-create desktop shortcut once).
+    # Fresh installs default False; GUIConfigManager seeds absent keys True only
+    # when loading a pre-existing config.
     first_run_shortcut_done: bool = False
     # Set once the first-run recommended-resources setup has been offered (so the
     # Welcome dialog never re-fires). Persisted automatically; absent in old
-    # configs defaults to False.
+    # configs is seeded True by GUIConfigManager.
     first_run_setup_done: bool = False
 
     # Performance settings

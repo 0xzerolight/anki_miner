@@ -540,6 +540,28 @@
         <translation>ノートタイプが見つかりません</translation>
     </message>
 </context><context>
+    <name>App</name>
+    <message>
+        <source>Anki Miner Is Already Running</source>
+        <translation>Anki Miner は既に実行中です</translation>
+    </message>
+    <message>
+        <source>Another copy of Anki Miner appears to be running. Running two copies at once can corrupt the known-words and statistics databases.
+
+Continue anyway?</source>
+        <translation>別の Anki Miner が実行中のようです。2 つ同時に実行すると、既知単語と統計のデータベースが破損する恐れがあります。
+
+このまま続行しますか？</translation>
+    </message>
+    <message>
+        <source>Continue anyway</source>
+        <translation>このまま続行</translation>
+    </message>
+    <message>
+        <source>Quit</source>
+        <translation>終了</translation>
+    </message>
+</context><context>
     <name>AsrModelDownloadWorker</name>
     <message>
         <source>Downloading %1…</source>
@@ -5244,6 +5266,22 @@ Imported values override your current settings; anything not in the file is kept
 %1</translation>
     </message>
     <message>
+        <source>Invalid imported fields were ignored; current values were kept: %1</source>
+        <translation>無効なインポート項目は無視され、現在の値が保持されました: %1</translation>
+    </message>
+    <message>
+        <source>Auto-update of yt-dlp was disabled (settings imported from an older version).</source>
+        <translation>yt-dlp の自動更新を無効にしました（旧バージョンからインポートされた設定のため）。</translation>
+    </message>
+    <message>
+        <source>Settings from version 2.8.3 were mapped conservatively to schema 2.</source>
+        <translation>バージョン 2.8.3 の設定は、スキーマ 2 へ保守的にマッピングされました。</translation>
+    </message>
+    <message>
+        <source>Settings Imported</source>
+        <translation>設定をインポートしました</translation>
+    </message>
+    <message>
         <source>✓ Imported</source>
         <translation>✓ インポートしました</translation>
     </message>
@@ -6308,6 +6346,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>すべてのUIテキストを拡大縮小します。アプリ全体に即座に反映されます。</translation>
     </message>
     <message>
+        <source>Use system file dialogs</source>
+        <translation>システムのファイルダイアログを使用</translation>
+    </message>
+    <message>
+        <source>Use the operating system's native file pickers instead of the app's built-in ones. Native dialogs can freeze the app on some Windows systems with flaky network drives or cloud storage, which is why this is off by default.</source>
+        <translation>アプリ内蔵のファイル選択画面の代わりに、OS のネイティブなファイル選択ダイアログを使用します。ネットワークドライブやクラウドストレージが不安定な一部の Windows 環境では、ネイティブダイアログが原因でアプリがフリーズすることがあるため、既定では無効になっています。</translation>
+    </message>
+    <message>
         <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
         <translation>テーマにスターを付けると、右上のセレクターに追加されます。行をクリックするとプレビューでき、変更はアプリ全体に即座に反映されます。プレビューを取り消すには&lt;b&gt;復元&lt;/b&gt;を押してください。</translation>
     </message>
@@ -6794,6 +6840,10 @@ Continue with import?</source>
     <message>
         <source>%1 entries</source>
         <translation>%1 件のエントリ</translation>
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation>⚠ 再インポートが必要です（アプリのアップグレード）</translation>
     </message>
     <message>
         <source>⚠ folder missing — re-import</source>

@@ -165,8 +165,7 @@ def scan_index_root(
     Each direct subdirectory containing an ``index.sqlite`` is a candidate. For
     each candidate the meta is read via :func:`read_meta_cached` (sidecar-cached)
     and handed to ``parse(child, db_path, meta)``; a non-``None`` return is stored
-    under ``child.name`` (a ``None`` return means "skip this child" — the audio
-    layer uses it for its drop-schema-mismatch-at-scan policy).
+    under ``child.name`` (a ``None`` return means "skip this child").
 
     Parameters let each family keep its behavior:
     * ``child_prefilter`` runs *before* the ``index.sqlite`` check and the meta

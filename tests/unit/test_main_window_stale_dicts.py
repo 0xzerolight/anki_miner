@@ -68,9 +68,14 @@ def test_stale_prompt_yes_triggers_reimport(main_window, monkeypatch, qtbot):
     trigger = _stub_settings_trigger(qtbot, main_window)
 
     main_window._stale_dict_prompt_handled = False
-    main_window._on_stale_dicts_scanned([SimpleNamespace(source_name="Old Dict")])
+    main_window._on_stale_dicts_scanned(
+        [
+            SimpleNamespace(dict_id="old-dict", source_name="Old Dict"),
+            SimpleNamespace(dict_id="other-old-dict", source_name="Other Old Dict"),
+        ]
+    )
 
-    trigger.assert_called_once()
+    trigger.assert_called_once_with(frozenset({"old-dict", "other-old-dict"}))
 
 
 def test_stale_prompt_later_does_not_reimport(main_window, monkeypatch, qtbot):

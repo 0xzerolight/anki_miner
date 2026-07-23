@@ -540,6 +540,28 @@
         <translation>Tipo de nota não encontrado</translation>
     </message>
 </context><context>
+    <name>App</name>
+    <message>
+        <source>Anki Miner Is Already Running</source>
+        <translation>O Anki Miner Já Está em Execução</translation>
+    </message>
+    <message>
+        <source>Another copy of Anki Miner appears to be running. Running two copies at once can corrupt the known-words and statistics databases.
+
+Continue anyway?</source>
+        <translation>Outra cópia do Anki Miner parece estar em execução. Executar duas cópias ao mesmo tempo pode corromper os bancos de dados de palavras conhecidas e de estatísticas.
+
+Continuar mesmo assim?</translation>
+    </message>
+    <message>
+        <source>Continue anyway</source>
+        <translation>Continuar mesmo assim</translation>
+    </message>
+    <message>
+        <source>Quit</source>
+        <translation>Sair</translation>
+    </message>
+</context><context>
     <name>AsrModelDownloadWorker</name>
     <message>
         <source>Downloading %1…</source>
@@ -5255,6 +5277,22 @@ Os valores importados substituem suas configurações atuais; qualquer coisa que
 %1</translation>
     </message>
     <message>
+        <source>Invalid imported fields were ignored; current values were kept: %1</source>
+        <translation>Campos importados inválidos foram ignorados; os valores atuais foram mantidos: %1</translation>
+    </message>
+    <message>
+        <source>Auto-update of yt-dlp was disabled (settings imported from an older version).</source>
+        <translation>A atualização automática do yt-dlp foi desativada (configurações importadas de uma versão mais antiga).</translation>
+    </message>
+    <message>
+        <source>Settings from version 2.8.3 were mapped conservatively to schema 2.</source>
+        <translation>As configurações da versão 2.8.3 foram mapeadas de forma conservadora para o esquema 2.</translation>
+    </message>
+    <message>
+        <source>Settings Imported</source>
+        <translation>Configurações Importadas</translation>
+    </message>
+    <message>
         <source>✓ Imported</source>
         <translation>✓ Importado</translation>
     </message>
@@ -6320,6 +6358,14 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
         <translation>Dimensiona todo o texto da interface. Aplicado ao vivo em todo o app.</translation>
     </message>
     <message>
+        <source>Use system file dialogs</source>
+        <translation>Usar diálogos de arquivo do sistema</translation>
+    </message>
+    <message>
+        <source>Use the operating system's native file pickers instead of the app's built-in ones. Native dialogs can freeze the app on some Windows systems with flaky network drives or cloud storage, which is why this is off by default.</source>
+        <translation>Usar os seletores de arquivo nativos do sistema operacional em vez dos integrados do aplicativo. Diálogos nativos podem travar o aplicativo em alguns sistemas Windows com unidades de rede instáveis ou armazenamento em nuvem, e por isso esta opção fica desativada por padrão.</translation>
+    </message>
+    <message>
         <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
         <translation>Marque temas com estrela para adicioná-los ao seletor no canto superior direito. Clique em qualquer linha para pré-visualizar — a mudança é aplicada ao vivo em todo o app. Pressione &lt;b&gt;Reverter&lt;/b&gt; para desfazer a pré-visualização.</translation>
     </message>
@@ -6806,6 +6852,10 @@ Continuar com a importação?</translation>
     <message>
         <source>%1 entries</source>
         <translation>%1 entradas</translation>
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation>⚠ reimportação necessária (atualização do aplicativo)</translation>
     </message>
     <message>
         <source>⚠ folder missing — re-import</source>

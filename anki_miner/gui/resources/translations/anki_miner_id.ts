@@ -540,6 +540,28 @@
         <translation>Tipe catatan tidak ditemukan</translation>
     </message>
 </context><context>
+    <name>App</name>
+    <message>
+        <source>Anki Miner Is Already Running</source>
+        <translation>Anki Miner Sudah Berjalan</translation>
+    </message>
+    <message>
+        <source>Another copy of Anki Miner appears to be running. Running two copies at once can corrupt the known-words and statistics databases.
+
+Continue anyway?</source>
+        <translation>Salinan lain Anki Miner tampaknya sedang berjalan. Menjalankan dua salinan sekaligus dapat merusak basis data kata yang dikenal dan statistik.
+
+Tetap lanjutkan?</translation>
+    </message>
+    <message>
+        <source>Continue anyway</source>
+        <translation>Tetap lanjutkan</translation>
+    </message>
+    <message>
+        <source>Quit</source>
+        <translation>Keluar</translation>
+    </message>
+</context><context>
     <name>AsrModelDownloadWorker</name>
     <message>
         <source>Downloading %1…</source>
@@ -5244,6 +5266,22 @@ Nilai yang diimpor menggantikan pengaturan Anda saat ini; apa pun yang tidak ada
 %1</translation>
     </message>
     <message>
+        <source>Invalid imported fields were ignored; current values were kept: %1</source>
+        <translation>Bidang impor yang tidak valid diabaikan; nilai saat ini dipertahankan: %1</translation>
+    </message>
+    <message>
+        <source>Auto-update of yt-dlp was disabled (settings imported from an older version).</source>
+        <translation>Pembaruan otomatis yt-dlp dinonaktifkan (pengaturan diimpor dari versi lama).</translation>
+    </message>
+    <message>
+        <source>Settings from version 2.8.3 were mapped conservatively to schema 2.</source>
+        <translation>Pengaturan dari versi 2.8.3 dipetakan secara konservatif ke skema 2.</translation>
+    </message>
+    <message>
+        <source>Settings Imported</source>
+        <translation>Pengaturan Diimpor</translation>
+    </message>
+    <message>
         <source>✓ Imported</source>
         <translation>✓ Diimpor</translation>
     </message>
@@ -6308,6 +6346,14 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>Skalakan semua teks antarmuka. Diterapkan langsung di seluruh aplikasi.</translation>
     </message>
     <message>
+        <source>Use system file dialogs</source>
+        <translation>Gunakan dialog berkas sistem</translation>
+    </message>
+    <message>
+        <source>Use the operating system's native file pickers instead of the app's built-in ones. Native dialogs can freeze the app on some Windows systems with flaky network drives or cloud storage, which is why this is off by default.</source>
+        <translation>Gunakan pemilih berkas bawaan sistem operasi alih-alih pemilih bawaan aplikasi. Dialog natif dapat membuat aplikasi macet di beberapa sistem Windows dengan drive jaringan atau penyimpanan awan yang tidak stabil, sehingga fitur ini nonaktif secara bawaan.</translation>
+    </message>
+    <message>
         <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
         <translation>Beri bintang pada tema untuk menambahkannya ke pemilih di kanan atas. Klik baris mana pun untuk pratinjau — perubahan diterapkan langsung di seluruh aplikasi. Tekan &lt;b&gt;Kembalikan&lt;/b&gt; untuk membatalkan pratinjau Anda.</translation>
     </message>
@@ -6794,6 +6840,10 @@ Lanjutkan impor?</translation>
     <message>
         <source>%1 entries</source>
         <translation>%1 entri</translation>
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation>⚠ perlu impor ulang (pemutakhiran aplikasi)</translation>
     </message>
     <message>
         <source>⚠ folder missing — re-import</source>

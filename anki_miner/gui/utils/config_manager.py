@@ -26,6 +26,15 @@ class _ConfigReadError(ValueError):
     pass
 
 
+@dataclasses.dataclass(frozen=True)
+class ImportConfigResult:
+    """Imported config plus non-fatal validation and migration feedback."""
+
+    config: AnkiMinerConfig
+    invalid_fields: list[str] = dataclasses.field(default_factory=list)
+    notices: list[str] = dataclasses.field(default_factory=list)
+
+
 class GUIConfigManager:
     """Manager for GUI configuration persistence.
 
@@ -111,10 +120,25 @@ class GUIConfigManager:
                 json.dump(config_dict, f, indent=2, ensure_ascii=False)
             # First-ever save has nothing to back up — skip silently.
             if cls.CONFIG_FILE.exists():
-                bak_path.touch(mode=0o600, exist_ok=True)
-                if os.name == "posix":
-                    os.chmod(bak_path, 0o600)
-                shutil.copyfile(cls.CONFIG_FILE, bak_path)
+                # Rotation guard: never copy a corrupt primary over a possibly
+                # valid .bak. Only DECODE failures skip rotation — a read
+                # OSError propagates so the outer handler aborts the save with
+                # the primary untouched (an unreadable file is not "corrupt").
+                primary_bytes = cls.CONFIG_FILE.read_bytes()
+                try:
+                    rotatable = isinstance(json.loads(primary_bytes), dict)
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    rotatable = False
+                if not rotatable:
+                    logger.warning(
+                        "Backup rotation skipped for unparseable primary %s",
+                        cls.CONFIG_FILE,
+                    )
+                else:
+                    bak_path.touch(mode=0o600, exist_ok=True)
+                    if os.name == "posix":
+                        os.chmod(bak_path, 0o600)
+                    shutil.copyfile(cls.CONFIG_FILE, bak_path)
             os.replace(tmp_path, cls.CONFIG_FILE)
         except BaseException:
             tmp_path.unlink(missing_ok=True)
@@ -137,14 +161,73 @@ class GUIConfigManager:
             logger.warning("Invalid config %s: expected a JSON object", path)
             raise _ConfigReadError(f"Invalid root in {path.name}")
 
-        # LOAD path runs schema migrations for existing gui_config.json files;
-        # the import path calls _migrate_dict without these load-only flags.
+        schema_version = config_dict.get("config_schema_version")
+        if (
+            isinstance(schema_version, int)
+            and not isinstance(schema_version, bool)
+            and schema_version > cls.CONFIG_SCHEMA_VERSION
+        ):
+            cls._archive_future_schema_config(path, schema_version)
+
+        # LOAD path runs schema migrations for existing gui_config.json files.
+        # Import handles its provenance-aware shims after this shared migration
+        # so absent overlay keys cannot be synthesized.
         migrated = cls._migrate_dict(
             config_dict,
             seed_wordsets=True,
             disable_legacy_ytdlp_update=True,
+            seed_first_run_flags=True,
         )
         return AnkiMinerConfig(**cls._decode_field_types(migrated))
+
+    @classmethod
+    def _archive_future_schema_config(cls, path: Path, schema_version: int) -> None:
+        """Best-effort byte archive of a loaded config from a future schema."""
+        try:
+            source_bytes = path.read_bytes()
+            archive_root = cls.CONFIG_FILE
+            base = archive_root.with_name(f"{archive_root.stem}.from-schema-{schema_version}{archive_root.suffix}")
+            candidate = base
+            collision_index = 2
+
+            while True:
+                try:
+                    fd = os.open(candidate, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                except FileExistsError:
+                    try:
+                        identical = candidate.read_bytes() == source_bytes
+                    except OSError:
+                        identical = False
+                    if identical:
+                        archive = candidate
+                        break
+                    candidate = archive_root.with_name(
+                        f"{archive_root.stem}.from-schema-{schema_version}.{collision_index}{archive_root.suffix}"
+                    )
+                    collision_index += 1
+                    continue
+
+                try:
+                    with os.fdopen(fd, "wb") as archive_file:
+                        archive_file.write(source_bytes)
+                except OSError:
+                    candidate.unlink(missing_ok=True)
+                    raise
+                archive = candidate
+                break
+        except OSError as e:
+            logger.warning(
+                "Could not archive future-schema config %s (schema %s): %s",
+                path,
+                schema_version,
+                e,
+            )
+            return
+
+        logger.warning(
+            "Future-schema config archived to %s before best-effort load",
+            archive,
+        )
 
     @classmethod
     def _migrate_dict(
@@ -154,6 +237,7 @@ class GUIConfigManager:
         backfill_anki_fields: bool = True,
         seed_wordsets: bool = False,
         disable_legacy_ytdlp_update: bool = False,
+        seed_first_run_flags: bool = False,
     ) -> dict[str, Any]:
         """Run the full pre-construction migration pipeline on a raw JSON dict.
 
@@ -170,14 +254,14 @@ class GUIConfigManager:
                 can be merged onto the current mapping — the backfilled dict
                 would otherwise clobber unlisted current sub-keys with
                 defaults.
-            seed_wordsets: When True (LOAD path only), seed the default-ON
-                name wordsets on a schema < 2 config that has none enabled.
-                The import path leaves it False: an imported settings file
-                carries no schema marker, so a deliberate all-off export must
-                not be force-re-enabled here.
-            disable_legacy_ytdlp_update: When True (LOAD path only), force the
-                updater off for configs written under schema < 3. Schema 3+
+            seed_wordsets: When True, seed the default-ON name wordsets on a
+                schema < 2 config that has none enabled. Used for loads.
+            disable_legacy_ytdlp_update: When True, force the updater off for
+                configs written under schema < 3. Used for loads; schema 3+
                 preserves an explicit opt-in.
+            seed_first_run_flags: When True (LOAD path only), mark first-run
+                flows done when their keys are absent from an existing config.
+                Explicit stored values are preserved.
         """
         # Convert string paths back to Path objects
         config_dict = cls._strings_to_paths(config_dict)
@@ -202,10 +286,9 @@ class GUIConfigManager:
         # written under schema < 2 that carries no enabled wordsets predates
         # the default-ON rollout, so seed the full bundled set. This is the
         # first shim to gate on the marker, so it MUST read it before the pop
-        # below. LOAD-path only (seed_wordsets): the import path never seeds —
-        # an imported settings file has no marker, so a deliberate all-off
-        # export would otherwise be force-re-enabled. A non-empty saved list is
-        # left untouched; the value tracks the dataclass default automatically.
+        # below. Callers enable seed_wordsets only for a load or an import with
+        # schema provenance. A non-empty saved list is left untouched; the
+        # value tracks the dataclass default automatically.
         schema_version = config_dict.get("config_schema_version", 0)
         if not isinstance(schema_version, int) or isinstance(schema_version, bool):
             schema_version = 0
@@ -217,6 +300,13 @@ class GUIConfigManager:
         # opt-in remains true on later loads.
         if disable_legacy_ytdlp_update and schema_version < 3:
             config_dict["auto_update_ytdlp"] = False
+
+        # Existing installs predate both first-run flows. Offer them only on a
+        # genuinely fresh install; preserve explicit False so an interrupted or
+        # deliberately re-enabled flow remains pending.
+        if seed_first_run_flags:
+            config_dict.setdefault("first_run_setup_done", True)
+            config_dict.setdefault("first_run_shortcut_done", True)
 
         # Drop the schema-version marker (see CONFIG_SCHEMA_VERSION): a JSON-
         # only key, never a dataclass field. A missing marker means the file
@@ -245,30 +335,56 @@ class GUIConfigManager:
             If the file exists but is invalid, attempts recovery from the .bak
             file before falling back to default configuration.
         """
-        if not cls.CONFIG_FILE.exists():
+        bak_path = cls.CONFIG_FILE.with_name(cls.CONFIG_FILE.name + ".bak")
+        if cls.CONFIG_FILE.exists():
+            try:
+                return cls._parse_and_migrate(cls.CONFIG_FILE)
+            except (_ConfigReadError, TypeError, ValueError) as e:
+                logger.warning("gui_config.json invalid (%s); attempting .bak recovery", e)
+            except OSError as e:
+                # An unreadable file (permissions, transient I/O error) must not
+                # crash startup — try .bak before falling back to defaults.
+                logger.warning("gui_config.json unreadable (%s); attempting .bak recovery", e)
+        elif not bak_path.exists():
             return create_default_config()
-
-        try:
-            return cls._parse_and_migrate(cls.CONFIG_FILE)
-        except (_ConfigReadError, TypeError, ValueError) as e:
-            logger.warning("gui_config.json invalid (%s); attempting .bak recovery", e)
-        except OSError as e:
-            # An unreadable file (permissions, transient I/O error) must not
-            # crash startup — try .bak before falling back to defaults.
-            logger.warning("gui_config.json unreadable (%s); attempting .bak recovery", e)
+        else:
+            logger.warning("gui_config.json missing; attempting .bak recovery")
 
         # One .bak attempt — no loop.
-        bak_path = cls.CONFIG_FILE.with_name(cls.CONFIG_FILE.name + ".bak")
         try:
             config = cls._parse_and_migrate(bak_path)
-            logger.warning("gui_config.json corrupt; recovered from .bak")
+            cls._repair_primary_from_backup(bak_path)
+            logger.warning("gui_config.json recovered from .bak")
             return config
         except (_ConfigReadError, TypeError, ValueError, OSError) as bak_err:
             logger.warning("gui_config.json.bak also unusable (%s); using defaults", bak_err)
             return create_default_config()
 
+    @classmethod
+    def _repair_primary_from_backup(cls, bak_path: Path) -> None:
+        """Best-effort write-through repair after a successful backup parse."""
+        corrupt_path = cls.CONFIG_FILE.with_name(cls.CONFIG_FILE.name + ".corrupt")
+        if cls.CONFIG_FILE.exists():
+            try:
+                shutil.copyfile(cls.CONFIG_FILE, corrupt_path)
+            except OSError as e:
+                logger.warning("Could not preserve corrupt gui_config.json at %s: %s", corrupt_path, e)
+
+        tmp_path = cls.CONFIG_FILE.with_suffix(cls.CONFIG_FILE.suffix + ".tmp")
+        try:
+            tmp_path.touch(mode=0o600, exist_ok=True)
+            if os.name == "posix":
+                os.chmod(tmp_path, 0o600)
+            shutil.copyfile(bak_path, tmp_path)
+            os.replace(tmp_path, cls.CONFIG_FILE)
+        except OSError as e:
+            tmp_path.unlink(missing_ok=True)
+            logger.warning("Could not repair gui_config.json from %s: %s", bak_path, e)
+
     # Envelope marker key for exported settings files (see export_config).
     _EXPORT_MARKER = "anki_miner_settings"
+    _OLDER_YTDLP_IMPORT_NOTICE = "Auto-update of yt-dlp was disabled (settings imported from an older version)."
+    _LEGACY_283_IMPORT_NOTICE = "Settings from version 2.8.3 were mapped conservatively to schema 2."
 
     @classmethod
     def machine_specific_fields(cls) -> frozenset[str]:
@@ -280,7 +396,8 @@ class GUIConfigManager:
         (their ``dict_id``/``pack_id``/``source_id`` entries reference
         resources installed under THIS machine's roots — imported elsewhere
         they render as silent "(missing)" chain rows), the local browser for
-        cookie extraction, and the host GPU backend. Deliberately portable:
+        cookie extraction, and the host GPU backend. ``config_version`` is an
+        internal monotonic identity and must not travel. Deliberately portable:
         ``theme`` (built-ins always resolve) and ``max_parallel_workers``.
         """
         return cls._path_field_names() | {
@@ -293,6 +410,7 @@ class GUIConfigManager:
             "frequency_chain",
             "youtube_cookies_from_browser",
             "asr_device",
+            "config_version",
         }
 
     @classmethod
@@ -300,8 +418,9 @@ class GUIConfigManager:
         """Write a portable settings export to ``path``.
 
         The payload is an envelope ``{"anki_miner_settings": 1, "app_version":
-        ..., "settings": {...}}`` whose ``settings`` dict is the normal
-        gui_config.json serialization minus :meth:`machine_specific_fields`.
+        ..., "config_schema_version": ..., "settings": {...}}`` whose
+        ``settings`` dict is the normal gui_config.json serialization minus
+        :meth:`machine_specific_fields`.
 
         Raises:
             OSError: If the file cannot be written.
@@ -311,7 +430,12 @@ class GUIConfigManager:
         settings = cls._paths_to_strings(cls._config_to_serializable_dict(config))
         excluded = cls.machine_specific_fields()
         settings = {k: v for k, v in settings.items() if k not in excluded}
-        payload = {cls._EXPORT_MARKER: 1, "app_version": __version__, "settings": settings}
+        payload = {
+            cls._EXPORT_MARKER: 1,
+            "app_version": __version__,
+            "config_schema_version": cls.CONFIG_SCHEMA_VERSION,
+            "settings": settings,
+        }
 
         tmp_path = path.with_suffix(path.suffix + ".tmp")
         try:
@@ -323,8 +447,8 @@ class GUIConfigManager:
             raise
 
     @classmethod
-    def import_config(cls, path: Path, current_config: AnkiMinerConfig) -> AnkiMinerConfig:
-        """Overlay a settings file onto ``current_config`` and return the result.
+    def import_config(cls, path: Path, current_config: AnkiMinerConfig) -> ImportConfigResult:
+        """Overlay a settings file onto ``current_config`` and return feedback.
 
         Accepts both the export envelope and a flat dict (a raw
         gui_config.json is importable). Version tolerance comes from
@@ -334,8 +458,8 @@ class GUIConfigManager:
         dangling resource chains. Keys absent from the file keep their
         current values — including at the ``anki_fields`` /
         ``card_type_marker_fields`` sub-key level, where present dicts are
-        merged onto the current mapping and non-dict values are discarded
-        (matching ``load_config``'s tolerance for corrupt values).
+        merged onto the current mapping. Invalid typed values are reported and
+        dropped so the corresponding current values survive the overlay.
 
         Raises:
             json.JSONDecodeError: Invalid JSON.
@@ -347,14 +471,59 @@ class GUIConfigManager:
             raw = json.load(f)
 
         data = raw
+        source_schema: int | None = None
+        conservative_283_mapping = False
         if isinstance(raw, dict) and cls._EXPORT_MARKER in raw:
             data = raw.get("settings")
+            if "config_schema_version" in raw:
+                marker = raw.get("config_schema_version")
+                if isinstance(marker, int) and not isinstance(marker, bool):
+                    source_schema = marker
+            else:
+                app_version = raw.get("app_version")
+                if app_version in {"2.8.1", "2.8.2"}:
+                    source_schema = 1
+                elif app_version == "2.8.3":
+                    source_schema = 2
+                    conservative_283_mapping = True
+        elif isinstance(raw, dict):
+            marker = raw.get("config_schema_version")
+            if isinstance(marker, int) and not isinstance(marker, bool):
+                source_schema = marker
         if not isinstance(data, dict):
             raise ValueError("Not a settings file: expected a JSON object of config fields")
 
-        incoming = cls._migrate_dict(dict(data), backfill_anki_fields=False)
+        migration_input = dict(data)
+        if source_schema is not None:
+            migration_input["config_schema_version"] = source_schema
+        incoming = cls._migrate_dict(
+            migration_input,
+            backfill_anki_fields=False,
+        )
+        legacy_ytdlp_forced = False
+        if source_schema is not None:
+            # Exact-type gates: the shims must only rewrite well-formed legacy
+            # values. Anything else (null, strings, ...) falls through to
+            # _decode_value below and is rejected into invalid_fields instead
+            # of being silently rewritten.
+            if source_schema < 2 and data.get("excluded_wordsets") == []:
+                incoming["excluded_wordsets"] = create_default_config().excluded_wordsets
+            if source_schema < 3 and isinstance(data.get("auto_update_ytdlp"), bool):
+                incoming["auto_update_ytdlp"] = False
+                legacy_ytdlp_forced = True
         excluded = cls.machine_specific_fields()
         incoming = {k: v for k, v in incoming.items() if k not in excluded}
+
+        invalid_fields: list[str] = []
+        validated: dict[str, Any] = {}
+        hints = typing.get_type_hints(AnkiMinerConfig)
+        for key, value in incoming.items():
+            valid, converted = cls._decode_value(value, hints[key])
+            if valid:
+                validated[key] = converted
+            else:
+                invalid_fields.append(key)
+        incoming = validated
 
         # Sub-key overlay for the two mapping fields: a present dict merges
         # onto the current mapping (file wins per sub-key, unlisted sub-keys
@@ -366,7 +535,17 @@ class GUIConfigManager:
             elif key in incoming:
                 del incoming[key]
 
-        return dataclasses.replace(current_config, **incoming)
+        notices: list[str] = []
+        if legacy_ytdlp_forced:
+            notices.append(cls._OLDER_YTDLP_IMPORT_NOTICE)
+        if conservative_283_mapping:
+            notices.append(cls._LEGACY_283_IMPORT_NOTICE)
+
+        return ImportConfigResult(
+            config=dataclasses.replace(current_config, **incoming),
+            invalid_fields=invalid_fields,
+            notices=notices,
+        )
 
     @staticmethod
     def _migrate_dictionary_chain(data: dict[str, Any]) -> dict[str, Any]:

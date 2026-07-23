@@ -34,6 +34,7 @@ set -euo pipefail
 WORKFLOW="release.yml"
 PLATFORMS="${1:-linux-windows}"
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+REPOSITORY="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
 
 case "$PLATFORMS" in
   linux-windows | all | linux | windows | macos) ;;
@@ -220,8 +221,53 @@ assert_mpv_ran "windows-latest"
 assert_mpv_ran "macos-latest"
 assert_mpv_ran "macos-15-intel"
 
+count_log_matches() { # $1 = ERE, $2 = log path
+  local pattern="$1"
+  local log_path="$2"
+  { grep -Eo "$pattern" "$log_path" 2>/dev/null || true; } | wc -l | tr -d '[:space:]'
+}
+
+# Windows installer leg 3 must emit one terminal marker: PASS, or an explicit
+# fail-closed classifier SKIP. The canonical release repo may never accept SKIP.
+assert_installer_upgrade_terminal() {
+  local os="windows-latest"
+  local job_id
+  job_id="$(echo "$JOBS_JSON" | jq -r --arg os "$os" \
+    'first(.jobs[] | select((.name | startswith("build")) and (.name | contains($os))) | .databaseId) // empty')"
+  if [ -z "$job_id" ]; then
+    return 0 # Windows leg not in this selection; nothing to assert
+  fi
+  local jlog="$LOG_DIR/job-$job_id.log"
+  for _ in $(seq 1 30); do
+    gh run view "$RUN_ID" --job "$job_id" --log >"$jlog" 2>/dev/null || true
+    if grep -qE "INSTALLER_SMOKE_(PASS leg3|SKIP leg3 reason=[^[:space:]]+)" "$jlog" 2>/dev/null; then
+      break
+    fi
+    sleep 6
+  done
+
+  local terminal_count pass_count skip_count
+  terminal_count="$(count_log_matches 'INSTALLER_SMOKE_(PASS leg3([[:space:]]|$)|SKIP leg3 reason=[^[:space:]]+)' "$jlog")"
+  pass_count="$(count_log_matches 'INSTALLER_SMOKE_PASS leg3([[:space:]]|$)' "$jlog")"
+  skip_count="$(count_log_matches 'INSTALLER_SMOKE_SKIP leg3 reason=(no-releases|no-eligible-version)([[:space:]]|$)' "$jlog")"
+  if [ "$terminal_count" -ne 1 ] || { [ "$pass_count" -ne 1 ] && [ "$skip_count" -ne 1 ]; }; then
+    echo "ERROR: Windows installer upgrade smoke must emit exactly one PASS or supported SKIP marker; found terminal=$terminal_count pass=$pass_count supported-skip=$skip_count." >&2
+    exit 1
+  fi
+  if [ "$skip_count" -eq 1 ]; then
+    if [ "$REPOSITORY" = "0xzerolight/anki_miner" ]; then
+      echo "ERROR: Windows installer upgrade smoke SKIP is not allowed for 0xzerolight/anki_miner; a prior release installer must produce PASS." >&2
+      exit 1
+    fi
+    echo "    Windows installer upgrade smoke emitted an allowed classifier SKIP on fork '$REPOSITORY'."
+    return 0
+  fi
+  echo "    Windows installer upgrade + downgrade probe executed+passed."
+}
+assert_installer_upgrade_terminal
+
 echo "############################################"
 echo "RELEASE DRY-RUN GREEN (run $RUN_ID, platforms=$PLATFORMS)"
 echo "  build matrix + bundle smokes passed; release + ci-gate jobs skipped;"
-echo "  no GitHub Release created; Vulkan + mpv smokes verified executed."
+echo "  no GitHub Release created; Vulkan + mpv + Windows installer smokes verified."
 echo "############################################"
