@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import builtins
+import ctypes
+import logging
 import os
+import re
 import stat
 import subprocess
 import sys
 import tomllib
+from ctypes import wintypes
 from pathlib import Path
+from types import ModuleType, SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -188,6 +195,119 @@ def test_importing_launch_does_not_import_qt_or_app(tmp_path: Path) -> None:
     )
 
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize(
+    ("platform", "frozen"),
+    [
+        pytest.param("linux", True, id="non-windows"),
+        pytest.param("win32", False, id="non-frozen"),
+    ],
+)
+def test_app_mutex_is_noop_without_frozen_windows(
+    monkeypatch: pytest.MonkeyPatch,
+    platform: str,
+    frozen: bool,
+) -> None:
+    from anki_miner.gui import launch
+
+    retained_handle = object()
+    monkeypatch.setattr(launch, "_APP_MUTEX_HANDLE", retained_handle, raising=False)
+    monkeypatch.setattr(launch.sys, "platform", platform)
+    monkeypatch.setattr(launch.sys, "frozen", frozen, raising=False)
+    real_import = builtins.__import__
+
+    def reject_ctypes_import(name, *args, **kwargs):
+        if name == "ctypes":
+            raise AssertionError("ctypes must not be used outside frozen Windows")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", reject_ctypes_import)
+
+    launch._create_windows_app_mutex()
+
+    assert launch._APP_MUTEX_HANDLE is retained_handle
+
+
+def test_frozen_windows_app_mutex_retains_handle(monkeypatch: pytest.MonkeyPatch) -> None:
+    from anki_miner.gui import launch
+
+    expected_handle = 12345
+    create_mutex = Mock(return_value=expected_handle)
+    monkeypatch.setattr(
+        ctypes,
+        "windll",
+        SimpleNamespace(kernel32=SimpleNamespace(CreateMutexW=create_mutex)),
+        raising=False,
+    )
+    monkeypatch.setattr(launch.sys, "platform", "win32")
+    monkeypatch.setattr(launch.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(launch, "_APP_MUTEX_HANDLE", None, raising=False)
+
+    launch._create_windows_app_mutex()
+
+    create_mutex.assert_called_once_with(None, False, launch.APP_MUTEX_NAME)
+    assert create_mutex.argtypes == [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR]
+    assert create_mutex.restype is wintypes.HANDLE
+    assert expected_handle == launch._APP_MUTEX_HANDLE
+
+
+@pytest.mark.parametrize(
+    "create_mutex",
+    [
+        pytest.param(Mock(return_value=0), id="null-handle"),
+        pytest.param(Mock(side_effect=OSError("mutex unavailable")), id="exception"),
+    ],
+)
+def test_app_mutex_failure_logs_and_fails_open(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    create_mutex: Mock,
+) -> None:
+    from anki_miner.gui import launch
+
+    monkeypatch.setattr(
+        ctypes,
+        "windll",
+        SimpleNamespace(kernel32=SimpleNamespace(CreateMutexW=create_mutex)),
+        raising=False,
+    )
+    monkeypatch.setattr(launch.sys, "platform", "win32")
+    monkeypatch.setattr(launch.sys, "frozen", True, raising=False)
+    monkeypatch.setattr(launch, "_APP_MUTEX_HANDLE", None, raising=False)
+
+    with caplog.at_level(logging.WARNING, logger=launch.__name__):
+        launch._create_windows_app_mutex()
+
+    assert launch._APP_MUTEX_HANDLE is None
+    assert caplog.messages.count("Failed to create Windows app mutex; continuing startup") == 1
+
+
+def test_main_creates_app_mutex_after_early_sink_before_heavy_imports(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from anki_miner.gui import launch
+
+    calls = []
+    monkeypatch.setattr(launch, "_install_early_crash_sink", lambda: calls.append("sink"))
+    monkeypatch.setattr(launch, "_create_windows_app_mutex", lambda: calls.append("mutex"))
+    monkeypatch.setattr(launch, "_inject_windows_truststore", lambda: calls.append("truststore"))
+    fake_app = ModuleType("anki_miner.gui.app")
+    fake_app.main = lambda: calls.append("app") or 0  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "anki_miner.gui.app", fake_app)
+
+    assert launch.main() == 0
+    assert calls == ["sink", "mutex", "truststore", "app"]
+
+
+def test_installer_app_mutex_matches_launch_constant() -> None:
+    from anki_miner.gui import launch
+
+    installer_text = (PROJECT_ROOT / "packaging" / "innosetup" / "anki_miner.iss").read_text(encoding="utf-8")
+    match = re.search(r"^AppMutex=(.+)$", installer_text, flags=re.MULTILINE)
+
+    assert match is not None
+    assert match.group(1) == launch.APP_MUTEX_NAME
 
 
 def test_early_sink_and_root_are_warning_level(tmp_path: Path) -> None:

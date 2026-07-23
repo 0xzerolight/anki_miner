@@ -12,6 +12,8 @@ from typing import cast
 
 TRUSTSTORE_INJECTED = False
 _EARLY_EXCEPTHOOK_INSTALLED = False
+APP_MUTEX_NAME = r"Local\AnkiMiner-15B09250-AC39-4792-A15A-B73BD8E218A1"
+_APP_MUTEX_HANDLE: int | None = None
 
 _CA_ENV_VARS = ("REQUESTS_CA_BUNDLE", "SSL_CERT_FILE", "CURL_CA_BUNDLE")
 _LOG_FORMAT = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
@@ -114,6 +116,29 @@ def _install_early_crash_sink() -> None:
     _EARLY_EXCEPTHOOK_INSTALLED = True
 
 
+def _create_windows_app_mutex() -> None:
+    global _APP_MUTEX_HANDLE
+    if not (sys.platform == "win32" and getattr(sys, "frozen", False)):
+        return
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        create_mutex = ctypes.windll.kernel32.CreateMutexW
+        create_mutex.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR]
+        create_mutex.restype = wintypes.HANDLE
+        handle = create_mutex(None, False, APP_MUTEX_NAME)
+        if not handle:
+            raise OSError("CreateMutexW returned a null handle")
+        # Keep the handle referenced for process lifetime so Windows does not close the mutex.
+        _APP_MUTEX_HANDLE = handle
+    except Exception:
+        logging.getLogger(__name__).warning(
+            "Failed to create Windows app mutex; continuing startup",
+            exc_info=True,
+        )
+
+
 def _inject_windows_truststore() -> None:
     global TRUSTSTORE_INJECTED
     TRUSTSTORE_INJECTED = False
@@ -137,6 +162,7 @@ def _inject_windows_truststore() -> None:
 def main() -> int:
     """Install early recovery, then hand control to the full GUI application."""
     _install_early_crash_sink()
+    _create_windows_app_mutex()
     _inject_windows_truststore()
 
     from anki_miner.gui.app import main as app_main
