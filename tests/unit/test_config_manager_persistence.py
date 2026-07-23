@@ -418,6 +418,47 @@ class TestAtomicSave:
             for record in caplog.records
         )
 
+    def test_save_skips_backup_rotation_for_non_object_primary(self, tmp_config: Path):
+        """A JSON array primary parses but is not a config — must not rotate."""
+        bak_path = tmp_config.with_name(tmp_config.name + ".bak")
+        bak_bytes = json.dumps(
+            {
+                "config_schema_version": GUIConfigManager.CONFIG_SCHEMA_VERSION,
+                "theme": "dark",
+            }
+        ).encode()
+        tmp_config.write_bytes(b"[]")
+        bak_path.write_bytes(bak_bytes)
+
+        GUIConfigManager.save_config(replace(create_default_config(), theme="light"))
+
+        assert bak_path.read_bytes() == bak_bytes
+        assert json.loads(tmp_config.read_bytes())["theme"] == "light"
+
+    def test_save_aborts_when_primary_unreadable(self, tmp_config: Path, monkeypatch):
+        """A read OSError is not corruption — the save must abort untouched."""
+        import anki_miner.gui.utils.config_manager as cm
+
+        primary_bytes = json.dumps({"theme": "dark"}).encode()
+        tmp_config.write_bytes(primary_bytes)
+        bak_path = tmp_config.with_name(tmp_config.name + ".bak")
+        bak_path.write_bytes(b'{"theme": "dark"}')
+
+        original_read_bytes = cm.Path.read_bytes
+
+        def _fail_on_primary(self: Path) -> bytes:
+            if self == tmp_config:
+                raise OSError("transient read failure")
+            return original_read_bytes(self)
+
+        monkeypatch.setattr(cm.Path, "read_bytes", _fail_on_primary)
+        with pytest.raises(OSError):
+            GUIConfigManager.save_config(replace(create_default_config(), theme="light"))
+        monkeypatch.undo()
+
+        assert tmp_config.read_bytes() == primary_bytes
+        assert bak_path.read_bytes() == b'{"theme": "dark"}'
+
     @pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits are required")
     def test_backup_is_owner_only_before_copy(self, tmp_config: Path, monkeypatch):
         import anki_miner.gui.utils.config_manager as cm

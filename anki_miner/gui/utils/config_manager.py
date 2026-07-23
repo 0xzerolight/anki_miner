@@ -120,13 +120,19 @@ class GUIConfigManager:
                 json.dump(config_dict, f, indent=2, ensure_ascii=False)
             # First-ever save has nothing to back up — skip silently.
             if cls.CONFIG_FILE.exists():
+                # Rotation guard: never copy a corrupt primary over a possibly
+                # valid .bak. Only DECODE failures skip rotation — a read
+                # OSError propagates so the outer handler aborts the save with
+                # the primary untouched (an unreadable file is not "corrupt").
+                primary_bytes = cls.CONFIG_FILE.read_bytes()
                 try:
-                    json.loads(cls.CONFIG_FILE.read_bytes())
-                except Exception as e:
+                    rotatable = isinstance(json.loads(primary_bytes), dict)
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    rotatable = False
+                if not rotatable:
                     logger.warning(
-                        "Backup rotation skipped for unparseable primary %s: %s",
+                        "Backup rotation skipped for unparseable primary %s",
                         cls.CONFIG_FILE,
-                        e,
                     )
                 else:
                     bak_path.touch(mode=0o600, exist_ok=True)
@@ -496,9 +502,13 @@ class GUIConfigManager:
         )
         legacy_ytdlp_forced = False
         if source_schema is not None:
-            if source_schema < 2 and "excluded_wordsets" in data and not data.get("excluded_wordsets"):
+            # Exact-type gates: the shims must only rewrite well-formed legacy
+            # values. Anything else (null, strings, ...) falls through to
+            # _decode_value below and is rejected into invalid_fields instead
+            # of being silently rewritten.
+            if source_schema < 2 and data.get("excluded_wordsets") == []:
                 incoming["excluded_wordsets"] = create_default_config().excluded_wordsets
-            if source_schema < 3 and "auto_update_ytdlp" in data:
+            if source_schema < 3 and isinstance(data.get("auto_update_ytdlp"), bool):
                 incoming["auto_update_ytdlp"] = False
                 legacy_ytdlp_forced = True
         excluded = cls.machine_specific_fields()

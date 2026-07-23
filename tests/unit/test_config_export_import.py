@@ -216,6 +216,32 @@ class TestImportProvenance:
         assert result.config.auto_update_ytdlp is expected_ytdlp
         assert (self._OLDER_YTDLP_NOTICE in result.notices) is expects_notice
 
+    def test_malformed_legacy_seed_values_rejected_not_rewritten(self, tmp_path):
+        """null wordsets / string ytdlp must land in invalid_fields, not be seeded."""
+        path = _write_import_file(
+            tmp_path,
+            {
+                "anki_miner_settings": 1,
+                "config_schema_version": 1,
+                "settings": {
+                    "excluded_wordsets": None,
+                    "auto_update_ytdlp": "yes",
+                },
+            },
+        )
+        current = replace(
+            AnkiMinerConfig(),
+            excluded_wordsets=("place-names",),
+            auto_update_ytdlp=True,
+        )
+
+        result = GUIConfigManager.import_config(path, current)
+
+        assert result.config.excluded_wordsets == ("place-names",)
+        assert result.config.auto_update_ytdlp is True
+        assert set(result.invalid_fields) >= {"excluded_wordsets", "auto_update_ytdlp"}
+        assert self._OLDER_YTDLP_NOTICE not in result.notices
+
     def test_legacy_envelope_keeps_absent_seed_fields_current(self, tmp_path):
         path = _write_import_file(
             tmp_path,
