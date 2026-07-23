@@ -329,7 +329,8 @@ class AudioPackImportFlow(ModalImportFlowMixin):
                 QCoreApplication.translate("AudioPackImportFlow", "Re-import Blocked"),
                 QCoreApplication.translate(
                     "AudioPackImportFlow",
-                    "A mining run is in progress. Stop it before re-importing audio packs.",
+                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                    "Wait for the active task to finish and try again.",
                 ),
             )
             self._set_import_buttons_enabled(True)

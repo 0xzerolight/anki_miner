@@ -289,7 +289,10 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
             QMessageBox.warning(
                 self,
                 self.tr("Remove failed"),
-                self.tr("A mining run is in progress. Stop it before removing frequency sources."),
+                self.tr(
+                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                    "Wait for the active task to finish and try again."
+                ),
             )
             return False
         return True

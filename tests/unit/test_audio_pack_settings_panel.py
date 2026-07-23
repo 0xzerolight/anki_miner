@@ -546,7 +546,8 @@ def test_release_callback_blocks_remove(qapp, qtbot, tmp_path, confirm_remove, m
 
     assert panel.get_chain() == (AudioSourceEntry(kind="pack", pack_id="a", enabled=True),)
     assert pack_dir.exists()
-    assert any("A mining run is in progress" in body for body in warnings)
+    assert any("Indexed resources are in use" in body for body in warnings)
+    assert all(task in warnings[0] for task in ("mining", "startup prewarm", "card backfill"))
 
 
 def test_remove_cancelled_keeps_pack_and_chain(qapp, qtbot, monkeypatch, tmp_path):

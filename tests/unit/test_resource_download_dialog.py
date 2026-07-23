@@ -174,6 +174,9 @@ def test_release_false_aborts_without_downloading():
     assert result is None
     ran_modal.assert_not_called()  # nothing touched disk
     warn.assert_called_once()
+    body = warn.call_args.args[2]
+    assert "Indexed resources are in use" in body
+    assert all(task in body for task in ("mining", "startup prewarm", "card backfill"))
 
 
 def test_release_true_proceeds_to_modal():

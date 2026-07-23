@@ -337,7 +337,9 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 self._parent,
                 QCoreApplication.translate("DictionaryImportFlow", "Re-import Blocked"),
                 QCoreApplication.translate(
-                    "DictionaryImportFlow", "A mining run is in progress. Stop it before re-importing dictionaries."
+                    "DictionaryImportFlow",
+                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                    "Wait for the active task to finish and try again.",
                 ),
             )
             self._set_import_buttons_enabled(True)
@@ -424,7 +426,9 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 self._parent,
                 QCoreApplication.translate("DictionaryImportFlow", "Re-import Blocked"),
                 QCoreApplication.translate(
-                    "DictionaryImportFlow", "A mining run is in progress. Stop it before re-importing dictionaries."
+                    "DictionaryImportFlow",
+                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                    "Wait for the active task to finish and try again.",
                 ),
             )
             self._set_import_buttons_enabled(True)
@@ -570,7 +574,9 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 self._parent,
                 QCoreApplication.translate("DictionaryImportFlow", "Re-import Blocked"),
                 QCoreApplication.translate(
-                    "DictionaryImportFlow", "A mining run is in progress. Stop it before re-importing dictionaries."
+                    "DictionaryImportFlow",
+                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                    "Wait for the active task to finish and try again.",
                 ),
             )
             self._set_import_buttons_enabled(True)

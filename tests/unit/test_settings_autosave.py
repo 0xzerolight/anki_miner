@@ -95,6 +95,24 @@ class TestDebounceWiring:
         assert len(received) == 1
         assert received[0].anki_deck_name == "ABC"
 
+    def test_debounce_retries_while_panel_mutation_token_is_active(self, tab, qtbot):
+        received: list[AnkiMinerConfig] = []
+        timeout_count: list[None] = []
+        tab.config_changed.connect(received.append)
+        tab._debounce_timer.timeout.connect(lambda: timeout_count.append(None))
+        tab._debounce_timer.setInterval(20)
+        token = tab.dictionary_panel.hold_mutation("scan")
+        tab.deck_input.setText("WaitForToken")
+
+        qtbot.waitUntil(lambda: bool(timeout_count), timeout=3000)
+
+        assert received == []
+        assert tab._debounce_timer.isActive()
+
+        with qtbot.waitSignal(tab.config_changed, timeout=3000) as blocker:
+            tab.dictionary_panel.release(token)
+        assert blocker.args[0].anki_deck_name == "WaitForToken"
+
 
 class TestPerFieldValidation:
     def test_invalid_regex_keeps_last_good_and_commits_rest(self, tab, test_config, no_modals):

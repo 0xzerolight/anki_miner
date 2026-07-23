@@ -99,3 +99,28 @@ def test_reset_declined_does_nothing(test_config: AnkiMinerConfig, qtbot, monkey
 
     assert emitted == []
     assert tab.config is before
+
+
+def test_reset_declined_rearms_pending_root_commit(test_config: AnkiMinerConfig, qtbot, monkeypatch, tmp_path):
+    tab = SettingsTab(test_config)
+    qtbot.addWidget(tab)
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.settings_tab.QMessageBox.question",
+        lambda *a, **kw: QMessageBox.StandardButton.No,
+    )
+    new_root = tmp_path / "new-root"
+    new_root.mkdir()
+    tab.config_changed.connect(tab.update_config)
+    tab.dictionary_panel.dicts_root_selector.set_path(str(new_root))
+
+    try:
+        tab._on_reset_to_defaults_clicked()
+
+        assert tab._debounce_timer.isActive()
+        assert tab.commit_pending_settings_for_mutation() is True
+        assert tab.config.dicts_root == new_root
+    finally:
+        tab.shutdown()
+        for worker in tab.iter_close_workers():
+            if worker is not None:
+                worker.wait(3000)

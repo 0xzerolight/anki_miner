@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import contextlib
+import os
+from dataclasses import replace
 from unittest.mock import MagicMock
 
 import pytest
@@ -192,21 +194,40 @@ def test_mutation_preflight_refuses_without_consuming_pending_root(tab, tmp_path
     tab.dictionary_panel.release(token)
 
 
-def test_mutation_preflight_refuses_when_config_commit_fails(test_config, qtbot, tmp_path):
+def test_mutation_preflight_refuses_when_config_commit_fails(test_config, qtbot, tmp_path, monkeypatch):
     def fail_commit(_config):
         raise OSError("disk full")
 
-    widget = SettingsTab(test_config, commit_config=fail_commit)
+    pitch_csv = tmp_path / "pitch.csv"
+    pitch_csv.write_bytes(b"old pitch")
+    pending_pitch_csv = tmp_path / "pitch.csv.pending"
+    pending_pitch_csv.write_bytes(b"new pitch")
+    config = replace(test_config, pitch_accent_path=pitch_csv)
+    widget = SettingsTab(config, commit_config=fail_commit)
     qtbot.addWidget(widget)
+    old_panel_root = widget.dictionary_panel._dicts_root
     new_root = tmp_path / "new-root"
     new_root.mkdir()
     widget.dictionary_panel.dicts_root_selector.set_path(str(new_root))
+    pitch_zip = tmp_path / "pitch.zip"
+    pitch_zip.write_bytes(b"zip")
+    widget.dictionary_panel.pitch_accent_selector.set_path(str(pitch_zip))
+    monkeypatch.setattr(widget, "_resolve_pitch_accent_path", lambda: pitch_csv)
+
+    def promote_pitch() -> None:
+        os.replace(pending_pitch_csv, pitch_csv)
+
+    widget._zip_import_flow._pending_pitch_commit = promote_pitch
 
     try:
         assert widget.commit_pending_settings_for_mutation() is False
         assert widget._debounce_timer.isActive()
-        assert widget.config.dicts_root == test_config.dicts_root
+        assert widget.config.dicts_root == config.dicts_root
         assert widget.dictionary_panel.dicts_root_selector.get_path() == str(new_root)
+        assert widget.dictionary_panel.pitch_accent_selector.get_path() == str(pitch_zip)
+        assert pitch_csv.read_bytes() == b"old pitch"
+        assert widget.dictionary_panel._dicts_root == old_panel_root
+        assert list(tmp_path.glob(".pitch.csv.rollback-*")) == []
     finally:
         widget.shutdown()
         for worker in widget.iter_close_workers():

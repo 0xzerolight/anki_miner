@@ -165,8 +165,8 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         reaching into ``_release_callback`` directly (Issue #32).
 
         Returns ``True`` when no callback is wired or the callback succeeded;
-        ``False`` when the callback refused (typically a mining run is in
-        flight, see ``MainWindow.release_dictionary_resources``).
+        ``False`` when the callback refused because indexed resources are in
+        use (see ``MainWindow.release_dictionary_resources``).
         """
         if self._release_callback is None:
             return True
@@ -425,7 +425,10 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
             QMessageBox.warning(
                 self,
                 self.tr("Remove failed"),
-                self.tr("A mining run is in progress. Stop it before removing dictionaries."),
+                self.tr(
+                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                    "Wait for the active task to finish and try again."
+                ),
             )
             return False
         return True

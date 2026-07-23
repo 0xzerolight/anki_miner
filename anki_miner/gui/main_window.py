@@ -1043,9 +1043,9 @@ class MainWindow(QMainWindow):
 
         Used by the Settings → Remove dictionary flow to drop SQLite handles
         before ``rmtree`` (Issue #30, Win11 file-lock). Returns ``False`` if
-        prewarm is running or any tab refused — typically because a mining run
-        is in flight — so the caller can surface a clear message instead of
-        silently failing.
+        prewarm is running or any tab refused because mining or card backfill
+        is using indexed resources, so the caller can surface a clear message
+        instead of silently failing.
         """
         if still_running(self.background_tasks.prewarm_worker):
             return False
@@ -1069,8 +1069,8 @@ class MainWindow(QMainWindow):
         """
         # Flush a pending Settings auto-save FIRST. Ordering is load-bearing:
         # background_tasks.shutdown below fans out to SettingsTab.shutdown,
-        # which stops the debounce timer — a flush placed after it would see
-        # an inactive timer and silently drop an edit made <1s before quit.
+        # which stops debounce scheduling and begins worker teardown; persist
+        # edits while the Settings tab is still fully active.
         # The deferred-close path also returns before the save_config at the
         # bottom, so this is the only spot both close paths pass through.
         # Committing routes through config_changed → update_config, which

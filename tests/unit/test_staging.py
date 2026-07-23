@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import errno
+import gc
 import os
 import shutil
 import threading
+import weakref
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
 
+from anki_miner.services import _staging as staging_module
 from anki_miner.services._staging import promote_staged_dir
 
 
@@ -145,3 +148,59 @@ def test_promote_without_overwrite_serializes_same_root_collision(tmp_path: Path
     assert (final / "payload").read_bytes() == b"first"
     assert not first_staging.exists()
     assert not second_staging.exists()
+
+
+def test_promote_without_overwrite_copies_to_destination_local_staging(tmp_path: Path) -> None:
+    final = tmp_path / "resource"
+    staging = tmp_path / "system-temp-staging"
+    staging.mkdir()
+    (staging / "payload").write_bytes(b"new")
+    move_destinations: list[Path] = []
+
+    def cross_filesystem_mover(src: str, dst: str) -> None:
+        move_destinations.append(Path(dst))
+        shutil.move(src, dst)
+
+    promote_staged_dir(staging, final, mover=cross_filesystem_mover, overwrite=False)
+
+    assert (final / "payload").read_bytes() == b"new"
+    assert len(move_destinations) == 1
+    local_staging = move_destinations[0]
+    assert local_staging.name == final.name
+    assert local_staging.parent.parent == final.parent
+    assert local_staging.parent.name.startswith(".staging-resource-")
+    assert list(tmp_path.glob(".staging-resource-*")) == []
+
+
+def test_promote_without_overwrite_copy_fault_never_exposes_partial_final(tmp_path: Path) -> None:
+    final = tmp_path / "resource"
+    staging = tmp_path / "system-temp-staging"
+    staging.mkdir()
+    (staging / "payload").write_bytes(b"complete")
+
+    def faulting_mover(_src: str, dst: str) -> None:
+        partial = Path(dst)
+        partial.mkdir()
+        (partial / "payload").write_bytes(b"partial")
+        raise OSError(errno.ENOSPC, "disk full")
+
+    with pytest.raises(OSError, match="disk full"):
+        promote_staged_dir(staging, final, mover=faulting_mover, overwrite=False)
+
+    assert not final.exists()
+    assert (staging / "payload").read_bytes() == b"complete"
+    assert list(tmp_path.glob(".staging-resource-*")) == []
+
+
+def test_promotion_lock_registry_reclaims_unused_roots(tmp_path: Path) -> None:
+    root = tmp_path.resolve()
+    lock = staging_module._promotion_lock(root / "resource")
+    lock_ref = weakref.ref(lock)
+
+    assert root in staging_module._promotion_locks
+
+    del lock
+    gc.collect()
+
+    assert lock_ref() is None
+    assert root not in staging_module._promotion_locks

@@ -567,7 +567,8 @@ class TestReimportPack:
         tab._audio_pack_import_flow.reimport_pack("my-pack-id")
 
         stub_worker.assert_not_called()
-        assert any("A mining run is in progress" in body for _title, body in warnings)
+        assert any("Indexed resources are in use" in body for _title, body in warnings)
+        assert all(task in warnings[0][1] for task in ("mining", "startup prewarm", "card backfill"))
         assert tab.audio_panel._add_btn.isEnabled()
 
     def test_reimport_passes_overwrite_and_pack_id(self, tab, monkeypatch, stub_worker, tmp_path):

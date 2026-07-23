@@ -19,13 +19,14 @@ import os
 import shutil
 import tempfile
 import threading
+import weakref
 from pathlib import Path
 from typing import Callable
 
 from anki_miner.utils.atomic_io import atomic_replace_dir
 
 _promotion_locks_guard = threading.Lock()
-_promotion_locks: dict[Path, threading.Lock] = {}
+_promotion_locks: weakref.WeakValueDictionary[Path, threading.Lock] = weakref.WeakValueDictionary()
 
 
 def _promotion_lock(final: Path) -> threading.Lock:
@@ -65,7 +66,13 @@ def promote_staged_dir(
             if os.path.lexists(final):
                 shutil.rmtree(staging, ignore_errors=True)
                 raise FileExistsError(errno.EEXIST, "Destination already exists", str(final))
-            mover(str(staging), str(final))
+            local_parent = Path(tempfile.mkdtemp(prefix=f".staging-{final.name}-", dir=final.parent))
+            try:
+                local_staging = local_parent / final.name
+                mover(str(staging), str(local_staging))
+                os.replace(local_staging, final)
+            finally:
+                shutil.rmtree(local_parent, ignore_errors=True)
             return
 
         try:

@@ -283,7 +283,8 @@ class FrequencyImportFlow(ModalImportFlowMixin):
                 QCoreApplication.translate("FrequencyImportFlow", "Re-import Blocked"),
                 QCoreApplication.translate(
                     "FrequencyImportFlow",
-                    "A mining run is in progress. Stop it before re-importing frequency sources.",
+                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                    "Wait for the active task to finish and try again.",
                 ),
             )
             self._set_import_buttons_enabled(True)

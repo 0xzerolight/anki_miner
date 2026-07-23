@@ -746,7 +746,7 @@ def test_on_rmtree_error_reraises_non_permission(tmp_path):
 
 
 def test_release_callback_returning_false_aborts_remove(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
-    """When the release callback says no (mining run in flight), the panel
+    """When the release callback says no (indexed resources in use), the panel
     must show a warning and leave the dictionary on disk untouched."""
     dict_dir = tmp_path / "a"
     dict_dir.mkdir()
@@ -778,7 +778,8 @@ def test_release_callback_returning_false_aborts_remove(qapp, qtbot, monkeypatch
 
     assert rmtree_calls == [], "rmtree must not run when release callback refuses"
     assert dict_dir.exists()
-    assert any("mining run" in w.lower() for w in warned), warned
+    assert any("Indexed resources are in use" in body for body in warned), warned
+    assert all(task in warned[0] for task in ("mining", "startup prewarm", "card backfill"))
     assert changed == []
     assert [e.dict_id for e in panel.get_chain()[:1]] == ["a"]
 
@@ -897,7 +898,7 @@ def test_request_resource_release_returns_true_when_unset(qapp, qtbot, tmp_path)
 
 def test_request_resource_release_proxies_callback_return(qapp, qtbot, tmp_path):
     """The proxy forwards the callback's return value verbatim so settings_tab
-    can branch on True/False (mining run in flight refuses with False)."""
+    can branch on True/False (indexed resources in use refuses with False)."""
     panel = DictionarySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
 

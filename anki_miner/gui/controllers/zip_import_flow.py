@@ -270,3 +270,7 @@ class ZipImportFlow:
         self._pending_pitch_commit = None
         if pitch_commit is not None:
             pitch_commit()
+
+    def has_pending_csv_import(self) -> bool:
+        """Return whether a staged pitch CSV is awaiting promotion."""
+        return self._pending_pitch_commit is not None

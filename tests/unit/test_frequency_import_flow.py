@@ -591,7 +591,8 @@ class TestReimportSource:
         tab._frequency_import_flow.reimport_source("jpdb")
 
         stub_worker.assert_not_called()
-        assert any("A mining run is in progress" in body for _title, body in warnings)
+        assert any("Indexed resources are in use" in body for _title, body in warnings)
+        assert all(task in warnings[0][1] for task in ("mining", "startup prewarm", "card backfill"))
         assert tab.frequency_panel._add_btn.isEnabled()
 
     def test_wrong_typed_source_name_uses_normal_default(self, tab, monkeypatch, stub_worker):
