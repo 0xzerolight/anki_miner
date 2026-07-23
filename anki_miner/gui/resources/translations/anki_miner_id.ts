@@ -600,20 +600,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
 Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), Forvo (subdirektori pembicara), JPod legacy (stem {reading} - {expression}).</translation>
     </message>
     <message>
-        <source>Importing audio pack…</source>
-        <translation>Mengimpor paket audio…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Batal</translation>
-    </message>
-    <message>
-        <source>Configuration Update Failed</source>
-        <translation>Pembaruan Konfigurasi Gagal</translation>
-    </message>
-    <message>
-        <source>Import completed, but the configuration update failed: %1</source>
-        <translation>Impor selesai, tetapi pembaruan konfigurasi gagal: %1</translation>
+        <source>Pack %1 of %2: %3</source>
+        <translation>Paket %1 dari %2: %3</translation>
     </message>
     <message>
         <source>Imported %1 audio pack(s):</source>
@@ -636,12 +624,36 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
         <translation>Selesai.</translation>
     </message>
     <message>
-        <source>Pack %1 of %2: %3</source>
-        <translation>Paket %1 dari %2: %3</translation>
+        <source>Configuration Update Failed</source>
+        <translation>Pembaruan Konfigurasi Gagal</translation>
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation>Impor selesai, tetapi pembaruan konfigurasi gagal: %1</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Batal</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Membatalkan…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>Proses impor selesai tanpa hasil akhir.</translation>
     </message>
     <message>
         <source>Choose audio pack folder to re-import</source>
         <translation>Pilih folder paket audio untuk diimpor ulang</translation>
+    </message>
+    <message>
+        <source>Re-import Blocked</source>
+        <translation>Impor Ulang Diblokir</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Sumber daya terindeks sedang digunakan oleh mining, pemanasan awal saat startup, atau pengisian ulang kartu. Tunggu hingga tugas yang aktif selesai lalu coba lagi.</translation>
     </message>
     <message>
         <source>Audio Pack Re-imported</source>
@@ -663,14 +675,6 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
         <source>Another import is still finishing. Wait for it to finish and try again.</source>
         <translation>Impor lain masih berlangsung. Tunggu hingga selesai lalu coba lagi.</translation>
     </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Membatalkan…</translation>
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>Proses impor selesai tanpa hasil akhir.</translation>
-    </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
@@ -690,6 +694,64 @@ The audio pack was not removed.</source>
 %2
 
 Paket audio tidak dihapus.</translation>
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation>Berkas tidak disentuh</translation>
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>Entri rantai telah dihapus, tetapi berkas di %1 tidak disentuh karena folder tersebut tidak dapat dipastikan milik Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation>Tidak dapat menghapus %1:
+%2
+
+Berkas masih utuh. Coba lagi.</translation>
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this audio pack before retrying.</source>
+        <translation>Tidak dapat menyelesaikan penghapusan %1:
+%2
+
+Berkas telah berubah sebagian. Impor ulang atau perbaiki paket audio ini sebelum mencoba lagi.</translation>
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation>Tidak dapat memulihkan %1 setelah pembaruan konfigurasinya gagal:
+%2
+
+Berkas tidak lagi berada di lokasi instalasi; pembaruan konfigurasi masih tertunda. Mulai ulang Anki Miner sebelum mencoba lagi.</translation>
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation>Penghapusan %1 telah disimpan, tetapi Anki Miner tidak dapat menyegarkannya:
+%2
+
+Penghapusan telah disimpan dan akan tetap berlaku setelah mulai ulang.</translation>
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <translation>%1 telah dihapus, tetapi tombstone-nya di %2 tidak dapat dihapus:
+%3
+
+Penghapusan telah disimpan; pembersihan masih tertunda dan akan dicoba lagi saat startup.</translation>
     </message>
     <message>
         <source>Active Audio Sources</source>
@@ -792,6 +854,18 @@ This cannot be undone. You would need to re-import to use this pack again.</sour
 
 Hanya berkas indeks yang dihapus — berkas audio asli Anda tidak tersentuh.
 Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang untuk menggunakan paket ini lagi.</translation>
+    </message>
+    <message>
+        <source>Remove '%1' from the audio chain?
+
+Index files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>Hapus '%1' dari rantai audio?
+
+Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan milik Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Sumber daya terindeks sedang digunakan oleh mining, pemanasan awal saat startup, atau pengisian ulang kartu. Tunggu hingga tugas yang aktif selesai lalu coba lagi.</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -2400,20 +2474,20 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>Zip Tidak Valid</translation>
     </message>
     <message>
-        <source>Zip does not match slot</source>
-        <translation>Zip tidak cocok dengan slot</translation>
+        <source>No Recoverable Source</source>
+        <translation>Tidak Ada Sumber yang Dapat Dipulihkan</translation>
     </message>
     <message>
-        <source>This zip is for '%1', but you are re-importing '%2'. Pick the matching zip.</source>
-        <translation>Zip ini untuk '%1', tetapi Anda mengimpor ulang '%2'. Pilih zip yang cocok.</translation>
+        <source>No recoverable source was found for '%1'. Restore its saved source.zip or configured JMdict XML and try again.</source>
+        <translation>Tidak ditemukan sumber yang dapat dipulihkan untuk '%1'. Pulihkan source.zip yang tersimpan atau XML JMdict yang dikonfigurasi, lalu coba lagi.</translation>
     </message>
     <message>
         <source>Re-import Blocked</source>
         <translation>Impor Ulang Diblokir</translation>
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before re-importing dictionaries.</source>
-        <translation>Proses mining sedang berjalan. Hentikan sebelum mengimpor ulang kamus.</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Sumber daya terindeks sedang digunakan oleh mining, pemanasan awal saat startup, atau pengisian ulang kartu. Tunggu hingga tugas yang aktif selesai lalu coba lagi.</translation>
     </message>
     <message>
         <source>Dictionary re-imported</source>
@@ -2452,13 +2526,13 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>Pemindaian Gagal</translation>
     </message>
     <message>
-        <source>No dictionaries with saved sources were found.
+        <source>No dictionaries eligible for automatic repair were found.
 
-Skipped (no saved source — right-click a dictionary row → Re-import… to seed):
+Skipped (not eligible for automatic repair; use per-row Re-import…):
 </source>
-        <translation>Tidak ada kamus dengan sumber tersimpan yang ditemukan.
+        <translation>Tidak ditemukan kamus yang memenuhi syarat untuk perbaikan otomatis.
 
-Dilewati (tidak ada sumber tersimpan — klik kanan baris kamus → Impor ulang… untuk menyediakannya):
+Dilewati (tidak memenuhi syarat untuk perbaikan otomatis; gunakan Impor Ulang… per baris):
 </translation>
     </message>
     <message>
@@ -2470,16 +2544,16 @@ Dilewati (tidak ada sumber tersimpan — klik kanan baris kamus → Impor ulang�
         <translation>Tidak ada yang perlu diimpor ulang</translation>
     </message>
     <message>
-        <source>Reimporting dictionaries…</source>
-        <translation>Mengimpor ulang kamus…</translation>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>Kamus %1 dari %2: %3</translation>
     </message>
     <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation>%1 kamus diimpor ulang:</translation>
     </message>
     <message>
-        <source>Skipped (no saved source — right-click a dictionary row → Re-import… to seed):</source>
-        <translation>Dilewati (tidak ada sumber tersimpan — klik kanan baris kamus → Impor ulang… untuk menyediakannya):</translation>
+        <source>Skipped (not eligible for automatic repair; use per-row Re-import…):</source>
+        <translation>Dilewati (tidak memenuhi syarat untuk perbaikan otomatis; gunakan Impor Ulang… per baris):</translation>
     </message>
     <message>
         <source>Failed:</source>
@@ -2496,10 +2570,6 @@ Dilewati (tidak ada sumber tersimpan — klik kanan baris kamus → Impor ulang�
     <message>
         <source>Done.</source>
         <translation>Selesai.</translation>
-    </message>
-    <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation>Kamus %1 dari %2: %3</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -2544,6 +2614,64 @@ The dictionary was not removed.</source>
 %2
 
 Kamus tidak dihapus.</translation>
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation>Berkas tidak disentuh</translation>
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>Entri rantai telah dihapus, tetapi berkas di %1 tidak disentuh karena folder tersebut tidak dapat dipastikan milik Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation>Tidak dapat menghapus %1:
+%2
+
+Berkas masih utuh. Coba lagi.</translation>
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this dictionary before retrying.</source>
+        <translation>Tidak dapat menyelesaikan penghapusan %1:
+%2
+
+Berkas telah berubah sebagian. Impor ulang atau perbaiki kamus ini sebelum mencoba lagi.</translation>
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation>Tidak dapat memulihkan %1 setelah pembaruan konfigurasinya gagal:
+%2
+
+Berkas tidak lagi berada di lokasi instalasi; pembaruan konfigurasi masih tertunda. Mulai ulang Anki Miner sebelum mencoba lagi.</translation>
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation>Penghapusan %1 telah disimpan, tetapi Anki Miner tidak dapat menyegarkannya:
+%2
+
+Penghapusan telah disimpan dan akan tetap berlaku setelah mulai ulang.</translation>
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <translation>%1 telah dihapus, tetapi tombstone-nya di %2 tidak dapat dihapus:
+%3
+
+Penghapusan telah disimpan; pembersihan masih tertunda dan akan dicoba lagi saat startup.</translation>
     </message>
     <message>
         <source>Select dictionary storage folder...</source>
@@ -2642,8 +2770,16 @@ This cannot be undone. You would need to reimport from the source zip.</source>
 Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang dari zip sumber.</translation>
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before removing dictionaries.</source>
-        <translation>Proses mining sedang berjalan. Hentikan sebelum menghapus kamus.</translation>
+        <source>Remove '%1' from the dictionary list?
+
+Files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>Hapus '%1' dari daftar kamus?
+
+Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan milik Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Sumber daya terindeks sedang digunakan oleh mining, pemanasan awal saat startup, atau pengisian ulang kartu. Tunggu hingga tugas yang aktif selesai lalu coba lagi.</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -3410,10 +3546,6 @@ Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang dari zip sumber.</transla
         <translation>Pilih sumber frekuensi</translation>
     </message>
     <message>
-        <source>Frequency source (*.zip *.csv *.tsv);;All Files (*)</source>
-        <translation>Sumber frekuensi (*.zip *.csv *.tsv);;Semua Berkas (*)</translation>
-    </message>
-    <message>
         <source> (skipped %1 malformed entries)</source>
         <translation> (melewati %1 entri yang rusak)</translation>
     </message>
@@ -3470,6 +3602,14 @@ Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang dari zip sumber.</transla
         <translation>Pilih sumber frekuensi untuk diimpor ulang</translation>
     </message>
     <message>
+        <source>Re-import Blocked</source>
+        <translation>Impor Ulang Diblokir</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Sumber daya terindeks sedang digunakan oleh mining, pemanasan awal saat startup, atau pengisian ulang kartu. Tunggu hingga tugas yang aktif selesai lalu coba lagi.</translation>
+    </message>
+    <message>
         <source>Frequency Source Re-imported</source>
         <translation>Sumber Frekuensi Diimpor Ulang</translation>
     </message>
@@ -3484,6 +3624,10 @@ Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang dari zip sumber.</transla
     <message>
         <source>Re-import Failed</source>
         <translation>Impor Ulang Gagal</translation>
+    </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation>Sumber frekuensi (%1);;Semua Berkas (*)</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -3504,6 +3648,64 @@ The frequency source was not removed.</source>
 %2
 
 Sumber frekuensi tidak dihapus.</translation>
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation>Berkas tidak disentuh</translation>
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>Entri rantai telah dihapus, tetapi berkas di %1 tidak disentuh karena folder tersebut tidak dapat dipastikan milik Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation>Tidak dapat menghapus %1:
+%2
+
+Berkas masih utuh. Coba lagi.</translation>
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this frequency source before retrying.</source>
+        <translation>Tidak dapat menyelesaikan penghapusan %1:
+%2
+
+Berkas telah berubah sebagian. Impor ulang atau perbaiki sumber frekuensi ini sebelum mencoba lagi.</translation>
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation>Tidak dapat memulihkan %1 setelah pembaruan konfigurasinya gagal:
+%2
+
+Berkas tidak lagi berada di lokasi instalasi; pembaruan konfigurasi masih tertunda. Mulai ulang Anki Miner sebelum mencoba lagi.</translation>
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation>Penghapusan %1 telah disimpan, tetapi Anki Miner tidak dapat menyegarkannya:
+%2
+
+Penghapusan telah disimpan dan akan tetap berlaku setelah mulai ulang.</translation>
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <translation>%1 telah dihapus, tetapi tombstone-nya di %2 tidak dapat dihapus:
+%3
+
+Penghapusan telah disimpan; pembersihan masih tertunda dan akan dicoba lagi saat startup.</translation>
     </message>
     <message>
         <source>Active Frequency Sources</source>
@@ -3548,8 +3750,8 @@ Hanya berkas indeks yang dihapus.
 Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang untuk menggunakan sumber ini lagi.</translation>
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before removing frequency sources.</source>
-        <translation>Proses mining sedang berlangsung. Hentikan sebelum menghapus sumber frekuensi.</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Sumber daya terindeks sedang digunakan oleh mining, pemanasan awal saat startup, atau pengisian ulang kartu. Tunggu hingga tugas yang aktif selesai lalu coba lagi.</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -3870,6 +4072,14 @@ Tambahkan %3 kata ke daftar kata yang dikenal Anda?</translation>
     <message>
         <source>Join the community on Discord</source>
         <translation>Gabung komunitas di Discord</translation>
+    </message>
+    <message>
+        <source>Dictionary Change Blocked</source>
+        <translation>Perubahan Kamus Diblokir</translation>
+    </message>
+    <message>
+        <source>The startup JMdict migration is still stopping. Wait for it to finish and try again.</source>
+        <translation>Migrasi JMdict saat startup masih dalam proses berhenti. Tunggu hingga selesai lalu coba lagi.</translation>
     </message>
     <message>
         <source>Desktop Shortcut</source>
@@ -4880,8 +5090,8 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation>Unduhan Diblokir</translation>
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before downloading resources.</source>
-        <translation>Proses mining sedang berjalan. Hentikan sebelum mengunduh sumber daya.</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Sumber daya terindeks sedang digunakan oleh mining, pemanasan awal saat startup, atau pengisian ulang kartu. Tunggu hingga tugas yang aktif selesai lalu coba lagi.</translation>
     </message>
     <message>
         <source>Preparing download…</source>

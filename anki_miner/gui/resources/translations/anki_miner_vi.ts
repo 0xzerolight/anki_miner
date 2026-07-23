@@ -600,20 +600,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
 Định dạng hỗ trợ: AJT (index.json + media/), NHK16 (entries.json + audio/), Forvo (thư mục con theo người nói), JPod cũ (gốc {reading} - {expression}).</translation>
     </message>
     <message>
-        <source>Importing audio pack…</source>
-        <translation>Đang nhập gói âm thanh…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Hủy</translation>
-    </message>
-    <message>
-        <source>Configuration Update Failed</source>
-        <translation>Cập nhật cấu hình thất bại</translation>
-    </message>
-    <message>
-        <source>Import completed, but the configuration update failed: %1</source>
-        <translation>Nhập xong, nhưng cập nhật cấu hình thất bại: %1</translation>
+        <source>Pack %1 of %2: %3</source>
+        <translation>Gói %1 trên %2: %3</translation>
     </message>
     <message>
         <source>Imported %1 audio pack(s):</source>
@@ -636,12 +624,36 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Xong.</translation>
     </message>
     <message>
-        <source>Pack %1 of %2: %3</source>
-        <translation>Gói %1 trên %2: %3</translation>
+        <source>Configuration Update Failed</source>
+        <translation>Cập nhật cấu hình thất bại</translation>
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation>Nhập xong, nhưng cập nhật cấu hình thất bại: %1</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Hủy</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>Tiến trình nhập đã kết thúc mà không có kết quả hoàn tất.</translation>
     </message>
     <message>
         <source>Choose audio pack folder to re-import</source>
         <translation>Chọn thư mục gói âm thanh để nhập lại</translation>
+    </message>
+    <message>
+        <source>Re-import Blocked</source>
+        <translation>Nhập lại bị chặn</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Tài nguyên đã lập chỉ mục đang được sử dụng cho khai thác, làm nóng khi khởi động, hoặc điền dữ liệu còn thiếu cho thẻ. Hãy đợi tác vụ đang hoạt động hoàn tất rồi thử lại.</translation>
     </message>
     <message>
         <source>Audio Pack Re-imported</source>
@@ -663,14 +675,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <source>Another import is still finishing. Wait for it to finish and try again.</source>
         <translation>Một lượt nhập khác vẫn đang hoàn tất. Vui lòng đợi rồi thử lại.</translation>
     </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Đang hủy…</translation>
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>Tiến trình nhập đã kết thúc mà không có kết quả hoàn tất.</translation>
-    </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
@@ -690,6 +694,64 @@ The audio pack was not removed.</source>
 %2
 
 Gói âm thanh chưa được xóa.</translation>
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation>Tệp được giữ nguyên</translation>
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>Mục trong chuỗi đã được xóa, nhưng các tệp tại %1 vẫn được giữ nguyên vì không thể xác minh thư mục này thuộc về Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation>Không thể xóa %1:
+%2
+
+Các tệp vẫn còn nguyên vẹn. Hãy thử lại.</translation>
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this audio pack before retrying.</source>
+        <translation>Không thể hoàn tất việc xóa %1:
+%2
+
+Các tệp đã bị thay đổi một phần. Hãy nhập lại hoặc sửa chữa gói âm thanh này trước khi thử lại.</translation>
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation>Không thể khôi phục %1 sau khi cập nhật cấu hình của nó thất bại:
+%2
+
+Các tệp không còn ở vị trí đã cài đặt; một cập nhật cấu hình đang chờ xử lý. Hãy khởi động lại Anki Miner trước khi thử lại.</translation>
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation>Việc xóa %1 đã được lưu, nhưng Anki Miner không thể làm mới nó:
+%2
+
+Việc xóa đã được lưu và sẽ vẫn còn hiệu lực sau khi khởi động lại.</translation>
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <translation>%1 đã bị xóa, nhưng tệp đánh dấu xóa của nó tại %2 không thể bị xóa:
+%3
+
+Việc xóa đã được lưu; việc dọn dẹp đang chờ xử lý và sẽ được thử lại khi khởi động.</translation>
     </message>
     <message>
         <source>Active Audio Sources</source>
@@ -792,6 +854,18 @@ This cannot be undone. You would need to re-import to use this pack again.</sour
 
 Chỉ các tệp chỉ mục bị xóa — các tệp âm thanh gốc của bạn không bị chạm tới.
 Thao tác này không thể hoàn tác. Bạn sẽ cần nhập lại để dùng gói này lần nữa.</translation>
+    </message>
+    <message>
+        <source>Remove '%1' from the audio chain?
+
+Index files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>Xóa '%1' khỏi chuỗi âm thanh?
+
+Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể xác minh thư mục này thuộc về Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Tài nguyên đã lập chỉ mục đang được sử dụng cho khai thác, làm nóng khi khởi động, hoặc điền dữ liệu còn thiếu cho thẻ. Hãy đợi tác vụ đang hoạt động hoàn tất rồi thử lại.</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -2400,20 +2474,20 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
         <translation>Zip không hợp lệ</translation>
     </message>
     <message>
-        <source>Zip does not match slot</source>
-        <translation>Zip không khớp với vị trí</translation>
+        <source>No Recoverable Source</source>
+        <translation>Không có nguồn có thể khôi phục</translation>
     </message>
     <message>
-        <source>This zip is for '%1', but you are re-importing '%2'. Pick the matching zip.</source>
-        <translation>Zip này dành cho '%1', nhưng bạn đang nhập lại '%2'. Hãy chọn zip khớp.</translation>
+        <source>No recoverable source was found for '%1'. Restore its saved source.zip or configured JMdict XML and try again.</source>
+        <translation>Không tìm thấy nguồn có thể khôi phục cho '%1'. Hãy khôi phục tệp source.zip đã lưu hoặc XML JMdict đã cấu hình của nó rồi thử lại.</translation>
     </message>
     <message>
         <source>Re-import Blocked</source>
         <translation>Đã chặn việc nhập lại</translation>
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before re-importing dictionaries.</source>
-        <translation>Một lượt khai thác đang diễn ra. Hãy dừng nó trước khi nhập lại từ điển.</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Tài nguyên đã lập chỉ mục đang được sử dụng cho khai thác, làm nóng khi khởi động, hoặc điền dữ liệu còn thiếu cho thẻ. Hãy đợi tác vụ đang hoạt động hoàn tất rồi thử lại.</translation>
     </message>
     <message>
         <source>Dictionary re-imported</source>
@@ -2452,13 +2526,13 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
         <translation>Quét thất bại</translation>
     </message>
     <message>
-        <source>No dictionaries with saved sources were found.
+        <source>No dictionaries eligible for automatic repair were found.
 
-Skipped (no saved source — right-click a dictionary row → Re-import… to seed):
+Skipped (not eligible for automatic repair; use per-row Re-import…):
 </source>
-        <translation>Không tìm thấy từ điển nào có nguồn đã lưu.
+        <translation>Không tìm thấy từ điển nào đủ điều kiện để tự động sửa chữa.
 
-Đã bỏ qua (không có nguồn đã lưu — nhấp chuột phải vào một hàng từ điển → Nhập lại… để khởi tạo):
+Đã bỏ qua (không đủ điều kiện để tự động sửa chữa; hãy dùng Nhập lại… theo từng dòng):
 </translation>
     </message>
     <message>
@@ -2470,16 +2544,16 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation>Không có gì để nhập lại</translation>
     </message>
     <message>
-        <source>Reimporting dictionaries…</source>
-        <translation>Đang nhập lại các từ điển…</translation>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>Từ điển %1 trên %2: %3</translation>
     </message>
     <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation>Đã nhập lại %1 từ điển:</translation>
     </message>
     <message>
-        <source>Skipped (no saved source — right-click a dictionary row → Re-import… to seed):</source>
-        <translation>Đã bỏ qua (không có nguồn đã lưu — nhấp chuột phải vào một hàng từ điển → Nhập lại… để khởi tạo):</translation>
+        <source>Skipped (not eligible for automatic repair; use per-row Re-import…):</source>
+        <translation>Đã bỏ qua (không đủ điều kiện để tự động sửa chữa; hãy dùng Nhập lại… theo từng dòng):</translation>
     </message>
     <message>
         <source>Failed:</source>
@@ -2496,10 +2570,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
     <message>
         <source>Done.</source>
         <translation>Xong.</translation>
-    </message>
-    <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation>Từ điển %1 trên %2: %3</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -2544,6 +2614,64 @@ The dictionary was not removed.</source>
 %2
 
 Từ điển chưa được xóa.</translation>
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation>Tệp được giữ nguyên</translation>
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>Mục trong chuỗi đã được xóa, nhưng các tệp tại %1 vẫn được giữ nguyên vì không thể xác minh thư mục này thuộc về Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation>Không thể xóa %1:
+%2
+
+Các tệp vẫn còn nguyên vẹn. Hãy thử lại.</translation>
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this dictionary before retrying.</source>
+        <translation>Không thể hoàn tất việc xóa %1:
+%2
+
+Các tệp đã bị thay đổi một phần. Hãy nhập lại hoặc sửa chữa từ điển này trước khi thử lại.</translation>
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation>Không thể khôi phục %1 sau khi cập nhật cấu hình của nó thất bại:
+%2
+
+Các tệp không còn ở vị trí đã cài đặt; một cập nhật cấu hình đang chờ xử lý. Hãy khởi động lại Anki Miner trước khi thử lại.</translation>
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation>Việc xóa %1 đã được lưu, nhưng Anki Miner không thể làm mới nó:
+%2
+
+Việc xóa đã được lưu và sẽ vẫn còn hiệu lực sau khi khởi động lại.</translation>
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <translation>%1 đã bị xóa, nhưng tệp đánh dấu xóa của nó tại %2 không thể bị xóa:
+%3
+
+Việc xóa đã được lưu; việc dọn dẹp đang chờ xử lý và sẽ được thử lại khi khởi động.</translation>
     </message>
     <message>
         <source>Select dictionary storage folder...</source>
@@ -2642,8 +2770,16 @@ This cannot be undone. You would need to reimport from the source zip.</source>
 Hành động này không thể hoàn tác. Bạn sẽ cần nhập lại từ zip nguồn.</translation>
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before removing dictionaries.</source>
-        <translation>Một lượt khai thác đang diễn ra. Hãy dừng nó trước khi xóa từ điển.</translation>
+        <source>Remove '%1' from the dictionary list?
+
+Files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>Xóa '%1' khỏi danh sách từ điển?
+
+Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh thư mục này thuộc về Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Tài nguyên đã lập chỉ mục đang được sử dụng cho khai thác, làm nóng khi khởi động, hoặc điền dữ liệu còn thiếu cho thẻ. Hãy đợi tác vụ đang hoạt động hoàn tất rồi thử lại.</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -3410,10 +3546,6 @@ Hành động này không thể hoàn tác. Bạn sẽ cần nhập lại từ z
         <translation>Chọn nguồn tần suất</translation>
     </message>
     <message>
-        <source>Frequency source (*.zip *.csv *.tsv);;All Files (*)</source>
-        <translation>Nguồn tần suất (*.zip *.csv *.tsv);;Tất cả tệp (*)</translation>
-    </message>
-    <message>
         <source> (skipped %1 malformed entries)</source>
         <translation> (đã bỏ qua %1 mục sai định dạng)</translation>
     </message>
@@ -3470,6 +3602,14 @@ Hành động này không thể hoàn tác. Bạn sẽ cần nhập lại từ z
         <translation>Chọn nguồn tần suất để nhập lại</translation>
     </message>
     <message>
+        <source>Re-import Blocked</source>
+        <translation>Nhập lại bị chặn</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Tài nguyên đã lập chỉ mục đang được sử dụng cho khai thác, làm nóng khi khởi động, hoặc điền dữ liệu còn thiếu cho thẻ. Hãy đợi tác vụ đang hoạt động hoàn tất rồi thử lại.</translation>
+    </message>
+    <message>
         <source>Frequency Source Re-imported</source>
         <translation>Đã nhập lại nguồn tần suất</translation>
     </message>
@@ -3484,6 +3624,10 @@ Hành động này không thể hoàn tác. Bạn sẽ cần nhập lại từ z
     <message>
         <source>Re-import Failed</source>
         <translation>Nhập lại thất bại</translation>
+    </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation>Nguồn tần suất (%1);;Tất cả tệp (*)</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -3504,6 +3648,64 @@ The frequency source was not removed.</source>
 %2
 
 Nguồn tần suất chưa được gỡ bỏ.</translation>
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation>Tệp được giữ nguyên</translation>
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>Mục trong chuỗi đã được xóa, nhưng các tệp tại %1 vẫn được giữ nguyên vì không thể xác minh thư mục này thuộc về Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation>Không thể xóa %1:
+%2
+
+Các tệp vẫn còn nguyên vẹn. Hãy thử lại.</translation>
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this frequency source before retrying.</source>
+        <translation>Không thể hoàn tất việc xóa %1:
+%2
+
+Các tệp đã bị thay đổi một phần. Hãy nhập lại hoặc sửa chữa nguồn tần suất này trước khi thử lại.</translation>
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation>Không thể khôi phục %1 sau khi cập nhật cấu hình của nó thất bại:
+%2
+
+Các tệp không còn ở vị trí đã cài đặt; một cập nhật cấu hình đang chờ xử lý. Hãy khởi động lại Anki Miner trước khi thử lại.</translation>
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation>Việc xóa %1 đã được lưu, nhưng Anki Miner không thể làm mới nó:
+%2
+
+Việc xóa đã được lưu và sẽ vẫn còn hiệu lực sau khi khởi động lại.</translation>
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <translation>%1 đã bị xóa, nhưng tệp đánh dấu xóa của nó tại %2 không thể bị xóa:
+%3
+
+Việc xóa đã được lưu; việc dọn dẹp đang chờ xử lý và sẽ được thử lại khi khởi động.</translation>
     </message>
     <message>
         <source>Active Frequency Sources</source>
@@ -3548,8 +3750,8 @@ Chỉ các tệp chỉ mục bị xóa.
 Không thể hoàn tác. Bạn sẽ cần nhập lại để dùng nguồn này lần nữa.</translation>
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before removing frequency sources.</source>
-        <translation>Một lần chạy khai thác đang diễn ra. Hãy dừng nó trước khi gỡ bỏ nguồn tần suất.</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Tài nguyên đã lập chỉ mục đang được sử dụng cho khai thác, làm nóng khi khởi động, hoặc điền dữ liệu còn thiếu cho thẻ. Hãy đợi tác vụ đang hoạt động hoàn tất rồi thử lại.</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -3870,6 +4072,14 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
     <message>
         <source>Join the community on Discord</source>
         <translation>Tham gia cộng đồng trên Discord</translation>
+    </message>
+    <message>
+        <source>Dictionary Change Blocked</source>
+        <translation>Thay đổi từ điển bị chặn</translation>
+    </message>
+    <message>
+        <source>The startup JMdict migration is still stopping. Wait for it to finish and try again.</source>
+        <translation>Quá trình di chuyển JMdict khi khởi động vẫn đang dừng lại. Hãy đợi nó hoàn tất rồi thử lại.</translation>
     </message>
     <message>
         <source>Desktop Shortcut</source>
@@ -4880,8 +5090,8 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation>Đã chặn tải xuống</translation>
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before downloading resources.</source>
-        <translation>Một lần chạy khai thác đang diễn ra. Dừng nó trước khi tải xuống tài nguyên.</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Tài nguyên đã lập chỉ mục đang được sử dụng cho khai thác, làm nóng khi khởi động, hoặc điền dữ liệu còn thiếu cho thẻ. Hãy đợi tác vụ đang hoạt động hoàn tất rồi thử lại.</translation>
     </message>
     <message>
         <source>Preparing download…</source>

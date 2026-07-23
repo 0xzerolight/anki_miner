@@ -600,20 +600,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
 Formatos suportados: AJT (index.json + media/), NHK16 (entries.json + audio/), Forvo (subdiretórios de locutores), JPod legado (radicais {reading} - {expression}).</translation>
     </message>
     <message>
-        <source>Importing audio pack…</source>
-        <translation>Importando pacote de áudio…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Cancelar</translation>
-    </message>
-    <message>
-        <source>Configuration Update Failed</source>
-        <translation>Falha na atualização da configuração</translation>
-    </message>
-    <message>
-        <source>Import completed, but the configuration update failed: %1</source>
-        <translation>Importação concluída, mas a atualização da configuração falhou: %1</translation>
+        <source>Pack %1 of %2: %3</source>
+        <translation>Pacote %1 de %2: %3</translation>
     </message>
     <message>
         <source>Imported %1 audio pack(s):</source>
@@ -636,12 +624,36 @@ Formatos suportados: AJT (index.json + media/), NHK16 (entries.json + audio/), F
         <translation>Concluído.</translation>
     </message>
     <message>
-        <source>Pack %1 of %2: %3</source>
-        <translation>Pacote %1 de %2: %3</translation>
+        <source>Configuration Update Failed</source>
+        <translation>Falha na atualização da configuração</translation>
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation>Importação concluída, mas a atualização da configuração falhou: %1</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Cancelando…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>O processo de importação terminou sem retornar um resultado.</translation>
     </message>
     <message>
         <source>Choose audio pack folder to re-import</source>
         <translation>Escolher pasta do pacote de áudio para reimportar</translation>
+    </message>
+    <message>
+        <source>Re-import Blocked</source>
+        <translation>Reimportação Bloqueada</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Os recursos indexados estão em uso pela mineração, pelo pré-aquecimento de inicialização ou pelo preenchimento retroativo de cartões. Aguarde a tarefa ativa terminar e tente novamente.</translation>
     </message>
     <message>
         <source>Audio Pack Re-imported</source>
@@ -663,14 +675,6 @@ Formatos suportados: AJT (index.json + media/), NHK16 (entries.json + audio/), F
         <source>Another import is still finishing. Wait for it to finish and try again.</source>
         <translation>Outra importação ainda está sendo concluída. Aguarde a conclusão e tente novamente.</translation>
     </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Cancelando…</translation>
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>O processo de importação terminou sem retornar um resultado.</translation>
-    </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
@@ -690,6 +694,64 @@ The audio pack was not removed.</source>
 %2
 
 O pacote de áudio não foi removido.</translation>
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation>Arquivos Não Modificados</translation>
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>A entrada da cadeia foi removida, mas os arquivos em %1 não foram modificados porque não foi possível comprovar que a pasta pertence ao Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation>Não foi possível remover %1:
+%2
+
+Os arquivos estão intactos. Tente novamente.</translation>
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this audio pack before retrying.</source>
+        <translation>Não foi possível concluir a remoção de %1:
+%2
+
+Os arquivos foram parcialmente alterados. Reimporte ou repare este pacote de áudio antes de tentar novamente.</translation>
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation>Não foi possível restaurar %1 após a falha na atualização de sua configuração:
+%2
+
+Os arquivos não estão mais no local instalado; há uma atualização de configuração pendente. Reinicie o Anki Miner antes de tentar novamente.</translation>
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation>A remoção de %1 foi salva, mas o Anki Miner não conseguiu atualizá-la:
+%2
+
+A remoção foi salva e permanecerá após a reinicialização.</translation>
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <translation>%1 foi removido, mas seu marcador de remoção em %2 não pôde ser excluído:
+%3
+
+A remoção está salva; a limpeza está pendente e será repetida na inicialização.</translation>
     </message>
     <message>
         <source>Active Audio Sources</source>
@@ -792,6 +854,18 @@ This cannot be undone. You would need to re-import to use this pack again.</sour
 
 Apenas os arquivos de índice são excluídos — seus arquivos de áudio originais permanecem intactos.
 Isso não pode ser desfeito. Você precisaria reimportar para usar este pacote novamente.</translation>
+    </message>
+    <message>
+        <source>Remove '%1' from the audio chain?
+
+Index files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>Remover '%1' da cadeia de áudio?
+
+Os arquivos de índice no disco não serão modificados porque não foi possível comprovar que a pasta pertence ao Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Os recursos indexados estão em uso pela mineração, pelo pré-aquecimento de inicialização ou pelo preenchimento retroativo de cartões. Aguarde a tarefa ativa terminar e tente novamente.</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -2400,20 +2474,20 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
         <translation>Zip Inválido</translation>
     </message>
     <message>
-        <source>Zip does not match slot</source>
-        <translation>O zip não corresponde ao slot</translation>
+        <source>No Recoverable Source</source>
+        <translation>Nenhuma Origem Recuperável</translation>
     </message>
     <message>
-        <source>This zip is for '%1', but you are re-importing '%2'. Pick the matching zip.</source>
-        <translation>Este zip é de '%1', mas você está reimportando '%2'. Escolha o zip correspondente.</translation>
+        <source>No recoverable source was found for '%1'. Restore its saved source.zip or configured JMdict XML and try again.</source>
+        <translation>Nenhuma origem recuperável foi encontrada para '%1'. Restaure o source.zip salvo ou o XML do JMdict configurado e tente novamente.</translation>
     </message>
     <message>
         <source>Re-import Blocked</source>
         <translation>Reimportação Bloqueada</translation>
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before re-importing dictionaries.</source>
-        <translation>Uma mineração está em andamento. Pare-a antes de reimportar dicionários.</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Os recursos indexados estão em uso pela mineração, pelo pré-aquecimento de inicialização ou pelo preenchimento retroativo de cartões. Aguarde a tarefa ativa terminar e tente novamente.</translation>
     </message>
     <message>
         <source>Dictionary re-imported</source>
@@ -2452,13 +2526,13 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
         <translation>Falha na varredura</translation>
     </message>
     <message>
-        <source>No dictionaries with saved sources were found.
+        <source>No dictionaries eligible for automatic repair were found.
 
-Skipped (no saved source — right-click a dictionary row → Re-import… to seed):
+Skipped (not eligible for automatic repair; use per-row Re-import…):
 </source>
-        <translation>Nenhum dicionário com fontes salvas foi encontrado.
+        <translation>Nenhum dicionário elegível para reparo automático foi encontrado.
 
-Pulados (sem fonte salva — clique com o botão direito na linha de um dicionário → Reimportar… para inicializar):
+Ignorados (não elegíveis para reparo automático; use Reimportar… por linha):
 </translation>
     </message>
     <message>
@@ -2470,16 +2544,16 @@ Pulados (sem fonte salva — clique com o botão direito na linha de um dicioná
         <translation>Nada para reimportar</translation>
     </message>
     <message>
-        <source>Reimporting dictionaries…</source>
-        <translation>Reimportando dicionários…</translation>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>Dicionário %1 de %2: %3</translation>
     </message>
     <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation>%1 dicionário(s) reimportado(s):</translation>
     </message>
     <message>
-        <source>Skipped (no saved source — right-click a dictionary row → Re-import… to seed):</source>
-        <translation>Ignorado (nenhuma fonte salva — clique com o botão direito na linha de um dicionário → Reimportar… para preencher):</translation>
+        <source>Skipped (not eligible for automatic repair; use per-row Re-import…):</source>
+        <translation>Ignorados (não elegíveis para reparo automático; use Reimportar… por linha):</translation>
     </message>
     <message>
         <source>Failed:</source>
@@ -2496,10 +2570,6 @@ Pulados (sem fonte salva — clique com o botão direito na linha de um dicioná
     <message>
         <source>Done.</source>
         <translation>Concluído.</translation>
-    </message>
-    <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation>Dicionário %1 de %2: %3</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -2544,6 +2614,64 @@ The dictionary was not removed.</source>
 %2
 
 O dicionário não foi removido.</translation>
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation>Arquivos Não Modificados</translation>
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>A entrada da cadeia foi removida, mas os arquivos em %1 não foram modificados porque não foi possível comprovar que a pasta pertence ao Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation>Não foi possível remover %1:
+%2
+
+Os arquivos estão intactos. Tente novamente.</translation>
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this dictionary before retrying.</source>
+        <translation>Não foi possível concluir a remoção de %1:
+%2
+
+Os arquivos foram parcialmente alterados. Reimporte ou repare este dicionário antes de tentar novamente.</translation>
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation>Não foi possível restaurar %1 após a falha na atualização de sua configuração:
+%2
+
+Os arquivos não estão mais no local instalado; há uma atualização de configuração pendente. Reinicie o Anki Miner antes de tentar novamente.</translation>
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation>A remoção de %1 foi salva, mas o Anki Miner não conseguiu atualizá-la:
+%2
+
+A remoção foi salva e permanecerá após a reinicialização.</translation>
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <translation>%1 foi removido, mas seu marcador de remoção em %2 não pôde ser excluído:
+%3
+
+A remoção está salva; a limpeza está pendente e será repetida na inicialização.</translation>
     </message>
     <message>
         <source>Select dictionary storage folder...</source>
@@ -2642,8 +2770,16 @@ This cannot be undone. You would need to reimport from the source zip.</source>
 Isso não pode ser desfeito. Você precisaria reimportar a partir do zip de origem.</translation>
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before removing dictionaries.</source>
-        <translation>Uma mineração está em andamento. Pare-a antes de remover dicionários.</translation>
+        <source>Remove '%1' from the dictionary list?
+
+Files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>Remover '%1' da lista de dicionários?
+
+Os arquivos no disco não serão modificados porque não foi possível comprovar que a pasta pertence ao Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Os recursos indexados estão em uso pela mineração, pelo pré-aquecimento de inicialização ou pelo preenchimento retroativo de cartões. Aguarde a tarefa ativa terminar e tente novamente.</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -3421,10 +3557,6 @@ Isso não pode ser desfeito. Você precisaria reimportar a partir do zip de orig
         <translation>Escolha a fonte de frequência</translation>
     </message>
     <message>
-        <source>Frequency source (*.zip *.csv *.tsv);;All Files (*)</source>
-        <translation>Fonte de frequência (*.zip *.csv *.tsv);;Todos os Arquivos (*)</translation>
-    </message>
-    <message>
         <source> (skipped %1 malformed entries)</source>
         <translation> (%1 entradas malformadas ignoradas)</translation>
     </message>
@@ -3481,6 +3613,14 @@ Isso não pode ser desfeito. Você precisaria reimportar a partir do zip de orig
         <translation>Escolha a fonte de frequência a reimportar</translation>
     </message>
     <message>
+        <source>Re-import Blocked</source>
+        <translation>Reimportação Bloqueada</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Os recursos indexados estão em uso pela mineração, pelo pré-aquecimento de inicialização ou pelo preenchimento retroativo de cartões. Aguarde a tarefa ativa terminar e tente novamente.</translation>
+    </message>
+    <message>
         <source>Frequency Source Re-imported</source>
         <translation>Fonte de Frequência Reimportada</translation>
     </message>
@@ -3495,6 +3635,10 @@ Isso não pode ser desfeito. Você precisaria reimportar a partir do zip de orig
     <message>
         <source>Re-import Failed</source>
         <translation>Falha na Reimportação</translation>
+    </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation>Fonte de frequência (%1);;Todos os Arquivos (*)</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -3515,6 +3659,64 @@ The frequency source was not removed.</source>
 %2
 
 A fonte de frequência não foi removida.</translation>
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation>Arquivos Não Modificados</translation>
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>A entrada da cadeia foi removida, mas os arquivos em %1 não foram modificados porque não foi possível comprovar que a pasta pertence ao Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation>Não foi possível remover %1:
+%2
+
+Os arquivos estão intactos. Tente novamente.</translation>
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this frequency source before retrying.</source>
+        <translation>Não foi possível concluir a remoção de %1:
+%2
+
+Os arquivos foram parcialmente alterados. Reimporte ou repare esta fonte de frequência antes de tentar novamente.</translation>
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation>Não foi possível restaurar %1 após a falha na atualização de sua configuração:
+%2
+
+Os arquivos não estão mais no local instalado; há uma atualização de configuração pendente. Reinicie o Anki Miner antes de tentar novamente.</translation>
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation>A remoção de %1 foi salva, mas o Anki Miner não conseguiu atualizá-la:
+%2
+
+A remoção foi salva e permanecerá após a reinicialização.</translation>
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <translation>%1 foi removido, mas seu marcador de remoção em %2 não pôde ser excluído:
+%3
+
+A remoção está salva; a limpeza está pendente e será repetida na inicialização.</translation>
     </message>
     <message>
         <source>Active Frequency Sources</source>
@@ -3559,8 +3761,8 @@ Apenas os arquivos de índice são excluídos.
 Isso não pode ser desfeito. Você precisaria reimportar para usar esta fonte novamente.</translation>
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before removing frequency sources.</source>
-        <translation>Uma mineração está em andamento. Pare-a antes de remover fontes de frequência.</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Os recursos indexados estão em uso pela mineração, pelo pré-aquecimento de inicialização ou pelo preenchimento retroativo de cartões. Aguarde a tarefa ativa terminar e tente novamente.</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -3881,6 +4083,14 @@ Adicionar %3 palavra(s) à sua lista de conhecidas?</translation>
     <message>
         <source>Join the community on Discord</source>
         <translation>Entre na comunidade no Discord</translation>
+    </message>
+    <message>
+        <source>Dictionary Change Blocked</source>
+        <translation>Alteração de Dicionário Bloqueada</translation>
+    </message>
+    <message>
+        <source>The startup JMdict migration is still stopping. Wait for it to finish and try again.</source>
+        <translation>A migração do JMdict na inicialização ainda está sendo interrompida. Aguarde a conclusão e tente novamente.</translation>
     </message>
     <message>
         <source>Desktop Shortcut</source>
@@ -4891,8 +5101,8 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
         <translation>Download Bloqueado</translation>
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before downloading resources.</source>
-        <translation>Uma execução de mineração está em andamento. Pare-a antes de baixar recursos.</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Os recursos indexados estão em uso pela mineração, pelo pré-aquecimento de inicialização ou pelo preenchimento retroativo de cartões. Aguarde a tarefa ativa terminar e tente novamente.</translation>
     </message>
     <message>
         <source>Preparing download…</source>

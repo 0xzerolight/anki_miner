@@ -595,19 +595,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Importing audio pack…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Configuration Update Failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Import completed, but the configuration update failed: %1</source>
+        <source>Pack %1 of %2: %3</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -631,11 +619,35 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Pack %1 of %2: %3</source>
+        <source>Configuration Update Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Choose audio pack folder to re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import Blocked</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -658,14 +670,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <source>Another import is still finishing. Wait for it to finish and try again.</source>
         <translation type="unfinished" />
     </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation type="unfinished" />
-    </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
@@ -681,6 +685,49 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
 %2
 
 The audio pack was not removed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this audio pack before retrying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -780,6 +827,16 @@ The audio pack was not removed.</source>
 
 Only the index files are deleted — your original audio files are untouched.
 This cannot be undone. You would need to re-import to use this pack again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove '%1' from the audio chain?
+
+Index files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2383,11 +2440,11 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Zip does not match slot</source>
+        <source>No Recoverable Source</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>This zip is for '%1', but you are re-importing '%2'. Pick the matching zip.</source>
+        <source>No recoverable source was found for '%1'. Restore its saved source.zip or configured JMdict XML and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2395,7 +2452,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before re-importing dictionaries.</source>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2435,9 +2492,9 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No dictionaries with saved sources were found.
+        <source>No dictionaries eligible for automatic repair were found.
 
-Skipped (no saved source — right-click a dictionary row → Re-import… to seed):
+Skipped (not eligible for automatic repair; use per-row Re-import…):
 </source>
         <translation type="unfinished" />
     </message>
@@ -2450,7 +2507,7 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Reimporting dictionaries…</source>
+        <source>Dictionary %1 of %2: %3</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2458,7 +2515,7 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Skipped (no saved source — right-click a dictionary row → Re-import… to seed):</source>
+        <source>Skipped (not eligible for automatic repair; use per-row Re-import…):</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2475,10 +2532,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
     </message>
     <message>
         <source>Done.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Dictionary %1 of %2: %3</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2518,6 +2571,49 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
 %2
 
 The dictionary was not removed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this dictionary before retrying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2615,7 +2711,13 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before removing dictionaries.</source>
+        <source>Remove '%1' from the dictionary list?
+
+Files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3381,10 +3483,6 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Frequency source (*.zip *.csv *.tsv);;All Files (*)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source> (skipped %1 malformed entries)</source>
         <translation type="unfinished" />
     </message>
@@ -3441,6 +3539,14 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Re-import Blocked</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Frequency Source Re-imported</source>
         <translation type="unfinished" />
     </message>
@@ -3454,6 +3560,10 @@ This cannot be undone. You would need to reimport from the source zip.</source>
     </message>
     <message>
         <source>Re-import Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -3471,6 +3581,49 @@ This cannot be undone. You would need to reimport from the source zip.</source>
 %2
 
 The frequency source was not removed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this frequency source before retrying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3513,7 +3666,7 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before removing frequency sources.</source>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3828,6 +3981,14 @@ Add %3 word(s) to your known list?</source>
     </message>
     <message>
         <source>Join the community on Discord</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary Change Blocked</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The startup JMdict migration is still stopping. Wait for it to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4832,7 +4993,7 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before downloading resources.</source>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>

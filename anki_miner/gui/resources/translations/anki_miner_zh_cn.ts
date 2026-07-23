@@ -600,20 +600,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
 支持的格式：AJT（index.json + media/）、NHK16（entries.json + audio/）、Forvo（发音者子目录）、JPod 旧版（{reading} - {expression} 词干）。</translation>
     </message>
     <message>
-        <source>Importing audio pack…</source>
-        <translation>正在导入音频包…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>取消</translation>
-    </message>
-    <message>
-        <source>Configuration Update Failed</source>
-        <translation>配置更新失败</translation>
-    </message>
-    <message>
-        <source>Import completed, but the configuration update failed: %1</source>
-        <translation>导入已完成，但配置更新失败：%1</translation>
+        <source>Pack %1 of %2: %3</source>
+        <translation>第 %1 / %2 个音频包：%3</translation>
     </message>
     <message>
         <source>Imported %1 audio pack(s):</source>
@@ -636,12 +624,36 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>完成。</translation>
     </message>
     <message>
-        <source>Pack %1 of %2: %3</source>
-        <translation>第 %1 / %2 个音频包：%3</translation>
+        <source>Configuration Update Failed</source>
+        <translation>配置更新失败</translation>
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation>导入已完成，但配置更新失败：%1</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>导入工作线程结束，但未返回完成结果。</translation>
     </message>
     <message>
         <source>Choose audio pack folder to re-import</source>
         <translation>选择要重新导入的音频包文件夹</translation>
+    </message>
+    <message>
+        <source>Re-import Blocked</source>
+        <translation>重新导入被阻止</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
     </message>
     <message>
         <source>Audio Pack Re-imported</source>
@@ -663,14 +675,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <source>Another import is still finishing. Wait for it to finish and try again.</source>
         <translation>另一个导入任务尚未完成，请等待其完成后重试。</translation>
     </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>正在取消…</translation>
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>导入工作线程结束，但未返回完成结果。</translation>
-    </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
@@ -690,6 +694,64 @@ The audio pack was not removed.</source>
 %2
 
 音频包未被移除。</translation>
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation>文件未作改动</translation>
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>链中的条目已移除，但 %1 处的文件未作改动，因为无法确认该文件夹属于 Anki Miner。</translation>
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation>无法移除 %1：
+%2
+
+文件完好无损，请重试。</translation>
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this audio pack before retrying.</source>
+        <translation>无法完成 %1 的移除：
+%2
+
+文件已被部分更改。请在重试前重新导入或修复此音频包。</translation>
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation>%1 的配置更新失败后无法恢复：
+%2
+
+文件已不在安装位置；配置更新处于待处理状态。请重启 Anki Miner 后再重试。</translation>
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation>%1 的移除已保存，但 Anki Miner 无法刷新它：
+%2
+
+移除已保存，重启后仍将保留。</translation>
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <translation>%1 已被移除，但位于 %2 的墓碑文件无法删除：
+%3
+
+移除已保存；清理操作待处理，将在启动时重试。</translation>
     </message>
     <message>
         <source>Active Audio Sources</source>
@@ -792,6 +854,18 @@ This cannot be undone. You would need to re-import to use this pack again.</sour
 
 仅删除索引文件——你的原始音频文件不受影响。
 此操作无法撤销。你需要重新导入才能再次使用此音频包。</translation>
+    </message>
+    <message>
+        <source>Remove '%1' from the audio chain?
+
+Index files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>要将 “%1” 从音频链中移除吗？
+
+磁盘上的索引文件将保持不变，因为无法确认该文件夹属于 Anki Miner。</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -2400,20 +2474,20 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>无效的 Zip</translation>
     </message>
     <message>
-        <source>Zip does not match slot</source>
-        <translation>Zip 与槽位不匹配</translation>
+        <source>No Recoverable Source</source>
+        <translation>无可恢复的来源</translation>
     </message>
     <message>
-        <source>This zip is for '%1', but you are re-importing '%2'. Pick the matching zip.</source>
-        <translation>此 zip 用于“%1”，但你正在重新导入“%2”。请选择匹配的 zip。</translation>
+        <source>No recoverable source was found for '%1'. Restore its saved source.zip or configured JMdict XML and try again.</source>
+        <translation>未找到 “%1” 的可恢复来源。请恢复其已保存的 source.zip 或已配置的 JMdict XML 文件后重试。</translation>
     </message>
     <message>
         <source>Re-import Blocked</source>
         <translation>重新导入被阻止</translation>
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before re-importing dictionaries.</source>
-        <translation>挖词运行正在进行中。请先停止后再重新导入词典。</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
     </message>
     <message>
         <source>Dictionary re-imported</source>
@@ -2452,13 +2526,13 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>扫描失败</translation>
     </message>
     <message>
-        <source>No dictionaries with saved sources were found.
+        <source>No dictionaries eligible for automatic repair were found.
 
-Skipped (no saved source — right-click a dictionary row → Re-import… to seed):
+Skipped (not eligible for automatic repair; use per-row Re-import…):
 </source>
-        <translation>未找到带有已保存来源的词典。
+        <translation>未找到符合自动修复条件的词典。
 
-已跳过（无已保存来源——右键点击词典行 → 重新导入… 以设定）：
+已跳过（不符合自动修复条件；请使用各行的“重新导入…”）：
 </translation>
     </message>
     <message>
@@ -2470,16 +2544,16 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation>无需重新导入</translation>
     </message>
     <message>
-        <source>Reimporting dictionaries…</source>
-        <translation>正在重新导入词典…</translation>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>词典 %1 / %2：%3</translation>
     </message>
     <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation>已重新导入 %1 个词典：</translation>
     </message>
     <message>
-        <source>Skipped (no saved source — right-click a dictionary row → Re-import… to seed):</source>
-        <translation>已跳过（无已保存来源——右键点击词典行 → 重新导入… 以设定）：</translation>
+        <source>Skipped (not eligible for automatic repair; use per-row Re-import…):</source>
+        <translation>已跳过（不符合自动修复条件；请使用各行的“重新导入…”）：</translation>
     </message>
     <message>
         <source>Failed:</source>
@@ -2496,10 +2570,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
     <message>
         <source>Done.</source>
         <translation>完成。</translation>
-    </message>
-    <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation>词典 %1 / %2：%3</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -2544,6 +2614,64 @@ The dictionary was not removed.</source>
 %2
 
 词典未被移除。</translation>
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation>文件未作改动</translation>
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>链中的条目已移除，但 %1 处的文件未作改动，因为无法确认该文件夹属于 Anki Miner。</translation>
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation>无法移除 %1：
+%2
+
+文件完好无损，请重试。</translation>
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this dictionary before retrying.</source>
+        <translation>无法完成 %1 的移除：
+%2
+
+文件已被部分更改。请在重试前重新导入或修复此词典。</translation>
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation>%1 的配置更新失败后无法恢复：
+%2
+
+文件已不在安装位置；配置更新处于待处理状态。请重启 Anki Miner 后再重试。</translation>
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation>%1 的移除已保存，但 Anki Miner 无法刷新它：
+%2
+
+移除已保存，重启后仍将保留。</translation>
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <translation>%1 已被移除，但位于 %2 的墓碑文件无法删除：
+%3
+
+移除已保存；清理操作待处理，将在启动时重试。</translation>
     </message>
     <message>
         <source>Select dictionary storage folder...</source>
@@ -2642,8 +2770,16 @@ This cannot be undone. You would need to reimport from the source zip.</source>
 此操作无法撤销。你需要从来源 zip 重新导入。</translation>
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before removing dictionaries.</source>
-        <translation>挖词运行正在进行中。请先停止后再移除词典。</translation>
+        <source>Remove '%1' from the dictionary list?
+
+Files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>要将 “%1” 从词典列表中移除吗？
+
+磁盘上的文件将保持不变，因为无法确认该文件夹属于 Anki Miner。</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -3410,10 +3546,6 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation>选择词频来源</translation>
     </message>
     <message>
-        <source>Frequency source (*.zip *.csv *.tsv);;All Files (*)</source>
-        <translation>词频来源 (*.zip *.csv *.tsv);;所有文件 (*)</translation>
-    </message>
-    <message>
         <source> (skipped %1 malformed entries)</source>
         <translation> （已跳过 %1 个格式错误的条目）</translation>
     </message>
@@ -3470,6 +3602,14 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation>选择要重新导入的词频来源</translation>
     </message>
     <message>
+        <source>Re-import Blocked</source>
+        <translation>重新导入被阻止</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
+    </message>
+    <message>
         <source>Frequency Source Re-imported</source>
         <translation>已重新导入词频来源</translation>
     </message>
@@ -3484,6 +3624,10 @@ This cannot be undone. You would need to reimport from the source zip.</source>
     <message>
         <source>Re-import Failed</source>
         <translation>重新导入失败</translation>
+    </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation>词频来源 (%1);;所有文件 (*)</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -3504,6 +3648,64 @@ The frequency source was not removed.</source>
 %2
 
 词频来源未被移除。</translation>
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation>文件未作改动</translation>
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>链中的条目已移除，但 %1 处的文件未作改动，因为无法确认该文件夹属于 Anki Miner。</translation>
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation>无法移除 %1：
+%2
+
+文件完好无损，请重试。</translation>
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this frequency source before retrying.</source>
+        <translation>无法完成 %1 的移除：
+%2
+
+文件已被部分更改。请在重试前重新导入或修复此词频来源。</translation>
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation>%1 的配置更新失败后无法恢复：
+%2
+
+文件已不在安装位置；配置更新处于待处理状态。请重启 Anki Miner 后再重试。</translation>
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation>%1 的移除已保存，但 Anki Miner 无法刷新它：
+%2
+
+移除已保存，重启后仍将保留。</translation>
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <translation>%1 已被移除，但位于 %2 的墓碑文件无法删除：
+%3
+
+移除已保存；清理操作待处理，将在启动时重试。</translation>
     </message>
     <message>
         <source>Active Frequency Sources</source>
@@ -3548,8 +3750,8 @@ This cannot be undone. You would need to re-import to use this source again.</so
 此操作无法撤销。若要再次使用此来源，你需要重新导入。</translation>
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before removing frequency sources.</source>
-        <translation>挖掘任务正在进行中。请先停止，再移除词频来源。</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -3870,6 +4072,14 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Join the community on Discord</source>
         <translation>在 Discord 上加入社区</translation>
+    </message>
+    <message>
+        <source>Dictionary Change Blocked</source>
+        <translation>词典更改被阻止</translation>
+    </message>
+    <message>
+        <source>The startup JMdict migration is still stopping. Wait for it to finish and try again.</source>
+        <translation>启动时的 JMdict 迁移仍在停止中。请等待其完成后重试。</translation>
     </message>
     <message>
         <source>Desktop Shortcut</source>
@@ -4880,8 +5090,8 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>下载被阻止</translation>
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before downloading resources.</source>
-        <translation>挖词运行正在进行中。请先停止它再下载资源。</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
     </message>
     <message>
         <source>Preparing download…</source>
