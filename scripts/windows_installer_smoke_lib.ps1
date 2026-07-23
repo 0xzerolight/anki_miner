@@ -175,11 +175,11 @@ function Assert-Installed {
   )
 
   Assert-Condition (Test-Path -LiteralPath $Context.InstalledExe -PathType Leaf) "Installed executable missing: $($Context.InstalledExe)"
-  $keys = if ($AllAppKeys) {
-    @(Get-AppUninstallKeys -Context $Context -Prefix)
+  $keys = @(if ($AllAppKeys) {
+    Get-AppUninstallKeys -Context $Context -Prefix
   } else {
-    @(Get-AppUninstallKeys -Context $Context)
-  }
+    Get-AppUninstallKeys -Context $Context
+  })
   Assert-Condition ($keys.Count -eq 1) "Expected exactly one HKCU uninstall entry for $($Context.UninstallKeyName); found $($keys.Count)."
   Assert-Condition ($keys[0].PSChildName -eq $Context.UninstallKeyName) "Unexpected uninstall key: $($keys[0].PSChildName)"
   $entry = Get-ItemProperty -LiteralPath $keys[0].PSPath
@@ -227,11 +227,11 @@ function Assert-Uninstalled {
   )
 
   Assert-Condition (-not (Test-Path -LiteralPath $Context.InstallDir)) "Install directory survived uninstall: $($Context.InstallDir)"
-  $keys = if ($AllAppKeys) {
-    @(Get-AppUninstallKeys -Context $Context -Prefix)
+  $keys = @(if ($AllAppKeys) {
+    Get-AppUninstallKeys -Context $Context -Prefix
   } else {
-    @(Get-AppUninstallKeys -Context $Context)
-  }
+    Get-AppUninstallKeys -Context $Context
+  })
   Assert-Condition ($keys.Count -eq 0) "HKCU uninstall entry survived uninstall: $($Context.UninstallKeyName)"
 }
 
@@ -308,11 +308,11 @@ function Assert-CleanInstallerRunner {
 
   Assert-Condition ([Environment]::Is64BitProcess) 'Installer smoke requires x64 PowerShell for the 64-bit HKCU uninstall view.'
   Assert-Condition (-not (Test-Path -LiteralPath $Context.InstallDir)) "Dirty runner install directory: $($Context.InstallDir)"
-  $keys = if ($AllAppKeys) {
-    @(Get-AppUninstallKeys -Context $Context -Prefix)
+  $keys = @(if ($AllAppKeys) {
+    Get-AppUninstallKeys -Context $Context -Prefix
   } else {
-    @(Get-AppUninstallKeys -Context $Context)
-  }
+    Get-AppUninstallKeys -Context $Context
+  })
   Assert-Condition ($keys.Count -eq 0) "Dirty runner uninstall entry: $($Context.UninstallKeyName)"
   Assert-Condition (-not (Test-Path -LiteralPath $Context.DesktopShortcut)) "Dirty runner desktop shortcut: $($Context.DesktopShortcut)"
   Assert-Condition (-not (Test-Path -LiteralPath $Context.StartMenuGroup)) "Dirty runner Start Menu group: $($Context.StartMenuGroup)"
