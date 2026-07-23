@@ -46,6 +46,7 @@ from anki_miner.gui.widgets.reading_tab import ReadingTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 from anki_miner.gui.widgets.video_tab import VideoTab
+from anki_miner.services.startup_store_recovery import run_startup_store_recovery
 from anki_miner.services.stats_service import StatsService
 from anki_miner.utils import alass_resolver
 from anki_miner.utils.atomic_io import atomic_write_path
@@ -395,6 +396,20 @@ def _confirm_second_instance(parent: QWidget | None = None) -> bool:
         close_btn.setText(QCoreApplication.translate("App", "Quit"))
     box.setDefaultButton(QMessageBox.StandardButton.Close)
     return box.exec() == QMessageBox.StandardButton.Yes
+
+
+def _run_store_recovery_if_locked(
+    config: AnkiMinerConfig,
+    instance_lock: QLockFile | None,
+) -> None:
+    """Run destructive startup repair only while this process owns the lock."""
+    if instance_lock is None:
+        logger.warning("Skipping startup store recovery because the instance lock is not held")
+        return
+    try:
+        run_startup_store_recovery(config)
+    except Exception:
+        logger.exception("Startup store recovery failed; continuing startup")
 
 
 def _seed_file_dialog_mode(config: AnkiMinerConfig | None) -> None:
@@ -1147,6 +1162,7 @@ def main():
         if not _proceed:
             return
         app._instance_lock = _instance_lock  # type: ignore[attr-defined]
+        _run_store_recovery_if_locked(_early_config, _instance_lock)
 
     composed = compose_main_window(
         _early_config,

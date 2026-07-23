@@ -175,17 +175,12 @@ def validate_index_schema(db_path: Path, family: StoreFamily) -> bool:
     return _validated_index_meta(db_path, family) is not None
 
 
-def prove_owned_slot(root: Path, slot_id: str, family: StoreFamily) -> bool:
-    """Prove canonical slot ownership by exact marker or legacy physical schema."""
-    try:
-        slot = resolve_managed_slot(root, slot_id)
-    except ValueError:
+def _prove_owned_directory(directory: Path, slot_id: str, family: StoreFamily) -> bool:
+    if directory.is_symlink() or not directory.is_dir():
         return False
-    if slot.is_symlink() or not slot.is_dir():
-        return False
-    if read_ownership_marker(slot) == (family, slot_id):
+    if read_ownership_marker(directory) == (family, slot_id):
         return True
-    meta = _validated_index_meta(slot / "index.sqlite", family)
+    meta = _validated_index_meta(directory / "index.sqlite", family)
     if meta is None:
         return False
     if family == "dictionary":
@@ -193,6 +188,32 @@ def prove_owned_slot(root: Path, slot_id: str, family: StoreFamily) -> bool:
     if family == "frequency":
         return "schema_version" in meta
     return meta.get("pack_id") == slot_id
+
+
+def prove_owned_slot(root: Path, slot_id: str, family: StoreFamily) -> bool:
+    """Prove canonical slot ownership by exact marker or legacy physical schema."""
+    try:
+        slot = resolve_managed_slot(root, slot_id)
+    except ValueError:
+        return False
+    return _prove_owned_directory(slot, slot_id, family)
+
+
+def prove_owned_generation(
+    root: Path,
+    slot_id: str,
+    family: StoreFamily,
+    generation: Path,
+) -> bool:
+    """Prove one direct generated sibling belongs to *slot_id* and *family*."""
+    try:
+        resolved_root = root.resolve()
+        validate_store_id(slot_id)
+        if generation.parent.resolve() != resolved_root:
+            return False
+    except (OSError, RuntimeError, ValueError):
+        return False
+    return _prove_owned_directory(generation, slot_id, family)
 
 
 def write_meta(

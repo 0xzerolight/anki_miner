@@ -12,7 +12,6 @@ from anki_miner.services._sqlite_index import is_generated_store_artifact, scan_
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 from anki_miner.services.dictionary.providers.jisho_provider import JishoProvider
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION
-from anki_miner.utils.atomic_io import reconcile_backups_in
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,6 @@ class DictionaryRegistry:
         self._dicts: dict[str, DictMeta] = {}
 
     def load(self) -> None:
-        reconcile_backups_in(self._root)
         self._dicts = scan_index_root(
             self._root,
             self._parse_meta,

@@ -99,6 +99,16 @@ def test_backup_dir_not_enumerated_as_resource(tmp_path: Path):
     assert (tmp_path / "jpdb.tomb-20260721000000000001").is_dir()
 
 
+def test_staging_dir_not_enumerated_as_resource(tmp_path: Path):
+    _build_source(tmp_path, ".staging-orphan", [("猫", "ねこ", 100)])
+
+    reg = FrequencySourceRegistry(tmp_path)
+    reg.load()
+
+    assert reg.get(".staging-orphan") is None
+    assert (tmp_path / ".staging-orphan").is_dir()
+
+
 def test_load_finds_sources(tmp_path: Path):
     _build_source(tmp_path, "jpdb", [("猫", "ねこ", 100)])
     _build_source(tmp_path, "bccwj", [("犬", "いぬ", 200), ("猫", "ねこ", 50)])
