@@ -417,6 +417,85 @@ class TestImportInvalidSubtitleRegex:
                 widget.deleteLater()
 
 
+class TestImportResultFeedback:
+    def test_invalid_fields_and_notices_show_information_summary(self, tab, monkeypatch, tmp_path):
+        import json
+
+        from PyQt6.QtWidgets import QMessageBox
+
+        source = tmp_path / "old-settings.json"
+        source.write_text(
+            json.dumps(
+                {
+                    "anki_miner_settings": 1,
+                    "config_schema_version": 1,
+                    "settings": {
+                        "anki_deck_name": "Imported Deck",
+                        "check_for_updates": {"invalid": "bool"},
+                        "auto_update_ytdlp": True,
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.settings_tab.file_dialogs.get_open_file_name",
+            lambda *a, **k: (str(source), ""),
+        )
+        monkeypatch.setattr(
+            QMessageBox,
+            "question",
+            lambda *a, **k: QMessageBox.StandardButton.Yes,
+        )
+        information: list[tuple[str, str]] = []
+        monkeypatch.setattr(
+            QMessageBox,
+            "information",
+            lambda _parent, title, body, *a, **k: information.append((title, body)),
+        )
+        flashes: list[str] = []
+        monkeypatch.setattr(tab, "_flash_save_status", flashes.append)
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+
+        tab._on_import_settings()
+
+        assert len(received) == 1
+        assert received[0].anki_deck_name == "Imported Deck"
+        assert len(information) == 1
+        assert "check_for_updates" in information[0][1]
+        assert "Auto-update of yt-dlp was disabled (settings imported from an older version)." in information[0][1]
+        assert flashes == []
+
+    def test_clean_import_keeps_inline_imported_flash(self, tab, monkeypatch, tmp_path):
+        import json
+
+        from PyQt6.QtWidgets import QMessageBox
+
+        source = tmp_path / "clean-settings.json"
+        source.write_text(json.dumps({"anki_deck_name": "Clean Import"}), encoding="utf-8")
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.settings_tab.file_dialogs.get_open_file_name",
+            lambda *a, **k: (str(source), ""),
+        )
+        monkeypatch.setattr(
+            QMessageBox,
+            "question",
+            lambda *a, **k: QMessageBox.StandardButton.Yes,
+        )
+
+        def fail_information(*_args, **_kwargs):
+            raise AssertionError("clean import must not show an information dialog")
+
+        monkeypatch.setattr(QMessageBox, "information", fail_information)
+        flashes: list[str] = []
+        monkeypatch.setattr(tab, "_flash_save_status", flashes.append)
+
+        tab._on_import_settings()
+
+        assert flashes == ["✓ Imported"]
+
+
 class TestIPlusOneFilterRoundTrip:
     """Load/save round-trip for the i+1 sentence filter checkbox."""
 

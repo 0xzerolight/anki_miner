@@ -9,6 +9,7 @@ except tuple).
 from __future__ import annotations
 
 import builtins
+import json
 import os
 import stat
 import types
@@ -175,6 +176,107 @@ class TestLoadResilience:
         assert isinstance(loaded, AnkiMinerConfig)
         assert loaded.theme == create_default_config().theme
         assert any("config" in r.message.lower() for r in caplog.records)
+
+
+class TestBackupRecoveryRepair:
+    def test_recovery_repairs_primary_and_preserves_bak_and_corrupt_bytes(self, tmp_config: Path):
+        bak_path = tmp_config.with_name(tmp_config.name + ".bak")
+        corrupt_path = tmp_config.with_name(tmp_config.name + ".corrupt")
+        corrupt_bytes = b'{"theme":"light",BROKEN'
+        bak_bytes = json.dumps(
+            {
+                "config_schema_version": GUIConfigManager.CONFIG_SCHEMA_VERSION,
+                "theme": "dark",
+            },
+            indent=3,
+        ).encode()
+        tmp_config.write_bytes(corrupt_bytes)
+        bak_path.write_bytes(bak_bytes)
+
+        loaded = GUIConfigManager.load_config()
+
+        assert loaded.theme == "dark"
+        assert tmp_config.read_bytes() == bak_bytes
+        assert bak_path.read_bytes() == bak_bytes
+        assert corrupt_path.read_bytes() == corrupt_bytes
+
+    def test_save_after_recovery_rotates_valid_primary_to_bak(self, tmp_config: Path):
+        bak_path = tmp_config.with_name(tmp_config.name + ".bak")
+        tmp_config.write_bytes(b"{BROKEN PRIMARY")
+        bak_path.write_text(
+            json.dumps(
+                {
+                    "config_schema_version": GUIConfigManager.CONFIG_SCHEMA_VERSION,
+                    "theme": "dark",
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        GUIConfigManager.load_config()
+        GUIConfigManager.save_config(replace(create_default_config(), theme="light"))
+
+        rotated = json.loads(bak_path.read_text(encoding="utf-8"))
+        assert rotated["theme"] == "dark"
+        assert json.loads(tmp_config.read_text(encoding="utf-8"))["theme"] == "light"
+
+
+class TestFutureSchemaArchival:
+    def test_future_schema_archives_primary_bytes_and_warns(self, tmp_config: Path, caplog):
+        future_schema = GUIConfigManager.CONFIG_SCHEMA_VERSION + 4
+        primary_bytes = json.dumps(
+            {"config_schema_version": future_schema, "theme": "dark"},
+            indent=3,
+        ).encode()
+        tmp_config.write_bytes(primary_bytes)
+        archive = tmp_config.with_name(f"gui_config.from-schema-{future_schema}.json")
+
+        with caplog.at_level("WARNING"):
+            loaded = GUIConfigManager.load_config()
+
+        assert loaded.theme == "dark"
+        assert archive.read_bytes() == primary_bytes
+        assert any(str(archive) in record.message for record in caplog.records)
+
+    def test_identical_future_schema_reload_reuses_archive(self, tmp_config: Path):
+        future_schema = GUIConfigManager.CONFIG_SCHEMA_VERSION + 1
+        tmp_config.write_text(
+            json.dumps({"config_schema_version": future_schema, "anki_deck_name": "Future"}),
+            encoding="utf-8",
+        )
+
+        GUIConfigManager.load_config()
+        GUIConfigManager.load_config()
+
+        assert sorted(tmp_config.parent.glob(f"gui_config.from-schema-{future_schema}*.json")) == [
+            tmp_config.with_name(f"gui_config.from-schema-{future_schema}.json")
+        ]
+
+    def test_different_future_configs_with_same_schema_get_numbered_archives(self, tmp_config: Path):
+        future_schema = GUIConfigManager.CONFIG_SCHEMA_VERSION + 2
+        first_bytes = json.dumps({"config_schema_version": future_schema, "anki_deck_name": "First"}).encode()
+        second_bytes = json.dumps({"config_schema_version": future_schema, "anki_deck_name": "Second"}).encode()
+
+        tmp_config.write_bytes(first_bytes)
+        GUIConfigManager.load_config()
+        tmp_config.write_bytes(second_bytes)
+        GUIConfigManager.load_config()
+
+        assert tmp_config.with_name(f"gui_config.from-schema-{future_schema}.json").read_bytes() == first_bytes
+        assert tmp_config.with_name(f"gui_config.from-schema-{future_schema}.2.json").read_bytes() == second_bytes
+
+    def test_normal_saves_never_modify_future_schema_archives(self, tmp_config: Path):
+        future_schema = GUIConfigManager.CONFIG_SCHEMA_VERSION + 3
+        future_bytes = json.dumps({"config_schema_version": future_schema, "theme": "dark"}).encode()
+        archive = tmp_config.with_name(f"gui_config.from-schema-{future_schema}.json")
+        tmp_config.write_bytes(future_bytes)
+        GUIConfigManager.load_config()
+
+        GUIConfigManager.save_config(replace(create_default_config(), theme="light"))
+        GUIConfigManager.save_config(replace(create_default_config(), theme="system"))
+
+        assert archive.read_bytes() == future_bytes
+        assert not tmp_config.with_name(f"gui_config.from-schema-{future_schema}.2.json").exists()
 
 
 class TestAtomicSave:

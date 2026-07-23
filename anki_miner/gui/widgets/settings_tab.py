@@ -309,8 +309,7 @@ class SettingsTab(QWidget):
         self.reset_settings_button = ModernButton(self.tr("Reset to Defaults…"), variant="secondary")
         self.reset_settings_button.setToolTip(
             self.tr(
-                "Reset settings to defaults. Installed dictionaries, audio, "
-                "frequency lists, and your theme are kept."
+                "Reset settings to defaults. Installed dictionaries, audio, frequency lists, and your theme are kept."
             )
         )
         self.reset_settings_button.clicked.connect(self._on_reset_to_defaults_clicked)
@@ -977,7 +976,7 @@ class SettingsTab(QWidget):
         if reply != QMessageBox.StandardButton.Yes:
             return
         try:
-            new_config = GUIConfigManager.import_config(Path(source), self.config)
+            import_result = GUIConfigManager.import_config(Path(source), self.config)
         except (json.JSONDecodeError, TypeError, ValueError, OSError) as e:
             QMessageBox.critical(
                 self,
@@ -985,8 +984,9 @@ class SettingsTab(QWidget):
                 tr_format(self.tr("Could not import %1:\n%2"), source, e),
             )
             return
-        # Validate an imported subtitle regex the same way the commit path does.
-        # import_config applies the pattern without validation, so
+        new_config = import_result.config
+        # Validate imported subtitle-regex semantics the same way the commit path does.
+        # import_config validates the field types but does not compile the pattern, so
         # an invalid pattern would otherwise persist even while disabled. Reject
         # it here and warn the user, so the failure is surfaced rather than stored.
         if new_config.subtitle_regex_filter or new_config.subtitle_regex_replacement:
@@ -1011,7 +1011,31 @@ class SettingsTab(QWidget):
         # auto-save commit.
         self.config_changed.emit(new_config)
         self._load_config()
-        self._flash_save_status(self.tr("✓ Imported"))
+        if import_result.invalid_fields or import_result.notices:
+            summary: list[str] = []
+            if import_result.invalid_fields:
+                summary.append(
+                    tr_format(
+                        self.tr("Invalid imported fields were ignored; current values were kept: %1"),
+                        ", ".join(import_result.invalid_fields),
+                    )
+                )
+            for notice in import_result.notices:
+                if notice == ("Auto-update of yt-dlp was disabled (settings imported from an older version)."):
+                    summary.append(
+                        self.tr("Auto-update of yt-dlp was disabled (settings imported from an older version).")
+                    )
+                elif notice == ("Settings from version 2.8.3 were mapped conservatively to schema 2."):
+                    summary.append(self.tr("Settings from version 2.8.3 were mapped conservatively to schema 2."))
+                else:
+                    summary.append(notice)
+            QMessageBox.information(
+                self,
+                self.tr("Settings Imported"),
+                "\n\n".join(summary),
+            )
+        else:
+            self._flash_save_status(self.tr("✓ Imported"))
 
     def _on_reset_to_defaults_clicked(self) -> None:
         """Reset settings to defaults after an explicit confirm (Issue #99).
