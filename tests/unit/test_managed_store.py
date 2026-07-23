@@ -412,3 +412,34 @@ def test_scan_index_root_prefilters_every_generated_artifact(tmp_path: Path) -> 
 
     assert result == {}
     assert parsed == []
+
+
+class TestReadonlySqliteUri:
+    """Windows extended-length prefixes must not leak into the file: URI."""
+
+    def test_unc_extended_prefix_stripped(self):
+        from anki_miner.services._sqlite_index import _strip_extended_length_prefix
+
+        assert _strip_extended_length_prefix("\\\\?\\UNC\\server\\share\\db") == "\\\\server\\share\\db"
+
+    def test_drive_extended_prefix_stripped(self):
+        from anki_miner.services._sqlite_index import _strip_extended_length_prefix
+
+        assert _strip_extended_length_prefix("\\\\?\\C:\\dicts\\a\\index.sqlite") == "C:\\dicts\\a\\index.sqlite"
+
+    def test_plain_paths_untouched(self):
+        from anki_miner.services._sqlite_index import _strip_extended_length_prefix
+
+        assert _strip_extended_length_prefix("/home/u/.anki_miner/dicts/a/index.sqlite") is None
+        assert _strip_extended_length_prefix("C:\\dicts\\a\\index.sqlite") is None
+
+    def test_readonly_uri_roundtrip_opens(self, tmp_path):
+        import sqlite3
+
+        from anki_miner.services._sqlite_index import readonly_sqlite_uri
+
+        db = tmp_path / "weird #? %dir" / "index.sqlite"
+        db.parent.mkdir()
+        sqlite3.connect(db).close()
+        conn = sqlite3.connect(readonly_sqlite_uri(db), uri=True)
+        conn.close()
