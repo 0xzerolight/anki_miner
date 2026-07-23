@@ -20,6 +20,9 @@ class _Signal:
     def connect(self, slot: Callable[..., None]) -> None:
         self._slots.append(slot)
 
+    def disconnect(self) -> None:
+        self._slots.clear()
+
     def emit(self, *args: object) -> None:
         for slot in tuple(self._slots):
             slot(*args)
@@ -634,17 +637,22 @@ def test_18_watchdog_and_first_progress_reset_per_job_and_wait_unarmed(
 
     predecessor.finish()
     assert timers[0].start_calls == 1
+    timers[0].timeout.emit()
     first.progress.emit(1, 2, "First")
     first.import_finished.emit("one-id", {})
     first.finish()
     assert timers[0].start_calls == 3
+    timers[0].timeout.emit()
     second.progress.emit(1, 2, "Second")
     second.import_finished.emit("two-id", {})
     second.finish()
 
     assert len(results) == 1
-    first_progress_logs = [record for record in caplog.records if "first progress" in record.getMessage()]
-    assert len(first_progress_logs) == 2
+    for marker in ("no progress for 10 s", "first progress", "domain latch", "native finished"):
+        messages = [record.getMessage() for record in caplog.records if marker in record.getMessage()]
+        assert len(messages) == 2
+        assert "index=0" in messages[0]
+        assert "index=1" in messages[1]
 
 
 def test_19_batch_callback_failure_runs_error_callback_once_and_cleans_up(

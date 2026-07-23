@@ -129,6 +129,7 @@ class ModalImportFlowMixin:
     _retained_import_workers: list[ImportWorker]
     _scan_worker: SingleCallWorker | None = None
     _scan_generation: int = 0
+    _active_batch_cancel_hook: Callable[[], None] | None = None
 
     def _set_import_buttons_enabled(self, enabled: bool) -> None:
         """Toggle import-trigger buttons — provided by the concrete flow."""
@@ -186,7 +187,6 @@ class ModalImportFlowMixin:
         no_progress_timer = QTimer(dlg)
         no_progress_timer.setSingleShot(True)
         no_progress_timer.setInterval(_NO_PROGRESS_WARNING_MS)
-        no_progress_timer.timeout.connect(lambda: logger.warning("Import trace %s no progress for 10 s", trace_id))
         return dlg, no_progress_timer
 
     def _wire_latched_import_step(
@@ -197,11 +197,21 @@ class ModalImportFlowMixin:
         no_progress_timer: QTimer,
         state: _ModalImportState,
         trace_id: str,
+        job_index: int,
         format_progress: Callable[[str], str],
         is_current: Callable[[], bool],
         on_native_finished: Callable[[], None],
     ) -> Callable[[], None]:
         """Wire one worker's guarded progress, first-result latch, and native barrier."""
+        with contextlib.suppress(TypeError, RuntimeError):
+            no_progress_timer.timeout.disconnect()
+        no_progress_timer.timeout.connect(
+            lambda: logger.warning(
+                "Import trace %s no progress for 10 s index=%d",
+                trace_id,
+                job_index,
+            )
+        )
 
         def on_progress(cur: int, total: int, msg: str) -> None:
             if not is_current() or state.cancel_requested or state.kind is not None or state.terminal_handled:
@@ -220,10 +230,11 @@ class ModalImportFlowMixin:
             if not state.first_progress_seen:
                 state.first_progress_seen = True
                 logger.info(
-                    "Import trace %s first progress current=%d total=%d",
+                    "Import trace %s first progress current=%d total=%d index=%d",
                     trace_id,
                     cur,
                     total,
+                    job_index,
                 )
 
         def latch_outcome(
@@ -234,14 +245,20 @@ class ModalImportFlowMixin:
             error: str | None = None,
         ) -> None:
             if not is_current() or state.terminal_handled:
-                logger.warning("Import trace %s late domain signal ignored kind=%s", trace_id, kind)
+                logger.warning(
+                    "Import trace %s late domain signal ignored kind=%s index=%d",
+                    trace_id,
+                    kind,
+                    job_index,
+                )
                 return
             if state.kind is not None:
                 logger.warning(
-                    "Import trace %s duplicate domain signal ignored first=%s late=%s",
+                    "Import trace %s duplicate domain signal ignored first=%s late=%s index=%d",
                     trace_id,
                     state.kind,
                     kind,
+                    job_index,
                 )
                 return
             state.kind = kind
@@ -250,7 +267,7 @@ class ModalImportFlowMixin:
             state.error = error
             with contextlib.suppress(RuntimeError):
                 no_progress_timer.stop()
-            logger.info("Import trace %s domain latch kind=%s", trace_id, kind)
+            logger.info("Import trace %s domain latch kind=%s index=%d", trace_id, kind, job_index)
 
         def on_done(resource_id: str, meta: dict) -> None:
             latch_outcome("success", resource_id=resource_id, meta=meta)
@@ -263,11 +280,11 @@ class ModalImportFlowMixin:
 
         def on_thread_finished() -> None:
             if not is_current() or state.terminal_handled:
-                logger.warning("Import trace %s late native finish ignored", trace_id)
+                logger.warning("Import trace %s late native finish ignored index=%d", trace_id, job_index)
                 return
             with contextlib.suppress(RuntimeError):
                 no_progress_timer.stop()
-            logger.info("Import trace %s native finished", trace_id)
+            logger.info("Import trace %s native finished index=%d", trace_id, job_index)
             on_native_finished()
 
         def cancel_step() -> None:
@@ -430,6 +447,7 @@ class ModalImportFlowMixin:
             no_progress_timer=no_progress_timer,
             state=state,
             trace_id=trace_id,
+            job_index=0,
             format_progress=lambda message: message,
             is_current=lambda: self._active_import_worker is worker,
             on_native_finished=on_thread_finished,
@@ -465,6 +483,21 @@ class ModalImportFlowMixin:
         state = _ChainedImportState[_JobT]()
         cancel_current: Callable[[], None] | None = None
 
+        def cancel_batch_session() -> None:
+            if state.terminal_handled:
+                return
+            state.cancel_requested = True
+            # A retained predecessor belongs to the close join; only the
+            # worker created by this batch is cancelled here.
+            worker = state.current_worker
+            if worker is None:
+                return
+            if state.current_step is not None:
+                state.current_step.cancel_requested = True
+            worker.cancel()
+
+        self._active_batch_cancel_hook = cancel_batch_session
+
         def cleanup_current_worker() -> None:
             nonlocal cancel_current
             worker = state.current_worker
@@ -475,6 +508,8 @@ class ModalImportFlowMixin:
                 self._release_import_worker(worker)
 
         def finish_batch() -> None:
+            if self._active_batch_cancel_hook is cancel_batch_session:
+                self._active_batch_cancel_hook = None
             result = _ChainedImportResult(
                 successes=tuple(state.successes),
                 failures=tuple(state.failures),
@@ -509,9 +544,7 @@ class ModalImportFlowMixin:
         def on_cancel_requested() -> None:
             if state.terminal_handled:
                 return
-            state.cancel_requested = True
-            if cancel_current is not None:
-                cancel_current()
+            cancel_batch_session()
             show_cancelling()
             # Title-bar close hides the dialog after ``canceled`` slots return.
             QTimer.singleShot(0, show_cancelling)
@@ -658,6 +691,7 @@ class ModalImportFlowMixin:
                 no_progress_timer=no_progress_timer,
                 state=step,
                 trace_id=trace_id,
+                job_index=index,
                 format_progress=lambda message: format_label(index + 1, len(jobs), job, message),
                 is_current=is_current,
                 on_native_finished=on_native_finished,
@@ -682,6 +716,12 @@ class ModalImportFlowMixin:
 
         dlg.canceled.connect(on_cancel_requested)
         launch_next()
+
+    def cancel_active_batch(self) -> None:
+        """Cancel the active chained session without waiting on any worker."""
+        hook = self._active_batch_cancel_hook
+        if hook is not None:
+            hook()
 
     def _join_active_import_worker(self, join_noun: str) -> ImportWorker | None:
         """Retain a running predecessor and refuse replacement without waiting."""

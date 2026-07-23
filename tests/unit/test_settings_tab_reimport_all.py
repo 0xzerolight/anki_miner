@@ -484,6 +484,31 @@ def test_reimport_all_defers_reassignment_until_native_finished_without_wait(
     assert tab._dict_import_flow._active_import_worker is stubbed_workers["instances"][1]
 
 
+def test_reimport_all_shutdown_while_waiting_does_not_dispatch_after_predecessor_finishes(
+    tab_for_reimport_all, monkeypatch, stubbed_workers
+):
+    """Direct shutdown cancels the batch but leaves its predecessor for the close join."""
+    tab = tab_for_reimport_all
+    dicts_root = tab.config.dicts_root
+    _make_dict_on_disk(dicts_root, "dict-a", fmt="yomitan", source_name="Dict A")
+    tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="dict-a", enabled=True),))
+    _silence_dialogs(monkeypatch)
+
+    predecessor = stubbed_workers["yomitan_factory"]()
+    stubbed_workers["yomitan_factory"].reset_mock()
+    tab._dict_import_flow._active_import_worker = predecessor
+
+    tab._dict_import_flow.reimport_all()
+    assert stubbed_workers["yomitan_factory"].call_count == 0
+
+    tab.shutdown()
+
+    assert predecessor in tab.iter_close_workers()
+    predecessor.cancel.assert_not_called()
+    _emit_native_finished(predecessor)
+    assert stubbed_workers["yomitan_factory"].call_count == 0
+
+
 def test_reimport_all_refresh_failure_warns_and_restores_controls(tab_for_reimport_all, monkeypatch, stubbed_workers):
     tab = tab_for_reimport_all
     dicts_root = tab.config.dicts_root
