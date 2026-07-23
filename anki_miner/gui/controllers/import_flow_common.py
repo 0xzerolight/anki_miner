@@ -160,13 +160,17 @@ class ModalImportFlowMixin:
                 with contextlib.suppress(RuntimeError):
                     on_error(message)
 
-        self._scan_worker = run_off_thread(
-            self._parent,
-            work,
-            _on_done,
-            _on_error,
-            pass_cancel_check=pass_cancel_check,
-        )
+        try:
+            self._scan_worker = run_off_thread(
+                self._parent,
+                work,
+                _on_done,
+                _on_error,
+                pass_cancel_check=pass_cancel_check,
+            )
+        except Exception as exc:  # noqa: BLE001 - dispatch failure must release the flow token
+            self._scan_worker = None
+            _on_error(str(exc))
 
     def _create_modal_import_dialog(
         self,
@@ -384,6 +388,7 @@ class ModalImportFlowMixin:
         if self._join_active_import_worker(join_noun) is not None:
             QMessageBox.warning(self._parent, failure_title, refusal_message)
             worker.deleteLater()
+            self._set_import_buttons_enabled(True)
             return
 
         self._active_import_worker = worker
@@ -454,7 +459,26 @@ class ModalImportFlowMixin:
         )
         dlg.canceled.connect(on_cancel_requested)
         logger.info("Import trace %s worker start", trace_id)
-        worker.start()
+        try:
+            worker.start()
+        except Exception as exc:  # noqa: BLE001 - synchronous start failure must not strand the modal
+            logger.exception("Import trace %s worker start failed", trace_id)
+            if still_running(worker):
+                state.kind = "failed"
+                state.error = str(exc)
+                with contextlib.suppress(RuntimeError):
+                    no_progress_timer.stop()
+            else:
+                self._finish_modal_import_dialog(
+                    state=state,
+                    dlg=dlg,
+                    no_progress_timer=no_progress_timer,
+                    trace_id=trace_id,
+                    on_finished=lambda: None,
+                    on_finished_error=None,
+                    cleanup_worker=lambda: self._release_import_worker(worker),
+                )
+            raise
 
     def _run_chained_imports(
         self,

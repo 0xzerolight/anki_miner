@@ -217,6 +217,14 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
             if isinstance(widget, _ChainRow) and widget.reimport_button is not None:
                 widget.reimport_button.setEnabled(enabled)
 
+    def _set_mutation_controls_enabled(self, enabled: bool) -> None:
+        self.dicts_root_selector.setEnabled(enabled)
+        self._reset_dicts_root_btn.setEnabled(enabled)
+        self._add_btn.setEnabled(enabled)
+        self._reimport_btn.setEnabled(enabled)
+        self._restore_btn.setEnabled(enabled)
+        self.set_per_row_reimport_enabled(enabled)
+
     def _setup_fields(self) -> None:
         # Storage folder picker — first so it sits above the dictionary chain.
         # Issue #45: lets users move ``dicts/`` off the home partition (e.g. to
@@ -439,7 +447,7 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         # self._chain then targets an arbitrary real dictionary the user never
         # clicked — and Remove would rmtree it. Bail, mirroring the frequency
         # panel's identical guard.
-        if self._scan_in_flight:
+        if self._scan_in_flight or self.has_active_mutation():
             return
         item = self._list.itemAt(pos)
         if item is None:

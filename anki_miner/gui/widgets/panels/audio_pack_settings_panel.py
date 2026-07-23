@@ -358,6 +358,10 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         """Enable/disable the retry button while its off-thread sweep runs."""
         self._retry_missing_btn.setEnabled(enabled)
 
+    def _set_mutation_controls_enabled(self, enabled: bool) -> None:
+        self._add_btn.setEnabled(enabled)
+        self._add_online_btn.setEnabled(enabled)
+
     def set_chain(
         self,
         chain: tuple[AudioSourceEntry, ...],
@@ -393,12 +397,22 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
 
     def _on_add_online_source(self) -> None:
         """Open the Add-Source dialog and append the chosen custom entry."""
-        dialog = _AddSourceDialog(self)
-        if dialog.exec() != QDialog.DialogCode.Accepted:
+        if not self.prepare_for_mutation():
             return
-        self.add_source_entry(
-            AudioSourceEntry(kind=dialog.selected_kind(), url=dialog.url_value(), enabled=True)  # type: ignore[arg-type]
-        )
+        token = self.hold_mutation("add-online-source")
+        try:
+            dialog = _AddSourceDialog(self)
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return
+            self.add_source_entry(
+                AudioSourceEntry(
+                    kind=dialog.selected_kind(),  # type: ignore[arg-type]
+                    url=dialog.url_value(),
+                    enabled=True,
+                )
+            )
+        finally:
+            self.release(token)
 
     def _describe_entry(self, entry: AudioSourceEntry, view: _RegistryView | None) -> tuple[str, str, int, bool, bool]:
         """Return display, format, count, missing-dir, and stale-schema state."""
@@ -486,6 +500,8 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
 
         Built-in online rows (jpod101, googletts) have no menu — they can't be re-imported.
         """
+        if self._scan_in_flight or self.has_active_mutation():
+            return
         item = self._list.itemAt(pos)
         if item is None:
             return

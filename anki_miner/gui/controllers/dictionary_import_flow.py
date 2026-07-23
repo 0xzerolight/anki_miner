@@ -28,6 +28,7 @@ from anki_miner.gui.controllers.import_flow_common import (
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.panels import DictionarySettingsPanel
+from anki_miner.gui.widgets.panels.chain_settings_panel_base import MutationToken
 from anki_miner.gui.workers.import_worker import ImportWorker
 from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip, read_yomitan_title
 from anki_miner.services.dictionary.registry import DictionaryRegistry, DictMeta
@@ -79,6 +80,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         # destroyed mid-run if it fell out of scope before joining.
         self._active_import_worker: ImportWorker | None = None
         self._retained_import_workers: list[ImportWorker] = []
+        self._mutation_token: MutationToken | None = None
 
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close.
@@ -121,11 +123,20 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         return ("\n\n" + "\n".join(notes)) if notes else ""
 
     def _set_import_buttons_enabled(self, enabled: bool) -> None:
-        """Toggle import-trigger buttons. Prevents overlapping import workers."""
-        self._panel._add_btn.setEnabled(enabled)
-        self._panel._reimport_btn.setEnabled(enabled)
-        self._panel._restore_btn.setEnabled(enabled)
-        self._panel.set_per_row_reimport_enabled(enabled)
+        """Acquire/release the panel token that gates every mutation control."""
+        if enabled:
+            token = self._mutation_token
+            self._mutation_token = None
+            if token is not None:
+                self._panel.release(token)
+        elif self._mutation_token is None:
+            self._mutation_token = self._panel.hold_mutation("import")
+
+    def _begin_mutation(self, kind: str) -> bool:
+        if self._mutation_token is not None or not self._panel.prepare_for_mutation():
+            return False
+        self._mutation_token = self._panel.hold_mutation(kind)
+        return True
 
     def _with_dict_at_top(self, dict_id: str) -> tuple[ChainEntry, ...]:
         """Return the current chain with ``dict_id`` placed (or moved) to the top."""
@@ -136,6 +147,8 @@ class DictionaryImportFlow(ModalImportFlowMixin):
 
     def add_dict(self) -> None:
         """Prompt for a Yomitan zip and run the import worker."""
+        if not self._begin_mutation("add"):
+            return
         trace_id = _begin_import_trace("dictionary add")
         picker_started = _log_import_picker_enter(trace_id, "dictionary zip")
         zip_path_str, _ = file_dialogs.get_open_file_name(
@@ -146,9 +159,14 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         )
         _log_import_picker_return(trace_id, "dictionary zip", picker_started, zip_path_str)
         if not zip_path_str:
+            self._set_import_buttons_enabled(True)
             return
 
-        worker = ImportWorker.for_yomitan(Path(zip_path_str), self._get_config().dicts_root)
+        try:
+            worker = ImportWorker.for_yomitan(Path(zip_path_str), self._get_config().dicts_root)
+        except Exception:
+            self._set_import_buttons_enabled(True)
+            raise
 
         def on_success(dict_id: str, meta: dict) -> None:
             new_chain = self._with_dict_at_top(dict_id)
@@ -245,6 +263,8 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         """
         trace_id = _trace_id or _begin_import_trace("dictionary reimport")
         if _scan_result is None:
+            if not self._begin_mutation("reimport"):
+                return
             picker_started = _log_import_picker_enter(trace_id, "dictionary zip")
             zip_path_str, _ = file_dialogs.get_open_file_name(
                 self._parent,
@@ -254,10 +274,10 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             )
             _log_import_picker_return(trace_id, "dictionary zip", picker_started, zip_path_str)
             if not zip_path_str:
+                self._set_import_buttons_enabled(True)
                 return
 
             zip_path = Path(zip_path_str)
-            self._set_import_buttons_enabled(False)
 
             def _scan() -> tuple[Path, str, bool]:
                 derived_id = derive_dict_id_from_zip(zip_path)
@@ -284,7 +304,6 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             return
 
         zip_path, derived_id, base_matches = _scan_result
-        self._set_import_buttons_enabled(True)
 
         # A catalog (or former-catalog) slot is pinned (its on-disk id is a
         # stable id like "jmdict-english" or the legacy "jitendex",
@@ -306,6 +325,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                     slot_id,
                 ),
             )
+            self._set_import_buttons_enabled(True)
             return
 
         # Drop sqlite handles before the importer renames the dict folder.
@@ -320,12 +340,22 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                     "DictionaryImportFlow", "A mining run is in progress. Stop it before re-importing dictionaries."
                 ),
             )
+            self._set_import_buttons_enabled(True)
             return
 
         # Pin the existing slot so a same-dictionary zip with a newer date
         # rebuilds in place (dict_id=slot_id is a no-op for non-catalog slots,
         # where derived_id already equals slot_id).
-        worker = ImportWorker.for_yomitan(zip_path, self._get_config().dicts_root, overwrite=True, dict_id=slot_id)
+        try:
+            worker = ImportWorker.for_yomitan(
+                zip_path,
+                self._get_config().dicts_root,
+                overwrite=True,
+                dict_id=slot_id,
+            )
+        except Exception:
+            self._set_import_buttons_enabled(True)
+            raise
 
         def on_success(dict_id: str, meta: dict) -> None:
             # Refresh registry so the stale-flag warning clears on the row.
@@ -368,6 +398,8 @@ class DictionaryImportFlow(ModalImportFlowMixin):
 
     def reimport_jmdict(self) -> None:
         """Reimport JMdict from the configured XML path."""
+        if not self._begin_mutation("reimport"):
+            return
         trace_id = _begin_import_trace("JMdict reimport")
         xml = self._get_config().jmdict_path
         if not xml.exists():
@@ -381,6 +413,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                     xml,
                 ),
             )
+            self._set_import_buttons_enabled(True)
             return
 
         # Drop sqlite handles before the importer renames the dict folder
@@ -394,9 +427,14 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                     "DictionaryImportFlow", "A mining run is in progress. Stop it before re-importing dictionaries."
                 ),
             )
+            self._set_import_buttons_enabled(True)
             return
 
-        worker = ImportWorker.for_jmdict(xml, self._get_config().dicts_root)
+        try:
+            worker = ImportWorker.for_jmdict(xml, self._get_config().dicts_root)
+        except Exception:
+            self._set_import_buttons_enabled(True)
+            raise
 
         def on_success(_dict_id: str, _meta: dict) -> None:
             # Re-render chain so the (refreshed) entry count is reflected.
@@ -459,9 +497,10 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         """
         trace_id = _trace_id or _begin_import_trace("dictionary reimport all")
         if _scan_result is None:
+            if not self._begin_mutation("reimport-all"):
+                return
             config = self._get_config()
             chain = self._panel.get_chain()
-            self._set_import_buttons_enabled(False)
 
             def _scan() -> tuple[list[tuple[str, str, str, Path]], list[str]]:
                 registry = DictionaryRegistry(config.dicts_root)
@@ -506,7 +545,6 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             return
 
         jobs, missing_legacy = _scan_result
-        self._set_import_buttons_enabled(True)
 
         if not jobs:
             if missing_legacy:
@@ -520,6 +558,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             QMessageBox.information(
                 self._parent, QCoreApplication.translate("DictionaryImportFlow", "Nothing to reimport"), body
             )
+            self._set_import_buttons_enabled(True)
             return
 
         # Drop sqlite handles before any worker touches the dict folders.
@@ -534,6 +573,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                     "DictionaryImportFlow", "A mining run is in progress. Stop it before re-importing dictionaries."
                 ),
             )
+            self._set_import_buttons_enabled(True)
             return
 
         def make_worker(job: tuple[str, str, str, Path]) -> ImportWorker:
@@ -655,9 +695,10 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         needs updating.
         """
         if _scan_result is None:
+            if not self._begin_mutation("restore"):
+                return
             config = self._get_config()
             panel_config = replace(config, dictionary_chain=self._panel.get_chain())
-            self._set_import_buttons_enabled(False)
 
             def _scan() -> list[DictMeta]:
                 registry = DictionaryRegistry(config.dicts_root)
@@ -680,41 +721,42 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             return
 
         orphans = _scan_result
-        self._set_import_buttons_enabled(True)
+        try:
+            if not orphans:
+                QMessageBox.information(
+                    self._parent,
+                    QCoreApplication.translate("DictionaryImportFlow", "Nothing to restore"),
+                    QCoreApplication.translate("DictionaryImportFlow", "All on-disk dictionaries are already listed."),
+                )
+                return
 
-        if not orphans:
-            QMessageBox.information(
+            body = (
+                QCoreApplication.translate(
+                    "DictionaryImportFlow", "Found dictionaries on disk that aren't in your list:\n\n"
+                )
+                + "\n".join(f"  • {m.source_name}" for m in orphans)
+                + "\n\n"
+                + QCoreApplication.translate("DictionaryImportFlow", "Add them to the dictionary list?")
+            )
+            reply = QMessageBox.question(
                 self._parent,
-                QCoreApplication.translate("DictionaryImportFlow", "Nothing to restore"),
-                QCoreApplication.translate("DictionaryImportFlow", "All on-disk dictionaries are already listed."),
+                QCoreApplication.translate("DictionaryImportFlow", "Restore from Disk"),
+                body,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
             )
-            return
+            if reply != QMessageBox.StandardButton.Yes:
+                return
 
-        body = (
-            QCoreApplication.translate(
-                "DictionaryImportFlow", "Found dictionaries on disk that aren't in your list:\n\n"
-            )
-            + "\n".join(f"  • {m.source_name}" for m in orphans)
-            + "\n\n"
-            + QCoreApplication.translate("DictionaryImportFlow", "Add them to the dictionary list?")
-        )
-        reply = QMessageBox.question(
-            self._parent,
-            QCoreApplication.translate("DictionaryImportFlow", "Restore from Disk"),
-            body,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        if reply != QMessageBox.StandardButton.Yes:
-            return
+            chain = list(self._panel.get_chain())
+            new_entries = [ChainEntry(kind="indexed", dict_id=m.dict_id, enabled=True) for m in orphans]
+            # Insert before the first jisho entry so the online fallback stays last.
+            # The UI only ever creates one jisho row; "first jisho wins" is fine.
+            insert_at = next((i for i, e in enumerate(chain) if e.kind == "jisho"), len(chain))
+            new_chain = tuple(chain[:insert_at] + new_entries + chain[insert_at:])
 
-        chain = list(self._panel.get_chain())
-        new_entries = [ChainEntry(kind="indexed", dict_id=m.dict_id, enabled=True) for m in orphans]
-        # Insert before the first jisho entry so the online fallback stays last.
-        # The UI only ever creates one jisho row; "first jisho wins" is fine.
-        insert_at = next((i for i, e in enumerate(chain) if e.kind == "jisho"), len(chain))
-        new_chain = tuple(chain[:insert_at] + new_entries + chain[insert_at:])
-
-        self._panel.refresh_registry()
-        self._panel.set_chain(new_chain)
-        self._persist_chain(new_chain)
+            self._panel.refresh_registry()
+            self._panel.set_chain(new_chain)
+            self._persist_chain(new_chain)
+        finally:
+            self._set_import_buttons_enabled(True)

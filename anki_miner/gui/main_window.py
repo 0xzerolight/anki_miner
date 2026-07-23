@@ -3,7 +3,8 @@
 import logging
 import sys
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -417,6 +418,28 @@ class MainWindow(QMainWindow):
                 return i
         return -1
 
+    @contextmanager
+    def _dictionary_mutation_guard(self, kind: str) -> Iterator[bool]:
+        """Commit pending Settings, then own dictionary mutation controls."""
+        settings_idx = self._settings_tab_index()
+        if settings_idx < 0:
+            yield True
+            return
+        settings_tab = self.tabs.widget(settings_idx)
+        preflight = getattr(settings_tab, "commit_pending_settings_for_mutation", None)
+        panel = getattr(settings_tab, "dictionary_panel", None)
+        if not callable(preflight) or panel is None:
+            yield True
+            return
+        if not preflight():
+            yield False
+            return
+        token = panel.hold_mutation(kind)
+        try:
+            yield True
+        finally:
+            panel.release(token)
+
     # Stable capability key -> the widget class name registered as that main tab.
     # Matched by class name (not index/label) so it survives tab reorder and i18n.
     _MAIN_TAB_CLASSES = {
@@ -581,15 +604,17 @@ class MainWindow(QMainWindow):
         """Tools-menu handler: run the resource download dialog, apply result."""
         from anki_miner.gui.widgets.dialogs.resource_download_dialog import run_resource_download
 
-        # The recommended dict downloads into the same slot the legacy JMdict
-        # XML migration writes; stop an in-flight migration first (same-slot
-        # concurrent-writer race, see cancel_jmdict_migration).
-        self.background_tasks.cancel_jmdict_migration()
-        outcome = run_resource_download(self, self.config, release_resources=self.release_dictionary_resources)
-        if outcome is not None and outcome.summary.succeeded:
-            # update_config (not from_settings) propagates via config_refreshed
-            # to all tabs incl. Settings, and persists to disk.
-            self.update_config(outcome.config)
+        with self._dictionary_mutation_guard("resource-download") as ready:
+            if not ready:
+                return
+            # The recommended dict downloads into the same slot the legacy
+            # JMdict XML migration writes; stop an in-flight migration first.
+            self.background_tasks.cancel_jmdict_migration()
+            outcome = run_resource_download(self, self.config, release_resources=self.release_dictionary_resources)
+            if outcome is not None and outcome.summary.succeeded:
+                # update_config (not from_settings) propagates via
+                # config_refreshed to all tabs incl. Settings, and persists.
+                self.update_config(outcome.config)
 
     def _run_capability_browser_tool(self) -> None:
         """Tools-menu handler: open the Find a Feature browser.
@@ -610,10 +635,13 @@ class MainWindow(QMainWindow):
         """
         from anki_miner.gui.widgets.dialogs.setup_wizard import run_setup_wizard
 
-        # Wizard's Resources page can download into the JMdict migration slot.
-        self.background_tasks.cancel_jmdict_migration()
-        outcome = run_setup_wizard(self, self.config)
-        self._commit_setup_wizard_outcome(outcome, first_run_offer=False)
+        with self._dictionary_mutation_guard("setup-wizard") as ready:
+            if not ready:
+                return
+            # Wizard's Resources page can download into the JMdict migration slot.
+            self.background_tasks.cancel_jmdict_migration()
+            outcome = run_setup_wizard(self, self.config)
+            self._commit_setup_wizard_outcome(outcome, first_run_offer=False)
 
     def _commit_setup_wizard_outcome(
         self,
@@ -715,16 +743,20 @@ class MainWindow(QMainWindow):
             return
         self._first_run_setup_handled = True
 
-        # Boot started the legacy JMdict XML migration just before scheduling
-        # this offer; its slot is the wizard download's target — stop it first.
-        self.background_tasks.cancel_jmdict_migration()
+        with self._dictionary_mutation_guard("first-run-setup-wizard") as ready:
+            if not ready:
+                self._first_run_setup_handled = False
+                return
+            # Boot started the legacy JMdict XML migration just before
+            # scheduling this offer; stop it before the wizard captures config.
+            self.background_tasks.cancel_jmdict_migration()
 
-        try:
-            outcome = run_setup_wizard(self, self.config)
-        except Exception:
-            logger.exception("Setup wizard failed")
-            return
-        self._commit_setup_wizard_outcome(outcome, first_run_offer=True)
+            try:
+                outcome = run_setup_wizard(self, self.config)
+            except Exception:
+                logger.exception("Setup wizard failed")
+                return
+            self._commit_setup_wizard_outcome(outcome, first_run_offer=True)
 
     def _maybe_prompt_stale_dictionaries(self) -> None:
         """Dispatch the schema-staleness scan off-thread; prompt in the callback (4.0).

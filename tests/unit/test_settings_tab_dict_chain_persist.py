@@ -112,6 +112,7 @@ class TestDictChainRemovalPersistsExactlyOnce:
 
         # Point the panel at tmp_path so the remove finds the dir.
         tab.dictionary_panel.set_dicts_root(tmp_path)
+        tab._debounce_timer.stop()
         tab.dictionary_panel.set_chain(
             (
                 ChainEntry(kind="indexed", dict_id="alpha", enabled=True),
@@ -139,6 +140,7 @@ class TestDictChainRemovalPersistsExactlyOnce:
         (dict_dir / "index.sqlite").write_bytes(b"placeholder")
 
         tab.dictionary_panel.set_dicts_root(tmp_path)
+        tab._debounce_timer.stop()
         tab.dictionary_panel.set_chain(
             (
                 ChainEntry(kind="indexed", dict_id="alpha", enabled=True),

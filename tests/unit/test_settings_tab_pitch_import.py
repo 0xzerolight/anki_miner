@@ -184,6 +184,29 @@ class TestOverwritePrompt:
 
 
 class TestWorkerOutcomes:
+    def test_mutation_preflight_commits_pending_pitch_zip(self, tab, tmp_path, pitch_home, monkeypatch):
+        _capture_messagebox(monkeypatch)
+        result = YomitanPitchImportResult(
+            source_name="Preflight",
+            source_revision="v1",
+            entry_count=1,
+            skipped_display_only=0,
+        )
+        calls = _stub_importer(monkeypatch, result=result)
+        zip_path = tmp_path / "pitch.zip"
+        zip_path.write_bytes(b"")
+        tab.config_changed.connect(tab.update_config)
+        tab.dictionary_panel.pitch_accent_selector.set_path(str(zip_path))
+        assert tab._debounce_timer.isActive()
+
+        accepted = tab.commit_pending_settings_for_mutation()
+
+        final_csv = pitch_home / "pitch_accent.csv"
+        assert accepted is True
+        assert calls == [(zip_path, pitch_home / "pitch_accent.csv.pending")]
+        assert final_csv.exists()
+        assert tab.config.pitch_accent_path == final_csv
+
     def test_successful_import_updates_selector_and_returns_csv(self, tab, tmp_path, pitch_home, monkeypatch):
         captured = _capture_messagebox(monkeypatch)
         result = YomitanPitchImportResult(

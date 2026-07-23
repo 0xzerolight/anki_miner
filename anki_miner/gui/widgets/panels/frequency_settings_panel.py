@@ -230,6 +230,9 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
             out.append(FreqEntry(source_id=entry.source_id, enabled=enabled))
         return tuple(out)
 
+    def _set_mutation_controls_enabled(self, enabled: bool) -> None:
+        self._add_btn.setEnabled(enabled)
+
     # ------------------------------------------------------------------
     # Chain-panel hooks
     # ------------------------------------------------------------------
@@ -298,7 +301,7 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
         # self._chain then targets an arbitrary real source the user never
         # clicked — and Remove would rmtree it. Bail, mirroring the dictionary
         # panel's "meta is None → return" guard.
-        if self._scan_in_flight:
+        if self._scan_in_flight or self.has_active_mutation():
             return
         item = self._list.itemAt(pos)
         if item is None:
