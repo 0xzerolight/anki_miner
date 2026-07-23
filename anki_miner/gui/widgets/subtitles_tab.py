@@ -29,6 +29,7 @@ from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
+from anki_miner.gui.workers.backfill_worker import BackfillScanWorker
 
 if TYPE_CHECKING:
     from anki_miner.gui.workers.base_worker import CancellableWorker
@@ -110,6 +111,11 @@ class SubtitlesTab(QWidget):
         self.retime_tab.update_config(config)
         self.condense_tab.update_config(config)
         self.backfill_tab.update_config(config)
+
+    def release_dictionary_resources(self) -> bool:
+        """Refuse resource mutation while a backfill scan uses providers."""
+        worker = self.backfill_tab.worker_thread
+        return not (isinstance(worker, BackfillScanWorker) and worker.isRunning())
 
     # ------------------------------------------------------------------
     # Close contract

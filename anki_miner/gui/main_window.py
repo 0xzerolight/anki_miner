@@ -37,7 +37,7 @@ from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.config_manager import GUIConfigManager
-from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
 from anki_miner.gui.widgets.header_widget import HeaderWidget
 from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
@@ -1043,9 +1043,12 @@ class MainWindow(QMainWindow):
 
         Used by the Settings → Remove dictionary flow to drop SQLite handles
         before ``rmtree`` (Issue #30, Win11 file-lock). Returns ``False`` if
-        any tab refused — typically because a mining run is in flight — so
-        the caller can surface a clear message instead of silently failing.
+        prewarm is running or any tab refused — typically because a mining run
+        is in flight — so the caller can surface a clear message instead of
+        silently failing.
         """
+        if still_running(self.background_tasks.prewarm_worker):
+            return False
         for i in range(self.tabs.count()):
             tab = self.tabs.widget(i)
             release = getattr(tab, "release_dictionary_resources", None)

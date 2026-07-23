@@ -40,7 +40,8 @@ import logging
 from PyQt6.QtCore import QThread
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.utils.service_factory import build_definition_service
+from anki_miner.gui.utils.service_factory import ServiceLoadResult, build_definition_service
+from anki_miner.services.definition_service import DefinitionService
 
 logger = logging.getLogger(__name__)
 
@@ -67,27 +68,31 @@ class PrewarmWorker(QThread):
 
         The shared tagger singleton is built/warmed and intentionally retained
         (it is the instance mining reuses). The registry, providers and
-        DefinitionService are throwaway — they go out of scope (and their
-        sqlite handles close) when this method returns.
+        DefinitionService are throwaway; the service is closed explicitly in
+        ``finally``.
         """
+        definition_service: DefinitionService | None = None
         try:
-            from anki_miner.services.tagger import get_shared_tagger
+            try:
+                from anki_miner.services.tagger import get_shared_tagger
 
-            # Build the SHARED tagger singleton (the one mining reuses); this
-            # loads unidic-lite, the dominant first-use cost. Do NOT discard it.
-            # We deliberately do NOT run a warm `.parse()` here — only the
-            # construction cost is paid.  Post-construction, the LockedTagger
-            # wrapper in services/tagger.py serialises concurrent parses, so
-            # any `.parse()` here would just add unnecessary work without
-            # benefiting from a warmer tagger (the lattice state is not cached).
-            get_shared_tagger()
+                # Build the SHARED tagger singleton (the one mining reuses); this
+                # loads unidic-lite, the dominant first-use cost. Do NOT discard it.
+                # We deliberately do NOT run a warm `.parse()` here — only the
+                # construction cost is paid.  Post-construction, the LockedTagger
+                # wrapper in services/tagger.py serialises concurrent parses, so
+                # any `.parse()` here would just add unnecessary work without
+                # benefiting from a warmer tagger (the lattice state is not cached).
+                get_shared_tagger()
 
-            # Warm the sqlite page cache / meta sidecars for the configured
-            # dictionary chain, then discard everything (no shared connections).
-            # Shares the factory's gated eager-load: build_definition_service
-            # only touches sqlite when an indexed entry is enabled, so a
-            # Jisho-only chain warms nothing here, same as the real mine path.
-            definition_service = build_definition_service(self._config)
-            del definition_service
+                # Warm the sqlite page cache / meta sidecars for the configured
+                # dictionary chain, then discard everything (no shared connections).
+                # Shares the factory's gated eager-load: build_definition_service
+                # only touches sqlite when an indexed entry is enabled, so a
+                # Jisho-only chain warms nothing here, same as the real mine path.
+                definition_service = build_definition_service(self._config, ServiceLoadResult())
+            finally:
+                if definition_service is not None:
+                    definition_service.close()
         except Exception:  # noqa: BLE001 - best-effort; never crash the app
             logger.debug("Prewarm failed (best-effort, ignored)", exc_info=True)

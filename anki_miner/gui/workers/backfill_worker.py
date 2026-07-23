@@ -5,7 +5,7 @@ import logging
 from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.utils.service_factory import create_services
+from anki_miner.gui.utils.service_factory import create_shared_lookup_services
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.card_backfiller import (
@@ -23,9 +23,9 @@ logger = logging.getLogger(__name__)
 class BackfillScanWorker(CancellableWorker):
     """Runs ``scan_backfill`` off the GUI thread.
 
-    Builds ONE ``AnkiService`` and injects it into ``create_services`` (the
-    factory would otherwise construct a redundant second instance), so all
-    SQLite/CSV/registry I/O happens here, never on the GUI thread. Read-only.
+    Builds ONE ``AnkiService`` plus the lookup-only shared service bundle, so
+    all SQLite/CSV/registry I/O happens here, never on the GUI thread.
+    Read-only.
     """
 
     progress = pyqtSignal(int, int)  # (scanned, total)
@@ -41,19 +41,22 @@ class BackfillScanWorker(CancellableWorker):
             if self.check_cancelled():
                 return
             anki_service = AnkiService(self.config)
-            services = create_services(self.config, anki_service=anki_service)
-            if self.check_cancelled():
-                return
-            plan = scan_backfill(
-                anki_service,
-                self.config,
-                services,
-                self.options,
-                progress=self.progress.emit,
-                is_cancelled=self.check_cancelled,
-            )
-            if not self.check_cancelled():
-                self.result_ready.emit(plan)
+            shared_lookup = create_shared_lookup_services(self.config)
+            try:
+                if self.check_cancelled():
+                    return
+                plan = scan_backfill(
+                    anki_service,
+                    self.config,
+                    shared_lookup,
+                    self.options,
+                    progress=self.progress.emit,
+                    is_cancelled=self.check_cancelled,
+                )
+                if not self.check_cancelled():
+                    self.result_ready.emit(plan)
+            finally:
+                shared_lookup.close()
         except Exception as e:  # noqa: BLE001 — surface every failure to the GUI
             logger.exception("BackfillScanWorker unhandled exception")
             if not self.check_cancelled():
@@ -64,7 +67,7 @@ class BackfillApplyWorker(CancellableWorker):
     """Runs ``apply_backfill`` off the GUI thread.
 
     Builds only an ``AnkiService`` — apply writes the plan's precomputed
-    values, so the lookup services (the ``create_services`` bundle) are
+    values, so the lookup services (the shared lookup bundle) are
     scan-only and never loaded here. Cancellation is honored between chunks;
     committed chunks stay written and tagged.
     """

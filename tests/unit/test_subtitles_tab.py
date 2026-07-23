@@ -18,6 +18,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
+from anki_miner.gui.workers.backfill_worker import BackfillApplyWorker, BackfillScanWorker
 
 # ---------------------------------------------------------------------------
 # Patch targets (suppress ASR engine + alass I/O during construction)
@@ -292,6 +293,33 @@ def test_iter_close_workers_yields_all_when_all_active(qtbot, tmp_path):
     assert fake_condense_worker in workers
     assert fake_backfill_worker in workers
     assert len(workers) == 4
+
+
+# ---------------------------------------------------------------------------
+# Dictionary resource release
+# ---------------------------------------------------------------------------
+
+
+def test_release_dictionary_resources_refuses_running_backfill_scan(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    worker = MagicMock(spec=BackfillScanWorker)
+    worker.isRunning.return_value = True
+    tab.backfill_tab.worker_thread = worker
+
+    release = getattr(tab, "release_dictionary_resources", lambda: True)
+
+    assert release() is False
+
+
+def test_release_dictionary_resources_allows_running_backfill_apply(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    worker = MagicMock(spec=BackfillApplyWorker)
+    worker.isRunning.return_value = True
+    tab.backfill_tab.worker_thread = worker
+
+    release = getattr(tab, "release_dictionary_resources", lambda: True)
+
+    assert release() is True
 
 
 # ---------------------------------------------------------------------------
