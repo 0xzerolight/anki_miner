@@ -949,9 +949,16 @@ jobs:
           if (-not (Test-Path $iscc)) {
             throw "ISCC.exe not found at $iscc after install"
           }
-          $version = (Get-Item $iscc).VersionInfo.ProductVersion
-          if (-not $version.StartsWith('7.0.2')) {
-            throw "Expected Inno Setup 7.0.2, found $version at $iscc"
+          # The SHA-256 pin above is the authoritative 7.0.2 identity check.
+          # Do NOT assert (Get-Item $iscc).VersionInfo.ProductVersion: Inno Setup
+          # 7.x ISCC.exe ships ProductVersion 0.0.0.0, and its runtime banner
+          # (ISCC.dpr ShowBanner) carries only the major "Inno Setup 7", never
+          # "7.0.2". Functional sanity check that ISCC runs and self-reports v7;
+          # `iscc /?` prints the banner to stdout then Halt(1), so the native
+          # exit code 1 is expected and not an error.
+          $banner = (& $iscc /? 2>$null | Select-Object -First 1)
+          if ($banner -notlike 'Inno Setup 7*') {
+            throw "Unexpected ISCC banner '$banner' at $iscc"
           }
           $installDir | Out-File -FilePath $env:GITHUB_PATH -Append
 
