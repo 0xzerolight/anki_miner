@@ -12,6 +12,7 @@ from typing import Any
 import pytest
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services._sqlite_index import read_ownership_marker
 from anki_miner.services.frequency import storage
 from anki_miner.services.frequency.mode_probe import LESS_COMMON_TERMS, MORE_COMMON_TERMS
 from anki_miner.services.frequency.source_importer import (
@@ -635,6 +636,7 @@ class TestSourceIdAndAtomicity:
         result = import_frequency_source(csv_path, tmp_path / "sources", source_id="custom-id")
         assert result.source_id == "custom-id"
         assert (tmp_path / "sources" / "custom-id" / "index.sqlite").is_file()
+        assert read_ownership_marker(tmp_path / "sources" / "custom-id") == ("frequency", "custom-id")
 
     def test_source_file_copied_for_reimport_zip(self, tmp_path: Path) -> None:
         zip_path = _write_zip(tmp_path / "f.zip")
@@ -704,6 +706,32 @@ class TestSourceIdAndAtomicity:
         # No leftover staging or backup dirs.
         leftover = [p.name for p in dest.iterdir() if p.name != "same"]
         assert leftover == []
+
+    def test_overwrite_refuses_foreign_same_name_with_plausible_meta(self, tmp_path: Path) -> None:
+        dest = tmp_path / "sources"
+        foreign = dest / "same"
+        foreign.mkdir(parents=True)
+        db_path = foreign / "index.sqlite"
+        conn = sqlite3.connect(db_path)
+        try:
+            conn.execute("CREATE TABLE entries (payload TEXT)")
+            conn.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)")
+            conn.execute(
+                "INSERT INTO meta (key, value) VALUES (?, ?)",
+                ("schema_version", str(storage.SCHEMA_VERSION)),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        payload = foreign / "keep.txt"
+        payload.write_text("foreign", encoding="utf-8")
+        source = tmp_path / "source.csv"
+        source.write_text("term,rank\n猫,5\n", encoding="utf-8")
+
+        with pytest.raises(SetupError, match="not an Anki Miner-managed frequency source"):
+            import_frequency_source(source, dest, source_id="same", overwrite=True)
+
+        assert payload.read_text(encoding="utf-8") == "foreign"
 
 
 class TestDispatchErrors:

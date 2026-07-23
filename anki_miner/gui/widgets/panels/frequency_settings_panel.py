@@ -38,6 +38,7 @@ from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
     _ChainPanelStrings,
     _RegistryView,
 )
+from anki_miner.services._sqlite_index import prove_owned_slot, resolve_managed_slot
 from anki_miner.services.frequency.registry import FreqSourceMeta, FrequencySourceRegistry
 from anki_miner.utils.i18n import tr_format
 
@@ -152,6 +153,11 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
             loading=self.tr("Loading…"),
             remove_failed_title=self.tr("Remove failed"),
             could_not_delete_template=self.tr("Could not delete %1:\n%2\n\nThe frequency source was not removed."),
+            files_left_title=self.tr("Files left untouched"),
+            files_left_template=self.tr(
+                "The chain entry was removed, but files at %1 were left untouched because "
+                "the folder could not be proven to belong to Anki Miner."
+            ),
         )
         self._setup_fields()
 
@@ -264,7 +270,15 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
         return meta.source_name if meta else (source_id or "(missing)")
 
     def _entry_disk_dir(self, entry: FreqEntry) -> Path | None:
-        return (self._freqs_root / entry.source_id) if entry.source_id else None
+        if not entry.source_id:
+            return None
+        try:
+            return resolve_managed_slot(self._freqs_root, entry.source_id)
+        except ValueError:
+            return None
+
+    def _owns_entry_disk_dir(self, entry: FreqEntry, target: Path) -> bool:
+        return bool(entry.source_id) and prove_owned_slot(target.parent, entry.source_id, "frequency")
 
     def _confirm_remove(self, display: str) -> bool:
         reply = QMessageBox.question(

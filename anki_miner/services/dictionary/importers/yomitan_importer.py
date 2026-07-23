@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import tempfile
 import zipfile
@@ -12,6 +13,11 @@ from pathlib import Path
 from typing import Any, Callable
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services._sqlite_index import (
+    prove_owned_slot,
+    resolve_managed_slot,
+    write_ownership_marker,
+)
 from anki_miner.services._staging import promote_staged_dir
 from anki_miner.services.dictionary.schema_validation import (
     ensure_bank_array,
@@ -143,13 +149,23 @@ def import_yomitan_zip(
         if dict_id is None:
             dict_id = _derive_dict_id(title, revision)
 
+        try:
+            final_path = resolve_managed_slot(dest_root, dict_id)
+        except ValueError as exc:
+            raise SetupError(str(exc)) from exc
+
         # Fail fast on an already-imported dict BEFORE any staging/rendering
         # work (mirrors Yomitan checking dictionaryExists right after reading
         # index.json). The late check below the atomic rename stays as a
         # race backstop. dest_root may not exist yet — .exists() is False then.
-        final_path = dest_root / dict_id
-        if final_path.exists() and not overwrite:
-            raise SetupError(f"Dictionary '{dict_id}' already exists")
+        if os.path.lexists(final_path):
+            if not overwrite:
+                raise SetupError(f"Dictionary '{dict_id}' already exists")
+            if not prove_owned_slot(final_path.parent, dict_id, "dictionary"):
+                raise SetupError(
+                    f"Dictionary '{dict_id}' exists but is not an Anki Miner-managed dictionary; "
+                    "refusing to overwrite it"
+                )
 
         # Enumerate term bank files for progress totals
         term_files = sorted(tmp_path.glob("term_bank_*.json"))
@@ -159,6 +175,7 @@ def import_yomitan_zip(
         # Stage to a temp dict folder, then atomic-rename
         staging = tmp_path / "_staging" / dict_id
         staging.mkdir(parents=True, exist_ok=True)
+        write_ownership_marker(staging, dict_id, "dictionary")
         db_path = staging / "index.sqlite"
         create_index(db_path)
 
@@ -297,10 +314,10 @@ def import_yomitan_zip(
         # Move staging into dest_root atomically. final_path was computed up
         # front for the early duplicate check; this late check is the race
         # backstop (dir may have appeared since staging began).
-        dest_root.mkdir(parents=True, exist_ok=True)
+        final_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Pre-check stays here (the helper owns only the promote skeleton).
-        if final_path.exists() and not overwrite:
+        if os.path.lexists(final_path) and not overwrite:
             raise SetupError(f"Dictionary '{dict_id}' already exists")
         _raise_if_cancelled(cancel_check)
         promote_staged_dir(staging, final_path, mover=shutil.move, overwrite=overwrite)

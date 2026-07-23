@@ -88,6 +88,7 @@ def confirm_remove(monkeypatch):
         "anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.question",
         lambda *a, **kw: QMessageBox.StandardButton.Yes,
     )
+    monkeypatch.setattr(asp_mod, "prove_owned_slot", lambda *_args: True)
 
 
 def _patch_menu_exec(monkeypatch, action_label: str | None):
@@ -592,6 +593,32 @@ def test_remove_tolerates_missing_index_folder(qapp, qtbot, tmp_path, confirm_re
     panel.remove(0)
 
     assert [e.kind for e in panel.get_chain()] == ["jpod101"]
+
+
+def test_remove_foreign_same_name_is_chain_only(qtbot, monkeypatch, tmp_path):
+    foreign = tmp_path / "foreign"
+    foreign.mkdir()
+    payload = foreign / "keep.txt"
+    payload.write_text("foreign", encoding="utf-8")
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.question",
+        lambda *a, **kw: QMessageBox.StandardButton.Yes,
+    )
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
+        lambda _parent, _title, body, *a, **kw: warnings.append(body),
+    )
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((AudioSourceEntry(kind="pack", pack_id="foreign", enabled=True),))
+
+    panel.remove(0)
+    qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
+
+    assert panel.get_chain() == ()
+    assert payload.read_text(encoding="utf-8") == "foreign"
+    assert any("left untouched" in body for body in warnings)
 
 
 def test_remove_failed_rmtree_does_not_emit_chain_changed(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):

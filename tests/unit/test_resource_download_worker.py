@@ -495,12 +495,18 @@ def test_summary_properties_filter_results():
 
 def _seed_dict_dir(dicts_root: Path, dict_id: str, source_name: str) -> None:
     """Create dicts_root/<dict_id>/index.sqlite with a source_name meta row."""
-    from anki_miner.services.dictionary.storage import create_index, write_meta
+    from anki_miner.services.dictionary.storage import SCHEMA_VERSION, create_index, write_meta
 
     db = dicts_root / dict_id / "index.sqlite"
     db.parent.mkdir(parents=True, exist_ok=True)
     create_index(db)
-    write_meta(db, {"source_name": source_name})
+    write_meta(
+        db,
+        {
+            "schema_version": str(SCHEMA_VERSION),
+            "source_name": source_name,
+        },
+    )
 
 
 def _run_dict_download(tmp_path, monkeypatch, *, imported_source_name: str):

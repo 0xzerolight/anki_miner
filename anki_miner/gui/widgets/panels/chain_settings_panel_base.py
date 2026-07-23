@@ -24,6 +24,7 @@ makes no ``tr()`` call, so extraction contexts never churn.
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -59,6 +60,8 @@ class _ChainPanelStrings:
     remove_failed_title: str
     # Already-translated ``tr_format`` template: "Could not delete %1:\n%2\n\n…".
     could_not_delete_template: str
+    files_left_title: str
+    files_left_template: str
 
 
 @dataclass(frozen=True, eq=False)
@@ -361,14 +364,24 @@ class ChainSettingsPanelBase(FormPanel):
             if not self._confirm_remove(display):
                 return  # user declined the destructive-remove confirmation
 
+            if target_dir is None:
+                self._finalize_remove(entry)
+                self._warn_files_left(display)
+                return
+
+            if not os.path.lexists(target_dir):
+                # Nothing to delete on disk; finish synchronously.
+                self._finalize_remove(entry)
+                return
+
+            if not self._owns_entry_disk_dir(entry, target_dir):
+                self._finalize_remove(entry)
+                self._warn_files_left(target_dir)
+                return
+
             # Give the subclass a chance to drop cached sqlite handles before
             # rmtree. Returns False to abort (e.g. mining in flight).
             if not self._acquire_release_for_remove():
-                return
-
-            if target_dir is None or not target_dir.exists():
-                # Nothing to delete on disk; finish synchronously.
-                self._finalize_remove(entry)
                 return
 
             target = target_dir
@@ -406,10 +419,20 @@ class ChainSettingsPanelBase(FormPanel):
         finally:
             self._finish_remove_mutation()
 
+    def _warn_files_left(self, target: object) -> None:
+        QMessageBox.warning(
+            self,
+            self._strings.files_left_title,
+            tr_format(self._strings.files_left_template, target),
+        )
+
     def _finalize_remove(self, removed_entry: Any) -> None:
         """Rebase the successful deletion onto the current live chain."""
         removed_dir = self._entry_disk_dir(removed_entry)
-        self._chain = [entry for entry in self.get_chain() if self._entry_disk_dir(entry) != removed_dir]
+        if removed_dir is None:
+            self._chain = [entry for entry in self.get_chain() if entry != removed_entry]
+        else:
+            self._chain = [entry for entry in self.get_chain() if self._entry_disk_dir(entry) != removed_dir]
         # Disk state changed — drop cached view so the next render reflects the
         # missing folder (and a re-add of the same id won't show stale meta).
         self._view = None
@@ -481,6 +504,10 @@ class ChainSettingsPanelBase(FormPanel):
 
     def _entry_disk_dir(self, entry: Any) -> Path | None:
         """On-disk index folder to rmtree, or None when nothing is on disk."""
+        raise NotImplementedError
+
+    def _owns_entry_disk_dir(self, entry: Any, target: Path) -> bool:
+        """Return whether *target* is proven safe for recursive deletion."""
         raise NotImplementedError
 
     def _confirm_remove(self, display: str) -> bool:

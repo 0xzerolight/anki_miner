@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
-from anki_miner.services.dictionary.storage import create_index, write_meta
+from anki_miner.services.dictionary.storage import SCHEMA_VERSION, create_index, write_meta
 from anki_miner.services.dictionary.superseded import (
     strip_date_bracket,
     sweep_superseded_dicts,
@@ -15,7 +16,13 @@ def _seed(dicts_root: Path, dict_id: str, source_name: str) -> Path:
     db = dicts_root / dict_id / "index.sqlite"
     db.parent.mkdir(parents=True, exist_ok=True)
     create_index(db)
-    write_meta(db, {"source_name": source_name})
+    write_meta(
+        db,
+        {
+            "schema_version": str(SCHEMA_VERSION),
+            "source_name": source_name,
+        },
+    )
     return db.parent
 
 
@@ -107,6 +114,34 @@ class TestSweepSupersededDicts:
         assert swept == [("jitendex-org-2025-11-05", "Jitendex.org [2025-11-05]")]
         assert failed == []
         assert (dicts / "broken").exists()
+
+    def test_foreign_matching_meta_is_never_swept(self, tmp_path: Path):
+        dicts = tmp_path / "dicts"
+        foreign = dicts / "jitendex-org-2025-11-05"
+        foreign.mkdir(parents=True)
+        db_path = foreign / "index.sqlite"
+        conn = sqlite3.connect(db_path)
+        try:
+            conn.execute("CREATE TABLE entries (payload TEXT)")
+            conn.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)")
+            conn.executemany(
+                "INSERT INTO meta (key, value) VALUES (?, ?)",
+                (
+                    ("schema_version", str(SCHEMA_VERSION)),
+                    ("source_name", "Jitendex.org [2025-11-05]"),
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        swept, failed = sweep_superseded_dicts(
+            dicts, keep_id="jitendex", imported_source_name="Jitendex.org [2026-06-06]"
+        )
+
+        assert swept == []
+        assert failed == []
+        assert foreign.is_dir()
 
     def test_rmtree_failure_is_reported_not_raised(self, tmp_path: Path, monkeypatch):
         dicts = tmp_path / "dicts"

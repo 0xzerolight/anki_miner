@@ -1,10 +1,12 @@
 """Tests for the Yomitan zip importer."""
 
+import sqlite3
 from pathlib import Path
 
 import pytest
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services._sqlite_index import read_ownership_marker
 from anki_miner.services.dictionary.importers.yomitan_importer import (
     YomitanImportResult,
     derive_dict_id_from_zip,
@@ -29,6 +31,7 @@ class TestImportYomitanZip:
 
         db_path = dest_root / result.dict_id / "index.sqlite"
         assert db_path.exists()
+        assert read_ownership_marker(db_path.parent) == ("dictionary", result.dict_id)
 
         conn = open_readonly(db_path)
         try:
@@ -196,6 +199,31 @@ class TestImportYomitanZip:
         second = import_yomitan_zip(zip_path, dest_root, overwrite=True)
         assert second.dict_id == first.dict_id
         assert (dest_root / first.dict_id / "index.sqlite").exists()
+
+    def test_overwrite_refuses_foreign_same_name_with_plausible_meta(self, tmp_path: Path):
+        zip_path = build_yomitan_zip(tmp_path / "src" / "test.zip")
+        dest_root = tmp_path / "dicts"
+        foreign = dest_root / "catalog-slot"
+        foreign.mkdir(parents=True)
+        db_path = foreign / "index.sqlite"
+        conn = sqlite3.connect(db_path)
+        try:
+            conn.execute("CREATE TABLE entries (payload TEXT)")
+            conn.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)")
+            conn.executemany(
+                "INSERT INTO meta (key, value) VALUES (?, ?)",
+                (("schema_version", str(SCHEMA_VERSION)), ("source_name", "Test Dict")),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        payload = foreign / "keep.txt"
+        payload.write_text("foreign", encoding="utf-8")
+
+        with pytest.raises(SetupError, match="not an Anki Miner-managed dictionary"):
+            import_yomitan_zip(zip_path, dest_root, dict_id="catalog-slot", overwrite=True)
+
+        assert payload.read_text(encoding="utf-8") == "foreign"
 
     def test_import_creates_source_zip(self, tmp_path: Path):
         zip_path = build_yomitan_zip(tmp_path / "src" / "test.zip")

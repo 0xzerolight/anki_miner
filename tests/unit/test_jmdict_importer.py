@@ -1,16 +1,18 @@
 """Tests for the JMdict XML importer."""
 
+import sqlite3
 from pathlib import Path
 
 import pytest
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services._sqlite_index import read_ownership_marker
 from anki_miner.services.dictionary.importers.jmdict_importer import (
     JMDICT_DICT_ID,
     JMdictImportResult,
     import_jmdict_xml,
 )
-from anki_miner.services.dictionary.storage import open_readonly, read_meta
+from anki_miner.services.dictionary.storage import SCHEMA_VERSION, open_readonly, read_meta
 
 MINI_JMDICT_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <JMdict>
@@ -41,6 +43,7 @@ class TestImportJmdictXml:
         assert result.dict_id == JMDICT_DICT_ID
 
         db = tmp_path / "dicts" / JMDICT_DICT_ID / "index.sqlite"
+        assert read_ownership_marker(db.parent) == ("dictionary", JMDICT_DICT_ID)
         conn = open_readonly(db)
         try:
             # Two entries, two readings each (kanji + kana) = 4 rows
@@ -232,3 +235,29 @@ class TestImportJmdictXmlEdgeCases:
             assert row[0] == "すごい"
         finally:
             conn.close()
+
+    def test_refuses_to_overwrite_foreign_canonical_slot(self, tmp_path: Path):
+        xml = tmp_path / "JMdict_e"
+        xml.write_text(MINI_JMDICT_XML, encoding="utf-8")
+        dest = tmp_path / "dicts"
+        foreign = dest / JMDICT_DICT_ID
+        foreign.mkdir(parents=True)
+        db_path = foreign / "index.sqlite"
+        conn = sqlite3.connect(db_path)
+        try:
+            conn.execute("CREATE TABLE entries (payload TEXT)")
+            conn.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)")
+            conn.executemany(
+                "INSERT INTO meta (key, value) VALUES (?, ?)",
+                (("schema_version", str(SCHEMA_VERSION)), ("source_name", "JMdict (English)")),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        payload = foreign / "keep.txt"
+        payload.write_text("foreign", encoding="utf-8")
+
+        with pytest.raises(SetupError, match="not an Anki Miner-managed dictionary"):
+            import_jmdict_xml(xml, dest)
+
+        assert payload.read_text(encoding="utf-8") == "foreign"

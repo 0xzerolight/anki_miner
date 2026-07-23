@@ -15,6 +15,7 @@ from anki_miner.gui.widgets.panels import chain_settings_panel_base as base_modu
 from anki_miner.gui.widgets.panels import frequency_settings_panel as frequency_panel_module
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
+from anki_miner.services._sqlite_index import write_ownership_marker
 
 
 @pytest.fixture
@@ -101,6 +102,7 @@ def test_context_menu_refuses_while_mutation_token_is_held(tab, monkeypatch):
 def test_remove_completion_rebases_on_current_chain(qtbot, monkeypatch, tmp_path):
     target = tmp_path / "remove-me"
     target.mkdir()
+    write_ownership_marker(target, "remove-me", "dictionary")
     panel = DictionarySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     panel.set_chain(

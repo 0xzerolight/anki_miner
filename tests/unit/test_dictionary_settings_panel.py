@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import QMessageBox
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.widgets.panels import dictionary_settings_panel as dsp_mod
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
+from anki_miner.services._sqlite_index import write_ownership_marker
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, create_index, write_meta
 
 
@@ -58,6 +59,7 @@ def confirm_remove(monkeypatch):
         "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.question",
         lambda *a, **kw: QMessageBox.StandardButton.Yes,
     )
+    monkeypatch.setattr(dsp_mod, "prove_owned_slot", lambda *_args: True)
 
 
 def test_panel_renders_default_chain(qapp, qtbot, monkeypatch, tmp_path):
@@ -335,6 +337,63 @@ def test_remove_tolerates_missing_dict_folder(qapp, qtbot, tmp_path, confirm_rem
 
     chain = panel.get_chain()
     assert [e.kind for e in chain] == ["jisho"]
+
+
+def test_remove_foreign_same_name_is_chain_only(qtbot, monkeypatch, tmp_path):
+    foreign = tmp_path / "foreign"
+    foreign.mkdir()
+    payload = foreign / "keep.txt"
+    payload.write_text("foreign", encoding="utf-8")
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.question",
+        lambda *a, **kw: QMessageBox.StandardButton.Yes,
+    )
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
+        lambda _parent, _title, body, *a, **kw: warnings.append(body),
+    )
+    panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((ChainEntry(kind="indexed", dict_id="foreign", enabled=True),))
+
+    panel.remove(0)
+    qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
+
+    assert panel.get_chain() == ()
+    assert payload.read_text(encoding="utf-8") == "foreign"
+    assert any("left untouched" in body for body in warnings)
+
+
+def test_remove_symlink_slot_is_chain_only(qtbot, monkeypatch, tmp_path):
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    payload = outside / "keep.txt"
+    payload.write_text("owned target", encoding="utf-8")
+    write_ownership_marker(outside, "linked", "dictionary")
+    root = tmp_path / "dicts"
+    root.mkdir()
+    link = root / "linked"
+    link.symlink_to(outside, target_is_directory=True)
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.question",
+        lambda *a, **kw: QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
+        lambda *a, **kw: QMessageBox.StandardButton.Ok,
+    )
+    panel = DictionarySettingsPanel(root)
+    qtbot.addWidget(panel)
+    panel.set_chain((ChainEntry(kind="indexed", dict_id="linked", enabled=True),))
+
+    panel.remove(0)
+    qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
+
+    assert panel.get_chain() == ()
+    assert link.is_symlink()
+    assert payload.read_text(encoding="utf-8") == "owned target"
+    link.unlink()
 
 
 def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, qtbot, tmp_path):

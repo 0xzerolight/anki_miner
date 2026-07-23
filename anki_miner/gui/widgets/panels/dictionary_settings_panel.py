@@ -29,6 +29,7 @@ from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
     ChainSettingsPanelBase,
     _ChainPanelStrings,
 )
+from anki_miner.services._sqlite_index import prove_owned_slot, resolve_managed_slot
 from anki_miner.services.dictionary.registry import DictionaryRegistry, DictMeta
 from anki_miner.utils.i18n import tr_format
 
@@ -147,6 +148,11 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
             loading=self.tr("Loading…"),
             remove_failed_title=self.tr("Remove failed"),
             could_not_delete_template=self.tr("Could not delete %1:\n%2\n\nThe dictionary was not removed."),
+            files_left_title=self.tr("Files left untouched"),
+            files_left_template=self.tr(
+                "The chain entry was removed, but files at %1 were left untouched because "
+                "the folder could not be proven to belong to Anki Miner."
+            ),
         )
         self._setup_fields()
 
@@ -399,7 +405,16 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         return meta.source_name if meta else (dict_id or "(missing)")
 
     def _entry_disk_dir(self, entry: ChainEntry) -> Path | None:
-        return (self._dicts_root / entry.dict_id) if entry.dict_id else None
+        if not entry.dict_id:
+            return None
+        try:
+            return resolve_managed_slot(self._dicts_root, entry.dict_id)
+        except ValueError:
+            return None
+
+    def _owns_entry_disk_dir(self, entry: ChainEntry, target: Path) -> bool:
+        dict_id = entry.dict_id
+        return dict_id is not None and prove_owned_slot(target.parent, dict_id, "dictionary")
 
     def _confirm_remove(self, display: str) -> bool:
         reply = QMessageBox.question(

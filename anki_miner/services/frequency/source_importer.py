@@ -37,6 +37,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services._sqlite_index import (
+    prove_owned_slot,
+    resolve_managed_slot,
+    write_ownership_marker,
+)
 from anki_miner.services._staging import promote_staged_dir
 from anki_miner.services.frequency import mode_probe, storage
 from anki_miner.services.frequency.csv_parse import (
@@ -459,13 +464,23 @@ def _finalize(
     Copies the original input alongside ``index.sqlite`` (``source.zip`` /
     ``source.csv``) for later reimport.
     """
-    dest_root.mkdir(parents=True, exist_ok=True)
-    final_path = dest_root / source_id
-    if os.path.lexists(final_path) and not overwrite:
-        raise SetupError(f"Frequency source '{source_id}' already exists")
-
-    staging = Path(tempfile.mkdtemp(prefix=".staging-", dir=dest_root))
     try:
+        final_path = resolve_managed_slot(dest_root, source_id)
+    except ValueError as exc:
+        raise SetupError(str(exc)) from exc
+    final_path.parent.mkdir(parents=True, exist_ok=True)
+    if os.path.lexists(final_path):
+        if not overwrite:
+            raise SetupError(f"Frequency source '{source_id}' already exists")
+        if not prove_owned_slot(final_path.parent, source_id, "frequency"):
+            raise SetupError(
+                f"Frequency source '{source_id}' exists but is not an Anki Miner-managed frequency source; "
+                "refusing to overwrite it"
+            )
+
+    staging = Path(tempfile.mkdtemp(prefix=".staging-", dir=final_path.parent))
+    try:
+        write_ownership_marker(staging, source_id, "frequency")
         db_path = staging / "index.sqlite"
         meta = {
             "schema_version": str(storage.SCHEMA_VERSION),

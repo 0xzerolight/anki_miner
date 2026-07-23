@@ -25,6 +25,7 @@ import re
 import shutil
 from pathlib import Path
 
+from anki_miner.services._sqlite_index import is_generated_store_artifact, prove_owned_slot
 from anki_miner.services.dictionary.storage import read_meta
 
 logger = logging.getLogger(__name__)
@@ -85,7 +86,12 @@ def sweep_superseded_dicts(
         # sqlite3.Error (NOT OSError) on a corrupt / old-schema / locked sibling.
         # One bad sibling must never abort the loop or fail the import.
         try:
-            if not child.is_dir() or child.name == keep_id:
+            if (
+                not child.is_dir()
+                or child.name == keep_id
+                or is_generated_store_artifact(child.name)
+                or not prove_owned_slot(dicts_root, child.name, "dictionary")
+            ):
                 continue
             db = child / "index.sqlite"
             if not db.exists():

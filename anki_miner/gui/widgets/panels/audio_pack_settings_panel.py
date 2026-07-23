@@ -33,6 +33,7 @@ from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
     _ChainPanelStrings,
     _RegistryView,
 )
+from anki_miner.services._sqlite_index import prove_owned_slot, resolve_managed_slot
 from anki_miner.services.audio_packs.registry import AudioPackMeta, AudioPackRegistry
 from anki_miner.utils.i18n import tr_format
 
@@ -219,6 +220,11 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
             loading=self.tr("Loading…"),
             remove_failed_title=self.tr("Remove failed"),
             could_not_delete_template=self.tr("Could not delete %1:\n%2\n\nThe audio pack was not removed."),
+            files_left_title=self.tr("Files left untouched"),
+            files_left_template=self.tr(
+                "The chain entry was removed, but files at %1 were left untouched because "
+                "the folder could not be proven to belong to Anki Miner."
+            ),
         )
         self._setup_fields()
 
@@ -487,7 +493,16 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         return self._describe_entry(entry, self._view)[0]
 
     def _entry_disk_dir(self, entry: AudioSourceEntry) -> Path | None:
-        return (self._packs_root / entry.pack_id) if entry.pack_id else None
+        if not entry.pack_id:
+            return None
+        try:
+            return resolve_managed_slot(self._packs_root, entry.pack_id)
+        except ValueError:
+            return None
+
+    def _owns_entry_disk_dir(self, entry: AudioSourceEntry, target: Path) -> bool:
+        pack_id = entry.pack_id
+        return pack_id is not None and prove_owned_slot(target.parent, pack_id, "audio")
 
     def _confirm_remove(self, display: str) -> bool:
         reply = QMessageBox.question(
