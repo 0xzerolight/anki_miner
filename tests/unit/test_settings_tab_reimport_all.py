@@ -40,8 +40,9 @@ def _make_dict_on_disk(
     fmt: str,
     source_name: str,
     with_source_zip: bool = True,
+    schema_version: int = SCHEMA_VERSION,
 ) -> Path:
-    """Create a dict folder with index.sqlite (current schema) and optional source.zip."""
+    """Create a dict folder with index.sqlite and optional source.zip."""
     dict_dir = dicts_root / dict_id
     dict_dir.mkdir(parents=True, exist_ok=True)
     db_path = dict_dir / "index.sqlite"
@@ -49,7 +50,7 @@ def _make_dict_on_disk(
     write_meta(
         db_path,
         {
-            "schema_version": str(SCHEMA_VERSION),
+            "schema_version": str(schema_version),
             "format": fmt,
             "source_name": source_name,
             "entry_count": "0",
@@ -221,6 +222,67 @@ def test_reimport_all_skips_legacy_without_source_zip(tab_for_reimport_all, monk
     assert "Fresh" in body
     assert "Legacy" in body
     assert "Skipped" in body
+
+
+def test_reimport_all_only_ids_scopes_jobs_and_missing_sources(tab_for_reimport_all, monkeypatch, stubbed_workers):
+    """Upgrade repair reimports and reports only stale IDs supplied by its scan."""
+    tab = tab_for_reimport_all
+    dicts_root = tab.config.dicts_root
+    _make_dict_on_disk(
+        dicts_root,
+        "stale-saved",
+        fmt="yomitan",
+        source_name="Stale Saved",
+        schema_version=SCHEMA_VERSION - 1,
+    )
+    _make_dict_on_disk(
+        dicts_root,
+        "stale-missing",
+        fmt="yomitan",
+        source_name="Stale Missing",
+        with_source_zip=False,
+        schema_version=SCHEMA_VERSION - 1,
+    )
+    _make_dict_on_disk(dicts_root, "current", fmt="yomitan", source_name="Current")
+    _make_dict_on_disk(
+        dicts_root,
+        "disabled-stale",
+        fmt="yomitan",
+        source_name="Disabled Stale",
+        schema_version=SCHEMA_VERSION - 1,
+    )
+    _make_dict_on_disk(
+        dicts_root,
+        "unrelated-stale",
+        fmt="yomitan",
+        source_name="Unrelated Stale",
+        with_source_zip=False,
+        schema_version=SCHEMA_VERSION - 1,
+    )
+    tab.dictionary_panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="stale-saved", enabled=True),
+            ChainEntry(kind="indexed", dict_id="stale-missing", enabled=True),
+            ChainEntry(kind="indexed", dict_id="current", enabled=True),
+            ChainEntry(kind="indexed", dict_id="disabled-stale", enabled=False),
+            ChainEntry(kind="indexed", dict_id="unrelated-stale", enabled=True),
+        )
+    )
+    summaries = _silence_dialogs(monkeypatch)
+
+    tab._dict_import_flow.reimport_all(only_ids=frozenset({"stale-saved", "stale-missing"}))
+    _complete_in_flight_worker(stubbed_workers)
+
+    stubbed_workers["yomitan_factory"].assert_called_once()
+    args, kwargs = stubbed_workers["yomitan_factory"].call_args
+    assert Path(args[0]).parent.name == "stale-saved"
+    assert kwargs["dict_id"] == "stale-saved"
+    _, body = summaries[-1]
+    assert "Stale Saved" in body
+    assert "Stale Missing" in body
+    assert "Current" not in body
+    assert "Disabled Stale" not in body
+    assert "Unrelated Stale" not in body
 
 
 def test_reimport_all_includes_jmdict(tab_for_reimport_all, monkeypatch, stubbed_workers):

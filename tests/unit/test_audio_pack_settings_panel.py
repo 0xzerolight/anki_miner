@@ -29,8 +29,9 @@ def _make_pack_on_disk(
     source: str | None = None,
     entry_count: int = 100,
     pack_dir_exists: bool = True,
+    schema_version: int = SCHEMA_VERSION,
 ) -> Path:
-    """Materialize a minimal on-disk audio pack with current schema_version."""
+    """Materialize a minimal on-disk audio pack."""
     pack_dir = root / pack_id
     pack_dir.mkdir(parents=True, exist_ok=True)
     db_path = pack_dir / "index.sqlite"
@@ -41,7 +42,7 @@ def _make_pack_on_disk(
     write_meta(
         db_path,
         {
-            "schema_version": str(SCHEMA_VERSION),
+            "schema_version": str(schema_version),
             "format": fmt,
             "source": source or pack_id,
             "pack_id": pack_id,
@@ -60,6 +61,7 @@ def _make_meta(
     entry_count: int = 100,
     pack_dir_exists: bool = True,
     pack_dir: Path | None = None,
+    schema_ok: bool = True,
 ) -> AudioPackMeta:
     """Build an AudioPackMeta without touching disk."""
     return AudioPackMeta(
@@ -67,6 +69,7 @@ def _make_meta(
         source=source or pack_id,
         format=fmt,
         entry_count=entry_count,
+        schema_ok=schema_ok,
         pack_dir=pack_dir or Path("/fake/audio"),
         pack_dir_exists=pack_dir_exists,
         db_path=Path("/fake/index.sqlite"),
@@ -178,6 +181,21 @@ def test_pack_row_shows_format_and_entry_count(qapp, qtbot, tmp_path):
     texts = [lbl.text() for lbl in labels]
     assert any("ajt" in t for t in texts), texts
     assert any("5,000" in t for t in texts), texts
+
+
+def test_stale_pack_row_shows_upgrade_reimport_status(qapp, qtbot, tmp_path):
+    meta = _make_meta("old-pack", source="Old Pack", schema_ok=False)
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(
+        (AudioSourceEntry(kind="pack", pack_id="old-pack", enabled=True),),
+        registry_meta={"old-pack": meta},
+    )
+
+    row = panel._row_widget(0)
+    assert row is not None
+    texts = [label.text() for label in row.findChildren(QLabel)]
+    assert any("re-import required (app upgrade)" in text for text in texts), texts
 
 
 def test_missing_folder_badge_shown(qapp, qtbot, tmp_path):
@@ -744,6 +762,27 @@ def test_right_click_pack_row_emits_reimport_signal(qapp, qtbot, monkeypatch, tm
     assert emitted == ["ajt-pack"]
 
 
+def test_right_click_stale_pack_row_exposes_and_emits_reimport(qapp, qtbot, monkeypatch, tmp_path):
+    meta = _make_meta("old-pack", source="Old Pack", schema_ok=False)
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(
+        (AudioSourceEntry(kind="pack", pack_id="old-pack", enabled=True),),
+        registry_meta={"old-pack": meta},
+    )
+    constructed = _patch_menu_exec(monkeypatch, "Re-import…")
+    emitted: list[str] = []
+    panel.reimport_pack_requested.connect(emitted.append)
+
+    item = panel._list.item(0)
+    pos = panel._list.visualItemRect(item).center()
+    panel._on_row_context_menu(pos)
+
+    assert len(constructed) == 1
+    assert [action.text() for action in constructed[0].actions()] == ["Re-import…", "Remove"]
+    assert emitted == ["old-pack"]
+
+
 def test_right_click_jpod101_row_shows_no_menu(qapp, qtbot, monkeypatch, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
     qtbot.addWidget(panel)
@@ -784,6 +823,31 @@ def test_right_click_remove_action_removes_pack(qapp, qtbot, monkeypatch, tmp_pa
     # Remove delegates to self.remove(), whose rmtree runs off-thread.
     qtbot.waitUntil(lambda: changed == [None], timeout=3000)
     assert panel._list.count() == 0
+
+
+def test_right_click_stale_pack_remove_action_removes_pack(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
+    _make_pack_on_disk(
+        tmp_path,
+        "old-pack",
+        source="Old Pack",
+        schema_version=SCHEMA_VERSION - 1,
+    )
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((AudioSourceEntry(kind="pack", pack_id="old-pack", enabled=True),))
+    panel.show()
+    qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
+    _patch_menu_exec(monkeypatch, "Remove")
+    changed: list[None] = []
+    panel.chain_changed.connect(lambda: changed.append(None))
+
+    item = panel._list.item(0)
+    pos = panel._list.visualItemRect(item).center()
+    panel._on_row_context_menu(pos)
+
+    qtbot.waitUntil(lambda: changed == [None], timeout=3000)
+    assert panel._list.count() == 0
+    assert not (tmp_path / "old-pack").exists()
 
 
 def test_right_click_pack_row_no_meta_shows_no_menu(qapp, qtbot, monkeypatch, tmp_path):

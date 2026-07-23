@@ -76,7 +76,7 @@ def _robust_rmtree(target: Path, *, retries: int = 3, delay_s: float = 0.1) -> N
 
 
 class _PackRow(QWidget):
-    """One row in the chain list: checkbox + label + format badge + count + missing badge."""
+    """One row in the chain list: checkbox + label + format/count + repair status."""
 
     toggled = pyqtSignal()
 
@@ -88,10 +88,12 @@ class _PackRow(QWidget):
         count: int,
         *,
         dir_missing: bool = False,
+        schema_stale: bool = False,
     ):
         super().__init__()
         self.entry = entry
         self.dir_missing = dir_missing
+        self.schema_stale = schema_stale
         layout = QHBoxLayout(self)
         layout.setContentsMargins(4, 2, 4, 2)
 
@@ -113,7 +115,11 @@ class _PackRow(QWidget):
             count_label.setStyleSheet("color: gray; font-size: 10px;")
             layout.addWidget(count_label)
 
-        if dir_missing:
+        if schema_stale:
+            stale_label = QLabel(self.tr("⚠ re-import required (app upgrade)"))
+            stale_label.setStyleSheet("color: #d97706; font-size: 10px;")
+            layout.addWidget(stale_label)
+        elif dir_missing:
             missing_label = QLabel(self.tr("⚠ folder missing — re-import"))
             missing_label.setStyleSheet("color: #d97706; font-size: 10px;")
             layout.addWidget(missing_label)
@@ -394,8 +400,8 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
             AudioSourceEntry(kind=dialog.selected_kind(), url=dialog.url_value(), enabled=True)  # type: ignore[arg-type]
         )
 
-    def _describe_entry(self, entry: AudioSourceEntry, view: _RegistryView | None) -> tuple[str, str, int, bool]:
-        """Return ``(display, format_label, entry_count, dir_missing)`` for a row."""
+    def _describe_entry(self, entry: AudioSourceEntry, view: _RegistryView | None) -> tuple[str, str, int, bool, bool]:
+        """Return display, format, count, missing-dir, and stale-schema state."""
         if entry.kind == "pack":
             meta = view.get(entry.pack_id) if (view is not None and entry.pack_id) else None
             return (
@@ -403,14 +409,15 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
                 meta.format if meta else "",
                 meta.entry_count if meta else 0,
                 meta is not None and not meta.pack_dir_exists,
+                meta is not None and not meta.schema_ok,
             )
         if entry.kind == "googletts":
-            return self.tr("Google Translate (synthetic TTS)"), "online", 0, False
+            return self.tr("Google Translate (synthetic TTS)"), "online", 0, False, False
         if entry.kind in ("custom", "custom_json"):
             label = self.tr("Custom JSON") if entry.kind == "custom_json" else self.tr("Custom URL")
-            return (f"{label}: {entry.url}" if entry.url else label), "custom", 0, False
+            return (f"{label}: {entry.url}" if entry.url else label), "custom", 0, False, False
         # jpod101 (built-in online)
-        return self.tr("JapanesePod101 (online)"), "online", 0, False
+        return self.tr("JapanesePod101 (online)"), "online", 0, False, False
 
     # ------------------------------------------------------------------
     # Chain-panel hooks
@@ -422,8 +429,15 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         return _RegistryView(registry.packs.get)
 
     def _make_row(self, entry: AudioSourceEntry, view: _RegistryView | None) -> QWidget:
-        display, fmt, count, dir_missing = self._describe_entry(entry, view)
-        row = _PackRow(entry, display, fmt, count, dir_missing=dir_missing)
+        display, fmt, count, dir_missing, schema_stale = self._describe_entry(entry, view)
+        row = _PackRow(
+            entry,
+            display,
+            fmt,
+            count,
+            dir_missing=dir_missing,
+            schema_stale=schema_stale,
+        )
         row.toggled.connect(self._on_row_toggled)
         return row
 

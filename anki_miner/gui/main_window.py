@@ -749,10 +749,10 @@ class MainWindow(QMainWindow):
         ``DictMeta.schema_ok``), not a new scanner. When any *enabled* indexed
         chain entry is schema-stale, mining would silently drop every word for
         lack of a definition, so we surface a blocking prompt offering one-click
-        Reimport All (which covers both yomitan ``source.zip`` slots and the
-        legacy JMdict slot; slots without a saved source are named in its
-        summary and fall to the per-row affordance). "Later" leaves mining gated
-        by the per-run pre-checks; the prompt re-offers next launch.
+        repair scoped to those stale slots (covering both yomitan ``source.zip``
+        slots and the legacy JMdict slot; slots without a saved source are named
+        in its summary and fall to the per-row affordance). "Later" leaves mining
+        gated by the per-run pre-checks; the prompt re-offers next launch.
         """
         if self._stale_dict_prompt_handled:
             return
@@ -784,7 +784,7 @@ class MainWindow(QMainWindow):
         settings_widget = self.tabs.widget(idx)
         trigger = getattr(settings_widget, "trigger_reimport_all", None)
         if callable(trigger):
-            trigger()
+            trigger(frozenset(m.dict_id for m in stale))
 
     def _show_about(self) -> None:
         """Show the About dialog."""

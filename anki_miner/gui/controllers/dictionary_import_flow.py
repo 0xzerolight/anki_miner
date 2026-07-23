@@ -430,15 +430,21 @@ class DictionaryImportFlow(ModalImportFlowMixin):
     def reimport_all(
         self,
         *,
+        only_ids: frozenset[str] | None = None,
         _scan_result: tuple[list[tuple[str, str, str, Path]], list[str]] | None = None,
     ) -> None:
-        """Reimport every dictionary in the chain from its saved source.
+        """Reimport dictionaries in the chain from their saved sources.
 
         For each indexed ChainEntry, dispatch based on format:
         - jmdict format → reimport from ``config.jmdict_path`` (the XML stays
           on disk between sessions, no copy needed).
         - yomitan format → reimport from ``<dicts_root>/<dict_id>/source.zip``
           if present.
+
+        ``only_ids`` scopes upgrade repair to dictionary IDs found stale by the
+        startup scan. ``None`` preserves the manual Reimport All behavior,
+        including disabled chain entries. Missing-source reporting follows the
+        same scope.
 
         Dicts with no saved source are skipped and surfaced in the final
         summary dialog. The user can seed them via the per-row stale-reimport
@@ -463,6 +469,8 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 for entry in chain:
                     if entry.kind != "indexed" or entry.dict_id is None:
                         continue
+                    if only_ids is not None and entry.dict_id not in only_ids:
+                        continue
                     meta = registry.get(entry.dict_id)
                     if meta is None:
                         missing_legacy.append(entry.dict_id)
@@ -482,7 +490,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
 
             def _on_done(result: object) -> None:
                 assert isinstance(result, tuple)
-                self.reimport_all(_scan_result=result)
+                self.reimport_all(only_ids=only_ids, _scan_result=result)
 
             def _on_error(message: str) -> None:
                 self._set_import_buttons_enabled(True)
