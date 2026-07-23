@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+import dataclasses
+from unittest.mock import MagicMock
+
 import pytest
 
 pytest.importorskip("PyQt6.QtCore")
 
+from anki_miner.config import ChainEntry
+from anki_miner.gui.utils import service_factory
+from anki_miner.gui.workers import prewarm_worker as prewarm_worker_module
 from anki_miner.gui.workers.prewarm_worker import PrewarmWorker
 
 
@@ -76,3 +82,42 @@ def test_prewarm_does_not_expose_shared_state(test_config, qapp):
     assert not hasattr(worker, "registry")
     assert not hasattr(worker, "_tagger")
     assert not hasattr(worker, "_registry")
+
+
+def test_prewarm_closes_definition_service_on_success(test_config, monkeypatch):
+    import anki_miner.services.tagger as tagger_module
+
+    definition_service = MagicMock()
+    monkeypatch.setattr(tagger_module, "get_shared_tagger", MagicMock())
+    monkeypatch.setattr(
+        prewarm_worker_module,
+        "build_definition_service",
+        MagicMock(return_value=definition_service),
+    )
+
+    worker = PrewarmWorker(test_config)
+    worker.run()
+
+    definition_service.close.assert_called_once_with()
+
+
+def test_prewarm_closes_definition_service_when_eager_warm_fails(test_config, monkeypatch):
+    import anki_miner.services.tagger as tagger_module
+
+    definition_service = MagicMock()
+    definition_service.ensure_loaded.side_effect = RuntimeError("warm boom")
+    registry = MagicMock()
+    registry.build_provider_chain.return_value = []
+    config = dataclasses.replace(
+        test_config,
+        dictionary_chain=(ChainEntry(kind="indexed", dict_id="test-dict", enabled=True),),
+    )
+    monkeypatch.setattr(tagger_module, "get_shared_tagger", MagicMock())
+    monkeypatch.setattr(service_factory, "_load_dict_registry", MagicMock(return_value=registry))
+    monkeypatch.setattr(service_factory, "DefinitionService", MagicMock(return_value=definition_service))
+
+    worker = PrewarmWorker(config)
+    worker.run()
+
+    definition_service.ensure_loaded.assert_called_once_with()
+    definition_service.close.assert_called_once_with()

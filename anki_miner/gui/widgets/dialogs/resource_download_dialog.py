@@ -80,8 +80,8 @@ def run_resource_download(
     runs (like the reimport flows). The import now overwrites a pinned slot in
     place and the sweep deletes superseded dirs, so on Windows an open
     ``IndexedDictProvider`` connection would make the rename/rmtree fail with
-    "Access denied" (Issues #30/#32). If it returns False a mining run is live —
-    warn and abort without touching disk.
+    "Access denied" (Issues #30/#32). If it returns False, indexed resources
+    are in use — warn and abort without touching disk.
     """
     from anki_miner.gui.utils.resource_setup import apply_download_summary
 
@@ -94,7 +94,8 @@ def run_resource_download(
                 QCoreApplication.translate("ResourceDownloadDialog", "Download Blocked"),
                 QCoreApplication.translate(
                     "ResourceDownloadDialog",
-                    "A mining run is in progress. Stop it before downloading resources.",
+                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                    "Wait for the active task to finish and try again.",
                 ),
             )
             return None

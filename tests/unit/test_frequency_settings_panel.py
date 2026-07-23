@@ -380,23 +380,25 @@ def test_add_button_emits_add_requested(qapp, qtbot, tmp_path):
 
 def test_release_callback_blocks_remove(qapp, qtbot, tmp_path, confirm_remove, monkeypatch):
     _make_source_on_disk(tmp_path, "jpdb")
-    warned: list[int] = []
+    warned: list[str] = []
     monkeypatch.setattr(
         fsp_mod.QMessageBox,
         "warning",
-        lambda *a, **kw: warned.append(1),
+        lambda _parent, _title, body, *a, **kw: warned.append(body),
     )
     panel = FrequencySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     panel.set_chain((FreqEntry(source_id="jpdb", enabled=True),))
-    panel.set_release_callback(lambda: False)  # mining in flight
+    panel.set_release_callback(lambda: False)  # indexed resources in use
 
     panel.remove(0)
 
     # Refused: entry kept, dir kept, warning shown.
     assert len(panel.get_chain()) == 1
     assert (tmp_path / "jpdb").exists()
-    assert warned == [1]
+    assert len(warned) == 1
+    assert "Indexed resources are in use" in warned[0]
+    assert all(task in warned[0] for task in ("mining", "startup prewarm", "card backfill"))
 
 
 # ---------------------------------------------------------------------------

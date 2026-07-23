@@ -15,12 +15,25 @@ caller keeps its own pre-checks (e.g. the "already exists and not overwrite"
 from __future__ import annotations
 
 import errno
+import os
 import shutil
 import tempfile
+import threading
+import weakref
 from pathlib import Path
 from typing import Callable
 
 from anki_miner.utils.atomic_io import atomic_replace_dir
+
+_promotion_locks_guard = threading.Lock()
+_promotion_locks: weakref.WeakValueDictionary[Path, threading.Lock] = weakref.WeakValueDictionary()
+
+
+def _promotion_lock(final: Path) -> threading.Lock:
+    """Return the in-process promotion lock for ``final``'s resolved root."""
+    root = final.parent.resolve()
+    with _promotion_locks_guard:
+        return _promotion_locks.setdefault(root, threading.Lock())
 
 
 def promote_staged_dir(
@@ -36,19 +49,32 @@ def promote_staged_dir(
         staging: The freshly-built staging directory to move into place.
         final: The canonical destination path.
         mover: Compatibility move primitive, used for a cross-filesystem
-            transfer or if a caller reaches the existing-final path with
-            ``overwrite=False``.
+            transfer or no-clobber placement.
         overwrite: When ``final`` already exists, replace it (back up first,
-            restore on failure). Callers are responsible for rejecting an
-            unwanted overwrite *before* calling this helper.
+            restore on failure). When false, fail without touching ``final``.
 
     Raises:
+        FileExistsError: When ``overwrite`` is false and ``final`` exists.
         Whatever the placement primitive raises. On replacement failure, the
         backup is restored before the exception propagates.
+
+    The no-clobber lock covers writers in this process only. It does not claim
+    cross-process atomicity.
     """
-    if final.exists() and not overwrite:
-        mover(str(staging), str(final))
-    else:
+    with _promotion_lock(final):
+        if not overwrite:
+            if os.path.lexists(final):
+                shutil.rmtree(staging, ignore_errors=True)
+                raise FileExistsError(errno.EEXIST, "Destination already exists", str(final))
+            local_parent = Path(tempfile.mkdtemp(prefix=f".staging-{final.name}-", dir=final.parent))
+            try:
+                local_staging = local_parent / final.name
+                mover(str(staging), str(local_staging))
+                os.replace(local_staging, final)
+            finally:
+                shutil.rmtree(local_parent, ignore_errors=True)
+            return
+
         try:
             atomic_replace_dir(staging, final)
         except OSError as exc:

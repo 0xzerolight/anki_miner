@@ -9,6 +9,7 @@ from unittest.mock import patch
 import pytest
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services.audio_packs import importer as audio_pack_importer
 from anki_miner.services.audio_packs.importer import (
     AudioPackImportResult,
     derive_pack_id,
@@ -261,6 +262,22 @@ class TestDerivePackId:
 
 
 class TestExistsOverwrite:
+    def test_new_pack_routes_overwrite_false_to_promotion(self, tmp_path: Path, monkeypatch) -> None:
+        pack = _make_ajt_pack(tmp_path / "pack")
+        dest = tmp_path / "out"
+        observed: list[bool] = []
+        real_promote = audio_pack_importer.promote_staged_dir
+
+        def recording_promote(staging, final, *, mover, overwrite):
+            observed.append(overwrite)
+            return real_promote(staging, final, mover=mover, overwrite=overwrite)
+
+        monkeypatch.setattr(audio_pack_importer, "promote_staged_dir", recording_promote)
+
+        import_audio_pack(pack, dest, overwrite=False)
+
+        assert observed == [False]
+
     def test_exists_without_overwrite_raises(self, tmp_path: Path):
         pack = _make_ajt_pack(tmp_path / "pack")
         dest = tmp_path / "out"

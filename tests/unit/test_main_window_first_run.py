@@ -12,6 +12,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 import pytest
+from PyQt6.QtWidgets import QWidget
 
 
 @pytest.fixture
@@ -191,6 +192,82 @@ def test_handler_cancels_jmdict_migration_before_dialog(main_window, monkeypatch
     getattr(main_window, handler)()
 
     assert order == ["cancel", "dialog"]
+
+
+@pytest.mark.parametrize(
+    ("handler", "dialog_target", "token_kind"),
+    [
+        (
+            "_download_recommended_resources",
+            "anki_miner.gui.widgets.dialogs.resource_download_dialog.run_resource_download",
+            "resource-download",
+        ),
+        (
+            "_run_setup_wizard_tool",
+            "anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard",
+            "setup-wizard",
+        ),
+        (
+            "_maybe_offer_first_run_setup",
+            "anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard",
+            "first-run-setup-wizard",
+        ),
+    ],
+)
+def test_handler_commits_pending_root_before_config_capture(
+    main_window,
+    qtbot,
+    monkeypatch,
+    tmp_path,
+    handler,
+    dialog_target,
+    token_kind,
+):
+    new_root = tmp_path / "committed-root"
+    new_root.mkdir()
+    order: list[str] = []
+
+    class FakeDictionaryPanel:
+        def hold_mutation(self, kind):
+            order.append(f"hold:{kind}")
+            return object()
+
+        def release(self, token):
+            order.append("release")
+
+    class FakeSettingsTab(QWidget):
+        def __init__(self):
+            super().__init__()
+            self.dictionary_panel = FakeDictionaryPanel()
+
+        def open_ui_subtab(self):
+            return None
+
+        def commit_pending_settings_for_mutation(self):
+            order.append("preflight")
+            main_window.config = replace(main_window.config, dicts_root=new_root)
+            return True
+
+    settings_tab = FakeSettingsTab()
+    qtbot.addWidget(settings_tab)
+    main_window.tabs.addTab(settings_tab, "Settings")
+    monkeypatch.setattr(main_window.background_tasks, "cancel_jmdict_migration", lambda: order.append("cancel"))
+
+    def fake_dialog(parent, config, *args, **kwargs):
+        order.append("dialog")
+        assert config.dicts_root == new_root
+        if "setup_wizard" in dialog_target:
+            return _wizard_outcome(config, consumes=False)
+        return None
+
+    monkeypatch.setattr(dialog_target, fake_dialog)
+    monkeypatch.setattr(type(main_window), "update_config", lambda self, cfg, **kw: None)
+    main_window._first_run_setup_handled = False
+    main_window.config = replace(main_window.config, first_run_setup_done=False)
+
+    getattr(main_window, handler)()
+
+    assert order == ["preflight", f"hold:{token_kind}", "cancel", "dialog", "release"]
 
 
 # ---------------------------------------------------------------------------

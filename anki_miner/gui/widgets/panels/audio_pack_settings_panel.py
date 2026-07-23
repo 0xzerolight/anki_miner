@@ -6,6 +6,7 @@ import os
 import shutil
 import stat
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 from PyQt6.QtCore import QPoint, Qt, pyqtSignal
@@ -213,12 +214,23 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
     def __init__(self, packs_root: Path, parent=None):
         super().__init__("Audio Pack Settings", parent=parent)
         self._packs_root = packs_root
+        self._release_callback: Callable[[], bool] | None = None
         self._strings = _ChainPanelStrings(
             loading=self.tr("Loading…"),
             remove_failed_title=self.tr("Remove failed"),
             could_not_delete_template=self.tr("Could not delete %1:\n%2\n\nThe audio pack was not removed."),
         )
         self._setup_fields()
+
+    def set_release_callback(self, cb: Callable[[], bool] | None) -> None:
+        """Wire the pre-remove resource-release hook."""
+        self._release_callback = cb
+
+    def request_resource_release(self) -> bool:
+        """Ask the app to close cached resource handles before replacement."""
+        if self._release_callback is None:
+            return True
+        return self._release_callback()
 
     def _setup_fields(self) -> None:
         self.add_section(self.tr("Active Audio Sources"))
@@ -358,6 +370,10 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         """Enable/disable the retry button while its off-thread sweep runs."""
         self._retry_missing_btn.setEnabled(enabled)
 
+    def _set_mutation_controls_enabled(self, enabled: bool) -> None:
+        self._add_btn.setEnabled(enabled)
+        self._add_online_btn.setEnabled(enabled)
+
     def set_chain(
         self,
         chain: tuple[AudioSourceEntry, ...],
@@ -393,12 +409,22 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
 
     def _on_add_online_source(self) -> None:
         """Open the Add-Source dialog and append the chosen custom entry."""
-        dialog = _AddSourceDialog(self)
-        if dialog.exec() != QDialog.DialogCode.Accepted:
+        if not self.prepare_for_mutation():
             return
-        self.add_source_entry(
-            AudioSourceEntry(kind=dialog.selected_kind(), url=dialog.url_value(), enabled=True)  # type: ignore[arg-type]
-        )
+        token = self.hold_mutation("add-online-source")
+        try:
+            dialog = _AddSourceDialog(self)
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return
+            self.add_source_entry(
+                AudioSourceEntry(
+                    kind=dialog.selected_kind(),  # type: ignore[arg-type]
+                    url=dialog.url_value(),
+                    enabled=True,
+                )
+            )
+        finally:
+            self.release(token)
 
     def _describe_entry(self, entry: AudioSourceEntry, view: _RegistryView | None) -> tuple[str, str, int, bool, bool]:
         """Return display, format, count, missing-dir, and stale-schema state."""
@@ -478,6 +504,19 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         )
         return reply == QMessageBox.StandardButton.Yes
 
+    def _acquire_release_for_remove(self) -> bool:
+        if not self.request_resource_release():
+            QMessageBox.warning(
+                self,
+                self.tr("Remove failed"),
+                self.tr(
+                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                    "Wait for the active task to finish and try again."
+                ),
+            )
+            return False
+        return True
+
     def _rmtree_dir(self, target: Path) -> None:
         _robust_rmtree(target)
 
@@ -486,6 +525,8 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
 
         Built-in online rows (jpod101, googletts) have no menu — they can't be re-imported.
         """
+        if self._scan_in_flight or self.has_active_mutation():
+            return
         item = self._list.itemAt(pos)
         if item is None:
             return

@@ -29,6 +29,7 @@ from anki_miner.gui.controllers.import_flow_common import (
 )
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
+from anki_miner.gui.widgets.panels.chain_settings_panel_base import MutationToken
 from anki_miner.gui.widgets.panels.frequency_settings_panel import FrequencySettingsPanel
 from anki_miner.gui.workers.import_worker import ImportWorker
 from anki_miner.services.frequency import storage
@@ -62,15 +63,18 @@ class FrequencyImportFlow(ModalImportFlowMixin):
         panel: FrequencySettingsPanel,
         get_config: Callable[[], AnkiMinerConfig],
         persist_chain: Callable[[tuple[FreqEntry, ...]], None],
+        notify_config_changed: Callable[[], None],
     ) -> None:
         self._parent = parent
         self._panel = panel
         self._get_config = get_config
         self._persist_chain = persist_chain
+        self._notify_config_changed = notify_config_changed
         # Long-lived worker reference: ImportWorker is a QThread and would be
         # destroyed mid-run if it fell out of scope before joining.
         self._active_import_worker: ImportWorker | None = None
         self._retained_import_workers: list[ImportWorker] = []
+        self._mutation_token: MutationToken | None = None
 
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close.
@@ -81,8 +85,20 @@ class FrequencyImportFlow(ModalImportFlowMixin):
         return self._iter_import_workers()
 
     def _set_import_buttons_enabled(self, enabled: bool) -> None:
-        """Toggle the add-trigger button. Prevents overlapping import workers."""
-        self._panel._add_btn.setEnabled(enabled)
+        """Acquire/release the panel token that gates every mutation control."""
+        if enabled:
+            token = self._mutation_token
+            self._mutation_token = None
+            if token is not None:
+                self._panel.release(token)
+        elif self._mutation_token is None:
+            self._mutation_token = self._panel.hold_mutation("import")
+
+    def _begin_mutation(self, kind: str) -> bool:
+        if self._mutation_token is not None or not self._panel.prepare_for_mutation():
+            return False
+        self._mutation_token = self._panel.hold_mutation(kind)
+        return True
 
     @staticmethod
     def _categorical_note(meta: dict) -> str:
@@ -107,6 +123,8 @@ class FrequencyImportFlow(ModalImportFlowMixin):
 
     def add_source(self) -> None:
         """Prompt for a frequency file and import it as a new source."""
+        if not self._begin_mutation("add"):
+            return
         trace_id = _begin_import_trace("frequency add")
         picker_started = _log_import_picker_enter(trace_id, "frequency source")
         chosen, _ = file_dialogs.get_open_file_name(
@@ -117,9 +135,14 @@ class FrequencyImportFlow(ModalImportFlowMixin):
         )
         _log_import_picker_return(trace_id, "frequency source", picker_started, chosen)
         if not chosen:
+            self._set_import_buttons_enabled(True)
             return
 
-        worker = ImportWorker.for_source(Path(chosen), self._get_config().freqs_root)
+        try:
+            worker = ImportWorker.for_source(Path(chosen), self._get_config().freqs_root, overwrite=False)
+        except Exception:
+            self._set_import_buttons_enabled(True)
+            raise
 
         def on_success(source_id: str, meta: dict) -> None:
             new_chain = self._chain_with_new_source_appended(source_id)
@@ -206,9 +229,10 @@ class FrequencyImportFlow(ModalImportFlowMixin):
         """
         trace_id = _trace_id or _begin_import_trace("frequency reimport")
         if _scan_result is None:
+            if not self._begin_mutation("reimport"):
+                return
             dest_root = self._get_config().freqs_root
             source_dir = dest_root / source_id
-            self._set_import_buttons_enabled(False)
 
             def _scan() -> tuple[Path, Path | None, str | None]:
                 source_file = self._find_source_copy(source_dir)
@@ -233,7 +257,6 @@ class FrequencyImportFlow(ModalImportFlowMixin):
             return
 
         dest_root, source_file, existing_name = _scan_result
-        self._set_import_buttons_enabled(True)
         if source_file is None:
             picker_started = _log_import_picker_enter(trace_id, "frequency source")
             chosen, _ = file_dialogs.get_open_file_name(
@@ -246,6 +269,7 @@ class FrequencyImportFlow(ModalImportFlowMixin):
             )
             _log_import_picker_return(trace_id, "frequency source", picker_started, chosen)
             if not chosen:
+                self._set_import_buttons_enabled(True)
                 return
             source_file = Path(chosen)
 
@@ -253,12 +277,38 @@ class FrequencyImportFlow(ModalImportFlowMixin):
         # CSV path re-derives the name from the generic "source.csv" persisted
         # copy's stem and collapses the label to "source". Read the authoritative
         # SQLite meta (not the sidecar); None for a zip / missing index is fine.
-        worker = ImportWorker.for_source(source_file, dest_root, source_id=source_id, source_name=existing_name)
+        if not self._panel.request_resource_release():
+            QMessageBox.warning(
+                self._parent,
+                QCoreApplication.translate("FrequencyImportFlow", "Re-import Blocked"),
+                QCoreApplication.translate(
+                    "FrequencyImportFlow",
+                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                    "Wait for the active task to finish and try again.",
+                ),
+            )
+            self._set_import_buttons_enabled(True)
+            return
+
+        try:
+            worker = ImportWorker.for_source(
+                source_file,
+                dest_root,
+                source_id=source_id,
+                source_name=existing_name,
+                overwrite=True,
+            )
+        except Exception:
+            self._set_import_buttons_enabled(True)
+            raise
 
         def on_success(imported_id: str, meta: dict) -> None:
             current_chain = self._panel.get_chain()
             self._panel.refresh_registry()
             self._panel.set_chain(current_chain)
+            _log_import_persist(trace_id, "start")
+            self._notify_config_changed()
+            _log_import_persist(trace_id, "done")
             QMessageBox.information(
                 self._parent,
                 QCoreApplication.translate("FrequencyImportFlow", "Frequency Source Re-imported"),

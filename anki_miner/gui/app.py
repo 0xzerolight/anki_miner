@@ -906,10 +906,11 @@ def compose_main_window(
         _connect_vulkan_download,
     ):
         _connect(window, settings_tab)
-    # Wire the Dictionary Settings panel's pre-remove hook so deleting a
-    # dictionary closes cached sqlite handles across every tab first — Win11
-    # rejects the rmtree otherwise (Issue #30).
+    # Wire indexed-resource mutation hooks so replacing or deleting a store
+    # releases cached readers across every tab first.
     settings_tab.dictionary_panel.set_release_callback(window.release_dictionary_resources)
+    settings_tab.frequency_panel.set_release_callback(window.release_dictionary_resources)
+    settings_tab.audio_panel.set_release_callback(window.release_dictionary_resources)
     # Favorites-list edits in the UI panel must repopulate the top-right combo
     # immediately; the panel doesn't know about the header so the wiring lives
     # here. Active-theme changes from the panel must update the selected entry

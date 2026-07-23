@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
+from anki_miner.gui.workers import backfill_worker as backfill_worker_module
 from anki_miner.gui.workers.backfill_worker import BackfillApplyWorker, BackfillScanWorker
 from anki_miner.services.card_backfiller import BackfillOptions, BackfillPlan, BackfillResult
 
@@ -25,10 +26,53 @@ _WORKER_MOD = "anki_miner.gui.workers.backfill_worker"
 
 
 class TestBackfillScanWorker:
+    def test_closes_shared_lookup_bundle_on_success(self, test_config, monkeypatch):
+        anki_service = MagicMock()
+        shared_lookup = MagicMock()
+        shared_factory = MagicMock(return_value=shared_lookup)
+        scan = MagicMock(return_value=_PLAN)
+        monkeypatch.setattr(backfill_worker_module, "AnkiService", MagicMock(return_value=anki_service))
+        monkeypatch.setattr(
+            backfill_worker_module,
+            "create_shared_lookup_services",
+            shared_factory,
+        )
+        monkeypatch.setattr(backfill_worker_module, "scan_backfill", scan)
+
+        worker = BackfillScanWorker(test_config, _OPTIONS)
+        worker.run()
+
+        shared_factory.assert_called_once_with(test_config)
+        assert scan.call_args.args[2] is shared_lookup
+        shared_lookup.close.assert_called_once_with()
+
+    def test_closes_shared_lookup_bundle_on_scan_exception(self, test_config, monkeypatch):
+        shared_lookup = MagicMock()
+        shared_factory = MagicMock(return_value=shared_lookup)
+        monkeypatch.setattr(backfill_worker_module, "AnkiService", MagicMock())
+        monkeypatch.setattr(
+            backfill_worker_module,
+            "create_shared_lookup_services",
+            shared_factory,
+        )
+        monkeypatch.setattr(
+            backfill_worker_module,
+            "scan_backfill",
+            MagicMock(side_effect=RuntimeError("scan boom")),
+        )
+
+        worker = BackfillScanWorker(test_config, _OPTIONS)
+        errors: list[str] = []
+        worker.error.connect(errors.append)
+        worker.run()
+
+        assert errors == ["Backfill scan failed: scan boom"]
+        shared_lookup.close.assert_called_once_with()
+
     def test_emits_plan_on_success(self, qtbot, test_config):
         with (
             patch(f"{_WORKER_MOD}.AnkiService") as anki_cls,
-            patch(f"{_WORKER_MOD}.create_services") as factory,
+            patch(f"{_WORKER_MOD}.create_shared_lookup_services") as factory,
             patch(f"{_WORKER_MOD}.scan_backfill", return_value=_PLAN) as scan,
         ):
             worker = BackfillScanWorker(test_config, _OPTIONS)
@@ -36,10 +80,11 @@ class TestBackfillScanWorker:
                 worker.start()
             worker.wait(5000)
         assert blocker.args == [_PLAN]
-        # One AnkiService, injected into create_services (no second instance).
         anki_cls.assert_called_once_with(test_config)
-        assert factory.call_args[1]["anki_service"] is anki_cls.return_value
+        factory.assert_called_once_with(test_config)
         assert scan.call_args[0][0] is anki_cls.return_value
+        assert scan.call_args[0][2] is factory.return_value
+        factory.return_value.close.assert_called_once_with()
 
     def test_emits_error_on_anki_service_valueerror(self, qtbot, test_config):
         with patch(f"{_WORKER_MOD}.AnkiService", side_effect=ValueError("bad mapping")):
@@ -52,7 +97,7 @@ class TestBackfillScanWorker:
     def test_cancellation_suppresses_result(self, qtbot, test_config):
         with (
             patch(f"{_WORKER_MOD}.AnkiService"),
-            patch(f"{_WORKER_MOD}.create_services"),
+            patch(f"{_WORKER_MOD}.create_shared_lookup_services"),
             patch(f"{_WORKER_MOD}.scan_backfill", return_value=_PLAN),
         ):
             worker = BackfillScanWorker(test_config, _OPTIONS)
@@ -155,7 +200,7 @@ class TestBackfillApplyWorker:
     def test_emits_result_on_success(self, qtbot, test_config):
         with (
             patch(f"{_WORKER_MOD}.AnkiService") as anki_cls,
-            patch(f"{_WORKER_MOD}.create_services") as factory,
+            patch(f"{_WORKER_MOD}.create_shared_lookup_services") as factory,
             patch(f"{_WORKER_MOD}.apply_backfill", return_value=_RESULT) as apply_fn,
         ):
             worker = BackfillApplyWorker(test_config, _PLAN)

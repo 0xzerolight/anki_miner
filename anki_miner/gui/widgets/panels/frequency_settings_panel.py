@@ -145,11 +145,8 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
     def __init__(self, freqs_root: Path, parent=None):
         super().__init__("Frequency Sources", parent=parent)
         self._freqs_root = freqs_root
-        # Optional callback invoked before destructive remove to ask the rest of
-        # the app to close cached sqlite handles. Returns True on success.
-        # Defaults to no-op (frequency providers are rebuilt per run, not held
-        # open like the definition service), but kept for API parity + Windows
-        # robustness should that ever change.
+        # Optional callback invoked before destructive replacement/removal to
+        # ask the rest of the app to close cached sqlite handles.
         self._release_callback: Callable[[], bool] | None = None
         self._strings = _ChainPanelStrings(
             loading=self.tr("Loading…"),
@@ -159,8 +156,14 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
         self._setup_fields()
 
     def set_release_callback(self, cb: Callable[[], bool] | None) -> None:
-        """Wire the pre-remove resource-release hook (see ``_acquire_release_for_remove``)."""
+        """Wire the resource-release hook used by reimport and remove."""
         self._release_callback = cb
+
+    def request_resource_release(self) -> bool:
+        """Ask the app to close cached resource handles before replacement."""
+        if self._release_callback is None:
+            return True
+        return self._release_callback()
 
     def _setup_fields(self) -> None:
         self.add_section(self.tr("Active Frequency Sources"))
@@ -230,6 +233,9 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
             out.append(FreqEntry(source_id=entry.source_id, enabled=enabled))
         return tuple(out)
 
+    def _set_mutation_controls_enabled(self, enabled: bool) -> None:
+        self._add_btn.setEnabled(enabled)
+
     # ------------------------------------------------------------------
     # Chain-panel hooks
     # ------------------------------------------------------------------
@@ -279,11 +285,14 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
     def _acquire_release_for_remove(self) -> bool:
         # Drop any cached sqlite handles before rmtree (Windows lock safety).
         # No-op unless a release callback is wired.
-        if self._release_callback is not None and not self._release_callback():
+        if not self.request_resource_release():
             QMessageBox.warning(
                 self,
                 self.tr("Remove failed"),
-                self.tr("A mining run is in progress. Stop it before removing frequency sources."),
+                self.tr(
+                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                    "Wait for the active task to finish and try again."
+                ),
             )
             return False
         return True
@@ -298,7 +307,7 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
         # self._chain then targets an arbitrary real source the user never
         # clicked — and Remove would rmtree it. Bail, mirroring the dictionary
         # panel's "meta is None → return" guard.
-        if self._scan_in_flight:
+        if self._scan_in_flight or self.has_active_mutation():
             return
         item = self._list.itemAt(pos)
         if item is None:

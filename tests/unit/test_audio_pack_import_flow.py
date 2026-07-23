@@ -558,6 +558,19 @@ class TestAddPackMultiPack:
 
 
 class TestReimportPack:
+    def test_reimport_refused_while_mining_active(self, tab, monkeypatch, stub_worker, tmp_path):
+        pack_dir = _make_forvo_pack(tmp_path / "forvo_pack")
+        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(pack_dir))
+        monkeypatch.setattr(tab.audio_panel, "request_resource_release", lambda: False, raising=False)
+        warnings = _capture_warnings(monkeypatch)
+
+        tab._audio_pack_import_flow.reimport_pack("my-pack-id")
+
+        stub_worker.assert_not_called()
+        assert any("Indexed resources are in use" in body for _title, body in warnings)
+        assert all(task in warnings[0][1] for task in ("mining", "startup prewarm", "card backfill"))
+        assert tab.audio_panel._add_btn.isEnabled()
+
     def test_reimport_passes_overwrite_and_pack_id(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = tmp_path / "forvo_pack"
         pack_dir.mkdir()
@@ -590,6 +603,13 @@ class TestReimportPack:
 
         persist_calls: list = []
         tab._audio_pack_import_flow._persist_chain = persist_calls.append
+        notify_calls: list[None] = []
+        monkeypatch.setattr(
+            tab._audio_pack_import_flow,
+            "_notify_config_changed",
+            lambda: notify_calls.append(None),
+            raising=False,
+        )
 
         tab._audio_pack_import_flow.reimport_pack("my-pack-id")
 
@@ -601,6 +621,7 @@ class TestReimportPack:
         assert infos, "success dialog must appear"
         # reimport does not change the chain — only refreshes the panel view
         assert persist_calls == [], "reimport must not call persist_chain (chain unchanged)"
+        assert notify_calls == [None]
 
 
 # ---------------------------------------------------------------------------

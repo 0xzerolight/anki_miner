@@ -28,6 +28,7 @@ count first) before storage, so downstream rank filtering/sorting stays correct.
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import tempfile
 from collections.abc import Callable, Iterable, Mapping
@@ -108,6 +109,7 @@ def import_frequency_source(
     source_name: str | None = None,
     progress: ProgressFn | None = None,
     cancel_check: Callable[[], bool] | None = None,
+    overwrite: bool = False,
 ) -> FreqSourceImportResult:
     """Import ``input_path`` into ``dest_root/<source_id>/index.sqlite``.
 
@@ -126,10 +128,11 @@ def import_frequency_source(
         progress: Optional ``(current, total, message)`` callback.
         cancel_check: Optional zero-arg predicate; if it returns True the import
             aborts (partial staging files are cleaned up by the temp dir).
+        overwrite: If true, replace an existing same-id source atomically.
 
     Raises:
         SetupError: On a missing/unsupported input, or a source that yields zero
-            usable entries.
+            usable entries, or when the destination exists and overwrite is false.
     """
     if not input_path.exists():
         raise SetupError(f"Frequency source not found: {input_path}")
@@ -142,11 +145,18 @@ def import_frequency_source(
             source_id=source_id,
             progress=progress,
             cancel_check=cancel_check,
+            overwrite=overwrite,
         )
     if suffix in _CSV_SUFFIXES:
-        return _import_csv(input_path, dest_root, source_id=source_id, source_name=source_name)
+        return _import_csv(
+            input_path,
+            dest_root,
+            source_id=source_id,
+            source_name=source_name,
+            overwrite=overwrite,
+        )
     raise SetupError(
-        f"Unsupported frequency source '{input_path.name}'. " "Provide a Yomitan .zip or a .csv/.tsv/.txt rank list."
+        f"Unsupported frequency source '{input_path.name}'. Provide a Yomitan .zip or a .csv/.tsv/.txt rank list."
     )
 
 
@@ -157,6 +167,7 @@ def _import_zip(
     source_id: str | None,
     progress: ProgressFn | None,
     cancel_check: Callable[[], bool] | None,
+    overwrite: bool,
 ) -> FreqSourceImportResult:
     with open_yomitan_meta_banks(zip_path, kind="frequency") as banks:
         title = banks.title
@@ -256,11 +267,11 @@ def _import_zip(
             skipped_malformed=banks.skipped_malformed,
             converted_to_ranks=converted,
             is_categorical=is_categorical,
+            overwrite=overwrite,
         )
 
     logger.info(
-        "Imported %d frequency entries from '%s' (revision '%s') as source '%s', "
-        "skipped %d display-only, %d malformed",
+        "Imported %d frequency entries from '%s' (revision '%s') as source '%s', skipped %d display-only, %d malformed",
         result.entry_count,
         title,
         revision,
@@ -277,6 +288,7 @@ def _import_csv(
     *,
     source_id: str | None,
     source_name: str | None = None,
+    overwrite: bool,
 ) -> FreqSourceImportResult:
     stem = csv_path.stem
     resolved_id = source_id or _derive_source_id(stem)
@@ -343,6 +355,7 @@ def _import_csv(
         entry_count=len(ranks),
         skipped_display_only=0,
         converted_to_ranks=converted,
+        overwrite=overwrite,
     )
     logger.info(
         "Imported %d frequency entries from CSV '%s' as source '%s'",
@@ -439,14 +452,17 @@ def _finalize(
     skipped_malformed: int = 0,
     converted_to_ranks: bool = False,
     is_categorical: bool = False,
+    overwrite: bool,
 ) -> FreqSourceImportResult:
     """Build the index under a staging dir, then atomically promote it.
 
     Copies the original input alongside ``index.sqlite`` (``source.zip`` /
-    ``source.csv``) for later reimport, overwriting any same-id source.
+    ``source.csv``) for later reimport.
     """
     dest_root.mkdir(parents=True, exist_ok=True)
     final_path = dest_root / source_id
+    if os.path.lexists(final_path) and not overwrite:
+        raise SetupError(f"Frequency source '{source_id}' already exists")
 
     staging = Path(tempfile.mkdtemp(prefix=".staging-", dir=dest_root))
     try:
@@ -469,8 +485,10 @@ def _finalize(
         source_copy_name = "source" + input_path.suffix.lower()
         shutil.copy2(input_path, staging / source_copy_name)
 
-        # Atomic-ish promote: replace any existing same-id source.
-        promote_staged_dir(staging, final_path, mover=shutil.move, overwrite=True)
+        try:
+            promote_staged_dir(staging, final_path, mover=shutil.move, overwrite=overwrite)
+        except FileExistsError as exc:
+            raise SetupError(f"Frequency source '{source_id}' already exists") from exc
     finally:
         # On success the staging dir was moved away; clean up on any failure
         # so a partial import does not orphan a .staging-* dir in dest_root.

@@ -163,6 +163,7 @@ class ImportWorker(CancellableWorker):
         *,
         source_id: str | None = None,
         source_name: str | None = None,
+        overwrite: bool = False,
     ) -> ImportWorker:
         """Build a worker that imports a frequency source file.
 
@@ -178,6 +179,7 @@ class ImportWorker(CancellableWorker):
                 source_name=source_name,
                 progress=progress_fn,
                 cancel_check=cancel_fn,
+                overwrite=overwrite,
             )
             meta: dict[str, Any] = {
                 "entry_count": getattr(result, "entry_count", 0),

@@ -509,7 +509,9 @@ def test_reimport_all_shutdown_while_waiting_does_not_dispatch_after_predecessor
     assert stubbed_workers["yomitan_factory"].call_count == 0
 
 
-def test_reimport_all_refresh_failure_warns_and_restores_controls(tab_for_reimport_all, monkeypatch, stubbed_workers):
+def test_reimport_all_refresh_failure_warns_and_restores_controls(
+    tab_for_reimport_all, monkeypatch, stubbed_workers, qtbot
+):
     tab = tab_for_reimport_all
     dicts_root = tab.config.dicts_root
     _make_dict_on_disk(dicts_root, "dict-a", fmt="yomitan", source_name="Dict A")
@@ -535,7 +537,10 @@ def test_reimport_all_refresh_failure_warns_and_restores_controls(tab_for_reimpo
 
     _emit_native_finished(worker)
 
-    assert tab.dictionary_panel._reimport_btn.isEnabled()
+    # The batch-finish refresh dispatches an async registry rescan that holds a
+    # panel mutation token; controls re-enable once its completion callback
+    # lands on the event loop, not synchronously at native finished.
+    qtbot.waitUntil(lambda: tab.dictionary_panel._reimport_btn.isEnabled(), timeout=3000)
     assert len(warnings) == 1
     assert warnings[0][0] == "Configuration Update Failed"
     assert "refresh callback failed" in warnings[0][1]

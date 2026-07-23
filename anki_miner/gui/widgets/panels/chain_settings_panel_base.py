@@ -61,6 +61,13 @@ class _ChainPanelStrings:
     could_not_delete_template: str
 
 
+@dataclass(frozen=True, eq=False)
+class MutationToken:
+    """Opaque ownership token for one panel mutation."""
+
+    kind: str
+
+
 class _RegistryView:
     """Uniform meta-lookup shim: ``get(id) -> meta | None``.
 
@@ -118,6 +125,7 @@ class ChainSettingsPanelBase(FormPanel):
         # Set while an off-thread registry scan is running so overlapping scans /
         # removes don't stack (OVH disk-scan-off-thread).
         self._scan_in_flight: bool = False
+        self._scan_mutation_token: MutationToken | None = None
         # Set when a rescan is requested while one is already in flight. The
         # in-flight worker captured the pre-request disk state, so dropping the
         # request would leave the panel showing stale data after an import. On
@@ -125,6 +133,10 @@ class ChainSettingsPanelBase(FormPanel):
         # (not a counter) — one trailing scan reads the latest disk state, so
         # collapsing N pending requests into one re-dispatch cannot loop.
         self._rescan_pending: bool = False
+        self._mutation_counts: dict[str, int] = {}
+        self._mutation_tokens: set[MutationToken] = set()
+        self._mutation_preflight: Callable[[], bool] | None = None
+        self._remove_mutation_token: MutationToken | None = None
 
     # ------------------------------------------------------------------
     # First-show / refresh lifecycle
@@ -172,13 +184,20 @@ class ChainSettingsPanelBase(FormPanel):
             self._rescan_pending = True
             return
         self._scan_in_flight = True
+        self._scan_mutation_token = self.hold_mutation("scan")
         self._show_loading_placeholder()
-        run_off_thread(self, self._build_view, self._on_scan_done, self._on_scan_error)
+        try:
+            run_off_thread(self, self._build_view, self._on_scan_done, self._on_scan_error)
+        except Exception:
+            self._scan_in_flight = False
+            self._finish_scan_mutation()
+            raise
 
     def _on_scan_done(self, view: object) -> None:
         self._scan_in_flight = False
         self._view = view
         self._rebuild_list()
+        self._finish_scan_mutation()
         self._redispatch_pending_scan()
 
     def _on_scan_error(self, msg: str) -> None:
@@ -187,7 +206,14 @@ class ChainSettingsPanelBase(FormPanel):
         # Render whatever we have (rows without metadata) so the panel isn't
         # stuck on the Loading placeholder.
         self._rebuild_list()
+        self._finish_scan_mutation()
         self._redispatch_pending_scan()
+
+    def _finish_scan_mutation(self) -> None:
+        token = self._scan_mutation_token
+        self._scan_mutation_token = None
+        if token is not None:
+            self.release(token)
 
     def _redispatch_pending_scan(self) -> None:
         """Re-run one scan if a rescan was requested while one was in flight.
@@ -224,6 +250,52 @@ class ChainSettingsPanelBase(FormPanel):
         self._remove_btn.setEnabled(enabled)
 
     # ------------------------------------------------------------------
+    # Mutation ownership
+    # ------------------------------------------------------------------
+
+    def set_mutation_preflight(self, callback: Callable[[], bool] | None) -> None:
+        """Set the synchronous settings commit required before a mutation."""
+        self._mutation_preflight = callback
+
+    def prepare_for_mutation(self) -> bool:
+        """Commit pending settings, refusing overlap with an active mutation."""
+        if self.has_active_mutation():
+            return False
+        return self._mutation_preflight is None or self._mutation_preflight()
+
+    def hold_mutation(self, kind: str) -> MutationToken:
+        """Hold one named mutation until its opaque token is released."""
+        token = MutationToken(kind)
+        self._mutation_tokens.add(token)
+        self._mutation_counts[kind] = self._mutation_counts.get(kind, 0) + 1
+        self._sync_mutation_controls()
+        return token
+
+    def release(self, token: MutationToken) -> None:
+        """Release a mutation token once; repeated releases are no-ops."""
+        if token not in self._mutation_tokens:
+            return
+        self._mutation_tokens.remove(token)
+        remaining = self._mutation_counts[token.kind] - 1
+        if remaining:
+            self._mutation_counts[token.kind] = remaining
+        else:
+            del self._mutation_counts[token.kind]
+        self._sync_mutation_controls()
+
+    def has_active_mutation(self, kind: str | None = None) -> bool:
+        """Return whether any token, or any token of ``kind``, is held."""
+        if kind is None:
+            return bool(self._mutation_tokens)
+        return self._mutation_counts.get(kind, 0) > 0
+
+    def _sync_mutation_controls(self) -> None:
+        enabled = not self.has_active_mutation()
+        self._list.setEnabled(enabled)
+        self._set_reorder_controls_enabled(enabled)
+        self._set_mutation_controls_enabled(enabled)
+
+    # ------------------------------------------------------------------
     # Reorder / toggle
     # ------------------------------------------------------------------
 
@@ -235,10 +307,14 @@ class ChainSettingsPanelBase(FormPanel):
         next commit would re-persist ``enabled=True``. Syncing here keeps
         ``_chain`` authoritative.
         """
+        if self.has_active_mutation():
+            return
         self._chain = list(self.get_chain())
         self.chain_changed.emit()
 
     def move_up(self, index: int) -> None:
+        if self.has_active_mutation():
+            return
         if index <= 0 or index >= len(self._chain):
             return
         # Capture current enabled state before rebuild.
@@ -249,6 +325,8 @@ class ChainSettingsPanelBase(FormPanel):
         self.chain_changed.emit()
 
     def move_down(self, index: int) -> None:
+        if self.has_active_mutation():
+            return
         if index < 0 or index >= len(self._chain) - 1:
             return
         self._chain = list(self.get_chain())
@@ -267,65 +345,71 @@ class ChainSettingsPanelBase(FormPanel):
         entry = self._chain[index]
         if self._is_protected_entry(entry):
             return  # built-in / online entry: can be disabled but not removed
-        if self._handle_diskless_remove(entry, index):
-            return  # subclass fully handled a source with nothing on disk
-
-        # Resolve the display name + on-disk folder for the confirm prompt and
-        # the actual rmtree.
-        display = self._entry_display_name(entry)
-        target_dir = self._entry_disk_dir(entry)
-
-        if not self._confirm_remove(display):
-            return  # user declined the destructive-remove confirmation
-
-        # Give the subclass a chance to drop cached sqlite handles before rmtree
-        # (Issue #30, Win11 lock). Returns False to abort (e.g. mining in flight).
-        if not self._acquire_release_for_remove():
+        if not self.prepare_for_mutation():
             return
+        self._remove_mutation_token = self.hold_mutation("remove")
+        async_started = False
+        try:
+            if self._handle_diskless_remove(entry, index):
+                return  # subclass fully handled a source with nothing on disk
 
-        # Capture the post-remove chain on the GUI thread (reads row widgets)
-        # BEFORE dispatching the disk delete off-thread — the worker touches no
-        # widgets.
-        new_chain = list(self.get_chain())
-        del new_chain[index]
+            # Resolve the display name + on-disk folder for the confirm prompt
+            # and the actual rmtree after pending settings have committed.
+            display = self._entry_display_name(entry)
+            target_dir = self._entry_disk_dir(entry)
 
-        if target_dir is None or not target_dir.exists():
-            # Nothing to delete on disk; finish synchronously.
-            self._finalize_remove(new_chain)
-            return
+            if not self._confirm_remove(display):
+                return  # user declined the destructive-remove confirmation
 
-        # The rmtree (with its sleep-backed retry loop) runs off the GUI thread.
-        # The Remove button + list are disabled while it runs and re-enabled in
-        # the done/error callbacks.
-        self._remove_btn.setEnabled(False)
-        self._list.setEnabled(False)
-        target = target_dir
+            # Give the subclass a chance to drop cached sqlite handles before
+            # rmtree. Returns False to abort (e.g. mining in flight).
+            if not self._acquire_release_for_remove():
+                return
 
-        run_off_thread(
-            self,
-            lambda: self._rmtree_dir(target),
-            lambda _r: self._on_remove_done(new_chain),
-            lambda msg: self._on_remove_error(target, msg),
-        )
+            if target_dir is None or not target_dir.exists():
+                # Nothing to delete on disk; finish synchronously.
+                self._finalize_remove(entry)
+                return
 
-    def _on_remove_done(self, new_chain: list[Any]) -> None:
-        self._remove_btn.setEnabled(True)
-        self._list.setEnabled(True)
-        self._finalize_remove(new_chain)
+            target = target_dir
+            run_off_thread(
+                self,
+                lambda: self._rmtree_dir(target),
+                lambda _r: self._on_remove_done(entry),
+                lambda msg: self._on_remove_error(target, msg),
+            )
+            async_started = True
+        finally:
+            if not async_started:
+                self._finish_remove_mutation()
+
+    def _finish_remove_mutation(self) -> None:
+        token = self._remove_mutation_token
+        self._remove_mutation_token = None
+        if token is not None:
+            self.release(token)
+
+    def _on_remove_done(self, removed_entry: Any) -> None:
+        try:
+            self._finalize_remove(removed_entry)
+        finally:
+            self._finish_remove_mutation()
 
     def _on_remove_error(self, target_dir: Path, msg: str) -> None:
-        self._remove_btn.setEnabled(True)
-        self._list.setEnabled(True)
-        logger.error("Failed to delete %s %s: %s", self._REMOVE_ERROR_NOUN, target_dir, msg)
-        QMessageBox.warning(
-            self,
-            self._strings.remove_failed_title,
-            tr_format(self._strings.could_not_delete_template, target_dir, msg),
-        )
+        try:
+            logger.error("Failed to delete %s %s: %s", self._REMOVE_ERROR_NOUN, target_dir, msg)
+            QMessageBox.warning(
+                self,
+                self._strings.remove_failed_title,
+                tr_format(self._strings.could_not_delete_template, target_dir, msg),
+            )
+        finally:
+            self._finish_remove_mutation()
 
-    def _finalize_remove(self, new_chain: list[Any]) -> None:
-        """Commit the chain mutation + rescan after a successful disk delete."""
-        self._chain = new_chain
+    def _finalize_remove(self, removed_entry: Any) -> None:
+        """Rebase the successful deletion onto the current live chain."""
+        removed_dir = self._entry_disk_dir(removed_entry)
+        self._chain = [entry for entry in self.get_chain() if self._entry_disk_dir(entry) != removed_dir]
         # Disk state changed — drop cached view so the next render reflects the
         # missing folder (and a re-add of the same id won't show stale meta).
         self._view = None
@@ -365,9 +449,7 @@ class ChainSettingsPanelBase(FormPanel):
                 self._list.setItemWidget(item, row)
         finally:
             self._list.setUpdatesEnabled(True)
-            # Real rows are back: restore the controls the loading placeholder
-            # disabled.
-            self._set_reorder_controls_enabled(True)
+            self._sync_mutation_controls()
 
     # ------------------------------------------------------------------
     # Subclass hooks
@@ -377,6 +459,9 @@ class ChainSettingsPanelBase(FormPanel):
         """Build the panel's fields, including ``self._list`` and the reorder
         buttons (``_up_btn`` / ``_down_btn`` / ``_remove_btn``)."""
         raise NotImplementedError
+
+    def _set_mutation_controls_enabled(self, enabled: bool) -> None:
+        """Toggle subclass-specific mutation triggers and root selectors."""
 
     def get_chain(self) -> tuple[Any, ...]:
         """Return the chain with live checkbox states folded back in."""

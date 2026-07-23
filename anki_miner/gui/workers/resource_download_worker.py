@@ -246,6 +246,7 @@ class ResourceDownloadWorker(CancellableWorker):
                         self._freqs_root,
                         cancel_check=lambda: self.is_cancelled,
                         progress=self._progress_for(spec.id),
+                        overwrite=True,
                     )
                     source_id = freq_result.source_id
                     detail = f"{freq_result.entry_count} entries"

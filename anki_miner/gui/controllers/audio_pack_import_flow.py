@@ -28,6 +28,7 @@ from anki_miner.gui.controllers.import_flow_common import (
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
+from anki_miner.gui.widgets.panels.chain_settings_panel_base import MutationToken
 from anki_miner.gui.workers.import_worker import ImportWorker
 from anki_miner.services.audio_packs.formats import scan_importable_packs
 from anki_miner.services.audio_packs.importer import derive_pack_id
@@ -66,15 +67,18 @@ class AudioPackImportFlow(ModalImportFlowMixin):
         panel: AudioPackSettingsPanel,
         get_config: Callable[[], AnkiMinerConfig],
         persist_chain: Callable[[tuple[AudioSourceEntry, ...]], None],
+        notify_config_changed: Callable[[], None],
     ) -> None:
         self._parent = parent
         self._panel = panel
         self._get_config = get_config
         self._persist_chain = persist_chain
+        self._notify_config_changed = notify_config_changed
         # Long-lived worker reference: ImportWorker is a QThread and would be
         # destroyed mid-run if it fell out of scope before joining.
         self._active_import_worker: ImportWorker | None = None
         self._retained_import_workers: list[ImportWorker] = []
+        self._mutation_token: MutationToken | None = None
 
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close.
@@ -87,9 +91,20 @@ class AudioPackImportFlow(ModalImportFlowMixin):
         return self._iter_import_workers()
 
     def _set_import_buttons_enabled(self, enabled: bool) -> None:
-        """Toggle import-trigger buttons. Prevents overlapping import workers."""
-        # no panel-level reimport button; context-menu rows stay enabled
-        self._panel._add_btn.setEnabled(enabled)
+        """Acquire/release the panel token that gates every mutation control."""
+        if enabled:
+            token = self._mutation_token
+            self._mutation_token = None
+            if token is not None:
+                self._panel.release(token)
+        elif self._mutation_token is None:
+            self._mutation_token = self._panel.hold_mutation("import")
+
+    def _begin_mutation(self, kind: str) -> bool:
+        if self._mutation_token is not None or not self._panel.prepare_for_mutation():
+            return False
+        self._mutation_token = self._panel.hold_mutation(kind)
+        return True
 
     def _chain_with_new_packs_inserted(self, new_pack_ids: list[str]) -> tuple[AudioSourceEntry, ...]:
         """Return current chain with new packs inserted above first enabled jpod101.
@@ -131,6 +146,8 @@ class AudioPackImportFlow(ModalImportFlowMixin):
         """Prompt for a directory and import all detectable audio packs in it."""
         trace_id = _trace_id or _begin_import_trace("audio pack add")
         if _scan_result is None:
+            if not self._begin_mutation("add"):
+                return
             picker_started = _log_import_picker_enter(trace_id, "audio pack folder")
             chosen_dir = file_dialogs.get_existing_directory(
                 self._parent,
@@ -139,8 +156,8 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             )
             _log_import_picker_return(trace_id, "audio pack folder", picker_started, chosen_dir)
             if not chosen_dir:
+                self._set_import_buttons_enabled(True)
                 return
-            self._set_import_buttons_enabled(False)
 
             def _on_done(result: object) -> None:
                 assert isinstance(result, list)
@@ -166,7 +183,6 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             return
 
         chosen_dir, packs = _scan_result
-        self._set_import_buttons_enabled(True)
         # Sort by upstream source priority so completion order = priority order
         # and _chain_with_new_packs_inserted preserves the correct sequence.
         # Unknown pack_ids land after all known ones (stable sort).
@@ -185,6 +201,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
                     chosen_dir,
                 ),
             )
+            self._set_import_buttons_enabled(True)
             return
 
         # Import all detected packs sequentially using the same chained
@@ -292,6 +309,8 @@ class AudioPackImportFlow(ModalImportFlowMixin):
         importer overwrites the existing index in-place, preserving the
         pack_id so the chain entry keeps pointing at it correctly.
         """
+        if not self._begin_mutation("reimport"):
+            return
         trace_id = _begin_import_trace("audio pack reimport")
         picker_started = _log_import_picker_enter(trace_id, "audio pack folder")
         chosen_dir = file_dialogs.get_existing_directory(
@@ -301,16 +320,40 @@ class AudioPackImportFlow(ModalImportFlowMixin):
         )
         _log_import_picker_return(trace_id, "audio pack folder", picker_started, chosen_dir)
         if not chosen_dir:
+            self._set_import_buttons_enabled(True)
             return
 
-        worker = ImportWorker.for_pack(
-            Path(chosen_dir), self._get_config().audio_packs_root, pack_id=pack_id, overwrite=True
-        )
+        if not self._panel.request_resource_release():
+            QMessageBox.warning(
+                self._parent,
+                QCoreApplication.translate("AudioPackImportFlow", "Re-import Blocked"),
+                QCoreApplication.translate(
+                    "AudioPackImportFlow",
+                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                    "Wait for the active task to finish and try again.",
+                ),
+            )
+            self._set_import_buttons_enabled(True)
+            return
+
+        try:
+            worker = ImportWorker.for_pack(
+                Path(chosen_dir),
+                self._get_config().audio_packs_root,
+                pack_id=pack_id,
+                overwrite=True,
+            )
+        except Exception:
+            self._set_import_buttons_enabled(True)
+            raise
 
         def on_success(imported_id: str, _meta: dict) -> None:
             current_chain = self._panel.get_chain()
             self._panel.refresh_registry()
             self._panel.set_chain(current_chain)
+            _log_import_persist(trace_id, "start")
+            self._notify_config_changed()
+            _log_import_persist(trace_id, "done")
             QMessageBox.information(
                 self._parent,
                 QCoreApplication.translate("AudioPackImportFlow", "Audio Pack Re-imported"),

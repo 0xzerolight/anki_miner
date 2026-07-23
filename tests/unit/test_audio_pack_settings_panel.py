@@ -521,6 +521,35 @@ def test_remove_deletes_index_dir_on_disk(qapp, qtbot, tmp_path, confirm_remove)
     assert [e.kind for e in panel.get_chain()] == ["jpod101"]
 
 
+def test_release_callback_blocks_remove(qapp, qtbot, tmp_path, confirm_remove, monkeypatch):
+    pack_dir = tmp_path / "a"
+    pack_dir.mkdir()
+    (pack_dir / "index.sqlite").write_bytes(b"placeholder")
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((AudioSourceEntry(kind="pack", pack_id="a", enabled=True),))
+    panel.set_release_callback(lambda: False)
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.warning",
+        lambda _parent, _title, body, *a, **kw: warnings.append(body),
+    )
+
+    def run_sync(_parent, work, on_success, _on_error):
+        on_success(work())
+
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.chain_settings_panel_base.run_off_thread",
+        run_sync,
+    )
+    panel.remove(0)
+
+    assert panel.get_chain() == (AudioSourceEntry(kind="pack", pack_id="a", enabled=True),)
+    assert pack_dir.exists()
+    assert any("Indexed resources are in use" in body for body in warnings)
+    assert all(task in warnings[0] for task in ("mining", "startup prewarm", "card backfill"))
+
+
 def test_remove_cancelled_keeps_pack_and_chain(qapp, qtbot, monkeypatch, tmp_path):
     monkeypatch.setattr(
         "anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.question",
