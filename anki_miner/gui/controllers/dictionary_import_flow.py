@@ -31,7 +31,10 @@ from anki_miner.gui.widgets.panels import DictionarySettingsPanel
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import MutationToken
 from anki_miner.gui.workers.import_worker import ImportWorker
 from anki_miner.services._sqlite_index import prove_owned_slot, resolve_managed_slot
-from anki_miner.services.dictionary.importers.yomitan_importer import read_yomitan_title
+from anki_miner.services.dictionary.importers.yomitan_importer import (
+    derive_dict_id_from_zip,
+    read_yomitan_title,
+)
 from anki_miner.services.dictionary.registry import DictionaryRegistry, DictMeta
 from anki_miner.services.dictionary.storage import read_meta
 from anki_miner.services.dictionary.superseded import strip_date_bracket
@@ -248,6 +251,16 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         cur_base, cur_had = strip_date_bracket(existing_name)
         return zip_had and cur_had and zip_base == cur_base
 
+    def _saved_yomitan_source_matches(self, slot_id: str, zip_path: Path) -> bool:
+        """Return whether a saved Yomitan zip is safe to pin to ``slot_id``."""
+        try:
+            derived_id = derive_dict_id_from_zip(zip_path)
+        except Exception:  # noqa: BLE001 — invalid saved source falls through
+            return False
+        return derived_id == slot_id or (
+            slot_id in _PINNED_DICT_SLOT_IDS and self._catalog_slot_base_matches(slot_id, zip_path)
+        )
+
     def reimport_dict(
         self,
         slot_id: str,
@@ -268,7 +281,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 except ValueError:
                     return config.dicts_root, "", False
                 source_zip = slot / "source.zip"
-                if source_zip.is_file():
+                if source_zip.is_file() and self._saved_yomitan_source_matches(slot_id, source_zip):
                     return source_zip, "yomitan", True
                 if slot_id == "jmdict-english" and config.jmdict_path.is_file():
                     return config.jmdict_path, "jmdict", True
@@ -495,7 +508,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                     display_name = meta.source_name if meta is not None else entry.dict_id
                     owned = prove_owned_slot(config.dicts_root, entry.dict_id, "dictionary")
                     source_zip = slot / "source.zip"
-                    if owned and source_zip.is_file():
+                    if owned and source_zip.is_file() and self._saved_yomitan_source_matches(entry.dict_id, source_zip):
                         jobs.append(("yomitan", entry.dict_id, display_name, source_zip))
                         continue
                     if (

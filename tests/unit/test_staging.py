@@ -13,7 +13,78 @@ import pytest
 
 from anki_miner.services import _staging as staging_module
 from anki_miner.services._sqlite_index import read_ownership_marker, write_ownership_marker
-from anki_miner.services._staging import promote_staged_dir
+from anki_miner.services._staging import promote_staged_dir, repair_managed_slot
+
+
+def test_repair_crash_after_quarantine_leaves_owned_recovery_candidate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    final = tmp_path / "resource"
+    final.mkdir()
+    (final / "source.zip").write_bytes(b"saved")
+    real_replace = os.replace
+
+    def crash_after_quarantine(src: str | Path, dst: str | Path) -> None:
+        real_replace(src, dst)
+        if Path(src) == final and ".corrupt-" in Path(dst).name:
+            raise SystemExit("simulated process exit")
+
+    monkeypatch.setattr(staging_module.os, "replace", crash_after_quarantine)
+
+    with pytest.raises(SystemExit, match="simulated process exit"):
+        repair_managed_slot(
+            final / "source.zip",
+            tmp_path,
+            "resource",
+            "dictionary",
+            lambda _source, _overwrite: None,
+        )
+
+    quarantines = list(tmp_path.glob("resource.corrupt-*"))
+    assert not final.exists()
+    assert len(quarantines) == 1
+    assert read_ownership_marker(quarantines[0]) == ("dictionary", "resource")
+    assert (quarantines[0] / "source.zip").read_bytes() == b"saved"
+
+
+def test_repair_restore_failure_preserves_original_error_and_recovery_candidate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    final = tmp_path / "resource"
+    final.mkdir()
+    (final / "source.zip").write_bytes(b"saved")
+    real_replace = os.replace
+    restore_attempts = 0
+
+    def fail_restore(src: str | Path, dst: str | Path) -> None:
+        nonlocal restore_attempts
+        if ".corrupt-" in Path(src).name and Path(dst) == final:
+            restore_attempts += 1
+            raise OSError(errno.EACCES, "restore blocked")
+        real_replace(src, dst)
+
+    def fail_import(_source: Path, _overwrite: bool) -> None:
+        raise RuntimeError("import failed")
+
+    monkeypatch.setattr(staging_module.os, "replace", fail_restore)
+
+    with pytest.raises(RuntimeError, match="import failed"):
+        repair_managed_slot(
+            final / "source.zip",
+            tmp_path,
+            "resource",
+            "dictionary",
+            fail_import,
+        )
+
+    quarantines = list(tmp_path.glob("resource.corrupt-*"))
+    assert restore_attempts == 1
+    assert not final.exists()
+    assert len(quarantines) == 1
+    assert read_ownership_marker(quarantines[0]) == ("dictionary", "resource")
+    assert (quarantines[0] / "source.zip").read_bytes() == b"saved"
 
 
 def test_promote_staged_dir_is_crash_safe(tmp_path: Path, monkeypatch) -> None:

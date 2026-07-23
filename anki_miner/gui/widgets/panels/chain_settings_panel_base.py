@@ -404,8 +404,12 @@ class ChainSettingsPanelBase(FormPanel):
             # and tombstone rename after pending settings have committed.
             display = self._entry_display_name(entry)
             target_dir = self._entry_disk_dir(entry)
+            owns_target = (
+                target_dir is not None and os.path.lexists(target_dir) and self._owns_entry_disk_dir(entry, target_dir)
+            )
 
-            if not self._confirm_remove(display):
+            confirm_remove = self._confirm_remove if owns_target else self._confirm_chain_only_remove
+            if not confirm_remove(display):
                 return  # user declined the destructive-remove confirmation
 
             if target_dir is None:
@@ -431,7 +435,7 @@ class ChainSettingsPanelBase(FormPanel):
                     self._warn_post_save_failure(display, self._error_text(result))
                 return
 
-            if not self._owns_entry_disk_dir(entry, target_dir):
+            if not owns_target or not self._owns_entry_disk_dir(entry, target_dir):
                 result = self._commit_removed_entry(entry)
                 if not result.persisted:
                     self._report_remove_failure(
@@ -699,6 +703,10 @@ class ChainSettingsPanelBase(FormPanel):
     def _confirm_remove(self, display: str) -> bool:
         """Show the destructive-remove confirmation; return True to proceed."""
         raise NotImplementedError
+
+    def _confirm_chain_only_remove(self, display: str) -> bool:
+        """Show a chain-only confirmation when disk ownership is unproved."""
+        return self._confirm_remove(display)
 
     def _rmtree_dir(self, target: Path) -> RmtreeOutcome:
         """Delete *target* off-thread with non-raising cleanup semantics."""

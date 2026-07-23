@@ -52,28 +52,86 @@ def test_add_dict_dialog_defaults_to_dicts_dir():
     assert rsd.call_args.kwargs.get("default_dir") == dicts_root
 
 
-def test_corrupt_meta_jmdict_with_source_zip_routes_to_slot_pinned_yomitan(tmp_path: Path):
+def test_corrupt_saved_jmdict_zip_falls_back_to_configured_xml(tmp_path: Path):
     dicts_root = tmp_path / "dicts"
     slot = dicts_root / "jmdict-english"
     slot.mkdir(parents=True)
     (slot / "index.sqlite").write_bytes(b"not sqlite")
     source_zip = slot / "source.zip"
     source_zip.write_bytes(b"PK\x03\x04")
+    xml = tmp_path / "JMdict_e"
+    xml.write_text("<JMdict/>", encoding="utf-8")
     flow = _make_flow(dicts_root)
+    flow._get_config().jmdict_path = xml
     flow._panel.request_resource_release.return_value = True
     flow._run_modal_import = MagicMock()
     worker = MagicMock()
 
     with (
-        patch(f"{MOD}.ImportWorker.for_yomitan_repair", return_value=worker) as yomitan,
-        patch(f"{MOD}.ImportWorker.for_jmdict_repair") as jmdict,
+        patch(f"{MOD}.ImportWorker.for_yomitan_repair") as yomitan,
+        patch(f"{MOD}.ImportWorker.for_jmdict_repair", return_value=worker) as jmdict,
         patch(f"{MOD}.file_dialogs.get_open_file_name") as picker,
     ):
         flow.reimport_dict("jmdict-english")
 
-    yomitan.assert_called_once_with(source_zip, dicts_root, dict_id="jmdict-english")
-    jmdict.assert_not_called()
+    yomitan.assert_not_called()
+    jmdict.assert_called_once_with(xml, dicts_root)
     picker.assert_not_called()
+    assert flow._run_modal_import.call_args.kwargs["worker"] is worker
+
+
+def test_unrelated_saved_zip_is_not_pinned_to_slot(tmp_path: Path):
+    dicts_root = tmp_path / "dicts"
+    slot = dicts_root / "expected"
+    source_zip = build_yomitan_zip(slot / "source.zip", title="Other Dictionary")
+    flow = _make_flow(dicts_root)
+
+    with (
+        patch(f"{MOD}.QMessageBox.warning") as warning,
+        patch(f"{MOD}.ImportWorker.for_yomitan_repair") as yomitan,
+    ):
+        flow.reimport_dict("expected")
+
+    warning.assert_called_once()
+    yomitan.assert_not_called()
+    assert source_zip.is_file()
+
+
+def test_saved_zip_with_exact_derived_id_routes_to_slot_pinned_yomitan(tmp_path: Path):
+    dicts_root = tmp_path / "dicts"
+    source_zip = build_yomitan_zip(
+        dicts_root / "expected" / "source.zip",
+        title="Expected",
+        revision="",
+    )
+    flow = _make_flow(dicts_root)
+    flow._panel.request_resource_release.return_value = True
+    flow._run_modal_import = MagicMock()
+    worker = MagicMock()
+
+    with patch(f"{MOD}.ImportWorker.for_yomitan_repair", return_value=worker) as yomitan:
+        flow.reimport_dict("expected")
+
+    yomitan.assert_called_once_with(source_zip, dicts_root, dict_id="expected")
+    assert flow._run_modal_import.call_args.kwargs["worker"] is worker
+
+
+def test_saved_catalog_zip_with_matching_title_base_routes_to_pinned_slot(tmp_path: Path):
+    dicts_root = tmp_path / "dicts"
+    _seed_slot(dicts_root, "jitendex", "Jitendex.org [2025-11-05]")
+    source_zip = build_yomitan_zip(
+        dicts_root / "jitendex" / "source.zip",
+        title="Jitendex.org [2026-06-06]",
+    )
+    flow = _make_flow(dicts_root)
+    flow._panel.request_resource_release.return_value = True
+    flow._run_modal_import = MagicMock()
+    worker = MagicMock()
+
+    with patch(f"{MOD}.ImportWorker.for_yomitan_repair", return_value=worker) as yomitan:
+        flow.reimport_dict("jitendex")
+
+    yomitan.assert_called_once_with(source_zip, dicts_root, dict_id="jitendex")
     assert flow._run_modal_import.call_args.kwargs["worker"] is worker
 
 

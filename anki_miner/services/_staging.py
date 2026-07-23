@@ -95,6 +95,7 @@ def repair_managed_slot(
         ):
             return import_slot(source, True)
 
+        write_ownership_marker(final, slot_id, family)
         quarantine = _unique_repair_path(final, "corrupt")
         os.replace(final, quarantine)
         try:
@@ -105,13 +106,16 @@ def repair_managed_slot(
             else:
                 repair_source = quarantine / relative_source
             result = import_slot(repair_source, False)
-        except BaseException:
-            _restore_repair_quarantine(
-                final,
-                quarantine,
-                slot_id=slot_id,
-                family=family,
-            )
+        except BaseException as import_error:
+            try:
+                _restore_repair_quarantine(
+                    final,
+                    quarantine,
+                    slot_id=slot_id,
+                    family=family,
+                )
+            except BaseException as restore_error:
+                import_error.add_note(f"Could not restore repair quarantine {quarantine}: {restore_error}")
             raise
         return result
 

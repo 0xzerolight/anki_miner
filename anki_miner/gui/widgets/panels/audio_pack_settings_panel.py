@@ -503,6 +503,21 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         )
         return reply == QMessageBox.StandardButton.Yes
 
+    def _confirm_chain_only_remove(self, display: str) -> bool:
+        reply = QMessageBox.question(
+            self,
+            self.tr("Remove audio pack"),
+            tr_format(
+                self.tr(
+                    "Remove '%1' from the audio chain?\n\nIndex files on disk will be left untouched because the folder could not be proven to belong to Anki Miner."
+                ),
+                display,
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return reply == QMessageBox.StandardButton.Yes
+
     def _acquire_release_for_remove(self) -> bool:
         if not self.request_resource_release():
             QMessageBox.warning(

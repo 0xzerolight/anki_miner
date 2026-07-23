@@ -917,6 +917,43 @@ def test_right_click_pack_row_no_meta_exposes_reimport_and_remove(qtbot, monkeyp
     assert emitted == ["unknown-pack"]
 
 
+def test_right_click_remove_pack_without_meta_uses_chain_only_prompt(
+    qtbot,
+    monkeypatch,
+    tmp_path,
+):
+    target = tmp_path / "unknown-pack"
+    target.mkdir()
+    (target / "keep.txt").write_text("foreign", encoding="utf-8")
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(
+        (AudioSourceEntry(kind="pack", pack_id="unknown-pack", enabled=True),),
+        registry_meta={},
+    )
+    _patch_menu_exec(monkeypatch, "Remove")
+    prompts: list[str] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.question",
+        lambda _parent, _title, body, *a, **kw: prompts.append(body) or QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
+        lambda *a, **kw: QMessageBox.StandardButton.Ok,
+    )
+
+    item = panel._list.item(0)
+    pos = panel._list.visualItemRect(item).center()
+    panel._on_row_context_menu(pos)
+    qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
+
+    assert len(prompts) == 1
+    assert "from the audio chain" in prompts[0]
+    assert "left untouched" in prompts[0]
+    assert "index files are deleted" not in prompts[0]
+    assert (target / "keep.txt").read_text(encoding="utf-8") == "foreign"
+
+
 # ---------------------------------------------------------------------------
 # set_chain with registry_meta
 # ---------------------------------------------------------------------------

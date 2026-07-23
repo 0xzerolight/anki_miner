@@ -660,6 +660,41 @@ def test_right_click_metadata_less_row_exposes_reimport_and_remove(qtbot, monkey
     assert emitted == ["broken-dict"]
 
 
+def test_right_click_remove_metadata_less_unproved_row_uses_chain_only_prompt(
+    qtbot,
+    monkeypatch,
+    tmp_path,
+):
+    target = tmp_path / "broken-dict"
+    target.mkdir()
+    (target / "keep.txt").write_text("foreign", encoding="utf-8")
+    panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((ChainEntry(kind="indexed", dict_id="broken-dict", enabled=True),))
+    panel._view = DictionaryRegistry(tmp_path)
+    _patch_menu_exec(monkeypatch, "Remove")
+    prompts: list[str] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.question",
+        lambda _parent, _title, body, *a, **kw: prompts.append(body) or QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
+        lambda *a, **kw: QMessageBox.StandardButton.Ok,
+    )
+
+    item = panel._list.item(0)
+    pos = panel._list.visualItemRect(item).center()
+    panel._on_row_context_menu(pos)
+    qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
+
+    assert len(prompts) == 1
+    assert "from the dictionary list" in prompts[0]
+    assert "left untouched" in prompts[0]
+    assert "delete its files" not in prompts[0]
+    assert (target / "keep.txt").read_text(encoding="utf-8") == "foreign"
+
+
 def test_remove_emits_chain_changed_signal(qapp, qtbot, tmp_path, confirm_remove):
     """remove() must fire chain_changed so settings_tab can persist the chain to
     gui_config.json without waiting for the user to click Save."""

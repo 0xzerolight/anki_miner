@@ -408,6 +408,21 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         )
         return reply == QMessageBox.StandardButton.Yes
 
+    def _confirm_chain_only_remove(self, display: str) -> bool:
+        reply = QMessageBox.question(
+            self,
+            self.tr("Remove dictionary"),
+            tr_format(
+                self.tr(
+                    "Remove '%1' from the dictionary list?\n\nFiles on disk will be left untouched because the folder could not be proven to belong to Anki Miner."
+                ),
+                display,
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return reply == QMessageBox.StandardButton.Yes
+
     def _acquire_release_for_remove(self) -> bool:
         # Drop sqlite handles before rmtree. On Windows the index.sqlite file
         # stays locked while any DefinitionService still holds its read-only
