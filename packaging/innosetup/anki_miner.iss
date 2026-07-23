@@ -82,7 +82,7 @@ Type: filesandordirs; Name: "{app}\_internal"
 ; shortcut locations outside Inno's install log; exact paths only, never wildcards.
 Type: files; Name: "{autodesktop}\Anki Miner.lnk"
 Type: files; Name: "{userprograms}\Anki Miner.lnk"
-Type: files; Name: "{userprofile}\Anki Miner.lnk"
+Type: files; Name: "{%USERPROFILE}\Anki Miner.lnk"
 
 [Files]
 Source: "..\..\dist\AnkiMiner\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
