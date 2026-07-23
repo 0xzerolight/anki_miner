@@ -147,7 +147,7 @@ def _inject_windows_truststore() -> None:
     if any(name in os.environ for name in _CA_ENV_VARS):
         return
     try:
-        import truststore  # type: ignore[import-not-found]
+        import truststore
 
         truststore.inject_into_ssl()
     except Exception:
