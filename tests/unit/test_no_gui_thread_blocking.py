@@ -135,14 +135,6 @@ ALLOWLIST: dict[str, set[str]] = {
         # be poisoned before its bounded QThread join.
         "controllers/background_tasks.py",
     },
-    # time.sleep — only inside `_robust_rmtree`'s Windows-retry loop, and that
-    # helper is only ever called from a `_delete` work callable dispatched via
-    # run_off_thread (settings-panel "remove" actions). Off-thread.
-    r"time\.sleep\(": {
-        "widgets/panels/audio_pack_settings_panel.py",
-        "widgets/panels/dictionary_settings_panel.py",
-        "widgets/panels/frequency_settings_panel.py",
-    },
     # processEvents — a single deliberate pump in ui_settings_panel so the busy
     # cursor paints before an UNAVOIDABLE synchronous repolish of the whole widget
     # tree (documented in the slot: the restyle cost can't be moved off the GUI thread).
