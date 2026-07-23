@@ -692,9 +692,8 @@ def test_remove_cancelled_does_not_emit_chain_changed(qapp, qtbot, monkeypatch, 
     assert changed == []
 
 
-def test_remove_failed_rmtree_does_not_emit_chain_changed(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
-    """If rmtree exhausts its retries we abort early; chain_changed must not fire
-    because the chain mutation also did not happen."""
+def test_remove_failed_tombstone_cleanup_keeps_durable_chain_change(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
+    """Post-commit cleanup failure leaves a tombstone without reversing remove."""
     dict_dir = tmp_path / "a"
     dict_dir.mkdir()
     (dict_dir / "index.sqlite").write_bytes(b"placeholder")
@@ -706,7 +705,7 @@ def test_remove_failed_rmtree_does_not_emit_chain_changed(qapp, qtbot, monkeypat
     )
 
     def _always_fail(*args, **kwargs):
-        raise PermissionError("simulated locked file")
+        return False, PermissionError("simulated locked file")
 
     monkeypatch.setattr(dsp_mod, "robust_rmtree", _always_fail)
 
@@ -723,12 +722,11 @@ def test_remove_failed_rmtree_does_not_emit_chain_changed(qapp, qtbot, monkeypat
     panel.chain_changed.connect(lambda: changed.append(None))
 
     panel.remove(0)
-    # The off-thread rmtree fails; wait for the error handler to re-enable the
-    # Remove button (proof the error callback ran on the GUI thread).
-    qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
-    assert changed == []
+    qtbot.waitUntil(lambda: not panel.has_active_mutation(), timeout=3000)
+    assert changed == [None]
     chain = panel.get_chain()
-    assert [e.dict_id for e in chain[:1]] == ["a"], "failed remove must leave chain intact"
+    assert [e.kind for e in chain] == ["jisho"]
+    assert len(list(tmp_path.glob("a.tomb-*"))) == 1
 
 
 def test_remove_retries_transient_oserror(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
@@ -769,8 +767,9 @@ def test_remove_retries_transient_oserror(qapp, qtbot, monkeypatch, tmp_path, co
 
     panel.remove(0)
 
-    # rmtree (with its retry loop) now runs off the GUI thread.
-    qtbot.waitUntil(lambda: changed == [None], timeout=3000)
+    # Tombstone cleanup (with its retry loop) runs off the GUI thread.
+    qtbot.waitUntil(lambda: not panel.has_active_mutation(), timeout=3000)
+    assert changed == [None]
     assert calls["n"] >= 2, "retry loop should have triggered at least once"
     assert not dict_dir.exists(), "second attempt must complete the rmtree"
     assert warned == [], "successful retry must not show an error dialog"
@@ -874,9 +873,8 @@ def test_release_callback_runs_before_rmtree(qapp, qtbot, monkeypatch, tmp_path,
 
     panel.remove(0)
 
-    # release fires synchronously on the GUI thread before the off-thread
-    # rmtree is dispatched; wait for the delete to land.
-    qtbot.waitUntil(lambda: not dict_dir.exists(), timeout=3000)
+    # release fires synchronously before rename; cleanup follows off-thread.
+    qtbot.waitUntil(lambda: len(events) == 2, timeout=3000)
     assert events == ["release", "rmtree"], events
 
 
@@ -903,18 +901,19 @@ def test_remove_without_release_callback_still_works(qapp, qtbot, tmp_path, conf
     assert [e.kind for e in panel.get_chain()] == ["jisho"]
 
 
-def test_robust_rmtree_wrapper_uses_shared_raising_mode(monkeypatch, tmp_path):
-    """Panel-local seam delegates to the shared required-delete mode."""
+def test_robust_rmtree_wrapper_uses_shared_outcome_mode(monkeypatch, tmp_path):
+    """Panel-local seam delegates to non-raising post-commit cleanup."""
     target = tmp_path / "doomed"
     target.mkdir()
     calls: list[tuple[Path, str]] = []
 
-    def shared(path: Path, *, mode: str) -> None:
+    def shared(path: Path, *, mode: str):
         calls.append((path, mode))
+        return True, None
 
     monkeypatch.setattr(dsp_mod, "robust_rmtree", shared)
     dsp_mod._robust_rmtree(target)
-    assert calls == [(target, "raise")]
+    assert calls == [(target, "outcome")]
 
 
 def test_right_click_jisho_row_shows_no_menu(qapp, qtbot, monkeypatch, tmp_path):
@@ -1172,7 +1171,7 @@ class TestOffThreadDiskWork:
         )
 
         panel.remove(0)
-        qtbot.waitUntil(lambda: not dict_dir.exists(), timeout=3000)
+        qtbot.waitUntil(lambda: bool(rmtree_threads), timeout=3000)
         assert rmtree_threads and all(t != main_id for t in rmtree_threads), rmtree_threads
 
     def test_refresh_registry_scans_off_gui_thread(self, qapp, qtbot, tmp_path, monkeypatch):

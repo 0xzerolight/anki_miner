@@ -8,7 +8,7 @@ from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
 from pathlib import Path
-from typing import Protocol, runtime_checkable
+from typing import Protocol, cast, runtime_checkable
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -32,6 +32,7 @@ from anki_miner.gui.controllers.frequency_import_flow import FrequencyImportFlow
 from anki_miner.gui.controllers.zip_import_flow import YomitanCsvLabels, ZipImportFlow
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import file_dialogs
+from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.qt_helpers import install_no_scroll_on_inputs
@@ -173,6 +174,9 @@ class SettingsTab(QWidget):
         self._setup_ui()
         for panel in (self.dictionary_panel, self.audio_panel, self.frequency_panel):
             panel.set_mutation_preflight(self.commit_pending_settings_for_mutation)
+        self.dictionary_panel.set_remove_chain_commit(self._commit_dictionary_removal)
+        self.audio_panel.set_remove_chain_commit(self._commit_audio_removal)
+        self.frequency_panel.set_remove_chain_commit(self._commit_frequency_removal)
         # Controllers (T-66) own worker lifecycles + dialogs; the tab keeps
         # widgets, signal wiring, and config assembly. Dependency is one-way:
         # tab → controller → workers/services (tab-owned collaboration points
@@ -366,7 +370,7 @@ class SettingsTab(QWidget):
         self.dictionary_panel.reimport_dict_requested.connect(self._dict_import_flow.reimport_dict)
         self.dictionary_panel.reimport_all_requested.connect(self._dict_import_flow.reimport_all)
         self.dictionary_panel.rescan_requested.connect(self._dict_import_flow.restore_unlisted)
-        # Persist chain immediately after reorder/toggle or destructive remove.
+        # Persist chain immediately after reorder/toggle.
         # Use a NARROW persist of just the chain — NOT the full Save pipeline
         # (T-08): the commit pipeline has unrelated validation gates (bad
         # dicts_root, missing cookies file, invalid regex, pitch/freq import
@@ -374,9 +378,6 @@ class SettingsTab(QWidget):
         # deleted dict_id orphaned — the exact Issue #30 bug this wiring
         # prevents — while its success path silently commits every panel's
         # unsaved edits.
-        # A destructive remove re-emits chain_changed (its sole persist
-        # trigger), so this single wiring covers reorder, toggle, and remove
-        # alike (OVH-032).
         self.dictionary_panel.chain_changed.connect(
             lambda: self._persist_chain_change(self.dictionary_panel.get_chain())
         )
@@ -384,9 +385,7 @@ class SettingsTab(QWidget):
         # Audio panel signals — wire Add/Reimport to the import flow controller.
         self.audio_panel.add_pack_requested.connect(self._audio_pack_import_flow.add_pack)
         self.audio_panel.reimport_pack_requested.connect(self._audio_pack_import_flow.reimport_pack)
-        # Persist chain immediately after reorder/toggle or destructive remove.
-        # Removal re-emits chain_changed (after pack deletion succeeds), so this
-        # single wiring covers it.
+        # Persist chain immediately after reorder/toggle.
         self.audio_panel.chain_changed.connect(lambda: self._persist_audio_chain_change(self.audio_panel.get_chain()))
         self.audio_panel.retry_missing_audio_requested.connect(self._on_retry_missing_audio)
         # Sentence-TTS toggles persist immediately, like the chain above.
@@ -395,9 +394,7 @@ class SettingsTab(QWidget):
         # Frequency panel signals — wire Add/Reimport to the import flow.
         self.frequency_panel.add_source_requested.connect(self._frequency_import_flow.add_source)
         self.frequency_panel.reimport_source_requested.connect(self._frequency_import_flow.reimport_source)
-        # Persist chain immediately after reorder/toggle or destructive remove.
-        # Removal re-emits chain_changed (after source deletion succeeds), so
-        # this single wiring covers it.
+        # Persist chain immediately after reorder/toggle.
         self.frequency_panel.chain_changed.connect(
             lambda: self._persist_frequency_chain_change(self.frequency_panel.get_chain())
         )
@@ -1277,10 +1274,32 @@ class SettingsTab(QWidget):
 
     # === Dictionary chain persistence ===
 
+    def _commit_remove_config(self, config: AnkiMinerConfig) -> ConfigCommitResult:
+        """Commit one remove and normalize its durable failure boundary."""
+        try:
+            self._commit_config(config)
+        except ConfigCommitError as error:
+            return error.result
+        except Exception as error:
+            return ConfigCommitResult.pre_save_failure(error)
+        return ConfigCommitResult.committed()
+
+    def _commit_dictionary_removal(self, new_chain: tuple[object, ...]) -> ConfigCommitResult:
+        chain = cast(tuple[ChainEntry, ...], new_chain)
+        return self._commit_remove_config(replace(self.config, dictionary_chain=chain))
+
+    def _commit_audio_removal(self, new_chain: tuple[object, ...]) -> ConfigCommitResult:
+        chain = cast(tuple[AudioSourceEntry, ...], new_chain)
+        return self._commit_remove_config(replace(self.config, expression_audio_chain=chain))
+
+    def _commit_frequency_removal(self, new_chain: tuple[object, ...]) -> ConfigCommitResult:
+        chain = cast(tuple[FreqEntry, ...], new_chain)
+        return self._commit_remove_config(replace(self.config, frequency_chain=chain))
+
     def _persist_chain_change(self, new_chain: tuple[ChainEntry, ...]) -> None:
         """Save a chain mutation to disk and notify listeners.
 
-        Called after a successful import (or a panel reorder/remove) so the
+        Called after a successful import or panel reorder/toggle so the
         freshly imported dictionary is reachable on the very next lookup —
         without requiring a manual Save. Without this, the dict folder exists on
         disk but is absent from dictionary_chain in gui_config, i.e. invisible to
@@ -1297,7 +1316,7 @@ class SettingsTab(QWidget):
     def _persist_audio_chain_change(self, new_chain: tuple[AudioSourceEntry, ...]) -> None:
         """Save an audio chain mutation to disk and notify listeners.
 
-        Called after a successful audio pack import or a destructive remove so
+        Called after a successful audio pack import or panel reorder/toggle so
         the freshly-imported pack is reachable on the very next lookup without
         requiring the user to click Save in Settings.
         """
@@ -1356,9 +1375,9 @@ class SettingsTab(QWidget):
     def _persist_frequency_chain_change(self, new_chain: tuple[FreqEntry, ...]) -> None:
         """Save a frequency chain mutation to disk and notify listeners.
 
-        Called after a successful frequency-source import or a destructive
-        remove so the freshly-imported source is reachable on the very next
-        run without requiring the user to click Save in Settings.
+        Called after a successful frequency-source import or panel reorder/toggle
+        so the freshly-imported source is reachable on the very next run without
+        requiring the user to click Save in Settings.
         """
         new_config = replace(self.config, frequency_chain=new_chain)
         self._commit_config(new_config)

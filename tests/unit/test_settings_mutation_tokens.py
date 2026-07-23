@@ -137,7 +137,7 @@ def test_remove_completion_rebases_on_current_chain(qtbot, monkeypatch, tmp_path
         )
     )
 
-    remove_done(None)
+    remove_done((True, None))
 
     assert [entry.dict_id for entry in panel.get_chain()] == ["added-during-remove", None]
 

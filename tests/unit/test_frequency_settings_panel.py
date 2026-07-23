@@ -477,7 +477,7 @@ class TestOffThreadDiskWork:
         panel.set_chain((FreqEntry(source_id="jpdb", enabled=True),))
 
         panel.remove(0)
-        qtbot.waitUntil(lambda: not (tmp_path / "jpdb").exists(), timeout=3000)
+        qtbot.waitUntil(lambda: bool(rmtree_threads), timeout=3000)
         assert rmtree_threads and all(t != main_id for t in rmtree_threads), rmtree_threads
 
 

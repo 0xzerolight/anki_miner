@@ -1,9 +1,4 @@
-"""Tests for OVH-032: dictionary chain reorder/toggle instant persist.
-
-chain_changed must be wired to _persist_chain_change (mirroring the audio
-panel).  A destructive remove re-emits chain_changed (and nothing else), so the
-single wiring persists a removal exactly once.
-"""
+"""Tests for immediate dictionary-chain persistence."""
 
 from __future__ import annotations
 
@@ -12,6 +7,7 @@ from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.widgets.settings_tab import SettingsTab
+from anki_miner.services._sqlite_index import write_ownership_marker
 
 
 @pytest.fixture
@@ -101,14 +97,15 @@ class TestDictChainReorderPersists:
 
 
 class TestDictChainRemovalPersistsExactlyOnce:
-    """Removal must persist exactly once (a single chain_changed emit)."""
+    """Outcome-aware removal must persist exactly once."""
 
     def test_remove_persists_exactly_once(self, tab, confirm_remove, tmp_path, qtbot):
-        """Removing a dict triggers chain_changed → exactly one config_changed emit."""
-        # Create a physical dir so rmtree doesn't fail.
+        """Removing a dict triggers exactly one removal config commit."""
+        # Create an owned physical slot for tombstone removal.
         dict_dir = tmp_path / "alpha"
         dict_dir.mkdir()
         (dict_dir / "index.sqlite").write_bytes(b"placeholder")
+        write_ownership_marker(dict_dir, "alpha", "dictionary")
 
         # Point the panel at tmp_path so the remove finds the dir.
         tab.dictionary_panel.set_dicts_root(tmp_path)
@@ -127,7 +124,7 @@ class TestDictChainRemovalPersistsExactlyOnce:
 
         # remove() first runs the mutation settings preflight, which commits
         # the pending root edit (an emit carrying the pre-remove chain), then
-        # the off-thread rmtree completes and the removal itself persists.
+        # the synchronous removal commit drops the indexed entry.
         qtbot.waitUntil(lambda: any(len(chain) == 1 for chain in persisted), timeout=3000)
         removal_emits = [chain for chain in persisted if len(chain) == 1]
         assert len(removal_emits) == 1, f"removal must persist exactly once; got {len(removal_emits)} removal emits"
@@ -144,6 +141,7 @@ class TestDictChainRemovalPersistsExactlyOnce:
         dict_dir = tmp_path / "alpha"
         dict_dir.mkdir()
         (dict_dir / "index.sqlite").write_bytes(b"placeholder")
+        write_ownership_marker(dict_dir, "alpha", "dictionary")
 
         tab.dictionary_panel.set_dicts_root(tmp_path)
         tab._debounce_timer.stop()

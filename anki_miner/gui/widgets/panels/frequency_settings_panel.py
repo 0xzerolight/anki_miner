@@ -37,12 +37,12 @@ from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
 from anki_miner.services._sqlite_index import prove_owned_slot, resolve_managed_slot
 from anki_miner.services.frequency.registry import FreqSourceMeta, FrequencySourceRegistry
 from anki_miner.utils.i18n import tr_format
-from anki_miner.utils.robust_fs import robust_rmtree
+from anki_miner.utils.robust_fs import RmtreeOutcome, robust_rmtree
 
 
-def _robust_rmtree(target: Path) -> None:
-    """Panel-local seam for required deletion."""
-    robust_rmtree(target, mode="raise")
+def _robust_rmtree(target: Path) -> RmtreeOutcome:
+    """Panel-local seam for post-commit cleanup."""
+    return robust_rmtree(target, mode="outcome")
 
 
 # Human-readable format labels keyed by the importer's ``format`` value.
@@ -132,6 +132,24 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
             files_left_template=self.tr(
                 "The chain entry was removed, but files at %1 were left untouched because "
                 "the folder could not be proven to belong to Anki Miner."
+            ),
+            intact_failure_template=self.tr("Could not remove %1:\n%2\n\nThe files are intact. Try again."),
+            partial_failure_template=self.tr(
+                "Could not complete removal of %1:\n%2\n\nThe files were partially changed. "
+                "Re-import or repair this frequency source before retrying."
+            ),
+            config_pending_failure_template=self.tr(
+                "Could not restore %1 after its configuration update failed:\n%2\n\n"
+                "The files are no longer in the installed location; a configuration update "
+                "is pending. Restart Anki Miner before retrying."
+            ),
+            post_save_warning_template=self.tr(
+                "Removal of %1 was saved, but Anki Miner could not refresh it:\n%2\n\n"
+                "The removal was saved and will remain after restart."
+            ),
+            cleanup_pending_template=self.tr(
+                "%1 was removed, but its tombstone at %2 could not be deleted:\n%3\n\n"
+                "The removal is saved; cleanup is pending and will be retried at startup."
             ),
         )
         self._setup_fields()
@@ -286,8 +304,8 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
             return False
         return True
 
-    def _rmtree_dir(self, target: Path) -> None:
-        _robust_rmtree(target)
+    def _rmtree_dir(self, target: Path) -> RmtreeOutcome:
+        return _robust_rmtree(target)
 
     def _on_row_context_menu(self, pos: QPoint) -> None:
         """Right-click a source row to re-import or remove it."""
