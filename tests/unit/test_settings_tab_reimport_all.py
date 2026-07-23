@@ -99,6 +99,8 @@ def stubbed_workers(monkeypatch):
         inst.finished = MagicMock()
         inst.cancel = MagicMock()
         inst.start = MagicMock()
+        inst.set_trace_id = MagicMock()
+        inst.is_cancelled = False
         inst.isRunning = MagicMock(return_value=True)
         instances.append(inst)
         return inst
@@ -127,6 +129,16 @@ def _silence_dialogs(monkeypatch) -> list[tuple[str, str]]:
     monkeypatch.setattr(
         QMessageBox,
         "information",
+        lambda parent, title, body, *a, **kw: captured.append((title, body)) or 0,
+    )
+    return captured
+
+
+def _capture_warnings(monkeypatch) -> list[tuple[str, str]]:
+    captured: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        QMessageBox,
+        "warning",
         lambda parent, title, body, *a, **kw: captured.append((title, body)) or 0,
     )
     return captured
@@ -169,12 +181,18 @@ def test_reimport_all_two_yomitan(tab_for_reimport_all, monkeypatch, stubbed_wor
     config_changed_emissions: list[object] = []
     tab.config_changed.connect(config_changed_emissions.append)
     summaries = _silence_dialogs(monkeypatch)
+    warnings = _capture_warnings(monkeypatch)
 
     tab._dict_import_flow.reimport_all()
 
-    # Worker 1 launched; complete it → worker 2 launched.
+    # Worker 1 launched; its domain result alone must not launch worker 2.
+    assert stubbed_workers["yomitan_factory"].call_count == 1, warnings
+    first = stubbed_workers["instances"][0]
+    first.import_finished.connect.call_args.args[0]("dict_id_ignored", {"entry_count": 0})
     assert stubbed_workers["yomitan_factory"].call_count == 1
-    _complete_in_flight_worker(stubbed_workers)
+    assert config_changed_emissions == []
+    assert summaries == []
+    _emit_native_finished(first)
     assert stubbed_workers["yomitan_factory"].call_count == 2
     _complete_in_flight_worker(stubbed_workers)
 
@@ -194,6 +212,10 @@ def test_reimport_all_two_yomitan(tab_for_reimport_all, monkeypatch, stubbed_wor
     assert title == "Reimport All"
     assert "Reimported 2" in body
     assert "Dict A" in body and "Dict B" in body
+    assert "Cancelled" not in body
+    assert warnings == []
+    for worker in stubbed_workers["instances"]:
+        worker.cancel.assert_not_called()
 
 
 def test_reimport_all_skips_legacy_without_source_zip(tab_for_reimport_all, monkeypatch, stubbed_workers):
@@ -301,6 +323,7 @@ def test_reimport_all_includes_jmdict(tab_for_reimport_all, monkeypatch, stubbed
     stubbed_workers["jmdict_factory"].assert_called_once()
     args, _kwargs = stubbed_workers["jmdict_factory"].call_args
     assert Path(args[0]) == tab.config.jmdict_path
+    _complete_in_flight_worker(stubbed_workers)
 
 
 def test_reimport_all_jmdict_skipped_when_xml_missing(tab_for_reimport_all, monkeypatch, stubbed_workers):
@@ -459,6 +482,38 @@ def test_reimport_all_defers_reassignment_until_native_finished_without_wait(
 
     assert stubbed_workers["yomitan_factory"].call_count == 2
     assert tab._dict_import_flow._active_import_worker is stubbed_workers["instances"][1]
+
+
+def test_reimport_all_refresh_failure_warns_and_restores_controls(tab_for_reimport_all, monkeypatch, stubbed_workers):
+    tab = tab_for_reimport_all
+    dicts_root = tab.config.dicts_root
+    _make_dict_on_disk(dicts_root, "dict-a", fmt="yomitan", source_name="Dict A")
+    tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="dict-a", enabled=True),))
+    warnings: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        QMessageBox,
+        "warning",
+        lambda parent, title, body, *a, **kw: warnings.append((title, body)) or 0,
+    )
+    _silence_dialogs(monkeypatch)
+
+    def fail_notify() -> None:
+        raise RuntimeError("refresh callback failed")
+
+    tab._dict_import_flow._notify_config_changed = fail_notify
+    tab._dict_import_flow.reimport_all()
+    worker = stubbed_workers["instances"][0]
+    worker.import_finished.connect.call_args.args[0]("dict-a", {})
+
+    assert warnings == []
+    assert tab.dictionary_panel._reimport_btn.isEnabled() is False
+
+    _emit_native_finished(worker)
+
+    assert tab.dictionary_panel._reimport_btn.isEnabled()
+    assert len(warnings) == 1
+    assert warnings[0][0] == "Configuration Update Failed"
+    assert "refresh callback failed" in warnings[0][1]
 
 
 # ---------------------------------------------------------------------------

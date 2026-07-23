@@ -1,4 +1,4 @@
-"""Shared modal single-worker import plumbing for the Settings import flows.
+"""Shared modal import plumbing for the Settings import flows.
 
 The dictionary / frequency / audio-pack import flows each drive an
 :class:`~anki_miner.gui.workers.import_worker.ImportWorker` behind an
@@ -9,9 +9,8 @@ per flow method. :meth:`ModalImportFlowMixin._run_modal_import` owns that spine
 once; flows keep their chain policy, prompts, worker construction, and the
 domain-specific success handler.
 
-Only the single-worker methods delegate here. The two chained *state machines*
-(``DictionaryImportFlow.reimport_all`` and ``AudioPackImportFlow.add_pack``)
-have real per-step logic and keep their own plumbing.
+Single-worker methods and the two chained flows delegate their invariant
+dialog/worker lifecycle here.
 
 i18n note: every user-facing string is built by the flow (with the flow's own
 ``QCoreApplication.translate`` literal context) and passed in already
@@ -23,10 +22,10 @@ from __future__ import annotations
 import contextlib
 import logging
 import time
-from collections.abc import Callable
-from dataclasses import dataclass
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Any, Generic, Literal, TypeVar
 from uuid import uuid4
 
 from PyQt6.QtCore import Qt, QTimer
@@ -41,6 +40,7 @@ logger = logging.getLogger(__name__)
 _NO_PROGRESS_WARNING_MS = 10_000
 
 _OutcomeKind = Literal["success", "failed", "cancelled"]
+_JobT = TypeVar("_JobT")
 
 
 @dataclass
@@ -54,6 +54,29 @@ class _ModalImportState:
     first_progress_seen: bool = False
     cancel_requested: bool = False
     terminal_handled: bool = False
+
+
+@dataclass(frozen=True)
+class _ChainedImportResult(Generic[_JobT]):
+    successes: tuple[tuple[_JobT, str, dict], ...]
+    failures: tuple[tuple[_JobT, str], ...]
+    cancelled: bool
+
+
+@dataclass
+class _ChainedImportState(Generic[_JobT]):
+    index: int = 0
+    cancel_requested: bool = False
+    terminal_handled: bool = False
+
+    # Batch-owned worker. Never substitute _active_import_worker here:
+    # that global may hold a retained predecessor.
+    current_worker: ImportWorker | None = None
+    awaited_predecessor: ImportWorker | None = None
+    current_step: _ModalImportState | None = None
+
+    successes: list[tuple[_JobT, str, dict]] = field(default_factory=list)
+    failures: list[tuple[_JobT, str]] = field(default_factory=list)
 
 
 def _begin_import_trace(flow_name: str) -> str:
@@ -144,6 +167,164 @@ class ModalImportFlowMixin:
             pass_cancel_check=pass_cancel_check,
         )
 
+    def _create_modal_import_dialog(
+        self,
+        *,
+        progress_label: str,
+        cancel_label: str,
+        determinate: bool,
+        trace_id: str,
+    ) -> tuple[QProgressDialog, QTimer]:
+        """Create the shared modal dialog, watchdog, and import-button gate."""
+        dlg = QProgressDialog(progress_label, cancel_label, 0, 100 if determinate else 0, self._parent)
+        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
+        dlg.setAutoClose(False)
+        dlg.setAutoReset(False)
+        dlg.show()
+        self._set_import_buttons_enabled(False)
+
+        no_progress_timer = QTimer(dlg)
+        no_progress_timer.setSingleShot(True)
+        no_progress_timer.setInterval(_NO_PROGRESS_WARNING_MS)
+        no_progress_timer.timeout.connect(lambda: logger.warning("Import trace %s no progress for 10 s", trace_id))
+        return dlg, no_progress_timer
+
+    def _wire_latched_import_step(
+        self,
+        *,
+        worker: ImportWorker,
+        dlg: QProgressDialog,
+        no_progress_timer: QTimer,
+        state: _ModalImportState,
+        trace_id: str,
+        format_progress: Callable[[str], str],
+        is_current: Callable[[], bool],
+        on_native_finished: Callable[[], None],
+    ) -> Callable[[], None]:
+        """Wire one worker's guarded progress, first-result latch, and native barrier."""
+
+        def on_progress(cur: int, total: int, msg: str) -> None:
+            if not is_current() or state.cancel_requested or state.kind is not None or state.terminal_handled:
+                return
+            if total == 0:
+                dlg.setRange(0, 0)
+            else:
+                dlg.setMaximum(total)
+                if not is_current() or state.cancel_requested or state.kind is not None or state.terminal_handled:
+                    return
+                dlg.setValue(cur)
+            if not is_current() or state.cancel_requested or state.kind is not None or state.terminal_handled:
+                return
+            dlg.setLabelText(format_progress(msg))
+            no_progress_timer.start()
+            if not state.first_progress_seen:
+                state.first_progress_seen = True
+                logger.info(
+                    "Import trace %s first progress current=%d total=%d",
+                    trace_id,
+                    cur,
+                    total,
+                )
+
+        def latch_outcome(
+            kind: _OutcomeKind,
+            *,
+            resource_id: str | None = None,
+            meta: dict | None = None,
+            error: str | None = None,
+        ) -> None:
+            if not is_current() or state.terminal_handled:
+                logger.warning("Import trace %s late domain signal ignored kind=%s", trace_id, kind)
+                return
+            if state.kind is not None:
+                logger.warning(
+                    "Import trace %s duplicate domain signal ignored first=%s late=%s",
+                    trace_id,
+                    state.kind,
+                    kind,
+                )
+                return
+            state.kind = kind
+            state.resource_id = resource_id
+            state.meta = meta
+            state.error = error
+            with contextlib.suppress(RuntimeError):
+                no_progress_timer.stop()
+            logger.info("Import trace %s domain latch kind=%s", trace_id, kind)
+
+        def on_done(resource_id: str, meta: dict) -> None:
+            latch_outcome("success", resource_id=resource_id, meta=meta)
+
+        def on_failed(err: str) -> None:
+            latch_outcome("failed", error=err)
+
+        def on_cancelled() -> None:
+            latch_outcome("cancelled")
+
+        def on_thread_finished() -> None:
+            if not is_current() or state.terminal_handled:
+                logger.warning("Import trace %s late native finish ignored", trace_id)
+                return
+            with contextlib.suppress(RuntimeError):
+                no_progress_timer.stop()
+            logger.info("Import trace %s native finished", trace_id)
+            on_native_finished()
+
+        def cancel_step() -> None:
+            if not is_current() or state.terminal_handled or state.cancel_requested:
+                return
+            state.cancel_requested = True
+            worker.cancel()
+
+        worker.progress.connect(on_progress)
+        worker.import_finished.connect(on_done)
+        worker.failed.connect(on_failed)
+        worker.cancelled.connect(on_cancelled)
+        worker.finished.connect(on_thread_finished)
+        no_progress_timer.start()
+        return cancel_step
+
+    def _finish_modal_import_dialog(
+        self,
+        *,
+        state: _ModalImportState | _ChainedImportState[Any],
+        dlg: QProgressDialog,
+        no_progress_timer: QTimer,
+        trace_id: str,
+        on_finished: Callable[[], None],
+        on_finished_error: Callable[[Exception], None] | None,
+        cleanup_worker: Callable[[], None],
+    ) -> None:
+        """Run one terminal callback and always release the modal session."""
+        if state.terminal_handled:
+            return
+        state.terminal_handled = True
+        try:
+            try:
+                on_finished()
+            except Exception as exc:  # noqa: BLE001 - terminal cleanup must still run
+                if on_finished_error is None:
+                    raise
+                on_finished_error(exc)
+        finally:
+            try:
+                self._set_import_buttons_enabled(True)
+                logger.info("Import trace %s buttons restored", trace_id)
+            finally:
+                try:
+                    with contextlib.suppress(RuntimeError):
+                        no_progress_timer.stop()
+                    with contextlib.suppress(RuntimeError):
+                        no_progress_timer.deleteLater()
+                finally:
+                    try:
+                        with contextlib.suppress(RuntimeError):
+                            dlg.close()
+                        with contextlib.suppress(RuntimeError):
+                            dlg.deleteLater()
+                    finally:
+                        cleanup_worker()
+
     def _run_modal_import(
         self,
         *,
@@ -188,76 +369,15 @@ class ModalImportFlowMixin:
             worker.deleteLater()
             return
 
-        dlg = QProgressDialog(progress_label, cancel_label, 0, 100 if determinate else 0, self._parent)
-        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dlg.setAutoClose(False)
-        dlg.setAutoReset(False)
-        dlg.show()
-
         self._active_import_worker = worker
-        self._set_import_buttons_enabled(False)
+        dlg, no_progress_timer = self._create_modal_import_dialog(
+            progress_label=progress_label,
+            cancel_label=cancel_label,
+            determinate=determinate,
+            trace_id=trace_id,
+        )
         worker.set_trace_id(trace_id)
         state = _ModalImportState()
-        no_progress_timer = QTimer(dlg)
-        no_progress_timer.setSingleShot(True)
-        no_progress_timer.setInterval(_NO_PROGRESS_WARNING_MS)
-        no_progress_timer.timeout.connect(lambda: logger.warning("Import trace %s no progress for 10 s", trace_id))
-
-        def on_progress(cur: int, total: int, msg: str) -> None:
-            if state.cancel_requested or state.kind is not None or state.terminal_handled:
-                return
-            if total == 0:
-                dlg.setRange(0, 0)
-            else:
-                dlg.setMaximum(total)
-                dlg.setValue(cur)
-            if state.cancel_requested or state.kind is not None or state.terminal_handled:
-                return
-            dlg.setLabelText(msg)
-            no_progress_timer.start()
-            if not state.first_progress_seen:
-                state.first_progress_seen = True
-                logger.info(
-                    "Import trace %s first progress current=%d total=%d",
-                    trace_id,
-                    cur,
-                    total,
-                )
-
-        def latch_outcome(
-            kind: _OutcomeKind,
-            *,
-            resource_id: str | None = None,
-            meta: dict | None = None,
-            error: str | None = None,
-        ) -> None:
-            if state.terminal_handled:
-                logger.warning("Import trace %s late domain signal ignored kind=%s", trace_id, kind)
-                return
-            if state.kind is not None:
-                logger.warning(
-                    "Import trace %s duplicate domain signal ignored first=%s late=%s",
-                    trace_id,
-                    state.kind,
-                    kind,
-                )
-                return
-            state.kind = kind
-            state.resource_id = resource_id
-            state.meta = meta
-            state.error = error
-            with contextlib.suppress(RuntimeError):
-                no_progress_timer.stop()
-            logger.info("Import trace %s domain latch kind=%s", trace_id, kind)
-
-        def on_done(resource_id: str, meta: dict) -> None:
-            latch_outcome("success", resource_id=resource_id, meta=meta)
-
-        def on_failed(err: str) -> None:
-            latch_outcome("failed", error=err)
-
-        def on_cancelled() -> None:
-            latch_outcome("cancelled")
 
         def show_cancelling() -> None:
             if state.terminal_handled:
@@ -270,21 +390,13 @@ class ModalImportFlowMixin:
         def on_cancel_requested() -> None:
             if state.terminal_handled:
                 return
-            if not state.cancel_requested:
-                state.cancel_requested = True
-                worker.cancel()
+            cancel_step()
             show_cancelling()
             # Title-bar close hides the dialog after ``canceled`` slots return.
             QTimer.singleShot(0, show_cancelling)
 
         def on_thread_finished() -> None:
-            if state.terminal_handled:
-                return
-            state.terminal_handled = True
-            with contextlib.suppress(RuntimeError):
-                no_progress_timer.stop()
-            logger.info("Import trace %s native finished", trace_id)
-            try:
+            def finish() -> None:
                 if state.kind == "success":
                     assert state.resource_id is not None
                     assert state.meta is not None
@@ -301,30 +413,275 @@ class ModalImportFlowMixin:
                 elif state.kind is None:
                     QMessageBox.warning(self._parent, failure_title, missing_result_message)
                 # Cancellation intentionally closes silently.
-            finally:
-                try:
-                    self._set_import_buttons_enabled(True)
-                    logger.info("Import trace %s buttons restored", trace_id)
-                finally:
-                    with contextlib.suppress(RuntimeError):
-                        no_progress_timer.stop()
-                    with contextlib.suppress(RuntimeError):
-                        no_progress_timer.deleteLater()
-                    with contextlib.suppress(RuntimeError):
-                        dlg.close()
-                    with contextlib.suppress(RuntimeError):
-                        dlg.deleteLater()
-                    self._release_import_worker(worker)
 
-        worker.progress.connect(on_progress)
-        worker.import_finished.connect(on_done)
-        worker.failed.connect(on_failed)
-        worker.cancelled.connect(on_cancelled)
-        worker.finished.connect(on_thread_finished)
+            self._finish_modal_import_dialog(
+                state=state,
+                dlg=dlg,
+                no_progress_timer=no_progress_timer,
+                trace_id=trace_id,
+                on_finished=finish,
+                on_finished_error=None,
+                cleanup_worker=lambda: self._release_import_worker(worker),
+            )
+
+        cancel_step = self._wire_latched_import_step(
+            worker=worker,
+            dlg=dlg,
+            no_progress_timer=no_progress_timer,
+            state=state,
+            trace_id=trace_id,
+            format_progress=lambda message: message,
+            is_current=lambda: self._active_import_worker is worker,
+            on_native_finished=on_thread_finished,
+        )
         dlg.canceled.connect(on_cancel_requested)
-        no_progress_timer.start()
         logger.info("Import trace %s worker start", trace_id)
         worker.start()
+
+    def _run_chained_imports(
+        self,
+        *,
+        jobs: Sequence[_JobT],
+        make_worker: Callable[[_JobT], ImportWorker],
+        format_label: Callable[[int, int, _JobT, str | None], str],
+        cancel_label: str,
+        cancelling_label: str,
+        determinate: bool,
+        join_noun: str,
+        failure_title: str,
+        missing_result_message: str,
+        trace_id: str,
+        on_finished: Callable[[_ChainedImportResult[_JobT]], None],
+        on_finished_error: Callable[[Exception, _ChainedImportResult[_JobT]], None] | None = None,
+    ) -> None:
+        """Drive a sequence of import workers behind one modal dialog."""
+        initial_label = format_label(1, len(jobs), jobs[0], None) if jobs else ""
+        dlg, no_progress_timer = self._create_modal_import_dialog(
+            progress_label=initial_label,
+            cancel_label=cancel_label,
+            determinate=determinate,
+            trace_id=trace_id,
+        )
+        state = _ChainedImportState[_JobT]()
+        cancel_current: Callable[[], None] | None = None
+
+        def cleanup_current_worker() -> None:
+            nonlocal cancel_current
+            worker = state.current_worker
+            state.current_worker = None
+            state.current_step = None
+            cancel_current = None
+            if worker is not None:
+                self._release_import_worker(worker)
+
+        def finish_batch() -> None:
+            result = _ChainedImportResult(
+                successes=tuple(state.successes),
+                failures=tuple(state.failures),
+                cancelled=state.cancel_requested,
+            )
+
+            def report_error(exc: Exception) -> None:
+                logger.exception("Import trace %s batch finish handler failed", trace_id, exc_info=exc)
+                if on_finished_error is not None:
+                    on_finished_error(exc, result)
+                else:
+                    QMessageBox.warning(self._parent, failure_title, str(exc))
+
+            self._finish_modal_import_dialog(
+                state=state,
+                dlg=dlg,
+                no_progress_timer=no_progress_timer,
+                trace_id=trace_id,
+                on_finished=lambda: on_finished(result),
+                on_finished_error=report_error,
+                cleanup_worker=cleanup_current_worker,
+            )
+
+        def show_cancelling() -> None:
+            if state.terminal_handled:
+                return
+            dlg.setLabelText(cancelling_label)
+            dlg.setCancelButton(None)
+            dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
+            dlg.show()
+
+        def on_cancel_requested() -> None:
+            if state.terminal_handled:
+                return
+            state.cancel_requested = True
+            if cancel_current is not None:
+                cancel_current()
+            show_cancelling()
+            # Title-bar close hides the dialog after ``canceled`` slots return.
+            QTimer.singleShot(0, show_cancelling)
+
+        def schedule_next() -> None:
+            QTimer.singleShot(0, launch_next)
+
+        def record_unstarted_failure(job: _JobT, worker: ImportWorker, step: _ModalImportState, exc: Exception) -> None:
+            nonlocal cancel_current
+            step.kind = "failed"
+            step.error = str(exc)
+            step.terminal_handled = True
+            with contextlib.suppress(RuntimeError):
+                no_progress_timer.stop()
+            state.failures.append((job, str(exc)))
+            state.current_worker = None
+            state.current_step = None
+            cancel_current = None
+            self._release_import_worker(worker)
+            state.index += 1
+            schedule_next()
+
+        def launch_next() -> None:
+            nonlocal cancel_current
+            if state.terminal_handled:
+                return
+            if state.cancel_requested or state.index >= len(jobs):
+                finish_batch()
+                return
+
+            index = state.index
+            job = jobs[index]
+            dlg.setLabelText(format_label(index + 1, len(jobs), job, None))
+            if state.terminal_handled:
+                return
+            if state.cancel_requested:
+                finish_batch()
+                return
+            dlg.setRange(0, 100 if determinate else 0)
+            if state.terminal_handled:
+                return
+            if state.cancel_requested:
+                finish_batch()
+                return
+            dlg.setValue(0)
+            if state.terminal_handled:
+                return
+            if state.cancel_requested:
+                finish_batch()
+                return
+
+            laggard = self._join_active_import_worker(join_noun)
+            if laggard is not None:
+                state.awaited_predecessor = laggard
+
+                def resume_after_predecessor() -> None:
+                    if state.terminal_handled or state.awaited_predecessor is not laggard:
+                        return
+                    state.awaited_predecessor = None
+                    if state.cancel_requested:
+                        finish_batch()
+                    else:
+                        launch_next()
+
+                self._resume_once_finished(laggard, resume_after_predecessor)
+                return
+
+            try:
+                worker = make_worker(job)
+            except Exception as exc:  # noqa: BLE001 - one bad job must not strand the batch
+                logger.exception("Import trace %s worker construction failed index=%d", trace_id, index)
+                state.failures.append((job, str(exc)))
+                state.index += 1
+                schedule_next()
+                return
+
+            step = _ModalImportState()
+            self._active_import_worker = worker
+            state.current_worker = worker
+            state.current_step = step
+
+            def abort_before_start() -> bool:
+                if state.terminal_handled:
+                    cleanup_current_worker()
+                    return True
+                if not state.cancel_requested:
+                    return False
+                if cancel_current is None:
+                    step.cancel_requested = True
+                    worker.cancel()
+                else:
+                    cancel_current()
+                cleanup_current_worker()
+                finish_batch()
+                return True
+
+            if abort_before_start():
+                return
+            worker.set_trace_id(trace_id)
+            if abort_before_start():
+                return
+
+            def is_current() -> bool:
+                return (
+                    not state.terminal_handled
+                    and state.index == index
+                    and state.current_worker is worker
+                    and state.current_step is step
+                )
+
+            def on_native_finished() -> None:
+                nonlocal cancel_current
+                if not is_current():
+                    return
+                worker_cancelled = getattr(worker, "is_cancelled", False) is True
+                if step.kind == "success":
+                    assert step.resource_id is not None
+                    assert step.meta is not None
+                    state.successes.append((job, step.resource_id, step.meta))
+                elif step.kind == "failed":
+                    state.failures.append((job, step.error or missing_result_message))
+                elif step.kind == "cancelled":
+                    state.cancel_requested = True
+                else:
+                    state.failures.append((job, missing_result_message))
+
+                if worker_cancelled or step.cancel_requested:
+                    state.cancel_requested = True
+
+                step.terminal_handled = True
+                state.current_worker = None
+                state.current_step = None
+                cancel_current = None
+                self._release_import_worker(worker)
+                if state.cancel_requested:
+                    finish_batch()
+                else:
+                    state.index = index + 1
+                    launch_next()
+
+            cancel_current = self._wire_latched_import_step(
+                worker=worker,
+                dlg=dlg,
+                no_progress_timer=no_progress_timer,
+                state=step,
+                trace_id=trace_id,
+                format_progress=lambda message: format_label(index + 1, len(jobs), job, message),
+                is_current=is_current,
+                on_native_finished=on_native_finished,
+            )
+            if abort_before_start():
+                return
+
+            logger.info("Import trace %s worker start index=%d", trace_id, index)
+            if abort_before_start():
+                return
+            try:
+                worker.start()
+            except Exception as exc:  # noqa: BLE001 - one bad job must not strand the batch
+                logger.exception("Import trace %s worker start failed index=%d", trace_id, index)
+                if still_running(worker):
+                    step.kind = "failed"
+                    step.error = str(exc)
+                    with contextlib.suppress(RuntimeError):
+                        no_progress_timer.stop()
+                else:
+                    record_unstarted_failure(job, worker, step, exc)
+
+        dlg.canceled.connect(on_cancel_requested)
+        launch_next()
 
     def _join_active_import_worker(self, join_noun: str) -> ImportWorker | None:
         """Retain a running predecessor and refuse replacement without waiting."""

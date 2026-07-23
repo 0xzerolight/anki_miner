@@ -13,20 +13,20 @@ from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
-from PyQt6.QtCore import QCoreApplication, Qt
-from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QWidget
+from PyQt6.QtCore import QCoreApplication
+from PyQt6.QtWidgets import QMessageBox, QWidget
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.controllers.import_flow_common import (
     ModalImportFlowMixin,
     _begin_import_trace,
+    _ChainedImportResult,
     _log_import_persist,
     _log_import_picker_enter,
     _log_import_picker_return,
 )
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
-from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.panels import DictionarySettingsPanel
 from anki_miner.gui.workers.import_worker import ImportWorker
 from anki_miner.services.dictionary.importers.yomitan_importer import derive_dict_id_from_zip, read_yomitan_title
@@ -432,6 +432,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         *,
         only_ids: frozenset[str] | None = None,
         _scan_result: tuple[list[tuple[str, str, str, Path]], list[str]] | None = None,
+        _trace_id: str | None = None,
     ) -> None:
         """Reimport dictionaries in the chain from their saved sources.
 
@@ -450,12 +451,13 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         summary dialog. The user can seed them via the per-row stale-reimport
         button (which prompts for the zip and now persists it on success).
 
-        Runs sequentially: each worker's ``on_done`` chains the next dispatch
+        Runs sequentially: each worker's native finish chains the next dispatch
         so a single ApplicationModal QProgressDialog tracks the whole batch.
         Per-dict failures accumulate into ``errors`` and don't abort the
         loop. ``config_changed`` is emitted once at the end so cached
         DefinitionService instances rebuild a single time.
         """
+        trace_id = _trace_id or _begin_import_trace("dictionary reimport all")
         if _scan_result is None:
             config = self._get_config()
             chain = self._panel.get_chain()
@@ -490,7 +492,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
 
             def _on_done(result: object) -> None:
                 assert isinstance(result, tuple)
-                self.reimport_all(only_ids=only_ids, _scan_result=result)
+                self.reimport_all(only_ids=only_ids, _scan_result=result, _trace_id=trace_id)
 
             def _on_error(message: str) -> None:
                 self._set_import_buttons_enabled(True)
@@ -534,40 +536,44 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             )
             return
 
-        dlg = QProgressDialog(
-            QCoreApplication.translate("DictionaryImportFlow", "Reimporting dictionaries…"),
-            QCoreApplication.translate("DictionaryImportFlow", "Cancel"),
-            0,
-            100,
-            self._parent,
-        )
-        dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
-        dlg.show()
+        def make_worker(job: tuple[str, str, str, Path]) -> ImportWorker:
+            kind, dict_id, _display, source_path = job
+            if kind == "jmdict":
+                return ImportWorker.for_jmdict(source_path, self._get_config().dicts_root)
+            # Pin the existing slot id so a saved source whose title embeds a
+            # changing release date (e.g. Jitendex) rebuilds the index in the
+            # SAME folder instead of forking a new date-named dir — which would
+            # orphan the chained slot and permanently wedge the stale-schema
+            # pre-run gate (it could never clear the old slot).
+            return ImportWorker.for_yomitan(source_path, self._get_config().dicts_root, overwrite=True, dict_id=dict_id)
 
-        self._set_import_buttons_enabled(False)
+        def format_label(
+            index: int,
+            total: int,
+            job: tuple[str, str, str, Path],
+            message: str | None,
+        ) -> str:
+            _kind, _dict_id, display, _source_path = job
+            label = tr_format(
+                QCoreApplication.translate("DictionaryImportFlow", "Dictionary %1 of %2: %3"),
+                index,
+                total,
+                display,
+            )
+            return f"{label}\n{message}" if message is not None else label
 
-        # Mutable state shared across the chained closures.
-        state: dict[str, object] = {
-            "index": 0,
-            "cancelled": False,
-            "reimported": [],
-            "errors": [],
-        }
-
-        def finish() -> None:
-            dlg.close()
+        def on_finished(result: _ChainedImportResult[tuple[str, str, str, Path]]) -> None:
             # One refresh + one config_changed for the whole batch so
             # DefinitionService rebuilds once, not N times.
+            _log_import_persist(trace_id, "start")
             current_chain = self._panel.get_chain()
             self._panel.refresh_registry()
             self._panel.set_chain(current_chain)
             self._notify_config_changed()
-            self._set_import_buttons_enabled(True)
+            _log_import_persist(trace_id, "done")
 
-            reimported = state["reimported"]
-            errors = state["errors"]
-            assert isinstance(reimported, list)
-            assert isinstance(errors, list)
+            reimported = [job[2] for job, _dict_id, _meta in result.successes]
+            errors = [(job[2], message) for job, message in result.failures]
 
             lines: list[str] = []
             if reimported:
@@ -593,7 +599,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                     lines.append("")
                 lines.append(QCoreApplication.translate("DictionaryImportFlow", "Failed:"))
                 lines.extend(f"  • {name}: {msg}" for name, msg in errors)
-            if state["cancelled"]:
+            if result.cancelled:
                 if lines:
                     lines.append("")
                 lines.append(
@@ -606,90 +612,38 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 "\n".join(lines) or QCoreApplication.translate("DictionaryImportFlow", "Done."),
             )
 
-        def launch_next() -> None:
-            idx = state["index"]
-            assert isinstance(idx, int)
-            if state["cancelled"] or idx >= len(jobs):
-                finish()
-                return
-
-            kind, dict_id, display, source_path = jobs[idx]
-            dlg.setLabelText(
+        def on_finished_error(
+            exc: Exception,
+            _result: _ChainedImportResult[tuple[str, str, str, Path]],
+        ) -> None:
+            QMessageBox.warning(
+                self._parent,
+                QCoreApplication.translate("DictionaryImportFlow", "Configuration Update Failed"),
                 tr_format(
-                    QCoreApplication.translate("DictionaryImportFlow", "Dictionary %1 of %2: %3"),
-                    idx + 1,
-                    len(jobs),
-                    display,
-                )
+                    QCoreApplication.translate(
+                        "DictionaryImportFlow",
+                        "Import completed, but the configuration update failed: %1",
+                    ),
+                    str(exc),
+                ),
             )
-            dlg.setMaximum(100)
-            dlg.setValue(0)
 
-            # Never replace a live predecessor (T-09). Retain it and resume
-            # this pump only from its native ``finished`` signal, without a
-            # GUI wait.
-            laggard = self._join_active_import_worker("dictionary import worker")
-            if laggard is not None:
-                self._resume_once_finished(laggard, launch_next)
-                return
-
-            if kind == "jmdict":
-                worker = ImportWorker.for_jmdict(source_path, self._get_config().dicts_root)
-            else:
-                # Pin the existing slot id so a saved source whose title embeds a
-                # changing release date (e.g. Jitendex) rebuilds the index in the
-                # SAME folder instead of forking a new date-named dir — which would
-                # orphan the chained slot and permanently wedge the stale-schema
-                # pre-run gate (it could never clear the old slot).
-                worker = ImportWorker.for_yomitan(
-                    source_path, self._get_config().dicts_root, overwrite=True, dict_id=dict_id
-                )
-            self._active_import_worker = worker
-
-            def on_progress(cur: int, total: int, msg: str) -> None:
-                dlg.setMaximum(total)
-                dlg.setValue(cur)
-
-            def on_done(_dict_id: str, _meta: dict) -> None:
-                reimported = state["reimported"]
-                assert isinstance(reimported, list)
-                reimported.append(display)
-                state["index"] = idx + 1
-                launch_next()
-
-            def on_failed(err: str) -> None:
-                errors = state["errors"]
-                assert isinstance(errors, list)
-                errors.append((display, err))
-                state["index"] = idx + 1
-                launch_next()
-
-            def on_cancelled() -> None:
-                # A mid-job user cancel now arrives on ``cancelled`` (not
-                # ``failed``). Without re-entering the pump here the state
-                # machine would never reach finish() and the modal would
-                # strand. ``state["cancelled"]`` is already set by on_cancel
-                # (dlg.canceled), but set it defensively so launch_next() short-
-                # circuits straight to finish() regardless.
-                state["cancelled"] = True
-                launch_next()
-
-            worker.progress.connect(on_progress)
-            worker.import_finished.connect(on_done)
-            worker.failed.connect(on_failed)
-            worker.cancelled.connect(on_cancelled)
-            worker.finished.connect(lambda w=worker: self._release_import_worker(w))
-            worker.start()
-
-        def on_cancel() -> None:
-            state["cancelled"] = True
-            worker = self._active_import_worker
-            if still_running(worker):
-                assert worker is not None
-                worker.cancel()
-
-        dlg.canceled.connect(on_cancel)
-        launch_next()
+        self._run_chained_imports(
+            jobs=jobs,
+            make_worker=make_worker,
+            format_label=format_label,
+            cancel_label=QCoreApplication.translate("DictionaryImportFlow", "Cancel"),
+            cancelling_label=QCoreApplication.translate("DictionaryImportFlow", "Cancelling…"),
+            determinate=True,
+            join_noun="dictionary import worker",
+            failure_title=QCoreApplication.translate("DictionaryImportFlow", "Reimport Failed"),
+            missing_result_message=QCoreApplication.translate(
+                "DictionaryImportFlow", "The import worker finished without a completion result."
+            ),
+            trace_id=trace_id,
+            on_finished=on_finished,
+            on_finished_error=on_finished_error,
+        )
 
     def restore_unlisted(self, *, _scan_result: list[DictMeta] | None = None) -> None:
         """Re-add on-disk dictionaries that are absent from the chain config.
