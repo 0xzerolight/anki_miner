@@ -503,6 +503,21 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         )
         return reply == QMessageBox.StandardButton.Yes
 
+    def _confirm_chain_only_remove(self, display: str) -> bool:
+        reply = QMessageBox.question(
+            self,
+            self.tr("Remove audio pack"),
+            tr_format(
+                self.tr(
+                    "Remove '%1' from the audio chain?\n\nIndex files on disk will be left untouched because the folder could not be proven to belong to Anki Miner."
+                ),
+                display,
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return reply == QMessageBox.StandardButton.Yes
+
     def _acquire_release_for_remove(self) -> bool:
         if not self.request_resource_release():
             QMessageBox.warning(
@@ -535,11 +550,6 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         entry = self._chain[index]
         if entry.kind in ("jpod101", "googletts") or entry.pack_id is None:
             return
-        # _view is always set after _rebuild_list; guard is belt-and-suspenders.
-        meta = self._view.get(entry.pack_id) if self._view is not None else None
-        if meta is None:
-            return
-
         menu = QMenu(self._list)
         reimport_action = menu.addAction(self.tr("Re-import…"))
         remove_action = menu.addAction(self.tr("Remove"))

@@ -121,12 +121,21 @@ class IndexedFreqProvider:
             )
             return False
 
+        conn: sqlite3.Connection | None = None
         try:
-            self._conn = open_readonly(self._db_path)
+            conn = open_readonly(self._db_path)
+            has_display_value = self._detect_display_value(conn)
         except sqlite3.DatabaseError as e:
+            if conn is not None:
+                conn.close()
             logger.warning("Failed to open %s: %s", self._db_path, e)
             return False
-        self._has_display_value = self._detect_display_value(self._conn)
+        except Exception:
+            if conn is not None:
+                conn.close()
+            raise
+        self._conn = conn
+        self._has_display_value = has_display_value
         return True
 
     @staticmethod

@@ -52,18 +52,124 @@ def test_add_dict_dialog_defaults_to_dicts_dir():
     assert rsd.call_args.kwargs.get("default_dir") == dicts_root
 
 
-def test_reimport_dict_dialog_defaults_to_dicts_dir():
-    dicts_root = Path("/home/u/.anki_miner/dicts")
+def test_corrupt_saved_jmdict_zip_falls_back_to_configured_xml(tmp_path: Path):
+    dicts_root = tmp_path / "dicts"
+    slot = dicts_root / "jmdict-english"
+    slot.mkdir(parents=True)
+    (slot / "index.sqlite").write_bytes(b"not sqlite")
+    source_zip = slot / "source.zip"
+    source_zip.write_bytes(b"PK\x03\x04")
+    xml = tmp_path / "JMdict_e"
+    xml.write_text("<JMdict/>", encoding="utf-8")
+    flow = _make_flow(dicts_root)
+    flow._get_config().jmdict_path = xml
+    flow._panel.request_resource_release.return_value = True
+    flow._run_modal_import = MagicMock()
+    worker = MagicMock()
+
+    with (
+        patch(f"{MOD}.ImportWorker.for_yomitan_repair") as yomitan,
+        patch(f"{MOD}.ImportWorker.for_jmdict_repair", return_value=worker) as jmdict,
+        patch(f"{MOD}.file_dialogs.get_open_file_name") as picker,
+    ):
+        flow.reimport_dict("jmdict-english")
+
+    yomitan.assert_not_called()
+    jmdict.assert_called_once_with(xml, dicts_root)
+    picker.assert_not_called()
+    assert flow._run_modal_import.call_args.kwargs["worker"] is worker
+
+
+def test_unrelated_saved_zip_is_not_pinned_to_slot(tmp_path: Path):
+    dicts_root = tmp_path / "dicts"
+    slot = dicts_root / "expected"
+    source_zip = build_yomitan_zip(slot / "source.zip", title="Other Dictionary")
     flow = _make_flow(dicts_root)
 
     with (
-        patch(f"{MOD}.resolve_start_dir", return_value=str(dicts_root)) as rsd,
-        patch(f"{MOD}.file_dialogs.get_open_file_name", return_value=("", "")),
+        patch(f"{MOD}.QMessageBox.warning") as warning,
+        patch(f"{MOD}.ImportWorker.for_yomitan_repair") as yomitan,
     ):
-        flow.reimport_dict("some-dict")  # empty selection → early return
+        flow.reimport_dict("expected")
 
-    rsd.assert_called_once()
-    assert rsd.call_args.kwargs.get("default_dir") == dicts_root
+    warning.assert_called_once()
+    yomitan.assert_not_called()
+    assert source_zip.is_file()
+
+
+def test_saved_zip_with_exact_derived_id_routes_to_slot_pinned_yomitan(tmp_path: Path):
+    dicts_root = tmp_path / "dicts"
+    source_zip = build_yomitan_zip(
+        dicts_root / "expected" / "source.zip",
+        title="Expected",
+        revision="",
+    )
+    flow = _make_flow(dicts_root)
+    flow._panel.request_resource_release.return_value = True
+    flow._run_modal_import = MagicMock()
+    worker = MagicMock()
+
+    with patch(f"{MOD}.ImportWorker.for_yomitan_repair", return_value=worker) as yomitan:
+        flow.reimport_dict("expected")
+
+    yomitan.assert_called_once_with(source_zip, dicts_root, dict_id="expected")
+    assert flow._run_modal_import.call_args.kwargs["worker"] is worker
+
+
+def test_saved_catalog_zip_with_matching_title_base_routes_to_pinned_slot(tmp_path: Path):
+    dicts_root = tmp_path / "dicts"
+    _seed_slot(dicts_root, "jitendex", "Jitendex.org [2025-11-05]")
+    source_zip = build_yomitan_zip(
+        dicts_root / "jitendex" / "source.zip",
+        title="Jitendex.org [2026-06-06]",
+    )
+    flow = _make_flow(dicts_root)
+    flow._panel.request_resource_release.return_value = True
+    flow._run_modal_import = MagicMock()
+    worker = MagicMock()
+
+    with patch(f"{MOD}.ImportWorker.for_yomitan_repair", return_value=worker) as yomitan:
+        flow.reimport_dict("jitendex")
+
+    yomitan.assert_called_once_with(source_zip, dicts_root, dict_id="jitendex")
+    assert flow._run_modal_import.call_args.kwargs["worker"] is worker
+
+
+def test_jmdict_reimport_falls_back_to_configured_xml(tmp_path: Path):
+    dicts_root = tmp_path / "dicts"
+    flow = _make_flow(dicts_root)
+    xml = tmp_path / "JMdict_e"
+    xml.write_text("<JMdict/>", encoding="utf-8")
+    flow._get_config().jmdict_path = xml
+    flow._panel.request_resource_release.return_value = True
+    flow._run_modal_import = MagicMock()
+    worker = MagicMock()
+
+    with (
+        patch(f"{MOD}.ImportWorker.for_yomitan_repair") as yomitan,
+        patch(f"{MOD}.ImportWorker.for_jmdict_repair", return_value=worker) as jmdict,
+    ):
+        flow.reimport_dict("jmdict-english")
+
+    yomitan.assert_not_called()
+    jmdict.assert_called_once_with(xml, dicts_root)
+    assert flow._run_modal_import.call_args.kwargs["worker"] is worker
+
+
+def test_reimport_without_recoverable_source_reports_dialog(tmp_path: Path):
+    flow = _make_flow(tmp_path / "dicts")
+
+    with (
+        patch(f"{MOD}.QMessageBox.warning") as warning,
+        patch(f"{MOD}.ImportWorker.for_yomitan_repair") as yomitan,
+        patch(f"{MOD}.ImportWorker.for_jmdict_repair") as jmdict,
+    ):
+        flow.reimport_dict("broken")
+
+    warning.assert_called_once()
+    assert "recoverable source" in warning.call_args.args[2].lower()
+    yomitan.assert_not_called()
+    jmdict.assert_not_called()
 
 
 def test_add_dict_persist_failure_reports_partial_success_after_chain_commit(wired_window, monkeypatch, tmp_path):
@@ -168,79 +274,3 @@ class TestCatalogSlotBaseMatches:
         flow = _make_flow(tmp_path / "dicts")
         fresh = build_yomitan_zip(tmp_path / "src" / "j.zip", title="Jitendex.org [2026-06-06]")
         assert flow._catalog_slot_base_matches("jitendex", fresh) is False
-
-
-class TestReimportDictCatalogGuard:
-    def test_legacy_slot_accepts_fresh_same_base_zip(self, tmp_path: Path):
-        # "jitendex" left the catalog when JMdict became the recommended dict;
-        # existing installs keep the pinned re-import affordance through
-        # LEGACY_DICT_SLOT_IDS — this is the regression coverage for that.
-        dicts_root = tmp_path / "dicts"
-        flow = _make_flow(dicts_root)
-        # Block right after the guard so no real worker/QThread runs.
-        flow._panel.request_resource_release.return_value = False
-        _seed_slot(dicts_root, "jitendex", "Jitendex.org [2025-11-05]")
-        fresh = build_yomitan_zip(tmp_path / "src" / "j.zip", title="Jitendex.org [2026-06-06]")
-
-        with (
-            patch(f"{MOD}.file_dialogs.get_open_file_name", return_value=(str(fresh), "")),
-            patch(f"{MOD}.QMessageBox.warning") as warn,
-        ):
-            flow.reimport_dict("jitendex")
-
-        # Guard passed → release was attempted (then blocked). The one warning is
-        # the release-block, NOT a "does not match slot" abort.
-        flow._panel.request_resource_release.assert_called_once()
-        assert warn.call_count == 1
-        assert "match" not in warn.call_args.args[1].lower()
-
-    def test_catalog_slot_accepts_fresh_same_base_zip(self, tmp_path: Path):
-        # The live catalog slot: a newer JMdict zip (title-derived id differs)
-        # re-imports into the pinned "jmdict-english" slot.
-        dicts_root = tmp_path / "dicts"
-        flow = _make_flow(dicts_root)
-        flow._panel.request_resource_release.return_value = False
-        _seed_slot(dicts_root, "jmdict-english", "JMdict [2026-07-21]")
-        fresh = build_yomitan_zip(tmp_path / "src" / "jm.zip", title="JMdict [2026-08-01]")
-
-        with (
-            patch(f"{MOD}.file_dialogs.get_open_file_name", return_value=(str(fresh), "")),
-            patch(f"{MOD}.QMessageBox.warning") as warn,
-        ):
-            flow.reimport_dict("jmdict-english")
-
-        flow._panel.request_resource_release.assert_called_once()
-        assert warn.call_count == 1
-        assert "match" not in warn.call_args.args[1].lower()
-
-    def test_legacy_slot_rejects_wrong_base_zip(self, tmp_path: Path):
-        dicts_root = tmp_path / "dicts"
-        flow = _make_flow(dicts_root)
-        _seed_slot(dicts_root, "jitendex", "Jitendex.org [2025-11-05]")
-        wrong = build_yomitan_zip(tmp_path / "src" / "d.zip", title="Daijirin [2026-01-01]")
-
-        with (
-            patch(f"{MOD}.file_dialogs.get_open_file_name", return_value=(str(wrong), "")),
-            patch(f"{MOD}.QMessageBox.warning") as warn,
-        ):
-            flow.reimport_dict("jitendex")
-
-        # Aborted at the guard: mismatch warning shown, handles never released.
-        warn.assert_called_once()
-        assert "match" in warn.call_args.args[1].lower()
-        flow._panel.request_resource_release.assert_not_called()
-
-    def test_non_catalog_slot_still_rejects_mismatch(self, tmp_path: Path):
-        dicts_root = tmp_path / "dicts"
-        flow = _make_flow(dicts_root)
-        other = build_yomitan_zip(tmp_path / "src" / "o.zip", title="Other Dict", revision="v1")
-
-        with (
-            patch(f"{MOD}.file_dialogs.get_open_file_name", return_value=(str(other), "")),
-            patch(f"{MOD}.QMessageBox.warning") as warn,
-        ):
-            flow.reimport_dict("some-slot")  # not a catalog slot
-
-        warn.assert_called_once()
-        assert "match" in warn.call_args.args[1].lower()
-        flow._panel.request_resource_release.assert_not_called()

@@ -37,7 +37,7 @@ from anki_miner.services._sqlite_index import (
     resolve_managed_slot,
     write_ownership_marker,
 )
-from anki_miner.services._staging import promote_staged_dir
+from anki_miner.services._staging import promote_staged_dir, repair_managed_slot
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
     DictRow,
@@ -213,6 +213,29 @@ def import_jmdict_xml(
             progress(total_entries, total_entries, "Done")
 
         return JMdictImportResult(dict_id=JMDICT_DICT_ID, entry_count=row_count)
+
+
+def repair_jmdict_xml(
+    xml_path: Path,
+    dest_root: Path,
+    *,
+    progress: ProgressFn | None = None,
+    cancel_check: Callable[[], bool] | None = None,
+) -> JMdictImportResult:
+    """Explicitly repair JMdict, retaining an invalid prior slot as quarantine."""
+    return repair_managed_slot(
+        xml_path,
+        dest_root,
+        JMDICT_DICT_ID,
+        "dictionary",
+        lambda source, overwrite: import_jmdict_xml(
+            source,
+            dest_root,
+            progress=progress,
+            cancel_check=cancel_check,
+            overwrite=overwrite,
+        ),
+    )
 
 
 def _format_senses_html(senses: list[list[str]]) -> str:

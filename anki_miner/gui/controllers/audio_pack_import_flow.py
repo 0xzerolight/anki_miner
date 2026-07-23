@@ -303,11 +303,11 @@ class AudioPackImportFlow(ModalImportFlowMixin):
         )
 
     def reimport_pack(self, pack_id: str) -> None:
-        """Prompt for the pack's source directory and re-import with overwrite.
+        """Prompt for the pack's source directory and run explicit repair.
 
         Fixes moved-folder scenarios: the user picks the new location and the
-        importer overwrites the existing index in-place, preserving the
-        pack_id so the chain entry keeps pointing at it correctly.
+        importer preserves the pack_id. Invalid old slots are quarantined
+        before no-clobber promotion and restored if repair fails.
         """
         if not self._begin_mutation("reimport"):
             return
@@ -337,11 +337,10 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             return
 
         try:
-            worker = ImportWorker.for_pack(
+            worker = ImportWorker.for_pack_repair(
                 Path(chosen_dir),
                 self._get_config().audio_packs_root,
                 pack_id=pack_id,
-                overwrite=True,
             )
         except Exception:
             self._set_import_buttons_enabled(True)

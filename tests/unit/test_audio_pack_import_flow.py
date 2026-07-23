@@ -5,7 +5,7 @@ Covers:
 - add_pack multi-pack directory imports all sequentially
 - add_pack with zero detectable packs → warning, no worker
 - add_pack failure mid-batch continues remaining packs + summary
-- reimport_pack passes overwrite=True and pack_id
+- reimport_pack uses the explicit repair worker and preserves pack_id
 - persist_chain called after import and after remove
 """
 
@@ -105,6 +105,7 @@ def stub_worker(monkeypatch):
     callbacks that the flow connects to the mock's signals.
     """
     factory = MagicMock(name="for_pack")
+    repair_factory = MagicMock(name="for_pack_repair")
     instances: list[MagicMock] = []
 
     def _build_instance(*args, **kwargs):
@@ -123,10 +124,17 @@ def stub_worker(monkeypatch):
         return instance
 
     factory.side_effect = _build_instance
+    repair_factory.side_effect = _build_instance
     factory.instances = instances
+    factory.repair_factory = repair_factory
     monkeypatch.setattr(
         "anki_miner.gui.controllers.audio_pack_import_flow.ImportWorker.for_pack",
         factory,
+    )
+    monkeypatch.setattr(
+        "anki_miner.gui.controllers.audio_pack_import_flow.ImportWorker.for_pack_repair",
+        repair_factory,
+        raising=False,
     )
     return factory
 
@@ -570,11 +578,12 @@ class TestReimportPack:
         tab._audio_pack_import_flow.reimport_pack("my-pack-id")
 
         stub_worker.assert_not_called()
+        stub_worker.repair_factory.assert_not_called()
         assert any("Indexed resources are in use" in body for _title, body in warnings)
         assert all(task in warnings[0][1] for task in ("mining", "startup prewarm", "card backfill"))
         assert tab.audio_panel._add_btn.isEnabled()
 
-    def test_reimport_passes_overwrite_and_pack_id(self, tab, monkeypatch, stub_worker, tmp_path):
+    def test_reimport_uses_repair_worker_and_pack_id(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = tmp_path / "forvo_pack"
         pack_dir.mkdir()
         _make_forvo_pack(pack_dir)
@@ -585,15 +594,15 @@ class TestReimportPack:
 
         tab._audio_pack_import_flow.reimport_pack("my-pack-id")
 
-        assert stub_worker.called
-        kw = stub_worker.call_args[1]
-        assert kw.get("overwrite") is True, "overwrite must be True for reimport"
+        assert stub_worker.repair_factory.called
+        kw = stub_worker.repair_factory.call_args[1]
         assert kw.get("pack_id") == "my-pack-id", "pack_id must be forwarded to worker"
 
     def test_reimport_cancelled_dir_dialog_skips_worker(self, tab, monkeypatch, stub_worker):
         monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: "")
         tab._audio_pack_import_flow.reimport_pack("some-id")
         stub_worker.assert_not_called()
+        stub_worker.repair_factory.assert_not_called()
 
     def test_reimport_success_refreshes_panel_no_chain_change(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = tmp_path / "forvo_pack"

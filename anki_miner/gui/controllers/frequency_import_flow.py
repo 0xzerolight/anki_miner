@@ -233,9 +233,14 @@ class FrequencyImportFlow(ModalImportFlowMixin):
 
             def _scan() -> tuple[Path, Path | None, str | None]:
                 source_file = self._find_source_copy(source_dir)
-                existing_name = storage.read_meta(source_dir / "index.sqlite").get("source_name")
-                if not isinstance(existing_name, str):
-                    existing_name = None
+                existing_name: str | None = source_id
+                try:
+                    stored_name = storage.read_meta(source_dir / "index.sqlite").get("source_name")
+                except Exception:  # noqa: BLE001 — corrupt metadata must not strand a saved source
+                    pass
+                else:
+                    if isinstance(stored_name, str):
+                        existing_name = stored_name
                 return dest_root, source_file, existing_name
 
             def _on_done(result: object) -> None:
@@ -268,10 +273,9 @@ class FrequencyImportFlow(ModalImportFlowMixin):
                 return
             source_file = Path(chosen)
 
-        # Preserve the existing display name across reimport: without this the
-        # CSV path re-derives the name from the generic "source.csv" persisted
-        # copy's stem and collapses the label to "source". Read the authoritative
-        # SQLite meta (not the sidecar); None for a zip / missing index is fine.
+        # Preserve the existing display name across reimport. Corrupt or missing
+        # metadata falls back to the stable source id instead of the persisted
+        # copy's generic "source" stem.
         if not self._panel.request_resource_release():
             QMessageBox.warning(
                 self._parent,
@@ -286,12 +290,11 @@ class FrequencyImportFlow(ModalImportFlowMixin):
             return
 
         try:
-            worker = ImportWorker.for_source(
+            worker = ImportWorker.for_source_repair(
                 source_file,
                 dest_root,
                 source_id=source_id,
-                source_name=existing_name,
-                overwrite=True,
+                source_name=existing_name or source_id,
             )
         except Exception:
             self._set_import_buttons_enabled(True)

@@ -110,6 +110,34 @@ def test_audio_missing_canonical_restores_valid_backup(tmp_path: Path) -> None:
     assert not backup.exists()
 
 
+def test_missing_canonical_restores_repair_quarantine(tmp_path: Path) -> None:
+    config = _config(tmp_path, audio_ids=("pack",))
+    quarantine = config.audio_packs_root / "pack.corrupt-100-repair"
+    _audio_generation(quarantine, "pack", schema_version=999)
+    write_ownership_marker(quarantine, "pack", "audio")
+
+    run_startup_store_recovery(config, allow_collection=True)
+
+    canonical = config.audio_packs_root / "pack"
+    assert canonical.is_dir()
+    assert audio_storage.read_meta(canonical / "index.sqlite")["schema_version"] == "999"
+    assert not quarantine.exists()
+
+
+def test_valid_canonical_collects_owned_repair_quarantine(tmp_path: Path) -> None:
+    config = _config(tmp_path, audio_ids=("pack",))
+    canonical = config.audio_packs_root / "pack"
+    _audio_generation(canonical, "pack")
+    quarantine = config.audio_packs_root / "pack.corrupt-100-repair"
+    quarantine.mkdir()
+    write_ownership_marker(quarantine, "pack", "audio")
+
+    run_startup_store_recovery(config, allow_collection=True)
+
+    assert canonical.is_dir()
+    assert not quarantine.exists()
+
+
 def test_invalid_audio_canonical_is_quarantined_before_authoritative_backup_restore(
     tmp_path: Path,
 ) -> None:
@@ -129,13 +157,15 @@ def test_invalid_audio_canonical_is_quarantined_before_authoritative_backup_rest
     )
 
     run_startup_store_recovery(config, allow_collection=True)
-    run_startup_store_recovery(config, allow_collection=True)
-
     assert audio_storage.read_meta(canonical / "index.sqlite")["schema_version"] == str(audio_storage.SCHEMA_VERSION)
     quarantines = list(config.audio_packs_root.glob("pack.corrupt-*"))
     assert len(quarantines) == 1
     assert audio_storage.read_meta(quarantines[0] / "index.sqlite")["schema_version"] == "999"
     assert not backup.exists()
+
+    run_startup_store_recovery(config, allow_collection=True)
+
+    assert list(config.audio_packs_root.glob("pack.corrupt-*")) == []
 
 
 def test_invalid_unowned_canonical_and_valid_backup_are_both_retained(

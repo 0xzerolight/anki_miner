@@ -53,6 +53,7 @@ def tab(test_config: AnkiMinerConfig, tmp_path, qtbot):
 def stub_worker(monkeypatch):
     """Replace ImportWorker.for_source with a controllable mock factory."""
     factory = MagicMock(name="for_source")
+    repair_factory = MagicMock(name="for_source_repair")
     instances: list[MagicMock] = []
 
     def _build_instance(*args, **kwargs):
@@ -71,10 +72,17 @@ def stub_worker(monkeypatch):
         return instance
 
     factory.side_effect = _build_instance
+    repair_factory.side_effect = _build_instance
     factory.instances = instances
+    factory.repair_factory = repair_factory
     monkeypatch.setattr(
         "anki_miner.gui.controllers.frequency_import_flow.ImportWorker.for_source",
         factory,
+    )
+    monkeypatch.setattr(
+        "anki_miner.gui.controllers.frequency_import_flow.ImportWorker.for_source_repair",
+        repair_factory,
+        raising=False,
     )
     return factory
 
@@ -615,6 +623,7 @@ class TestReimportSource:
         tab._frequency_import_flow.reimport_source("jpdb")
 
         stub_worker.assert_not_called()
+        stub_worker.repair_factory.assert_not_called()
         assert any("Indexed resources are in use" in body for _title, body in warnings)
         assert all(task in warnings[0][1] for task in ("mining", "startup prewarm", "card backfill"))
         assert tab.frequency_panel._add_btn.isEnabled()
@@ -629,7 +638,27 @@ class TestReimportSource:
 
         tab._frequency_import_flow.reimport_source("jpdb")
 
-        assert stub_worker.instances[0]._kwargs["source_name"] is None
+        assert stub_worker.instances[0]._kwargs["source_name"] == "jpdb"
+
+    def test_corrupt_meta_uses_saved_source_and_fallback_name(self, tab, monkeypatch, stub_worker):
+        from anki_miner.services.frequency import storage
+
+        source_dir = tab.config.freqs_root / "jpdb"
+        source_dir.mkdir(parents=True)
+        source = source_dir / "source.csv"
+        source.write_text("word,rank\n猫,5\n", encoding="utf-8")
+        monkeypatch.setattr(storage, "read_meta", lambda _path: (_ for _ in ()).throw(OSError("corrupt")))
+        warnings = _capture_warnings(monkeypatch)
+
+        tab._frequency_import_flow.reimport_source("jpdb")
+
+        assert warnings == []
+        stub_worker.repair_factory.assert_called_once_with(
+            source,
+            tab.config.freqs_root,
+            source_id="jpdb",
+            source_name="jpdb",
+        )
 
     def test_reimport_uses_stored_source_and_id(self, tab, monkeypatch, stub_worker):
         # Materialize a persisted source copy alongside the (would-be) index.
@@ -642,14 +671,14 @@ class TestReimportSource:
 
         tab._frequency_import_flow.reimport_source("jpdb")
 
-        assert stub_worker.called
+        assert stub_worker.repair_factory.called
         instance = stub_worker.instances[0]
-        # for_source(input_path, dest_root, source_id="jpdb", overwrite=True)
+        # for_source_repair(input_path, dest_root, source_id="jpdb")
         args, kwargs = instance._args, instance._kwargs
         assert args[0] == source_dir / "source.csv"
         assert args[1] == freqs_root
         assert kwargs.get("source_id") == "jpdb"
-        assert kwargs.get("overwrite") is True
+        assert "overwrite" not in kwargs
 
     def test_reimport_success_notifies_config_changed(self, tab, monkeypatch, stub_worker):
         source_dir = tab.config.freqs_root / "jpdb"
@@ -690,7 +719,7 @@ class TestReimportSource:
 
         tab._frequency_import_flow.reimport_source("jpdb")
 
-        assert stub_worker.called
+        assert stub_worker.repair_factory.called
         assert stub_worker.instances[0]._kwargs.get("source_name") == "JPDB"
 
     def test_reimport_missing_copy_prompts_for_file(self, tab, monkeypatch, stub_worker, tmp_path):
@@ -705,7 +734,7 @@ class TestReimportSource:
 
         tab._frequency_import_flow.reimport_source("jpdb")
 
-        assert stub_worker.called
+        assert stub_worker.repair_factory.called
         instance = stub_worker.instances[0]
         assert instance._args[0] == picked
         assert instance._kwargs.get("source_id") == "jpdb"
@@ -717,6 +746,7 @@ class TestReimportSource:
 
         tab._frequency_import_flow.reimport_source("jpdb")
         stub_worker.assert_not_called()
+        stub_worker.repair_factory.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

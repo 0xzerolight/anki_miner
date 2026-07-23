@@ -23,7 +23,9 @@ from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.widgets.settings_tab import SettingsTab
+from anki_miner.services._sqlite_index import write_ownership_marker
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, create_index, write_meta
+from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip
 
 
 def _run_scan_sync(work, on_done, on_error):
@@ -57,7 +59,7 @@ def _make_dict_on_disk(
         },
     )
     if with_source_zip:
-        (dict_dir / "source.zip").write_bytes(b"PK\x03\x04 fake zip bytes")
+        build_yomitan_zip(dict_dir / "source.zip", title=dict_id, revision="")
     return dict_dir
 
 
@@ -343,6 +345,82 @@ def test_reimport_all_jmdict_skipped_when_xml_missing(tab_for_reimport_all, monk
     _, body = summaries[-1]
     assert "JMdict (English)" in body
     assert "Skipped" in body or "No dictionaries with saved sources" in body
+
+
+def test_reimport_all_repairs_only_owned_metadata_less_slot(
+    tab_for_reimport_all,
+    monkeypatch,
+    stubbed_workers,
+):
+    tab = tab_for_reimport_all
+    root = tab.config.dicts_root
+    owned = root / "owned"
+    owned.mkdir()
+    write_ownership_marker(owned, "owned", "dictionary")
+    build_yomitan_zip(owned / "source.zip", title="Owned", revision="")
+    foreign = root / "foreign"
+    foreign.mkdir()
+    (foreign / "source.zip").write_bytes(b"PK\x03\x04")
+    tab.dictionary_panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="owned", enabled=True),
+            ChainEntry(kind="indexed", dict_id="foreign", enabled=True),
+        )
+    )
+    summaries = _silence_dialogs(monkeypatch)
+
+    tab._dict_import_flow.reimport_all()
+    _complete_in_flight_worker(stubbed_workers)
+
+    stubbed_workers["yomitan_factory"].assert_called_once()
+    args, kwargs = stubbed_workers["yomitan_factory"].call_args
+    assert args[0] == owned / "source.zip"
+    assert kwargs["dict_id"] == "owned"
+    assert kwargs["overwrite"] is True
+    assert "foreign" in summaries[-1][1]
+
+
+def test_reimport_all_skips_saved_zip_for_other_dictionary(
+    tab_for_reimport_all,
+    monkeypatch,
+    stubbed_workers,
+):
+    tab = tab_for_reimport_all
+    root = tab.config.dicts_root
+    slot = _make_dict_on_disk(root, "expected", fmt="yomitan", source_name="Expected")
+    build_yomitan_zip(slot / "source.zip", title="Other Dictionary")
+    tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="expected", enabled=True),))
+    summaries = _silence_dialogs(monkeypatch)
+
+    tab._dict_import_flow.reimport_all()
+
+    stubbed_workers["yomitan_factory"].assert_not_called()
+    assert "Expected" in summaries[-1][1]
+    assert "Skipped" in summaries[-1][1]
+
+
+def test_reimport_all_corrupt_saved_jmdict_zip_falls_back_to_configured_xml(
+    tab_for_reimport_all,
+    monkeypatch,
+    stubbed_workers,
+):
+    tab = tab_for_reimport_all
+    slot = _make_dict_on_disk(
+        tab.config.dicts_root,
+        "jmdict-english",
+        fmt="jmdict",
+        source_name="JMdict (English)",
+    )
+    (slot / "source.zip").write_bytes(b"PK\x03\x04")
+    tab.config.jmdict_path.write_text("<JMdict/>", encoding="utf-8")
+    tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),))
+    _silence_dialogs(monkeypatch)
+
+    tab._dict_import_flow.reimport_all()
+
+    stubbed_workers["yomitan_factory"].assert_not_called()
+    stubbed_workers["jmdict_factory"].assert_called_once()
+    _complete_in_flight_worker(stubbed_workers)
 
 
 def test_reimport_all_cancel_stops_chain(tab_for_reimport_all, monkeypatch, stubbed_workers):

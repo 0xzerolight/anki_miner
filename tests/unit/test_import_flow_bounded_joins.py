@@ -432,6 +432,7 @@ class TestAudioPackBoundedJoin:
 class TestDictionaryBoundedJoin:
     def _prepare_reimport_all(self, tab, monkeypatch):
         from anki_miner.config import ChainEntry
+        from anki_miner.services._sqlite_index import write_ownership_marker
         from anki_miner.services.dictionary.registry import DictMeta
 
         mod = "anki_miner.gui.controllers.dictionary_import_flow"
@@ -443,9 +444,14 @@ class TestDictionaryBoundedJoin:
         )
 
         # Seed a saved source.zip for the indexed dict so a job is produced.
+        # Must be a REAL Yomitan zip whose derived id matches the slot — the
+        # saved-source validation (wave-4) rejects unreadable/mismatched zips.
+        from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip
+
         dicts_root = tab.config.dicts_root
         (dicts_root / "mydict").mkdir(parents=True)
-        (dicts_root / "mydict" / "source.zip").write_bytes(b"zip")
+        write_ownership_marker(dicts_root / "mydict", "mydict", "dictionary")
+        build_yomitan_zip(dicts_root / "mydict" / "source.zip", title="mydict", revision="")
 
         registry = MagicMock()
         registry.load = MagicMock()

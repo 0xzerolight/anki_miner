@@ -252,6 +252,32 @@ def prove_owned_generation(
     return _prove_owned_directory(generation, slot_id, family)
 
 
+def readonly_sqlite_uri(db_path: Path) -> str:
+    """Build the ``file:`` read-only URI for ``db_path``.
+
+    ``Path.as_uri()`` percent-encodes URI-significant characters (``#``, ``?``,
+    ``%``) so they can't truncate the path, but on Windows it renders
+    extended-length prefixes (``\\\\?\\C:\\...`` / ``\\\\?\\UNC\\server\\share``)
+    as a ``file://%3F/...`` authority that sqlite rejects — silently skipping
+    valid stores. Strip the extended-length prefix back to the plain drive/UNC
+    form before conversion; sqlite re-applies long-path handling itself.
+    """
+    resolved = db_path.resolve()
+    stripped = _strip_extended_length_prefix(str(resolved))
+    if stripped is not None:
+        resolved = Path(stripped)
+    return resolved.as_uri() + "?mode=ro"
+
+
+def _strip_extended_length_prefix(raw: str) -> str | None:
+    """Return ``raw`` without a Windows extended-length prefix, or None if absent."""
+    if raw.startswith("\\\\?\\UNC\\"):
+        return "\\\\" + raw[8:]
+    if raw.startswith("\\\\?\\"):
+        return raw[4:]
+    return None
+
+
 def write_meta(
     db_path: Path,
     items: dict[str, str],
@@ -285,7 +311,7 @@ def read_meta(db_path: Path) -> dict[str, str]:
     """Read all ``meta`` rows. Returns an empty dict if the file is missing."""
     if not db_path.exists():
         return {}
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(readonly_sqlite_uri(db_path), uri=True)
     try:
         return {
             key: value
@@ -304,10 +330,13 @@ def read_meta_cached(
 ) -> dict[str, str]:
     """Read ``meta`` rows via the ``meta.json`` sidecar when it is fresh.
 
-    Falls through to ``read_meta_fn`` and rewrites the sidecar when:
+    Falls through to ``read_meta_fn`` without publishing a sidecar when:
     * the sidecar is missing,
     * ``index.sqlite`` is newer than the sidecar,
     * the sidecar is unreadable / not valid JSON.
+
+    Only the explicit writer path, :func:`write_meta`, publishes the sidecar;
+    reads never repair or refresh it.
 
     ``read_meta_fn`` is passed in (rather than calling :func:`read_meta`
     directly) so each storage module routes the fall-through through *its own*
@@ -325,14 +354,11 @@ def read_meta_cached(
     except (OSError, UnicodeError, json.JSONDecodeError, RecursionError) as e:
         logger.debug("meta sidecar miss for %s: %s", db_path, e)
 
-    meta = read_meta_fn(db_path)
-    write_meta_sidecar(db_path, meta, sidecar_name=sidecar_name)
-    return meta
+    return read_meta_fn(db_path)
 
 
 def write_meta_sidecar(db_path: Path, meta: dict[str, str], *, sidecar_name: str = _META_SIDECAR) -> None:
-    """Best-effort sidecar write. Cache misses are logged, not raised — the
-    next :func:`read_meta_cached` call simply falls back to the SQLite read."""
+    """Best-effort sidecar write. Publication failures are logged, not raised."""
     sidecar = db_path.parent / sidecar_name
     try:
         sidecar.write_text(json.dumps(meta), encoding="utf-8")
@@ -348,14 +374,12 @@ def open_readonly(db_path: Path) -> sqlite3.Connection:
     threads. The connection is read-only (``PRAGMA query_only=ON``) so concurrent
     reads are safe under sqlite3's serialized access mode.
     """
-    # Build the file: URI via Path.as_uri() so URI-significant characters in the
-    # path (``#`` fragment, ``?`` query, ``%`` escape) are percent-encoded. A
-    # raw f-string would let a root path containing any of these truncate the
-    # path and point sqlite at the wrong (or nonexistent) file. as_uri() needs
-    # an absolute path, so resolve first.
-    uri = db_path.resolve().as_uri() + "?mode=ro"
-    conn = sqlite3.connect(uri, uri=True, check_same_thread=False)
-    conn.execute("PRAGMA query_only=ON")
+    conn = sqlite3.connect(readonly_sqlite_uri(db_path), uri=True, check_same_thread=False)
+    try:
+        conn.execute("PRAGMA query_only=ON")
+    except Exception:
+        conn.close()
+        raise
     return conn
 
 

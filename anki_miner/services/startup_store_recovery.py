@@ -104,6 +104,7 @@ def _recovery_artifact_name(
     markers: tuple[tuple[str, ArtifactKind], ...] = (
         (".bak-", "backup"),
         (".tomb-", "tombstone"),
+        (".corrupt-", "quarantine"),
     )
     for marker, kind in markers:
         slot_id, found, suffix = name.rpartition(marker)
@@ -142,7 +143,11 @@ def _candidate(
 ) -> RecoveryArtifact:
     owned = prove_owned_generation(root, slot_id, family, path)
     valid = owned and validate_index_schema(path / "index.sqlite", family)
-    marker = ".bak-" if kind == "backup" else ".tomb-"
+    marker = {
+        "backup": ".bak-",
+        "tombstone": ".tomb-",
+        "quarantine": ".corrupt-",
+    }[kind]
     timestamp_text = path.name.rpartition(marker)[2].partition("-")[0]
     if timestamp_text.isdigit():
         generation = int(timestamp_text)

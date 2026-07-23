@@ -416,22 +416,21 @@ class TestReadMetaCached:
         sidecar.unlink()
         meta = read_meta_cached(db_path)
         assert meta["pack_id"] == "nhk16"
-        # Fall-through rewrites the sidecar.
-        assert sidecar.is_file()
+        assert not sidecar.exists()
 
     def test_cached_read_falls_back_when_sqlite_newer(self, tmp_path: Path):
         db_path = self._setup_pack(tmp_path)
         sidecar = db_path.parent / "meta.json"
         old = sidecar.stat().st_mtime - 100
         os.utime(sidecar, (old, old))
+        stale_mtime_ns = sidecar.stat().st_mtime_ns
         with patch(
             "anki_miner.services.audio_packs.storage.read_meta",
             wraps=read_meta,
         ) as wrapped:
             read_meta_cached(db_path)
         assert wrapped.call_count == 1
-        # Sidecar gets rewritten with current mtime.
-        assert sidecar.stat().st_mtime > old
+        assert sidecar.stat().st_mtime_ns == stale_mtime_ns
 
     def test_cached_read_handles_corrupt_sidecar(self, tmp_path: Path):
         db_path = self._setup_pack(tmp_path)
@@ -439,8 +438,7 @@ class TestReadMetaCached:
         sidecar.write_text("{not valid json", encoding="utf-8")
         meta = read_meta_cached(db_path)
         assert meta["pack_id"] == "nhk16"
-        # Sidecar is rewritten with valid JSON.
-        assert json.loads(sidecar.read_text(encoding="utf-8"))["pack_id"] == "nhk16"
+        assert sidecar.read_text(encoding="utf-8") == "{not valid json"
 
     def test_cached_read_missing_db(self, tmp_path: Path):
         assert read_meta_cached(tmp_path / "nonexistent.sqlite") == {}

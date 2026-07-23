@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
+from anki_miner.services import _sqlite_index
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
     prove_owned_slot,
@@ -193,6 +195,61 @@ def test_schema_validation_never_creates_missing_database(tmp_path: Path) -> Non
     assert not db_path.exists()
 
 
+def test_read_meta_missing_database_does_not_create_file(tmp_path: Path) -> None:
+    db_path = tmp_path / "missing" / "index.sqlite"
+
+    assert _sqlite_index.read_meta(db_path) == {}
+    assert not db_path.exists()
+
+
+def test_read_meta_does_not_recreate_file_deleted_after_precheck(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db_path = tmp_path / "index.sqlite"
+    real_exists = Path.exists
+    first_check = True
+
+    def exists_once(path: Path) -> bool:
+        nonlocal first_check
+        if path == db_path and first_check:
+            first_check = False
+            return True
+        return real_exists(path)
+
+    monkeypatch.setattr(Path, "exists", exists_once)
+
+    with pytest.raises(sqlite3.OperationalError):
+        _sqlite_index.read_meta(db_path)
+
+    assert not db_path.exists()
+
+
+def test_read_meta_does_not_modify_corrupt_file(tmp_path: Path) -> None:
+    db_path = tmp_path / "index.sqlite"
+    payload = b"not a sqlite database"
+    db_path.write_bytes(payload)
+
+    with pytest.raises(sqlite3.DatabaseError):
+        _sqlite_index.read_meta(db_path)
+
+    assert db_path.read_bytes() == payload
+
+
+def test_open_readonly_closes_connection_when_pragma_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    conn = MagicMock()
+    conn.execute.side_effect = sqlite3.OperationalError("PRAGMA failed")
+    monkeypatch.setattr(_sqlite_index.sqlite3, "connect", MagicMock(return_value=conn))
+
+    with pytest.raises(sqlite3.OperationalError, match="PRAGMA failed"):
+        _sqlite_index.open_readonly(tmp_path / "index.sqlite")
+
+    conn.close.assert_called_once_with()
+
+
 @pytest.mark.parametrize("family", ("dictionary", "frequency", "audio"))
 def test_exact_marker_proves_owned_slot_with_unexpected_child(
     tmp_path: Path,
@@ -355,3 +412,34 @@ def test_scan_index_root_prefilters_every_generated_artifact(tmp_path: Path) -> 
 
     assert result == {}
     assert parsed == []
+
+
+class TestReadonlySqliteUri:
+    """Windows extended-length prefixes must not leak into the file: URI."""
+
+    def test_unc_extended_prefix_stripped(self):
+        from anki_miner.services._sqlite_index import _strip_extended_length_prefix
+
+        assert _strip_extended_length_prefix("\\\\?\\UNC\\server\\share\\db") == "\\\\server\\share\\db"
+
+    def test_drive_extended_prefix_stripped(self):
+        from anki_miner.services._sqlite_index import _strip_extended_length_prefix
+
+        assert _strip_extended_length_prefix("\\\\?\\C:\\dicts\\a\\index.sqlite") == "C:\\dicts\\a\\index.sqlite"
+
+    def test_plain_paths_untouched(self):
+        from anki_miner.services._sqlite_index import _strip_extended_length_prefix
+
+        assert _strip_extended_length_prefix("/home/u/.anki_miner/dicts/a/index.sqlite") is None
+        assert _strip_extended_length_prefix("C:\\dicts\\a\\index.sqlite") is None
+
+    def test_readonly_uri_roundtrip_opens(self, tmp_path):
+        import sqlite3
+
+        from anki_miner.services._sqlite_index import readonly_sqlite_uri
+
+        db = tmp_path / "weird #? %dir" / "index.sqlite"
+        db.parent.mkdir()
+        sqlite3.connect(db).close()
+        conn = sqlite3.connect(readonly_sqlite_uri(db), uri=True)
+        conn.close()

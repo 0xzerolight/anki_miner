@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Literal, TypeAlias
 
 CanonicalState: TypeAlias = Literal["absent", "invalid", "valid"]
-ArtifactKind: TypeAlias = Literal["backup", "tombstone"]
+ArtifactKind: TypeAlias = Literal["backup", "tombstone", "quarantine"]
 
 
 @dataclass(frozen=True)
@@ -54,7 +54,14 @@ def decide_slot_recovery(
             quarantine_canonical=False,
         )
 
-    restore = next((candidate for candidate in owned if candidate.valid), None)
+    restore = next(
+        (
+            candidate
+            for candidate in owned
+            if candidate.valid or (canonical == "absent" and candidate.kind == "quarantine")
+        ),
+        None,
+    )
     return RecoveryDecision(
         restore=restore,
         collect=tuple(candidate for candidate in owned if candidate is not restore),

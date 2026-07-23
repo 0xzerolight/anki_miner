@@ -26,10 +26,10 @@ from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.base_worker import CancellableWorker
-from anki_miner.services.audio_packs.importer import import_audio_pack
-from anki_miner.services.dictionary.importers.jmdict_importer import import_jmdict_xml
-from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
-from anki_miner.services.frequency.source_importer import import_frequency_source
+from anki_miner.services.audio_packs.importer import import_audio_pack, repair_audio_pack
+from anki_miner.services.dictionary.importers.jmdict_importer import import_jmdict_xml, repair_jmdict_xml
+from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip, repair_yomitan_zip
+from anki_miner.services.frequency.source_importer import import_frequency_source, repair_frequency_source
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +136,34 @@ class ImportWorker(CancellableWorker):
         return cls(runner, source_path=zip_path)
 
     @classmethod
+    def for_yomitan_repair(
+        cls,
+        zip_path: Path,
+        dest_root: Path,
+        *,
+        dict_id: str,
+    ) -> ImportWorker:
+        """Build a worker for explicit source-first repair of one dictionary slot."""
+
+        def runner(progress_fn: ProgressFn, cancel_fn: CancelFn) -> tuple[str, dict[str, Any]]:
+            result = repair_yomitan_zip(
+                zip_path,
+                dest_root,
+                dict_id=dict_id,
+                progress=progress_fn,
+                cancel_check=cancel_fn,
+            )
+            meta: dict[str, Any] = {
+                "entry_count": result.entry_count,
+                "source_name": result.source_name,
+                "skipped_malformed": result.skipped_malformed,
+                "media_warnings": list(result.media_warnings),
+            }
+            return result.dict_id, meta
+
+        return cls(runner, source_path=zip_path)
+
+    @classmethod
     def for_jmdict(
         cls,
         xml_path: Path,
@@ -158,6 +186,31 @@ class ImportWorker(CancellableWorker):
                 "source_name": getattr(result, "source_name", getattr(result, "dict_id", "")),
                 "skipped_malformed": getattr(result, "skipped_malformed", 0),
                 "media_warnings": list(getattr(result, "media_warnings", ())),
+            }
+            return result.dict_id, meta
+
+        return cls(runner, source_path=xml_path)
+
+    @classmethod
+    def for_jmdict_repair(
+        cls,
+        xml_path: Path,
+        dest_root: Path,
+    ) -> ImportWorker:
+        """Build a worker for explicit repair of the fixed JMdict slot."""
+
+        def runner(progress_fn: ProgressFn, cancel_fn: CancelFn) -> tuple[str, dict[str, Any]]:
+            result = repair_jmdict_xml(
+                xml_path,
+                dest_root,
+                progress=progress_fn,
+                cancel_check=cancel_fn,
+            )
+            meta: dict[str, Any] = {
+                "entry_count": result.entry_count,
+                "source_name": result.dict_id,
+                "skipped_malformed": 0,
+                "media_warnings": [],
             }
             return result.dict_id, meta
 
@@ -202,6 +255,38 @@ class ImportWorker(CancellableWorker):
         return cls(runner, source_path=input_path)
 
     @classmethod
+    def for_source_repair(
+        cls,
+        input_path: Path,
+        dest_root: Path,
+        *,
+        source_id: str,
+        source_name: str,
+    ) -> ImportWorker:
+        """Build a worker for explicit repair of one frequency slot."""
+
+        def runner(progress_fn: ProgressFn, cancel_fn: CancelFn) -> tuple[str, dict[str, Any]]:
+            result = repair_frequency_source(
+                input_path,
+                dest_root,
+                source_id=source_id,
+                source_name=source_name,
+                progress=progress_fn,
+                cancel_check=cancel_fn,
+            )
+            meta: dict[str, Any] = {
+                "entry_count": result.entry_count,
+                "source_name": result.source_name,
+                "format": result.format,
+                "skipped_malformed": result.skipped_malformed,
+                "converted_to_ranks": result.converted_to_ranks,
+                "is_categorical": result.is_categorical,
+            }
+            return result.source_id, meta
+
+        return cls(runner, source_path=input_path)
+
+    @classmethod
     def for_pack(
         cls,
         pack_dir: Path,
@@ -230,6 +315,33 @@ class ImportWorker(CancellableWorker):
                 "entry_count": getattr(result, "entry_count", 0),
                 "source_name": getattr(result, "source_name", getattr(result, "pack_id", "")),
                 "format": getattr(result, "format", ""),
+            }
+            return result.pack_id, meta
+
+        return cls(runner, source_path=pack_dir)
+
+    @classmethod
+    def for_pack_repair(
+        cls,
+        pack_dir: Path,
+        dest_root: Path,
+        *,
+        pack_id: str,
+    ) -> ImportWorker:
+        """Build a worker for explicit repair of one audio-pack slot."""
+
+        def runner(progress_fn: ProgressFn, cancel_fn: CancelFn) -> tuple[str, dict[str, Any]]:
+            result = repair_audio_pack(
+                pack_dir,
+                dest_root,
+                pack_id=pack_id,
+                progress=lambda msg: progress_fn(0, 0, msg),
+                cancel_check=cancel_fn,
+            )
+            meta: dict[str, Any] = {
+                "entry_count": result.entry_count,
+                "source_name": result.source_name,
+                "format": result.format,
             }
             return result.pack_id, meta
 

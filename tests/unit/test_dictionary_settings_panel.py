@@ -16,6 +16,7 @@ from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.widgets.panels import dictionary_settings_panel as dsp_mod
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
 from anki_miner.services._sqlite_index import write_ownership_marker
+from anki_miner.services.dictionary.registry import DictionaryRegistry
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, create_index, write_meta
 from anki_miner.utils import robust_fs
 
@@ -444,9 +445,8 @@ def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, qtbot, tmp_pa
     assert jmdict_fired == [], "Yomitan row must not fire the JMdict signal"
 
 
-def test_stale_jmdict_row_fires_reimport_jmdict_signal(qapp, qtbot, tmp_path):
-    """A JMdict dictionary with outdated schema_version wires the per-row button
-    to the existing reimport_jmdict_requested signal, not the new generic one."""
+def test_stale_jmdict_row_fires_source_first_reimport_signal(qtbot, tmp_path):
+    """A stale JMdict row routes through the id-based source-first dispatcher."""
     _make_dict_on_disk(
         tmp_path,
         "jmdict-english",
@@ -477,8 +477,8 @@ def test_stale_jmdict_row_fires_reimport_jmdict_signal(qapp, qtbot, tmp_path):
     panel.reimport_dict_requested.connect(generic_fired.append)
 
     row.reimport_button.click()
-    assert jmdict_fired == [None]
-    assert generic_fired == [], "JMdict row must not fire the generic signal"
+    assert jmdict_fired == []
+    assert generic_fired == ["jmdict-english"]
 
 
 def test_current_schema_row_has_no_stale_ui(qapp, qtbot, tmp_path):
@@ -605,9 +605,8 @@ def test_right_click_non_stale_yomitan_row_emits_reimport_dict_requested(qapp, q
     assert jmdict_fired == [], "Yomitan row must not fire the JMdict signal"
 
 
-def test_right_click_jmdict_row_emits_reimport_jmdict_requested(qapp, qtbot, monkeypatch, tmp_path):
-    """Right-clicking a JMdict row → Re-import… emits the JMdict-specific
-    signal (which uses the configured XML path, not a file picker)."""
+def test_right_click_jmdict_row_emits_source_first_reimport(qtbot, monkeypatch, tmp_path):
+    """JMdict rows use the id-based source-first dispatcher."""
     _make_dict_on_disk(
         tmp_path,
         "jmdict-english",
@@ -638,8 +637,62 @@ def test_right_click_jmdict_row_emits_reimport_jmdict_requested(qapp, qtbot, mon
     pos = panel._list.visualItemRect(item).center()
     panel._on_row_context_menu(pos)
 
-    assert jmdict_fired == [None]
-    assert generic_fired == [], "JMdict row must not fire the generic signal"
+    assert jmdict_fired == []
+    assert generic_fired == ["jmdict-english"]
+
+
+def test_right_click_metadata_less_row_exposes_reimport_and_remove(qtbot, monkeypatch, tmp_path):
+    panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((ChainEntry(kind="indexed", dict_id="broken-dict", enabled=True),))
+    panel._view = DictionaryRegistry(tmp_path)
+
+    constructed = _patch_menu_exec(monkeypatch, "Re-import…")
+    emitted: list[str] = []
+    panel.reimport_dict_requested.connect(emitted.append)
+
+    item = panel._list.item(0)
+    pos = panel._list.visualItemRect(item).center()
+    panel._on_row_context_menu(pos)
+
+    assert len(constructed) == 1
+    assert [action.text() for action in constructed[0].actions()] == ["Re-import…", "Remove"]
+    assert emitted == ["broken-dict"]
+
+
+def test_right_click_remove_metadata_less_unproved_row_uses_chain_only_prompt(
+    qtbot,
+    monkeypatch,
+    tmp_path,
+):
+    target = tmp_path / "broken-dict"
+    target.mkdir()
+    (target / "keep.txt").write_text("foreign", encoding="utf-8")
+    panel = DictionarySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((ChainEntry(kind="indexed", dict_id="broken-dict", enabled=True),))
+    panel._view = DictionaryRegistry(tmp_path)
+    _patch_menu_exec(monkeypatch, "Remove")
+    prompts: list[str] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.question",
+        lambda _parent, _title, body, *a, **kw: prompts.append(body) or QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
+        lambda *a, **kw: QMessageBox.StandardButton.Ok,
+    )
+
+    item = panel._list.item(0)
+    pos = panel._list.visualItemRect(item).center()
+    panel._on_row_context_menu(pos)
+    qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
+
+    assert len(prompts) == 1
+    assert "from the dictionary list" in prompts[0]
+    assert "left untouched" in prompts[0]
+    assert "delete its files" not in prompts[0]
+    assert (target / "keep.txt").read_text(encoding="utf-8") == "foreign"
 
 
 def test_remove_emits_chain_changed_signal(qapp, qtbot, tmp_path, confirm_remove):
