@@ -8,7 +8,11 @@ from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces.dictionary_provider import DictionaryProvider
-from anki_miner.services._sqlite_index import is_generated_store_artifact, scan_index_root
+from anki_miner.services._sqlite_index import (
+    is_generated_store_artifact,
+    read_ownership_marker,
+    scan_index_root,
+)
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 from anki_miner.services.dictionary.providers.jisho_provider import JishoProvider
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION
@@ -37,7 +41,10 @@ class DictionaryRegistry:
         self._dicts = scan_index_root(
             self._root,
             self._parse_meta,
-            child_prefilter=lambda child: not is_generated_store_artifact(child.name),
+            child_prefilter=lambda child: (
+                not is_generated_store_artifact(child.name)
+                or read_ownership_marker(child) == ("dictionary", child.name)
+            ),
             warn_label="dictionary",
         )
 

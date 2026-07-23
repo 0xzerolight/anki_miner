@@ -18,7 +18,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.services._sqlite_index import is_generated_store_artifact, scan_index_root
+from anki_miner.services._sqlite_index import (
+    is_generated_store_artifact,
+    read_ownership_marker,
+    scan_index_root,
+)
 from anki_miner.services.frequency.providers.indexed_freq_provider import (
     IndexedFreqProvider,
 )
@@ -60,7 +64,9 @@ class FrequencySourceRegistry:
         self._sources = scan_index_root(
             self._root,
             self._parse_meta,
-            child_prefilter=lambda child: not is_generated_store_artifact(child.name),
+            child_prefilter=lambda child: (
+                not is_generated_store_artifact(child.name) or read_ownership_marker(child) == ("frequency", child.name)
+            ),
             warn_label="frequency source",
         )
 

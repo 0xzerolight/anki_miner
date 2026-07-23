@@ -9,9 +9,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from anki_miner.config import AudioSourceEntry, ChainEntry, FreqEntry
+from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, ChainEntry, FreqEntry
 from anki_miner.gui.controllers import import_flow_common as import_flow_common_module
 from anki_miner.gui.controllers.background_tasks import BackgroundTaskController
+from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.widgets.panels import chain_settings_panel_base as base_module
 from anki_miner.gui.widgets.panels import frequency_settings_panel as frequency_panel_module
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
@@ -230,6 +231,80 @@ def test_mutation_preflight_refuses_when_config_commit_fails(test_config, qtbot,
         assert widget.dictionary_panel.pitch_accent_selector.get_path() == str(pitch_zip)
         assert pitch_csv.read_bytes() == b"old pitch"
         assert widget.dictionary_panel._dicts_root == old_panel_root
+        assert list(tmp_path.glob(".pitch.csv.rollback-*")) == []
+    finally:
+        widget.shutdown()
+        for worker in widget.iter_close_workers():
+            if worker is not None:
+                worker.wait(3000)
+
+
+def test_post_save_removal_sync_prevents_later_chain_resurrection(
+    test_config,
+    qtbot,
+) -> None:
+    persisted: list[AnkiMinerConfig] = []
+
+    def commit(config: AnkiMinerConfig) -> None:
+        persisted.append(config)
+        if len(persisted) == 1:
+            raise ConfigCommitError(ConfigCommitResult.post_save_failure(RuntimeError("refresh failed")))
+
+    config = replace(
+        test_config,
+        dictionary_chain=(
+            ChainEntry(kind="indexed", dict_id="remove-me", enabled=True),
+            ChainEntry(kind="jisho", dict_id=None, enabled=True),
+        ),
+    )
+    widget = SettingsTab(config, commit_config=commit)
+    qtbot.addWidget(widget)
+    try:
+        result = widget._commit_dictionary_removal((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
+        widget._persist_audio_chain_change(widget.config.expression_audio_chain)
+
+        assert result.persisted is True
+        assert [entry.kind for entry in widget.config.dictionary_chain] == ["jisho"]
+        assert [entry.kind for entry in persisted[-1].dictionary_chain] == ["jisho"]
+    finally:
+        widget.shutdown()
+        for worker in widget.iter_close_workers():
+            if worker is not None:
+                worker.wait(3000)
+
+
+def test_post_save_pitch_failure_keeps_promoted_bytes_and_committed_path(
+    test_config,
+    qtbot,
+    tmp_path,
+    monkeypatch,
+) -> None:
+    pitch_csv = tmp_path / "pitch.csv"
+    pitch_csv.write_bytes(b"old pitch")
+    pending_pitch_csv = tmp_path / "pitch.csv.pending"
+    pending_pitch_csv.write_bytes(b"new pitch")
+    config = replace(test_config, pitch_accent_path=pitch_csv)
+
+    def fail_refresh(_config: AnkiMinerConfig) -> None:
+        raise ConfigCommitError(ConfigCommitResult.post_save_failure(RuntimeError("refresh failed")))
+
+    widget = SettingsTab(config, commit_config=fail_refresh)
+    qtbot.addWidget(widget)
+    pitch_zip = tmp_path / "pitch.zip"
+    pitch_zip.write_bytes(b"zip")
+    widget.dictionary_panel.pitch_accent_selector.set_path(str(pitch_zip))
+    monkeypatch.setattr(widget, "_resolve_pitch_accent_path", lambda: pitch_csv)
+
+    def promote_pitch() -> None:
+        os.replace(pending_pitch_csv, pitch_csv)
+
+    widget._zip_import_flow._pending_pitch_commit = promote_pitch
+
+    try:
+        assert widget.commit_pending_settings_for_mutation() is False
+        assert widget.config.pitch_accent_path == pitch_csv
+        assert widget.dictionary_panel.pitch_accent_selector.get_path() == str(pitch_csv)
+        assert pitch_csv.read_bytes() == b"new pitch"
         assert list(tmp_path.glob(".pitch.csv.rollback-*")) == []
     finally:
         widget.shutdown()

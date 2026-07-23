@@ -748,7 +748,7 @@ class TestMainUsesConfigLogPath:
     """main() passes config.log_path (not the hardcoded default) to _configure_logging."""
 
     def test_main_passes_config_log_path_to_configure_logging(self, tmp_path):
-        """_configure_logging is called with the path from GUIConfigManager.load_config()."""
+        """_configure_logging uses the config returned by the provenance-aware startup load."""
         from unittest.mock import MagicMock, patch
 
         custom_log = tmp_path / "custom" / "app.log"
@@ -763,8 +763,8 @@ class TestMainUsesConfigLogPath:
 
         with (
             patch(
-                "anki_miner.gui.app.GUIConfigManager.load_config",
-                return_value=mock_config,
+                "anki_miner.gui.app.GUIConfigManager.load_config_with_provenance",
+                return_value=(mock_config, True),
             ),
             patch("anki_miner.gui.app._configure_logging", side_effect=fake_configure_logging),
             patch("anki_miner.gui.app.QApplication"),

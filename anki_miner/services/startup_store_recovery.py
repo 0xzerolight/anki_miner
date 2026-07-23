@@ -97,14 +97,22 @@ def _family_specs(config: AnkiMinerConfig) -> tuple[_FamilySpec, ...]:
     )
 
 
-def _recovery_artifact_name(name: str) -> tuple[str, ArtifactKind] | None:
+def _recovery_artifact_name(
+    name: str,
+    listed_ids: frozenset[str],
+) -> tuple[str, ArtifactKind] | None:
     markers: tuple[tuple[str, ArtifactKind], ...] = (
         (".bak-", "backup"),
         (".tomb-", "tombstone"),
     )
     for marker, kind in markers:
         slot_id, found, suffix = name.rpartition(marker)
-        if not found or not slot_id or not suffix or is_generated_store_artifact(slot_id):
+        if (
+            not found
+            or not slot_id
+            or not suffix
+            or (is_generated_store_artifact(slot_id) and slot_id not in listed_ids)
+        ):
             continue
         try:
             validate_store_id(slot_id)
@@ -134,10 +142,15 @@ def _candidate(
 ) -> RecoveryArtifact:
     owned = prove_owned_generation(root, slot_id, family, path)
     valid = owned and validate_index_schema(path / "index.sqlite", family)
-    try:
-        generation = path.stat().st_mtime_ns
-    except OSError:
-        generation = 0
+    marker = ".bak-" if kind == "backup" else ".tomb-"
+    timestamp_text = path.name.rpartition(marker)[2].partition("-")[0]
+    if timestamp_text.isdigit():
+        generation = int(timestamp_text)
+    else:
+        try:
+            generation = path.stat().st_mtime_ns
+        except OSError:
+            generation = 0
     if not owned:
         logger.warning("Startup store recovery retained unowned artifact: %s", path)
     return RecoveryArtifact(
@@ -166,11 +179,17 @@ def _recover_slot(
     slot_id: str,
     children: dict[str, Path],
     budget: _DeleteBudget,
+    *,
+    allow_collection: bool,
 ) -> None:
     canonical = spec.root / slot_id
     if not os.path.lexists(canonical):
         canonical_state: CanonicalState = "absent"
-    elif validate_index_schema(canonical / "index.sqlite", spec.family):
+    elif validate_index_schema(canonical / "index.sqlite", spec.family) and prove_owned_slot(
+        spec.root,
+        slot_id,
+        spec.family,
+    ):
         canonical_state = "valid"
     else:
         canonical_state = "invalid"
@@ -178,7 +197,8 @@ def _recover_slot(
     candidates = tuple(
         _candidate(spec.root, slot_id, spec.family, child, kind)
         for name, child in children.items()
-        if (parsed := _recovery_artifact_name(name)) is not None
+        if name not in spec.listed_ids
+        if (parsed := _recovery_artifact_name(name, spec.listed_ids)) is not None
         for candidate_slot, kind in (parsed,)
         if candidate_slot == slot_id
     )
@@ -210,20 +230,24 @@ def _recover_slot(
 
     if decision.restore is not None:
         restore = decision.restore
-        if not prove_owned_generation(spec.root, slot_id, spec.family, restore.path):
-            logger.warning(
-                "Startup store recovery retained recovery candidate whose ownership changed: %s", restore.path
-            )
-            return
         try:
-            os.replace(restore.path, canonical)
-        except OSError:
-            logger.warning(
-                "Startup store recovery failed to restore %s from %s",
-                canonical,
-                restore.path,
-                exc_info=True,
-            )
+            if not prove_owned_generation(spec.root, slot_id, spec.family, restore.path):
+                logger.warning(
+                    "Startup store recovery retained recovery candidate whose ownership changed: %s", restore.path
+                )
+                return
+            try:
+                os.replace(restore.path, canonical)
+            except OSError:
+                logger.warning(
+                    "Startup store recovery failed to restore %s from %s",
+                    canonical,
+                    restore.path,
+                    exc_info=True,
+                )
+                return
+            logger.info("Startup store recovery restored canonical: %s <- %s", canonical, restore.path)
+        finally:
             if quarantine is not None and not os.path.lexists(canonical):
                 try:
                     os.replace(quarantine, canonical)
@@ -233,11 +257,10 @@ def _recover_slot(
                         quarantine,
                         exc_info=True,
                     )
-            return
-        logger.info("Startup store recovery restored canonical: %s <- %s", canonical, restore.path)
 
-    for artifact in decision.collect:
-        _collect_artifact(spec, slot_id, artifact, budget)
+    if allow_collection:
+        for artifact in decision.collect:
+            _collect_artifact(spec, slot_id, artifact, budget)
 
 
 def _sweep_staging(
@@ -269,6 +292,8 @@ def _recover_family(
     spec: _FamilySpec,
     budget: _DeleteBudget,
     now_ns: int,
+    *,
+    allow_collection: bool,
 ) -> None:
     try:
         if not spec.root.is_dir():
@@ -280,7 +305,9 @@ def _recover_family(
 
     slot_ids = set(spec.listed_ids)
     for name in children:
-        parsed = _recovery_artifact_name(name)
+        if name in spec.listed_ids:
+            continue
+        parsed = _recovery_artifact_name(name, spec.listed_ids)
         if parsed is not None:
             slot_ids.add(parsed[0])
         elif not is_generated_store_artifact(name):
@@ -296,13 +323,21 @@ def _recover_family(
         except ValueError:
             logger.warning("Startup store recovery skipped invalid configured %s id: %r", spec.family, slot_id)
             continue
-        _recover_slot(spec, slot_id, children, budget)
-    _sweep_staging(spec, children, budget, now_ns)
+        _recover_slot(
+            spec,
+            slot_id,
+            children,
+            budget,
+            allow_collection=allow_collection,
+        )
+    if allow_collection:
+        _sweep_staging(spec, children, budget, now_ns)
 
 
 def run_startup_store_recovery(
     config: AnkiMinerConfig,
     *,
+    allow_collection: bool = True,
     now_ns: int | None = None,
     clock: Callable[[], float] = time.monotonic,
 ) -> None:
@@ -311,7 +346,12 @@ def run_startup_store_recovery(
     recovery_now_ns = time.time_ns() if now_ns is None else now_ns
     for spec in _family_specs(config):
         try:
-            _recover_family(spec, budget, recovery_now_ns)
+            _recover_family(
+                spec,
+                budget,
+                recovery_now_ns,
+                allow_collection=allow_collection,
+            )
         except Exception:
             logger.exception(
                 "Startup store recovery failed for %s root %s",

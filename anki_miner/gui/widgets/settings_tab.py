@@ -781,7 +781,17 @@ class SettingsTab(QWidget):
                 skip_zip_import=False,
                 commit_config=self._commit_config,
             )
-        except Exception:  # noqa: BLE001 - persistence failure must refuse the mutation
+        except ConfigCommitError as error:
+            if error.result.persisted:
+                return False
+            self._loading = True
+            try:
+                self.dictionary_panel.pitch_accent_selector.set_path(pending_pitch_path)
+            finally:
+                self._loading = False
+            self._debounce_timer.start()
+            return False
+        except Exception:  # noqa: BLE001 - unknown commit phase must refuse the mutation
             self._loading = True
             try:
                 self.dictionary_panel.pitch_accent_selector.set_path(pending_pitch_path)
@@ -824,6 +834,12 @@ class SettingsTab(QWidget):
             self._debounce_timer.stop()
             self._settings_dirty = False
             self._commit_settings_locked(skip_zip_import, commit_config)
+        except ConfigCommitError as error:
+            if not error.result.persisted:
+                self._settings_dirty = dirty_before_commit or self._settings_dirty
+                if self._settings_dirty:
+                    self._debounce_timer.start()
+            raise
         except Exception:
             self._settings_dirty = dirty_before_commit or self._settings_dirty
             if self._settings_dirty:
@@ -970,6 +986,14 @@ class SettingsTab(QWidget):
                 self.config_changed.emit(new_config)
             else:
                 commit_config(new_config)
+        except ConfigCommitError as error:
+            if error.result.persisted:
+                self._sync_persisted_config(new_config)
+                if pitch_rollback is not None:
+                    self._discard_pitch_rollback(pitch_rollback[1])
+            elif pitch_rollback is not None:
+                self._restore_pitch_rollback(*pitch_rollback)
+            raise
         except Exception:
             if pitch_rollback is not None:
                 self._restore_pitch_rollback(*pitch_rollback)
@@ -1278,11 +1302,20 @@ class SettingsTab(QWidget):
 
     # === Dictionary chain persistence ===
 
+    def _sync_persisted_config(self, config: AnkiMinerConfig) -> None:
+        """Keep durable content while preserving any committed version stamp."""
+        self.config = replace(
+            config,
+            config_version=max(self.config.config_version, config.config_version),
+        )
+
     def _commit_remove_config(self, config: AnkiMinerConfig) -> ConfigCommitResult:
         """Commit one remove and normalize its durable failure boundary."""
         try:
             self._commit_config(config)
         except ConfigCommitError as error:
+            if error.result.persisted:
+                self._sync_persisted_config(config)
             return error.result
         except Exception as error:
             return ConfigCommitResult.pre_save_failure(error)

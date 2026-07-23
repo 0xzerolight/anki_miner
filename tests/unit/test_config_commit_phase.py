@@ -48,6 +48,8 @@ def test_update_config_marks_refresh_failure_as_post_save(
     window = MainWindow()
     qtbot.addWidget(window)
     saved = []
+    refreshed = []
+    window.config_refreshed.connect(refreshed.append)
     monkeypatch.setattr(GUIConfigManager, "save_config", saved.append)
     monkeypatch.setattr(
         window,
@@ -63,6 +65,7 @@ def test_update_config_marks_refresh_failure_as_post_save(
     assert raised.value.result.refreshed is False
     assert isinstance(raised.value.result.error, RuntimeError)
     assert saved
+    assert refreshed == [window.config]
     assert window.config.anki_deck_name == "changed"
 
 

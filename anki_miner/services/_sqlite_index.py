@@ -31,7 +31,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sqlite3
+import stat
 from pathlib import Path, PureWindowsPath
 from typing import Callable, Literal, TypeVar
 
@@ -47,11 +49,11 @@ _OWNERSHIP_MARKER = ".anki-miner-owned.json"
 
 StoreFamily = Literal["dictionary", "frequency", "audio"]
 
-_DICTIONARY_ENTRY_COLUMNS = frozenset(("content", "tags", "rules", "sequence"))
+_DICTIONARY_ENTRY_COLUMNS = frozenset(("term", "content", "tags", "rules", "sequence"))
 _DICTIONARY_TAG_COLUMNS = frozenset(("name", "category", "ord", "notes", "score"))
-_FREQUENCY_V1_COLUMNS = frozenset(("reading", "rank"))
+_FREQUENCY_V1_COLUMNS = frozenset(("term", "reading", "rank"))
 _FREQUENCY_V2_COLUMNS = _FREQUENCY_V1_COLUMNS | {"display_value"}
-_AUDIO_ENTRY_COLUMNS = frozenset(("file", "source", "speaker"))
+_AUDIO_ENTRY_COLUMNS = frozenset(("expression", "file", "source", "speaker"))
 
 
 def validate_store_id(store_id: str) -> None:
@@ -70,13 +72,19 @@ def validate_store_id(store_id: str) -> None:
 
 
 def resolve_managed_slot(root: Path, store_id: str) -> Path:
-    """Resolve *root* and return its direct, unresolved child *store_id*."""
+    """Resolve *root* and return its direct, unresolved child *store_id*.
+
+    Generated-artifact syntax is reserved for recovery files. Existing legacy
+    slots with such names remain addressable, but no new slot may claim one.
+    """
     validate_store_id(store_id)
     try:
         resolved_root = root.resolve()
         final = resolved_root / store_id
         if final.parent.resolve() != resolved_root:
             raise ValueError(f"Managed store escapes root: {store_id!r}")
+        if is_generated_store_artifact(store_id) and not os.path.lexists(final):
+            raise ValueError(f"Invalid managed store id: {store_id!r}")
     except (OSError, RuntimeError) as exc:
         raise ValueError(f"Could not resolve managed store id {store_id!r}") from exc
     return final
@@ -136,8 +144,27 @@ def _supported_schema_version(family: StoreFamily, version: int) -> bool:
     return version == SCHEMA_VERSION
 
 
-def _validated_index_meta(db_path: Path, family: StoreFamily) -> dict[str, str] | None:
-    if family not in ("dictionary", "frequency", "audio") or not db_path.is_file():
+def _supported_ownership_schema_version(family: StoreFamily, version: int) -> bool:
+    if family == "dictionary":
+        from anki_miner.services.dictionary.storage import SCHEMA_VERSION
+
+        return version in (3, SCHEMA_VERSION)
+    return _supported_schema_version(family, version)
+
+
+def _is_regular_file_nofollow(path: Path) -> bool:
+    try:
+        return stat.S_ISREG(path.lstat().st_mode)
+    except OSError:
+        return False
+
+
+def _validated_index_meta_with_policy(
+    db_path: Path,
+    family: StoreFamily,
+    supports_version: Callable[[StoreFamily, int], bool],
+) -> dict[str, str] | None:
+    if family not in ("dictionary", "frequency", "audio") or not _is_regular_file_nofollow(db_path):
         return None
     try:
         conn = open_readonly(db_path)
@@ -148,7 +175,7 @@ def _validated_index_meta(db_path: Path, family: StoreFamily) -> dict[str, str] 
                 if isinstance(key, str) and isinstance(value, str)
             }
             version = int(meta.get("schema_version", ""))
-            if not _supported_schema_version(family, version):
+            if not supports_version(family, version):
                 return None
             entry_columns = {row[1] for row in conn.execute("PRAGMA table_info(entries)") if isinstance(row[1], str)}
             if family == "dictionary":
@@ -170,6 +197,14 @@ def _validated_index_meta(db_path: Path, family: StoreFamily) -> dict[str, str] 
         return None
 
 
+def _validated_index_meta(db_path: Path, family: StoreFamily) -> dict[str, str] | None:
+    return _validated_index_meta_with_policy(db_path, family, _supported_schema_version)
+
+
+def _validated_ownership_index_meta(db_path: Path, family: StoreFamily) -> dict[str, str] | None:
+    return _validated_index_meta_with_policy(db_path, family, _supported_ownership_schema_version)
+
+
 def validate_index_schema(db_path: Path, family: StoreFamily) -> bool:
     """Validate one family's supported version and queried physical columns."""
     return _validated_index_meta(db_path, family) is not None
@@ -178,9 +213,10 @@ def validate_index_schema(db_path: Path, family: StoreFamily) -> bool:
 def _prove_owned_directory(directory: Path, slot_id: str, family: StoreFamily) -> bool:
     if directory.is_symlink() or not directory.is_dir():
         return False
-    if read_ownership_marker(directory) == (family, slot_id):
-        return True
-    meta = _validated_index_meta(directory / "index.sqlite", family)
+    marker_path = directory / _OWNERSHIP_MARKER
+    if os.path.lexists(marker_path):
+        return read_ownership_marker(directory) == (family, slot_id)
+    meta = _validated_ownership_index_meta(directory / "index.sqlite", family)
     if meta is None:
         return False
     if family == "dictionary":
@@ -366,12 +402,13 @@ def scan_index_root(
     for child in children:
         if not child.is_dir():
             continue
-        if is_generated_store_artifact(child.name):
-            continue
-        if child_prefilter is not None and not child_prefilter(child):
+        if child_prefilter is None:
+            if is_generated_store_artifact(child.name):
+                continue
+        elif not child_prefilter(child):
             continue
         db = child / "index.sqlite"
-        if not db.exists():
+        if not _is_regular_file_nofollow(db):
             continue
         try:
             meta = read_meta_cached(db, read_meta)

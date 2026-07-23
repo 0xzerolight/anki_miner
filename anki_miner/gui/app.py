@@ -401,13 +401,18 @@ def _confirm_second_instance(parent: QWidget | None = None) -> bool:
 def _run_store_recovery_if_locked(
     config: AnkiMinerConfig,
     instance_lock: QLockFile | None,
+    *,
+    allow_collection: bool,
 ) -> None:
     """Run destructive startup repair only while this process owns the lock."""
     if instance_lock is None:
         logger.warning("Skipping startup store recovery because the instance lock is not held")
         return
     try:
-        run_startup_store_recovery(config)
+        run_startup_store_recovery(
+            config,
+            allow_collection=allow_collection,
+        )
     except Exception:
         logger.exception("Startup store recovery failed; continuing startup")
 
@@ -1086,7 +1091,7 @@ def main():
     except Exception:
         logger.exception("Failed to configure startup log; continuing with stderr logging")
     try:
-        _early_config = GUIConfigManager.load_config()
+        _early_config, _allow_store_collection = GUIConfigManager.load_config_with_provenance()
         _log_path = _early_config.log_path
     except Exception:
         # Never leave _early_config unbound (would NameError at the zoom call
@@ -1095,6 +1100,7 @@ def main():
             raise
         logger.exception("Failed to load config at startup; using default config")
         _early_config = create_default_config()
+        _allow_store_collection = False
         _log_path = _default_log_path
     # Honour a user-customised log_path by re-pointing the handler (idempotent,
     # so no duplicate sink). No-op in the common case where it equals the default.
@@ -1164,7 +1170,11 @@ def main():
         if not _proceed:
             return
         app._instance_lock = _instance_lock  # type: ignore[attr-defined]
-        _run_store_recovery_if_locked(_early_config, _instance_lock)
+        _run_store_recovery_if_locked(
+            _early_config,
+            _instance_lock,
+            allow_collection=_allow_store_collection,
+        )
 
     composed = compose_main_window(
         _early_config,

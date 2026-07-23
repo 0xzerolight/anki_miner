@@ -8,7 +8,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.services._sqlite_index import is_generated_store_artifact, scan_index_root
+from anki_miner.services._sqlite_index import (
+    is_generated_store_artifact,
+    read_ownership_marker,
+    scan_index_root,
+)
 from anki_miner.services.audio_packs.fetcher import LocalAudioPackFetcher
 from anki_miner.services.audio_packs.storage import SCHEMA_VERSION
 
@@ -72,7 +76,7 @@ class AudioPackRegistry:
         # Skip hidden dirs (importer staging artefacts) and importer overwrite
         # backups (<pack>.bak-<timestamp> siblings): a failed Windows rmtree must
         # not surface a stale staging dir or backup as a pack.
-        return not is_generated_store_artifact(child.name)
+        return not is_generated_store_artifact(child.name) or read_ownership_marker(child) == ("audio", child.name)
 
     def _parse_meta(self, child: Path, db: Path, meta: dict[str, str]) -> AudioPackMeta:
         # Schema version check — mismatch means the pack needs re-import.

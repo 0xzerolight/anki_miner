@@ -36,6 +36,24 @@ def test_resolve_managed_slot_returns_direct_child_of_resolved_root(tmp_path: Pa
     assert resolve_managed_slot(root, "safe-slot") == root.resolve() / "safe-slot"
 
 
+@pytest.mark.parametrize("store_id", ("slot.bak-new", "slot.tomb-new"))
+def test_resolve_managed_slot_reserves_generated_syntax_for_new_ids(
+    tmp_path: Path,
+    store_id: str,
+) -> None:
+    with pytest.raises(ValueError):
+        resolve_managed_slot(tmp_path, store_id)
+
+
+def test_resolve_managed_slot_allows_existing_legacy_generated_syntax_id(
+    tmp_path: Path,
+) -> None:
+    slot = tmp_path / "slot.bak-existing"
+    slot.mkdir()
+
+    assert resolve_managed_slot(tmp_path, slot.name) == slot
+
+
 def _create_index(
     slot: Path,
     *,
@@ -86,31 +104,46 @@ def test_dictionary_schema_requires_entries_and_tags_columns(tmp_path: Path) -> 
             "source_name": "Plausible",
         },
     )
+    missing_term = _create_index(
+        tmp_path / "missing-term",
+        entries_sql=("CREATE TABLE entries (content TEXT, tags TEXT, rules TEXT, sequence INTEGER)"),
+        tags_sql=("CREATE TABLE tags (name TEXT, category TEXT, ord INTEGER, notes TEXT, score REAL)"),
+        meta={
+            "schema_version": str(dictionary_storage.SCHEMA_VERSION),
+            "source_name": "Plausible",
+        },
+    )
 
     assert validate_index_schema(valid, "dictionary")
     assert not validate_index_schema(missing_rules, "dictionary")
     assert not validate_index_schema(missing_tag_score, "dictionary")
+    assert not validate_index_schema(missing_term, "dictionary")
 
 
 def test_frequency_schema_uses_version_specific_columns(tmp_path: Path) -> None:
     v1 = _create_index(
         tmp_path / "v1",
-        entries_sql="CREATE TABLE entries (reading TEXT, rank INTEGER)",
+        entries_sql="CREATE TABLE entries (term TEXT, reading TEXT, rank INTEGER)",
         meta={"schema_version": "1"},
     )
     v1_missing_reading = _create_index(
         tmp_path / "v1-missing-reading",
-        entries_sql="CREATE TABLE entries (rank INTEGER)",
+        entries_sql="CREATE TABLE entries (term TEXT, rank INTEGER)",
         meta={"schema_version": "1"},
     )
     v2 = _create_index(
         tmp_path / "v2",
-        entries_sql=("CREATE TABLE entries (reading TEXT, rank INTEGER, display_value TEXT)"),
+        entries_sql=("CREATE TABLE entries (term TEXT, reading TEXT, rank INTEGER, display_value TEXT)"),
         meta={"schema_version": str(frequency_storage.SCHEMA_VERSION)},
     )
     v2_missing_display = _create_index(
         tmp_path / "v2-missing-display",
-        entries_sql="CREATE TABLE entries (reading TEXT, rank INTEGER)",
+        entries_sql="CREATE TABLE entries (term TEXT, reading TEXT, rank INTEGER)",
+        meta={"schema_version": str(frequency_storage.SCHEMA_VERSION)},
+    )
+    v2_missing_term = _create_index(
+        tmp_path / "v2-missing-term",
+        entries_sql=("CREATE TABLE entries (reading TEXT, rank INTEGER, display_value TEXT)"),
         meta={"schema_version": str(frequency_storage.SCHEMA_VERSION)},
     )
 
@@ -118,6 +151,7 @@ def test_frequency_schema_uses_version_specific_columns(tmp_path: Path) -> None:
     assert not validate_index_schema(v1_missing_reading, "frequency")
     assert validate_index_schema(v2, "frequency")
     assert not validate_index_schema(v2_missing_display, "frequency")
+    assert not validate_index_schema(v2_missing_term, "frequency")
 
 
 def test_audio_schema_requires_lookup_columns(tmp_path: Path) -> None:
@@ -138,9 +172,18 @@ def test_audio_schema_requires_lookup_columns(tmp_path: Path) -> None:
             "pack_id": "missing-speaker",
         },
     )
+    missing_expression = _create_index(
+        tmp_path / "missing-expression",
+        entries_sql="CREATE TABLE entries (file TEXT, source TEXT, speaker TEXT)",
+        meta={
+            "schema_version": str(audio_storage.SCHEMA_VERSION),
+            "pack_id": "missing-expression",
+        },
+    )
 
     assert validate_index_schema(valid, "audio")
     assert not validate_index_schema(missing_speaker, "audio")
+    assert not validate_index_schema(missing_expression, "audio")
 
 
 def test_schema_validation_never_creates_missing_database(tmp_path: Path) -> None:
@@ -169,7 +212,7 @@ def test_legacy_physical_stores_prove_family_ownership(tmp_path: Path) -> None:
     dictionary_storage.write_meta(
         dict_db,
         {
-            "schema_version": str(dictionary_storage.SCHEMA_VERSION),
+            "schema_version": "3",
             "source_name": "Legacy dictionary",
         },
     )
@@ -190,6 +233,7 @@ def test_legacy_physical_stores_prove_family_ownership(tmp_path: Path) -> None:
     )
 
     assert prove_owned_slot(tmp_path, "dict", "dictionary")
+    assert not validate_index_schema(dict_db, "dictionary")
     assert prove_owned_slot(tmp_path, "freq", "frequency")
     assert prove_owned_slot(tmp_path, "audio", "audio")
 
@@ -219,6 +263,41 @@ def test_audio_physical_proof_requires_exact_pack_id(tmp_path: Path) -> None:
     )
 
     assert not prove_owned_slot(tmp_path, "expected", "audio")
+
+
+def test_present_contradictory_marker_is_authoritative_negative(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "expected" / "index.sqlite"
+    dictionary_storage.create_index(db_path)
+    dictionary_storage.write_meta(
+        db_path,
+        {
+            "schema_version": str(dictionary_storage.SCHEMA_VERSION),
+            "source_name": "Expected",
+        },
+    )
+    write_ownership_marker(db_path.parent, "other", "dictionary")
+
+    assert not prove_owned_slot(tmp_path, "expected", "dictionary")
+
+
+def test_symlinked_index_never_proves_container_ownership(tmp_path: Path) -> None:
+    external_db = tmp_path / "external" / "index.sqlite"
+    dictionary_storage.create_index(external_db)
+    dictionary_storage.write_meta(
+        external_db,
+        {
+            "schema_version": str(dictionary_storage.SCHEMA_VERSION),
+            "source_name": "External",
+        },
+    )
+    foreign = tmp_path / "foreign"
+    foreign.mkdir()
+    (foreign / "unrelated.txt").write_text("keep", encoding="utf-8")
+    (foreign / "index.sqlite").symlink_to(external_db)
+
+    assert not prove_owned_slot(tmp_path, "foreign", "dictionary")
 
 
 def test_symlink_slot_never_proves_ownership(tmp_path: Path) -> None:

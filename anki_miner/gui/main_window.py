@@ -1020,6 +1020,7 @@ class MainWindow(QMainWindow):
         except Exception as error:
             raise ConfigCommitError(ConfigCommitResult.pre_save_failure(error)) from error
         self.config = committed_config
+        refresh_error: Exception | None = None
         try:
             # Re-seed the app-wide file-dialog mode so a toggled setting applies to
             # the very next dialog without restart (Issue #100).
@@ -1028,9 +1029,15 @@ class MainWindow(QMainWindow):
             # effect: validation and the undo-delete AnkiService were frozen to the
             # startup config and would otherwise keep hitting the old endpoint.
             self._build_config_bound_services()
+        except Exception as error:
+            refresh_error = error
+        try:
             self.config_refreshed.emit(committed_config)
         except Exception as error:
-            raise ConfigCommitError(ConfigCommitResult.post_save_failure(error)) from error
+            if refresh_error is None:
+                refresh_error = error
+        if refresh_error is not None:
+            raise ConfigCommitError(ConfigCommitResult.post_save_failure(refresh_error)) from refresh_error
 
     def _build_config_bound_services(self) -> None:
         """(Re)create services bound to the current ``self.config``.
