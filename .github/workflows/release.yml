@@ -922,6 +922,23 @@ jobs:
           BUNDLE_SMOKE_GGML_MODEL: ${{ env.SMOKE_GGML_MODEL_PATH }}
         run: scripts/bundle_smoke.sh dist/AnkiMiner
 
+      - name: Install Inno Setup (pinned)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          choco install innosetup --version=7.0.2 --no-progress -y
+
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 7\ISCC.exe'
+          if (-not (Test-Path $iscc)) {
+            $iscc = (Get-Command iscc -ErrorAction Stop).Source
+          }
+          $version = (Get-Item $iscc).VersionInfo.ProductVersion
+          if (-not $version.StartsWith('7.0.2')) {
+            throw "Expected Inno Setup 7.0.2, found $version at $iscc"
+          }
+          Split-Path $iscc | Out-File -FilePath $env:GITHUB_PATH -Append
+
       - name: Build Windows installer
         if: runner.os == 'Windows'
         run: iscc /DAppVersion=${{ steps.version.outputs.version }} packaging\innosetup\anki_miner.iss
