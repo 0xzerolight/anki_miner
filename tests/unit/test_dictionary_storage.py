@@ -951,8 +951,7 @@ class TestReadMetaCached:
         sidecar.unlink()
         meta = read_meta_cached(db_path)
         assert meta["source_name"] == "Test Dict"
-        # Fall-through rewrites the sidecar.
-        assert sidecar.is_file()
+        assert not sidecar.exists()
 
     def test_cached_read_falls_back_when_sqlite_newer(self, tmp_path: Path):
         db_path = self._setup_dict(tmp_path)
@@ -962,14 +961,14 @@ class TestReadMetaCached:
 
         old = sidecar.stat().st_mtime - 100
         os.utime(sidecar, (old, old))
+        stale_mtime_ns = sidecar.stat().st_mtime_ns
         with patch(
             "anki_miner.services.dictionary.storage.read_meta",
             wraps=read_meta,
         ) as wrapped:
             read_meta_cached(db_path)
         assert wrapped.call_count == 1
-        # Sidecar gets rewritten with current mtime.
-        assert sidecar.stat().st_mtime > old
+        assert sidecar.stat().st_mtime_ns == stale_mtime_ns
 
     def test_cached_read_handles_corrupt_sidecar(self, tmp_path: Path):
         db_path = self._setup_dict(tmp_path)
@@ -977,8 +976,7 @@ class TestReadMetaCached:
         sidecar.write_text("{not valid json", encoding="utf-8")
         meta = read_meta_cached(db_path)
         assert meta["source_name"] == "Test Dict"
-        # Sidecar is rewritten with valid JSON.
-        assert json.loads(sidecar.read_text(encoding="utf-8"))["source_name"] == "Test Dict"
+        assert sidecar.read_text(encoding="utf-8") == "{not valid json"
 
     def test_bad_sidecar_falls_back_to_sqlite_miss(self, tmp_path: Path):
         db_path = self._setup_dict(tmp_path)
@@ -986,9 +984,11 @@ class TestReadMetaCached:
 
         sidecar.write_bytes(b"\xff")
         assert read_meta_cached(db_path)["entry_count"] == "42"
+        assert sidecar.read_bytes() == b"\xff"
 
         sidecar.write_text(json.dumps({"entry_count": None}), encoding="utf-8")
         assert read_meta_cached(db_path)["entry_count"] == "42"
+        assert json.loads(sidecar.read_text(encoding="utf-8")) == {"entry_count": None}
 
     def test_cached_read_missing_db(self, tmp_path: Path):
         assert read_meta_cached(tmp_path / "nonexistent.sqlite") == {}

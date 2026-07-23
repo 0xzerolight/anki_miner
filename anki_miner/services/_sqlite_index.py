@@ -285,7 +285,8 @@ def read_meta(db_path: Path) -> dict[str, str]:
     """Read all ``meta`` rows. Returns an empty dict if the file is missing."""
     if not db_path.exists():
         return {}
-    conn = sqlite3.connect(db_path)
+    uri = db_path.resolve().as_uri() + "?mode=ro"
+    conn = sqlite3.connect(uri, uri=True)
     try:
         return {
             key: value
@@ -304,10 +305,13 @@ def read_meta_cached(
 ) -> dict[str, str]:
     """Read ``meta`` rows via the ``meta.json`` sidecar when it is fresh.
 
-    Falls through to ``read_meta_fn`` and rewrites the sidecar when:
+    Falls through to ``read_meta_fn`` without publishing a sidecar when:
     * the sidecar is missing,
     * ``index.sqlite`` is newer than the sidecar,
     * the sidecar is unreadable / not valid JSON.
+
+    Only the explicit writer path, :func:`write_meta`, publishes the sidecar;
+    reads never repair or refresh it.
 
     ``read_meta_fn`` is passed in (rather than calling :func:`read_meta`
     directly) so each storage module routes the fall-through through *its own*
@@ -325,14 +329,11 @@ def read_meta_cached(
     except (OSError, UnicodeError, json.JSONDecodeError, RecursionError) as e:
         logger.debug("meta sidecar miss for %s: %s", db_path, e)
 
-    meta = read_meta_fn(db_path)
-    write_meta_sidecar(db_path, meta, sidecar_name=sidecar_name)
-    return meta
+    return read_meta_fn(db_path)
 
 
 def write_meta_sidecar(db_path: Path, meta: dict[str, str], *, sidecar_name: str = _META_SIDECAR) -> None:
-    """Best-effort sidecar write. Cache misses are logged, not raised — the
-    next :func:`read_meta_cached` call simply falls back to the SQLite read."""
+    """Best-effort sidecar write. Publication failures are logged, not raised."""
     sidecar = db_path.parent / sidecar_name
     try:
         sidecar.write_text(json.dumps(meta), encoding="utf-8")
@@ -355,7 +356,11 @@ def open_readonly(db_path: Path) -> sqlite3.Connection:
     # an absolute path, so resolve first.
     uri = db_path.resolve().as_uri() + "?mode=ro"
     conn = sqlite3.connect(uri, uri=True, check_same_thread=False)
-    conn.execute("PRAGMA query_only=ON")
+    try:
+        conn.execute("PRAGMA query_only=ON")
+    except Exception:
+        conn.close()
+        raise
     return conn
 
 
