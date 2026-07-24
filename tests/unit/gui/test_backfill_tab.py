@@ -6,6 +6,7 @@ from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
 import pytest
+from PyQt6.QtWidgets import QApplication, QScrollArea
 
 from anki_miner.gui.widgets.backfill_tab import _PREVIEW_ROW_CAP, CardBackfillTab
 from anki_miner.services.card_backfiller import (
@@ -205,6 +206,26 @@ class TestPreviewTable:
         plan = _plan([_note_plan(1)], sentinel_only_sorts=5)
         tab._on_scan_finished(plan)
         assert "5" in tab.summary_label.text()
+
+
+class TestLayoutSizing:
+    """Issue #102: fixed chrome must never crush the preview table."""
+
+    def test_preview_table_has_height_floor(self, tab):
+        assert tab.preview_table.minimumHeight() >= 240
+
+    def test_content_wrapped_in_resizable_scroll_area(self, tab):
+        scroll = tab.findChild(QScrollArea)
+        assert scroll is not None
+        assert scroll.widgetResizable()
+
+    def test_table_keeps_floor_at_short_window_height(self, qtbot, tab):
+        tab._decks_requested = True  # suppress showEvent deck fetch (network tripwire)
+        tab.resize(900, 620)
+        tab.show()
+        qtbot.waitExposed(tab)
+        QApplication.processEvents()
+        assert tab.preview_table.height() >= 240
 
 
 class TestApplyFlow:
