@@ -94,6 +94,11 @@ def _family_specs(config: AnkiMinerConfig) -> tuple[_FamilySpec, ...]:
                 if entry.kind == "pack" and entry.pack_id is not None
             ),
         ),
+        _FamilySpec(
+            config.pitch_root,
+            "pitch",
+            frozenset(entry.source_id for entry in config.pitch_chain),
+        ),
     )
 
 
