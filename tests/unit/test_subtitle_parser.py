@@ -4561,6 +4561,81 @@ class TestCompoundReadingAttestation:
         assert live == base
 
 
+class TestOovReadingRecovery:
+    """Unique-attested reading recovery for kana-less tokens (audio/pitch fix).
+
+    When unidic has no kana for a token (OOV names, rare kanji — real tokens
+    carry ``kana=None``), ``extract_reading`` falls back to the kanji surface,
+    which then misses every reading-keyed consumer at once (audio packs,
+    JPod101, pitch CSV) — the "no pitch ⇒ no word audio" report. When a
+    dictionary attests exactly ONE reading, the parser recovers it into
+    expression_reading/furigana/lemma_reading; ambiguous or unattested words
+    keep the surface fallback (never a guessed homograph). Mock tagger: a
+    kana-less token with a lemma (fully-OOV unidic rows have ``lemma=None``
+    and are dropped by the content gate; the mineable kana-less shape needs
+    pinning).
+    """
+
+    def _parse(self, tmp_path, reading_lookup):
+        sub_file = tmp_path / "oov.srt"
+        sub_file.write_text("stub", encoding="utf-8")
+        mock_line = MagicMock()
+        mock_line.text = "疆が"
+        mock_line.start = 1000
+        mock_line.end = 3000
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(return_value=iter([mock_line]))
+        mock_tagger = MagicMock()
+        mock_tagger.return_value = [
+            _make_token("疆", "名詞", "普通名詞", lemma="疆", kana=None, orth_base="疆"),
+            _make_token("が", "助詞", "格助詞", lemma="が", kana="ガ", orth_base="が"),
+        ]
+        cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            words = SubtitleParserService(cfg, reading_lookup=reading_lookup).parse_subtitle_file(sub_file)
+        return next(w for w in words if w.mined_form == "疆")
+
+    def test_unique_attested_reading_recovered(self, tmp_path):
+        word = self._parse(tmp_path, lambda ts: {"疆": ["さかい"]})
+        assert word.expression_reading == "さかい"
+        assert word.expression_furigana == "疆[さかい]"
+        assert word.lemma_reading == "さかい"
+
+    def test_katakana_attestation_folded_to_hiragana(self, tmp_path):
+        word = self._parse(tmp_path, lambda ts: {"疆": ["サカイ"]})
+        assert word.expression_reading == "さかい"
+
+    def test_multi_reading_not_recovered(self, tmp_path):
+        # Two distinct attested readings — recovery must NOT guess (an
+        # arbitrary homograph reading would poison audio identity and pitch).
+        word = self._parse(tmp_path, lambda ts: {"疆": ["さかい", "きょう"]})
+        assert word.expression_reading == "疆"
+
+    def test_same_reading_both_scripts_counts_as_one(self, tmp_path):
+        word = self._parse(tmp_path, lambda ts: {"疆": ["さかい", "サカイ"]})
+        assert word.expression_reading == "さかい"
+
+    def test_without_lookup_keeps_surface_fallback(self, tmp_path):
+        word = self._parse(tmp_path, None)
+        assert word.expression_reading == "疆"
+
+    def test_unattested_keeps_surface_fallback(self, tmp_path):
+        word = self._parse(tmp_path, lambda ts: {})
+        assert word.expression_reading == "疆"
+
+    def test_pure_kana_reading_never_overridden(self, tmp_path):
+        # Real tagger: a word unidic CAN read must never consult recovery,
+        # even when the dictionary would offer a different reading.
+        cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        srt = _write_srt(tmp_path, "kana.srt", "ご飯を食べる")
+        words = SubtitleParserService(cfg, reading_lookup=lambda ts: {"食べる": ["でたらめ"]}).parse_subtitle_file(srt)
+        word = next(w for w in words if w.mined_form == "食べる")
+        assert word.expression_reading == "たべる"
+
+
 class TestCompoundMatcherReadingAttestation:
     """Matcher-path attestation (mock tagger): the attested reading replaces the
     span-concat kana and the headword-re-tokenize regen for matcher merges."""
