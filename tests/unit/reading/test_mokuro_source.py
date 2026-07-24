@@ -450,6 +450,81 @@ def test_archive_imageref_without_extraction(tmp_path, monkeypatch):
     assert {p.name for p in tmp_path.iterdir()} == {"vol.mokuro", "vol.cbz"}
 
 
+def test_embedded_ocr_entry_loads_without_extraction(tmp_path, monkeypatch):
+    # Self-contained archive (Issue #103): OCR JSON is a member, images too.
+    # load() may READ the one .mokuro member, but must never extract anything.
+    archive = tmp_path / "vol.cbz"
+    pages = [
+        _page("001.jpg", [_block(["いちまい"])]),
+        _page("002.jpg", [_block(["にまい"])]),
+    ]
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("vol.mokuro", json.dumps(_mokuro(pages), ensure_ascii=False))
+        zf.writestr("001.jpg", _IMG_BYTES)
+        zf.writestr("002.jpg", _IMG_BYTES)
+
+    def _forbidden(*_a, **_k):
+        raise AssertionError("archive extraction attempted")
+
+    monkeypatch.setattr(zipfile.ZipFile, "extract", _forbidden)
+    monkeypatch.setattr(zipfile.ZipFile, "extractall", _forbidden)
+
+    ref = ReadingSourceRef(
+        kind="mokuro",
+        path=archive,
+        image_root=archive,
+        title="RefSeries",
+        volume="1",
+        ocr_entry="vol.mokuro",
+    )
+    doc = load(ref)
+
+    assert doc.units[0].image_ref == ImageRef(archive, "001.jpg")
+    assert doc.units[1].image_ref == ImageRef(archive, "002.jpg")
+    # The .mokuro member never pairs as a page image.
+    assert all(u.image_ref is None or u.image_ref.entry != "vol.mokuro" for u in doc.units)
+    # Nothing extracted to disk.
+    assert {p.name for p in tmp_path.iterdir()} == {"vol.cbz"}
+
+
+def test_embedded_ocr_entry_over_cap_raises_setup_error(tmp_path, monkeypatch):
+    from anki_miner.services.reading import mokuro_source
+
+    archive = tmp_path / "vol.cbz"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("vol.mokuro", json.dumps(_mokuro([])))
+    monkeypatch.setattr(mokuro_source, "MAX_MOKURO_JSON_BYTES", 16)
+
+    ref = ReadingSourceRef(
+        kind="mokuro",
+        path=archive,
+        image_root=archive,
+        title="RefSeries",
+        volume="1",
+        ocr_entry="vol.mokuro",
+    )
+    with pytest.raises(SetupError, match="cap"):
+        load(ref)
+
+
+def test_embedded_ocr_entry_error_names_the_member(tmp_path):
+    # An invalid embedded .mokuro must name the member, not the archive alone.
+    archive = tmp_path / "vol.cbz"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("inner/vol.mokuro", '{"pages": "not a list"}')
+
+    ref = ReadingSourceRef(
+        kind="mokuro",
+        path=archive,
+        image_root=archive,
+        title="RefSeries",
+        volume="1",
+        ocr_entry="inner/vol.mokuro",
+    )
+    with pytest.raises(SetupError, match="inner/vol.mokuro"):
+        load(ref)
+
+
 def test_archive_unmatched_page_warns(tmp_path):
     archive = tmp_path / "vol.cbz"
     with zipfile.ZipFile(archive, "w") as zf:

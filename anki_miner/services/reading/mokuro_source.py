@@ -29,6 +29,7 @@ from anki_miner.services.reading._util import (
     is_junk_path,
     natural_sort_key,
     read_text_capped,
+    read_zip_member_text_capped,
 )
 from anki_miner.services.reading.sentence_splitter import split_sentences
 from anki_miner.utils.ja_normalize import is_cjk_ideograph
@@ -71,9 +72,16 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
     assert ref.path is not None
     # Size-capped even though the detector normally gates first: load() trusts
     # a ref, so it must be safe standalone against a hostile multi-GB sidecar.
-    data = json.loads(read_text_capped(ref.path, MAX_MOKURO_JSON_BYTES, ".mokuro file"))
+    # ocr_entry set → self-contained archive (Issue #103): the .mokuro JSON is
+    # a member of the archive that ref.path/ref.image_root both point at.
+    if ref.ocr_entry is not None:
+        raw = read_zip_member_text_capped(ref.path, ref.ocr_entry, MAX_MOKURO_JSON_BYTES, ".mokuro member")
+    else:
+        raw = read_text_capped(ref.path, MAX_MOKURO_JSON_BYTES, ".mokuro file")
+    ocr_name = ref.ocr_entry or ref.path.name
+    data = json.loads(raw)
     if not isinstance(data, dict) or not isinstance(data.get("pages"), list):
-        raise SetupError(f"Invalid .mokuro file '{ref.path.name}': pages must be an array.")
+        raise SetupError(f"Invalid .mokuro file '{ocr_name}': pages must be an array.")
     pages = data["pages"]
 
     doc = ReadingDocument(
@@ -127,7 +135,7 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
     if skipped_malformed:
         doc.warnings.append(f"Skipped {skipped_malformed} malformed Mokuro record(s).")
     if not doc.units:
-        raise SetupError(f"Invalid .mokuro file '{ref.path.name}': no usable text records.")
+        raise SetupError(f"Invalid .mokuro file '{ocr_name}': no usable text records.")
     return doc
 
 
