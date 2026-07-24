@@ -7,8 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Multiple pitch accent sources.** Pitch accent now works like frequency: a new **Settings → Pitch Accent** tab manages an ordered chain of pitch dictionaries (Yomitan zip or `reading,kanji,pattern` CSV/TSV) — add, reorder, enable/disable, re-import, and remove sources, each stored as its own index under `~/.anki_miner/pitch/<source_id>/`. Unlike the additive frequency chain, pitch lookups are **first-hit-wins**: sources are checked top to bottom and the first one with an entry for a word wins, so lower sources purely extend word coverage. The setup wizard's Kanjium download now lands as a chain source, and an existing `pitch_accent.csv` is folded into the chain automatically on first launch (the file itself is left in place, so downgrading keeps working).
 
 ### Changed
+- The single "Pitch Accent File" picker under Settings → Dictionaries was replaced by the new Pitch Accent tab; Yomitan pitch zips now import as chain sources instead of overwriting one `pitch_accent.csv` on Save.
 
 ### Fixed
 

@@ -37,7 +37,7 @@ def _freq_result(ok: bool = True, source_id: str = "jpdb") -> ResourceDownloadRe
     )
 
 
-def _pitch_result(ok: bool = True) -> ResourceDownloadResult:
+def _pitch_result(ok: bool = True, source_id: str = "kanjium-pitch") -> ResourceDownloadResult:
     return ResourceDownloadResult(
         spec_id="kanjium-pitch",
         kind="pitch",
@@ -45,6 +45,7 @@ def _pitch_result(ok: bool = True) -> ResourceDownloadResult:
         url="https://example.com/accents.txt",
         ok=ok,
         detail="downloaded" if ok else "boom",
+        source_id=source_id if ok else None,
     )
 
 
@@ -168,15 +169,50 @@ class TestApplyDownloadSummary:
         assert len(jpdb_entries) == 1
         assert any(e.source_id == "other" for e in result.frequency_chain)
 
-    def test_pitch_success_is_config_noop(self) -> None:
-        # A pitch download changes no config field: the worker writes the file to
-        # config.pitch_accent_path, and its presence activates pitch
-        # (config.pitch_active). apply_download_summary only touches the chains.
+    def test_pitch_success_prepends_chain_entry_and_activates(self) -> None:
+        from anki_miner.config import PitchSourceEntry
+
         config = create_default_config()
+        assert config.pitch_active is False
         result = apply_download_summary(config, ResourceDownloadSummary(results=[_pitch_result()]))
-        assert result.pitch_accent_path == config.pitch_accent_path
+        assert result.pitch_chain == (PitchSourceEntry(source_id="kanjium-pitch", enabled=True),)
+        assert result.pitch_active is True
         assert result.frequency_chain == config.frequency_chain
         assert result.dictionary_chain == config.dictionary_chain
+
+    def test_pitch_success_is_idempotent_no_duplicate(self) -> None:
+        from anki_miner.config import PitchSourceEntry
+
+        config = create_default_config()
+        once = apply_download_summary(config, ResourceDownloadSummary(results=[_pitch_result()]))
+        twice = apply_download_summary(once, ResourceDownloadSummary(results=[_pitch_result()]))
+        assert twice.pitch_chain == (PitchSourceEntry(source_id="kanjium-pitch", enabled=True),)
+
+    def test_pitch_success_moves_existing_disabled_entry_to_front_enabled(self) -> None:
+        from dataclasses import replace as dc_replace
+
+        from anki_miner.config import PitchSourceEntry
+
+        config = dc_replace(
+            create_default_config(),
+            pitch_chain=(
+                PitchSourceEntry(source_id="other", enabled=True),
+                PitchSourceEntry(source_id="kanjium-pitch", enabled=False),
+            ),
+        )
+        result = apply_download_summary(config, ResourceDownloadSummary(results=[_pitch_result()]))
+        assert result.pitch_chain[0] == PitchSourceEntry(source_id="kanjium-pitch", enabled=True)
+        assert len([e for e in result.pitch_chain if e.source_id == "kanjium-pitch"]) == 1
+        assert any(e.source_id == "other" for e in result.pitch_chain)
+
+    def test_pitch_result_without_source_id_is_noop(self) -> None:
+        # Guard mirrors freq: no source_id → nothing to chain (defensive).
+        config = create_default_config()
+        result = apply_download_summary(
+            config,
+            ResourceDownloadSummary(results=[_pitch_result(source_id=None)]),  # type: ignore[arg-type]
+        )
+        assert result.pitch_chain == ()
 
     def test_partial_summary_applies_only_succeeded(self) -> None:
         config = create_default_config()
@@ -192,6 +228,8 @@ class TestApplyDownloadSummary:
         assert result.dictionary_chain[0].dict_id == "jitendex"
         assert result.frequency_active is False  # freq failed
         assert result.frequency_chain == ()  # freq failed → no chain entry
+        assert result.pitch_active is True  # pitch succeeded → chained
+        assert result.pitch_chain[0].source_id == "kanjium-pitch"
 
     def test_all_succeeded_applies_everything(self) -> None:
         config = create_default_config()
@@ -201,6 +239,8 @@ class TestApplyDownloadSummary:
         assert result.dictionary_chain[0].dict_id == "jitendex"
         assert result.frequency_active is True
         assert result.frequency_chain[0] == FreqEntry(source_id="jpdb", enabled=True)
+        assert result.pitch_active is True
+        assert result.pitch_chain[0].source_id == "kanjium-pitch"
 
 
 class TestFreqDownloadYieldsLiveServiceInSession:
