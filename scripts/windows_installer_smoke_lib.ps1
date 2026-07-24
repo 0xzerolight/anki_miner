@@ -218,6 +218,28 @@ function Invoke-RegisteredUninstall {
   ) "UninstallString does not register $uninstaller`: $command"
   $arguments = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG="{0}"' -f $LogPath
   [void] (Invoke-BoundedProcess -Label 'Uninstall' -FilePath $uninstaller -Arguments $arguments -WorkingDirectory $Context.InstallDir -TimeoutSeconds 180)
+
+  # Inno's silent uninstaller copies unins*.exe to a temp directory and runs
+  # from there; the process we just waited on returns before that copy finishes
+  # removing the (still-in-use) install directory and its unins*.exe/.dat. Poll
+  # for the observable end state so the callers' Assert-Uninstalled checks a
+  # settled system instead of racing the async self-cleanup.
+  $deadline = [DateTime]::UtcNow.AddSeconds(120)
+  while ($true) {
+    $dirGone = -not (Test-Path -LiteralPath $Context.InstallDir)
+    $remaining = @(if ($AllAppKeys) {
+      Get-AppUninstallKeys -Context $Context -Prefix
+    } else {
+      Get-AppUninstallKeys -Context $Context
+    })
+    if ($dirGone -and $remaining.Count -eq 0) {
+      break
+    }
+    if ([DateTime]::UtcNow -ge $deadline) {
+      break
+    }
+    Start-Sleep -Milliseconds 500
+  }
 }
 
 function Assert-Uninstalled {
