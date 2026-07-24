@@ -125,6 +125,32 @@ def test_reading_source_ref_text_defaults_none_for_file_kinds():
     assert ref.text is None
 
 
+def test_reading_source_ref_ocr_entry_defaults_none():
+    ref = ReadingSourceRef(
+        kind="mokuro",
+        path=Path("v1.mokuro"),
+        image_root=Path("v1.cbz"),
+        title="Show",
+        volume="1",
+    )
+    assert ref.ocr_entry is None
+
+
+def test_reading_source_ref_embedded_shape():
+    # Embedded-OCR shape: path IS the archive, image_root the same archive,
+    # ocr_entry names the .mokuro member inside it.
+    ref = ReadingSourceRef(
+        kind="mokuro",
+        path=Path("v1.cbz"),
+        image_root=Path("v1.cbz"),
+        title="Show",
+        volume="1",
+        ocr_entry="v1.mokuro",
+    )
+    assert ref.ocr_entry == "v1.mokuro"
+    hash(ref)  # stays hashable
+
+
 def test_reading_source_ref_file_kind_requires_path():
     # The loader assert is stripped under `python -O`; the invariant is enforced
     # at construction instead.

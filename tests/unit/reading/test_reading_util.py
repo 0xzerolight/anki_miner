@@ -1,10 +1,16 @@
 """Tests for the reading-tab shared utilities."""
 
+import zipfile
+
+import pytest
+
+from anki_miner.exceptions import SetupError
 from anki_miner.services.reading._util import (
     JUNK_NAMES,
     _decode,
     is_junk_path,
     natural_sort_key,
+    read_zip_member_text_capped,
 )
 
 
@@ -53,3 +59,40 @@ def test_decode_lives_in_util():
     # deep coverage stays in test_aozora_source via the re-export.
     assert _decode("日本語".encode()) == "日本語"
     assert _decode("日本語".encode("cp932")) == "日本語"
+
+
+def _zip_with(path, members: dict[str, bytes]):
+    with zipfile.ZipFile(path, "w") as zf:
+        for name, data in members.items():
+            zf.writestr(name, data)
+    return path
+
+
+def test_read_zip_member_text_capped_happy_path(tmp_path):
+    archive = _zip_with(tmp_path / "vol.cbz", {"vol.mokuro": '{"title": "日本"}'.encode()})
+    assert read_zip_member_text_capped(archive, "vol.mokuro", 1024, ".mokuro member") == '{"title": "日本"}'
+
+
+def test_read_zip_member_text_capped_over_cap_declared_size(tmp_path):
+    archive = _zip_with(tmp_path / "vol.cbz", {"vol.mokuro": b"x" * 64})
+    with pytest.raises(SetupError, match="cap"):
+        read_zip_member_text_capped(archive, "vol.mokuro", 16, ".mokuro member")
+
+
+def test_read_zip_member_text_capped_missing_member(tmp_path):
+    archive = _zip_with(tmp_path / "vol.cbz", {"other.txt": b"hi"})
+    with pytest.raises(SetupError, match="vol.mokuro"):
+        read_zip_member_text_capped(archive, "vol.mokuro", 1024, ".mokuro member")
+
+
+def test_read_zip_member_text_capped_bad_zip(tmp_path):
+    corrupt = tmp_path / "vol.cbz"
+    corrupt.write_bytes(b"PK\x03\x04 not a real zip")
+    with pytest.raises(SetupError, match="vol.cbz"):
+        read_zip_member_text_capped(corrupt, "vol.mokuro", 1024, ".mokuro member")
+
+
+def test_read_zip_member_text_capped_non_utf8(tmp_path):
+    archive = _zip_with(tmp_path / "vol.cbz", {"vol.mokuro": "日本".encode("cp932")})
+    with pytest.raises(SetupError, match="vol.mokuro"):
+        read_zip_member_text_capped(archive, "vol.mokuro", 1024, ".mokuro member")

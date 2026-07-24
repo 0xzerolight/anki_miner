@@ -58,6 +58,10 @@ class ReadingSourceRef:
       ``.mokuro`` JSON — ``title`` (= series), ``volume`` (= episode), and
       ``image_root`` (archive file Path for .cbz/.zip-backed volumes,
       directory Path for dir-backed, None for text-only). Loaders trust these.
+      Two OCR placements: ``ocr_entry`` is None when ``path`` IS the sidecar
+      ``.mokuro`` file on disk; for a self-contained archive (Issue #103) the
+      ``.mokuro`` JSON lives *inside* the archive — then ``path`` and
+      ``image_root`` are both the archive and ``ocr_entry`` names the member.
     * kind in {"epub","txt","subtitle"}: the detector sets ``title`` =
       ``path.stem`` (a provisional label for queue rows only), ``volume`` =
       None and ``image_root`` = None; the loader is authoritative for the
@@ -77,6 +81,7 @@ class ReadingSourceRef:
     title: str = ""
     volume: str | None = None
     text: str | None = None
+    ocr_entry: str | None = None
 
     def __post_init__(self) -> None:
         # Every field defaults so kind="text" can be built positionally, but the

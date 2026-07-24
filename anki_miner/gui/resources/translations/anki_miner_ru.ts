@@ -1744,6 +1744,18 @@ Total cards created: %2</source>
         <translation>Заполнять нечего — все выбранные поля уже содержат значения.</translation>
     </message>
     <message>
+        <source>Nothing to overwrite — the freshly computed values are identical to the existing content.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No new values were found for the selected fields.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>{count} field value(s) already up to date (identical to the computed value).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
         <translation>Сортировочные значения, равные заглушке 9999999 для ненайденной частотности: {count}.</translation>
     </message>
@@ -4240,8 +4252,8 @@ Continue?</source>
         <translation>Сжать</translation>
     </message>
     <message>
-        <source>Card Backfill</source>
-        <translation>Дозаполнение карточек</translation>
+        <source>Backfill</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Single</source>
@@ -4714,8 +4726,32 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>Прогресс</translation>
     </message>
     <message>
+        <source>Volume</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Volume File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Manga</source>
         <translation>Манга</translation>
+    </message>
+    <message>
+        <source>A .mokuro volume, or a .cbz/.zip archive with its .mokuro beside or inside it. No extraction needed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Майнить</translation>
+    </message>
+    <message>
+        <source>Mine the selected volume into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manga Folder</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Folder:</source>
@@ -4726,8 +4762,8 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>Папка с одним томом манги или папка серии со множеством томов.</translation>
     </message>
     <message>
-        <source>Mine</source>
-        <translation>Майнить</translation>
+        <source>Mine Folder</source>
+        <translation type="unfinished">Майнить папку</translation>
     </message>
     <message>
         <source>Mine the selected folder's volume(s) into Anki cards.</source>
@@ -4748,6 +4784,10 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Subtitle files are mined in the Subtitles tab.</source>
         <translation>Файлы субтитров майнятся на вкладке «Субтитры».</translation>
+    </message>
+    <message>
+        <source>Select a .mokuro, .cbz, or .zip volume first.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Select a manga folder first.</source>
