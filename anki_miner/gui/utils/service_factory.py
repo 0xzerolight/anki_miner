@@ -24,7 +24,8 @@ from anki_miner.services.frequency.registry import FrequencySourceRegistry
 from anki_miner.services.google_translate_audio_fetcher import GoogleTranslateAudioFetcher
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.media_extractor import MediaExtractorService
-from anki_miner.services.pitch_accent_service import PitchAccentService
+from anki_miner.services.pitch_accent.multi_pitch_service import MultiPitchAccentService
+from anki_miner.services.pitch_accent.registry import PitchSourceRegistry
 from anki_miner.services.sentence_tts_fetcher import (
     ChainedSentenceAudioFetcher,
     GoogleSentenceTtsFetcher,
@@ -68,7 +69,7 @@ class Services:
     media_extractor: MediaExtractorService
     definition_service: DefinitionService
     anki_service: AnkiService
-    pitch_accent_service: PitchAccentService | None
+    pitch_accent_service: MultiPitchAccentService | None
     frequency_service: MultiFrequencyService | None
     known_word_db: KnownWordDB | None
     word_list_service: WordListService | None
@@ -192,8 +193,8 @@ def _no_dictionary_warning() -> str:
 def _build_pitch_service(
     config: AnkiMinerConfig,
     load_result: ServiceLoadResult,
-) -> PitchAccentService | None:
-    """Build + load the optional pitch accent service (full CSV parse).
+) -> MultiPitchAccentService | None:
+    """Build + load the optional first-hit-wins pitch accent chain.
 
     Extracted from :func:`create_services` so :func:`create_shared_lookup_services`
     constructs the identical service — single source of truth for the load,
@@ -202,16 +203,23 @@ def _build_pitch_service(
     if not config.pitch_active:
         return None
     try:
-        pitch_accent_service = PitchAccentService(config.pitch_accent_path)
-        pitch_accent_service.load()
-        count = pitch_accent_service.entry_count
-        if count > 0:
-            load_result.info.append(tr_format(_tr("Pitch accent data loaded: %1 entries"), f"{count:,}"))
-            return pitch_accent_service
-        load_result.warnings.append(
-            _tr("Pitch accent file has no valid entries (expected CSV/TSV: reading, kanji, pattern)")
+        registry = PitchSourceRegistry(config.pitch_root)
+        registry.load()
+        providers = [p for p in registry.build_sources(config) if p.load()]
+        if not providers:
+            # Nothing enabled / on-disk: no providers loaded. Not an error —
+            # an enabled chain entry can still point at a missing on-disk index.
+            return None
+        pitch_accent_service = MultiPitchAccentService(providers)
+        total_entries = sum(meta.entry_count for p in providers if (meta := registry.get(p.source_id)) is not None)
+        load_result.info.append(
+            tr_format(
+                _tr("Pitch accent data loaded: %1 source(s), %2 entries"),
+                len(providers),
+                f"{total_entries:,}",
+            )
         )
-        return None
+        return pitch_accent_service
     except Exception as e:
         logger.warning(f"Could not load pitch accent data: {e}")
         load_result.warnings.append(tr_format(_tr("Couldn't load pitch accent data: %1"), e))
@@ -274,7 +282,7 @@ class SharedLookupServices:
 
     dictionary_registry: DictionaryRegistry
     definition_service: DefinitionService
-    pitch_accent_service: PitchAccentService | None
+    pitch_accent_service: MultiPitchAccentService | None
     frequency_service: MultiFrequencyService | None
     load_result: ServiceLoadResult
 
@@ -283,7 +291,8 @@ class SharedLookupServices:
 
         Closes the definition service's per-dict handles and every frequency
         provider's per-source handle (``MultiFrequencyService.close`` is itself
-        idempotent/never-raises). The in-memory pitch service has no handles.
+        idempotent/never-raises). The pitch chain holds no handles after load
+        (providers read SQLite fully into memory and close immediately).
         """
         with contextlib.suppress(Exception):
             self.definition_service.close()

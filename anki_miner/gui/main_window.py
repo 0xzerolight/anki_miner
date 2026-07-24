@@ -147,6 +147,13 @@ class MainWindow(QMainWindow):
                 "legacy frequency-source repair",
                 self._maybe_repair_legacy_frequency_source_name,
             )
+            # One-time legacy pitch_accent.csv → pitch/legacy-pitch migration.
+            # Synchronous (CSV→sqlite is fast and one-time) and must run before
+            # any pitch-consuming service is built.
+            self._run_optional_boot_step(
+                "legacy pitch migration",
+                self._maybe_migrate_legacy_pitch,
+            )
 
         previous = self.config.last_known_version
         if previous != __version__:
@@ -1182,6 +1189,23 @@ class MainWindow(QMainWindow):
         from anki_miner.services.frequency.legacy_migration import repair_legacy_frequency_source_name
 
         repair_legacy_frequency_source_name(self.config)
+
+    def _maybe_migrate_legacy_pitch(self) -> None:
+        """One-time: fold a legacy single pitch_accent.csv into the pitch chain.
+
+        Synchronous (CSV→sqlite is fast and one-time, so no background worker).
+        No-ops once migrated. Persists via ``update_config`` — NOT a bare
+        ``GUIConfigManager.save_config`` — so the live session picks the chain
+        up immediately (``self.config`` swap + config_version bump +
+        ``config_refreshed`` emit); a bare save would leave pitch inactive
+        until the next launch.
+        """
+        from anki_miner.services.pitch_accent.legacy_migration import migrate_legacy_pitch_csv
+
+        migrated = migrate_legacy_pitch_csv(self.config)
+        if migrated is not None:
+            self.update_config(migrated)
+            logger.info("Migrated legacy pitch_accent.csv into pitch/legacy-pitch")
 
     def _maybe_migrate_jmdict(self) -> None:
         """One-time: migrate legacy JMdict XML into a SQLite index in the background."""
