@@ -244,14 +244,22 @@ class SingleEpisodeTab(MiningTabBase):
 
         # Shared label-column width so every labeled row in this card lines its
         # input field up at the same x.
-        label_w = field_label_width("Recent Files:", "Video File:", "Subtitle File:", "Subtitle Offset:")
+        # Measure the TRANSLATED strings: the labels below render via self.tr(),
+        # so sizing the column on the English literals hard-clipped every
+        # non-English locale (German needed 274px in a 105px box).
+        label_w = field_label_width(
+            self.tr("Recent Files:"),
+            self.tr("Video File:"),
+            self.tr("Subtitle File:"),
+            self.tr("Subtitle Offset:"),
+        )
 
         # Recent files dropdown
         recent_layout = QHBoxLayout()
         recent_layout.setSpacing(SPACING.xs)
         recent_label = QLabel(self.tr("Recent Files:"))
         recent_label.setObjectName("field-label")
-        recent_label.setFixedWidth(label_w)
+        recent_label.setMinimumWidth(label_w)
         make_label_fit_text(recent_label)
         recent_layout.addWidget(recent_label)
 
@@ -287,7 +295,7 @@ class SingleEpisodeTab(MiningTabBase):
 
         offset_label = QLabel(self.tr("Subtitle Offset:"))
         offset_label.setObjectName("field-label")
-        offset_label.setFixedWidth(label_w)
+        offset_label.setMinimumWidth(label_w)
         make_label_fit_text(offset_label)
 
         self.offset_spinbox = QDoubleSpinBox()

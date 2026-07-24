@@ -53,6 +53,7 @@ from anki_miner.gui.widgets._queue_mining_tab_base import (
     _QueueRunStrings,
 )
 from anki_miner.gui.widgets.audiobook_queue_item_widget import AudiobookQueueItemWidget
+from anki_miner.gui.widgets.base import field_label_width
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -170,10 +171,14 @@ class AudiobookTab(_ListQueueMiningTabBase):
 
         queue_layout.addWidget(SectionHeader(self.tr("Audio queue")))
 
+        # Derive the shared column from the TRANSLATED labels rather than a
+        # hardcoded 100: German "Untertiteldatei:" needed 149px in that 84px box.
+        label_w = field_label_width(self.tr("Audio File:"), self.tr("Subtitle File:"))
+
         self.audio_selector = FileSelector(
             label=self.tr("Audio File:"),
             file_filter=_AUDIO_FILTER,
-            label_width=100,
+            label_width=label_w,
         )
         self.audio_selector.path_changed.connect(self._on_audio_path_changed)
         queue_layout.addWidget(self.audio_selector)
@@ -181,7 +186,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
         self.subtitle_selector = FileSelector(
             label=self.tr("Subtitle File:"),
             file_filter=_SUBTITLE_FILTER,
-            label_width=100,
+            label_width=label_w,
         )
         queue_layout.addWidget(self.subtitle_selector)
 
