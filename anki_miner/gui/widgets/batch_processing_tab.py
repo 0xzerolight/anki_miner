@@ -212,7 +212,13 @@ class BatchProcessingTab(MiningTabBase):
         layout.addWidget(header)
 
         # Shared label-column width so both folder rows and the offset row line up.
-        label_w = field_label_width("Video Folder:", "Subtitle Folder:", "Subtitle Offset:")
+        # Measure the TRANSLATED strings (see single_episode_tab): sizing on the
+        # English literals clips every non-English locale.
+        label_w = field_label_width(
+            self.tr("Video Folder:"),
+            self.tr("Subtitle Folder:"),
+            self.tr("Subtitle Offset:"),
+        )
 
         # Video folder selector
         self.video_folder_selector = FileSelector(
@@ -233,7 +239,7 @@ class BatchProcessingTab(MiningTabBase):
 
         offset_label = QLabel(self.tr("Subtitle Offset:"))
         offset_label.setObjectName("field-label")
-        offset_label.setFixedWidth(label_w)
+        offset_label.setMinimumWidth(label_w)
         make_label_fit_text(offset_label)
 
         self.offset_spinbox = QDoubleSpinBox()

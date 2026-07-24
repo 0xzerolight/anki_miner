@@ -97,7 +97,14 @@ class FileSelector(QWidget):
             self.label = QLabel(self._label_text)
             self.label.setObjectName("field-label")
             if self._label_width is not None:
-                self.label.setFixedWidth(self._label_width)
+                # Minimum, not fixed: text size is applied LIVE (Settings -> UI)
+                # without rebuilding tabs, so a width frozen at construction is
+                # stale the moment the user scales text -- which is how a 105px
+                # box ended up holding 274px of German. A minimum lets the label
+                # grow to its recomputed sizeHint (the neighbouring input is
+                # Expanding and yields the space); the tradeoff is that an
+                # over-long label breaks column alignment instead of clipping.
+                self.label.setMinimumWidth(self._label_width)
             else:
                 self.label.setMinimumWidth(100)
             make_label_fit_text(self.label)

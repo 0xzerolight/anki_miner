@@ -6,7 +6,6 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QSizePolicy, QVBoxLayout, QWidget
 
-from anki_miner.gui.constants import MIN_HEIGHT_PROGRESS_WIDGET
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 
 
@@ -38,8 +37,11 @@ class ProgressWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(SPACING.xs)
 
-        # Set minimum height to prevent collapsing
-        self.setMinimumHeight(MIN_HEIGHT_PROGRESS_WIDGET)
+        # No explicit setMinimumHeight: the old MIN_HEIGHT_PROGRESS_WIDGET (80)
+        # sat BELOW this layout's own minimum (83 at 100% text, 103 at 150%), so
+        # it compressed the status/bar/stats stack instead of protecting it --
+        # the same inverse trap as 9301c581. The layout minimum already prevents
+        # collapsing, and unlike a constant it tracks the font scale.
 
         # Main status label
         self.status_label = QLabel(self.tr("Ready"))

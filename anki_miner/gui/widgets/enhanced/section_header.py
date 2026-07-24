@@ -65,4 +65,9 @@ class SectionHeader(QWidget):
 
         # Set size policy to allow growth when content needs more space
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-        self.setMinimumHeight(40)
+        # No explicit setMinimumHeight: an explicit minimum SMALLER than the
+        # layout's own minimum silently overrides the larger layout-derived value
+        # (the 9301c581 trap). The old 40 was below the 48 this layout needs at
+        # 100% text and the 59 it needs at 150%, so it compressed the title on
+        # every one of the 38 headers in the app. Qt derives the right minimum
+        # from the layout; let it.

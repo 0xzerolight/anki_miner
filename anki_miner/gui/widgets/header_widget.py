@@ -3,12 +3,13 @@
 Provides app branding, theme selection, and quick status indicators.
 """
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.utils.qt_helpers import install_no_scroll_on_inputs
 from anki_miner.utils.i18n import tr_format
 
 # Sentinel item data marking the "All themes…" entry that opens the Themes
@@ -69,6 +70,12 @@ class HeaderWidget(QWidget):
         theme_layout.addWidget(theme_label)
 
         self.theme_combo = QComboBox()
+        # Issue #99's hazard, with an unusually expensive payload: a wheel over
+        # this combo changes theme, and each change costs a measured ~870ms
+        # whole-app stylesheet repolish on the GUI thread. Without StrongFocus a
+        # single scroll gesture fires several of them back to back.
+        self.theme_combo.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        install_no_scroll_on_inputs(self)
         self._populate_theme_combo()
         self.theme_combo.currentIndexChanged.connect(self._on_theme_changed)
         theme_layout.addWidget(self.theme_combo)

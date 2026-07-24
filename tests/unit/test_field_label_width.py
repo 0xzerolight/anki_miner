@@ -32,13 +32,22 @@ def test_width_is_max_across_texts(qapp):
     assert grouped == longest
 
 
-def test_file_selector_uses_fixed_label_width(qtbot):
+def test_file_selector_label_width_is_a_floor_not_a_cage(qtbot):
+    """``label_width`` is a MINIMUM, deliberately not a fixed width.
+
+    Text size applies live (Settings -> UI) without rebuilding the tabs, so a
+    width frozen at construction is stale the moment the user scales text --
+    that is how a 105px box ended up holding 274px of German. A minimum lets the
+    label grow to its recomputed sizeHint (the neighbouring input is Expanding
+    and yields the space). The accepted tradeoff: a label that outgrows the
+    shared width breaks column alignment instead of clipping its text.
+    """
     w = FileSelector(label="Video File:", label_width=140)
     qtbot.addWidget(w)
     try:
         assert w.label is not None
         assert w.label.minimumWidth() == 140
-        assert w.label.maximumWidth() == 140
+        assert w.label.maximumWidth() > 140, "label must be able to grow past the shared column"
     finally:
         w.deleteLater()
 

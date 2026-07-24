@@ -77,11 +77,13 @@ class DeckBuilderTab(MiningTabBase):
     def _setup_ui(self) -> None:
         # Shared label-column width so every labeled row across both cards
         # lines its input field up at the same x.
+        # Measure the TRANSLATED strings (see single_episode_tab): sizing on the
+        # English literals clips every non-English locale.
         self._label_w = field_label_width(
-            "Video Folder:",
-            "Subtitle Folder:",
-            "Deck Name:",
-            "Word Selection:",
+            self.tr("Video Folder:"),
+            self.tr("Subtitle Folder:"),
+            self.tr("Deck Name:"),
+            self.tr("Word Selection:"),
         )
 
         scroll_area = QScrollArea()
@@ -158,7 +160,7 @@ class DeckBuilderTab(MiningTabBase):
         deck_row.setSpacing(SPACING.xs)
         deck_label = QLabel(self.tr("Deck Name:"))
         deck_label.setObjectName("field-label")
-        deck_label.setFixedWidth(self._label_w)
+        deck_label.setMinimumWidth(self._label_w)
         deck_row.addWidget(deck_label)
         self.deck_name_edit = QLineEdit()
         self.deck_name_edit.setPlaceholderText(self.tr("Enter deck name…"))
@@ -170,7 +172,7 @@ class DeckBuilderTab(MiningTabBase):
         mode_row.setSpacing(SPACING.xs)
         mode_label = QLabel(self.tr("Word Selection:"))
         mode_label.setObjectName("field-label")
-        mode_label.setFixedWidth(self._label_w)
+        mode_label.setMinimumWidth(self._label_w)
         mode_row.addWidget(mode_label)
         self.mode_combo = QComboBox()
         self.mode_combo.addItem(self.tr("All vocabulary"), userData=DeckSelectionMode.ALL)
