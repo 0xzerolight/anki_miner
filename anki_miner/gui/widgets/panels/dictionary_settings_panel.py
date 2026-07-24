@@ -58,6 +58,11 @@ class _ChainRow(QWidget):
         layout.setContentsMargins(4, 2, 4, 2)
 
         self.checkbox = QCheckBox()
+        # Text-less toggle: without an accessible name a screen reader announces
+        # only "check box", and the source it belongs to is conveyed purely by
+        # the sibling QLabel. 11 such toggles were unnamed across the 4 chain panels.
+        self.checkbox.setAccessibleName(tr_format(self.tr("Enable %1"), display_name))
+        self.checkbox.setToolTip(tr_format(self.tr("Enable or disable %1"), display_name))
         self.checkbox.setChecked(entry.enabled)
         self.checkbox.stateChanged.connect(lambda _s: self.toggled.emit())
         layout.addWidget(self.checkbox)
