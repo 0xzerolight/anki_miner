@@ -273,7 +273,7 @@ function Get-TreeSnapshot {
 function Assert-TreeSnapshot {
   param(
     [Parameter(Mandatory)] [string] $Root,
-    [Parameter(Mandatory)] [string[]] $Expected,
+    [Parameter(Mandatory)] [AllowEmptyCollection()] [string[]] $Expected,
     [Parameter(Mandatory)] [string] $Label
   )
 
@@ -294,7 +294,7 @@ function Get-SmokeHomeSnapshot {
 function Assert-SmokeHomeSnapshot {
   param(
     [Parameter(Mandatory)] [string] $SmokeHome,
-    [Parameter(Mandatory)] [string[]] $Expected
+    [Parameter(Mandatory)] [AllowEmptyCollection()] [string[]] $Expected
   )
   Assert-TreeSnapshot -Root $SmokeHome -Expected $Expected -Label 'ANKI_MINER_HOME'
 }
@@ -324,8 +324,8 @@ function Assert-CleanInstallerRunner {
 
 function Remove-InstallerSmokePaths {
   param(
-    [Parameter(Mandatory)] [string[]] $Paths,
-    [Parameter(Mandatory)] [System.Collections.Generic.List[string]] $CleanupFailures
+    [Parameter(Mandatory)] [AllowEmptyCollection()] [string[]] $Paths,
+    [Parameter(Mandatory)] [AllowEmptyCollection()] [System.Collections.Generic.List[string]] $CleanupFailures
   )
 
   foreach ($target in $Paths) {
