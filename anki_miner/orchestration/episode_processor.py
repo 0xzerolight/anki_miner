@@ -58,7 +58,7 @@ if TYPE_CHECKING:
     from anki_miner.services.dictionary.registry import DictionaryRegistry
     from anki_miner.services.frequency.multi_frequency_service import MultiFrequencyService
     from anki_miner.services.known_word_db import KnownWordDB
-    from anki_miner.services.pitch_accent_service import PitchAccentService
+    from anki_miner.services.pitch_accent.multi_pitch_service import MultiPitchAccentService
     from anki_miner.services.stats_service import StatsService
     from anki_miner.services.word_list_service import WordListService
     from anki_miner.services.wordset_service import WordsetService
@@ -190,7 +190,7 @@ class EpisodeProcessor:
         definition_service: DefinitionService,
         anki_service: AnkiService,
         presenter: PresenterProtocol,
-        pitch_accent_service: PitchAccentService | None = None,
+        pitch_accent_service: MultiPitchAccentService | None = None,
         frequency_service: MultiFrequencyService | None = None,
         known_word_db: KnownWordDB | None = None,
         word_list_service: WordListService | None = None,

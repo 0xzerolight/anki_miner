@@ -282,6 +282,9 @@ class GUIConfigManager:
         # Migrate frequency_chain JSON dicts → FreqEntry
         config_dict = cls._migrate_frequency_chain(config_dict)
 
+        # Migrate pitch_chain JSON dicts → PitchSourceEntry
+        config_dict = cls._migrate_pitch_chain(config_dict)
+
         # Default-ON seed for name wordsets (junk-reduction r3). A config
         # written under schema < 2 that carries no enabled wordsets predates
         # the default-ON rollout, so seed the full bundled set. This is the
@@ -397,7 +400,7 @@ class GUIConfigManager:
 
         Everything path-typed (auto-derived, so new Path fields can't leak),
         plus non-path state that is meaningless or harmful elsewhere:
-        first-run flags, update-checker state, the three resource-ID chains
+        first-run flags, update-checker state, the four resource-ID chains
         (their ``dict_id``/``pack_id``/``source_id`` entries reference
         resources installed under THIS machine's roots — imported elsewhere
         they render as silent "(missing)" chain rows), the local browser for
@@ -413,6 +416,7 @@ class GUIConfigManager:
             "dictionary_chain",
             "expression_audio_chain",
             "frequency_chain",
+            "pitch_chain",
             "youtube_cookies_from_browser",
             "asr_device",
             "config_version",
@@ -662,6 +666,40 @@ class GUIConfigManager:
                         )
                     )
         data["frequency_chain"] = tuple(chain)
+        return data
+
+    @staticmethod
+    def _migrate_pitch_chain(data: dict[str, Any]) -> dict[str, Any]:
+        """Rebuild PitchSourceEntry instances when an existing pitch_chain is
+        loaded as list[dict] from JSON. A missing chain falls through to the
+        dataclass default (empty tuple — no pitch sources).
+
+        Malformed entries (non-dict items, missing/empty source_id) are dropped;
+        items already constructed as PitchSourceEntry pass through unchanged.
+        """
+        from anki_miner.config import PitchSourceEntry
+
+        raw_chain = data.get("pitch_chain")
+        if raw_chain is None:
+            return data
+        if not isinstance(raw_chain, (list, tuple)):
+            data.pop("pitch_chain")
+            return data
+
+        chain: list[PitchSourceEntry] = []
+        for item in raw_chain:
+            if isinstance(item, PitchSourceEntry):
+                chain.append(item)
+            elif isinstance(item, dict):
+                source_id = item.get("source_id")
+                if isinstance(source_id, str) and source_id:
+                    chain.append(
+                        PitchSourceEntry(
+                            source_id=source_id,
+                            enabled=item.get("enabled", True),
+                        )
+                    )
+        data["pitch_chain"] = tuple(chain)
         return data
 
     @staticmethod

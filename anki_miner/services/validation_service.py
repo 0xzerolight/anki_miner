@@ -184,9 +184,9 @@ class ValidationService:
 
         # Pitch/frequency "resource missing" warnings were removed with the
         # use_pitch_accent / use_frequency_data flags: activation is now derived
-        # from the resource being present (pitch_active = file exists;
-        # frequency_active = an enabled source in the chain), so a "wanted but
-        # missing" state is no longer representable.
+        # from the resource being present (pitch_active / frequency_active = an
+        # enabled source in the chain), so a "wanted but missing" state is no
+        # longer representable.
 
         return ValidationResult(
             ankiconnect_ok=ankiconnect_ok,

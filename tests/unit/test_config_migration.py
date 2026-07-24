@@ -655,3 +655,44 @@ class TestWordsetSeedIdempotence:
         GUIConfigManager.save_config(off)
         loaded = GUIConfigManager.load_config()
         assert loaded.excluded_wordsets == ()
+
+
+def test_save_then_load_preserves_pitch_chain(tmp_config: Path):
+    from anki_miner.config import PitchSourceEntry
+
+    chain = (
+        PitchSourceEntry(source_id="nhk", enabled=True),
+        PitchSourceEntry(source_id="kanjium-pitch", enabled=False),
+    )
+    config = replace(AnkiMinerConfig(), pitch_chain=chain)
+    GUIConfigManager.save_config(config)
+
+    loaded = GUIConfigManager.load_config()
+    assert loaded.pitch_chain == chain
+
+
+def test_migrate_pitch_chain_drops_malformed_entries(tmp_config: Path):
+    from anki_miner.config import PitchSourceEntry
+
+    data = GUIConfigManager._migrate_pitch_chain(
+        {
+            "pitch_chain": [
+                {"source_id": "good", "enabled": False},
+                {"source_id": ""},  # empty id dropped
+                "not-a-dict",  # dropped
+                {"enabled": True},  # missing id dropped
+                PitchSourceEntry(source_id="passthrough"),
+            ]
+        }
+    )
+    assert data["pitch_chain"] == (
+        PitchSourceEntry(source_id="good", enabled=False),
+        PitchSourceEntry(source_id="passthrough"),
+    )
+
+
+def test_migrate_pitch_chain_absent_falls_through_to_default(tmp_config: Path):
+    data = GUIConfigManager._migrate_pitch_chain({})
+    assert "pitch_chain" not in data
+    data = GUIConfigManager._migrate_pitch_chain({"pitch_chain": "garbage"})
+    assert "pitch_chain" not in data

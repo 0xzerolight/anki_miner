@@ -92,16 +92,15 @@ def test_reorder_controls_disabled_during_scan_placeholder(qapp, qtbot, tmp_path
     assert panel._remove_btn.isEnabled()
 
 
-def test_frequency_widgets_removed_pitch_selector_kept(qapp, qtbot, tmp_path):
-    # Frequency moved to its own multi-source Settings → Frequency panel; the
-    # old single-file picker no longer lives on the dictionary panel. The pitch
-    # file selector stays here; its enable checkbox was removed (activation is
-    # now derived from the pitch file being present, config.pitch_active).
+def test_frequency_and_pitch_widgets_removed(qapp, qtbot, tmp_path):
+    # Frequency and pitch both moved to their own multi-source Settings tabs;
+    # neither single-file picker lives on the dictionary panel any more, and
+    # the enable checkboxes are long gone (activation derives from the chains).
     panel = DictionarySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     assert not hasattr(panel, "frequency_selector")
     assert not hasattr(panel, "use_frequency_checkbox")
-    assert hasattr(panel, "pitch_accent_selector")
+    assert not hasattr(panel, "pitch_accent_selector")
     assert not hasattr(panel, "use_pitch_accent_checkbox")
 
 

@@ -5,7 +5,7 @@ table; keep the two in sync. A later Qt worker iterates
 :data:`RECOMMENDED_DEFAULT_SET`, downloads each ``url`` via
 ``resource_downloader.download_to_temp``, then routes the temp file to the
 right importer based on ``kind`` (``dict`` → Yomitan importer, ``freq`` →
-Yomitan frequency importer, ``pitch`` → direct file write).
+per-source frequency importer, ``pitch`` → per-source pitch importer).
 """
 
 from dataclasses import dataclass

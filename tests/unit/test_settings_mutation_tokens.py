@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-import os
 from dataclasses import replace
 from unittest.mock import MagicMock
 
@@ -144,7 +143,12 @@ def test_remove_completion_rebases_on_current_chain(qtbot, monkeypatch, tmp_path
     assert [entry.dict_id for entry in panel.get_chain()] == ["added-during-remove", None]
 
 
-def test_save_rereads_all_chains_after_nested_pitch_loop(tab, monkeypatch):
+def test_save_rereads_all_chains_after_mid_save_mutation(tab, monkeypatch):
+    """A chain mutation landing mid-Save (async flow completion) must win over
+    the start-of-Save snapshot — the commit re-reads every immediate-persist
+    chain (incl. pitch) right before emitting."""
+    from anki_miner.config import PitchSourceEntry
+
     tab.dictionary_panel.set_chain(
         (
             ChainEntry(kind="indexed", dict_id="before", enabled=True),
@@ -156,8 +160,12 @@ def test_save_rereads_all_chains_after_nested_pitch_loop(tab, monkeypatch):
         (AudioSourceEntry(kind="pack", pack_id="before", enabled=True),),
         registry_meta={},
     )
+    tab.pitch_panel.set_chain((PitchSourceEntry(source_id="before", enabled=True),), registry_meta={})
 
-    def nested_pitch_loop():
+    original_contribute = tab.anki_panel.contribute
+
+    def contribute_with_mid_save_mutation(config):
+        # Simulate an async import-flow completion arriving mid-fold.
         tab.dictionary_panel.set_chain(
             (
                 ChainEntry(kind="indexed", dict_id="after", enabled=True),
@@ -169,10 +177,10 @@ def test_save_rereads_all_chains_after_nested_pitch_loop(tab, monkeypatch):
             (AudioSourceEntry(kind="pack", pack_id="after", enabled=True),),
             registry_meta={},
         )
-        return tab.config.pitch_accent_path
+        tab.pitch_panel.set_chain((PitchSourceEntry(source_id="after", enabled=True),), registry_meta={})
+        return original_contribute(config)
 
-    monkeypatch.setattr(tab, "_resolve_pitch_accent_path", nested_pitch_loop)
-    monkeypatch.setattr(tab, "_commit_pending_csv_imports", lambda: None)
+    monkeypatch.setattr(tab.anki_panel, "contribute", contribute_with_mid_save_mutation)
     committed = []
     tab.config_changed.connect(committed.append)
 
@@ -181,6 +189,7 @@ def test_save_rereads_all_chains_after_nested_pitch_loop(tab, monkeypatch):
     assert committed[-1].dictionary_chain[0].dict_id == "after"
     assert committed[-1].frequency_chain[0].source_id == "after"
     assert committed[-1].expression_audio_chain[0].pack_id == "after"
+    assert committed[-1].pitch_chain[0].source_id == "after"
 
 
 def test_mutation_preflight_refuses_without_consuming_pending_root(tab, tmp_path):
@@ -198,40 +207,44 @@ def test_mutation_preflight_refuses_without_consuming_pending_root(tab, tmp_path
     tab.dictionary_panel.release(token)
 
 
-def test_mutation_preflight_refuses_when_config_commit_fails(test_config, qtbot, tmp_path, monkeypatch):
+def test_mutation_preflight_refuses_when_config_commit_fails(test_config, qtbot, tmp_path):
     def fail_commit(_config):
         raise OSError("disk full")
 
-    pitch_csv = tmp_path / "pitch.csv"
-    pitch_csv.write_bytes(b"old pitch")
-    pending_pitch_csv = tmp_path / "pitch.csv.pending"
-    pending_pitch_csv.write_bytes(b"new pitch")
-    config = replace(test_config, pitch_accent_path=pitch_csv)
-    widget = SettingsTab(config, commit_config=fail_commit)
+    widget = SettingsTab(test_config, commit_config=fail_commit)
     qtbot.addWidget(widget)
     old_panel_root = widget.dictionary_panel._dicts_root
     new_root = tmp_path / "new-root"
     new_root.mkdir()
     widget.dictionary_panel.dicts_root_selector.set_path(str(new_root))
-    pitch_zip = tmp_path / "pitch.zip"
-    pitch_zip.write_bytes(b"zip")
-    widget.dictionary_panel.pitch_accent_selector.set_path(str(pitch_zip))
-    monkeypatch.setattr(widget, "_resolve_pitch_accent_path", lambda: pitch_csv)
-
-    def promote_pitch() -> None:
-        os.replace(pending_pitch_csv, pitch_csv)
-
-    widget._zip_import_flow._pending_pitch_commit = promote_pitch
 
     try:
         assert widget.commit_pending_settings_for_mutation() is False
         assert widget._debounce_timer.isActive()
-        assert widget.config.dicts_root == config.dicts_root
+        assert widget.config.dicts_root == test_config.dicts_root
         assert widget.dictionary_panel.dicts_root_selector.get_path() == str(new_root)
-        assert widget.dictionary_panel.pitch_accent_selector.get_path() == str(pitch_zip)
-        assert pitch_csv.read_bytes() == b"old pitch"
         assert widget.dictionary_panel._dicts_root == old_panel_root
-        assert list(tmp_path.glob(".pitch.csv.rollback-*")) == []
+    finally:
+        widget.shutdown()
+        for worker in widget.iter_close_workers():
+            if worker is not None:
+                worker.wait(3000)
+
+
+def test_mutation_preflight_commits_dirty_settings_without_pitch_selector(test_config, qtbot):
+    """Regression (17b): the shared preflight ran an unconditional
+    pitch_accent_selector read whenever _settings_dirty was True — with the
+    selector removed, a dirty preflight from ANY panel's Add/Reimport must
+    commit cleanly and return True, not AttributeError."""
+    committed: list[AnkiMinerConfig] = []
+    widget = SettingsTab(test_config, commit_config=committed.append)
+    qtbot.addWidget(widget)
+    widget.deck_input.setText("PreflightDeck")
+    assert widget._settings_dirty is True
+
+    try:
+        assert widget.commit_pending_settings_for_mutation() is True
+        assert committed and committed[-1].anki_deck_name == "PreflightDeck"
     finally:
         widget.shutdown()
         for worker in widget.iter_close_workers():
@@ -266,46 +279,6 @@ def test_post_save_removal_sync_prevents_later_chain_resurrection(
         assert result.persisted is True
         assert [entry.kind for entry in widget.config.dictionary_chain] == ["jisho"]
         assert [entry.kind for entry in persisted[-1].dictionary_chain] == ["jisho"]
-    finally:
-        widget.shutdown()
-        for worker in widget.iter_close_workers():
-            if worker is not None:
-                worker.wait(3000)
-
-
-def test_post_save_pitch_failure_keeps_promoted_bytes_and_committed_path(
-    test_config,
-    qtbot,
-    tmp_path,
-    monkeypatch,
-) -> None:
-    pitch_csv = tmp_path / "pitch.csv"
-    pitch_csv.write_bytes(b"old pitch")
-    pending_pitch_csv = tmp_path / "pitch.csv.pending"
-    pending_pitch_csv.write_bytes(b"new pitch")
-    config = replace(test_config, pitch_accent_path=pitch_csv)
-
-    def fail_refresh(_config: AnkiMinerConfig) -> None:
-        raise ConfigCommitError(ConfigCommitResult.post_save_failure(RuntimeError("refresh failed")))
-
-    widget = SettingsTab(config, commit_config=fail_refresh)
-    qtbot.addWidget(widget)
-    pitch_zip = tmp_path / "pitch.zip"
-    pitch_zip.write_bytes(b"zip")
-    widget.dictionary_panel.pitch_accent_selector.set_path(str(pitch_zip))
-    monkeypatch.setattr(widget, "_resolve_pitch_accent_path", lambda: pitch_csv)
-
-    def promote_pitch() -> None:
-        os.replace(pending_pitch_csv, pitch_csv)
-
-    widget._zip_import_flow._pending_pitch_commit = promote_pitch
-
-    try:
-        assert widget.commit_pending_settings_for_mutation() is False
-        assert widget.config.pitch_accent_path == pitch_csv
-        assert widget.dictionary_panel.pitch_accent_selector.get_path() == str(pitch_csv)
-        assert pitch_csv.read_bytes() == b"new pitch"
-        assert list(tmp_path.glob(".pitch.csv.rollback-*")) == []
     finally:
         widget.shutdown()
         for worker in widget.iter_close_workers():

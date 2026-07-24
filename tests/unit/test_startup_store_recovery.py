@@ -16,6 +16,7 @@ from anki_miner.config import (
     AudioSourceEntry,
     ChainEntry,
     FreqEntry,
+    PitchSourceEntry,
 )
 from anki_miner.gui.app import _run_store_recovery_if_locked
 from anki_miner.gui.utils.config_manager import GUIConfigManager
@@ -26,6 +27,8 @@ from anki_miner.services.dictionary import storage as dictionary_storage
 from anki_miner.services.dictionary.registry import DictionaryRegistry
 from anki_miner.services.frequency import storage as frequency_storage
 from anki_miner.services.frequency.registry import FrequencySourceRegistry
+from anki_miner.services.pitch_accent import storage as pitch_storage
+from anki_miner.services.pitch_accent.registry import PitchSourceRegistry
 from anki_miner.services.startup_store_recovery import run_startup_store_recovery
 
 
@@ -35,16 +38,31 @@ def _config(
     dictionary_ids: tuple[str, ...] = (),
     frequency_ids: tuple[str, ...] = (),
     audio_ids: tuple[str, ...] = (),
+    pitch_ids: tuple[str, ...] = (),
 ) -> AnkiMinerConfig:
     return replace(
         AnkiMinerConfig(),
         dicts_root=root / "dicts",
         freqs_root=root / "freqs",
         audio_packs_root=root / "audio",
+        pitch_root=root / "pitch",
         dictionary_chain=tuple(ChainEntry(kind="indexed", dict_id=slot_id) for slot_id in dictionary_ids),
         frequency_chain=tuple(FreqEntry(source_id=slot_id) for slot_id in frequency_ids),
         expression_audio_chain=tuple(AudioSourceEntry(kind="pack", pack_id=slot_id) for slot_id in audio_ids),
+        pitch_chain=tuple(PitchSourceEntry(source_id=slot_id) for slot_id in pitch_ids),
     )
+
+
+def _pitch_generation(path: Path, slot_id: str, *, schema_version: int | None = None) -> None:
+    pitch_storage.build_index(
+        path / "index.sqlite",
+        [("ねこ", "猫", "1", "", "")],
+        {
+            "schema_version": str(pitch_storage.SCHEMA_VERSION if schema_version is None else schema_version),
+            "source_name": slot_id,
+        },
+    )
+    write_ownership_marker(path, slot_id, "pitch")
 
 
 def _audio_generation(path: Path, slot_id: str, *, schema_version: int | None = None) -> None:
@@ -484,3 +502,49 @@ def test_all_cleanup_calls_share_one_total_retry_budget(
     assert {mode for mode, _deadline in calls} == {"outcome"}
     assert calls[0][1] > calls[-1][1]
     assert len(list(config.audio_packs_root.glob("pack.bak-*"))) == 1
+
+
+def test_valid_pitch_canonical_survives_recovery_and_loads(tmp_path: Path) -> None:
+    """A valid pitch canonical must validate under the pitch family policy —
+    the family-membership guard in _validated_index_meta_with_policy must
+    include "pitch" or every valid slot reads as invalid (and a valid backup
+    would be collected instead of restored)."""
+    config = _config(tmp_path, pitch_ids=("src",))
+    canonical = config.pitch_root / "src"
+    _pitch_generation(canonical, "src")
+
+    run_startup_store_recovery(config, allow_collection=True)
+
+    assert (canonical / "index.sqlite").is_file()
+    registry = PitchSourceRegistry(config.pitch_root)
+    registry.load()
+    meta = registry.get("src")
+    assert meta is not None and meta.schema_ok is True
+
+
+def test_corrupt_pitch_canonical_restores_valid_backup(tmp_path: Path) -> None:
+    config = _config(tmp_path, pitch_ids=("src",))
+    canonical = config.pitch_root / "src"
+    canonical.mkdir(parents=True)
+    (canonical / "index.sqlite").write_bytes(b"garbage")
+    write_ownership_marker(canonical, "src", "pitch")
+    backup = config.pitch_root / "src.bak-100-old"
+    _pitch_generation(backup, "src")
+
+    run_startup_store_recovery(config, allow_collection=True)
+
+    assert pitch_storage.read_meta(canonical / "index.sqlite")["schema_version"] == str(pitch_storage.SCHEMA_VERSION)
+    assert not backup.exists()
+    quarantines = list(config.pitch_root.glob("src.corrupt-*"))
+    assert len(quarantines) == 1
+
+
+def test_pitch_missing_canonical_restores_valid_backup(tmp_path: Path) -> None:
+    config = _config(tmp_path, pitch_ids=("src",))
+    backup = config.pitch_root / "src.bak-100-old"
+    _pitch_generation(backup, "src")
+
+    run_startup_store_recovery(config, allow_collection=True)
+
+    assert (config.pitch_root / "src" / "index.sqlite").is_file()
+    assert not backup.exists()

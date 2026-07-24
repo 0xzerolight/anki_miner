@@ -48,12 +48,13 @@ def test_old_frequency_selector_removed(tab):
     assert not hasattr(tab.dictionary_panel, "use_frequency_checkbox")
 
 
-def test_pitch_resolver_and_selector_still_present(tab):
-    # Pitch keeps the single-file zip-import flow. The enable checkbox was
-    # removed (activation derives from the pitch file being present).
-    assert hasattr(tab, "_resolve_pitch_accent_path")
-    assert hasattr(tab.dictionary_panel, "pitch_accent_selector")
+def test_old_pitch_selector_removed(tab):
+    # Pitch moved to its own multi-source chain tab (Settings → Pitch Accent);
+    # the single-file selector + modal zip-import resolver are gone.
+    assert not hasattr(tab, "_resolve_pitch_accent_path")
+    assert not hasattr(tab.dictionary_panel, "pitch_accent_selector")
     assert not hasattr(tab.dictionary_panel, "use_pitch_accent_checkbox")
+    assert hasattr(tab, "pitch_panel")
 
 
 def test_frequency_panel_present(tab):

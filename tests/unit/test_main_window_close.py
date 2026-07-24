@@ -188,7 +188,7 @@ class _FakeSettingsTab(SettingsTab):
         from anki_miner.gui.controllers.audio_pack_import_flow import AudioPackImportFlow
         from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
         from anki_miner.gui.controllers.frequency_import_flow import FrequencyImportFlow
-        from anki_miner.gui.controllers.zip_import_flow import ZipImportFlow
+        from anki_miner.gui.controllers.pitch_import_flow import PitchImportFlow
 
         QWidget.__init__(self)
         self._anki_probe = AnkiProbeController(
@@ -221,7 +221,13 @@ class _FakeSettingsTab(SettingsTab):
             persist_chain=MagicMock(),
             notify_config_changed=MagicMock(),
         )
-        self._zip_import_flow = ZipImportFlow(self)
+        self._pitch_import_flow = PitchImportFlow(
+            parent=self,
+            panel=MagicMock(),
+            get_config=MagicMock(),
+            persist_chain=MagicMock(),
+            notify_config_changed=MagicMock(),
+        )
         # Real SettingsTab shape: shutdown()/flush_pending_settings touch the
         # auto-save debounce timer, so the fake needs one too (idle).
         from PyQt6.QtCore import QTimer
@@ -414,10 +420,10 @@ class TestCloseEventSettingsTabImportFlowWorkers:
         assert w.wait_called_with == 2000
         event.accept.assert_called_once()
 
-    def test_running_zip_pitch_worker_cancelled(self, main_window):
+    def test_running_pitch_import_worker_cancelled(self, main_window):
         tab = _FakeSettingsTab()
         w = _FakeWorker(running=True)
-        tab._zip_import_flow._active_pitch_worker = w
+        tab._pitch_import_flow._active_import_worker = w
         main_window.tabs.addTab(tab, "Settings")
 
         event = _trigger_close(main_window)

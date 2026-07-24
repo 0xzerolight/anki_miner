@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
-from anki_miner.config import AnkiMinerConfig, ChainEntry, FreqEntry
+from anki_miner.config import AnkiMinerConfig, ChainEntry, FreqEntry, PitchSourceEntry
 
 if TYPE_CHECKING:
     from anki_miner.gui.workers.resource_download_worker import ResourceDownloadSummary
@@ -31,9 +31,10 @@ def apply_download_summary(config: AnkiMinerConfig, summary: ResourceDownloadSum
       source_id moves the existing entry to the front instead of duplicating it.
       The enabled chain entry is what activates frequency (``frequency_active``)
       and makes the freshly-downloaded data live in the same session.
-    * ``pitch`` → no config change needed: the worker wrote the file to
-      ``config.pitch_accent_path``, and its presence activates pitch
-      (``pitch_active``).
+    * ``pitch`` → prepend an enabled :class:`PitchSourceEntry` for the new
+      ``source_id`` (the worker imported the source into
+      ``config.pitch_root/<source_id>/``). Same idempotence as the freq path;
+      the enabled chain entry is what activates pitch (``pitch_active``).
 
     If nothing succeeded, the original ``config`` object is returned unchanged.
     """
@@ -43,6 +44,7 @@ def apply_download_summary(config: AnkiMinerConfig, summary: ResourceDownloadSum
 
     chain = list(config.dictionary_chain)
     freq_chain = list(config.frequency_chain)
+    pitch_chain = list(config.pitch_chain)
 
     for result in succeeded:
         if result.kind == "dict" and result.dict_id:
@@ -62,11 +64,15 @@ def apply_download_summary(config: AnkiMinerConfig, summary: ResourceDownloadSum
             # frequency providers until an app restart.
             freq_chain = [e for e in freq_chain if e.source_id != result.source_id]
             freq_chain.insert(0, FreqEntry(source_id=result.source_id, enabled=True))
-        # ``pitch`` results need no config change: the worker already wrote the
-        # file to config.pitch_accent_path, whose presence activates pitch.
+        elif result.kind == "pitch" and result.source_id:
+            # Same shape as freq: drop any existing entry for this source_id,
+            # then prepend a fresh enabled one (idempotent, front-of-chain).
+            pitch_chain = [e for e in pitch_chain if e.source_id != result.source_id]
+            pitch_chain.insert(0, PitchSourceEntry(source_id=result.source_id, enabled=True))
 
     return replace(
         config,
         dictionary_chain=tuple(chain),
         frequency_chain=tuple(freq_chain),
+        pitch_chain=tuple(pitch_chain),
     )

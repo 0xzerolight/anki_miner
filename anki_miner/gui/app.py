@@ -933,6 +933,7 @@ def compose_main_window(
     settings_tab.dictionary_panel.set_release_callback(window.release_dictionary_resources)
     settings_tab.frequency_panel.set_release_callback(window.release_dictionary_resources)
     settings_tab.audio_panel.set_release_callback(window.release_dictionary_resources)
+    settings_tab.pitch_panel.set_release_callback(window.release_dictionary_resources)
     # Favorites-list edits in the UI panel must repopulate the top-right combo
     # immediately; the panel doesn't know about the header so the wiring lives
     # here. Active-theme changes from the panel must update the selected entry

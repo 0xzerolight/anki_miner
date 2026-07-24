@@ -1,12 +1,13 @@
 """Shared SQLite-index plumbing for the index-backed resource families.
 
-Three resource families store their data as ``<root>/<id>/index.sqlite`` folders
+Four resource families store their data as ``<root>/<id>/index.sqlite`` folders
 with a small ``meta`` key/value table and a ``meta.json`` sidecar: dictionaries
 (:mod:`anki_miner.services.dictionary.storage`), frequency sources
-(:mod:`anki_miner.services.frequency.storage`), and audio packs
-(:mod:`anki_miner.services.audio_packs.storage`). This module owns the
+(:mod:`anki_miner.services.frequency.storage`), audio packs
+(:mod:`anki_miner.services.audio_packs.storage`), and pitch accent sources
+(:mod:`anki_miner.services.pitch_accent.storage`). This module owns the
 infrastructure they share so a fix (e.g. the URI-escaping guard in
-:func:`open_readonly`) lands once instead of being hand-propagated ×3:
+:func:`open_readonly`) lands once instead of being hand-propagated ×4:
 
 * the meta upsert + ``meta.json`` sidecar refresh (:func:`write_meta`),
 * the raw meta read (:func:`read_meta`) and its sidecar-cached variant
@@ -47,13 +48,14 @@ _T = TypeVar("_T")
 _META_SIDECAR = "meta.json"
 _OWNERSHIP_MARKER = ".anki-miner-owned.json"
 
-StoreFamily = Literal["dictionary", "frequency", "audio"]
+StoreFamily = Literal["dictionary", "frequency", "audio", "pitch"]
 
 _DICTIONARY_ENTRY_COLUMNS = frozenset(("term", "content", "tags", "rules", "sequence"))
 _DICTIONARY_TAG_COLUMNS = frozenset(("name", "category", "ord", "notes", "score"))
 _FREQUENCY_V1_COLUMNS = frozenset(("term", "reading", "rank"))
 _FREQUENCY_V2_COLUMNS = _FREQUENCY_V1_COLUMNS | {"display_value"}
 _AUDIO_ENTRY_COLUMNS = frozenset(("expression", "file", "source", "speaker"))
+_PITCH_ENTRY_COLUMNS = frozenset(("reading", "kanji", "pattern", "nasal", "devoice"))
 
 
 def validate_store_id(store_id: str) -> None:
@@ -98,7 +100,7 @@ def is_generated_store_artifact(name: str) -> bool:
 def write_ownership_marker(directory: Path, slot_id: str, family: StoreFamily) -> None:
     """Mark a staged/generated directory as owned by one managed slot."""
     validate_store_id(slot_id)
-    if family not in ("dictionary", "frequency", "audio"):
+    if family not in ("dictionary", "frequency", "audio", "pitch"):
         raise ValueError(f"Unknown managed store family: {family!r}")
     directory.mkdir(parents=True, exist_ok=True)
     marker = directory / _OWNERSHIP_MARKER
@@ -121,7 +123,7 @@ def read_ownership_marker(directory: Path) -> tuple[StoreFamily, str] | None:
         return None
     family = payload.get("family")
     slot_id = payload.get("slot_id")
-    if family not in ("dictionary", "frequency", "audio") or not isinstance(slot_id, str):
+    if family not in ("dictionary", "frequency", "audio", "pitch") or not isinstance(slot_id, str):
         return None
     try:
         validate_store_id(slot_id)
@@ -139,6 +141,10 @@ def _supported_schema_version(family: StoreFamily, version: int) -> bool:
         from anki_miner.services.frequency.storage import SCHEMA_VERSION
 
         return 1 <= version <= SCHEMA_VERSION
+    if family == "pitch":
+        from anki_miner.services.pitch_accent.storage import SCHEMA_VERSION
+
+        return version == SCHEMA_VERSION
     from anki_miner.services.audio_packs.storage import SCHEMA_VERSION
 
     return version == SCHEMA_VERSION
@@ -164,7 +170,7 @@ def _validated_index_meta_with_policy(
     family: StoreFamily,
     supports_version: Callable[[StoreFamily, int], bool],
 ) -> dict[str, str] | None:
-    if family not in ("dictionary", "frequency", "audio") or not _is_regular_file_nofollow(db_path):
+    if family not in ("dictionary", "frequency", "audio", "pitch") or not _is_regular_file_nofollow(db_path):
         return None
     try:
         conn = open_readonly(db_path)
@@ -187,6 +193,9 @@ def _validated_index_meta_with_policy(
             elif family == "frequency":
                 required = _FREQUENCY_V1_COLUMNS if version == 1 else _FREQUENCY_V2_COLUMNS
                 if not required <= entry_columns:
+                    return None
+            elif family == "pitch":
+                if not entry_columns >= _PITCH_ENTRY_COLUMNS:
                     return None
             elif not entry_columns >= _AUDIO_ENTRY_COLUMNS:
                 return None
@@ -221,7 +230,7 @@ def _prove_owned_directory(directory: Path, slot_id: str, family: StoreFamily) -
         return False
     if family == "dictionary":
         return "source_name" in meta and "schema_version" in meta
-    if family == "frequency":
+    if family in ("frequency", "pitch"):
         return "schema_version" in meta
     return meta.get("pack_id") == slot_id
 

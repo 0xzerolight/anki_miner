@@ -37,6 +37,7 @@ class TestMachineSpecificFields:
             "dictionary_chain",
             "expression_audio_chain",
             "frequency_chain",
+            "pitch_chain",
             "youtube_cookies_from_browser",
             "asr_device",
             "config_version",
@@ -60,11 +61,14 @@ class TestExport:
         assert isinstance(payload["settings"], dict)
 
     def test_export_strips_machine_specific_fields(self, export_path):
+        from anki_miner.config import PitchSourceEntry
+
         config = AnkiMinerConfig(
             anki_deck_name="Mining",
             dicts_root=Path("/mnt/ssd/dicts"),
             dictionary_chain=(ChainEntry(kind="indexed", dict_id="jitendex"),),
             frequency_chain=(FreqEntry(source_id="bccwj"),),
+            pitch_chain=(PitchSourceEntry(source_id="kanjium-pitch"),),
             first_run_setup_done=True,
             last_known_version="2.8.0",
             config_version=41,

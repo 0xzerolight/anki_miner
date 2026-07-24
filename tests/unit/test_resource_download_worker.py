@@ -69,7 +69,7 @@ def _make_worker(specs, tmp_path: Path) -> ResourceDownloadWorker:
         specs,
         dicts_root=tmp_path / "dicts",
         freqs_root=tmp_path / "freqs",
-        pitch_csv=tmp_path / "pitch_accent.csv",
+        pitch_root=tmp_path / "pitch",
         download_dir=tmp_path / "downloads",
     )
 
@@ -182,21 +182,18 @@ def test_per_item_failure_isolation(tmp_path, monkeypatch):
     assert ("jpdb-freq", False, freq_result.detail) in done
 
 
-def test_valid_pitch_download_atomically_replaces_existing_file(tmp_path, monkeypatch):
-    # download_dir and pitch_csv live under separate subdirs to mirror the real
-    # cross-filesystem layout (temp dir vs ~/.anki_miner). Promotion copies to
-    # an atomic-write staging path beside the destination before replacement.
+def test_valid_pitch_download_imports_into_pitch_root(tmp_path, monkeypatch):
+    """The pitch route is chain-native: a real import lands at
+    pitch_root/<spec.id>/index.sqlite and the result carries source_id so
+    apply_download_summary can prepend the chain entry (a missing source_id
+    would leave that branch dead code and pitch inactive until restart)."""
     download_dir = tmp_path / "downloads"
     download_dir.mkdir()
-    pitch_csv = tmp_path / "anki_miner_home" / "pitch_accent.csv"
-    pitch_csv.parent.mkdir()
-    pitch_csv.write_bytes("ふるい\t古い\t1\n".encode())
-    old_hash = hashlib.sha256(pitch_csv.read_bytes()).hexdigest()
-    expected = VALID_PITCH
+    pitch_root = tmp_path / "anki_miner_home" / "pitch"
 
     def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
         temp = Path(dest_dir) / "accents.txt.part"
-        temp.write_bytes(expected)
+        temp.write_bytes(VALID_PITCH)
         return temp
 
     monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
@@ -205,17 +202,48 @@ def test_valid_pitch_download_atomically_replaces_existing_file(tmp_path, monkey
         [PITCH_SPEC],
         dicts_root=tmp_path / "dicts",
         freqs_root=tmp_path / "freqs",
-        pitch_csv=pitch_csv,
+        pitch_root=pitch_root,
         download_dir=download_dir,
     )
     _done, _progress, summaries = _connect_capture(worker)
 
     worker.run()
 
-    assert pitch_csv.exists()
-    assert pitch_csv.read_bytes() == expected
-    assert hashlib.sha256(pitch_csv.read_bytes()).hexdigest() != old_hash
-    assert "1" in summaries[0].succeeded[0].detail
+    result = summaries[0].succeeded[0]
+    assert result.source_id == "kanjium-pitch"
+    slot = pitch_root / "kanjium-pitch"
+    assert (slot / "index.sqlite").is_file()
+    # The .part temp was re-suffixed to .txt (matching the catalog URL) so the
+    # importer's CSV path handled it; the source copy keeps that suffix.
+    assert (slot / "source.txt").is_file()
+    assert "1" in result.detail
+
+
+def test_pitch_redownload_overwrites_pinned_slot(tmp_path, monkeypatch):
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+    pitch_root = tmp_path / "anki_miner_home" / "pitch"
+
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+        temp = Path(dest_dir) / "accents.txt.part"
+        temp.write_bytes(VALID_PITCH)
+        return temp
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+
+    for _ in range(2):  # second run must overwrite in place, not fail/fork
+        worker = ResourceDownloadWorker(
+            [PITCH_SPEC],
+            dicts_root=tmp_path / "dicts",
+            freqs_root=tmp_path / "freqs",
+            pitch_root=pitch_root,
+            download_dir=download_dir,
+        )
+        _done, _progress, summaries = _connect_capture(worker)
+        worker.run()
+        assert summaries[0].succeeded[0].source_id == "kanjium-pitch"
+
+    assert (pitch_root / "kanjium-pitch" / "index.sqlite").is_file()
 
 
 @pytest.mark.parametrize(
@@ -225,25 +253,41 @@ def test_valid_pitch_download_atomically_replaces_existing_file(tmp_path, monkey
         pytest.param(b"not enough columns\n", id="zero-valid-rows"),
     ],
 )
-def test_invalid_pitch_download_preserves_existing_file_byte_identical(tmp_path, monkeypatch, payload):
+def test_invalid_pitch_download_preserves_existing_slot(tmp_path, monkeypatch, payload):
     download_dir = tmp_path / "downloads"
     download_dir.mkdir()
-    pitch_csv = tmp_path / "anki_miner_home" / "pitch_accent.csv"
-    pitch_csv.parent.mkdir()
-    pitch_csv.write_bytes("ふるい\t古い\t1\n".encode())
-    old_hash = hashlib.sha256(pitch_csv.read_bytes()).hexdigest()
+    pitch_root = tmp_path / "anki_miner_home" / "pitch"
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    # Seed a valid slot from a prior good download.
+    def good_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+        temp = Path(dest_dir) / "accents.txt.part"
+        temp.write_bytes(VALID_PITCH)
+        return temp
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", good_download)
+    seed = ResourceDownloadWorker(
+        [PITCH_SPEC],
+        dicts_root=tmp_path / "dicts",
+        freqs_root=tmp_path / "freqs",
+        pitch_root=pitch_root,
+        download_dir=download_dir,
+    )
+    _connect_capture(seed)
+    seed.run()
+    index = pitch_root / "kanjium-pitch" / "index.sqlite"
+    old_hash = hashlib.sha256(index.read_bytes()).hexdigest()
+
+    def bad_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
         temp = Path(dest_dir) / "accents.txt.part"
         temp.write_bytes(payload)
         return temp
 
-    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", bad_download)
     worker = ResourceDownloadWorker(
         [PITCH_SPEC],
         dicts_root=tmp_path / "dicts",
         freqs_root=tmp_path / "freqs",
-        pitch_csv=pitch_csv,
+        pitch_root=pitch_root,
         download_dir=download_dir,
     )
     _done, _progress, summaries = _connect_capture(worker)
@@ -251,81 +295,10 @@ def test_invalid_pitch_download_preserves_existing_file_byte_identical(tmp_path,
     worker.run()
 
     assert summaries[0].succeeded == []
-    assert "validation" in summaries[0].failed[0].detail.lower()
-    assert hashlib.sha256(pitch_csv.read_bytes()).hexdigest() == old_hash
-
-
-def test_pitch_copy_failure_preserves_existing_file_byte_identical(tmp_path, monkeypatch):
-    download_dir = tmp_path / "downloads"
-    download_dir.mkdir()
-    pitch_csv = tmp_path / "anki_miner_home" / "pitch_accent.csv"
-    pitch_csv.parent.mkdir()
-    pitch_csv.write_bytes("ふるい\t古い\t1\n".encode())
-    old_hash = hashlib.sha256(pitch_csv.read_bytes()).hexdigest()
-
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
-        temp = Path(dest_dir) / "accents.txt.part"
-        temp.write_bytes(VALID_PITCH)
-        return temp
-
-    def fail_copy(_source, destination):
-        Path(destination).write_bytes(b"partial copy")
-        raise OSError("copy fault")
-
-    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
-    monkeypatch.setattr(resource_download_worker.shutil, "copyfile", fail_copy)
-    worker = ResourceDownloadWorker(
-        [PITCH_SPEC],
-        dicts_root=tmp_path / "dicts",
-        freqs_root=tmp_path / "freqs",
-        pitch_csv=pitch_csv,
-        download_dir=download_dir,
-    )
-    _done, _progress, summaries = _connect_capture(worker)
-
-    worker.run()
-
-    assert summaries[0].succeeded == []
-    assert "validation" in summaries[0].failed[0].detail.lower()
-    assert "copy fault" in summaries[0].failed[0].detail
-    assert hashlib.sha256(pitch_csv.read_bytes()).hexdigest() == old_hash
-    assert list(pitch_csv.parent.iterdir()) == [pitch_csv]
-
-
-def test_pitch_replace_failure_preserves_existing_file_byte_identical(tmp_path, monkeypatch):
-    download_dir = tmp_path / "downloads"
-    download_dir.mkdir()
-    pitch_csv = tmp_path / "anki_miner_home" / "pitch_accent.csv"
-    pitch_csv.parent.mkdir()
-    pitch_csv.write_bytes("ふるい\t古い\t1\n".encode())
-    old_hash = hashlib.sha256(pitch_csv.read_bytes()).hexdigest()
-
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
-        temp = Path(dest_dir) / "accents.txt.part"
-        temp.write_bytes(VALID_PITCH)
-        return temp
-
-    def fail_replace(_source, _destination):
-        raise OSError("replace fault")
-
-    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
-    monkeypatch.setattr("anki_miner.utils.atomic_io.os.replace", fail_replace)
-    worker = ResourceDownloadWorker(
-        [PITCH_SPEC],
-        dicts_root=tmp_path / "dicts",
-        freqs_root=tmp_path / "freqs",
-        pitch_csv=pitch_csv,
-        download_dir=download_dir,
-    )
-    _done, _progress, summaries = _connect_capture(worker)
-
-    worker.run()
-
-    assert summaries[0].succeeded == []
-    assert "validation" in summaries[0].failed[0].detail.lower()
-    assert "replace fault" in summaries[0].failed[0].detail
-    assert hashlib.sha256(pitch_csv.read_bytes()).hexdigest() == old_hash
-    assert list(pitch_csv.parent.iterdir()) == [pitch_csv]
+    assert summaries[0].failed[0].spec_id == "kanjium-pitch"
+    # Existing slot untouched (staging-dir import never mutates the canonical
+    # slot until atomic promotion).
+    assert hashlib.sha256(index.read_bytes()).hexdigest() == old_hash
 
 
 def test_cancellation_stops_loop_early(tmp_path, monkeypatch):

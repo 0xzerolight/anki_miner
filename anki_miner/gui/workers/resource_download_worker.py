@@ -3,13 +3,15 @@
 Given a list of :class:`ResourceSpec`, downloads each artifact to a temp file
 then routes it to the right importer based on ``kind`` (``dict`` → Yomitan
 dictionary importer, ``freq`` → per-source frequency importer, ``pitch`` →
-validated atomic TSV promotion). Each item is wrapped in its own ``try/except`` so one
+per-source pitch importer). Each item is wrapped in its own ``try/except`` so one
 failure never aborts the batch; the per-item outcomes are collected into a
 :class:`ResourceDownloadSummary` emitted at the end.
 
-The ``freq`` route is chain-native: it imports into ``freqs_root/<source_id>/``
-exactly as the ``dict`` route imports into ``dicts_root/<dict_id>/``, and the
-result carries ``source_id`` so the config step can prepend a ``FreqEntry``.
+The ``freq`` and ``pitch`` routes are chain-native: they import into
+``freqs_root/<source_id>/`` / ``pitch_root/<source_id>/`` exactly as the
+``dict`` route imports into ``dicts_root/<dict_id>/``, and the result carries
+``source_id`` so the config step can prepend a ``FreqEntry`` /
+``PitchSourceEntry``.
 
 This worker NEVER mutates config. The summary is its sole output — a later
 task reads ``summary.succeeded`` (plus each result's ``kind`` / ``dict_id`` /
@@ -23,7 +25,6 @@ from __future__ import annotations
 
 import contextlib
 import logging
-import shutil
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -31,14 +32,12 @@ from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QCoreApplication, pyqtSignal
 
-from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
 from anki_miner.services.dictionary.superseded import sweep_superseded_dicts
 from anki_miner.services.frequency.source_importer import import_frequency_source
-from anki_miner.services.pitch_accent_service import PitchAccentService
+from anki_miner.services.pitch_accent.source_importer import import_pitch_source
 from anki_miner.services.resource_downloader import download_to_temp
-from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -48,8 +47,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Suffixes import_frequency_source dispatches on; anything else falls back to .zip
-# (the recommended freq resources are Yomitan zips).
+# Suffixes the freq/pitch source importers dispatch on; anything else falls
+# back to .zip (the recommended zip-shaped resources are Yomitan zips).
 _FREQ_SUFFIXES = {".zip", ".csv", ".tsv", ".txt"}
 
 
@@ -72,30 +71,6 @@ def _retype_for_suffix(temp: Path, url: str) -> Path:
     except OSError:
         return temp
     return retyped
-
-
-def _promote_pitch_download(staged_download: Path, pitch_csv: Path) -> int:
-    """Validate a staged pitch file, then atomically copy it into place."""
-    try:
-        service = PitchAccentService(staged_download)
-        service.load()
-        if service.entry_count <= 0:
-            raise SetupError(
-                QCoreApplication.translate("ResourceDownloadDialog", "No valid pitch accent entries were found.")
-            )
-
-        pitch_csv.parent.mkdir(parents=True, exist_ok=True)
-        with atomic_write_path(pitch_csv) as staged_pitch:
-            shutil.copyfile(staged_download, staged_pitch)
-    except Exception as exc:
-        raise SetupError(
-            tr_format(
-                QCoreApplication.translate("ResourceDownloadDialog", "Pitch accent validation failed: %1"),
-                str(exc),
-            )
-        ) from exc
-
-    return service.entry_count
 
 
 @dataclass
@@ -164,7 +139,7 @@ class ResourceDownloadWorker(CancellableWorker):
         *,
         dicts_root: Path,
         freqs_root: Path,
-        pitch_csv: Path,
+        pitch_root: Path,
         download_dir: Path,
         parent=None,
     ) -> None:
@@ -172,7 +147,7 @@ class ResourceDownloadWorker(CancellableWorker):
         self._specs = list(specs)
         self._dicts_root = dicts_root
         self._freqs_root = freqs_root
-        self._pitch_csv = pitch_csv
+        self._pitch_root = pitch_root
         self._download_dir = download_dir
 
     def _progress_for(self, spec_id: str) -> Callable[[int, int, str], None]:
@@ -251,13 +226,24 @@ class ResourceDownloadWorker(CancellableWorker):
                     source_id = freq_result.source_id
                     detail = f"{freq_result.entry_count} entries"
                 elif spec.kind == "pitch":
-                    entry_count = _promote_pitch_download(temp, self._pitch_csv)
-                    with contextlib.suppress(OSError):
-                        temp.unlink()
-                    temp = None
+                    # Same suffix re-typing as freq: import_pitch_source
+                    # dispatches on suffix, but download_to_temp stages ``.part``.
+                    # Pin the on-disk slot to the stable catalog id (like dict)
+                    # so a re-download overwrites in place.
+                    temp = _retype_for_suffix(temp, spec.url)
+                    pitch_result = import_pitch_source(
+                        temp,
+                        self._pitch_root,
+                        source_id=spec.id,
+                        source_name=spec.display_name,
+                        cancel_check=lambda: self.is_cancelled,
+                        progress=self._progress_for(spec.id),
+                        overwrite=True,
+                    )
+                    source_id = pitch_result.source_id
                     detail = tr_format(
                         QCoreApplication.translate("ResourceDownloadDialog", "%1 entries"),
-                        entry_count,
+                        pitch_result.entry_count,
                     )
                 else:  # pragma: no cover — catalog kinds are constrained
                     raise ValueError(f"Unknown resource kind: {spec.kind!r}")

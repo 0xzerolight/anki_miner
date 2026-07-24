@@ -24,6 +24,7 @@ _KEY_TO_PANEL = {
     "dictionaries": "dictionary_panel",
     "audio": "audio_panel",
     "frequency": "frequency_panel",
+    "pitch": "pitch_panel",
     "filtering": "filtering_panel",
     "youtube": "youtube_panel",
     "subtitles": "subtitles_panel",

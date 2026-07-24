@@ -37,7 +37,6 @@ HOME_CONSUMERS = (
         "ANKI_MINER_HOME",
         lambda home: home,
     ),
-    ("anki_miner.gui.controllers.zip_import_flow", "ANKI_MINER_HOME", lambda home: home),
 )
 
 
