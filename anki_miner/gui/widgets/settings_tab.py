@@ -3,10 +3,8 @@
 import dataclasses
 import json
 import os
-import uuid
 from collections.abc import Callable
 from dataclasses import replace
-from functools import partial
 from pathlib import Path
 from typing import Protocol, cast, runtime_checkable
 
@@ -23,13 +21,20 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, ChainEntry, FreqEntry, create_default_config
+from anki_miner.config import (
+    AnkiMinerConfig,
+    AudioSourceEntry,
+    ChainEntry,
+    FreqEntry,
+    PitchSourceEntry,
+    create_default_config,
+)
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
 from anki_miner.gui.controllers.audio_pack_import_flow import AudioPackImportFlow
 from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
 from anki_miner.gui.controllers.frequency_import_flow import FrequencyImportFlow
-from anki_miner.gui.controllers.zip_import_flow import YomitanCsvLabels, ZipImportFlow
+from anki_miner.gui.controllers.pitch_import_flow import PitchImportFlow
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
@@ -45,14 +50,13 @@ from anki_miner.gui.widgets.panels import (
     FilteringSettingsPanel,
     FrequencySettingsPanel,
     MediaSettingsPanel,
+    PitchSettingsPanel,
     UISettingsPanel,
     YouTubeSettingsPanel,
 )
 from anki_miner.gui.widgets.panels.subtitles_settings_panel import SubtitlesSettingsPanel
-from anki_miner.gui.workers.yomitan_csv_import_worker import YomitanCsvImportWorker
 from anki_miner.services.expression_audio_fetcher import purge_miss_markers
 from anki_miner.services.known_word_db import KnownWordDB
-from anki_miner.services.pitch_accent import import_yomitan_pitch_zip
 from anki_miner.services.subtitle_parser import compile_subtitle_regex_filter
 from anki_miner.utils.i18n import tr_format
 
@@ -166,25 +170,21 @@ class SettingsTab(QWidget):
         # Auto-save guards. _loading suppresses edit signals fired by
         # programmatic widget repopulation (_load_config, selector re-syncs);
         # _committing suppresses re-entry when the debounce fires while a
-        # commit is already in flight (the pitch zip import spins a nested
-        # modal event loop that can let the timer fire mid-commit).
+        # commit is already in flight.
         self._loading = False
         self._committing = False
         self._settings_dirty = False
         self._setup_ui()
-        for panel in (self.dictionary_panel, self.audio_panel, self.frequency_panel):
+        for panel in (self.dictionary_panel, self.audio_panel, self.frequency_panel, self.pitch_panel):
             panel.set_mutation_preflight(self.commit_pending_settings_for_mutation)
         self.dictionary_panel.set_remove_chain_commit(self._commit_dictionary_removal)
         self.audio_panel.set_remove_chain_commit(self._commit_audio_removal)
         self.frequency_panel.set_remove_chain_commit(self._commit_frequency_removal)
+        self.pitch_panel.set_remove_chain_commit(self._commit_pitch_removal)
         # Controllers (T-66) own worker lifecycles + dialogs; the tab keeps
         # widgets, signal wiring, and config assembly. Dependency is one-way:
         # tab → controller → workers/services (tab-owned collaboration points
         # are injected as callables).
-        # Modal pitch/frequency zip import engine: owns the import workers,
-        # the ``.pending`` staging files, and the deferred-promotion closures;
-        # the tab keeps the per-flow wrappers + save-time ordering.
-        self._zip_import_flow = ZipImportFlow(self)
         # Dictionary add/reimport orchestration, incl. the Reimport-All
         # chained state machine and its predecessor deferral (T-09).
         self._dict_import_flow = DictionaryImportFlow(
@@ -208,6 +208,14 @@ class SettingsTab(QWidget):
             panel=self.frequency_panel,
             get_config=lambda: self.config,
             persist_chain=self._persist_frequency_chain_change,
+            notify_config_changed=lambda: self.config_changed.emit(self.config),
+        )
+        # Pitch source add/reimport orchestration.
+        self._pitch_import_flow = PitchImportFlow(
+            parent=self,
+            panel=self.pitch_panel,
+            get_config=lambda: self.config,
+            persist_chain=self._persist_pitch_chain_change,
             notify_config_changed=lambda: self.config_changed.emit(self.config),
         )
         # AnkiConnect probe workers (fetch fields / fetch decks / styling);
@@ -259,6 +267,7 @@ class SettingsTab(QWidget):
         self.dictionary_panel = DictionarySettingsPanel(self.config.dicts_root)
         self.audio_panel = AudioPackSettingsPanel(self.config.audio_packs_root)
         self.frequency_panel = FrequencySettingsPanel(self.config.freqs_root)
+        self.pitch_panel = PitchSettingsPanel(self.config.pitch_root)
         self.filtering_panel = FilteringSettingsPanel()
         self.youtube_panel = YouTubeSettingsPanel()
         self.subtitles_panel = SubtitlesSettingsPanel(suppress_optional_startup=self._suppress_optional_startup)
@@ -281,6 +290,7 @@ class SettingsTab(QWidget):
             ),
             "audio": self.tab_widget.addTab(self._wrap_in_scroll_area(self.audio_panel), self.tr("Audio")),
             "frequency": self.tab_widget.addTab(self._wrap_in_scroll_area(self.frequency_panel), self.tr("Frequency")),
+            "pitch": self.tab_widget.addTab(self._wrap_in_scroll_area(self.pitch_panel), self.tr("Pitch Accent")),
             "filtering": self.tab_widget.addTab(self._wrap_in_scroll_area(self.filtering_panel), self.tr("Filtering")),
             "youtube": self.tab_widget.addTab(self._wrap_in_scroll_area(self.youtube_panel), self.tr("YouTube")),
             "subtitles": self.tab_widget.addTab(self._wrap_in_scroll_area(self.subtitles_panel), self.tr("Subtitles")),
@@ -399,6 +409,11 @@ class SettingsTab(QWidget):
             lambda: self._persist_frequency_chain_change(self.frequency_panel.get_chain())
         )
 
+        # Pitch panel signals — same wiring as frequency.
+        self.pitch_panel.add_source_requested.connect(self._pitch_import_flow.add_source)
+        self.pitch_panel.reimport_source_requested.connect(self._pitch_import_flow.reimport_source)
+        self.pitch_panel.chain_changed.connect(lambda: self._persist_pitch_chain_change(self.pitch_panel.get_chain()))
+
         # Filtering panel: excluded-decks picker + known-words cache rebuild (Issue #38).
         self.filtering_panel.fetch_decks_requested.connect(self._anki_probe.fetch_decks)
         self.filtering_panel.rebuild_known_words_requested.connect(self._on_rebuild_known_words)
@@ -465,7 +480,6 @@ class SettingsTab(QWidget):
         # Fields outside the save panels that commit through the same path.
         self.check_for_updates_checkbox.toggled.connect(self._on_settings_edited)
         self.dictionary_panel.dicts_root_selector.path_changed.connect(self._on_settings_edited)
-        self.dictionary_panel.pitch_accent_selector.path_changed.connect(self._on_settings_edited)
 
     def _on_settings_edited(self, *_args) -> None:
         """Restart the auto-save debounce on a user edit (no-op while loading)."""
@@ -633,9 +647,9 @@ class SettingsTab(QWidget):
             # max-rank threshold is owned by filtering_panel and already loaded above.
             self.frequency_panel.set_chain(self.config.frequency_chain)
 
-            # Pitch accent settings — file selector lives in the Dictionaries tab.
-            # Activation is derived from the file being present (config.pitch_active).
-            self.dictionary_panel.pitch_accent_selector.set_path(str(self.config.pitch_accent_path))
+            # Pitch source chain (same — immediate persist via its own signal).
+            # Activation is derived from an enabled source (config.pitch_active).
+            self.pitch_panel.set_chain(self.config.pitch_chain)
 
             # Update settings — standalone checkbox outside all panels.
             self.check_for_updates_checkbox.setChecked(self.config.check_for_updates)
@@ -734,13 +748,13 @@ class SettingsTab(QWidget):
         new_config = replace(self.config, use_native_file_dialogs=use_native)
         self.config_changed.emit(new_config)
 
-    def commit_settings(self, skip_zip_import: bool = False) -> None:
+    def commit_settings(self) -> None:
         """Commit the save-path panels into the config and emit ``config_changed``.
 
         Public entry point for tests and the close flush; the auto-save
         debounce timer drives :meth:`_commit_settings` directly.
         """
-        self._commit_settings(skip_zip_import=skip_zip_import)
+        self._commit_settings()
 
     def flush_pending_settings(self) -> None:
         """Commit a pending debounced edit immediately (close-time flush).
@@ -751,59 +765,40 @@ class SettingsTab(QWidget):
         Committing here routes through config_changed →
         MainWindow.update_config, which writes gui_config.json and updates
         MainWindow.config, so both close paths persist the edit.
-
-        ``skip_zip_import=True`` keeps the modal pitch-zip import (nested
-        event loop + dialogs) out of closeEvent: non-pitch fields commit and
-        an unconfirmed .zip selection is dropped — the next launch repaints
-        the selector from the persisted config.
         """
         if self._settings_dirty:
             self._debounce_timer.stop()
-            self._commit_settings(skip_zip_import=True)
+            self._commit_settings()
 
     def commit_pending_settings_for_mutation(self) -> bool:
         """Commit pending edits normally before a root-bound mutation.
 
         Refuse re-entry or an already-owned panel without consuming the
-        debounce timer or resetting the pending pitch selector.
+        debounce timer.
         """
         if self._committing or any(
-            panel.has_active_mutation() for panel in (self.dictionary_panel, self.audio_panel, self.frequency_panel)
+            panel.has_active_mutation()
+            for panel in (self.dictionary_panel, self.audio_panel, self.frequency_panel, self.pitch_panel)
         ):
             if self._settings_dirty:
                 self._debounce_timer.start()
             return False
         if not self._settings_dirty:
             return True
-        pending_pitch_path = self.dictionary_panel.pitch_accent_selector.get_path()
         try:
-            committed = self._commit_settings(
-                skip_zip_import=False,
-                commit_config=self._commit_config,
-            )
+            committed = self._commit_settings(commit_config=self._commit_config)
         except ConfigCommitError as error:
             if error.result.persisted:
                 return False
-            self._loading = True
-            try:
-                self.dictionary_panel.pitch_accent_selector.set_path(pending_pitch_path)
-            finally:
-                self._loading = False
             self._debounce_timer.start()
             return False
         except Exception:  # noqa: BLE001 - unknown commit phase must refuse the mutation
-            self._loading = True
-            try:
-                self.dictionary_panel.pitch_accent_selector.set_path(pending_pitch_path)
-            finally:
-                self._loading = False
             self._debounce_timer.start()
             return False
         return committed and not self._settings_dirty
 
     def _commit_settings(
         self,
-        skip_zip_import: bool = False,
         *,
         commit_config: Callable[[AnkiMinerConfig], None] | None = None,
     ) -> bool:
@@ -818,11 +813,11 @@ class SettingsTab(QWidget):
         rest commits, and a sticky inline warning names what was kept.
         """
         if self._committing or any(
-            panel.has_active_mutation() for panel in (self.dictionary_panel, self.audio_panel, self.frequency_panel)
+            panel.has_active_mutation()
+            for panel in (self.dictionary_panel, self.audio_panel, self.frequency_panel, self.pitch_panel)
         ):
-            # The debounce fired while a commit is in flight (the pitch zip
-            # import spins a nested modal event loop), or while a panel owns
-            # indexed-resource mutation authority — retry afterwards.
+            # The debounce fired while a commit is in flight, or while a panel
+            # owns indexed-resource mutation authority — retry afterwards.
             if self._settings_dirty:
                 self._debounce_timer.start()
             return False
@@ -833,7 +828,7 @@ class SettingsTab(QWidget):
             # still-pending expiry so it can't fire a redundant second commit.
             self._debounce_timer.stop()
             self._settings_dirty = False
-            self._commit_settings_locked(skip_zip_import, commit_config)
+            self._commit_settings_locked(commit_config)
         except ConfigCommitError as error:
             if not error.result.persisted:
                 self._settings_dirty = dirty_before_commit or self._settings_dirty
@@ -851,7 +846,6 @@ class SettingsTab(QWidget):
 
     def _commit_settings_locked(
         self,
-        skip_zip_import: bool,
         commit_config: Callable[[AnkiMinerConfig], None] | None,
     ) -> None:
         # If the user just re-enabled startup checks (False -> True), clear any
@@ -916,9 +910,6 @@ class SettingsTab(QWidget):
             # Dictionary storage folder (Issue #45). Validated above; reuse of
             # current value passes through unchanged.
             dicts_root=new_dicts_root,
-            # Pitch accent settings — pitch_accent_path is overwritten below
-            # with the resolver's result once the staged import commits.
-            pitch_accent_path=self.config.pitch_accent_path,
             # Sentence-TTS toggles — same immediate-persist + full-Save sync.
             reading_tts_enabled=self.audio_panel.get_reading_tts()[0],
             reading_tts_google_enabled=self.audio_panel.get_reading_tts()[1],
@@ -928,56 +919,15 @@ class SettingsTab(QWidget):
             skipped_update_version=skipped_update_version,
         )
 
-        # Pitch-zip import (modal: nested event loop + dialogs). Runs LAST so
-        # any validation above happens before we touch pitch_accent.csv on
-        # disk; the resolver only STAGES to a ``.pending`` sibling and the
-        # destructive promotion happens in _commit_pending_csv_imports. None
-        # means the import failed OR was cancelled — keep the last-good path
-        # and commit the rest (the user already saw the error dialog, if any).
-        # Skipped entirely on the close flush (never spin a modal loop inside
-        # closeEvent); an unconfirmed .zip pick is dropped there.
-        pitch_rollback: tuple[Path, Path | None] | None = None
-        if not skip_zip_import:
-            # The whole block runs under the _loading guard: the import flow's
-            # commit closure and the re-sync below both set_path the selector,
-            # which re-emits path_changed and must not re-arm the debounce.
-            self._loading = True
-            try:
-                resolved_pitch_path = self._resolve_pitch_accent_path()
-                if resolved_pitch_path is None:
-                    resolved_pitch_path = self.config.pitch_accent_path
-                else:
-                    # Pitch import validated (or passthrough) — promote the
-                    # staged CSV and run its UI feedback now.
-                    if self._zip_import_flow.has_pending_csv_import():
-                        pitch_rollback = self._prepare_pitch_rollback(resolved_pitch_path)
-                    try:
-                        self._commit_pending_csv_imports()
-                    except Exception:
-                        if pitch_rollback is not None:
-                            self._restore_pitch_rollback(*pitch_rollback)
-                        raise
-                new_config = replace(new_config, pitch_accent_path=resolved_pitch_path)
-
-                # Re-sync the selector to whatever was actually committed.
-                # Covers cancel/failure (resolver returned None) AND
-                # overwrite-decline (resolver returns the fallback path, not
-                # None): without this the declined .zip stays in the selector
-                # and every later commit re-pops the overwrite modal.
-                selector = self.dictionary_panel.pitch_accent_selector
-                if selector.get_path() != str(resolved_pitch_path):
-                    selector.set_path(str(resolved_pitch_path))
-            finally:
-                self._loading = False
-
-        # Pitch import spins a nested event loop. Re-read all immediate-persist
-        # chains only now so a completion inside that loop cannot be overwritten
-        # by a stale snapshot from the start of this Save.
+        # Async import flows can complete between the start-of-Save snapshot
+        # and this point. Re-read all immediate-persist chains only now so a
+        # completion mid-Save cannot be overwritten by a stale snapshot.
         new_config = replace(
             new_config,
             dictionary_chain=self.dictionary_panel.get_chain(),
             frequency_chain=self.frequency_panel.get_chain(),
             expression_audio_chain=self.audio_panel.get_chain(),
+            pitch_chain=self.pitch_panel.get_chain(),
         )
 
         # Emit signal to notify listeners of config change
@@ -989,17 +939,7 @@ class SettingsTab(QWidget):
         except ConfigCommitError as error:
             if error.result.persisted:
                 self._sync_persisted_config(new_config)
-                if pitch_rollback is not None:
-                    self._discard_pitch_rollback(pitch_rollback[1])
-            elif pitch_rollback is not None:
-                self._restore_pitch_rollback(*pitch_rollback)
             raise
-        except Exception:
-            if pitch_rollback is not None:
-                self._restore_pitch_rollback(*pitch_rollback)
-            raise
-        if pitch_rollback is not None:
-            self._discard_pitch_rollback(pitch_rollback[1])
 
         # Sync the dictionary panel only after configuration persistence
         # succeeds, so a failed save cannot transfer mutation authority to an
@@ -1184,54 +1124,6 @@ class SettingsTab(QWidget):
         self._save_status_timer.stop()
         self._save_status_timer.start(2500)
 
-    def _resolve_pitch_accent_path(self) -> Path | None:
-        """Resolve the pitch-accent selector for persistence (see the engine).
-
-        Thin wrapper over :meth:`ZipImportFlow.run_modal_zip_import`; see it
-        for the full staging/deferred-promotion contract and the meaning of
-        each return.
-        """
-        return self._zip_import_flow.run_modal_zip_import(
-            selector=self.dictionary_panel.pitch_accent_selector,
-            dest_name="pitch_accent.csv",
-            worker_factory=partial(YomitanCsvImportWorker, import_yomitan_pitch_zip),
-            worker_slot_attr="_active_pitch_worker",
-            commit_slot_attr="_pending_pitch_commit",
-            decline_fallback=self.config.pitch_accent_path,
-            labels=YomitanCsvLabels(
-                progress=self.tr("Importing pitch accent dictionary…"),
-                overwrite_title=self.tr("Overwrite Pitch Accent File?"),
-                failure_title=self.tr("Pitch Accent Import Failed"),
-                success_title=self.tr("Pitch accent dictionary imported"),
-            ),
-        )
-
-    def _commit_pending_csv_imports(self) -> None:
-        """Promote any staged pitch CSV import (delegates to the flow)."""
-        self._zip_import_flow.commit_pending_csv_imports()
-
-    @staticmethod
-    def _prepare_pitch_rollback(dest_csv: Path) -> tuple[Path, Path | None]:
-        """Move the current pitch CSV aside until config persistence succeeds."""
-        backup: Path | None = None
-        if dest_csv.exists():
-            backup = dest_csv.with_name(f".{dest_csv.name}.rollback-{uuid.uuid4().hex}")
-            os.replace(dest_csv, backup)
-        return dest_csv, backup
-
-    @staticmethod
-    def _restore_pitch_rollback(dest_csv: Path, backup: Path | None) -> None:
-        """Restore pitch bytes after failed configuration persistence."""
-        dest_csv.unlink(missing_ok=True)
-        if backup is not None:
-            os.replace(backup, dest_csv)
-
-    @staticmethod
-    def _discard_pitch_rollback(backup: Path | None) -> None:
-        """Delete a no-longer-needed pitch rollback file."""
-        if backup is not None:
-            backup.unlink(missing_ok=True)
-
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Update configuration from external source.
 
@@ -1262,7 +1154,7 @@ class SettingsTab(QWidget):
         """Live worker handles MainWindow must join on close (T-12).
 
         Chains the three AnkiConnect probe workers (T-66) with the active
-        import workers from all three import flows (OVH-004, 059, 060) so
+        import workers from all four import flows (OVH-004, 059, 060) so
         ``BackgroundTaskController._join_worker_for_close`` sees every live
         Settings-tab QThread.  ``None`` entries (idle flows) are filtered
         by ``_join_worker_for_close``.
@@ -1272,7 +1164,7 @@ class SettingsTab(QWidget):
             *self._dict_import_flow.iter_close_workers(),
             *self._audio_pack_import_flow.iter_close_workers(),
             *self._frequency_import_flow.iter_close_workers(),
-            *self._zip_import_flow.iter_close_workers(),
+            *self._pitch_import_flow.iter_close_workers(),
         )
 
     def shutdown(self) -> None:
@@ -1332,6 +1224,10 @@ class SettingsTab(QWidget):
     def _commit_frequency_removal(self, new_chain: tuple[object, ...]) -> ConfigCommitResult:
         chain = cast(tuple[FreqEntry, ...], new_chain)
         return self._commit_remove_config(replace(self.config, frequency_chain=chain))
+
+    def _commit_pitch_removal(self, new_chain: tuple[object, ...]) -> ConfigCommitResult:
+        chain = cast(tuple[PitchSourceEntry, ...], new_chain)
+        return self._commit_remove_config(replace(self.config, pitch_chain=chain))
 
     def _persist_chain_change(self, new_chain: tuple[ChainEntry, ...]) -> None:
         """Save a chain mutation to disk and notify listeners.
@@ -1417,6 +1313,16 @@ class SettingsTab(QWidget):
         requiring the user to click Save in Settings.
         """
         new_config = replace(self.config, frequency_chain=new_chain)
+        self._commit_config(new_config)
+
+    def _persist_pitch_chain_change(self, new_chain: tuple[PitchSourceEntry, ...]) -> None:
+        """Save a pitch chain mutation to disk and notify listeners.
+
+        Called after a successful pitch-source import or panel reorder/toggle
+        so the freshly-imported source is reachable on the very next run without
+        requiring the user to click Save in Settings.
+        """
+        new_config = replace(self.config, pitch_chain=new_chain)
         self._commit_config(new_config)
 
     # === Known words handlers (Issues #38 / #42) ===

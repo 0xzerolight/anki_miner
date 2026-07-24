@@ -18,9 +18,9 @@ from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 
 def test_no_red_border_in_dictionaries_panel_on_clean_install(test_config: AnkiMinerConfig, qtbot):
-    # Post-boot clean install: dicts_root exists (change 1), pitch CSV absent.
+    # Post-boot clean install: dicts_root exists (change 1), no pitch sources.
     test_config.dicts_root.mkdir(parents=True, exist_ok=True)
-    assert not test_config.pitch_accent_path.exists()
+    assert test_config.pitch_chain == ()
 
     tab = SettingsTab(test_config)
     qtbot.addWidget(tab)
@@ -28,9 +28,6 @@ def test_no_red_border_in_dictionaries_panel_on_clean_install(test_config: AnkiM
         panel = tab.dictionary_panel
 
         assert panel.dicts_root_selector.input.property("error") is False
-        assert panel.pitch_accent_selector.input.property("error") is False
-        # Pitch reads as an optional not-yet-installed resource, not a failure.
-        assert panel.pitch_accent_selector.status_label.text() == "Not installed"
     finally:
         tab.shutdown()
         for w in tab.iter_close_workers():

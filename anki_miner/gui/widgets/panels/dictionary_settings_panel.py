@@ -300,30 +300,9 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         layout.addLayout(buttons)
         self.add_field("", container)
 
-        # Pitch accent: file selector only. Activation is resource-driven —
-        # importing a pitch file turns the feature on (config.pitch_active);
-        # there is no separate on/off checkbox.
-        self.add_section(self.tr("Pitch Accent"))
-        self.pitch_accent_selector = FileSelector(
-            label="",
-            file_mode=True,
-            file_filter="Pitch accent (*.csv *.tsv *.txt *.zip);;All Files (*)",
-            placeholder=self.tr("Select pitch accent CSV/TSV or Yomitan zip..."),
-            default_dir=ANKI_MINER_HOME,
-            # Pitch is an optional resource: on a clean install the default
-            # ~/.anki_miner/pitch_accent.csv doesn't exist yet, which must
-            # read as "Not installed", not a red error border (Issue #100).
-            optional=True,
-        )
-        self.add_field(
-            self.tr("Pitch Accent File"),
-            self.pitch_accent_selector,
-            helper=self.tr(
-                "CSV/TSV with columns (reading, kanji, pattern), or a "
-                "Yomitan-format pitch zip (e.g. Kanjium, NHK). Yomitan zips "
-                "are imported into ~/.anki_miner/pitch_accent.csv on Save."
-            ),
-        )
+        # Pitch accent sources now live in their own Settings → Pitch Accent
+        # tab (multi-source first-hit-wins chain), like the frequency sources
+        # below. The old single-file picker that used to sit here was removed.
 
         # Frequency sources now live in their own Settings → Frequency tab
         # (multi-source additive chain). The old single-file picker that used

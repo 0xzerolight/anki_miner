@@ -2,7 +2,7 @@
 
 Runs :class:`ResourceDownloadWorker` over :data:`RECOMMENDED_DEFAULT_SET`
 behind a modal ``QProgressDialog`` + local ``QEventLoop`` (the same scaffold as
-``controllers/zip_import_flow.py``), then folds the successful results into the
+the frequency/pitch import flows), then folds the successful results into the
 config via :func:`apply_download_summary` and shows a per-item results dialog.
 
 The worker NEVER mutates config; this module owns the config mutation and the
@@ -141,7 +141,7 @@ def _run_download_modal(parent: QWidget, config: AnkiMinerConfig, download_dir: 
         RECOMMENDED_DEFAULT_SET,
         dicts_root=config.dicts_root,
         freqs_root=config.freqs_root,
-        pitch_csv=config.pitch_accent_path,
+        pitch_root=config.pitch_root,
         download_dir=download_dir,
     )
 

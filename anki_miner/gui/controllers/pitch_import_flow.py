@@ -1,0 +1,333 @@
+"""Pitch-source import orchestration (add / per-row reimport).
+
+Mirrors :class:`~anki_miner.gui.controllers.frequency_import_flow.FrequencyImportFlow`.
+Owns the :class:`~anki_miner.gui.workers.import_worker.ImportWorker`
+lifecycle and every dialog in the import flows. The settings tab keeps the panel
+widgets, the signal wiring, and the narrow chain persist (injected here as a
+callable so the dependency stays one-way: tab → controller → workers/services).
+
+Like frequency there is no fixed priority insertion point: a freshly imported
+source is simply *appended* (enabled) to the chain — with first-hit-wins
+resolution that means it starts as the lowest-priority filler; the user
+reorders it upward if it should win overlaps.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from pathlib import Path
+
+from PyQt6.QtCore import QCoreApplication
+from PyQt6.QtWidgets import QMessageBox, QWidget
+
+from anki_miner.config import AnkiMinerConfig, PitchSourceEntry
+from anki_miner.gui.controllers.import_flow_common import (
+    ModalImportFlowMixin,
+    _begin_import_trace,
+    _log_import_persist,
+    _log_import_picker_enter,
+    _log_import_picker_return,
+)
+from anki_miner.gui.utils import file_dialogs
+from anki_miner.gui.utils.dialog_paths import resolve_start_dir
+from anki_miner.gui.widgets.panels.chain_settings_panel_base import MutationToken
+from anki_miner.gui.widgets.panels.pitch_settings_panel import PitchSettingsPanel
+from anki_miner.gui.workers.import_worker import ImportWorker
+from anki_miner.services.pitch_accent import storage
+from anki_miner.services.pitch_accent.source_importer import PITCH_SOURCE_SUFFIXES
+from anki_miner.utils.i18n import tr_format
+
+
+class PitchImportFlow(ModalImportFlowMixin):
+    """Drives pitch-source imports for the Settings → Pitch Accent panel.
+
+    Plain (non-Qt) class mirroring
+    :class:`~anki_miner.gui.controllers.frequency_import_flow.FrequencyImportFlow`:
+    owns the import-worker lifecycle and every dialog; user feedback is the
+    in-flow progress dialog + success/failure message boxes.
+
+    Args:
+        parent: Widget used as the Qt parent for dialogs (the settings tab).
+        panel: The pitch settings panel (chain state, registry refresh).
+        get_config: Returns the tab's *current* config.
+        persist_chain: The tab's narrow chain persist — saves a chain mutation
+            to disk and notifies listeners without running the full Save
+            pipeline.
+    """
+
+    def __init__(
+        self,
+        parent: QWidget,
+        panel: PitchSettingsPanel,
+        get_config: Callable[[], AnkiMinerConfig],
+        persist_chain: Callable[[tuple[PitchSourceEntry, ...]], None],
+        notify_config_changed: Callable[[], None],
+    ) -> None:
+        self._parent = parent
+        self._panel = panel
+        self._get_config = get_config
+        self._persist_chain = persist_chain
+        self._notify_config_changed = notify_config_changed
+        # Long-lived worker reference: ImportWorker is a QThread and would be
+        # destroyed mid-run if it fell out of scope before joining.
+        self._active_import_worker: ImportWorker | None = None
+        self._retained_import_workers: list[ImportWorker] = []
+        self._mutation_token: MutationToken | None = None
+
+    def iter_close_workers(self) -> tuple:
+        """Live worker handles MainWindow must join on close.
+
+        A ``None`` entry (idle flow) is filtered by
+        ``BackgroundTaskController._join_worker_for_close``.
+        """
+        return self._iter_import_workers()
+
+    def _set_import_buttons_enabled(self, enabled: bool) -> None:
+        """Acquire/release the panel token that gates every mutation control."""
+        if enabled:
+            token = self._mutation_token
+            self._mutation_token = None
+            if token is not None:
+                self._panel.release(token)
+        elif self._mutation_token is None:
+            self._mutation_token = self._panel.hold_mutation("import")
+
+    def _begin_mutation(self, kind: str) -> bool:
+        if self._mutation_token is not None or not self._panel.prepare_for_mutation():
+            return False
+        self._mutation_token = self._panel.hold_mutation(kind)
+        return True
+
+    def _chain_with_new_source_appended(self, source_id: str) -> tuple[PitchSourceEntry, ...]:
+        """Return the current chain with ``source_id`` appended (enabled).
+
+        Any pre-existing entry with the same source_id is removed first so a
+        re-added source moves to the end rather than duplicating.
+        """
+        current = [e for e in self._panel.get_chain() if e.source_id != source_id]
+        current.append(PitchSourceEntry(source_id=source_id, enabled=True))
+        return tuple(current)
+
+    def add_source(self) -> None:
+        """Prompt for a pitch file and import it as a new source."""
+        if not self._begin_mutation("add"):
+            return
+        trace_id = _begin_import_trace("pitch add")
+        picker_started = _log_import_picker_enter(trace_id, "pitch source")
+        chosen, _ = file_dialogs.get_open_file_name(
+            self._parent,
+            QCoreApplication.translate("PitchImportFlow", "Choose pitch accent source"),
+            resolve_start_dir(None, file_mode=True),
+            self._source_picker_filter(),
+        )
+        _log_import_picker_return(trace_id, "pitch source", picker_started, chosen)
+        if not chosen:
+            self._set_import_buttons_enabled(True)
+            return
+
+        try:
+            worker = ImportWorker.for_pitch_source(Path(chosen), self._get_config().pitch_root, overwrite=False)
+        except Exception:
+            self._set_import_buttons_enabled(True)
+            raise
+
+        def on_success(source_id: str, meta: dict) -> None:
+            new_chain = self._chain_with_new_source_appended(source_id)
+            self._panel.refresh_registry()
+            self._panel.set_chain(new_chain)
+            _log_import_persist(trace_id, "start")
+            self._persist_chain(new_chain)
+            _log_import_persist(trace_id, "done")
+            skipped = meta.get("skipped_malformed", 0)
+            skipped_note = (
+                tr_format(
+                    QCoreApplication.translate("PitchImportFlow", " (skipped %1 malformed entries)"),
+                    f"{skipped:,}",
+                )
+                if skipped
+                else ""
+            )
+            QMessageBox.information(
+                self._parent,
+                QCoreApplication.translate("PitchImportFlow", "Pitch Source Added"),
+                tr_format(
+                    QCoreApplication.translate("PitchImportFlow", "Imported %1 entries from '%2'."),
+                    f"{meta.get('entry_count', 0):,}",
+                    meta.get("source_name", source_id),
+                )
+                + skipped_note,
+            )
+
+        def on_success_error(exc: Exception) -> None:
+            QMessageBox.warning(
+                self._parent,
+                QCoreApplication.translate("PitchImportFlow", "Configuration Update Failed"),
+                tr_format(
+                    QCoreApplication.translate(
+                        "PitchImportFlow",
+                        "Import completed, but the configuration update failed: %1",
+                    ),
+                    str(exc),
+                ),
+            )
+
+        self._run_modal_import(
+            worker=worker,
+            progress_label=QCoreApplication.translate("PitchImportFlow", "Importing pitch source…"),
+            cancel_label=QCoreApplication.translate("PitchImportFlow", "Cancel"),
+            determinate=False,
+            join_noun="pitch import worker",
+            failure_title=QCoreApplication.translate("PitchImportFlow", "Import Failed"),
+            refusal_message=QCoreApplication.translate(
+                "PitchImportFlow", "Another import is still finishing. Wait for it to finish and try again."
+            ),
+            cancelling_label=QCoreApplication.translate("PitchImportFlow", "Cancelling…"),
+            missing_result_message=QCoreApplication.translate(
+                "PitchImportFlow", "The import worker finished without a completion result."
+            ),
+            trace_id=trace_id,
+            on_success=on_success,
+            on_success_error=on_success_error,
+        )
+
+    def reimport_source(
+        self,
+        source_id: str,
+        *,
+        _scan_result: tuple[Path, Path | None, str | None] | None = None,
+        _trace_id: str | None = None,
+    ) -> None:
+        """Re-import an existing source into the same id.
+
+        The importer copied the original input alongside the index as
+        ``source.<ext>`` on first import, so a re-import can re-run without the
+        user re-picking the file. If that copy is gone (older import / moved
+        folder), prompt the user to re-pick.
+        """
+        trace_id = _trace_id or _begin_import_trace("pitch reimport")
+        if _scan_result is None:
+            if not self._begin_mutation("reimport"):
+                return
+            dest_root = self._get_config().pitch_root
+            source_dir = dest_root / source_id
+
+            def _scan() -> tuple[Path, Path | None, str | None]:
+                source_file = self._find_source_copy(source_dir)
+                existing_name: str | None = source_id
+                try:
+                    stored_name = storage.read_meta(source_dir / "index.sqlite").get("source_name")
+                except Exception:  # noqa: BLE001 — corrupt metadata must not strand a saved source
+                    pass
+                else:
+                    if isinstance(stored_name, str):
+                        existing_name = stored_name
+                return dest_root, source_file, existing_name
+
+            def _on_done(result: object) -> None:
+                assert isinstance(result, tuple)
+                self.reimport_source(source_id, _scan_result=result, _trace_id=trace_id)
+
+            def _on_error(message: str) -> None:
+                self._set_import_buttons_enabled(True)
+                QMessageBox.warning(
+                    self._parent,
+                    QCoreApplication.translate("PitchImportFlow", "Scan Failed"),
+                    message,
+                )
+
+            self._run_latest_scan(_scan, _on_done, _on_error)
+            return
+
+        dest_root, source_file, existing_name = _scan_result
+        if source_file is None:
+            picker_started = _log_import_picker_enter(trace_id, "pitch source")
+            chosen, _ = file_dialogs.get_open_file_name(
+                self._parent,
+                QCoreApplication.translate("PitchImportFlow", "Choose pitch source to re-import"),
+                resolve_start_dir(None, file_mode=True),
+                self._source_picker_filter(),
+            )
+            _log_import_picker_return(trace_id, "pitch source", picker_started, chosen)
+            if not chosen:
+                self._set_import_buttons_enabled(True)
+                return
+            source_file = Path(chosen)
+
+        # Preserve the existing display name across reimport. Corrupt or missing
+        # metadata falls back to the stable source id instead of the persisted
+        # copy's generic "source" stem.
+        if not self._panel.request_resource_release():
+            QMessageBox.warning(
+                self._parent,
+                QCoreApplication.translate("PitchImportFlow", "Re-import Blocked"),
+                QCoreApplication.translate(
+                    "PitchImportFlow",
+                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                    "Wait for the active task to finish and try again.",
+                ),
+            )
+            self._set_import_buttons_enabled(True)
+            return
+
+        try:
+            worker = ImportWorker.for_pitch_source_repair(
+                source_file,
+                dest_root,
+                source_id=source_id,
+                source_name=existing_name or source_id,
+            )
+        except Exception:
+            self._set_import_buttons_enabled(True)
+            raise
+
+        def on_success(imported_id: str, meta: dict) -> None:
+            del meta
+            current_chain = self._panel.get_chain()
+            self._panel.refresh_registry()
+            self._panel.set_chain(current_chain)
+            _log_import_persist(trace_id, "start")
+            self._notify_config_changed()
+            _log_import_persist(trace_id, "done")
+            QMessageBox.information(
+                self._parent,
+                QCoreApplication.translate("PitchImportFlow", "Pitch Source Re-imported"),
+                tr_format(
+                    QCoreApplication.translate("PitchImportFlow", "Re-imported %1 successfully."),
+                    imported_id,
+                ),
+            )
+
+        self._run_modal_import(
+            worker=worker,
+            progress_label=QCoreApplication.translate("PitchImportFlow", "Re-importing pitch source…"),
+            cancel_label=QCoreApplication.translate("PitchImportFlow", "Cancel"),
+            determinate=False,
+            join_noun="pitch import worker",
+            failure_title=QCoreApplication.translate("PitchImportFlow", "Re-import Failed"),
+            refusal_message=QCoreApplication.translate(
+                "PitchImportFlow", "Another import is still finishing. Wait for it to finish and try again."
+            ),
+            cancelling_label=QCoreApplication.translate("PitchImportFlow", "Cancelling…"),
+            missing_result_message=QCoreApplication.translate(
+                "PitchImportFlow", "The import worker finished without a completion result."
+            ),
+            trace_id=trace_id,
+            on_success=on_success,
+        )
+
+    @staticmethod
+    def _find_source_copy(source_dir: Path) -> Path | None:
+        """Return the persisted ``source.<ext>`` original input, if present."""
+        for suffix in PITCH_SOURCE_SUFFIXES:
+            candidate = source_dir / ("source" + suffix)
+            if candidate.is_file():
+                return candidate
+        return None
+
+    @staticmethod
+    def _source_picker_filter() -> str:
+        suffix_globs = " ".join(f"*{suffix}" for suffix in PITCH_SOURCE_SUFFIXES)
+        return tr_format(
+            QCoreApplication.translate("PitchImportFlow", "Pitch accent source (%1);;All Files (*)"),
+            suffix_globs,
+        )

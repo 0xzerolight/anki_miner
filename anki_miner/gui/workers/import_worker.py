@@ -1,18 +1,13 @@
 """QThread worker that wraps the on-disk resource importers with progress + cancel.
 
 One worker for every "import a file/dir into an on-disk index" flow: a Yomitan
-dictionary zip, JMdict XML, a frequency source, or an audio pack. Each domain's
-``for_*`` factory builds a ``runner`` closure that drives its importer and
-returns ``(resource_id, meta)``; :meth:`ImportWorker.run` executes it off the
-GUI thread and surfaces progress, completion, cancellation, and failure as Qt
-signals. Cancellation is delegated to the importer via its ``cancel_check``
-callback, wired to the base class's thread-safe ``is_cancelled`` flag.
-
-The Yomitan meta-bank → CSV importer (pitch accent) keeps its own
-:class:`~anki_miner.gui.workers.yomitan_csv_import_worker.YomitanCsvImportWorker`:
-its completion payload is a typed result *object*, not the ``(id, meta)``
-contract here, and its constructor takes a pre-bound importer fn rather than a
-runner — so unifying it would only obscure both.
+dictionary zip, JMdict XML, a frequency source, a pitch accent source, or an
+audio pack. Each domain's ``for_*`` factory builds a ``runner`` closure that
+drives its importer and returns ``(resource_id, meta)``; :meth:`ImportWorker.run`
+executes it off the GUI thread and surfaces progress, completion, cancellation,
+and failure as Qt signals. Cancellation is delegated to the importer via its
+``cancel_check`` callback, wired to the base class's thread-safe
+``is_cancelled`` flag.
 """
 
 from __future__ import annotations
@@ -30,6 +25,7 @@ from anki_miner.services.audio_packs.importer import import_audio_pack, repair_a
 from anki_miner.services.dictionary.importers.jmdict_importer import import_jmdict_xml, repair_jmdict_xml
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip, repair_yomitan_zip
 from anki_miner.services.frequency.source_importer import import_frequency_source, repair_frequency_source
+from anki_miner.services.pitch_accent.source_importer import import_pitch_source, repair_pitch_source
 
 logger = logging.getLogger(__name__)
 
@@ -281,6 +277,72 @@ class ImportWorker(CancellableWorker):
                 "skipped_malformed": result.skipped_malformed,
                 "converted_to_ranks": result.converted_to_ranks,
                 "is_categorical": result.is_categorical,
+            }
+            return result.source_id, meta
+
+        return cls(runner, source_path=input_path)
+
+    @classmethod
+    def for_pitch_source(
+        cls,
+        input_path: Path,
+        dest_root: Path,
+        *,
+        source_id: str | None = None,
+        source_name: str | None = None,
+        overwrite: bool = False,
+    ) -> ImportWorker:
+        """Build a worker that imports a pitch accent source file.
+
+        ``source_name`` is forwarded so reimport can preserve the existing
+        display name (see ``import_pitch_source``).
+        """
+
+        def runner(progress_fn: ProgressFn, cancel_fn: CancelFn) -> tuple[str, dict[str, Any]]:
+            result = import_pitch_source(
+                input_path,
+                dest_root,
+                source_id=source_id,
+                source_name=source_name,
+                progress=progress_fn,
+                cancel_check=cancel_fn,
+                overwrite=overwrite,
+            )
+            meta: dict[str, Any] = {
+                "entry_count": result.entry_count,
+                "source_name": result.source_name,
+                "format": result.format,
+                "skipped_malformed": result.skipped_malformed,
+            }
+            return result.source_id, meta
+
+        return cls(runner, source_path=input_path)
+
+    @classmethod
+    def for_pitch_source_repair(
+        cls,
+        input_path: Path,
+        dest_root: Path,
+        *,
+        source_id: str,
+        source_name: str,
+    ) -> ImportWorker:
+        """Build a worker for explicit repair of one pitch source slot."""
+
+        def runner(progress_fn: ProgressFn, cancel_fn: CancelFn) -> tuple[str, dict[str, Any]]:
+            result = repair_pitch_source(
+                input_path,
+                dest_root,
+                source_id=source_id,
+                source_name=source_name,
+                progress=progress_fn,
+                cancel_check=cancel_fn,
+            )
+            meta: dict[str, Any] = {
+                "entry_count": result.entry_count,
+                "source_name": result.source_name,
+                "format": result.format,
+                "skipped_malformed": result.skipped_malformed,
             }
             return result.source_id, meta
 
