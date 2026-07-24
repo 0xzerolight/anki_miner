@@ -27,6 +27,7 @@ from anki_miner.services.audio_fetch_common import (
     new_failure_counts,
 )
 from anki_miner.utils.file_utils import safe_filename
+from anki_miner.utils.text_utils import is_kana_only
 
 if TYPE_CHECKING:
     from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
@@ -167,11 +168,13 @@ class JPod101AudioFetcher:
 
         Args:
             mined_form: Word as mined onto the card (kanji/surface form).
-            reading: Kana reading of the word.  An empty or whitespace-only
-                reading skips the fetch entirely: without ``kana`` the JPod101
-                endpoint guesses a reading for the kanji, which picks the wrong
-                pronunciation for homographs (e.g. 辛い → からい vs つらい) and
-                caches that incorrect audio permanently under the word's key.
+            reading: Kana reading of the word.  A reading that is empty,
+                whitespace-only, or not pure kana (the tokenizer's OOV fallback
+                is the kanji surface) skips the fetch entirely: without a real
+                ``kana`` the JPod101 endpoint guesses a reading for the kanji,
+                which picks the wrong pronunciation for homographs (e.g. 辛い →
+                からい vs つらい) and caches that incorrect audio permanently
+                under the word's key.
             cancelled_check: Optional zero-argument callable that returns True
                 when the caller has requested cancellation.  Consulted after
                 the input guards, again immediately before ``time.sleep``, and
@@ -183,7 +186,7 @@ class JPod101AudioFetcher:
         Returns:
             Path to a cached mp3, or None if unavailable.
         """
-        if not mined_form.strip() or not reading.strip():
+        if not mined_form.strip() or not is_kana_only(reading.strip()):
             return None
 
         if cancelled_check is not None and cancelled_check():

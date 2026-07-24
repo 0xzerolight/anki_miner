@@ -104,6 +104,17 @@ class TestGoogleTranslateAudioFetcher:
         assert result is None
         assert calls == []
 
+    def test_non_kana_reading_returns_none_no_synthesis(self, tmp_path):
+        """A kanji 'reading' (the tokenizer's OOV surface fallback) is skipped:
+        feeding kanji to gTTS would make Google guess the homograph reading."""
+        fake, calls = _gtts_stub(_VALID_MP3)
+        fetcher = GoogleTranslateAudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch(f"{MODULE}.gtts.gTTS", fake):
+            result = fetcher.fetch("辛い", "辛い")
+
+        assert result is None
+        assert calls == []
+
     def test_empty_mined_form_returns_none_no_synthesis(self, tmp_path):
         """Empty or whitespace mined_form short-circuits to None."""
         fake, calls = _gtts_stub(_VALID_MP3)
@@ -212,11 +223,15 @@ class TestGoogleTranslateAudioFetcher:
         assert result.read_bytes() == mpeg_body
 
     def test_filename_sanitized_for_unsafe_characters(self, tmp_path):
-        """Words with path-hostile characters still cache safely."""
+        """Words with path-hostile characters still cache safely.
+
+        The reading must be kana (a non-kana reading is skipped by the input
+        guard), so the path-hostile characters ride on mined_form only.
+        """
         fake, _ = _gtts_stub(_VALID_MP3)
         fetcher = GoogleTranslateAudioFetcher(cache_dir=tmp_path, delay=0)
         with patch(f"{MODULE}.gtts.gTTS", fake):
-            result = fetcher.fetch("a/b:c", "x\\y")
+            result = fetcher.fetch("a/b:c\\d", "たべる")
 
         assert result is not None
         assert result.parent == tmp_path
