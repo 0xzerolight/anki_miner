@@ -73,7 +73,7 @@ class SubtitlesTab(QWidget):
         self.backfill_tab = CardBackfillTab(config)
         self._inner_tabs.addTab(
             self.backfill_tab,
-            QCoreApplication.translate("MainWindow", "Card Backfill"),
+            QCoreApplication.translate("MainWindow", "Backfill"),
         )
 
         # Stable sub-tab keys for reveal_capability (see capabilities.SUBTAB_KEYS).
