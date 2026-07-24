@@ -224,6 +224,25 @@ class TestEmptyReadingWildcard:
         finally:
             conn.close()
 
+    def test_lookup_rows_expose_stored_reading(self, tmp_path: Path):
+        # The fetcher's wildcard ambiguity guard counts distinct readings, so
+        # lookup must project the reading column (None for wildcard rows).
+        db_path = tmp_path / "index.sqlite"
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                AudioPackRow(expression="橋", reading="はし", source="nhk", file="hashi.mp3"),
+                AudioPackRow(expression="橋", reading=None, source="forvo", file="forvo.mp3"),
+            ],
+        )
+        conn = open_readonly(db_path)
+        try:
+            readings = {r.reading for r in lookup(conn, "橋", "")}
+            assert readings == {"はし", None}
+        finally:
+            conn.close()
+
     def test_empty_reading_returns_all_speakers(self, tmp_path: Path):
         db_path = tmp_path / "index.sqlite"
         create_index(db_path)

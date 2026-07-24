@@ -20,6 +20,7 @@ from anki_miner.services.audio_fetch_common import (
 )
 from anki_miner.services.audio_packs import storage
 from anki_miner.utils.file_utils import safe_filename
+from anki_miner.utils.text_utils import hiragana_to_katakana, is_kana_only, katakana_to_hiragana
 
 logger = logging.getLogger(__name__)
 
@@ -76,12 +77,19 @@ class LocalAudioPackFetcher:
 
         Args:
             mined_form: Word as mined onto the card (kanji/surface form).
-            reading: Kana reading of the word.  An empty or whitespace-only
-                reading skips the fetch entirely: storage.lookup falls back to
-                wildcard row selection without a reading, which can pick — and
-                cache permanently under the word's key — the wrong homograph
-                pronunciation (e.g. 辛い → からい vs つらい).  Same hazard the
-                JPod101AudioFetcher empty-reading skip closes.
+            reading: Kana reading of the word — usually. When the tokenizer has
+                no kana for a word (OOV), it falls back to the kanji surface,
+                so this can arrive non-kana; and a direct caller may pass ""
+                (unreachable from the mining ladder, which drops empty pairs —
+                see ``orchestration.audio_stage._expression_audio_candidates``).
+                A pure-kana reading takes the exact-match path (with a
+                katakana-folded retry: packs store ``kana`` verbatim, the miner
+                folds to hiragana). Anything else takes the wildcard path,
+                served ONLY when the pack's rows for the expression are
+                unambiguous — ≤1 distinct hiragana-folded reading — else only
+                NULL-reading (wildcard) rows are eligible. That guard keeps the
+                original homograph safety: 辛い (からい vs つらい) never serves
+                or caches a guessed pronunciation under the word's key.
             cancelled_check: Optional zero-argument callable that returns True
                 when the caller has requested cancellation.  Consulted once at
                 entry (before the sqlite open) — local lookups are fast enough
@@ -90,8 +98,9 @@ class LocalAudioPackFetcher:
         Returns:
             Path to a cached audio file, or None if unavailable. Never raises.
         """
-        if not mined_form.strip() or not reading.strip():
+        if not mined_form.strip():
             return None
+        reading = reading.strip()
 
         if cancelled_check is not None and cancelled_check():
             return None
@@ -113,7 +122,24 @@ class LocalAudioPackFetcher:
                 return None
 
             try:
-                rows = storage.lookup(conn, mined_form, reading)
+                if is_kana_only(reading):
+                    rows = storage.lookup(conn, mined_form, reading)
+                    katakana_variant = hiragana_to_katakana(reading)
+                    if not rows and katakana_variant != reading:
+                        # Packs store kana verbatim (often katakana for
+                        # NHK/SMK) while miner readings are hiragana-folded;
+                        # retry the exact match in the other script.
+                        rows = storage.lookup(conn, mined_form, katakana_variant)
+                else:
+                    # Non-kana (or empty) reading: the exact key is useless.
+                    # Wildcard the expression, then guard on ambiguity.
+                    rows = storage.lookup(conn, mined_form, "")
+                    distinct = {katakana_to_hiragana(r.reading) for r in rows if r.reading}
+                    if len(distinct) > 1:
+                        # Genuinely ambiguous — only wildcard (NULL-reading)
+                        # rows may serve, matching what the old exact path
+                        # returned for a non-kana reading.
+                        rows = [r for r in rows if r.reading is None]
             except (sqlite3.Error, OSError) as exc:
                 logger.debug("LocalAudioPackFetcher: lookup failed for %r: %s", mined_form, exc)
                 return None
