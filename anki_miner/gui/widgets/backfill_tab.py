@@ -318,8 +318,23 @@ class CardBackfillTab(QWidget):
             )
             if plan.total_field_changes > shown_rows:
                 parts.append(self.tr("Showing first {rows} rows.").format(rows=shown_rows))
-        else:
+        elif not plan.options.overwrite:
             parts.append(self.tr("Nothing to fill — all selected fields already have values."))
+        elif plan.identical_skips > 0:
+            parts.append(
+                self.tr("Nothing to overwrite — the freshly computed values are identical to the existing content.")
+            )
+        else:
+            # Overwrite scan with zero identical skips: the lookups produced no
+            # proposals (word not covered / field absent), so claiming the
+            # values are "identical" or "already present" would be false.
+            parts.append(self.tr("No new values were found for the selected fields."))
+        if plan.identical_skips > 0:
+            parts.append(
+                self.tr("{count} field value(s) already up to date (identical to the computed value).").format(
+                    count=plan.identical_skips
+                )
+            )
         if plan.sentinel_only_sorts:
             parts.append(
                 self.tr("{count} sort value(s) are the 9999999 no-frequency-found placeholder.").format(
