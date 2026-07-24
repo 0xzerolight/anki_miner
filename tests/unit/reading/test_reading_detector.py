@@ -166,14 +166,205 @@ def test_zip_with_sibling_mokuro(tmp_path):
     assert refs[0].image_root == archive
 
 
-def test_cbz_missing_sibling_errors_naming_expected(tmp_path):
+def test_cbz_missing_sibling_and_no_member_errors_naming_both(tmp_path):
+    # Real (empty) zip: no sidecar AND no embedded member → the error must
+    # guide toward both supported placements.
     cbz = tmp_path / "Vol1.cbz"
-    cbz.write_bytes(b"PK")
+    _write_archive(cbz, {"001.jpg": b"img"})
 
     with pytest.raises(SetupError) as excinfo:
         detector.detect(cbz)
 
-    assert "Vol1.mokuro" in str(excinfo.value)
+    msg = str(excinfo.value)
+    assert "Vol1.mokuro" in msg
+    assert "inside" in msg
+
+
+# --------------------------------------------------------------------------- #
+# Case 2b: embedded ``.mokuro`` member inside the archive (Issue #103).
+# --------------------------------------------------------------------------- #
+
+
+def _write_archive(path: Path, members: dict[str, bytes]) -> Path:
+    """Write a real zip archive with the given members."""
+    import zipfile
+
+    with zipfile.ZipFile(path, "w") as zf:
+        for name, data in members.items():
+            zf.writestr(name, data)
+    return path
+
+
+def _mokuro_bytes(*, title: str = "MyManga", volume: str | int = "Vol1", **extra) -> bytes:
+    data = {
+        "version": "0.1.0",
+        "title": title,
+        "title_uuid": "t-uuid",
+        "volume": volume,
+        "volume_uuid": "v-uuid",
+        "pages": [],
+    }
+    data.update(extra)
+    return json.dumps(data).encode("utf-8")
+
+
+def test_cbz_with_embedded_mokuro_member(tmp_path):
+    cbz = tmp_path / "Vol1.cbz"
+    _write_archive(cbz, {"Vol1.mokuro": _mokuro_bytes(volume="Vol1"), "001.jpg": b"img"})
+
+    refs = detector.detect(cbz)
+
+    assert len(refs) == 1
+    ref = refs[0]
+    assert ref.kind == "mokuro"
+    assert ref.path == cbz
+    assert ref.image_root == cbz
+    assert ref.ocr_entry == "Vol1.mokuro"
+    assert ref.title == "MyManga"
+    assert ref.volume == "Vol1"
+
+
+def test_cbz_embedded_member_nested_path(tmp_path):
+    cbz = tmp_path / "Vol1.cbz"
+    _write_archive(cbz, {"Vol1/Vol1.mokuro": _mokuro_bytes(), "Vol1/001.jpg": b"img"})
+
+    refs = detector.detect(cbz)
+
+    assert refs[0].ocr_entry == "Vol1/Vol1.mokuro"
+
+
+def test_cbz_embedded_member_numeric_volume_coerced_to_str(tmp_path):
+    cbz = tmp_path / "Vol1.cbz"
+    _write_archive(cbz, {"Vol1.mokuro": _mokuro_bytes(volume=3)})
+
+    refs = detector.detect(cbz)
+
+    assert refs[0].volume == "3"
+
+
+def test_cbz_sidecar_wins_over_embedded_member(tmp_path):
+    mok = tmp_path / "Vol1.mokuro"
+    _write_mokuro(mok, volume="Sidecar")
+    cbz = tmp_path / "Vol1.cbz"
+    _write_archive(cbz, {"Vol1.mokuro": _mokuro_bytes(volume="Embedded")})
+
+    refs = detector.detect(cbz)
+
+    assert refs[0].path == mok
+    assert refs[0].ocr_entry is None
+    assert refs[0].volume == "Sidecar"
+
+
+def test_cbz_embedded_junk_members_ignored(tmp_path):
+    cbz = tmp_path / "Vol1.cbz"
+    _write_archive(
+        cbz,
+        {
+            "__MACOSX/Vol1.mokuro": b"junk",
+            "._Vol1.mokuro": b"junk",
+            "Vol1.mokuro": _mokuro_bytes(),
+        },
+    )
+
+    refs = detector.detect(cbz)
+
+    assert refs[0].ocr_entry == "Vol1.mokuro"
+
+
+def test_cbz_multiple_embedded_members_errors(tmp_path):
+    cbz = tmp_path / "Vol1.cbz"
+    _write_archive(cbz, {"a.mokuro": _mokuro_bytes(), "b.mokuro": _mokuro_bytes()})
+
+    with pytest.raises(SetupError) as excinfo:
+        detector.detect(cbz)
+
+    msg = str(excinfo.value)
+    assert "a.mokuro" in msg
+    assert "b.mokuro" in msg
+
+
+def test_cbz_corrupt_archive_errors(tmp_path):
+    cbz = tmp_path / "Vol1.cbz"
+    cbz.write_bytes(b"PK\x03\x04 corrupt")
+
+    with pytest.raises(SetupError, match="Vol1.cbz"):
+        detector.detect(cbz)
+
+
+def test_cbz_malformed_embedded_mokuro_errors(tmp_path):
+    cbz = tmp_path / "Vol1.cbz"
+    _write_archive(cbz, {"Vol1.mokuro": b"{not json"})
+
+    with pytest.raises(SetupError):
+        detector.detect(cbz)
+
+
+def test_title_dir_with_embedded_archives(tmp_path):
+    title_dir = tmp_path / "MyManga"
+    title_dir.mkdir()
+    for vol in ["Vol1", "Vol2", "Vol10"]:
+        _write_archive(title_dir / f"{vol}.cbz", {f"{vol}.mokuro": _mokuro_bytes(volume=vol)})
+
+    refs = detector.detect(title_dir)
+
+    assert [r.volume for r in refs] == ["Vol1", "Vol2", "Vol10"]
+    assert all(r.ocr_entry is not None for r in refs)
+    assert all(r.image_root == r.path for r in refs)
+
+
+def test_title_dir_mixes_sidecar_and_embedded_volumes(tmp_path):
+    title_dir = tmp_path / "MyManga"
+    title_dir.mkdir()
+    _write_mokuro(title_dir / "Vol1.mokuro", volume="Vol1")
+    _write_archive(title_dir / "Vol2.cbz", {"Vol2.mokuro": _mokuro_bytes(volume="Vol2")})
+
+    refs = detector.detect(title_dir)
+
+    assert [r.volume for r in refs] == ["Vol1", "Vol2"]
+    assert refs[0].ocr_entry is None
+    assert refs[1].ocr_entry == "Vol2.mokuro"
+
+
+def test_title_dir_sidecar_beats_embedded_same_stem(tmp_path):
+    # Vol1.mokuro + Vol1.cbz (with an embedded copy) is ONE volume, sidecar-led.
+    title_dir = tmp_path / "MyManga"
+    title_dir.mkdir()
+    _write_mokuro(title_dir / "Vol1.mokuro", volume="Sidecar")
+    _write_archive(title_dir / "Vol1.cbz", {"Vol1.mokuro": _mokuro_bytes(volume="Embedded")})
+
+    refs = detector.detect(title_dir)
+
+    assert len(refs) == 1
+    assert refs[0].volume == "Sidecar"
+    assert refs[0].ocr_entry is None
+
+
+def test_title_dir_embedded_cbz_beats_zip_same_stem(tmp_path):
+    title_dir = tmp_path / "MyManga"
+    title_dir.mkdir()
+    _write_archive(title_dir / "Vol2.cbz", {"Vol2.mokuro": _mokuro_bytes(volume="FromCbz")})
+    _write_archive(title_dir / "Vol2.zip", {"Vol2.mokuro": _mokuro_bytes(volume="FromZip")})
+
+    refs = detector.detect(title_dir)
+
+    assert len(refs) == 1
+    assert refs[0].volume == "FromCbz"
+    assert refs[0].path == title_dir / "Vol2.cbz"
+
+
+def test_title_dir_bad_archive_skipped_not_fatal(tmp_path):
+    # One corrupt/ambiguous/OCR-less archive must not abort the folder scan.
+    title_dir = tmp_path / "MyManga"
+    title_dir.mkdir()
+    _write_archive(title_dir / "Vol1.cbz", {"Vol1.mokuro": _mokuro_bytes(volume="Vol1")})
+    (title_dir / "Vol2.cbz").write_bytes(b"PK\x03\x04 corrupt")
+    _write_archive(title_dir / "Vol3.cbz", {"a.mokuro": _mokuro_bytes(), "b.mokuro": _mokuro_bytes()})
+    _write_archive(title_dir / "Vol4.cbz", {"Vol4.mokuro": b"{not json"})
+    _write_archive(title_dir / "Vol5.cbz", {"001.jpg": b"img"})  # plain comic, no OCR
+
+    refs = detector.detect(title_dir)
+
+    assert [r.volume for r in refs] == ["Vol1"]
 
 
 # --------------------------------------------------------------------------- #
