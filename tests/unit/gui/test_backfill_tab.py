@@ -196,6 +196,46 @@ class TestPreviewTable:
         assert not tab.apply_button.isEnabled()
         assert tab.summary_label.text() != ""
 
+    def test_empty_plan_fill_mode_keeps_already_have_values_wording(self, tab):
+        tab._on_scan_finished(_plan([]))
+        assert "already have values" in tab.summary_label.text()
+
+    def test_empty_plan_overwrite_with_identicals_says_identical(self, tab):
+        plan = _plan(
+            [],
+            options=BackfillOptions(field_keys=frozenset({"frequency"}), overwrite=True),
+            identical_skips=2,
+        )
+        tab._on_scan_finished(plan)
+        text = tab.summary_label.text()
+        assert "Nothing to overwrite" in text
+        assert "identical" in text
+
+    def test_empty_plan_overwrite_without_identicals_is_neutral(self, tab):
+        # Empty overwrite plan with zero identical skips = lookups found nothing;
+        # must NOT claim values are identical or already present.
+        plan = _plan(
+            [],
+            options=BackfillOptions(field_keys=frozenset({"frequency"}), overwrite=True),
+            identical_skips=0,
+        )
+        tab._on_scan_finished(plan)
+        text = tab.summary_label.text()
+        assert "No new values were found" in text
+        assert "identical" not in text
+        assert "already have values" not in text
+
+    def test_identical_skips_suffix_on_nonempty_plan(self, tab):
+        plan = _plan(
+            [_note_plan(1)],
+            options=BackfillOptions(field_keys=frozenset({"frequency"}), overwrite=True),
+            identical_skips=3,
+        )
+        tab._on_scan_finished(plan)
+        text = tab.summary_label.text()
+        assert "3" in text
+        assert "up to date" in text
+
     def test_unavailable_fields_reported(self, tab):
         plan = _plan([], unavailable_fields=("pitch_graph", "pitch_text"))
         tab._on_scan_finished(plan)
