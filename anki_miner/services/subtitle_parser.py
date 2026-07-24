@@ -55,6 +55,7 @@ from anki_miner.utils.text_utils import (
     _format_furigana,
     generate_furigana_from_tokens,
     generate_reading_from_tokens,
+    is_kana_only,
     wrap_target_furigana_from_tokens,
 )
 
@@ -417,6 +418,10 @@ class SubtitleParserService:
         self._fg_cache = {}
         self._rd_cache = {}
         self._hw_reading_cache: dict[str, str | None] = {}
+        # Separate memo from _hw_reading_cache: same headword key, DIFFERENT
+        # selection policy (unique-only vs edit-distance tie-break) — sharing
+        # the dict would let one helper serve the other's answer.
+        self._unique_reading_cache: dict[str, str | None] = {}
 
     def _furigana(self, s: str) -> str:
         """Return generate_furigana(s, tagger), memoized within the current parse pass."""
@@ -460,6 +465,35 @@ class SubtitleParserService:
                     result = min(folded, key=lambda r: (_edit_distance(r, concat), folded.index(r)))
             self._hw_reading_cache[headword] = result
         return self._hw_reading_cache[headword]
+
+    def _attested_unique_reading(self, headword: str) -> str | None:
+        """Dictionary reading for *headword* ONLY when it is unambiguous; else None.
+
+        Reading-recovery probe for tokens whose tokenizer reading fell back to
+        the kanji surface (OOV: names, slang, neologisms — ``extract_reading``/
+        ``generate_reading`` return the surface when unidic has no kana). Such a
+        "reading" misses every reading-keyed consumer at once: pitch CSV lookup,
+        audio-pack ``reading = ?`` match, JPod101 ``kana=``, custom ``{reading}``
+        (the "no pitch ⇒ no word audio" report).
+
+        Deliberately NOT `_attested_headword_reading`: that helper's
+        multi-reading tie-break anchors on ``self._reading(headword)`` — which
+        in this path IS the kanji surface, so edit distance degenerates to
+        dictionary order and would stamp an arbitrary homograph reading
+        (中田 なかた/なかだ) onto the card, its furigana, its audio identity,
+        and its pitch. Recovering nothing is strictly safer than recovering
+        wrong: only a single distinct hiragana-folded attested reading passes.
+
+        Returns hiragana. None when no reading_lookup is wired, the dictionary
+        attests nothing, or it attests more than one distinct reading.
+        """
+        if self._reading_lookup is None:
+            return None
+        if headword not in self._unique_reading_cache:
+            attested = self._reading_lookup([headword]).get(headword) or []
+            folded = {katakana_to_hiragana(r) for r in attested}
+            self._unique_reading_cache[headword] = next(iter(folded)) if len(folded) == 1 else None
+        return self._unique_reading_cache[headword]
 
     def _apply_text_filter(self, text: str) -> str:
         """Apply the configured regex filter to a subtitle line.
@@ -799,6 +833,22 @@ class SubtitleParserService:
                 reading_overridden = True
             else:
                 expression_furigana = self._furigana(mined)
+
+        # Reading recovery (single point AFTER the whole branch chain, so every
+        # pure-kana outcome above — attested compounds, curated overrides,
+        # context-disambiguated readings like 方 かた/ほう — is structurally
+        # untouched): a non-kana expression_reading means the tokenizer had no
+        # kana for this token and fell back to the surface (OOV). Try the
+        # dictionary's UNIQUE attested reading; ambiguous or unattested words
+        # keep the surface fallback (and downstream reading-keyed consumers
+        # keep their current miss behavior — never a guessed homograph).
+        if not is_kana_only(expression_reading):
+            recovered = self._attested_unique_reading(mined)
+            if recovered is not None:
+                expression_reading = recovered
+                expression_furigana = _format_furigana(mined, recovered)
+                reading_overridden = True
+
         # Lemma reading for the JPod101 audio retry: when the mined form
         # misses, the loop retries with the lemma kanji and needs the lemma's
         # OWN reading (探す→さがす), not the surface reading (さがし). For
@@ -808,6 +858,13 @@ class SubtitleParserService:
         # reading override the lemma spelling (マズい→不味い) reads the SAME wrong
         # value in isolation, so reuse the corrected reading rather than recompute.
         lemma_reading = expression_reading if (mined == lemma or reading_overridden) else self._reading(lemma)
+        # Same recovery for the lemma leg (pitch keys on lemma + lemma_reading):
+        # a kanji-variant lemma the tokenizer can't read gets its unique
+        # attested reading, or stays on the surface fallback.
+        if lemma != mined and not is_kana_only(lemma_reading):
+            recovered_lemma = self._attested_unique_reading(lemma)
+            if recovered_lemma is not None:
+                lemma_reading = recovered_lemma
 
         # Pitch reading realignment: when the resolver diverged the front from
         # the lemma (感じる card, but archaic lemma 感ずる), pitch must key on the

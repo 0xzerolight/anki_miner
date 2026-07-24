@@ -401,27 +401,98 @@ class TestEmptyMinedForm:
 
 
 # ---------------------------------------------------------------------------
-# Empty / whitespace-only reading guard
+# Non-kana / empty reading: wildcard path with ambiguity guard
 # ---------------------------------------------------------------------------
 
 
-class TestEmptyReadingGuard:
-    """Mirrors the JPod101AudioFetcher empty-reading skip.
-
-    Without a reading the storage lookup falls back to wildcard row selection,
-    which can cache the wrong homograph pronunciation permanently under the
-    word's key. Storage-level wildcard semantics are unchanged (covered in
-    test_audio_pack_storage.py) — only the fetcher entry point is guarded.
+class TestUnreliableReadingWildcard:
+    """A non-kana reading (the tokenizer's OOV kanji-surface fallback) or an
+    empty one takes the wildcard path: serve only when the pack's rows for the
+    expression are unambiguous (≤1 distinct hiragana-folded reading), else only
+    NULL-reading rows are eligible. Preserves the original homograph guarantee
+    (辛い からい/つらい never serves a guess) while fixing the "kanji reading
+    skips every NHK/SMK/Forvo source" report. Empty readings are unreachable
+    from the mining ladder (audio_stage drops empty pairs); the fetcher
+    contract still covers them for direct callers.
     """
 
-    @pytest.mark.parametrize("reading", ["", "   "])
-    def test_empty_reading_returns_none_no_cache(self, tmp_path: Path, reading: str):
-        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+    def test_kanji_reading_single_reading_rows_serves(self, tmp_path: Path):
+        # The reported case: OOV word, reading fell back to the kanji surface,
+        # pack has exactly one reading for the expression.
+        db, pack_dir = _build_pack(tmp_path, [("鰤", "ぶり", "buri.mp3")])
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        assert fetcher.fetch("鰤", "鰤") is not None
+
+    def test_kanji_reading_all_null_rows_serves(self, tmp_path: Path):
+        # Forvo/latin-style rows carry NULL readings; today's exact path
+        # already served them for a kanji reading — must keep doing so.
+        db, pack_dir = _build_pack(tmp_path, [("鰤", None, "buri.mp3")])
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        assert fetcher.fetch("鰤", "鰤") is not None
+
+    def test_kanji_reading_ambiguous_rows_serves_null_row_only(self, tmp_path: Path):
+        db, pack_dir = _build_pack(
+            tmp_path,
+            [
+                ("辛い", "からい", "karai.mp3"),
+                ("辛い", "つらい", "tsurai.mp3"),
+                ("辛い", None, "forvo.mp3"),
+            ],
+        )
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        result = fetcher.fetch("辛い", "辛い")
+
+        assert result is not None
+        assert result.read_bytes() == b"AUDIO:forvo.mp3"
+
+    def test_kanji_reading_ambiguous_rows_no_null_returns_none(self, tmp_path: Path):
+        db, pack_dir = _build_pack(
+            tmp_path,
+            [("辛い", "からい", "karai.mp3"), ("辛い", "つらい", "tsurai.mp3")],
+        )
         cache_dir = tmp_path / "cache"
         fetcher = _make_fetcher(db, pack_dir, cache_dir)
 
-        assert fetcher.fetch("食べる", reading) is None
-        assert not cache_dir.exists() or not any(cache_dir.iterdir()), "no cache writes on empty reading"
+        assert fetcher.fetch("辛い", "辛い") is None
+        assert not cache_dir.exists() or not any(cache_dir.iterdir()), "no cache writes on ambiguous reading"
+
+    def test_mixed_script_same_reading_counts_as_one(self, tmp_path: Path):
+        # はし vs ハシ fold to one phonetic reading — not ambiguous.
+        db, pack_dir = _build_pack(
+            tmp_path,
+            [("嘴", "はし", "hashi_hira.mp3"), ("嘴", "ハシ", "hashi_kata.mp3")],
+        )
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        assert fetcher.fetch("嘴", "嘴") is not None
+
+    @pytest.mark.parametrize("reading", ["", "   "])
+    def test_empty_reading_unambiguous_serves(self, tmp_path: Path, reading: str):
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        assert fetcher.fetch("食べる", reading) is not None
+
+    @pytest.mark.parametrize("reading", ["", "   "])
+    def test_empty_reading_ambiguous_returns_none(self, tmp_path: Path, reading: str):
+        db, pack_dir = _build_pack(
+            tmp_path,
+            [("辛い", "からい", "karai.mp3"), ("辛い", "つらい", "tsurai.mp3")],
+        )
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        assert fetcher.fetch("辛い", reading) is None
+
+    def test_hiragana_reading_katakana_stored_rows_served_via_fold_retry(self, tmp_path: Path):
+        # NHK/SMK-style packs store the kana column verbatim (katakana);
+        # miner readings arrive hiragana-folded.
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "タベル", "taberu.mp3")])
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        assert fetcher.fetch("食べる", "たべる") is not None
 
     @pytest.mark.parametrize("mined_form", ["", "   "])
     def test_whitespace_mined_form_returns_none(self, tmp_path: Path, mined_form: str):

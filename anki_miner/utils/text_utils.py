@@ -293,9 +293,19 @@ def _is_kanji(char: str) -> bool:
     return is_cjk_ideograph(char) or char == "々"
 
 
-def _is_kana_only(text: str) -> bool:
-    """True iff every char is kana or a kana mark (ー・, iteration marks)."""
+def is_kana_only(text: str) -> bool:
+    """True iff every char is kana or a kana mark (ー・, iteration marks).
+
+    False for the empty string — callers using this as a "usable kana reading"
+    gate (audio fetchers, parser reading recovery) get the empty case rejected
+    for free.
+    """
     return bool(text) and all("ぁ" <= ch <= "ゖ" or "ァ" <= ch <= "ヺ" or ch in "ー・ゝゞヽヾ" for ch in text)
+
+
+# Internal alias predating the public export; existing private-name callers
+# (dictionary storage, furigana helpers) keep working.
+_is_kana_only = is_kana_only
 
 
 def _format_furigana(surface: str, reading: str) -> str:

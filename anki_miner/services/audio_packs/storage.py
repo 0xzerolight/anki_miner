@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS meta (
 # both cases as wildcards so callers never need to branch on reading presence.
 # No LIMIT: fetchers want all candidate rows; dictionary storage's LIMIT 5 does not apply.
 _LOOKUP_SQL = (
-    "SELECT file, source, speaker FROM entries "
+    "SELECT file, source, speaker, reading FROM entries "
     "WHERE expression = ? AND (? = '' OR reading IS NULL OR reading = ?) "
     "ORDER BY id"
 )
@@ -70,11 +70,17 @@ class AudioPackRow:
 
 @dataclass(frozen=True)
 class AudioEntry:
-    """Result of a lookup query."""
+    """Result of a lookup query.
+
+    ``reading`` carries the row's stored reading (None for wildcard rows,
+    e.g. forvo/legacy-jpod) so the fetcher's wildcard-lookup ambiguity guard
+    can count distinct readings; it is not part of the served audio identity.
+    """
 
     file: str
     source: str
     speaker: str | None
+    reading: str | None = None
 
 
 def create_index(db_path: Path) -> None:
@@ -177,4 +183,4 @@ def lookup(conn: sqlite3.Connection, expression: str, reading: str | None = "") 
     """
     r = reading if reading is not None else ""
     rows = conn.execute(_LOOKUP_SQL, (expression, r, r)).fetchall()
-    return [AudioEntry(file=row[0], source=row[1], speaker=row[2]) for row in rows]
+    return [AudioEntry(file=row[0], source=row[1], speaker=row[2], reading=row[3]) for row in rows]
