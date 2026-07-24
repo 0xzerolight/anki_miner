@@ -1744,6 +1744,18 @@ Total kartu dibuat: %2</translation>
         <translation>Tidak ada yang perlu diisi — semua bidang yang dipilih sudah memiliki nilai.</translation>
     </message>
     <message>
+        <source>Nothing to overwrite — the freshly computed values are identical to the existing content.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No new values were found for the selected fields.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>{count} field value(s) already up to date (identical to the computed value).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
         <translation>{count} nilai pengurutan merupakan nilai penanda 9999999 untuk frekuensi yang tidak ditemukan.</translation>
     </message>
@@ -4218,8 +4230,8 @@ Lanjutkan?</translation>
         <translation>Padatkan</translation>
     </message>
     <message>
-        <source>Card Backfill</source>
-        <translation>Pengisian Bidang Kartu</translation>
+        <source>Backfill</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Single</source>
@@ -4692,8 +4704,32 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation>Progres</translation>
     </message>
     <message>
+        <source>Volume</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Volume File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Manga</source>
         <translation>Manga</translation>
+    </message>
+    <message>
+        <source>A .mokuro volume, or a .cbz/.zip archive with its .mokuro beside or inside it. No extraction needed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Mining</translation>
+    </message>
+    <message>
+        <source>Mine the selected volume into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manga Folder</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Folder:</source>
@@ -4704,8 +4740,8 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation>Folder berisi satu volume manga, atau folder seri berisi banyak volume.</translation>
     </message>
     <message>
-        <source>Mine</source>
-        <translation>Mining</translation>
+        <source>Mine Folder</source>
+        <translation type="unfinished">Mining Folder</translation>
     </message>
     <message>
         <source>Mine the selected folder's volume(s) into Anki cards.</source>
@@ -4726,6 +4762,10 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     <message>
         <source>Subtitle files are mined in the Subtitles tab.</source>
         <translation>Berkas subtitel di-mining di tab Subtitel.</translation>
+    </message>
+    <message>
+        <source>Select a .mokuro, .cbz, or .zip volume first.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Select a manga folder first.</source>

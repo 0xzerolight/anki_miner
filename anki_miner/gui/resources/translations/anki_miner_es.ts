@@ -1744,6 +1744,18 @@ Total de tarjetas creadas: %2</translation>
         <translation>No hay nada que rellenar — todos los campos seleccionados ya tienen valores.</translation>
     </message>
     <message>
+        <source>Nothing to overwrite — the freshly computed values are identical to the existing content.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No new values were found for the selected fields.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>{count} field value(s) already up to date (identical to the computed value).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
         <translation>Valores de ordenación con el marcador 9999999 de frecuencia no encontrada: {count}.</translation>
     </message>
@@ -4229,8 +4241,8 @@ Cierre primero el explorador de tarjetas de Anki y cualquier editor de notas abi
         <translation>Condensar</translation>
     </message>
     <message>
-        <source>Card Backfill</source>
-        <translation>Completar tarjetas</translation>
+        <source>Backfill</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Single</source>
@@ -4703,8 +4715,32 @@ Puede ajustar esto más tarde en Ajustes → Anki.</translation>
         <translation>Progreso</translation>
     </message>
     <message>
+        <source>Volume</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Volume File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Manga</source>
         <translation>Manga</translation>
+    </message>
+    <message>
+        <source>A .mokuro volume, or a .cbz/.zip archive with its .mokuro beside or inside it. No extraction needed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Minar</translation>
+    </message>
+    <message>
+        <source>Mine the selected volume into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manga Folder</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Folder:</source>
@@ -4715,8 +4751,8 @@ Puede ajustar esto más tarde en Ajustes → Anki.</translation>
         <translation>Una carpeta con un volumen de manga, o una carpeta de serie con muchos volúmenes.</translation>
     </message>
     <message>
-        <source>Mine</source>
-        <translation>Minar</translation>
+        <source>Mine Folder</source>
+        <translation type="unfinished">Minar carpeta</translation>
     </message>
     <message>
         <source>Mine the selected folder's volume(s) into Anki cards.</source>
@@ -4737,6 +4773,10 @@ Puede ajustar esto más tarde en Ajustes → Anki.</translation>
     <message>
         <source>Subtitle files are mined in the Subtitles tab.</source>
         <translation>Los archivos de subtítulos se minan en la pestaña Subtítulos.</translation>
+    </message>
+    <message>
+        <source>Select a .mokuro, .cbz, or .zip volume first.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Select a manga folder first.</source>

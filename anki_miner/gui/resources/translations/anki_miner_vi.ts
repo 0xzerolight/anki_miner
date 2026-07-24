@@ -1744,6 +1744,18 @@ Tổng số thẻ đã tạo: %2</translation>
         <translation>Không có gì để điền — tất cả trường đã chọn đều đã có giá trị.</translation>
     </message>
     <message>
+        <source>Nothing to overwrite — the freshly computed values are identical to the existing content.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No new values were found for the selected fields.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>{count} field value(s) already up to date (identical to the computed value).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
         <translation>Có {count} giá trị sắp xếp là giá trị giữ chỗ 9999999 cho trường hợp không tìm thấy tần suất.</translation>
     </message>
@@ -4218,8 +4230,8 @@ Tiếp tục?</translation>
         <translation>Cô đọng</translation>
     </message>
     <message>
-        <source>Card Backfill</source>
-        <translation>Điền dữ liệu còn thiếu cho thẻ</translation>
+        <source>Backfill</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Single</source>
@@ -4692,8 +4704,32 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation>Tiến độ</translation>
     </message>
     <message>
+        <source>Volume</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Volume File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Manga</source>
         <translation>Manga</translation>
+    </message>
+    <message>
+        <source>A .mokuro volume, or a .cbz/.zip archive with its .mokuro beside or inside it. No extraction needed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation>Khai thác</translation>
+    </message>
+    <message>
+        <source>Mine the selected volume into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manga Folder</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Folder:</source>
@@ -4704,8 +4740,8 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation>Một thư mục có một tập manga, hoặc một thư mục bộ gồm nhiều tập.</translation>
     </message>
     <message>
-        <source>Mine</source>
-        <translation>Khai thác</translation>
+        <source>Mine Folder</source>
+        <translation type="unfinished">Khai thác thư mục</translation>
     </message>
     <message>
         <source>Mine the selected folder's volume(s) into Anki cards.</source>
@@ -4726,6 +4762,10 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     <message>
         <source>Subtitle files are mined in the Subtitles tab.</source>
         <translation>Tệp phụ đề được khai thác trong tab Phụ đề.</translation>
+    </message>
+    <message>
+        <source>Select a .mokuro, .cbz, or .zip volume first.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Select a manga folder first.</source>
