@@ -45,6 +45,17 @@ class GUIConfigManager:
 
     CONFIG_FILE = ANKI_MINER_HOME / "gui_config.json"
 
+    # Which named profile the live gui_config.json currently belongs to. A
+    # process-lifetime, IN-MEMORY value: seeded once by the boot step (from
+    # read_active_profile_id) and mutated only by the profile controller.
+    #
+    # save_config must NEVER read this from disk. It runs on every debounced
+    # settings edit, from MainWindow.closeEvent's finally, and from
+    # BackgroundTaskController._poll_deferred_close minutes after the window is
+    # hidden; a disk read there (let alone a "missing -> create" write) would
+    # add a new failure mode to all three.
+    ACTIVE_PROFILE_ID: str | None = None
+
     # Schema version stamped into every saved gui_config.json. Bump it only
     # when introducing a migration shim that a load MUST run for files written
     # under an older schema; that shim then gates on the loaded marker being
@@ -96,6 +107,11 @@ class GUIConfigManager:
         # the load path drops it before constructing AnkiMinerConfig.
         config_dict["config_schema_version"] = cls.CONFIG_SCHEMA_VERSION
 
+        # Stamp which profile this live config belongs to. Also a JSON-only
+        # marker; absent (not null) when no profile is active.
+        if cls.ACTIVE_PROFILE_ID is not None:
+            config_dict["active_profile_id"] = cls.ACTIVE_PROFILE_ID
+
         # Atomic write: stage to a sibling .tmp then os.replace. A truncating
         # in-place write (open("w")) leaves invalid JSON if we crash or lose
         # power mid-serialize, which load_config then swallows into factory
@@ -145,8 +161,36 @@ class GUIConfigManager:
             raise
 
     @classmethod
-    def _parse_and_migrate(cls, path: Path) -> AnkiMinerConfig:
+    def read_active_profile_id(cls) -> str | None:
+        """Return the ``active_profile_id`` marker stored in gui_config.json.
+
+        Best-effort raw read for the boot step that seeds
+        :attr:`ACTIVE_PROFILE_ID`; it deliberately does not build a config.
+        Never raises — every failure mode (missing file, OSError, undecodable
+        JSON, non-object root, absent key, or a value that is not a non-empty
+        string) yields ``None``, i.e. "no active profile".
+        """
+        raw = read_json_bounded(cls.CONFIG_FILE, _CONFIG_MAX_BYTES, _INVALID_CONFIG, "config")
+        if raw is _INVALID_CONFIG or not isinstance(raw, dict):
+            return None
+        value = raw.get("active_profile_id")
+        if isinstance(value, str) and value:
+            return value
+        return None
+
+    @classmethod
+    def _parse_and_migrate(cls, path: Path, *, archive_future: bool = True) -> AnkiMinerConfig:
         """Parse a config JSON file and run all migration steps.
+
+        Args:
+            archive_future: When True (the default, used for gui_config.json
+                and its .bak), archive a file whose schema version exceeds
+                CONFIG_SCHEMA_VERSION before the best-effort load. Callers
+                reading a sidecar file must pass False:
+                _archive_future_schema_config derives the archive name from
+                cls.CONFIG_FILE, so a future-schema sidecar would be archived
+                under a misleading gui_config.from-schema-N.json name and
+                repeated reads would pile up .2/.3 collision variants of it.
 
         Raises:
             json.JSONDecodeError: If the file contains invalid JSON.
@@ -163,7 +207,8 @@ class GUIConfigManager:
 
         schema_version = config_dict.get("config_schema_version")
         if (
-            isinstance(schema_version, int)
+            archive_future
+            and isinstance(schema_version, int)
             and not isinstance(schema_version, bool)
             and schema_version > cls.CONFIG_SCHEMA_VERSION
         ):
@@ -311,11 +356,18 @@ class GUIConfigManager:
             config_dict.setdefault("first_run_setup_done", True)
             config_dict.setdefault("first_run_shortcut_done", True)
 
-        # Drop the schema-version marker (see CONFIG_SCHEMA_VERSION): a JSON-
-        # only key, never a dataclass field. A missing marker means the file
-        # predates schema versioning (version 0). Popped here so it neither
-        # reaches AnkiMinerConfig nor logs as a dropped unknown key below.
+        # Drop the three JSON-only marker keys — none is a dataclass field:
+        #   config_schema_version (see CONFIG_SCHEMA_VERSION; a missing marker
+        #     means the file predates schema versioning, i.e. version 0),
+        #   active_profile_id (gui_config.json only — which profile the live
+        #     config belongs to),
+        #   profile_name (profile sidecar files only — that profile's display
+        #     name).
+        # Popped here so they neither reach AnkiMinerConfig nor log as dropped
+        # unknown keys below on every single load.
         config_dict.pop("config_schema_version", None)
+        config_dict.pop("active_profile_id", None)
+        config_dict.pop("profile_name", None)
 
         # Drop keys not in the current dataclass (e.g., removed fields from old
         # versions). Without this filter, AnkiMinerConfig(**config_dict) raises

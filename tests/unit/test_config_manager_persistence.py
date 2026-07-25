@@ -322,6 +322,37 @@ class TestFutureSchemaArchival:
         assert numbered.read_bytes() == future_bytes
         assert not tmp_config.with_name(f"gui_config.from-schema-{future_schema}.3.json").exists()
 
+    def test_archive_future_opt_out_writes_no_archive(self, tmp_config: Path, tmp_path: Path):
+        """``archive_future=False`` loads a future-schema sidecar without archiving.
+
+        The archive name is derived from ``CONFIG_FILE``, so archiving a
+        sidecar would name it ``gui_config.from-schema-N.json`` — a file that
+        never held gui_config.json's bytes.
+        """
+        future_schema = GUIConfigManager.CONFIG_SCHEMA_VERSION + 7
+        sidecar = tmp_path / "anime.json"
+        sidecar.write_text(
+            json.dumps({"config_schema_version": future_schema, "theme": "dark"}),
+            encoding="utf-8",
+        )
+
+        loaded = GUIConfigManager._parse_and_migrate(sidecar, archive_future=False)
+
+        assert loaded.theme == "dark"
+        assert list(tmp_path.glob("*from-schema*")) == []
+
+    def test_archive_future_defaults_to_archiving(self, tmp_config: Path, tmp_path: Path):
+        """The default keeps today's behaviour — the opt-out must be explicit."""
+        future_schema = GUIConfigManager.CONFIG_SCHEMA_VERSION + 8
+        sidecar = tmp_path / "anime.json"
+        sidecar_bytes = json.dumps({"config_schema_version": future_schema, "theme": "dark"}).encode()
+        sidecar.write_bytes(sidecar_bytes)
+
+        GUIConfigManager._parse_and_migrate(sidecar)
+
+        archive = tmp_config.with_name(f"gui_config.from-schema-{future_schema}.json")
+        assert archive.read_bytes() == sidecar_bytes
+
     def test_normal_saves_never_modify_future_schema_archives(self, tmp_config: Path):
         future_schema = GUIConfigManager.CONFIG_SCHEMA_VERSION + 3
         future_bytes = json.dumps({"config_schema_version": future_schema, "theme": "dark"}).encode()
@@ -653,3 +684,113 @@ class TestSchemaVersionMarker:
         GUIConfigManager.save_config(create_default_config())
         loaded = GUIConfigManager.load_config()
         assert not hasattr(loaded, "config_schema_version")
+
+
+class TestActiveProfileIdMarker:
+    """active_profile_id / profile_name: JSON-only markers, like the schema version."""
+
+    def test_isolation_fixture_resets_active_profile_id(self):
+        """The autouse home isolation must hand every test a clean marker.
+
+        Pins the ``tests/_home_isolation.py`` hook: without it the class
+        attribute is process-global mutable state and a test that sets it would
+        make an unrelated later save stamp a stale id.
+        """
+        assert GUIConfigManager.ACTIVE_PROFILE_ID is None
+
+    def test_saved_json_carries_active_profile_id(self, tmp_config: Path, monkeypatch):
+        monkeypatch.setattr(GUIConfigManager, "ACTIVE_PROFILE_ID", "anime")
+
+        GUIConfigManager.save_config(create_default_config())
+
+        raw = json.loads(tmp_config.read_text(encoding="utf-8"))
+        assert raw["active_profile_id"] == "anime"
+
+    def test_saved_json_omits_active_profile_id_when_unset(self, tmp_config: Path, monkeypatch):
+        """No active profile means the key is ABSENT, not null."""
+        monkeypatch.setattr(GUIConfigManager, "ACTIVE_PROFILE_ID", None)
+
+        GUIConfigManager.save_config(create_default_config())
+
+        raw = json.loads(tmp_config.read_text(encoding="utf-8"))
+        assert "active_profile_id" not in raw
+
+    def test_markers_never_reach_the_dataclass(self, tmp_config: Path):
+        """A file carrying both markers loads identically to one without them."""
+        base = {
+            "config_schema_version": GUIConfigManager.CONFIG_SCHEMA_VERSION,
+            "anki_deck_name": "Mining",
+            "theme": "dark",
+        }
+
+        tmp_config.write_text(json.dumps(base), encoding="utf-8")
+        without_markers = GUIConfigManager.load_config()
+
+        tmp_config.write_text(
+            json.dumps({**base, "active_profile_id": "anime", "profile_name": "Anime"}),
+            encoding="utf-8",
+        )
+        with_markers = GUIConfigManager.load_config()
+
+        assert with_markers == without_markers
+        assert not hasattr(with_markers, "active_profile_id")
+        assert not hasattr(with_markers, "profile_name")
+
+    def test_markers_are_not_logged_as_dropped_unknown_keys(self, tmp_config: Path, caplog):
+        """Popped before the unknown-key filter, so they never spam every load."""
+        tmp_config.write_text(
+            json.dumps(
+                {
+                    "config_schema_version": GUIConfigManager.CONFIG_SCHEMA_VERSION,
+                    "active_profile_id": "anime",
+                    "profile_name": "Anime",
+                    "removed_legacy_setting": 1,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with caplog.at_level("DEBUG", logger="anki_miner.gui.utils.config_manager"):
+            GUIConfigManager.load_config()
+
+        assert "removed_legacy_setting" in caplog.text
+        assert "active_profile_id" not in caplog.text
+        assert "profile_name" not in caplog.text
+
+    def test_read_active_profile_id_returns_stored_id(self, tmp_config: Path):
+        tmp_config.write_text(
+            json.dumps({"active_profile_id": "anime", "theme": "dark"}),
+            encoding="utf-8",
+        )
+
+        assert GUIConfigManager.read_active_profile_id() == "anime"
+
+    def test_read_active_profile_id_returns_none_for_missing_file(self, tmp_config: Path):
+        assert not tmp_config.exists()
+        assert GUIConfigManager.read_active_profile_id() is None
+
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            pytest.param("{BROKEN", id="invalid-json"),
+            pytest.param('["not", "a", "mapping"]', id="list-root"),
+            pytest.param('{"theme": "dark"}', id="key-absent"),
+            pytest.param('{"active_profile_id": 123}', id="not-a-string"),
+            pytest.param('{"active_profile_id": ""}', id="empty-string"),
+        ],
+    )
+    def test_read_active_profile_id_returns_none_for_unusable_marker(self, tmp_config: Path, raw: str):
+        tmp_config.write_text(raw, encoding="utf-8")
+
+        assert GUIConfigManager.read_active_profile_id() is None
+
+    def test_read_active_profile_id_swallows_oserror(self, tmp_config: Path, monkeypatch):
+        """An unreadable config must not crash the boot step that seeds the marker."""
+        tmp_config.write_text(json.dumps({"active_profile_id": "anime"}), encoding="utf-8")
+
+        def _boom(self: Path, *args, **kwargs):
+            raise OSError("Permission denied")
+
+        monkeypatch.setattr(Path, "open", _boom)
+
+        assert GUIConfigManager.read_active_profile_id() is None
