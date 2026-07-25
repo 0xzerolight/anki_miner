@@ -27,7 +27,7 @@ CORPUS_PATH = REPOSITORY_ROOT / "tests" / "fixtures" / "goldens" / "tokenizer-v1
 V2_INPUT_PATH = REPOSITORY_ROOT / "tests" / "fixtures" / "goldens" / "engine-v2-input.json"
 V2_SCHEMA_PATH = REPOSITORY_ROOT / "tests" / "fixtures" / "goldens" / "engine-v2.schema.json"
 V2_FIXTURE_PATH = REPOSITORY_ROOT / "tests" / "fixtures" / "goldens" / "engine-v2.json"
-RUNTIME_LOCK_PATH = REPOSITORY_ROOT / "scripts" / "golden-runtime-requirements.txt"
+RUNTIME_LOCK_PATH = REPOSITORY_ROOT / "scripts" / "golden-runtime-requirements.pip"
 GOLDEN_WORKFLOW_PATH = REPOSITORY_ROOT / ".github" / "workflows" / "android-engine-goldens.yml"
 PREPARE_UNIDIC_PATH = REPOSITORY_ROOT / "scripts" / "prepare_golden_unidic.py"
 PINNED_ENGINE_REVISION = "ba3b3cfbcc53e57a440c8b9f157209851408c62a"
@@ -656,7 +656,7 @@ def test_v2_fixture_is_byte_repeatable_and_matches_reviewed_artifact(clean_engin
     # provenance.runtime embeds ABI/interpreter-specific dependency content hashes
     # (compiled wheels differ per Python minor), so the byte-exact reviewed-artifact
     # match is only meaningful under the pinned golden runtime (CPython 3.13.7 +
-    # golden-runtime-requirements.txt), which the dedicated Android engine goldens
+    # golden-runtime-requirements.pip), which the dedicated Android engine goldens
     # workflow enforces on every push. Skip the comparison when the local runtime
     # cannot reproduce the reviewed dependency set (e.g. the 3.11/3.12 matrix legs).
     generated = json.loads(first.read_text(encoding="utf-8"))

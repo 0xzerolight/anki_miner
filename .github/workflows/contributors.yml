@@ -25,6 +25,11 @@ concurrency:
 
 jobs:
   update:
+    # Dependabot is never listed in CONTRIBUTORS.md, so regenerating for its PRs
+    # is pure churn -- and because the concurrency group above is deliberately
+    # global (one shared file, serialized on purpose), a burst of dependabot PRs
+    # makes these runs cancel each other and report as failed checks.
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
