@@ -26,6 +26,8 @@ from pathlib import Path
 
 import pytest
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QShowEvent
+from PyQt6.QtWidgets import QTreeWidgetItem
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles.theme import Theme
@@ -91,6 +93,23 @@ def _active_theme_key(panel: UISettingsPanel) -> str | None:
     return key if isinstance(key, str) else None
 
 
+def _item_for_key(panel: UISettingsPanel, key: str) -> QTreeWidgetItem:
+    """Return the (possibly nested) tree row carrying ``key``."""
+
+    def walk(item: QTreeWidgetItem):
+        yield item
+        for i in range(item.childCount()):
+            yield from walk(item.child(i))
+
+    root = panel.tree.invisibleRootItem()
+    assert root is not None
+    for i in range(root.childCount()):
+        for item in walk(root.child(i)):
+            if item.data(panel.COL_NAME, Qt.ItemDataRole.UserRole) == key:
+                return item
+    raise AssertionError(f"no tree row for theme {key!r}")
+
+
 class TestUIPanelLoadFromConfig:
     """Every UI-panel widget follows an external config swap."""
 
@@ -139,6 +158,11 @@ class TestUIPanelRestartNotes:
     """Restart notes track the values Qt is actually running with."""
 
     def test_hidden_when_loaded_value_equals_boot_value(self, ui_panel, test_config):
+        # Both notes are already hidden at construction, so force them visible
+        # first — otherwise this passes even if load_from_config did nothing.
+        ui_panel.language_restart_note.setVisible(True)
+        ui_panel.zoom_restart_note.setVisible(True)
+
         ui_panel.load_from_config(test_config)
 
         assert ui_panel.language_restart_note.isHidden()
@@ -187,6 +211,69 @@ class TestUIPanelRevertBaseline:
 
         assert ui_panel._preview_baseline == "dark"
 
+    def test_preview_survives_a_reload_triggered_by_an_unrelated_field(self, tab, test_config, swapped_config):
+        """A mid-preview reload must not destroy the Revert target.
+
+        The full live wiring, in four steps:
+
+        1. showEvent captures the baseline.
+        2. The user previews another theme. ``theme`` is in
+           ``_EXTERNAL_ONLY_FIELDS`` so this round trip does NOT reload.
+        3. The user toggles "Use system file dialogs" in the same panel.
+           ``use_native_file_dialogs`` is not external-only, so the config round
+           trip DOES reload the panel — carrying the previewed theme with it.
+        4. Revert must still restore the theme from step 1.
+        """
+        # SettingsTab.config_changed → MainWindow.update_config →
+        # config_refreshed → SettingsTab.update_config (app.py:950).
+        tab.config_changed.connect(tab.update_config)
+        Theme.set_mode("light")
+        tab.config = replace(test_config, theme="light", use_native_file_dialogs=False)
+        tab._load_config()
+        panel = tab.ui_panel
+
+        panel.showEvent(QShowEvent())
+        assert panel._preview_baseline == "light"
+
+        panel.tree.setCurrentItem(_item_for_key(panel, swapped_config.theme))
+        assert Theme.get_current_mode() == "dark"
+        assert tab.config.theme == "dark"  # persisted, but no reload
+        assert panel._preview_baseline == "light"
+
+        panel.native_dialogs_checkbox.setChecked(True)
+        assert tab.config.use_native_file_dialogs is True  # this one DID reload
+        assert panel.native_dialogs_checkbox.isChecked() is True
+
+        assert panel._preview_baseline == "light"
+        panel._revert_preview()
+        assert Theme.get_current_mode() == "light"
+        assert _active_theme_key(panel) == "light"
+
+
+class TestUIPanelThemesRoot:
+    """The "Open themes folder" button follows the config; the tree cannot."""
+
+    def test_button_and_tooltip_follow_the_config(self, ui_panel, test_config, tmp_path):
+        moved = tmp_path / "other-themes"
+
+        ui_panel.load_from_config(replace(test_config, themes_root=moved))
+
+        assert ui_panel._themes_root == moved
+        assert str(moved) in ui_panel.open_folder_btn.toolTip()
+
+    def test_open_uses_the_new_root(self, ui_panel, test_config, tmp_path, monkeypatch):
+        moved = tmp_path / "other-themes"
+        opened: list[str] = []
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.panels.ui_settings_panel.QDesktopServices.openUrl",
+            lambda url: opened.append(url.toLocalFile()),
+        )
+        ui_panel.load_from_config(replace(test_config, themes_root=moved))
+
+        ui_panel._open_themes_folder()
+
+        assert opened == [str(moved)]
+
 
 class TestChainPanelRoots:
     """The three chain panels re-root instead of scanning the old directory."""
@@ -211,6 +298,46 @@ class TestChainPanelRoots:
 
         assert tab.audio_panel._packs_root == new_root
         assert tab.audio_panel._view is None
+
+
+_CHAIN_PANELS = [
+    ("frequency_panel", "set_freqs_root", "_freqs_root"),
+    ("pitch_panel", "set_pitch_root", "_pitch_root"),
+    ("audio_panel", "set_packs_root", "_packs_root"),
+]
+
+
+@pytest.mark.parametrize(("panel_attr", "setter", "root_attr"), _CHAIN_PANELS)
+class TestChainPanelRootsAreIdempotent:
+    """An unchanged root must not spawn a rescan.
+
+    ``SettingsTab._load_config`` runs after every auto-save commit touching a
+    non-external field, and hands each panel the same root nearly every time. A
+    rescan there flashes a "Loading…" placeholder and holds a mutation token
+    that disables the panel's Add button, for nothing.
+    """
+
+    def test_same_root_is_a_no_op(self, tab, panel_attr, setter, root_attr, monkeypatch):
+        panel = getattr(tab, panel_attr)
+        panel._view = object()
+        scans: list[int] = []
+        monkeypatch.setattr(panel, "_scan_and_render_async", lambda: scans.append(1))
+
+        getattr(panel, setter)(getattr(panel, root_attr))
+
+        assert scans == []
+        assert panel._view is not None
+
+    def test_a_changed_root_still_rescans(self, tab, tmp_path, panel_attr, setter, root_attr, monkeypatch):
+        panel = getattr(tab, panel_attr)
+        panel._view = object()
+        scans: list[int] = []
+        monkeypatch.setattr(panel, "_scan_and_render_async", lambda: scans.append(1))
+
+        getattr(panel, setter)(tmp_path / "moved")
+
+        assert scans == [1]
+        assert panel._view is None
 
 
 class TestSettingsTabLoadConfigFanOut:

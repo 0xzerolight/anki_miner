@@ -178,6 +178,12 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
         resolves ``resolve_managed_slot`` against the wrong directory. This
         panel has no storage-folder selector, so there is nothing to re-sync.
         """
+        if freqs_root == self._freqs_root:
+            # _load_config runs after every auto-save commit that touches a
+            # non-external field, and the root is the same almost every time.
+            # Rescanning anyway would flash a "Loading…" placeholder and take a
+            # hold_mutation("scan") token (disabling Add) on every settings edit.
+            return
         self._freqs_root = freqs_root
         self._view = None
         # Root changed → cached scan is stale; rescan off-thread (no-op before

@@ -147,6 +147,14 @@ class UISettingsPanel(QWidget):
         self._boot_language = ui_language
         self._boot_zoom = ui_zoom
         self._preview_baseline: str | None = None
+        # The theme this panel last *saw*: the previous load's ``config.theme``,
+        # or whatever the panel itself made live since. ``load_from_config``
+        # compares against it to tell a genuine external theme change (profile
+        # switch, Import Settings, the header combo) apart from the panel's own
+        # live preview — the preview is exactly what Revert exists to undo, so a
+        # reload triggered by some unrelated field must not re-point the revert
+        # baseline at the previewed theme. ``None`` until the first load.
+        self._last_seen_theme: str | None = None
         # Star button registry — populated by _populate so favorite toggles
         # can update one row in place instead of rebuilding the entire tree.
         # Key → variant star button; key → (family_item, family_name, entries)
@@ -310,12 +318,7 @@ class UISettingsPanel(QWidget):
         buttons.setSpacing(SPACING.sm)
 
         self.open_folder_btn = ModernButton(self.tr("Open themes folder"), variant="secondary")
-        self.open_folder_btn.setToolTip(
-            tr_format(
-                self.tr("Open %1; drop theme JSON files here to install on next launch."),
-                self._themes_root,
-            )
-        )
+        self.open_folder_btn.setToolTip(self._themes_folder_tooltip())
         self.open_folder_btn.clicked.connect(self._open_themes_folder)
         buttons.addWidget(self.open_folder_btn)
 
@@ -631,6 +634,17 @@ class UISettingsPanel(QWidget):
         new_cell = self._build_family_star_cell(family_name, entries, favorites)
         self.tree.setItemWidget(family_item, self.COL_STAR, new_cell)
 
+    def _themes_folder_tooltip(self) -> str:
+        """Tooltip for the "Open themes folder" button, naming the current root.
+
+        Shared by ``_setup_ui`` and ``load_from_config`` so the displayed path
+        can follow a config swap without duplicating the translatable string.
+        """
+        return tr_format(
+            self.tr("Open %1; drop theme JSON files here to install on next launch."),
+            self._themes_root,
+        )
+
     def _open_themes_folder(self) -> None:
         """Open (creating if necessary) the user themes directory."""
         try:
@@ -652,6 +666,11 @@ class UISettingsPanel(QWidget):
 
     def _apply_to_app(self, mode: str) -> None:
         """Repaint the application with the given theme key."""
+        # Single choke point for "the panel made this theme live" (preview and
+        # Revert both route through here), so load_from_config can recognise a
+        # later reload carrying this theme as the panel's own change rather than
+        # an external swap. See _last_seen_theme.
+        self._last_seen_theme = mode
         app = QApplication.instance()
         if isinstance(app, QApplication):
             Theme.apply_to_app(app, mode)
@@ -813,16 +832,31 @@ class UISettingsPanel(QWidget):
         finally:
             self.native_dialogs_checkbox.blockSignals(False)
 
+        # The themes folder button and its tooltip must name the config's root.
+        # Deliberate asymmetry: the tree does NOT re-scan it, because Theme
+        # discovers themes once at boot, so a new root's JSON files can only
+        # become rows after a restart. The button has no such excuse — left
+        # alone it would open (and create) the PREVIOUS config's directory.
+        self._themes_root = config.themes_root
+        self.open_folder_btn.setToolTip(self._themes_folder_tooltip())
+
         # Rebuild the tree so the Active marker, favorites stars and selection
         # follow the re-seeded Theme. _populate blocks the tree's signals, so no
-        # state_changed escapes.
+        # state_changed escapes. Unconditional: favorites (and, for a whole-config
+        # swap, the entire Theme state) can move without config.theme changing.
         self._populate()
         # Re-point Revert at the now-active theme; reverting to the pre-swap one
-        # would fight the config that was just loaded. Skipped while the panel
-        # has never been shown — showEvent owns that first capture, and
-        # SettingsTab._load_config also runs during construction.
-        if self._preview_baseline is not None:
+        # would fight the config that was just loaded. Two guards:
+        #   * never before the first show — showEvent owns that first capture,
+        #     and SettingsTab._load_config also runs during construction;
+        #   * only when the incoming theme is not one this panel itself made
+        #     live. A reload can be triggered by ANY non-external field (e.g.
+        #     toggling "Use system file dialogs"), and it carries the previewed
+        #     theme along with it; resetting there would silently destroy the
+        #     revert target mid-preview and leave Revert a no-op.
+        if self._preview_baseline is not None and config.theme != self._last_seen_theme:
             self.reset_baseline()
+        self._last_seen_theme = config.theme
 
         self.language_restart_note.setVisible(config.ui_language != self._boot_language)
         self.zoom_restart_note.setVisible(config.ui_zoom != self._boot_zoom)
