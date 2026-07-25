@@ -102,6 +102,9 @@ class SettingsTab(QWidget):
         vulkan_model_download_requested: Emitted when the Subtitles panel's
             "Download Vulkan model" button is clicked. Carries the selected
             acoustic model name.
+        manage_profiles_requested: Re-emitted from the UI panel's "Manage
+            Profiles…" button. The window opens the dialog, not this tab: a
+            profile switch reloads every panel here from the incoming config.
     """
 
     validation_requested = pyqtSignal()
@@ -112,6 +115,7 @@ class SettingsTab(QWidget):
     cuda_pack_download_requested = pyqtSignal()
     vad_pack_download_requested = pyqtSignal()
     vulkan_model_download_requested = pyqtSignal(str)  # Emits model name
+    manage_profiles_requested = pyqtSignal()
 
     # Fields written OUTSIDE the Settings Save path (theme selector, update
     # banner, first-run flags).  An update_config call that touches ONLY these
@@ -425,6 +429,9 @@ class SettingsTab(QWidget):
         self.ui_panel.zoom_changed.connect(self._on_zoom_changed)
         self.ui_panel.native_dialogs_changed.connect(self._on_native_dialogs_changed)
         self.ui_panel.language_changed.connect(self._on_language_changed)
+        # Straight through to the window — the dialog must not be owned by a
+        # panel that a profile switch reloads underneath it.
+        self.ui_panel.manage_profiles_requested.connect(self.manage_profiles_requested)
 
         # YouTube panel: manual "Update yt-dlp now" → re-emit to MainWindow
         # (app.py routes it to background_tasks.start_ytdlp_update(force=True)).
