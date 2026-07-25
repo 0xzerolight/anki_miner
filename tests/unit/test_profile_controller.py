@@ -115,7 +115,10 @@ class _FakeWindow:
         self.resources_ready = True
         self.guard_kinds: list[str] = []
         self.release_calls = 0
-        self.build_services_error: Exception | None = None
+        # BaseException, not Exception: the real update_config guards this call
+        # with ``except Exception``, so a KeyboardInterrupt-shaped error escapes
+        # it with the save already done — the post-save rollback case.
+        self.build_services_error: BaseException | None = None
 
     @contextmanager
     def _dictionary_mutation_guard(self, kind: str):
@@ -715,6 +718,44 @@ class TestCommitBoundary:
         assert window.config is profile_a
         assert (Theme.get_current_mode(), Theme.get_favorites(), Theme.get_font_scale()) == theme_before
         assert window.header.last_active_id == "a"
+
+    def test_a_base_exception_after_the_save_keeps_the_pointer(self, controller, window, profile_a, profile_b):
+        """The mirror of the case above: the BaseException escapes AFTER the save.
+
+        ``update_config`` assigns ``self.config`` and only THEN re-seeds the
+        file-dialog mode, rebuilds the config-bound services and fans
+        ``config_refreshed`` out — each guarded by ``except Exception``. So a
+        KeyboardInterrupt/SystemExit out of the rebuild or out of any tab's slot
+        escapes with gui_config.json already holding the incoming settings AND
+        the incoming marker.
+
+        Reverting the pointer there is the same permanent loss the pre-save case
+        avoids, through the other door: every later save this session (the
+        settings debounce, ``closeEvent``, the deferred close) would re-stamp the
+        OUTGOING id onto the INCOMING settings, the next boot would attribute
+        them to the outgoing profile, and the first switch-away would write them
+        over its file — profile files have no ``.bak``. Restoring the theme is
+        wrong for the same reason: the singleton would hold A's favorites while B
+        is live, so the next star/unstar writes A's favorites into B.
+        """
+        _two_profiles(profile_a, profile_b)
+        Theme.initialize(active="light", favorites=("light",), font_scale=1.0)
+        window.build_services_error = _Interrupted("ctrl-c mid-refresh")
+
+        with pytest.raises(_Interrupted):
+            controller.switch_to("b")
+
+        assert GUIConfigManager.ACTIVE_PROFILE_ID == "b"
+        assert window.config.anki_deck_name == "Deck B"
+        saved = json.loads(GUIConfigManager.CONFIG_FILE.read_text(encoding="utf-8"))
+        assert saved["active_profile_id"] == "b"
+        assert saved["anki_deck_name"] == "Deck B"
+        assert (Theme.get_current_mode(), Theme.get_favorites(), Theme.get_font_scale()) == (
+            "dark",
+            ("dark", "light"),
+            1.25,
+        )
+        assert window.header.last_active_id == "b"
 
     def test_an_unexpected_raise_after_the_config_moved_keeps_the_pointer(
         self, controller, window, profile_a, profile_b

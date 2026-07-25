@@ -497,16 +497,34 @@ class ProfileController:
             # leaves: it assigns self.config only after save_config returned.
             persisted = window.config is not outgoing_config
         finally:
-            if not persisted:
-                # Nothing reached disk: undo the in-memory pointer and the theme
-                # re-seed so a refused switch leaves no residue at all.
-                #
-                # In a FINALLY, not in the except clauses: save_config re-raises
-                # BaseException after unlinking its tmp file, and that shape
-                # passes straight through update_config and both handlers above.
-                # A pointer left ahead of a config that never moved would make
-                # every later save this session stamp the incoming id onto the
-                # OUTGOING settings.
+            # In a FINALLY, not in the except clauses: a BaseException
+            # (KeyboardInterrupt, SystemExit) passes straight through
+            # update_config and both handlers above, leaving `persisted` False
+            # whichever side of the save it escaped from. So the flag alone
+            # cannot decide, and the rollback is gated on the durable evidence
+            # too: update_config assigns self.config only AFTER save_config
+            # returned, and always to a fresh replace(...) object, so
+            # `window.config is outgoing_config` is that assignment's own
+            # witness and cannot false-negative.
+            #
+            # Pre-save escape — nothing reached disk: undo the in-memory pointer
+            # and the theme re-seed so a refused switch leaves no residue. A
+            # pointer left ahead of a config that never moved would make every
+            # later save this session stamp the incoming id onto the OUTGOING
+            # settings.
+            #
+            # Post-save escape — gui_config.json already holds the incoming
+            # settings AND the incoming marker (update_config runs the
+            # file-dialog re-seed, the service rebuild and the config_refreshed
+            # fan-out after the assignment, each guarded only by `except
+            # Exception`). Reverting there is the same permanent loss through
+            # the other door: later saves would re-stamp the OUTGOING id onto
+            # the INCOMING settings, the next boot would attribute them to the
+            # outgoing profile, and the first switch-away would write them over
+            # its file — profile files have no .bak. Restoring the theme is
+            # wrong for the same reason: the singleton would hold A's favorites
+            # while B is live, so the next star/unstar writes A's into B.
+            if not persisted and window.config is outgoing_config:
                 GUIConfigManager.ACTIVE_PROFILE_ID = outgoing_id
                 self._restore_theme(outgoing_theme)
 
