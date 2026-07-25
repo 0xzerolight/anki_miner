@@ -249,7 +249,25 @@ class ProfileController:
         ``_repair_primary_from_backup`` copies the file without going through
         ``save_config``, so the marker can also legitimately be one save stale.
         """
-        profiles = ProfileStore.list_profiles()
+        # scan_profiles, not list_profiles: the lenient wrapper reports a
+        # directory it could not scan as EMPTY, which would fall into the branch
+        # below and adopt the live config as `default.json` — overwriting a real
+        # profile that a transient permission/IO error merely hid, with no .bak
+        # to recover from. `None` means "cannot enumerate", so nothing is written
+        # and nothing is adopted.
+        profiles = ProfileStore.scan_profiles()
+        if profiles is None:
+            # Leaving the pointer unset is already handled everywhere: the first
+            # switch writes no outgoing snapshot rather than aiming it at a
+            # guess, and save_config stamps no marker. The cost is that a later
+            # save this session drops the (still valid) marker from
+            # gui_config.json, so the next boot with a readable directory
+            # preserves the live config as a new profile instead of resolving
+            # it — clutter, not loss. The marker cannot be trusted here either:
+            # with no known-id list there is nothing to validate it against, and
+            # it must never reach ProfileStore unchecked.
+            logger.warning("Could not enumerate the stored settings profiles; starting with no active profile")
+            return (), None
         if not profiles:
             # First launch under profiles: adopt the live config as "Default" so
             # every existing user lands in a silent one-profile world.

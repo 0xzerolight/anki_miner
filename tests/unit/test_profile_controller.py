@@ -25,6 +25,7 @@ from __future__ import annotations
 import inspect
 import json
 import logging
+import os
 from contextlib import contextmanager
 from dataclasses import replace
 from pathlib import Path
@@ -217,6 +218,24 @@ def _file_bytes(path: Path) -> bytes:
     return path.read_bytes()
 
 
+def _break_scandir(monkeypatch) -> None:
+    """Make scanning the profiles directory — and only that — fail.
+
+    Patched rather than chmod'ed so the test is deterministic under any umask
+    and is not silently vacuous when the suite runs as root. Every other path
+    keeps the real ``os.scandir`` so the save/write machinery is unaffected.
+    """
+    real_scandir = os.scandir
+    target = ProfileStore.profiles_dir()
+
+    def scandir(path=".", *args, **kwargs):
+        if Path(path) == target:
+            raise PermissionError(13, "Permission denied", str(target))
+        return real_scandir(path, *args, **kwargs)
+
+    monkeypatch.setattr(os, "scandir", scandir)
+
+
 # ---------------------------------------------------------------------------
 # bootstrap()
 # ---------------------------------------------------------------------------
@@ -400,6 +419,54 @@ class TestBootstrapCannotIdentifyTheLiveConfig:
 
         assert GUIConfigManager.ACTIVE_PROFILE_ID not in (None, "../gui_config", "a")
         assert (_file_bytes(GUIConfigManager.CONFIG_FILE), _file_bytes(path_a)) == before
+
+
+class TestBootstrapCannotEnumerateTheProfiles:
+    """A directory scan that FAILS must not be read as "no profiles ever".
+
+    ``list_profiles`` collapses a transient permission/IO error into the same
+    ``()`` a fresh install produces. Taking that at face value sends the
+    reconcile down the empty-directory branch, which adopts the LIVE config as
+    ``default.json`` — overwriting a real profile the scan merely could not see,
+    with no ``.bak`` behind it. That is the same permanent loss shape as
+    borrowing an id, through a different door, so the reconcile asks
+    ``scan_profiles`` instead and treats its ``None`` as "cannot enumerate".
+    """
+
+    def test_a_failed_scan_writes_nothing_and_leaves_the_pointer_unset(
+        self, controller, window, profile_b, monkeypatch
+    ):
+        path_default = _seed("default", profile_b, "Default")
+        _activate("default", profile_b)
+        GUIConfigManager.ACTIVE_PROFILE_ID = None  # a fresh process reads the marker off disk
+        before = _file_bytes(path_default)
+        _break_scandir(monkeypatch)
+
+        controller.bootstrap()  # must not raise: the caller only log-and-swallows
+
+        # Asserted first because it is the permanent half: the empty branch would
+        # have written the LIVE config over this file, and there is no .bak.
+        assert _file_bytes(path_default) == before
+        assert GUIConfigManager.ACTIVE_PROFILE_ID is None
+        assert window.header.set_profiles_calls[-1] == ((), None)
+
+    def test_a_failed_scan_logs_that_it_could_not_enumerate(self, controller, profile_b, monkeypatch, caplog):
+        _seed("default", profile_b, "Default")
+        _break_scandir(monkeypatch)
+
+        with caplog.at_level(logging.WARNING, logger="anki_miner.gui.controllers.profile_controller"):
+            controller.bootstrap()
+
+        assert "enumerate" in caplog.text
+
+    def test_a_missing_directory_still_takes_the_empty_branch(self, controller, window):
+        """The legitimately-empty state is unchanged: adopt the live config."""
+        assert not ProfileStore.profiles_dir().exists()
+
+        controller.bootstrap()
+
+        assert GUIConfigManager.ACTIVE_PROFILE_ID == "default"
+        assert ProfileStore.read_profile("default").anki_deck_name == window.config.anki_deck_name
 
 
 # ---------------------------------------------------------------------------

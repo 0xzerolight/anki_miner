@@ -34,6 +34,23 @@ def _write_raw(profile_id: str, payload: object) -> Path:
     return path
 
 
+def _break_scandir(monkeypatch) -> None:
+    """Make scanning the profiles directory — and only that — fail.
+
+    Patched rather than chmod'ed so the test is deterministic under any umask
+    and is not silently vacuous when the suite runs as root.
+    """
+    real_scandir = os.scandir
+    target = ProfileStore.profiles_dir()
+
+    def scandir(path=".", *args, **kwargs):
+        if Path(path) == target:
+            raise PermissionError(13, "Permission denied", str(target))
+        return real_scandir(path, *args, **kwargs)
+
+    monkeypatch.setattr(os, "scandir", scandir)
+
+
 class TestProfilesDirIsolation:
     def test_profiles_dir_is_under_the_isolated_tmp_home(self, _isolate_anki_home: Path):
         assert ProfileStore.profiles_dir() == _isolate_anki_home / "profiles"
@@ -119,6 +136,51 @@ class TestListProfiles:
         # ...and the orphan does not poison the case-insensitive name check.
         ProfileStore.delete("anime")
         assert ProfileStore.create("Anime", create_default_config()) == Profile(id="anime", name="Anime")
+
+    def test_an_unscannable_directory_is_reported_as_empty(self, monkeypatch):
+        """The lenient wrapper keeps its never-raises contract for display callers."""
+        _write_raw("anime", {"profile_name": "Anime"})
+        _break_scandir(monkeypatch)
+
+        assert ProfileStore.list_profiles() == ()
+
+
+class TestScanProfiles:
+    """``None`` means "could not look"; ``()`` means "nothing is there".
+
+    Collapsing the two is a data-loss trap: a caller that WRITES on an empty
+    result (the boot reconcile adopts the live config as ``default.json``) would
+    overwrite a real profile that a transient permission/IO error merely hid,
+    and profile files have no ``.bak``.
+    """
+
+    def test_a_missing_directory_is_empty_not_unknown(self):
+        assert not ProfileStore.profiles_dir().exists()
+
+        assert ProfileStore.scan_profiles() == ()
+
+    def test_an_empty_directory_is_empty_not_unknown(self):
+        ProfileStore.profiles_dir().mkdir(parents=True)
+
+        assert ProfileStore.scan_profiles() == ()
+
+    def test_a_failed_scan_is_unknown_not_empty(self, monkeypatch):
+        _write_raw("anime", {"profile_name": "Anime"})
+        _break_scandir(monkeypatch)
+
+        assert ProfileStore.scan_profiles() is None
+
+    def test_unusable_member_files_still_fall_back_to_the_stem(self):
+        """The strictness is about the ENUMERATION, not about member files."""
+        directory = ProfileStore.profiles_dir()
+        directory.mkdir(parents=True)
+        (directory / "truncated.json").write_text('{"profile_name": "Anim', encoding="utf-8")
+        _write_raw("named", {"profile_name": "Named"})
+
+        assert ProfileStore.scan_profiles() == (
+            Profile(id="named", name="Named"),
+            Profile(id="truncated", name="truncated"),
+        )
 
 
 class TestProfileIdTraversal:

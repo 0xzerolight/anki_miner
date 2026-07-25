@@ -83,10 +83,34 @@ class ProfileStore:
     def list_profiles(cls) -> tuple[Profile, ...]:
         """Enumerate stored profiles, sorted by display name (case-insensitive).
 
-        Never raises: a missing directory yields ``()``, and a member file that
-        is unreadable, undecodable, non-dict, or missing a usable
-        ``profile_name`` falls back to its filename stem as the display name.
-        Only that one key is read — the full config is not decoded.
+        Never raises. A missing directory yields ``()``, a directory that cannot
+        be scanned at all is *also* reported as ``()``, and a member file that is
+        unreadable, undecodable, non-dict, or missing a usable ``profile_name``
+        falls back to its filename stem as the display name.
+
+        Callers that WRITE on the strength of an empty result must use
+        :meth:`scan_profiles` instead and handle its ``None`` — see the warning
+        there.
+        """
+        profiles = cls.scan_profiles()
+        return () if profiles is None else profiles
+
+    @classmethod
+    def scan_profiles(cls) -> tuple[Profile, ...] | None:
+        """Enumerate stored profiles, or ``None`` when the scan itself failed.
+
+        ``None`` means UNKNOWN, not empty, and that distinction is the whole
+        point of this method existing beside :meth:`list_profiles`: a transient
+        permission or I/O error on the directory must never read as "no profile
+        has ever been created". A caller that acts on emptiness by writing (the
+        boot reconcile adopts the live config as ``default.json``) would
+        overwrite a real profile it simply could not see, and profile files have
+        no ``.bak``.
+
+        A missing directory is a legitimate empty state and still yields ``()``.
+        Member files keep the lenient behaviour described on
+        :meth:`list_profiles` — the strictness here is about the enumeration
+        only. Only ``profile_name`` is read; the full config is not decoded.
         """
         directory = cls.profiles_dir()
         paths: list[Path] = []
@@ -115,8 +139,10 @@ class ProfileStore:
             # No profile has ever been created — the normal empty state.
             return ()
         except OSError as exc:
+            # The directory is there but unreadable. Reported as UNKNOWN, never
+            # as empty: see this method's docstring.
             logger.warning("Could not enumerate profile directory %s: %s", directory, exc)
-            return ()
+            return None
 
         profiles = [Profile(id=path.stem, name=cls._read_display_name(path)) for path in paths]
         profiles.sort(key=lambda profile: (profile.name.casefold(), profile.id))
