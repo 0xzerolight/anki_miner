@@ -169,6 +169,21 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
             return True
         return self._release_callback()
 
+    def set_freqs_root(self, freqs_root: Path) -> None:
+        """Update the freqs root (e.g. after a config swap) and invalidate caches.
+
+        Mirrors ``DictionarySettingsPanel.set_dicts_root``. Without it a config
+        carrying a different ``freqs_root`` leaves this panel scanning the old
+        root for the rest of the session, and the destructive remove flow
+        resolves ``resolve_managed_slot`` against the wrong directory. This
+        panel has no storage-folder selector, so there is nothing to re-sync.
+        """
+        self._freqs_root = freqs_root
+        self._view = None
+        # Root changed → cached scan is stale; rescan off-thread (no-op before
+        # first show, where _scanned is still False).
+        self._scan_and_render_async()
+
     def _setup_fields(self) -> None:
         self.add_section(self.tr("Active Frequency Sources"))
         container = QWidget()

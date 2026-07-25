@@ -634,6 +634,9 @@ class SettingsTab(QWidget):
             self.dictionary_panel.set_chain(self.config.dictionary_chain)
 
             # Audio source chain (same — immediate persist via its own signal).
+            # The root goes first so the chain renders against the current root
+            # and only one rescan is triggered.
+            self.audio_panel.set_packs_root(self.config.audio_packs_root)
             self.audio_panel.set_chain(self.config.expression_audio_chain)
             self.audio_panel.set_reading_tts(
                 self.config.reading_tts_enabled,
@@ -645,16 +648,20 @@ class SettingsTab(QWidget):
             # immediately via its own signal. Frequency activation is derived from an
             # enabled source being present (config.frequency_active) — no toggle. The
             # max-rank threshold is owned by filtering_panel and already loaded above.
+            self.frequency_panel.set_freqs_root(self.config.freqs_root)
             self.frequency_panel.set_chain(self.config.frequency_chain)
 
             # Pitch source chain (same — immediate persist via its own signal).
             # Activation is derived from an enabled source (config.pitch_active).
+            self.pitch_panel.set_pitch_root(self.config.pitch_root)
             self.pitch_panel.set_chain(self.config.pitch_chain)
 
             # Update settings — standalone checkbox outside all panels.
             self.check_for_updates_checkbox.setChecked(self.config.check_for_updates)
 
-            self.ui_panel.set_language(self.config.ui_language)
+            # UI panel is outside _save_panels (it persists via its own signals),
+            # so it owns its whole repaint here — signal-safe by construction.
+            self.ui_panel.load_from_config(self.config)
         finally:
             self._loading = False
 

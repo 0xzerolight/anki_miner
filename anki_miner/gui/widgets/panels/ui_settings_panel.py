@@ -44,6 +44,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.i18n import available_languages
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.resources.styles.theme import (
@@ -138,6 +139,13 @@ class UISettingsPanel(QWidget):
         self._themes_root = themes_root
         self._ui_zoom = ui_zoom
         self._use_native_file_dialogs = use_native_file_dialogs
+        # Construction-time values = what Qt is actually running with: the panel
+        # is built once at app boot from the boot config, and both language and
+        # zoom only take effect at startup. ``load_from_config`` compares against
+        # these so an A → B → A round trip clears the restart note again instead
+        # of latching it on for the rest of the session.
+        self._boot_language = ui_language
+        self._boot_zoom = ui_zoom
         self._preview_baseline: str | None = None
         # Star button registry — populated by _populate so favorite toggles
         # can update one row in place instead of rebuilding the entire tree.
@@ -764,3 +772,57 @@ class UISettingsPanel(QWidget):
             return
         self.language_restart_note.setVisible(True)
         self.language_changed.emit(code)
+
+    # ---- External config reload -----------------------------------------
+
+    def load_from_config(self, config: AnkiMinerConfig) -> None:
+        """Repaint every control from ``config`` without emitting a signal.
+
+        This panel is deliberately outside ``SettingsTab._save_panels`` (it
+        persists through its own signals, not the Save round-trip), so nothing
+        else repaints it when the whole config is replaced from the outside —
+        Reset to Defaults, Import Settings, or any other ``update_config`` →
+        ``config_refreshed`` fan-out. Without this the zoom/text-size combos,
+        the native-dialogs checkbox and the theme tree keep showing the previous
+        config's values and the user's next edit starts from a stale baseline.
+
+        Every mutation here is signal-safe. The panel's change handlers feed
+        ``config_changed`` → ``MainWindow.update_config``, so one unguarded
+        ``setChecked``/``setCurrentIndex`` would write the panel's *stale* state
+        straight back into the config being loaded.
+
+        Text size and the active theme live on the ``Theme`` singleton (the
+        panel writes through it for live preview), so they are re-read from
+        there rather than set here — callers that swap the whole config re-seed
+        ``Theme`` before calling.
+        """
+        # Blocks signals internally.
+        self.set_language(config.ui_language)
+
+        # Zoom has no live Theme state (it is injected as QT_SCALE_FACTOR before
+        # QApplication exists), so the backing field is the source of truth.
+        self._ui_zoom = config.ui_zoom
+        self._sync_zoom_combo()  # blocks signals internally
+
+        self._sync_font_scale_combo()  # blocks signals internally
+
+        self._use_native_file_dialogs = config.use_native_file_dialogs
+        self.native_dialogs_checkbox.blockSignals(True)
+        try:
+            self.native_dialogs_checkbox.setChecked(config.use_native_file_dialogs)
+        finally:
+            self.native_dialogs_checkbox.blockSignals(False)
+
+        # Rebuild the tree so the Active marker, favorites stars and selection
+        # follow the re-seeded Theme. _populate blocks the tree's signals, so no
+        # state_changed escapes.
+        self._populate()
+        # Re-point Revert at the now-active theme; reverting to the pre-swap one
+        # would fight the config that was just loaded. Skipped while the panel
+        # has never been shown — showEvent owns that first capture, and
+        # SettingsTab._load_config also runs during construction.
+        if self._preview_baseline is not None:
+            self.reset_baseline()
+
+        self.language_restart_note.setVisible(config.ui_language != self._boot_language)
+        self.zoom_restart_note.setVisible(config.ui_zoom != self._boot_zoom)
