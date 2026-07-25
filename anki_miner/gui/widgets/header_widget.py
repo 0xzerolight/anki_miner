@@ -73,9 +73,11 @@ class HeaderWidget(QWidget):
         # Issue #99's hazard, with an unusually expensive payload: a wheel over
         # this combo changes theme, and each change costs a measured ~870ms
         # whole-app stylesheet repolish on the GUI thread. Without StrongFocus a
-        # single scroll gesture fires several of them back to back.
+        # single scroll gesture fires several of them back to back. StrongFocus
+        # alone is not enough — QComboBox::wheelEvent is gated on the
+        # SH_ComboBox_AllowWheelScrolling style hint, not on focus — so the
+        # event-filter sweep below is the layer that actually eats the wheel.
         self.theme_combo.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        install_no_scroll_on_inputs(self)
         self._populate_theme_combo()
         self.theme_combo.currentIndexChanged.connect(self._on_theme_changed)
         theme_layout.addWidget(self.theme_combo)
@@ -84,6 +86,12 @@ class HeaderWidget(QWidget):
 
         self.setLayout(layout)
         self.setObjectName("header-widget")
+
+        # MUST run after setLayout: a widget added to a not-yet-installed
+        # layout is not reparented onto the container, so before this line
+        # findChildren(QComboBox) is empty and the sweep silently installs the
+        # filter on nothing. Keep this call last in _setup_ui.
+        install_no_scroll_on_inputs(self)
 
     def _populate_theme_combo(self) -> None:
         """Rebuild the combo from current favorites + active theme + sentinel.
