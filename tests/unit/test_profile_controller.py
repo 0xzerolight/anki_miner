@@ -4,6 +4,9 @@ Almost every assertion here is about ORDER, because that is where this feature's
 data-loss paths live:
 
 * the outgoing snapshot must be durable before the incoming file is even read;
+* a live config that cannot be attributed to a stored profile must be saved as
+  a NEW profile, never adopted into an existing id, or the first switch
+  overwrites a profile that was never live;
 * the active-profile pointer must roll back whenever the commit did not reach
   disk, and must NOT roll back when it did (``ConfigCommitResult.persisted``);
 * the ``Theme`` singleton must already hold the incoming profile's state when
@@ -19,6 +22,7 @@ cannot drift from the window's actual behaviour.
 
 from __future__ import annotations
 
+import inspect
 import json
 import logging
 from contextlib import contextmanager
@@ -63,6 +67,10 @@ class _FakeHeader:
     @property
     def last_active_id(self) -> str | None:
         return self.set_profiles_calls[-1][1]
+
+
+class _Interrupted(BaseException):
+    """A BaseException, like the KeyboardInterrupt ``save_config`` re-raises."""
 
 
 class _FakeStatusBar:
@@ -240,55 +248,14 @@ class TestBootstrap:
         assert GUIConfigManager.ACTIVE_PROFILE_ID == "b"
         assert window.header.last_active_id == "b"
 
-    def test_an_absent_marker_falls_back_to_default(self, controller, profile_a, profile_b):
-        _seed("default", profile_a, "Default")
-        _seed("b", profile_b, "B")
-        GUIConfigManager.save_config(profile_a)  # written with ACTIVE_PROFILE_ID still None
-        assert GUIConfigManager.read_active_profile_id() is None
-
-        controller.bootstrap()
-
-        assert GUIConfigManager.ACTIVE_PROFILE_ID == "default"
-
-    def test_a_marker_naming_a_missing_file_falls_back_and_logs(self, controller, profile_a, caplog):
-        _seed("a", profile_a, "A")
-        _activate("gone", profile_a)
-
-        with caplog.at_level(logging.INFO, logger="anki_miner.gui.controllers.profile_controller"):
-            controller.bootstrap()
-
-        assert GUIConfigManager.ACTIVE_PROFILE_ID == "a"
-        assert "gone" in caplog.text
-
-    def test_fallback_without_a_default_uses_the_first_sorted_profile(self, controller, profile_a, profile_b):
-        _seed("zulu", profile_a, "Zulu")
-        _seed("alpha", profile_b, "Alpha")
-        GUIConfigManager.save_config(profile_a)
-
-        controller.bootstrap()
-
-        assert GUIConfigManager.ACTIVE_PROFILE_ID == "alpha"
-
-    def test_a_marker_that_escapes_the_profiles_dir_is_never_used(self, controller, profile_a):
-        """A hand-edited/restored gui_config.json can carry ``"../gui_config"``.
-
-        It must be rejected by the known-id membership check and never reach
-        ``ProfileStore`` — which would otherwise load, stamp or unlink the live
-        config file itself.
-        """
-        _seed("a", profile_a, "A")
-        _activate("../gui_config", profile_a)
-        live_before = _file_bytes(GUIConfigManager.CONFIG_FILE)
-
-        controller.bootstrap()
-
-        assert GUIConfigManager.ACTIVE_PROFILE_ID == "a"
-        assert _file_bytes(GUIConfigManager.CONFIG_FILE) == live_before
-        assert [p.id for p in ProfileStore.list_profiles()] == ["a"]
-
-    def test_a_failed_default_write_leaves_the_pointer_unset(self, controller, window, monkeypatch):
+    # TypeError belongs with the other two: the write ends in ``json.dump``,
+    # which raises TypeError for a value it cannot serialise, and bootstrap must
+    # not raise for any recoverable condition — its caller only log-and-swallows,
+    # which would skip the header population for the whole session.
+    @pytest.mark.parametrize("error", [OSError("read-only home"), ValueError("bad id"), TypeError("not serialisable")])
+    def test_a_failed_default_write_leaves_the_pointer_unset(self, controller, window, monkeypatch, error):
         def boom(*a, **k):
-            raise OSError("read-only home")
+            raise error
 
         monkeypatch.setattr(ProfileStore, "write_profile", boom)
 
@@ -296,6 +263,140 @@ class TestBootstrap:
 
         assert GUIConfigManager.ACTIVE_PROFILE_ID is None
         assert window.header.set_profiles_calls[-1] == ((), None)
+
+
+class TestBootstrapCannotIdentifyTheLiveConfig:
+    """A marker that resolves to nothing must NOT borrow an existing id.
+
+    Borrowing one (``default``, or the first sorted profile) attributes the live
+    config to a profile that was never it, so the very first switch snapshots
+    the live config over that profile's file. Profile files have no ``.bak``, so
+    the overwrite is permanent — and ``_switch_locked``'s vanished-file warning
+    does not even fire, because the borrowed id IS a known id. Reachable when a
+    profile file is deleted outside the app, when gui_config.json is rebuilt
+    from a pre-marker ``.bak``, and when ``load_config_with_provenance`` falls
+    through to ``create_default_config()``.
+
+    The live config is stored as a NEW profile instead: nothing is lost and
+    nothing that already exists is touched.
+    """
+
+    @staticmethod
+    def _unresolvable(window, stored: AnkiMinerConfig, *, marker: str | None) -> tuple[Path, Path]:
+        """Seed ``default`` + ``b`` and leave the marker pointing at nothing."""
+        path_default = _seed("default", stored, "Default")
+        path_b = _seed("b", stored, "B")
+        if marker is None:
+            GUIConfigManager.save_config(window.config)  # ACTIVE_PROFILE_ID still None
+            assert GUIConfigManager.read_active_profile_id() is None
+        else:
+            _activate(marker, window.config)
+            GUIConfigManager.ACTIVE_PROFILE_ID = None  # a fresh process reads the marker off disk
+        return path_default, path_b
+
+    @pytest.mark.parametrize("marker", [None, "gone"])
+    def test_the_live_config_is_stored_as_a_new_profile(self, controller, window, profile_b, marker):
+        path_default, path_b = self._unresolvable(window, profile_b, marker=marker)
+        before = (_file_bytes(path_default), _file_bytes(path_b))
+
+        controller.bootstrap()
+
+        active = GUIConfigManager.ACTIVE_PROFILE_ID
+        assert active not in (None, "default", "b")
+        # The live config was preserved, under its own new identity...
+        assert ProfileStore.read_profile(active).anki_deck_name == window.config.anki_deck_name
+        # ...and no pre-existing profile file was touched.
+        assert (_file_bytes(path_default), _file_bytes(path_b)) == before
+
+    @pytest.mark.parametrize("marker", [None, "gone"])
+    def test_the_recovered_profile_is_named_and_listed(self, controller, window, profile_b, marker):
+        self._unresolvable(window, profile_b, marker=marker)
+
+        controller.bootstrap()
+
+        active = GUIConfigManager.ACTIVE_PROFILE_ID
+        names = {profile.id: profile.name for profile in ProfileStore.list_profiles()}
+        assert names[active] == "Recovered settings"
+        # The header lists the profile that was just created, not the pre-scan list.
+        profiles, header_active = window.header.set_profiles_calls[-1]
+        assert header_active == active
+        assert active in {profile.id for profile in profiles}
+
+    def test_it_logs_the_marker_it_could_not_resolve(self, controller, window, profile_b, caplog):
+        self._unresolvable(window, profile_b, marker="gone")
+
+        with caplog.at_level(logging.WARNING, logger="anki_miner.gui.controllers.profile_controller"):
+            controller.bootstrap()
+
+        assert "gone" in caplog.text
+
+    def test_the_first_switch_snapshots_into_the_recovered_profile(self, controller, window, profile_b):
+        path_default, _path_b = self._unresolvable(window, profile_b, marker=None)
+        before = _file_bytes(path_default)
+        controller.bootstrap()
+        recovered = GUIConfigManager.ACTIVE_PROFILE_ID
+        window.config = replace(window.config, anki_deck_name="Deck A edited")
+
+        result = controller.switch_to("b")
+
+        assert result.switched
+        # The edit landed in the profile that actually held the live config...
+        assert ProfileStore.read_profile(recovered).anki_deck_name == "Deck A edited"
+        # ...and the profile bootstrap could have borrowed is untouched.
+        assert _file_bytes(path_default) == before
+
+    def test_a_taken_recovery_name_is_disambiguated(self, controller, window, profile_b):
+        _seed("recovered-settings", profile_b, "Recovered settings")
+        _seed("b", profile_b, "B")
+        GUIConfigManager.save_config(window.config)
+
+        controller.bootstrap()
+
+        active = GUIConfigManager.ACTIVE_PROFILE_ID
+        names = {profile.id: profile.name for profile in ProfileStore.list_profiles()}
+        assert active not in ("recovered-settings", "b")
+        assert names[active] == "Recovered settings 2"
+        assert ProfileStore.read_profile(active).anki_deck_name == window.config.anki_deck_name
+
+    def test_a_failed_create_leaves_the_pointer_unset_and_writes_no_snapshot(
+        self, controller, window, profile_b, monkeypatch
+    ):
+        """Last resort: an unset pointer, never a borrowed id.
+
+        An unknown live identity is already handled everywhere — the first
+        switch skips the outgoing snapshot rather than aiming it at a guess.
+        """
+        path_default, path_b = self._unresolvable(window, profile_b, marker=None)
+        monkeypatch.setattr(ProfileStore, "create", lambda *a, **k: (_ for _ in ()).throw(OSError("read-only home")))
+        before = (_file_bytes(path_default), _file_bytes(path_b))
+
+        controller.bootstrap()  # must not raise: the caller only log-and-swallows
+
+        assert GUIConfigManager.ACTIVE_PROFILE_ID is None
+        assert window.header.last_active_id is None
+
+        result = controller.switch_to("b")
+
+        assert result.switched
+        assert GUIConfigManager.ACTIVE_PROFILE_ID == "b"
+        assert (_file_bytes(path_default), _file_bytes(path_b)) == before
+
+    def test_a_marker_that_escapes_the_profiles_dir_is_never_used(self, controller, window, profile_a):
+        """A hand-edited/restored gui_config.json can carry ``"../gui_config"``.
+
+        It must be rejected by the known-id membership check and never reach
+        ``ProfileStore`` — which would otherwise load, stamp or unlink the live
+        config file itself.
+        """
+        path_a = _seed("a", profile_a, "A")
+        _activate("../gui_config", profile_a)
+        GUIConfigManager.ACTIVE_PROFILE_ID = None
+        before = (_file_bytes(GUIConfigManager.CONFIG_FILE), _file_bytes(path_a))
+
+        controller.bootstrap()
+
+        assert GUIConfigManager.ACTIVE_PROFILE_ID not in (None, "../gui_config", "a")
+        assert (_file_bytes(GUIConfigManager.CONFIG_FILE), _file_bytes(path_a)) == before
 
 
 # ---------------------------------------------------------------------------
@@ -385,6 +486,13 @@ class TestRealMutationGuard:
             settings_tab.frequency_panel.release(token)
 
         assert not result.switched
+        # WHICH refusal fired, not merely that one did: this is the only test
+        # standing behind "the guard is _dictionary_mutation_guard". A bare
+        # `not result.switched` goes vacuous the moment wired_window grows a tab
+        # that refuses release_dictionary_resources for an unrelated reason —
+        # exactly the substitution this test exists to catch.
+        assert result.reason == ProfileController._busy()
+        assert result.reason != ProfileController._busy_mining()
         assert window.config is profile_a
         assert (_file_bytes(path_a), _file_bytes(path_b)) == before
         assert GUIConfigManager.ACTIVE_PROFILE_ID == "a"
@@ -410,6 +518,43 @@ class TestSwitchOrdering:
 
         assert not result.switched
         assert ProfileStore.read_profile("a").subtitle_offset == 2.5
+
+    def test_a_vanished_outgoing_file_is_recreated_under_its_real_name(self, controller, window, profile_a, profile_b):
+        """The snapshot resurrects a file deleted outside the app.
+
+        Its display name must come back as the user's ``"A"``, not the raw id
+        ``"a"`` — the id is only a filename stem, and the resurrected profile is
+        what the header combo then shows.
+        """
+        path_a, _path_b = _two_profiles(profile_a, profile_b)
+        controller.bootstrap()
+        path_a.unlink()
+
+        result = controller.switch_to("b")
+
+        assert result.switched
+        assert {profile.id: profile.name for profile in ProfileStore.list_profiles()}["a"] == "A"
+
+    def test_an_unserialisable_outgoing_snapshot_refuses_instead_of_raising(
+        self, controller, window, profile_a, profile_b, monkeypatch
+    ):
+        """``json.dump`` raises TypeError — neither an OSError nor a ValueError.
+
+        The incoming read catches all three; the outgoing write has to agree, or
+        one unserialisable value turns a refusable switch into a traceback on a
+        user-initiated action.
+        """
+        _two_profiles(profile_a, profile_b)
+        monkeypatch.setattr(
+            ProfileStore, "write_profile", lambda *a, **k: (_ for _ in ()).throw(TypeError("not serialisable"))
+        )
+
+        result = controller.switch_to("b")
+
+        assert not result.switched
+        assert result.reason is not None and "A" in result.reason
+        assert GUIConfigManager.ACTIVE_PROFILE_ID == "a"
+        assert window.config is profile_a
 
     def test_a_corrupt_incoming_file_is_refused_and_left_byte_identical(self, controller, window, profile_a, profile_b):
         _seed("a", profile_a, "A")
@@ -540,6 +685,36 @@ class TestCommitBoundary:
         assert not result.switched
         assert GUIConfigManager.ACTIVE_PROFILE_ID == "a"
         assert window.config is profile_a
+
+    def test_a_base_exception_escaping_the_commit_still_reverts_the_pointer(
+        self, controller, window, profile_a, profile_b
+    ):
+        """``save_config`` re-raises BaseException after unlinking its tmp file.
+
+        That shape passes straight through ``update_config``'s ``except
+        Exception`` and through both of the controller's handlers, so the
+        rollback cannot live in an except clause. A pointer stranded at the
+        incoming id over the outgoing config makes every later save this session
+        (the settings debounce, ``closeEvent``, the deferred close) stamp the
+        wrong identity, and the next switch-away overwrites the incoming profile
+        with the outgoing settings.
+        """
+        _two_profiles(profile_a, profile_b)
+        Theme.initialize(active="light", favorites=("light",), font_scale=1.0)
+        theme_before = (Theme.get_current_mode(), Theme.get_favorites(), Theme.get_font_scale())
+
+        def boom(config):
+            raise _Interrupted("ctrl-c mid-save")
+
+        window.update_config = boom
+
+        with pytest.raises(_Interrupted):
+            controller.switch_to("b")
+
+        assert GUIConfigManager.ACTIVE_PROFILE_ID == "a"
+        assert window.config is profile_a
+        assert (Theme.get_current_mode(), Theme.get_favorites(), Theme.get_font_scale()) == theme_before
+        assert window.header.last_active_id == "a"
 
     def test_an_unexpected_raise_after_the_config_moved_keeps_the_pointer(
         self, controller, window, profile_a, profile_b
@@ -676,8 +851,26 @@ class TestRestartNote:
 
         assert window.status_bar.messages == []
 
-    def test_boot_only_fields_are_the_documented_five(self):
-        assert {"ui_language", "ui_zoom", "themes_root", "stats_db_path", "log_path"} == _BOOT_ONLY_FIELDS
+    def test_themes_root_is_applied_live_so_it_raises_no_note(self, controller, window, profile_a, tmp_path):
+        """``themes_root`` is NOT boot-only: the Theme re-seed applies it.
+
+        ``_ThemeState.seed`` hands the incoming value to ``Theme.initialize``,
+        which re-runs discovery against it — so a restart note here would be
+        telling the user to restart for something already in effect.
+        """
+        incoming_root = tmp_path / "profile-b-themes"
+        _seed("a", profile_a, "A")
+        _seed("b", replace(profile_a, themes_root=incoming_root), "B")
+        _activate("a", profile_a)
+        controller.bootstrap()
+
+        controller.switch_to("b")
+
+        assert Theme._user_dir == incoming_root
+        assert window.status_bar.messages == []
+
+    def test_boot_only_fields_are_the_documented_four(self):
+        assert {"ui_language", "ui_zoom", "stats_db_path", "log_path"} == _BOOT_ONLY_FIELDS
         for name in _BOOT_ONLY_FIELDS:
             assert name in AnkiMinerConfig.__dataclass_fields__
 
@@ -797,10 +990,23 @@ class TestWindowSurface:
     def test_the_header_exposes_the_profile_surface(self):
         """``set_profiles`` lands with the header profile combo (a later task).
 
-        Kept as a skip rather than a soft assert so it converts into real
-        coverage the moment that method exists.
+        Asserts the SHAPE, not existence: the controller reaches the header
+        through ``cast("_ProfileHeader", window.header)``, and a cast is
+        unchecked — ``set_profiles(self, profiles)`` or ``(self, active_id,
+        profiles)`` would keep mypy silent and surface as a ``TypeError`` inside
+        a ``finally``, on every terminal path of every switch. Kept as a skip
+        rather than a soft assert so it converts into real coverage the moment
+        the method exists.
         """
         assert hasattr(HeaderWidget, "refresh_favorites")
+        inspect.signature(HeaderWidget.refresh_favorites).bind(None)
         if not hasattr(HeaderWidget, "set_profiles"):
             pytest.skip("HeaderWidget.set_profiles not present yet")
-        assert callable(HeaderWidget.set_profiles)
+
+        profiles = (Profile(id="default", name="Default"),)
+        # Bind the exact call _sync_header makes, with the real arguments, then
+        # check each landed in the parameter that means what the controller
+        # means — bind() alone accepts a swapped (active_id, profiles) order.
+        bound = inspect.signature(HeaderWidget.set_profiles).bind(None, profiles, "default")
+        assert bound.arguments["profiles"] == profiles
+        assert bound.arguments["active_id"] == "default"

@@ -6,6 +6,10 @@ which a switch moves state, which is where every data-loss path of this feature
 sits:
 
 * the outgoing profile is snapshotted to disk BEFORE anything else moves;
+* a live config that cannot be attributed to a stored profile is saved as a NEW
+  profile, never adopted into an existing id — adopting one makes the very first
+  switch snapshot the live config over a profile that was never live, and
+  profile files have no ``.bak``;
 * the incoming file is read BEFORE the active-profile pointer advances;
 * the pointer advances BEFORE the commit and is rolled back whenever the commit
   did not reach disk (``ConfigCommitResult.persisted``) — the naive
@@ -60,14 +64,18 @@ _MUTATION_KIND = "profile-switch"
 # them needs a restart note rather than silent divergence:
 #   ui_language   -> install_translators (app.py); widgets capture tr() at build
 #   ui_zoom       -> QT_SCALE_FACTOR, which Qt reads once at process start
-#   themes_root   -> Theme.initialize's discovery roots
 #   stats_db_path -> StatsService(...), constructed once and never rebuilt
 #   log_path      -> the logging handler installed at startup
+#
+# themes_root is deliberately NOT here: the Theme re-seed below hands the
+# incoming value to Theme.initialize, which re-runs discovery against it, so the
+# folder root IS live. (The theme TREE still cannot rescan mid-session, which is
+# the Settings panel's own note, not a restart note about this field.)
 #
 # Sibling field partitions, same idiom: SettingsTab._EXTERNAL_ONLY_FIELDS
 # (settings_tab.py:120), SettingsTab._RESET_PRESERVE_UI (:141) and
 # GUIConfigManager.machine_specific_fields() (config_manager.py:450).
-_BOOT_ONLY_FIELDS = frozenset({"ui_language", "ui_zoom", "themes_root", "stats_db_path", "log_path"})
+_BOOT_ONLY_FIELDS = frozenset({"ui_language", "ui_zoom", "stats_db_path", "log_path"})
 
 
 def _boot_only_values(config: AnkiMinerConfig) -> dict[str, object]:
@@ -80,7 +88,6 @@ def _boot_only_label(field: str) -> str:
     labels = {
         "ui_language": QCoreApplication.translate("ProfileController", "Language"),
         "ui_zoom": QCoreApplication.translate("ProfileController", "Interface scale"),
-        "themes_root": QCoreApplication.translate("ProfileController", "Themes folder"),
         "stats_db_path": QCoreApplication.translate("ProfileController", "Statistics database"),
         "log_path": QCoreApplication.translate("ProfileController", "Log file"),
     }
@@ -195,6 +202,11 @@ class ProfileController:
         # against on every switch so an A->B->A round trip stops warning; None
         # means bootstrap never ran, so there is no baseline to compare with.
         self._boot_only: dict[str, object] | None = None
+        # Display name of the active profile, as last seen on disk. Only ever
+        # read when the active profile's FILE has vanished, so the outgoing
+        # snapshot that recreates it comes back named "A" rather than "a"; a
+        # rename since then is picked up from the listing, which wins.
+        self._active_name: str | None = None
 
     # ------------------------------------------------------------------
     # Boot
@@ -217,30 +229,13 @@ class ProfileController:
 
         profiles, active_id = self._reconcile()
         GUIConfigManager.ACTIVE_PROFILE_ID = active_id
+        self._active_name = next((profile.name for profile in profiles if profile.id == active_id), None)
         # Stays hidden at fewer than two profiles, so an existing user who never
         # creates one sees no change at all.
         self._header().set_profiles(profiles, active_id)
 
     def _reconcile(self) -> tuple[tuple[Profile, ...], str | None]:
-        """Return the stored profiles and the id the session should start on."""
-        profiles = ProfileStore.list_profiles()
-        if profiles:
-            return profiles, self._resolve_active_id(profiles)
-
-        # First launch under profiles: adopt the live config as "Default" so
-        # every existing user lands in a silent one-profile world.
-        try:
-            ProfileStore.write_profile(_DEFAULT_PROFILE_ID, self._window.config, name=_DEFAULT_PROFILE_NAME)
-        except (OSError, ValueError):
-            # Leave the pointer unset rather than claiming a profile that has no
-            # file: save_config then stamps no marker and the next boot retries.
-            logger.warning("Could not create the default settings profile", exc_info=True)
-            return (), None
-        return ProfileStore.list_profiles(), _DEFAULT_PROFILE_ID
-
-    @staticmethod
-    def _resolve_active_id(profiles: tuple[Profile, ...]) -> str:
-        """Pick the active id, validating the stored marker against ``profiles``.
+        """Return the stored profiles and the id the session should start on.
 
         The marker is checked for MEMBERSHIP in the known-id list and is never
         handed to ``ProfileStore`` unchecked: ``read_active_profile_id`` returns
@@ -254,17 +249,93 @@ class ProfileController:
         ``_repair_primary_from_backup`` copies the file without going through
         ``save_config``, so the marker can also legitimately be one save stale.
         """
-        known = {profile.id for profile in profiles}
-        marker = GUIConfigManager.read_active_profile_id()
-        if marker is not None and marker in known:
-            return marker
+        profiles = ProfileStore.list_profiles()
+        if not profiles:
+            # First launch under profiles: adopt the live config as "Default" so
+            # every existing user lands in a silent one-profile world.
+            try:
+                ProfileStore.write_profile(_DEFAULT_PROFILE_ID, self._window.config, name=_DEFAULT_PROFILE_NAME)
+            except (OSError, ValueError, TypeError):
+                # Leave the pointer unset rather than claiming a profile that
+                # has no file: save_config then stamps no marker, the next boot
+                # retries, and the first switch writes no outgoing snapshot.
+                logger.warning("Could not create the default settings profile", exc_info=True)
+                return (), None
+            return ProfileStore.list_profiles(), _DEFAULT_PROFILE_ID
 
-        fallback = _DEFAULT_PROFILE_ID if _DEFAULT_PROFILE_ID in known else profiles[0].id
-        if marker is None:
-            logger.info("No active settings profile recorded; using '%s'", fallback)
-        else:
-            logger.info("Active settings profile '%s' has no stored file; using '%s'", marker, fallback)
-        return fallback
+        marker = GUIConfigManager.read_active_profile_id()
+        if marker is not None and any(profile.id == marker for profile in profiles):
+            return profiles, marker
+
+        recovered = self._recover_unidentified_config(marker, profiles)
+        if recovered is None:
+            return profiles, None
+        return ProfileStore.list_profiles(), recovered.id
+
+    def _recover_unidentified_config(self, marker: str | None, profiles: tuple[Profile, ...]) -> Profile | None:
+        """Save the live config as a NEW profile when it belongs to no stored one.
+
+        Deliberately not the obvious "fall back to ``default``, else the first
+        profile": that borrowed id becomes the outgoing id of the first switch,
+        whose snapshot then writes the live config over a stored profile that
+        was never live. Profile files have no ``.bak``, so the loss is
+        permanent, and the vanished-file warning in ``_switch_locked`` does not
+        even fire — the borrowed id IS a known id. Reachable whenever a profile
+        file is deleted outside the app, gui_config.json is rebuilt from a
+        pre-marker ``.bak``, or ``load_config_with_provenance`` fell through to
+        ``create_default_config()``.
+
+        Creating a new profile instead loses nothing and touches nothing that
+        already exists.
+
+        Returns:
+            The created profile, or ``None`` when even the create failed — the
+            caller then leaves the pointer unset, which is already correct: an
+            unknown live identity makes the first switch skip the outgoing
+            snapshot rather than aim it at a guess.
+        """
+        try:
+            profile = ProfileStore.create(self._recovered_profile_name(profiles), self._window.config)
+        except (OSError, ValueError, TypeError) as exc:
+            logger.warning(
+                "Active settings profile %r resolves to no stored file and the current settings could not be "
+                "saved as a new profile (%s); starting with no active profile",
+                marker,
+                exc,
+            )
+            return None
+        logger.warning(
+            "Active settings profile %r resolves to no stored file; saved the current settings as '%s' (%s) "
+            "instead of adopting an existing profile, which the first switch would have overwritten",
+            marker,
+            profile.name,
+            profile.id,
+        )
+        return profile
+
+    @staticmethod
+    def _recovered_profile_name(profiles: tuple[Profile, ...]) -> str:
+        """A recovery-profile display name no stored profile already holds.
+
+        ``ProfileStore.create`` rejects a case-insensitive duplicate name with
+        ``ValueError``, and a boot that cannot identify the live config must not
+        give up just because a previous recovery already used the plain name.
+        """
+        base = QCoreApplication.translate("ProfileController", "Recovered settings")
+        taken = {profile.name.casefold() for profile in profiles}
+        if base.casefold() not in taken:
+            return base
+        # Terminates: the candidates are distinct and ``taken`` is finite
+        # (ProfileStore caps the directory at MAX_PROFILES entries).
+        suffix = 2
+        while True:
+            candidate = tr_format(
+                QCoreApplication.translate("ProfileController", "Recovered settings %1"),
+                suffix,
+            )
+            if candidate.casefold() not in taken:
+                return candidate
+            suffix += 1
 
     # ------------------------------------------------------------------
     # Switch / create
@@ -309,7 +380,7 @@ class ProfileController:
 
         try:
             profile = ProfileStore.create(name, self._window.config)
-        except (OSError, ValueError) as exc:
+        except (OSError, ValueError, TypeError) as exc:
             logger.warning("Could not create settings profile %r: %s", name, exc)
             return SwitchResult(
                 switched=False,
@@ -338,6 +409,11 @@ class ProfileController:
 
         # 1. Durable snapshot of what we are leaving, before anything moves.
         if outgoing_id is not None:
+            # The listing wins (it picks up a rename made this session); the
+            # remembered name is the fallback for a file that vanished under us,
+            # so the id is only ever used as a display name when nothing else
+            # knows what this profile was called.
+            outgoing_name = names.get(outgoing_id) or self._active_name or outgoing_id
             if outgoing_id not in names:
                 # The file vanished under us (deleted outside the app). Writing
                 # it back resurrects the profile; NOT writing it would drop
@@ -345,8 +421,8 @@ class ProfileController:
                 # gui_config.json is about to become the incoming config.
                 logger.warning("Active settings profile '%s' has no stored file; recreating it", outgoing_id)
             try:
-                ProfileStore.write_profile(outgoing_id, outgoing_config, name=names.get(outgoing_id, outgoing_id))
-            except (OSError, ValueError) as exc:
+                ProfileStore.write_profile(outgoing_id, outgoing_config, name=outgoing_name)
+            except (OSError, ValueError, TypeError) as exc:
                 logger.warning("Could not snapshot settings profile '%s': %s", outgoing_id, exc)
                 return SwitchResult(
                     switched=False,
@@ -355,7 +431,7 @@ class ProfileController:
                             "ProfileController",
                             "Could not save the current profile '%1': %2. Nothing was switched.",
                         ),
-                        names.get(outgoing_id, outgoing_id),
+                        outgoing_name,
                         exc,
                     ),
                 )
@@ -405,12 +481,13 @@ class ProfileController:
         # incoming profile with them.
         GUIConfigManager.ACTIVE_PROFILE_ID = profile_id
         commit_error: Exception | None = None
-        persisted = True
+        persisted = False
         try:
             # The version re-stamp keeps a profile snapshotted before an app
             # upgrade from re-arming commit_boot's "Anki Miner updated" dialog.
             # It carves no field out of the stored file, which keeps its own.
             window.update_config(replace(incoming, last_known_version=__version__))
+            persisted = True
         except ConfigCommitError as error:
             commit_error = error
             persisted = error.result.persisted
@@ -419,17 +496,28 @@ class ProfileController:
             # No result to consult, so use the durable evidence update_config
             # leaves: it assigns self.config only after save_config returned.
             persisted = window.config is not outgoing_config
+        finally:
+            if not persisted:
+                # Nothing reached disk: undo the in-memory pointer and the theme
+                # re-seed so a refused switch leaves no residue at all.
+                #
+                # In a FINALLY, not in the except clauses: save_config re-raises
+                # BaseException after unlinking its tmp file, and that shape
+                # passes straight through update_config and both handlers above.
+                # A pointer left ahead of a config that never moved would make
+                # every later save this session stamp the incoming id onto the
+                # OUTGOING settings.
+                GUIConfigManager.ACTIVE_PROFILE_ID = outgoing_id
+                self._restore_theme(outgoing_theme)
 
-        if commit_error is not None and not persisted:
-            # Nothing reached disk: undo the in-memory pointer and the theme
-            # re-seed so a refused switch leaves no residue at all. Deliberately
-            # no apply_to_app here — the running app was never repainted.
-            GUIConfigManager.ACTIVE_PROFILE_ID = outgoing_id
-            self._restore_theme(outgoing_theme)
+        if not persisted:
+            # Rolled back in the finally above; deliberately no apply_to_app,
+            # because the running app was never repainted.
             return SwitchResult(switched=False, reason=self._could_not_apply(incoming_name, commit_error))
 
         # The switch is durable from here on, even if the refresh half failed;
         # the pointer stays where it is.
+        self._active_name = incoming_name
         self._apply_theme()
         self._header().refresh_favorites()
         self._note_restart_fields(incoming)
