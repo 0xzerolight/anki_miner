@@ -14,6 +14,7 @@ from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.interfaces import DictionaryProvider
+    from anki_miner.services.dictionary.registry import DictionaryRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -91,9 +92,12 @@ class DefinitionService:
         self,
         config: AnkiMinerConfig,
         providers: list[DictionaryProvider],
+        *,
+        registry: DictionaryRegistry | None = None,
     ):
         self.config = config
         self._providers = providers
+        self._registry = registry
         self._loaded = False
 
     def ensure_loaded(self) -> bool:
@@ -108,6 +112,26 @@ class DefinitionService:
             except Exception as e:  # pragma: no cover - defensive
                 logger.warning("Failed to load provider '%s': %s", provider.name, e)
         return any(p.is_available() for p in self._providers)
+
+    def has_usable_offline_provider(self) -> bool:
+        """Whether the loaded chain has an available, non-empty offline index.
+
+        Provider availability alone is insufficient: Jisho is always available,
+        and a schema-current index with zero declared entries opens normally. The
+        registry snapshot that built this chain is therefore authoritative. No
+        disk scan or metadata read occurs here.
+        """
+        if self._registry is None:
+            return False
+        self.ensure_loaded()
+        for provider in self._available_offline_providers():
+            dict_id = getattr(provider, "dict_id", None)
+            if not isinstance(dict_id, str):
+                continue
+            meta = self._registry.get(dict_id)
+            if meta is not None and meta.schema_ok and meta.entry_count > 0:
+                return True
+        return False
 
     def close(self) -> None:
         """Close every provider that exposes a ``close()`` method.

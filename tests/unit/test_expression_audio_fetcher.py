@@ -247,6 +247,18 @@ class TestJPod101AudioFetcher:
         assert not list(tmp_path.glob("*.mp3"))
         assert not list(tmp_path.glob("*.miss"))
 
+    def test_non_kana_reading_returns_none_without_network(self, tmp_path):
+        """A kanji 'reading' (the tokenizer's OOV surface fallback) is skipped:
+        sent as kana= it would make the endpoint guess a homograph reading."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch("requests.Session.get") as mock_get:
+            result = fetcher.fetch("辛い", "辛い")
+
+        assert result is None
+        mock_get.assert_not_called()
+        assert not list(tmp_path.glob("*.mp3"))
+        assert not list(tmp_path.glob("*.miss"))
+
     def test_empty_mined_form_returns_none_without_network(self, tmp_path):
         """Empty or whitespace mined_form short-circuits to None."""
         fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
@@ -276,10 +288,14 @@ class TestJPod101AudioFetcher:
         assert call_order == ["sleep", "get"]
 
     def test_filename_sanitized_for_unsafe_characters(self, tmp_path):
-        """Words containing path-hostile characters still cache safely."""
+        """Words containing path-hostile characters still cache safely.
+
+        The reading must be kana (a non-kana reading is skipped by the input
+        guard), so the path-hostile characters ride on mined_form only.
+        """
         fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
         with patch("requests.Session.get", return_value=_response()):
-            result = fetcher.fetch("a/b:c", "x\\y")
+            result = fetcher.fetch("a/b:c\\d", "たべる")
 
         assert result is not None
         assert result.parent == tmp_path

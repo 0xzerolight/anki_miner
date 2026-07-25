@@ -1,10 +1,4 @@
-"""Tests for DictionaryImportFlow.reimport_dict — the per-row Yomitan reimport flow.
-
-Covers the validation gate that guards against the user picking a zip that
-derives a different dict_id than the slot being re-imported. Mismatch must
-abort with a warning; match must invoke ImportWorker.for_yomitan
-with overwrite=True and refresh the panel registry on completion.
-"""
+"""Tests for DictionaryImportFlow.reimport_dict source-first repair."""
 
 from __future__ import annotations
 
@@ -37,13 +31,14 @@ def tab(test_config: AnkiMinerConfig, qtbot):
 
 @pytest.fixture
 def stub_worker(monkeypatch):
-    """Replace ImportWorker.for_yomitan with a MagicMock + capture.
+    """Replace normal and repair Yomitan worker factories with mocks.
 
     The mock returns an instance whose signals are also MagicMocks so the
     handler's `.connect(...)` calls succeed and `.start()` is a no-op. We
     return the factory mock so tests can inspect call_args.
     """
     factory = MagicMock(name="for_yomitan")
+    repair_factory = MagicMock(name="for_yomitan_repair")
 
     def _build_instance(*args, **kwargs):
         instance = MagicMock(name="ImportWorker")
@@ -52,14 +47,21 @@ def stub_worker(monkeypatch):
         instance.import_finished = MagicMock()
         instance.failed = MagicMock()
         instance.cancelled = MagicMock()
+        instance.finished = MagicMock()
         instance.cancel = MagicMock()
         instance.start = MagicMock()
         return instance
 
     factory.side_effect = _build_instance
+    repair_factory.side_effect = _build_instance
+    factory.repair_factory = repair_factory
     monkeypatch.setattr(
         "anki_miner.gui.controllers.dictionary_import_flow.ImportWorker.for_yomitan",
         factory,
+    )
+    monkeypatch.setattr(
+        "anki_miner.gui.controllers.dictionary_import_flow.ImportWorker.for_yomitan_repair",
+        repair_factory,
     )
     return factory
 
@@ -75,54 +77,37 @@ def _capture_warnings(monkeypatch) -> list[tuple[str, str]]:
     return captured
 
 
-def test_mismatched_zip_shows_warning_and_skips_worker(tab, monkeypatch, stub_worker, tmp_path):
-    """Zip derives `test-dict-v1`; slot is `wrong-slot` — must warn + abort."""
-    zip_path = build_yomitan_zip(tmp_path / "src.zip", title="Test Dict", revision="v1")
-
-    monkeypatch.setattr(
-        QFileDialog,
-        "getOpenFileName",
-        lambda *a, **kw: (str(zip_path), "Yomitan zip (*.zip)"),
-    )
+def test_no_saved_source_shows_warning_and_skips_worker(tab, monkeypatch, stub_worker):
     warnings = _capture_warnings(monkeypatch)
 
     tab._dict_import_flow.reimport_dict("wrong-slot")
 
-    assert any(
-        "wrong-slot" in body and "test-dict-v1" in body for _, body in warnings
-    ), f"Expected mismatch warning mentioning both ids; got {warnings}"
+    assert any("wrong-slot" in body and "recoverable source" in body for _, body in warnings)
     stub_worker.assert_not_called()
+    stub_worker.repair_factory.assert_not_called()
 
 
-def test_matched_zip_invokes_worker_with_overwrite_true(tab, monkeypatch, stub_worker, tmp_path):
-    """Zip derives `test-dict-v1`; slot is `test-dict-v1` — must invoke worker."""
-    zip_path = build_yomitan_zip(tmp_path / "src.zip", title="Test Dict", revision="v1")
-
-    monkeypatch.setattr(
-        QFileDialog,
-        "getOpenFileName",
-        lambda *a, **kw: (str(zip_path), "Yomitan zip (*.zip)"),
-    )
+def test_saved_zip_invokes_slot_pinned_repair_worker(tab, monkeypatch, stub_worker):
+    slot = tab.config.dicts_root / "test-dict-v1"
+    slot.mkdir(parents=True)
+    zip_path = build_yomitan_zip(slot / "source.zip", title="Test Dict", revision="v1")
     warnings = _capture_warnings(monkeypatch)
 
     tab._dict_import_flow.reimport_dict("test-dict-v1")
 
-    assert warnings == [], f"Match path must not warn; got {warnings}"
-    stub_worker.assert_called_once()
-    args, kwargs = stub_worker.call_args
-    # The handler must pass the zip path and request overwrite.
+    assert warnings == []
+    stub_worker.repair_factory.assert_called_once()
+    args, kwargs = stub_worker.repair_factory.call_args
     assert Path(args[0]) == zip_path
-    assert kwargs.get("overwrite") is True
+    assert args[1] == tab.config.dicts_root
+    assert kwargs["dict_id"] == "test-dict-v1"
 
 
 def test_refresh_registry_called_on_success(tab, monkeypatch, stub_worker, tmp_path):
     """The on_done callback re-scans the registry so stale flags clear."""
-    zip_path = build_yomitan_zip(tmp_path / "src.zip", title="Test Dict", revision="v1")
-    monkeypatch.setattr(
-        QFileDialog,
-        "getOpenFileName",
-        lambda *a, **kw: (str(zip_path), "Yomitan zip (*.zip)"),
-    )
+    slot = tab.config.dicts_root / "test-dict-v1"
+    slot.mkdir(parents=True)
+    build_yomitan_zip(slot / "source.zip", title="Test Dict", revision="v1")
     monkeypatch.setattr(QMessageBox, "warning", lambda *a, **kw: 0)
     monkeypatch.setattr(QMessageBox, "information", lambda *a, **kw: 0)
 
@@ -136,24 +121,27 @@ def test_refresh_registry_called_on_success(tab, monkeypatch, stub_worker, tmp_p
     tab._dict_import_flow.reimport_dict("test-dict-v1")
 
     # The flow keeps the worker alive on `_active_import_worker`; grab the
-    # on_done callback it wired to `import_finished` and invoke it directly so
-    # we can verify the post-success refresh without spinning up a QThread.
+    # domain and native-finished callbacks and invoke both directly so we can
+    # verify the post-success refresh without spinning up a QThread.
     captured_worker = tab._dict_import_flow._active_import_worker
     on_done = captured_worker.import_finished.connect.call_args.args[0]
     on_done("test-dict-v1", {"entry_count": 42})
+    captured_worker.finished.connect.call_args.args[0]()
 
     assert refresh_called == [True]
 
 
-def test_cancelled_dialog_skips_warning_and_worker(tab, monkeypatch, stub_worker):
-    """Empty path from QFileDialog (user cancelled) — must early-return silently."""
-    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **kw: ("", ""))
+def test_source_first_reimport_does_not_open_file_picker(tab, monkeypatch, stub_worker):
+    picker = MagicMock(return_value=("", ""))
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", picker)
     warnings = _capture_warnings(monkeypatch)
 
     tab._dict_import_flow.reimport_dict("any-slot")
 
-    assert warnings == []
+    assert len(warnings) == 1
+    picker.assert_not_called()
     stub_worker.assert_not_called()
+    stub_worker.repair_factory.assert_not_called()
 
 
 def test_add_dict_user_cancel_closes_without_warning(tab, monkeypatch, stub_worker, tmp_path):
@@ -171,6 +159,7 @@ def test_add_dict_user_cancel_closes_without_warning(tab, monkeypatch, stub_work
     worker = tab._dict_import_flow._active_import_worker
     on_cancelled = worker.cancelled.connect.call_args.args[0]
     on_cancelled()
+    worker.finished.connect.call_args.args[0]()
 
     assert warnings == [], "user cancel must not surface an Import Failed dialog"
     assert tab.dictionary_panel._add_btn.isEnabled() is True, "buttons re-enabled after cancel"
@@ -180,12 +169,9 @@ def test_resource_release_refusal_blocks_worker(tab, monkeypatch, stub_worker, t
     """When the release hook refuses (mining run in flight), the handler must
     show the "Re-import blocked" warning and never spawn the importer worker —
     otherwise on Windows the rename would crash with Access denied (Issue #32)."""
-    zip_path = build_yomitan_zip(tmp_path / "src.zip", title="Test Dict", revision="v1")
-    monkeypatch.setattr(
-        QFileDialog,
-        "getOpenFileName",
-        lambda *a, **kw: (str(zip_path), "Yomitan zip (*.zip)"),
-    )
+    slot = tab.config.dicts_root / "test-dict-v1"
+    slot.mkdir(parents=True)
+    build_yomitan_zip(slot / "source.zip", title="Test Dict", revision="v1")
     warnings = _capture_warnings(monkeypatch)
     monkeypatch.setattr(tab.dictionary_panel, "request_resource_release", lambda: False)
 
@@ -193,6 +179,7 @@ def test_resource_release_refusal_blocks_worker(tab, monkeypatch, stub_worker, t
 
     assert any(title == "Re-import Blocked" for title, _ in warnings), warnings
     stub_worker.assert_not_called()
+    stub_worker.repair_factory.assert_not_called()
 
 
 def test_add_dict_opens_file_dialog_at_home(tab, monkeypatch, stub_worker):
@@ -211,31 +198,13 @@ def test_add_dict_opens_file_dialog_at_home(tab, monkeypatch, stub_worker):
     assert captured.get("dir") != "", "start dir must not be empty string"
 
 
-def test_reimport_dict_opens_file_dialog_at_home(tab, monkeypatch, stub_worker):
-    """reimport_dict must pass home dir as the start-dir to getOpenFileName."""
-    captured: dict = {}
-
-    def fake_open(parent, title, start_dir, file_filter, *a, **kw):
-        captured["dir"] = start_dir
-        return ("", "")  # user cancels
-
-    monkeypatch.setattr(QFileDialog, "getOpenFileName", fake_open)
-    tab._dict_import_flow.reimport_dict("any-slot")
-
-    home = str(Path.home())
-    assert captured.get("dir") == home, f"Expected home={home!r}; got {captured.get('dir')!r}"
-
-
 def test_resource_release_runs_before_worker_start(tab, monkeypatch, stub_worker, tmp_path):
     """The release hook must fire strictly before ImportWorker is
     constructed, so cached sqlite handles are dropped before the importer
     renames the dict folder (Issue #32 root-cause ordering)."""
-    zip_path = build_yomitan_zip(tmp_path / "src.zip", title="Test Dict", revision="v1")
-    monkeypatch.setattr(
-        QFileDialog,
-        "getOpenFileName",
-        lambda *a, **kw: (str(zip_path), "Yomitan zip (*.zip)"),
-    )
+    slot = tab.config.dicts_root / "test-dict-v1"
+    slot.mkdir(parents=True)
+    build_yomitan_zip(slot / "source.zip", title="Test Dict", revision="v1")
     monkeypatch.setattr(QMessageBox, "warning", lambda *a, **kw: 0)
 
     events: list[str] = []
@@ -244,7 +213,7 @@ def test_resource_release_runs_before_worker_start(tab, monkeypatch, stub_worker
         "request_resource_release",
         lambda: events.append("release") or True,
     )
-    stub_worker.side_effect = lambda *a, **kw: (
+    stub_worker.repair_factory.side_effect = lambda *a, **kw: (
         events.append("worker_built"),
         MagicMock(
             progress=MagicMock(),

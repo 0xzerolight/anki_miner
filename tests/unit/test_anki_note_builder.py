@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import CardPayload, MediaData, TokenizedWord
-from anki_miner.services.anki_note_builder import build_note
+from anki_miner.services.anki_note_builder import build_note, configured_target_field_names
 
 
 def _word(**overrides) -> TokenizedWord:
@@ -52,6 +52,14 @@ def _config(**field_overrides) -> AnkiMinerConfig:
     fields = dict(AnkiMinerConfig().anki_fields)
     fields.update(field_overrides)
     return AnkiMinerConfig(anki_fields=fields)
+
+
+def test_configured_target_field_names_uses_nonempty_mappings_and_active_marker():
+    fields = dict.fromkeys(AnkiMinerConfig().anki_fields, "")
+    fields.update(word="Expression", source="MiningSource")
+    config = AnkiMinerConfig(anki_fields=fields, card_type="click")
+
+    assert configured_target_field_names(config) == {"Expression", "MiningSource", "IsClickCard"}
 
 
 class TestPitchGraphTextFields:

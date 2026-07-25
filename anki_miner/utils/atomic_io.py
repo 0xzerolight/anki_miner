@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import contextlib
 import os
-import shutil
 import tempfile
 import time
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+
+from anki_miner.utils.robust_fs import robust_rmtree
 
 
 @contextmanager
@@ -48,7 +49,7 @@ def atomic_replace_dir(new_dir: Path, dest_dir: Path) -> None:
         raise
     else:
         if backup is not None:
-            shutil.rmtree(backup, ignore_errors=True)
+            robust_rmtree(backup, mode="outcome")
 
 
 def reconcile_dir(dest_dir: Path) -> None:

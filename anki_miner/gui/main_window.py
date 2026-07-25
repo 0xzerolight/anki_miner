@@ -1,8 +1,12 @@
 """Main window for Anki Miner GUI."""
 
 import logging
-from collections.abc import Callable
+import sys
+from collections import Counter
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from dataclasses import replace
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
@@ -27,23 +31,38 @@ from anki_miner.gui.constants import (
     WINDOW_MIN_WIDTH,
 )
 from anki_miner.gui.controllers import BackgroundTaskController
+from anki_miner.gui.launch import get_effective_log_path
 from anki_miner.gui.presenters import GUIPresenter
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.utils import file_dialogs
+from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.utils.config_manager import GUIConfigManager
-from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
 from anki_miner.gui.widgets.header_widget import HeaderWidget
 from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
 from anki_miner.models import ProcessingResult, ValidationResult
 from anki_miner.services import ShortcutResult, ShortcutService, ValidationService
 from anki_miner.services.anki_service import AnkiService
+from anki_miner.utils.bundled_binary import frozen_state
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.gui.capabilities import CapabilityTarget
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome
 
 logger = logging.getLogger(__name__)
+
+
+def open_log_folder(log_path: Path) -> None:
+    """Open the parent directory of *log_path* in the system file manager."""
+    from PyQt6.QtCore import QUrl
+    from PyQt6.QtGui import QDesktopServices
+
+    log_folder = Path(log_path).parent
+    log_folder.mkdir(parents=True, exist_ok=True)
+    QDesktopServices.openUrl(QUrl.fromLocalFile(str(log_folder)))
 
 
 class MainWindow(QMainWindow):
@@ -118,21 +137,29 @@ class MainWindow(QMainWindow):
 
         self._update_banner: UpdateBanner | None = None
 
-    def commit_boot(self) -> None:
-        """Commit startup state, then start every boot background task."""
+    def commit_boot(self, *, suppress_optional: bool = False) -> None:
+        """Commit startup state, then start boot work unless suppressed."""
         if self._boot_committed:
             return
 
-        self._run_optional_boot_step(
-            "legacy frequency-source repair",
-            self._maybe_repair_legacy_frequency_source_name,
-        )
+        if not suppress_optional:
+            self._run_optional_boot_step(
+                "legacy frequency-source repair",
+                self._maybe_repair_legacy_frequency_source_name,
+            )
+            # One-time legacy pitch_accent.csv → pitch/legacy-pitch migration.
+            # Synchronous (CSV→sqlite is fast and one-time) and must run before
+            # any pitch-consuming service is built.
+            self._run_optional_boot_step(
+                "legacy pitch migration",
+                self._maybe_migrate_legacy_pitch,
+            )
 
         previous = self.config.last_known_version
         if previous != __version__:
             self.update_config(replace(self.config, last_known_version=__version__))
 
-        if previous and previous != __version__:
+        if not suppress_optional and previous and previous != __version__:
             QMessageBox.information(
                 self,
                 self.tr("Anki Miner updated"),
@@ -148,6 +175,9 @@ class MainWindow(QMainWindow):
             )
 
         self._boot_committed = True
+        if suppress_optional:
+            return
+
         self._validation_silent = True
         self._run_optional_boot_step("startup validation", self._run_validation)
         if self.config.check_for_updates:
@@ -396,6 +426,42 @@ class MainWindow(QMainWindow):
                 return i
         return -1
 
+    @contextmanager
+    def _dictionary_mutation_guard(self, kind: str) -> Iterator[bool]:
+        """Commit pending Settings, then own dictionary mutation controls."""
+        if not self.prepare_dictionary_mutation():
+            yield False
+            return
+        settings_idx = self._settings_tab_index()
+        if settings_idx < 0:
+            yield True
+            return
+        settings_tab = self.tabs.widget(settings_idx)
+        preflight = getattr(settings_tab, "commit_pending_settings_for_mutation", None)
+        panel = getattr(settings_tab, "dictionary_panel", None)
+        if not callable(preflight) or panel is None:
+            yield True
+            return
+        if not preflight():
+            yield False
+            return
+        token = panel.hold_mutation(kind)
+        try:
+            yield True
+        finally:
+            panel.release(token)
+
+    def prepare_dictionary_mutation(self) -> bool:
+        """Stop startup JMdict migration or show the shared refusal dialog."""
+        if self.background_tasks.prepare_dictionary_mutation():
+            return True
+        QMessageBox.warning(
+            self,
+            self.tr("Dictionary Change Blocked"),
+            self.tr("The startup JMdict migration is still stopping. Wait for it to finish and try again."),
+        )
+        return False
+
     # Stable capability key -> the widget class name registered as that main tab.
     # Matched by class name (not index/label) so it survives tab reorder and i18n.
     _MAIN_TAB_CLASSES = {
@@ -482,27 +548,40 @@ class MainWindow(QMainWindow):
 
     def _open_log_folder(self) -> None:
         """Open the log folder in the system file manager (Help → Open Log Folder)."""
-        from PyQt6.QtCore import QUrl
-        from PyQt6.QtGui import QDesktopServices
-
-        log_folder = self.config.log_path.parent
-        log_folder.mkdir(parents=True, exist_ok=True)
-        QDesktopServices.openUrl(QUrl.fromLocalFile(str(log_folder)))
+        open_log_folder(get_effective_log_path(self.config.log_path))
 
     def _create_desktop_shortcut(self) -> None:
         """Create a desktop shortcut via ShortcutService and report the result."""
-        self._run_shortcut_work(show_result=True, skip_if_exists=False)
+        self._run_shortcut_work(show_result=True, skip_if_exists=False, include_start_menu=False)
 
     def _maybe_create_shortcut_on_first_run(self) -> None:
         """Auto-create a desktop shortcut on first launch; persist the flag."""
-        self._run_shortcut_work(show_result=False, skip_if_exists=True)
+        if sys.platform == "win32" and frozen_state()[0]:
+            if not self.config.first_run_shortcut_done:
+                try:
+                    self.update_config(replace(self.config, first_run_shortcut_done=True))
+                except Exception:
+                    logger.exception("Could not persist desktop shortcut attempt state")
+            return
+        self._run_shortcut_work(show_result=False, skip_if_exists=True, include_start_menu=True)
 
-    def _run_shortcut_work(self, *, show_result: bool, skip_if_exists: bool) -> None:
+    def _run_shortcut_work(
+        self,
+        *,
+        show_result: bool,
+        skip_if_exists: bool,
+        include_start_menu: bool,
+    ) -> None:
         if self._shortcut_work_in_flight:
             return
         self._shortcut_work_in_flight = True
 
         def work() -> ShortcutResult | None:
+            if sys.platform == "win32":
+                return ShortcutService.create_shortcut(
+                    skip_if_exists=skip_if_exists,
+                    include_start_menu=include_start_menu,
+                )
             if skip_if_exists and ShortcutService.shortcut_exists():
                 return None
             return ShortcutService.create_shortcut()
@@ -547,15 +626,17 @@ class MainWindow(QMainWindow):
         """Tools-menu handler: run the resource download dialog, apply result."""
         from anki_miner.gui.widgets.dialogs.resource_download_dialog import run_resource_download
 
-        # The recommended dict downloads into the same slot the legacy JMdict
-        # XML migration writes; stop an in-flight migration first (same-slot
-        # concurrent-writer race, see cancel_jmdict_migration).
-        self.background_tasks.cancel_jmdict_migration()
-        new_config = run_resource_download(self, self.config, release_resources=self.release_dictionary_resources)
-        if new_config is not None:
-            # update_config (not from_settings) propagates via config_refreshed
-            # to all tabs incl. Settings, and persists to disk.
-            self.update_config(new_config)
+        with self._dictionary_mutation_guard("resource-download") as ready:
+            if not ready:
+                return
+            # The recommended dict downloads into the same slot the legacy
+            # JMdict XML migration writes; stop an in-flight migration first.
+            self.background_tasks.cancel_jmdict_migration()
+            outcome = run_resource_download(self, self.config, release_resources=self.release_dictionary_resources)
+            if outcome is not None and outcome.summary.succeeded:
+                # update_config (not from_settings) propagates via
+                # config_refreshed to all tabs incl. Settings, and persists.
+                self.update_config(outcome.config)
 
     def _run_capability_browser_tool(self) -> None:
         """Tools-menu handler: open the Find a Feature browser.
@@ -576,11 +657,33 @@ class MainWindow(QMainWindow):
         """
         from anki_miner.gui.widgets.dialogs.setup_wizard import run_setup_wizard
 
-        # Wizard's Resources page can download into the JMdict migration slot.
-        self.background_tasks.cancel_jmdict_migration()
-        new_config = run_setup_wizard(self, self.config)
-        if new_config is not None:
-            self.update_config(new_config)
+        with self._dictionary_mutation_guard("setup-wizard") as ready:
+            if not ready:
+                return
+            # Wizard's Resources page can download into the JMdict migration slot.
+            self.background_tasks.cancel_jmdict_migration()
+            outcome = run_setup_wizard(self, self.config)
+            self._commit_setup_wizard_outcome(outcome, first_run_offer=False)
+
+    def _commit_setup_wizard_outcome(
+        self,
+        outcome: "SetupWizardOutcome",
+        *,
+        first_run_offer: bool,
+    ) -> None:
+        """Merge live one-way flags, then persist one wizard outcome."""
+        live_config = self.config
+        setup_done = (
+            live_config.first_run_setup_done or outcome.consumes_first_run_offer
+            if first_run_offer
+            else live_config.first_run_setup_done
+        )
+        merged = replace(
+            outcome.config,
+            first_run_shortcut_done=(live_config.first_run_shortcut_done or outcome.config.first_run_shortcut_done),
+            first_run_setup_done=setup_done,
+        )
+        self.update_config(merged)
 
     def _restyle_mined_cards(self) -> None:
         """Tools-menu handler: re-apply the built-in glossary styling to already-mined cards.
@@ -645,14 +748,13 @@ class MainWindow(QMainWindow):
         self.background_tasks.start_restyle_cards(service, self.config, on_progress, on_result, on_error)
 
     def _maybe_offer_first_run_setup(self) -> None:
-        """Offer the guided setup wizard on first launch; persist the flag.
+        """Offer guided setup and consume the offer only on finish or Skip.
 
         Broadened (Task 3): the wizard is offered whenever the run hasn't been
         completed (``not first_run_setup_done``) — no longer gated on freq/pitch
         file presence, since the wizard's Resources step covers those. The
-        wizard's returned (possibly partial) config is folded in via
-        ``update_config``. The ``finally`` guarantees ``first_run_setup_done`` is
-        set even if the wizard raises, so it never re-fires on the next launch.
+        wizard's returned partial config is always persisted. Dismissal leaves
+        the offer unconsumed; failures are logged and re-offered next launch.
         """
         from anki_miner.gui.widgets.dialogs.setup_wizard import run_setup_wizard
 
@@ -663,21 +765,20 @@ class MainWindow(QMainWindow):
             return
         self._first_run_setup_handled = True
 
-        # Boot started the legacy JMdict XML migration just before scheduling
-        # this offer; its slot is the wizard download's target — stop it first.
-        self.background_tasks.cancel_jmdict_migration()
+        with self._dictionary_mutation_guard("first-run-setup-wizard") as ready:
+            if not ready:
+                self._first_run_setup_handled = False
+                return
+            # Boot started the legacy JMdict XML migration just before
+            # scheduling this offer; stop it before the wizard captures config.
+            self.background_tasks.cancel_jmdict_migration()
 
-        config = self.config
-        try:
-            returned = run_setup_wizard(self, config)
-            if returned is not None:
-                config = returned
-        finally:
-            # Persist once, combining any wizard mutations with the flag so we
-            # don't double-save or clobber them. The finally guarantees the flag
-            # is set even if the wizard raises, so it never re-fires. `config` is
-            # the wizard's returned config when it completed, else the original.
-            self.update_config(replace(config, first_run_setup_done=True))
+            try:
+                outcome = run_setup_wizard(self, self.config)
+            except Exception:
+                logger.exception("Setup wizard failed")
+                return
+            self._commit_setup_wizard_outcome(outcome, first_run_offer=True)
 
     def _maybe_prompt_stale_dictionaries(self) -> None:
         """Dispatch the schema-staleness scan off-thread; prompt in the callback (4.0).
@@ -702,10 +803,10 @@ class MainWindow(QMainWindow):
         ``DictMeta.schema_ok``), not a new scanner. When any *enabled* indexed
         chain entry is schema-stale, mining would silently drop every word for
         lack of a definition, so we surface a blocking prompt offering one-click
-        Reimport All (which covers both yomitan ``source.zip`` slots and the
-        legacy JMdict slot; slots without a saved source are named in its
-        summary and fall to the per-row affordance). "Later" leaves mining gated
-        by the per-run pre-checks; the prompt re-offers next launch.
+        repair scoped to those stale slots (covering both yomitan ``source.zip``
+        slots and the legacy JMdict slot; slots without a saved source are named
+        in its summary and fall to the per-row affordance). "Later" leaves mining
+        gated by the per-run pre-checks; the prompt re-offers next launch.
         """
         if self._stale_dict_prompt_handled:
             return
@@ -737,7 +838,7 @@ class MainWindow(QMainWindow):
         settings_widget = self.tabs.widget(idx)
         trigger = getattr(settings_widget, "trigger_reimport_all", None)
         if callable(trigger):
-            trigger()
+            trigger(frozenset(m.dict_id for m in stale))
 
     def _show_about(self) -> None:
         """Show the About dialog."""
@@ -794,6 +895,19 @@ class MainWindow(QMainWindow):
         """
         silent = self._validation_silent
         self._validation_silent = False
+
+        if silent:
+            if not result.issues:
+                logger.info("Startup validation completed: issues=0")
+            else:
+                component_counts = Counter(issue.component for issue in result.issues)
+                logger.warning(
+                    "Startup validation completed: issues=%d errors=%d warnings=%d components=%s",
+                    len(result.issues),
+                    len(result.get_errors()),
+                    len(result.get_warnings()),
+                    ",".join(f"{name}={count}" for name, count in sorted(component_counts.items())),
+                )
 
         # Update system status indicators
         ankiconnect_ok = all(issue.component != "AnkiConnect" for issue in result.issues)
@@ -908,13 +1022,29 @@ class MainWindow(QMainWindow):
             config,
             config_version=max(self.config.config_version, config.config_version) + 1,
         )
-        GUIConfigManager.save_config(committed_config)
+        try:
+            GUIConfigManager.save_config(committed_config)
+        except Exception as error:
+            raise ConfigCommitError(ConfigCommitResult.pre_save_failure(error)) from error
         self.config = committed_config
-        # Rebuild config-bound services so AnkiConnect URL/port edits take
-        # effect: validation and the undo-delete AnkiService were frozen to the
-        # startup config and would otherwise keep hitting the old endpoint.
-        self._build_config_bound_services()
-        self.config_refreshed.emit(committed_config)
+        refresh_error: Exception | None = None
+        try:
+            # Re-seed the app-wide file-dialog mode so a toggled setting applies to
+            # the very next dialog without restart (Issue #100).
+            file_dialogs.set_use_native(committed_config.use_native_file_dialogs)
+            # Rebuild config-bound services so AnkiConnect URL/port edits take
+            # effect: validation and the undo-delete AnkiService were frozen to the
+            # startup config and would otherwise keep hitting the old endpoint.
+            self._build_config_bound_services()
+        except Exception as error:
+            refresh_error = error
+        try:
+            self.config_refreshed.emit(committed_config)
+        except Exception as error:
+            if refresh_error is None:
+                refresh_error = error
+        if refresh_error is not None:
+            raise ConfigCommitError(ConfigCommitResult.post_save_failure(refresh_error)) from refresh_error
 
     def _build_config_bound_services(self) -> None:
         """(Re)create services bound to the current ``self.config``.
@@ -948,9 +1078,12 @@ class MainWindow(QMainWindow):
 
         Used by the Settings → Remove dictionary flow to drop SQLite handles
         before ``rmtree`` (Issue #30, Win11 file-lock). Returns ``False`` if
-        any tab refused — typically because a mining run is in flight — so
-        the caller can surface a clear message instead of silently failing.
+        prewarm is running or any tab refused because mining or card backfill
+        is using indexed resources, so the caller can surface a clear message
+        instead of silently failing.
         """
+        if still_running(self.background_tasks.prewarm_worker):
+            return False
         for i in range(self.tabs.count()):
             tab = self.tabs.widget(i)
             release = getattr(tab, "release_dictionary_resources", None)
@@ -971,8 +1104,8 @@ class MainWindow(QMainWindow):
         """
         # Flush a pending Settings auto-save FIRST. Ordering is load-bearing:
         # background_tasks.shutdown below fans out to SettingsTab.shutdown,
-        # which stops the debounce timer — a flush placed after it would see
-        # an inactive timer and silently drop an edit made <1s before quit.
+        # which stops debounce scheduling and begins worker teardown; persist
+        # edits while the Settings tab is still fully active.
         # The deferred-close path also returns before the save_config at the
         # bottom, so this is the only spot both close paths pass through.
         # Committing routes through config_changed → update_config, which
@@ -1056,6 +1189,23 @@ class MainWindow(QMainWindow):
         from anki_miner.services.frequency.legacy_migration import repair_legacy_frequency_source_name
 
         repair_legacy_frequency_source_name(self.config)
+
+    def _maybe_migrate_legacy_pitch(self) -> None:
+        """One-time: fold a legacy single pitch_accent.csv into the pitch chain.
+
+        Synchronous (CSV→sqlite is fast and one-time, so no background worker).
+        No-ops once migrated. Persists via ``update_config`` — NOT a bare
+        ``GUIConfigManager.save_config`` — so the live session picks the chain
+        up immediately (``self.config`` swap + config_version bump +
+        ``config_refreshed`` emit); a bare save would leave pitch inactive
+        until the next launch.
+        """
+        from anki_miner.services.pitch_accent.legacy_migration import migrate_legacy_pitch_csv
+
+        migrated = migrate_legacy_pitch_csv(self.config)
+        if migrated is not None:
+            self.update_config(migrated)
+            logger.info("Migrated legacy pitch_accent.csv into pitch/legacy-pitch")
 
     def _maybe_migrate_jmdict(self) -> None:
         """One-time: migrate legacy JMdict XML into a SQLite index in the background."""

@@ -37,6 +37,24 @@ class FreqEntry:
 
 
 @dataclass(frozen=True)
+class PitchSourceEntry:
+    """One enabled/ordered pitch accent source in the first-hit-wins chain.
+
+    References a folder under ~/.anki_miner/pitch/<source_id>/ holding an
+    index.sqlite built by the pitch source importer. Unlike the additive
+    frequency chain, sources resolve first-hit-wins in chain order: the first
+    enabled source whose lookup returns an entry wins, and later sources only
+    fill words earlier sources miss.
+
+    (Named PitchSourceEntry, not PitchEntry — that name is already the lookup
+    record in services/pitch_accent_service.py.)
+    """
+
+    source_id: str
+    enabled: bool = True
+
+
+@dataclass(frozen=True)
 class AudioSourceEntry:
     """One entry in the expression audio source chain.
 
@@ -238,9 +256,20 @@ class AnkiMinerConfig:
     reading_tts_papago_enabled: bool = True
 
     # Pitch accent settings. Activation is resource-driven (see the pitch_active
-    # property): the lookup runs iff a pitch data file is present. There is no
-    # separate on/off flag — importing/downloading the file is the switch.
+    # property): the lookup runs iff at least one enabled source is in the
+    # chain. There is no separate on/off flag — adding a source is the switch.
+    #
+    # DEPRECATED: pitch_accent_path is the legacy single-CSV location, kept only
+    # as the source for the one-time legacy-pitch chain migration (and for
+    # graceful downgrade to older app versions this release). Runtime lookups
+    # never read it once the chain exists.
     pitch_accent_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "pitch_accent.csv")
+    # First-hit-wins multi-source pitch chain. Each enabled PitchSourceEntry
+    # references a per-source index under ~/.anki_miner/pitch/<source_id>/.
+    # Empty by default; the boot-time legacy migration populates it from
+    # pitch_accent.csv when present.
+    pitch_chain: tuple["PitchSourceEntry", ...] = field(default_factory=tuple)
+    pitch_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "pitch")
     # Output label format for the pitch_category Anki field.
     # "jp": 平板/頭高/中高/尾高/起伏 (legacy)
     # "romaji": heiban/atamadaka/nakadaka/odaka/kifuku (Yomitan/Lapis compatible)
@@ -360,11 +389,13 @@ class AnkiMinerConfig:
     skipped_update_version: str = ""
     last_known_version: str = ""
 
-    # First-run flags (GUI-persisted; used to auto-create desktop shortcut once)
+    # First-run flags (GUI-persisted; used to auto-create desktop shortcut once).
+    # Fresh installs default False; GUIConfigManager seeds absent keys True only
+    # when loading a pre-existing config.
     first_run_shortcut_done: bool = False
     # Set once the first-run recommended-resources setup has been offered (so the
     # Welcome dialog never re-fires). Persisted automatically; absent in old
-    # configs defaults to False.
+    # configs is seeded True by GUIConfigManager.
     first_run_setup_done: bool = False
 
     # Performance settings
@@ -446,6 +477,11 @@ class AnkiMinerConfig:
     # the source language: no translator is installed for it. Persisted via
     # gui_config.json; applied at startup (restart-to-apply). Discussion #76.
     ui_language: str = "en"
+    # File pickers use Qt's built-in dialog by default: the OS-native dialog
+    # can hang the GUI thread indefinitely on some Windows setups (Explorer
+    # shell/cloud enumeration on a bad network — Issue #100). True restores
+    # native dialogs. Consumed via gui/utils/file_dialogs.set_use_native.
+    use_native_file_dialogs: bool = False
 
     # Monotonic identity for committed GUI settings. Not user-editable.
     config_version: int = 0
@@ -472,6 +508,8 @@ class AnkiMinerConfig:
             object.__setattr__(self, "audio_packs_root", Path(self.audio_packs_root))
         if isinstance(self.pitch_accent_path, str):
             object.__setattr__(self, "pitch_accent_path", Path(self.pitch_accent_path))
+        if isinstance(self.pitch_root, str):
+            object.__setattr__(self, "pitch_root", Path(self.pitch_root))
         if isinstance(self.freqs_root, str):
             object.__setattr__(self, "freqs_root", Path(self.freqs_root))
         if isinstance(self.known_words_db_path, str):
@@ -598,11 +636,13 @@ class AnkiMinerConfig:
 
     @property
     def pitch_active(self) -> bool:
-        """Whether pitch lookup should load — iff a pitch data file is present.
+        """Whether pitch lookup should load — iff an enabled source is configured.
 
-        Replaces the removed ``use_pitch_accent`` flag. The default path exists
-        only after the user imports/downloads pitch data, so default configs are
-        inactive. Like frequency, this drives pre-card-write surfaces (CSV
-        export), so file-presence — not a mapped pitch field — is the switch.
+        Replaces the removed ``use_pitch_accent`` flag (and, since the
+        multi-source chain, the legacy file-presence check on
+        ``pitch_accent_path``). Like frequency, this drives pre-card-write
+        surfaces (CSV export), so the chain — not a mapped pitch field — is the
+        switch. The default chain is empty, so default configs are inactive;
+        the boot-time legacy migration back-fills it for existing CSV users.
         """
-        return self.pitch_accent_path.is_file()
+        return any(e.enabled for e in self.pitch_chain)

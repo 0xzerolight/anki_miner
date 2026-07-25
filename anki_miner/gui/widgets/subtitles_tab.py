@@ -29,6 +29,7 @@ from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
+from anki_miner.gui.workers.backfill_worker import BackfillScanWorker
 
 if TYPE_CHECKING:
     from anki_miner.gui.workers.base_worker import CancellableWorker
@@ -42,13 +43,19 @@ class SubtitlesTab(QWidget):
         parent: Optional parent widget.
     """
 
-    def __init__(self, config: AnkiMinerConfig, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        config: AnkiMinerConfig,
+        parent: QWidget | None = None,
+        *,
+        suppress_optional_startup: bool = False,
+    ) -> None:
         super().__init__(parent)
         self.config = config
 
-        self.generate_tab = SubtitleCreationTab(config)
-        self.retime_tab = SubtitleRetimeTab(config)
-        self.condense_tab = CondenseTab(config)
+        self.generate_tab = SubtitleCreationTab(config, suppress_optional_startup=suppress_optional_startup)
+        self.retime_tab = SubtitleRetimeTab(config, suppress_optional_startup=suppress_optional_startup)
+        self.condense_tab = CondenseTab(config, suppress_optional_startup=suppress_optional_startup)
 
         self._inner_tabs = QTabWidget()
         self._inner_tabs.addTab(
@@ -66,7 +73,7 @@ class SubtitlesTab(QWidget):
         self.backfill_tab = CardBackfillTab(config)
         self._inner_tabs.addTab(
             self.backfill_tab,
-            QCoreApplication.translate("MainWindow", "Card Backfill"),
+            QCoreApplication.translate("MainWindow", "Backfill"),
         )
 
         # Stable sub-tab keys for reveal_capability (see capabilities.SUBTAB_KEYS).
@@ -104,6 +111,11 @@ class SubtitlesTab(QWidget):
         self.retime_tab.update_config(config)
         self.condense_tab.update_config(config)
         self.backfill_tab.update_config(config)
+
+    def release_dictionary_resources(self) -> bool:
+        """Refuse resource mutation while a backfill scan uses providers."""
+        worker = self.backfill_tab.worker_thread
+        return not (isinstance(worker, BackfillScanWorker) and worker.isRunning())
 
     # ------------------------------------------------------------------
     # Close contract

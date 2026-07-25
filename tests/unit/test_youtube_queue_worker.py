@@ -15,6 +15,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from anki_miner.exceptions import SetupError
 from anki_miner.exceptions.youtube import YouTubeFetchError
 from anki_miner.gui.workers.youtube_queue_worker import (
     YouTubeQueueWorker,
@@ -1010,3 +1011,40 @@ def test_stale_dict_aborts_queue_once(make_worker, mock_processor):
     assert caps["finished"].calls == []
     assert len(caps["queue_finished"].calls) == 1
     mock_processor.process_youtube_url.assert_not_called()
+
+
+def test_missing_offline_dictionary_aborts_queue_once(make_worker, mock_processor):
+    items = [
+        _make_item(url="https://www.youtube.com/watch?v=a", video_id="a"),
+        _make_item(url="https://www.youtube.com/watch?v=b", video_id="b"),
+    ]
+    message = (
+        "No usable offline dictionary is installed. "
+        "Use Tools → Download Recommended Resources or Settings → Dictionaries."
+    )
+    preflight_order: list[str] = []
+
+    def _check_card_target() -> None:
+        preflight_order.append("card-target")
+
+    def _check_offline_dictionary() -> None:
+        preflight_order.append("offline-dictionary")
+        raise SetupError(message)
+
+    mock_processor._preflight_card_target.side_effect = _check_card_target
+    mock_processor.check_offline_dictionary.side_effect = _check_offline_dictionary
+    worker = make_worker(items=items)
+    errors: list[str] = []
+    worker.error.connect(errors.append)
+    caps = _connect_all(worker)
+
+    worker.run()
+
+    assert errors == [message]
+    assert preflight_order == ["card-target", "offline-dictionary"]
+    mock_processor._preflight_card_target.assert_called_once_with()
+    mock_processor.check_offline_dictionary.assert_called_once_with()
+    mock_processor.process_youtube_url.assert_not_called()
+    assert caps["started"].calls == []
+    assert caps["finished"].calls == []
+    assert len(caps["queue_finished"].calls) == 1

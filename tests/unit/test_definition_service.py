@@ -11,6 +11,7 @@ from anki_miner.services.definition_service import (
     collect_dictionary_css_entries,
 )
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
+from anki_miner.services.dictionary.registry import DictionaryRegistry
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
     DictRow,
@@ -41,6 +42,73 @@ def _seed_dict(root: Path, dict_id: str, source_name: str, *, styles_css: str | 
 
 def _config(root: Path, *entries: ChainEntry) -> AnkiMinerConfig:
     return replace(AnkiMinerConfig(), dicts_root=root, dictionary_chain=entries)
+
+
+def _seed_empty_dict(root: Path, dict_id: str, source_name: str, *, schema_version: int = SCHEMA_VERSION) -> None:
+    folder = root / dict_id
+    folder.mkdir(parents=True, exist_ok=True)
+    db = folder / "index.sqlite"
+    create_index(db)
+    write_meta(
+        db,
+        {
+            "schema_version": str(schema_version),
+            "source_name": source_name,
+            "format": "yomitan",
+            "entry_count": "0",
+        },
+    )
+
+
+class TestHasUsableOfflineProvider:
+    @staticmethod
+    def _build(config: AnkiMinerConfig) -> tuple[DefinitionService, DictionaryRegistry]:
+        registry = DictionaryRegistry(config.dicts_root)
+        registry.load()
+        service = DefinitionService(
+            config,
+            providers=registry.build_provider_chain(config),
+            registry=registry,
+        )
+        return service, registry
+
+    def test_missing_referenced_dictionary_does_not_count(self, tmp_path: Path):
+        service, _registry = self._build(_config(tmp_path, ChainEntry(kind="indexed", dict_id="missing", enabled=True)))
+
+        assert service.has_usable_offline_provider() is False
+
+    def test_disabled_chain_entry_does_not_count(self, tmp_path: Path):
+        _seed_dict(tmp_path, "disabled", "Disabled")
+        service, _registry = self._build(
+            _config(tmp_path, ChainEntry(kind="indexed", dict_id="disabled", enabled=False))
+        )
+
+        assert service.has_usable_offline_provider() is False
+
+    def test_zero_entry_index_does_not_count(self, tmp_path: Path):
+        _seed_empty_dict(tmp_path, "empty", "Empty")
+        service, _registry = self._build(_config(tmp_path, ChainEntry(kind="indexed", dict_id="empty", enabled=True)))
+
+        assert service.has_usable_offline_provider() is False
+
+    def test_schema_mismatch_does_not_count(self, tmp_path: Path):
+        _seed_empty_dict(tmp_path, "stale", "Stale", schema_version=SCHEMA_VERSION - 1)
+        service, _registry = self._build(_config(tmp_path, ChainEntry(kind="indexed", dict_id="stale", enabled=True)))
+
+        assert service.has_usable_offline_provider() is False
+
+    def test_jisho_only_chain_does_not_count(self, tmp_path: Path):
+        service, _registry = self._build(_config(tmp_path, ChainEntry(kind="jisho", dict_id=None, enabled=True)))
+
+        assert service.has_usable_offline_provider() is False
+
+    def test_loaded_positive_entry_offline_provider_counts_without_rescan(self, tmp_path: Path):
+        _seed_dict(tmp_path, "valid", "Valid")
+        service, registry = self._build(_config(tmp_path, ChainEntry(kind="indexed", dict_id="valid", enabled=True)))
+        registry.load = MagicMock(side_effect=AssertionError("predicate must not rescan"))
+
+        assert service.has_usable_offline_provider() is True
+        registry.load.assert_not_called()
 
 
 class TestCollectDictionaryCss:

@@ -1,8 +1,8 @@
 """Smoke test: DeckBuilderTab is registered in the main() wiring.
 
-Builds the full tab stack from ``anki_miner.gui.app.main``'s construction
-block (via the shared ``wired_window`` fixture in ``tests/unit/conftest.py``,
-which mirrors the real call) and asserts that a tab titled "Deck Builder" is
+Builds the full tab stack through ``anki_miner.gui.app.compose_main_window``
+(via the shared ``wired_window`` fixture in ``tests/unit/conftest.py``) and
+asserts that a tab titled "Deck Builder" is
 present and is an instance of DeckBuilderTab.
 
 External services (AnkiConnect, disk I/O) are patched out by the shared

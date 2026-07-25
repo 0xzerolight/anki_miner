@@ -6,6 +6,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
 
+from anki_miner.gui.workers._queue_worker_base import queue_preflight_error
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.models.processing import ProcessingResult
@@ -104,6 +105,14 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
             if self.episode_processor is None:
                 assert self._processor_factory is not None  # validated in __init__
                 self.episode_processor = self._processor_factory()
+
+            preflight_error = queue_preflight_error(
+                self.episode_processor._preflight_card_target,
+                self.episode_processor.check_offline_dictionary,
+            )
+            if preflight_error is not None:
+                self.error.emit(preflight_error)
+                return
 
             results = []
 

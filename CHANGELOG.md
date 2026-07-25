@@ -7,13 +7,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Multiple pitch accent sources.** Pitch accent now works like frequency: a new **Settings → Pitch Accent** tab manages an ordered chain of pitch dictionaries (Yomitan zip or `reading,kanji,pattern` CSV/TSV) — add, reorder, enable/disable, re-import, and remove sources, each stored as its own index under `~/.anki_miner/pitch/<source_id>/`. Unlike the additive frequency chain, pitch lookups are **first-hit-wins**: sources are checked top to bottom and the first one with an entry for a word wins, so lower sources purely extend word coverage. The setup wizard's Kanjium download now lands as a chain source, and an existing `pitch_accent.csv` is folded into the chain automatically on first launch (the file itself is left in place, so downgrading keeps working).
 
 ### Changed
-- **The recommended dictionary the setup wizard and Tools → Download Recommended Resources install is now JMdict** (yomidevs Yomitan build) instead of Jitendex — cleaner, simpler definitions that most users prefer. Existing Jitendex installs are untouched and keep their in-place Re-import support; re-running the download simply puts JMdict ahead of Jitendex in the dictionary chain. For long-time users still on the legacy JMdict XML index, the download upgrades it in place with the richer Yomitan build, and an in-flight legacy XML migration is stopped before the wizard or download dialog opens (it re-runs on the next launch if no Yomitan build was installed).
+- The single "Pitch Accent File" picker under Settings → Dictionaries was replaced by the new Pitch Accent tab; Yomitan pitch zips now import as chain sources instead of overwriting one `pitch_accent.csv` on Save.
 
 ### Fixed
 
 ### Removed
+
+## [2.8.4] - 2026-07-24
+
+A reliability release focused on first-install, upgrade/uninstall, and dictionary robustness. No pipeline or card-format changes — existing cards and configs are untouched.
+
+### Added
+- **Repair a broken dictionary in place.** A dictionary slot whose index is corrupt or has lost its metadata can now be repaired or re-imported from its saved source without a full reset — the settings dictionary panel detects the damaged slot, routes through the original source when it has one, and quarantines/recovers rather than silently dropping it. Startup also runs a lock-gated store-recovery and garbage-collection pass so a half-written or orphaned slot from a previous crash is reconciled instead of breaking the next launch.
+- **Reset all settings to defaults.** A new button in Settings restores the default configuration in one step (#99).
+
+### Changed
+- **The recommended dictionary the setup wizard and Tools → Download Recommended Resources install is now JMdict** (yomidevs Yomitan build) instead of Jitendex — cleaner, simpler definitions that most users prefer. Existing Jitendex installs are untouched and keep their in-place Re-import support; re-running the download simply puts JMdict ahead of Jitendex in the dictionary chain. For long-time users still on the legacy JMdict XML index, the download upgrades it in place with the richer Yomitan build, and an in-flight legacy XML migration is stopped before the wizard or download dialog opens (it re-runs on the next launch if no Yomitan build was installed).
+- **Windows install, upgrade, and uninstall are hardened.** The installer now owns its shortcuts and pitch-accent install transactionally, upgrading in place keeps your data instead of wiping `_internal`, a downgrade is refused with a clear message rather than corrupting state, and config plus imported dictionary/audio-pack/frequency provenance migrate forward across versions. The Windows installer upgrade and uninstall paths are now exercised in CI against the real `Setup.exe`.
+- **First-run setup is far more robust.** A new stdlib bootstrap entry installs an early crash sink and the Windows trust store before the app proper starts; the app creates the default dictionary folder at startup (no more red-bordered empty path on a clean install), fails fast with an actionable message when no usable offline dictionary is present, retries transient resource downloads, and defaults all file pickers to Qt's non-native dialogs. The setup wizard's lifecycle, note-type page mapping validation, and modal import/download flow were rebuilt around one terminal state machine so a cancelled or failed step reports honestly.
+- **Reliability and performance hardening across the app.** Broad correctness and robustness work: bounded caches and fixed quadratic scans, supervised/contained external subprocesses (alass, yt-dlp, mpv), crash-safe durable output replacement, validated boot transaction, media and byte-budget validation, accessibility labels and buddy relations, privacy redaction of logged URLs and exception text, and a fail-closed gate for DRM-protected EPUBs.
+
+### Fixed
+- **Clean-install freeze when a file dialog opened (Issue #100).** On some systems the native OS file dialog hung the app; file pickers now default to non-native dialogs, with a toggle to switch back.
+- **A second app instance now warns instead of disrupting the running one**, and the known-words database no longer blocks startup on a busy lock.
+- **Runs never report success on a failure or cancel.** A fatal queue error now yields FAILED (not PARTIAL), and cancelled runs are classified as cancelled — the UI never paints green on a failed or cancelled outcome.
+- **Dictionary and CSS imports degrade instead of aborting.** A single damaged entry no longer fails the whole import, legacy-title cards still render via a back-compat CSS selector, and read-only SQLite dictionary access works on Windows extended-length paths.
+- **Cancelling a dictionary/audio-pack import is accounted for correctly** — cancellation and undo bookkeeping was tightened so a cancelled import leaves no half-applied state.
 
 ## [2.8.3] - 2026-07-19
 

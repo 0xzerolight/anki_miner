@@ -1,15 +1,33 @@
-"""Tests for PitchAccentService."""
+"""Tests for the pitch lookup store (CSV parsing, maps, 3-tier resolution)."""
 
 import pytest
 
 from anki_miner.exceptions import SetupError
 from anki_miner.services.pitch_accent_service import (
-    PitchAccentService,
     PitchEntry,
+    PitchMapsStore,
+    build_pitch_maps,
     classify_pitch,
     count_mora,
     downstep_positions,
+    iter_pitch_csv_rows,
 )
+
+
+class _CsvPitchStore(PitchMapsStore):
+    """Single-source CSV-backed store: the parity oracle for the old
+    PitchAccentService (deleted with the multi-source chain). Exercises the
+    production pieces the provider composes: iter_pitch_csv_rows +
+    build_pitch_maps + PitchMapsStore.
+    """
+
+    def __init__(self, path):
+        super().__init__()
+        self._path = path
+
+    def load(self):
+        self._set_maps(build_pitch_maps(iter_pitch_csv_rows(self._path)))
+        return True
 
 
 class TestCountMora:
@@ -118,13 +136,13 @@ class TestLoad:
             encoding="utf-8",
         )
 
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         assert service.load() is True
         assert service.is_available() is True
 
     def test_raises_setup_error_when_file_missing(self, tmp_path):
         """Test that SetupError is raised when file is missing."""
-        service = PitchAccentService(tmp_path / "nonexistent.csv")
+        service = _CsvPitchStore(tmp_path / "nonexistent.csv")
         with pytest.raises(SetupError):
             service.load()
 
@@ -136,7 +154,7 @@ class TestLoad:
             encoding="utf-8",
         )
 
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
         assert service.lookup("食べる") == "0"
         assert service.lookup("飲む") == "1"
@@ -149,7 +167,7 @@ class TestLoad:
             encoding="utf-8",
         )
 
-        service = PitchAccentService(tsv_file)
+        service = _CsvPitchStore(tsv_file)
         service.load()
         assert service.lookup("食べる") == "0"
         assert service.lookup("飲む") == "1"
@@ -162,7 +180,7 @@ class TestLoad:
             encoding="utf-8",
         )
 
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
         assert service.lookup("食べる") == "0"
         assert service.lookup("reading") is None
@@ -175,7 +193,7 @@ class TestLoad:
             encoding="utf-8",
         )
 
-        service = PitchAccentService(tsv_file)
+        service = _CsvPitchStore(tsv_file)
         service.load()
         assert service.lookup("食べる") == "0"
         assert service.lookup("kana") is None
@@ -188,7 +206,7 @@ class TestLoad:
             encoding="utf-8",
         )
 
-        service = PitchAccentService(tsv_file)
+        service = _CsvPitchStore(tsv_file)
         service.load()
         # Both kanji and reading stored as keys, so lookup works either way
         assert service.lookup("食べる") == "0"
@@ -204,7 +222,7 @@ class TestLoad:
             encoding="utf-8",
         )
 
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         assert service.entry_count == 0
         service.load()
         # entry_count is now distinct (surface, reading) pairs, not doubled by
@@ -219,7 +237,7 @@ class TestLoad:
             encoding="utf-8",
         )
 
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
         assert service.lookup("食べる") == "0"
 
@@ -228,7 +246,7 @@ class TestLoad:
         csv_file = tmp_path / "pitch.csv"
         csv_file.write_text("", encoding="utf-8")
 
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         assert service.load() is True
         assert service.is_available() is True
         assert service.lookup("食べる") is None
@@ -238,7 +256,7 @@ class TestLoad:
         csv_file = tmp_path / "pitch.csv"
         csv_file.write_bytes(b"\x80\x81\x82\xff\xfe")  # Invalid UTF-8
 
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         with pytest.raises(SetupError, match="Error loading pitch accent data"):
             service.load()
 
@@ -254,7 +272,7 @@ class TestLookup:
             "たべる,食べる,0\n" "のむ,飲む,1\n" "はしる,走る,2\n",
             encoding="utf-8",
         )
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
         return service
 
@@ -274,14 +292,14 @@ class TestLookup:
             "たべる,食べる,0\n",
             encoding="utf-8",
         )
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
         # Look up a word that doesn't exist, with a reading that does
         assert service.lookup("不明", reading="たべる") == "0"
 
     def test_returns_none_when_not_loaded(self, tmp_path):
         """Test lookup returns None when data hasn't been loaded."""
-        service = PitchAccentService(tmp_path / "pitch.csv")
+        service = _CsvPitchStore(tmp_path / "pitch.csv")
         assert service.lookup("食べる") is None
 
 
@@ -299,7 +317,7 @@ class TestLookupDetailed:
             "おとこ,男,3\n",  # 3 mora, position 3 → 尾高
             encoding="utf-8",
         )
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
         return service
 
@@ -335,7 +353,7 @@ class TestLookupDetailed:
         The pattern is still returned; the category is declined (None)."""
         csv_file = tmp_path / "pitch.csv"
         csv_file.write_text("がっこう,学校,2\n", encoding="utf-8")
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
 
         pos, cat = service.lookup_detailed("学校", "")
@@ -347,7 +365,7 @@ class TestLookupDetailed:
         for mora counting (4 mora → position 2 → 中高)."""
         csv_file = tmp_path / "pitch.csv"
         csv_file.write_text("がっこう,学校,2\n", encoding="utf-8")
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
 
         pos, cat = service.lookup_detailed("がっこう", "")
@@ -358,7 +376,7 @@ class TestLookupDetailed:
         # Use TSV to preserve comma in pattern (like real Kanjium file)
         tsv_file = tmp_path / "pitch.tsv"
         tsv_file.write_text("いちがつ\t１月\t4,0\n", encoding="utf-8")
-        service = PitchAccentService(tsv_file)
+        service = _CsvPitchStore(tsv_file)
         service.load()
 
         position, cat = service.lookup_detailed("１月", "いちがつ")
@@ -369,7 +387,7 @@ class TestLookupDetailed:
     def test_multi_pattern_romaji(self, tmp_path):
         tsv_file = tmp_path / "pitch.tsv"
         tsv_file.write_text("いちがつ\t１月\t4,0\n", encoding="utf-8")
-        service = PitchAccentService(tsv_file)
+        service = _CsvPitchStore(tsv_file)
         service.load()
 
         position, cat = service.lookup_detailed("１月", "いちがつ", fmt="romaji")
@@ -384,7 +402,7 @@ class TestLookupDetailed:
             "のむ,飲む,1\n",  # atamadaka
             encoding="utf-8",
         )
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
 
         _, heiban = service.lookup_detailed("食べる", "たべる", fmt="romaji")
@@ -398,7 +416,7 @@ class TestLookupDetailed:
         # 走る is a 動詞 with drop at mora_count (3) → kifuku in romaji
         csv_file = tmp_path / "pitch.csv"
         csv_file.write_text("はしる,走る,3\n", encoding="utf-8")
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
 
         _, cat = service.lookup_detailed("走る", "はしる", pos="動詞", fmt="romaji")
@@ -422,7 +440,7 @@ class TestLookupDetailed:
             "はしる,走る,3\n",  # 動詞, 3 mora, final drop → 起伏/kifuku
             encoding="utf-8",
         )
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
 
         results = service.lookup_batch_detailed(
@@ -470,7 +488,7 @@ class TestReadingScopedLookup:
         # 弾く: ひく[0] loaded FIRST, はじく[2] second. Old code returned whichever
         # loaded first for any reading; the fix scopes by reading.
         csv_file.write_text("ひく,弾く,0\nはじく,弾く,2\n", encoding="utf-8")
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
         return service
 
@@ -497,7 +515,7 @@ class TestReadingScopedLookup:
         # is a variant that doesn't match exactly.
         csv_file = tmp_path / "pitch.csv"
         csv_file.write_text("たべる,食べる,0\n", encoding="utf-8")
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
         assert service.lookup("食べる", "たべ") == "0"
 
@@ -512,7 +530,7 @@ class TestFiveColumnCsv:
             'reading,kanji,pattern,nasal,devoice\nほんばこ,本箱,3,"1,3",2\n',
             encoding="utf-8",
         )
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
         entry = service.lookup_entry("本箱", "ほんばこ")
         assert entry == PitchEntry(pattern="3", nasal=(1, 3), devoice=(2,))
@@ -523,7 +541,7 @@ class TestFiveColumnCsv:
             "reading,kanji,pattern,nasal,devoice\nねこ,猫,1,,\n",
             encoding="utf-8",
         )
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
         entry = service.lookup_entry("猫", "ねこ")
         assert entry == PitchEntry(pattern="1", nasal=(), devoice=())
@@ -534,7 +552,7 @@ class TestFiveColumnCsv:
             "reading,kanji,pattern,nasal,devoice\nはし,箸,LHL,,\n",
             encoding="utf-8",
         )
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
         pos, cat = service.lookup_detailed("箸", "はし")
         assert pos == "LHL"
@@ -547,7 +565,7 @@ class TestLegacyCompatibility:
     def test_headerless_three_column(self, tmp_path):
         csv_file = tmp_path / "pitch.csv"
         csv_file.write_text("たべる,食べる,0\nのむ,飲む,1\n", encoding="utf-8")
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
         assert service.lookup("食べる") == "0"
         assert service.lookup("飲む") == "1"
@@ -560,7 +578,7 @@ class TestLegacyCompatibility:
             "reading,kanji,pattern\nたべる,食べる,0\nのむ,飲む,1\n",
             encoding="utf-8",
         )
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
         assert service.lookup("食べる") == "0"
         assert service.lookup("reading") is None
@@ -571,7 +589,7 @@ class TestLegacyCompatibility:
         # pattern tail rejoined so it reads back as "0,2".
         csv_file = tmp_path / "pitch.csv"
         csv_file.write_text("いちがつ,１月,0,2\n", encoding="utf-8")
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
         entry = service.lookup_entry("１月", "いちがつ")
         assert entry is not None
@@ -585,7 +603,7 @@ class TestLegacyCompatibility:
         # tail-rejoined; nasal/devoice stay empty.
         csv_file = tmp_path / "pitch.csv"
         csv_file.write_text("よん,四,0,1,2,3\n", encoding="utf-8")
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
         entry = service.lookup_entry("四", "よん")
         assert entry is not None
@@ -598,13 +616,13 @@ class TestLookupEntry:
     """lookup_entry exposes PitchEntry fidelity (nasal/devoice) for downstream render."""
 
     def test_returns_none_when_not_loaded(self, tmp_path):
-        service = PitchAccentService(tmp_path / "pitch.csv")
+        service = _CsvPitchStore(tmp_path / "pitch.csv")
         assert service.lookup_entry("食べる") is None
 
     def test_returns_none_for_unknown(self, tmp_path):
         csv_file = tmp_path / "pitch.csv"
         csv_file.write_text("たべる,食べる,0\n", encoding="utf-8")
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
         assert service.lookup_entry("存在しない", "ぞんざい") is None
 
@@ -614,13 +632,13 @@ class TestIsAvailable:
 
     def test_false_before_load(self, tmp_path):
         """Test is_available returns False before loading."""
-        service = PitchAccentService(tmp_path / "pitch.csv")
+        service = _CsvPitchStore(tmp_path / "pitch.csv")
         assert service.is_available() is False
 
     def test_true_after_load(self, tmp_path):
         """Test is_available returns True after successful loading."""
         csv_file = tmp_path / "pitch.csv"
         csv_file.write_text("たべる,食べる,0\n", encoding="utf-8")
-        service = PitchAccentService(csv_file)
+        service = _CsvPitchStore(csv_file)
         service.load()
         assert service.is_available() is True

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import contextlib
 from dataclasses import replace
+from functools import partial
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, QUrl
@@ -26,7 +27,6 @@ from PyQt6.QtWidgets import (
     QWizardPage,
 )
 
-from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import StatusBadge
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels.anki_settings_panel import _FIELD_KEYWORDS, auto_map_fields
@@ -36,6 +36,7 @@ from anki_miner.gui.workers.fetch_workers import (
     FetchFieldsWorker,
     FetchNotetypesWorker,
 )
+from anki_miner.services.anki_note_builder import configured_target_field_names
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -118,6 +119,10 @@ class AnkiConnectPage(QWizardPage):
         url = self.url_input.text().strip()
         if url and url != self._wizard.working_config().ankiconnect_url:
             self._wizard.update_working_config(replace(self._wizard.working_config(), ankiconnect_url=url))
+
+    def stage_current_edits(self) -> None:
+        """Stage editor state without starting an AnkiConnect check."""
+        self._write_url_to_config()
 
     def _recheck_work(self) -> tuple[bool, str]:
         """Blocking AnkiConnect check (runs off the GUI thread)."""
@@ -205,6 +210,10 @@ class DeckPage(QWizardPage):
         if name and name != self._wizard.working_config().anki_deck_name:
             self._wizard.update_working_config(replace(self._wizard.working_config(), anki_deck_name=name))
 
+    def stage_current_edits(self) -> None:
+        """Stage editor state without fetching decks."""
+        self._write_deck_to_config()
+
     def validatePage(self) -> bool:
         self._write_deck_to_config()
         return True
@@ -255,6 +264,11 @@ class NoteTypePage(QWizardPage):
         # Monotonic id of the latest field-name check; on_done/on_error ignore any
         # result whose generation no longer matches (superseded by a newer check).
         self._warn_generation = 0
+        self._fields_generation = 0
+        self._desired_note_type = ""
+        self._active_fields_request: tuple[int, str] | None = None
+        self._accept_field_fetches = True
+        self._fetched_note_types: list[str] = []
         self._field_names: list[str] = []
         self._field_names_note_type: str | None = None
 
@@ -295,19 +309,41 @@ class NoteTypePage(QWizardPage):
         self.warning_label.setObjectName("validation-status")
         self.warning_label.setWordWrap(True)
         layout.addWidget(self.warning_label)
+        wizard.finished.connect(self._on_wizard_finished)
 
     def initializePage(self) -> None:
         self.notetype_combo.setCurrentText(self._wizard.working_config().anki_note_type)
         self._on_refresh_clicked()
 
     def isComplete(self) -> bool:
-        # Never hard-block: a non-empty note type is enough (warnings are advisory).
-        return bool(self.notetype_combo.currentText().strip())
+        note_type = self.notetype_combo.currentText().strip()
+        config = self._wizard.working_config()
+        if (
+            not note_type
+            or note_type not in self._fetched_note_types
+            or self._field_names_note_type != note_type
+            or config.anki_note_type != note_type
+        ):
+            return False
+        actual_fields = set(self._field_names)
+        word_field = config.anki_fields.get("word", "")
+        return (
+            bool(word_field)
+            and word_field in actual_fields
+            and not (configured_target_field_names(config) - actual_fields)
+        )
 
-    def _on_notetype_changed(self, _text: str) -> None:
+    def _on_notetype_changed(self, text: str) -> None:
+        self._record_desired_note_type(text.strip())
+        self._fetch_fields()
+
+    def _record_desired_note_type(self, note_type: str) -> None:
+        self._fields_generation += 1
+        self._desired_note_type = note_type
         self._field_names = []
         self._field_names_note_type = None
         self.auto_map_button.setEnabled(False)
+        self._write_notetype_to_config()
         self.completeChanged.emit()
 
     def validatePage(self) -> bool:
@@ -319,6 +355,10 @@ class NoteTypePage(QWizardPage):
         if name and name != self._wizard.working_config().anki_note_type:
             self._wizard.update_working_config(replace(self._wizard.working_config(), anki_note_type=name))
 
+    def stage_current_edits(self) -> None:
+        """Stage editor state without fetching note-type fields."""
+        self._write_notetype_to_config()
+
     # --- note-type list fetch ---
 
     def _on_refresh_clicked(self) -> None:
@@ -329,36 +369,91 @@ class NoteTypePage(QWizardPage):
         self._notetypes_worker = worker
         self._wizard.register_worker(worker)
         worker.result_ready.connect(self._on_notetypes_fetched)
-        worker.error.connect(lambda _m: self.refresh_button.setEnabled(True))
+        worker.error.connect(self._on_notetypes_error)
+        self.completeChanged.emit()
         worker.start()
 
     def _on_notetypes_fetched(self, model_names: object) -> None:
         self.refresh_button.setEnabled(True)
         names = list(model_names) if isinstance(model_names, list) else []
+        self._fetched_note_types = names
         current = self.notetype_combo.currentText()
         self.notetype_combo.blockSignals(True)
         self.notetype_combo.clear()
         self.notetype_combo.addItems(names)
         self.notetype_combo.setCurrentText(current or self._wizard.working_config().anki_note_type)
         self.notetype_combo.blockSignals(False)
+        self.completeChanged.emit()
         # Auto-fetch the fields for the selected note type so Auto-Map lights up.
         self._fetch_fields()
+
+    def _on_notetypes_error(self, _message: str) -> None:
+        self.refresh_button.setEnabled(True)
+        self.completeChanged.emit()
 
     # --- field list fetch ---
 
     def _fetch_fields(self) -> None:
-        note_type = self.notetype_combo.currentText().strip()
-        if not note_type:
+        if not self._accept_field_fetches:
             return
-        if self._fields_worker is not None and self._fields_worker.isRunning():
+        note_type = self.notetype_combo.currentText().strip()
+        if note_type != self._desired_note_type:
+            self._record_desired_note_type(note_type)
+        if not note_type or note_type not in self._fetched_note_types:
+            return
+        if self._active_fields_request is not None:
             return
         self._write_notetype_to_config()
+        generation = self._fields_generation
         worker = FetchFieldsWorker(self._wizard.anki_service(), note_type, self)
         self._fields_worker = worker
+        self._active_fields_request = (generation, note_type)
         self._wizard.register_worker(worker)
-        worker.result_ready.connect(lambda names, stamp=note_type: self._on_fields_fetched(stamp, names))
-        worker.error.connect(lambda _m: None)
+        worker.result_ready.connect(partial(self._on_fields_fetch_result, generation, note_type))
+        worker.error.connect(partial(self._on_fields_fetch_error, generation, note_type))
+        worker.finished.connect(partial(self._on_fields_fetch_finished, worker, generation, note_type))
+        self.completeChanged.emit()
         worker.start()
+
+    def _on_fields_fetch_result(self, generation: int, note_type: str, field_names: object) -> None:
+        if self._active_fields_request != (generation, note_type):
+            return
+        if generation != self._fields_generation or note_type != self._desired_note_type:
+            self.completeChanged.emit()
+            return
+        self._on_fields_fetched(note_type, field_names)
+
+    def _on_fields_fetch_error(self, generation: int, note_type: str, _message: str) -> None:
+        if self._active_fields_request != (generation, note_type):
+            return
+        if generation == self._fields_generation and note_type == self._desired_note_type:
+            self._field_names = []
+            self._field_names_note_type = None
+            self.auto_map_button.setEnabled(False)
+        self.completeChanged.emit()
+
+    def _on_fields_fetch_finished(
+        self,
+        worker: SingleCallWorker,
+        generation: int,
+        note_type: str,
+    ) -> None:
+        if self._fields_worker is not worker or self._active_fields_request != (generation, note_type):
+            return
+        self._fields_worker = None
+        self._active_fields_request = None
+        if generation != self._fields_generation or note_type != self._desired_note_type:
+            self._fetch_fields()
+
+    def prepare_for_close(self) -> None:
+        if not self._accept_field_fetches:
+            return
+        self._accept_field_fetches = False
+        self._fields_generation += 1
+        self._desired_note_type = ""
+
+    def _on_wizard_finished(self, _result: int) -> None:
+        self.prepare_for_close()
 
     def _on_fields_fetched(self, note_type: str, field_names: object) -> None:
         try:
@@ -377,7 +472,9 @@ class NoteTypePage(QWizardPage):
                     "No fields found. Make sure Anki is running and the note type name is spelled exactly as in Anki."
                 )
             )
+            self.completeChanged.emit()
             return
+        self._sanitize_field_mappings(note_type, names)
         self.auto_map_button.setEnabled(True)
         if not self._has_mining_shape(names):
             self._show_guidance(
@@ -393,6 +490,7 @@ class NoteTypePage(QWizardPage):
         else:
             self.guidance_label.setVisible(False)
             self.guidance_label.setText("")
+        self.completeChanged.emit()
 
     @staticmethod
     def _has_mining_shape(field_names: list[str]) -> bool:
@@ -410,29 +508,47 @@ class NoteTypePage(QWizardPage):
         self.guidance_label.setText(html)
         self.guidance_label.setVisible(True)
 
+    def _sanitize_field_mappings(self, note_type: str, field_names: list[str]) -> None:
+        config = self._wizard.working_config()
+        actual_fields = set(field_names)
+        sanitized_fields = dict.fromkeys(_FIELD_KEYWORDS, "")
+        sanitized_fields.update(
+            {key: value if not value or value in actual_fields else "" for key, value in config.anki_fields.items()}
+        )
+        sanitized_markers = dict(config.card_type_marker_fields)
+        if config.card_type:
+            marker_field = sanitized_markers.get(config.card_type, "")
+            if marker_field and marker_field not in actual_fields:
+                sanitized_markers[config.card_type] = ""
+        sanitized_config = replace(
+            config,
+            anki_note_type=note_type,
+            anki_fields=sanitized_fields,
+            card_type_marker_fields=sanitized_markers,
+        )
+        if sanitized_config != config:
+            self._wizard.update_working_config(sanitized_config)
+            self.completeChanged.emit()
+
     # --- auto-map ---
 
     def _on_auto_map_clicked(self) -> None:
         note_type = self.notetype_combo.currentText().strip()
         if not self._field_names or self._field_names_note_type != note_type:
             return
+        self._sanitize_field_mappings(note_type, self._field_names)
         mapped = auto_map_fields(self._field_names)
-        # Merge only the keys that actually matched OVER the current mapping —
-        # mirroring AnkiSettingsPanel.populate_from_field_list's "only overwrite
-        # on match" rule. auto_map_fields only produces the _FIELD_KEYWORDS keys
-        # and sets unmatched ones to ""; replacing wholesale would drop keys it
-        # can't map and clobber any manual mapping the user already set.
-        merged = {**dict(self._wizard.working_config().anki_fields)}
-        merged.update({key: value for key, value in mapped.items() if value})
+        config = self._wizard.working_config()
+        merged = dict(config.anki_fields)
+        for key, value in mapped.items():
+            if value and not merged.get(key):
+                merged[key] = value
         # Stage anki_fields as a PLAIN dict; config re-wraps it in MappingProxyType.
-        self._wizard.update_working_config(
-            replace(
-                self._wizard.working_config(),
-                anki_note_type=note_type or self._wizard.working_config().anki_note_type,
-                anki_fields=merged,
-            )
-        )
-        self._show_mapping_summary(mapped)
+        if merged != dict(config.anki_fields):
+            self._wizard.update_working_config(replace(config, anki_fields=merged))
+            self.completeChanged.emit()
+        effective_mappings = {key: merged.get(key, "") for key in mapped}
+        self._show_mapping_summary(effective_mappings)
         self._warn_missing_fields()
 
     def _show_mapping_summary(self, mapped: dict[str, str]) -> None:
@@ -482,15 +598,16 @@ class NoteTypePage(QWizardPage):
             # Anki unreachable/slow: surface the failure but never raise.
             _set_warning(message)
 
-        worker = run_off_thread(
-            self,
-            work=validation.check_field_names,
-            on_done=_on_done,
-            on_error=_on_error,
+        worker = SingleCallWorker(
+            validation.check_field_names,
             error_prefix=self.tr("Could not check note type fields: "),
+            parent=self,
         )
         self._warn_worker = worker
         self._wizard.register_worker(worker)
+        worker.result_ready.connect(_on_done)
+        worker.error.connect(_on_error)
+        worker.start()
 
 
 class ResourcesPage(QWizardPage):
@@ -532,12 +649,32 @@ class ResourcesPage(QWizardPage):
     def _on_download_clicked(self) -> None:
         from anki_miner.gui.widgets.dialogs.resource_download_dialog import run_resource_download
 
-        new_config = run_resource_download(
+        self.status_label.clear()
+        outcome = run_resource_download(
             self, self._wizard.working_config(), release_resources=self._wizard._release_resources
         )
-        if new_config is not None:
-            self._wizard.update_working_config(new_config)
-            self.status_label.setText(self.tr("Resources updated."))
+        if outcome is None:
+            return
+
+        summary = outcome.summary
+        if summary.succeeded:
+            self._wizard.update_working_config(outcome.config)
+
+        if summary.cancelled:
+            status = (
+                self.tr("Download cancelled. Some resources were installed before cancellation.")
+                if summary.succeeded
+                else self.tr("Download cancelled. No resources were installed.")
+            )
+        elif summary.failed:
+            status = (
+                self.tr("Some resources were installed; some failed.")
+                if summary.succeeded
+                else self.tr("No resources were installed.")
+            )
+        else:
+            status = self.tr("Resources installed.")
+        self.status_label.setText(status)
 
 
 class DonePage(QWizardPage):

@@ -163,7 +163,7 @@ if platform.system() == "Windows":
     )
 
 a = Analysis(
-    [os.path.join(project_root, "anki_miner", "gui", "app.py")],
+    [os.path.join(project_root, "anki_miner", "gui", "launch.py")],
     pathex=[project_root],
     binaries=ffmpeg_binaries + alass_binaries + libmpv_binaries,
     datas=[

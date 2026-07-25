@@ -1,7 +1,7 @@
 """Tests for SubtitlesTab container.
 
 Covers:
-- Inner QTabWidget has exactly four tabs: "Generate" (0), "Retime" (1), "Condense" (2), "Card Backfill" (3).
+- Inner QTabWidget has exactly four tabs: "Generate" (0), "Retime" (1), "Condense" (2), "Backfill" (3).
 - update_config fans out to all child tabs.
 - iter_close_workers yields workers from all children.
 - SubtitlesTab has no worker_thread attribute (or it is None-safe via getattr).
@@ -18,6 +18,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
+from anki_miner.gui.workers.backfill_worker import BackfillApplyWorker, BackfillScanWorker
 
 # ---------------------------------------------------------------------------
 # Patch targets (suppress ASR engine + alass I/O during construction)
@@ -26,6 +27,11 @@ from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 _ENGINE_AVAILABLE = "anki_miner.services.asr._engine.available"
 _ALASS_RESOLVER = "anki_miner.gui.widgets.subtitle_retime_tab.resolve_alass"
 _SHUTIL_WHICH = "anki_miner.gui.widgets.subtitle_retime_tab.shutil.which"
+# The Condense sub-tab probes real ffmpeg on PATH (shutil.which) in its
+# off-thread availability scan; the CI test job installs no ffmpeg, so without
+# this its condense_button never enables and _make_tab's waitUntil hangs. Fake
+# it available, mirroring test_condense_tab._make_tab.
+_FFMPEG_COMPUTE_AVAILABLE = "anki_miner.gui.widgets.condense_tab.CondenseTab._compute_ffmpeg_available"
 
 
 def _make_config(tmp_path: Path) -> AnkiMinerConfig:
@@ -40,6 +46,7 @@ def _make_tab(config: AnkiMinerConfig, qtbot) -> SubtitlesTab:
     with (
         patch(_ENGINE_AVAILABLE, return_value=True),
         patch(_ALASS_RESOLVER, return_value="/fake/alass"),
+        patch(_FFMPEG_COMPUTE_AVAILABLE, return_value=True),
         patch("pathlib.Path.exists", return_value=True),
     ):
         tab = SubtitlesTab(config)
@@ -69,7 +76,7 @@ def test_inner_tab_labels(qtbot, tmp_path):
     assert tab._inner_tabs.tabText(0) == "Generate"
     assert tab._inner_tabs.tabText(1) == "Retime"
     assert tab._inner_tabs.tabText(2) == "Condense"
-    assert tab._inner_tabs.tabText(3) == "Card Backfill"
+    assert tab._inner_tabs.tabText(3) == "Backfill"
 
 
 def test_generate_tab_is_first(qtbot, tmp_path):
@@ -286,6 +293,33 @@ def test_iter_close_workers_yields_all_when_all_active(qtbot, tmp_path):
     assert fake_condense_worker in workers
     assert fake_backfill_worker in workers
     assert len(workers) == 4
+
+
+# ---------------------------------------------------------------------------
+# Dictionary resource release
+# ---------------------------------------------------------------------------
+
+
+def test_release_dictionary_resources_refuses_running_backfill_scan(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    worker = MagicMock(spec=BackfillScanWorker)
+    worker.isRunning.return_value = True
+    tab.backfill_tab.worker_thread = worker
+
+    release = getattr(tab, "release_dictionary_resources", lambda: True)
+
+    assert release() is False
+
+
+def test_release_dictionary_resources_allows_running_backfill_apply(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    worker = MagicMock(spec=BackfillApplyWorker)
+    worker.isRunning.return_value = True
+    tab.backfill_tab.worker_thread = worker
+
+    release = getattr(tab, "release_dictionary_resources", lambda: True)
+
+    assert release() is True
 
 
 # ---------------------------------------------------------------------------

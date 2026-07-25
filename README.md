@@ -51,14 +51,11 @@ Grab the download for your platform from the [latest release](https://github.com
 
 ¹ Excludes local Whisper subtitle generation and AVIF screenshots. For full functionality: `pipx install "anki-miner[asr]"`.
 
-<details>
-<summary><strong>First-run notes (unsigned builds)</strong></summary>
+### First-run notes (unsigned builds)
 
 - **macOS**: Gatekeeper blocks the app. Extract first, then `xattr -dr com.apple.quarantine AnkiMiner/`
 - **Windows SmartScreen**: **More info** -> **Run anyway**.
 - **Windows Defender false positive**: restore from **Protection history** or [report to Microsoft](https://www.microsoft.com/en-us/wdsi/filesubmission).
-
-</details>
 
 <details>
 <summary><strong>Install from PyPI (Python 3.11+)</strong></summary>
@@ -141,7 +138,7 @@ Want another theme added? Suggest in a GitHub Issue.
 | Dictionary | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Add Dictionary… |
 | Dictionary | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Add Dictionary… |
 | Dictionary | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Generated on site | Add Dictionary… |
-| Pitch | [Kanjium](https://github.com/mifunetoshiro/kanjium/blob/master/data/source_files/raw/accents.txt) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Dictionary -> Pitch Accent File |
+| Pitch | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Dictionary -> Pitch Accent File |
 | Pitch | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Dictionary -> Pitch Accent File |
 | Frequency | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Filtering -> Frequency List File |
 | Frequency | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Filtering -> Frequency List File |
@@ -163,6 +160,10 @@ Uses bundled name wordsets derived from [JMnedict](https://www.edrdg.org/enamdic
 | "Note type not found"    | Configure your note type's field names in Settings -> Anki.                       |
 | "ffmpeg not found"       | Install ffmpeg and add it to PATH.                                               |
 | No definitions found     | Add a Yomitan dictionary in Settings -> Add Dictionary… (recommended), or enable the Jisho fallback (slower, rate-limited). |
+| Windows installer will not open / SmartScreen warning | See [First-run notes](#first-run-notes-unsigned-builds): select **More info** -> **Run anyway**; restore Defender false positives from **Protection history**. |
+| Fresh install has no definitions | Run Tools -> Setup Wizard or Tools -> Download Recommended Resources. For manual import, keep the Yomitan ZIP intact (do not unzip it). |
+| Add Dictionary stalls or fails | Note the last visible stage and attach logs (see "Where are the logs?" below). Include the dictionary ZIP name, source, and size in the report. |
+| Where are the logs?      | Use Help -> Open Log Folder, or open `%USERPROFILE%\.anki_miner\anki_miner.log` on Windows or `~/.anki_miner/anki_miner.log` on macOS/Linux. Rotated logs use the `.1` through `.5` suffixes. |
 | Audio is wrong language  | The tool tries Japanese audio tracks first, then falls back to the default.      |
 | Subtitles out of sync    | Use the subtitle offset control in the GUI (range ±300 seconds).                 |
 
@@ -176,13 +177,15 @@ List of ideas for future versions of Anki Miner. Not in priority order. Feature 
   - [x] UI language selection.
   - [x] Local subtitle creation tab: Opt-in tab to locally generate subtitles.
   - [x] Reading tab: Mine manga and books.
-  - [ ] Media library: Expand Analytics tab to display local media library across all media forms.
   - [x] Backfill tool.
+  - [ ] Media library: Expand Analytics tab to display local media library across all media forms.
   - [ ] Automatic subtitle downloading.
 
 - **Long-term**:
+  - [x] Android port -- https://github.com/0xzerolight/anki_miner_android
   - [ ] Beyond Japanese: Mining other languages.
-  - [ ] Android port.
+  - [ ] Anki Miner browser extension.
+
 
 ## Contributing
 

@@ -48,6 +48,7 @@ from anki_miner.services.audio_fetch_common import (
     new_failure_counts as _new_failure_counts,
 )
 from anki_miner.utils.file_utils import safe_filename
+from anki_miner.utils.text_utils import is_kana_only
 
 logger = logging.getLogger(__name__)
 
@@ -187,9 +188,12 @@ class GoogleTranslateAudioFetcher:
             mined_form: Word as mined onto the card (kanji/surface form). Used
                 only to key the cache filename; never sent to the synthesizer.
             reading: Kana reading of the word. This is what is fed to gTTS so
-                the pronunciation is correct and homograph-safe. An empty or
-                whitespace-only reading skips synthesis entirely and returns
-                None.
+                the pronunciation is correct and homograph-safe. A reading that
+                is empty, whitespace-only, or not pure kana (the tokenizer's
+                OOV fallback is the kanji surface) skips synthesis entirely —
+                feeding kanji to gTTS would make Google guess the reading,
+                trading correct-by-luck audio on non-homographs for wrong
+                audio on homographs, which this fetcher's design forbids.
             cancelled_check: Optional zero-argument callable that returns True
                 when the caller has requested cancellation. Consulted after the
                 input guards, again immediately before ``time.sleep``, and once
@@ -199,7 +203,7 @@ class GoogleTranslateAudioFetcher:
         Returns:
             Path to a cached mp3, or None if unavailable. Never raises.
         """
-        if not mined_form.strip() or not reading.strip():
+        if not mined_form.strip() or not is_kana_only(reading.strip()):
             return None
 
         if cancelled_check is not None and cancelled_check():

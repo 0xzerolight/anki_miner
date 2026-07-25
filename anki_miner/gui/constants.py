@@ -17,7 +17,6 @@ APP_NAME = "Anki Miner"
 # WIDGET MINIMUM HEIGHTS
 # =============================================================================
 MIN_HEIGHT_LOG_WIDGET = 200
-MIN_HEIGHT_PROGRESS_WIDGET = 80
 
 # =============================================================================
 # FILE FILTERS FOR DIALOGS

@@ -114,11 +114,12 @@ def _fake_run_setup_wizard(parent: Any, config: Any) -> Any:
     """No-op stand-in for ``run_setup_wizard`` that auto-skips the first-run flow.
 
     ``MainWindow._maybe_offer_first_run_setup`` calls ``run_setup_wizard(self,
-    config)`` and folds its return into the config. Returning the config unchanged
-    is a zero-touch skip (no Qt modal, no AnkiConnect, no network), after which
-    the caller persists ``first_run_setup_done`` as usual.
+    config)`` and folds its outcome into the config. This returns an explicit
+    zero-touch Skip (no Qt modal, no AnkiConnect, no network).
     """
-    return config
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome
+
+    return SetupWizardOutcome(config=config, consumes_first_run_offer=True)
 
 
 class AutoCurationResponder:

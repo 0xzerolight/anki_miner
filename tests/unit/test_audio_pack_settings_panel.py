@@ -29,8 +29,9 @@ def _make_pack_on_disk(
     source: str | None = None,
     entry_count: int = 100,
     pack_dir_exists: bool = True,
+    schema_version: int = SCHEMA_VERSION,
 ) -> Path:
-    """Materialize a minimal on-disk audio pack with current schema_version."""
+    """Materialize a minimal on-disk audio pack."""
     pack_dir = root / pack_id
     pack_dir.mkdir(parents=True, exist_ok=True)
     db_path = pack_dir / "index.sqlite"
@@ -41,7 +42,7 @@ def _make_pack_on_disk(
     write_meta(
         db_path,
         {
-            "schema_version": str(SCHEMA_VERSION),
+            "schema_version": str(schema_version),
             "format": fmt,
             "source": source or pack_id,
             "pack_id": pack_id,
@@ -60,6 +61,7 @@ def _make_meta(
     entry_count: int = 100,
     pack_dir_exists: bool = True,
     pack_dir: Path | None = None,
+    schema_ok: bool = True,
 ) -> AudioPackMeta:
     """Build an AudioPackMeta without touching disk."""
     return AudioPackMeta(
@@ -67,6 +69,7 @@ def _make_meta(
         source=source or pack_id,
         format=fmt,
         entry_count=entry_count,
+        schema_ok=schema_ok,
         pack_dir=pack_dir or Path("/fake/audio"),
         pack_dir_exists=pack_dir_exists,
         db_path=Path("/fake/index.sqlite"),
@@ -85,6 +88,7 @@ def confirm_remove(monkeypatch):
         "anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.question",
         lambda *a, **kw: QMessageBox.StandardButton.Yes,
     )
+    monkeypatch.setattr(asp_mod, "prove_owned_slot", lambda *_args: True)
 
 
 def _patch_menu_exec(monkeypatch, action_label: str | None):
@@ -178,6 +182,21 @@ def test_pack_row_shows_format_and_entry_count(qapp, qtbot, tmp_path):
     texts = [lbl.text() for lbl in labels]
     assert any("ajt" in t for t in texts), texts
     assert any("5,000" in t for t in texts), texts
+
+
+def test_stale_pack_row_shows_upgrade_reimport_status(qapp, qtbot, tmp_path):
+    meta = _make_meta("old-pack", source="Old Pack", schema_ok=False)
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(
+        (AudioSourceEntry(kind="pack", pack_id="old-pack", enabled=True),),
+        registry_meta={"old-pack": meta},
+    )
+
+    row = panel._row_widget(0)
+    assert row is not None
+    texts = [label.text() for label in row.findChildren(QLabel)]
+    assert any("re-import required (app upgrade)" in text for text in texts), texts
 
 
 def test_missing_folder_badge_shown(qapp, qtbot, tmp_path):
@@ -503,6 +522,35 @@ def test_remove_deletes_index_dir_on_disk(qapp, qtbot, tmp_path, confirm_remove)
     assert [e.kind for e in panel.get_chain()] == ["jpod101"]
 
 
+def test_release_callback_blocks_remove(qapp, qtbot, tmp_path, confirm_remove, monkeypatch):
+    pack_dir = tmp_path / "a"
+    pack_dir.mkdir()
+    (pack_dir / "index.sqlite").write_bytes(b"placeholder")
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((AudioSourceEntry(kind="pack", pack_id="a", enabled=True),))
+    panel.set_release_callback(lambda: False)
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.warning",
+        lambda _parent, _title, body, *a, **kw: warnings.append(body),
+    )
+
+    def run_sync(_parent, work, on_success, _on_error):
+        on_success(work())
+
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.chain_settings_panel_base.run_off_thread",
+        run_sync,
+    )
+    panel.remove(0)
+
+    assert panel.get_chain() == (AudioSourceEntry(kind="pack", pack_id="a", enabled=True),)
+    assert pack_dir.exists()
+    assert any("Indexed resources are in use" in body for body in warnings)
+    assert all(task in warnings[0] for task in ("mining", "startup prewarm", "card backfill"))
+
+
 def test_remove_cancelled_keeps_pack_and_chain(qapp, qtbot, monkeypatch, tmp_path):
     monkeypatch.setattr(
         "anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.question",
@@ -547,7 +595,33 @@ def test_remove_tolerates_missing_index_folder(qapp, qtbot, tmp_path, confirm_re
     assert [e.kind for e in panel.get_chain()] == ["jpod101"]
 
 
-def test_remove_failed_rmtree_does_not_emit_chain_changed(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
+def test_remove_foreign_same_name_is_chain_only(qtbot, monkeypatch, tmp_path):
+    foreign = tmp_path / "foreign"
+    foreign.mkdir()
+    payload = foreign / "keep.txt"
+    payload.write_text("foreign", encoding="utf-8")
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.question",
+        lambda *a, **kw: QMessageBox.StandardButton.Yes,
+    )
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
+        lambda _parent, _title, body, *a, **kw: warnings.append(body),
+    )
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((AudioSourceEntry(kind="pack", pack_id="foreign", enabled=True),))
+
+    panel.remove(0)
+    qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
+
+    assert panel.get_chain() == ()
+    assert payload.read_text(encoding="utf-8") == "foreign"
+    assert any("left untouched" in body for body in warnings)
+
+
+def test_remove_failed_tombstone_cleanup_keeps_durable_chain_change(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
     pack_dir = tmp_path / "a"
     pack_dir.mkdir()
     (pack_dir / "index.sqlite").write_bytes(b"placeholder")
@@ -558,7 +632,7 @@ def test_remove_failed_rmtree_does_not_emit_chain_changed(qapp, qtbot, monkeypat
     )
 
     def _always_fail(*args, **kwargs):
-        raise PermissionError("simulated locked file")
+        return False, PermissionError("simulated locked file")
 
     monkeypatch.setattr(asp_mod, "_robust_rmtree", _always_fail)
 
@@ -575,31 +649,24 @@ def test_remove_failed_rmtree_does_not_emit_chain_changed(qapp, qtbot, monkeypat
     panel.chain_changed.connect(lambda: changed.append(None))
 
     panel.remove(0)
-    # The off-thread rmtree fails; wait for the error handler to re-enable the
-    # Remove button (proof the error callback ran on the GUI thread).
-    qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
-    assert changed == []
-    assert [e.pack_id for e in panel.get_chain()[:1]] == ["a"], "failed remove must leave chain intact"
+    qtbot.waitUntil(lambda: not panel.has_active_mutation(), timeout=3000)
+    assert changed == [None]
+    assert [e.kind for e in panel.get_chain()] == ["jpod101"]
+    assert len(list(tmp_path.glob("a.tomb-*"))) == 1
 
 
-def test_remove_retries_on_transient_permission_error(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
-    """_robust_rmtree retry path: first call raises PermissionError, second succeeds."""
+def test_remove_consumes_successful_cleanup_outcome(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
     pack_dir = tmp_path / "a"
     pack_dir.mkdir()
     (pack_dir / "index.sqlite").write_bytes(b"placeholder")
 
-    call_count = [0]
-
-    def _fail_once(target, **kwargs):
-        call_count[0] += 1
-        if call_count[0] == 1:
-            raise PermissionError("simulated transient lock")
-        # Second call: actually remove so pack_dir.exists() becomes False.
+    def _succeed(target):
         import shutil as _shutil
 
         _shutil.rmtree(target)
+        return True, None
 
-    monkeypatch.setattr(asp_mod, "_robust_rmtree", _fail_once)
+    monkeypatch.setattr(asp_mod, "_robust_rmtree", _succeed)
     monkeypatch.setattr(
         "anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.warning",
         lambda *a, **kw: QMessageBox.StandardButton.Ok,
@@ -617,15 +684,9 @@ def test_remove_retries_on_transient_permission_error(qapp, qtbot, monkeypatch, 
     changed: list[None] = []
     panel.chain_changed.connect(lambda: changed.append(None))
 
-    # First remove → _robust_rmtree raises off-thread → pack stays, no signal.
     panel.remove(0)
-    qtbot.waitUntil(lambda: panel._remove_btn.isEnabled(), timeout=3000)
-    assert changed == [], "first attempt raised — chain_changed must not fire"
-    assert [e.pack_id for e in panel.get_chain()[:1]] == ["a"]
-
-    # Second remove → _robust_rmtree succeeds off-thread → pack gone, signal fires.
-    panel.remove(0)
-    qtbot.waitUntil(lambda: changed == [None], timeout=3000)
+    qtbot.waitUntil(lambda: not panel.has_active_mutation(), timeout=3000)
+    assert changed == [None]
     assert [e.kind for e in panel.get_chain()] == ["jpod101"]
 
 
@@ -744,6 +805,27 @@ def test_right_click_pack_row_emits_reimport_signal(qapp, qtbot, monkeypatch, tm
     assert emitted == ["ajt-pack"]
 
 
+def test_right_click_stale_pack_row_exposes_and_emits_reimport(qapp, qtbot, monkeypatch, tmp_path):
+    meta = _make_meta("old-pack", source="Old Pack", schema_ok=False)
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(
+        (AudioSourceEntry(kind="pack", pack_id="old-pack", enabled=True),),
+        registry_meta={"old-pack": meta},
+    )
+    constructed = _patch_menu_exec(monkeypatch, "Re-import…")
+    emitted: list[str] = []
+    panel.reimport_pack_requested.connect(emitted.append)
+
+    item = panel._list.item(0)
+    pos = panel._list.visualItemRect(item).center()
+    panel._on_row_context_menu(pos)
+
+    assert len(constructed) == 1
+    assert [action.text() for action in constructed[0].actions()] == ["Re-import…", "Remove"]
+    assert emitted == ["old-pack"]
+
+
 def test_right_click_jpod101_row_shows_no_menu(qapp, qtbot, monkeypatch, tmp_path):
     panel = AudioPackSettingsPanel(tmp_path)
     qtbot.addWidget(panel)
@@ -781,13 +863,38 @@ def test_right_click_remove_action_removes_pack(qapp, qtbot, monkeypatch, tmp_pa
     pos = panel._list.visualItemRect(item).center()
     panel._on_row_context_menu(pos)
 
-    # Remove delegates to self.remove(), whose rmtree runs off-thread.
-    qtbot.waitUntil(lambda: changed == [None], timeout=3000)
+    qtbot.waitUntil(lambda: not panel.has_active_mutation(), timeout=3000)
+    assert changed == [None]
     assert panel._list.count() == 0
 
 
-def test_right_click_pack_row_no_meta_shows_no_menu(qapp, qtbot, monkeypatch, tmp_path):
-    """Context menu is skipped when registry meta lookup returns None for the pack."""
+def test_right_click_stale_pack_remove_action_removes_pack(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
+    _make_pack_on_disk(
+        tmp_path,
+        "old-pack",
+        source="Old Pack",
+        schema_version=SCHEMA_VERSION - 1,
+    )
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((AudioSourceEntry(kind="pack", pack_id="old-pack", enabled=True),))
+    panel.show()
+    qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
+    _patch_menu_exec(monkeypatch, "Remove")
+    changed: list[None] = []
+    panel.chain_changed.connect(lambda: changed.append(None))
+
+    item = panel._list.item(0)
+    pos = panel._list.visualItemRect(item).center()
+    panel._on_row_context_menu(pos)
+
+    qtbot.waitUntil(lambda: not panel.has_active_mutation(), timeout=3000)
+    assert changed == [None]
+    assert panel._list.count() == 0
+    assert not (tmp_path / "old-pack").exists()
+
+
+def test_right_click_pack_row_no_meta_exposes_reimport_and_remove(qtbot, monkeypatch, tmp_path):
     # Use registry_meta={} so the pack_id has no entry — meta lookup returns None.
     panel = AudioPackSettingsPanel(tmp_path)
     qtbot.addWidget(panel)
@@ -805,8 +912,46 @@ def test_right_click_pack_row_no_meta_shows_no_menu(qapp, qtbot, monkeypatch, tm
     pos = panel._list.visualItemRect(item).center()
     panel._on_row_context_menu(pos)
 
-    assert constructed == [], "no meta → context menu must not open"
-    assert emitted == []
+    assert len(constructed) == 1
+    assert [action.text() for action in constructed[0].actions()] == ["Re-import…", "Remove"]
+    assert emitted == ["unknown-pack"]
+
+
+def test_right_click_remove_pack_without_meta_uses_chain_only_prompt(
+    qtbot,
+    monkeypatch,
+    tmp_path,
+):
+    target = tmp_path / "unknown-pack"
+    target.mkdir()
+    (target / "keep.txt").write_text("foreign", encoding="utf-8")
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(
+        (AudioSourceEntry(kind="pack", pack_id="unknown-pack", enabled=True),),
+        registry_meta={},
+    )
+    _patch_menu_exec(monkeypatch, "Remove")
+    prompts: list[str] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.question",
+        lambda _parent, _title, body, *a, **kw: prompts.append(body) or QMessageBox.StandardButton.Yes,
+    )
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
+        lambda *a, **kw: QMessageBox.StandardButton.Ok,
+    )
+
+    item = panel._list.item(0)
+    pos = panel._list.visualItemRect(item).center()
+    panel._on_row_context_menu(pos)
+    qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
+
+    assert len(prompts) == 1
+    assert "from the audio chain" in prompts[0]
+    assert "left untouched" in prompts[0]
+    assert "index files are deleted" not in prompts[0]
+    assert (target / "keep.txt").read_text(encoding="utf-8") == "foreign"
 
 
 # ---------------------------------------------------------------------------
@@ -1005,7 +1150,7 @@ class TestOffThreadDiskWork:
         )
 
         panel.remove(0)
-        qtbot.waitUntil(lambda: not pack_dir.exists(), timeout=3000)
+        qtbot.waitUntil(lambda: bool(rmtree_threads), timeout=3000)
         assert rmtree_threads and all(t != main_id for t in rmtree_threads), rmtree_threads
 
     def test_remove_disables_then_reenables_button(self, qapp, qtbot, tmp_path, confirm_remove):

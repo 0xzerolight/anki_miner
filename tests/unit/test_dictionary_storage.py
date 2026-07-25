@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
+from anki_miner.exceptions import SetupError
 from anki_miner.services.dictionary.storage import (
     _BIND_CHUNK,
     _LOOKUP_LIMIT,
@@ -229,6 +230,38 @@ class TestReadingNormalization:
 
 
 class TestBulkInsertAndLookup:
+    def test_bulk_insert_reports_progress_after_each_batch(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        progress: list[int] = []
+        rows = (DictRow(term=f"term-{i}", reading=None, content=f"<div>{i}</div>", sequence=i) for i in range(5001))
+
+        count = bulk_insert(db_path, rows, progress=progress.append)
+
+        assert count == 5001
+        assert progress == [5000, 5001]
+
+    def test_bulk_insert_cancels_before_next_batch_and_rolls_back(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        progress: list[int] = []
+        rows = (DictRow(term=f"term-{i}", reading=None, content=f"<div>{i}</div>", sequence=i) for i in range(5001))
+
+        def cancel_check() -> bool:
+            return bool(progress)
+
+        with pytest.raises(SetupError, match="Import cancelled"):
+            bulk_insert(
+                db_path,
+                rows,
+                progress=progress.append,
+                cancel_check=cancel_check,
+            )
+
+        assert progress == [5000]
+        with sqlite3.connect(db_path) as conn:
+            assert conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0] == 0
+
     def test_insert_and_lookup_by_term(self, tmp_path: Path):
         db_path = tmp_path / "test.sqlite"
         create_index(db_path)
@@ -918,8 +951,7 @@ class TestReadMetaCached:
         sidecar.unlink()
         meta = read_meta_cached(db_path)
         assert meta["source_name"] == "Test Dict"
-        # Fall-through rewrites the sidecar.
-        assert sidecar.is_file()
+        assert not sidecar.exists()
 
     def test_cached_read_falls_back_when_sqlite_newer(self, tmp_path: Path):
         db_path = self._setup_dict(tmp_path)
@@ -929,14 +961,14 @@ class TestReadMetaCached:
 
         old = sidecar.stat().st_mtime - 100
         os.utime(sidecar, (old, old))
+        stale_mtime_ns = sidecar.stat().st_mtime_ns
         with patch(
             "anki_miner.services.dictionary.storage.read_meta",
             wraps=read_meta,
         ) as wrapped:
             read_meta_cached(db_path)
         assert wrapped.call_count == 1
-        # Sidecar gets rewritten with current mtime.
-        assert sidecar.stat().st_mtime > old
+        assert sidecar.stat().st_mtime_ns == stale_mtime_ns
 
     def test_cached_read_handles_corrupt_sidecar(self, tmp_path: Path):
         db_path = self._setup_dict(tmp_path)
@@ -944,8 +976,7 @@ class TestReadMetaCached:
         sidecar.write_text("{not valid json", encoding="utf-8")
         meta = read_meta_cached(db_path)
         assert meta["source_name"] == "Test Dict"
-        # Sidecar is rewritten with valid JSON.
-        assert json.loads(sidecar.read_text(encoding="utf-8"))["source_name"] == "Test Dict"
+        assert sidecar.read_text(encoding="utf-8") == "{not valid json"
 
     def test_bad_sidecar_falls_back_to_sqlite_miss(self, tmp_path: Path):
         db_path = self._setup_dict(tmp_path)
@@ -953,9 +984,11 @@ class TestReadMetaCached:
 
         sidecar.write_bytes(b"\xff")
         assert read_meta_cached(db_path)["entry_count"] == "42"
+        assert sidecar.read_bytes() == b"\xff"
 
         sidecar.write_text(json.dumps({"entry_count": None}), encoding="utf-8")
         assert read_meta_cached(db_path)["entry_count"] == "42"
+        assert json.loads(sidecar.read_text(encoding="utf-8")) == {"entry_count": None}
 
     def test_cached_read_missing_db(self, tmp_path: Path):
         assert read_meta_cached(tmp_path / "nonexistent.sqlite") == {}

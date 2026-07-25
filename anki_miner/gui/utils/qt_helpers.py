@@ -1,8 +1,15 @@
 """Typed Qt helpers that absorb Optional-returning accessors with documented invariants."""
 
-from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtCore import QEvent, QObject, Qt, QUrl
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent
-from PyQt6.QtWidgets import QDialog, QHeaderView, QTableWidget
+from PyQt6.QtWidgets import (
+    QAbstractSpinBox,
+    QComboBox,
+    QDialog,
+    QHeaderView,
+    QTableWidget,
+    QWidget,
+)
 
 
 def urls_from_event(event: QDropEvent | QDragEnterEvent) -> list[QUrl]:
@@ -49,3 +56,43 @@ def add_min_max_buttons(dialog: QDialog) -> None:
     dialog.setWindowFlags(
         dialog.windowFlags() | Qt.WindowType.WindowMinimizeButtonHint | Qt.WindowType.WindowMaximizeButtonHint
     )
+
+
+class _NoScrollEventFilter(QObject):
+    """Swallow wheel events on unfocused spin/combo widgets (Issue #99).
+
+    In the settings scroll areas a wheel event over a ``QAbstractSpinBox`` /
+    ``QComboBox`` mutates its value instead of scrolling the panel. Installed on
+    those widgets (see :func:`install_no_scroll_on_inputs`), this eats the wheel
+    unless the widget has focus, so scrolling past a field never changes it; a
+    focused field (clicked or tabbed into) still adjusts on wheel as usual.
+    """
+
+    def eventFilter(self, obj: QObject | None, event: QEvent | None) -> bool:
+        if (
+            event is not None
+            and event.type() == QEvent.Type.Wheel
+            and isinstance(obj, (QAbstractSpinBox, QComboBox))
+            and not obj.hasFocus()
+        ):
+            return True  # eat: the unfocused widget's value stays put
+        return super().eventFilter(obj, event)
+
+
+def install_no_scroll_on_inputs(container: QWidget) -> None:
+    """Make every spin/combo descendant of ``container`` ignore hover-scroll.
+
+    Sweeps ``QAbstractSpinBox`` and ``QComboBox`` children, sets ``StrongFocus``
+    (so the wheel no longer grabs focus) and installs one shared
+    :class:`_NoScrollEventFilter` parented to ``container`` — its lifetime ties
+    to the container, so it is not garbage-collected. Call after the container's
+    widgets are built (e.g. once per settings scroll area). ``QLineEdit`` /
+    ``QCheckBox`` are untouched: they do not change value on wheel.
+    """
+    scroll_filter = _NoScrollEventFilter(container)
+    for widget in [
+        *container.findChildren(QAbstractSpinBox),
+        *container.findChildren(QComboBox),
+    ]:
+        widget.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        widget.installEventFilter(scroll_filter)

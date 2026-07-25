@@ -186,7 +186,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
             label=self.tr("Book File:"),
             file_mode=True,
             file_filter=f"{self.tr('Books')} ({_BOOK_FILTER_GLOB})",
-            label_width=field_label_width("Book File:"),
+            label_width=field_label_width(self.tr("Book File:")),
         )
         self.book_selector.setToolTip(self.tr("Select an .epub or .txt book to mine."))
         card_layout.addWidget(self.book_selector)
@@ -220,7 +220,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
             label=self.tr("Folder:"),
             file_mode=False,
             file_filter="",
-            label_width=field_label_width("Folder:"),
+            label_width=field_label_width(self.tr("Folder:")),
         )
         self.folder_selector.setToolTip(self.tr("A folder of .epub or .txt books; each book is mined separately."))
         card_layout.addWidget(self.folder_selector)

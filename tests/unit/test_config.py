@@ -554,19 +554,37 @@ class TestFrequencyActiveGate:
 
 
 class TestPitchActiveGate:
-    """pitch_active replaces the removed use_pitch_accent flag: it is True iff a
-    pitch data file is present at pitch_accent_path."""
+    """pitch_active replaces the removed use_pitch_accent flag: it is True iff
+    at least one enabled source is in pitch_chain (mirrors frequency_active).
+    The legacy pitch_accent_path file no longer activates pitch by itself —
+    the boot migration imports it into the chain instead."""
 
-    def test_absent_file_is_inactive(self, tmp_path):
+    def test_empty_chain_is_inactive(self):
+        assert AnkiMinerConfig().pitch_active is False
+
+    def test_enabled_entry_is_active(self):
         from dataclasses import replace
 
-        cfg = replace(AnkiMinerConfig(), pitch_accent_path=tmp_path / "missing.csv")
+        from anki_miner.config import PitchSourceEntry
+
+        cfg = replace(AnkiMinerConfig(), pitch_chain=(PitchSourceEntry("kanjium-pitch"),))
+        assert cfg.pitch_active is True
+
+    def test_all_disabled_is_inactive(self):
+        from dataclasses import replace
+
+        from anki_miner.config import PitchSourceEntry
+
+        cfg = replace(
+            AnkiMinerConfig(),
+            pitch_chain=(PitchSourceEntry("kanjium-pitch", enabled=False),),
+        )
         assert cfg.pitch_active is False
 
-    def test_present_file_is_active(self, tmp_path):
+    def test_legacy_file_presence_alone_is_inactive(self, tmp_path):
         from dataclasses import replace
 
         pitch = tmp_path / "pitch.csv"
         pitch.write_text("たべる,食べる,0\n", encoding="utf-8")
         cfg = replace(AnkiMinerConfig(), pitch_accent_path=pitch)
-        assert cfg.pitch_active is True
+        assert cfg.pitch_active is False

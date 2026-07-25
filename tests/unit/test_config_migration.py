@@ -102,6 +102,56 @@ def test_old_config_without_reading_min_occurrence_gets_default(tmp_config: Path
     assert loaded.reading_min_occurrence == 1
 
 
+class TestFirstRunFlagSeed:
+    """Existing configs predate the wizards; only absent keys are seeded."""
+
+    def test_existing_config_without_flags_seeds_both_done(self, tmp_config: Path):
+        tmp_config.write_text(json.dumps({"anki_deck_name": "Existing"}), encoding="utf-8")
+
+        loaded = GUIConfigManager.load_config()
+
+        assert loaded.first_run_setup_done is True
+        assert loaded.first_run_shortcut_done is True
+
+    def test_existing_config_preserves_explicit_false_flags(self, tmp_config: Path):
+        tmp_config.write_text(
+            json.dumps(
+                {
+                    "first_run_setup_done": False,
+                    "first_run_shortcut_done": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        loaded = GUIConfigManager.load_config()
+
+        assert loaded.first_run_setup_done is False
+        assert loaded.first_run_shortcut_done is False
+
+    def test_fresh_install_keeps_both_flags_false(self, tmp_config: Path):
+        assert not tmp_config.exists()
+
+        loaded = GUIConfigManager.load_config()
+
+        assert loaded.first_run_setup_done is False
+        assert loaded.first_run_shortcut_done is False
+
+    def test_flat_import_without_flags_keeps_local_values(self, tmp_path: Path):
+        path = tmp_path / "import.json"
+        path.write_text(json.dumps({"anki_deck_name": "Imported"}), encoding="utf-8")
+        current = replace(
+            create_default_config(),
+            first_run_setup_done=False,
+            first_run_shortcut_done=False,
+        )
+
+        imported = GUIConfigManager.import_config(path, current).config
+
+        assert imported.first_run_setup_done is False
+        assert imported.first_run_shortcut_done is False
+
+
 def test_reading_tts_defaults():
     """Feature ships inert: master flag OFF, both providers pre-selected."""
     config = AnkiMinerConfig()
@@ -537,28 +587,47 @@ class TestWordsetSeedMigration:
 
 
 class TestWordsetSeedImportPath:
-    """Import must NOT seed — an imported all-off must survive."""
+    """Markerless imports stay neutral; marked raw configs carry provenance."""
 
     def test_import_empty_list_not_seeded(self, tmp_path: Path):
         path = tmp_path / "import.json"
         path.write_text(json.dumps({"excluded_wordsets": []}), encoding="utf-8")
         # current has the default-ON set; the explicit imported empty wins and
         # is NOT force-re-seeded back to all-on.
-        result = GUIConfigManager.import_config(path, create_default_config())
+        result = GUIConfigManager.import_config(path, create_default_config()).config
         assert result.excluded_wordsets == ()
 
     def test_import_partial_list_applied(self, tmp_path: Path):
         path = tmp_path / "import.json"
         path.write_text(json.dumps({"excluded_wordsets": ["surnames"]}), encoding="utf-8")
-        result = GUIConfigManager.import_config(path, create_default_config())
+        result = GUIConfigManager.import_config(path, create_default_config()).config
         assert result.excluded_wordsets == ("surnames",)
 
     def test_import_absent_key_keeps_current(self, tmp_path: Path):
         path = tmp_path / "import.json"
         path.write_text(json.dumps({"anki_deck_name": "X"}), encoding="utf-8")
         current = replace(AnkiMinerConfig(), excluded_wordsets=("place-names",))
-        result = GUIConfigManager.import_config(path, current)
+        result = GUIConfigManager.import_config(path, current).config
         assert result.excluded_wordsets == ("place-names",)
+
+    def test_flat_v1_marker_seeds_only_present_wordsets(self, tmp_path: Path):
+        path = tmp_path / "import.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "config_schema_version": 1,
+                    "excluded_wordsets": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+        current = replace(AnkiMinerConfig(), auto_update_ytdlp=True)
+
+        result = GUIConfigManager.import_config(path, current)
+
+        assert result.config.excluded_wordsets == _ALL_WORDSETS
+        assert result.config.auto_update_ytdlp is True
+        assert result.notices == []
 
 
 class TestWordsetSeedIdempotence:
@@ -586,3 +655,44 @@ class TestWordsetSeedIdempotence:
         GUIConfigManager.save_config(off)
         loaded = GUIConfigManager.load_config()
         assert loaded.excluded_wordsets == ()
+
+
+def test_save_then_load_preserves_pitch_chain(tmp_config: Path):
+    from anki_miner.config import PitchSourceEntry
+
+    chain = (
+        PitchSourceEntry(source_id="nhk", enabled=True),
+        PitchSourceEntry(source_id="kanjium-pitch", enabled=False),
+    )
+    config = replace(AnkiMinerConfig(), pitch_chain=chain)
+    GUIConfigManager.save_config(config)
+
+    loaded = GUIConfigManager.load_config()
+    assert loaded.pitch_chain == chain
+
+
+def test_migrate_pitch_chain_drops_malformed_entries(tmp_config: Path):
+    from anki_miner.config import PitchSourceEntry
+
+    data = GUIConfigManager._migrate_pitch_chain(
+        {
+            "pitch_chain": [
+                {"source_id": "good", "enabled": False},
+                {"source_id": ""},  # empty id dropped
+                "not-a-dict",  # dropped
+                {"enabled": True},  # missing id dropped
+                PitchSourceEntry(source_id="passthrough"),
+            ]
+        }
+    )
+    assert data["pitch_chain"] == (
+        PitchSourceEntry(source_id="good", enabled=False),
+        PitchSourceEntry(source_id="passthrough"),
+    )
+
+
+def test_migrate_pitch_chain_absent_falls_through_to_default(tmp_config: Path):
+    data = GUIConfigManager._migrate_pitch_chain({})
+    assert "pitch_chain" not in data
+    data = GUIConfigManager._migrate_pitch_chain({"pitch_chain": "garbage"})
+    assert "pitch_chain" not in data

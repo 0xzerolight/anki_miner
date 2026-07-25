@@ -12,6 +12,7 @@ from typing import Any
 import pytest
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services._sqlite_index import read_ownership_marker
 from anki_miner.services.frequency import storage
 from anki_miner.services.frequency.mode_probe import LESS_COMMON_TERMS, MORE_COMMON_TERMS
 from anki_miner.services.frequency.source_importer import (
@@ -635,6 +636,7 @@ class TestSourceIdAndAtomicity:
         result = import_frequency_source(csv_path, tmp_path / "sources", source_id="custom-id")
         assert result.source_id == "custom-id"
         assert (tmp_path / "sources" / "custom-id" / "index.sqlite").is_file()
+        assert read_ownership_marker(tmp_path / "sources" / "custom-id") == ("frequency", "custom-id")
 
     def test_source_file_copied_for_reimport_zip(self, tmp_path: Path) -> None:
         zip_path = _write_zip(tmp_path / "f.zip")
@@ -648,6 +650,48 @@ class TestSourceIdAndAtomicity:
         dest = tmp_path / "sources"
         result = import_frequency_source(csv_path, dest)
         assert (dest / result.source_id / "source.csv").is_file()
+
+    def test_cancel_during_txt_row_loop_aborts_before_promotion(self, tmp_path: Path) -> None:
+        source = tmp_path / "f.txt"
+        source.write_text("term,rank\n猫,5\n犬,3\n鳥,7\n", encoding="utf-8")
+        dest = tmp_path / "sources"
+        checks = 0
+
+        def cancel_check() -> bool:
+            nonlocal checks
+            checks += 1
+            return checks == 3
+
+        with pytest.raises(SetupError, match="cancelled"):
+            import_frequency_source(source, dest, cancel_check=cancel_check)
+
+        assert checks == 3
+        assert not (dest / "f").exists()
+
+    def test_cancel_after_index_build_aborts_before_promotion(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        source = tmp_path / "f.csv"
+        source.write_text("term,rank\n猫,5\n", encoding="utf-8")
+        dest = tmp_path / "sources"
+        built = False
+        real_build_index = storage.build_index
+
+        def build_index(*args, **kwargs):
+            nonlocal built
+            result = real_build_index(*args, **kwargs)
+            built = True
+            return result
+
+        monkeypatch.setattr(storage, "build_index", build_index)
+
+        with pytest.raises(SetupError, match="cancelled"):
+            import_frequency_source(source, dest, cancel_check=lambda: built)
+
+        assert built is True
+        assert not (dest / "f").exists()
 
     def test_meta_json_sidecar_written(self, tmp_path: Path) -> None:
         csv_path = tmp_path / "f.csv"
@@ -671,7 +715,26 @@ class TestSourceIdAndAtomicity:
         assert meta["source_name"] == "f"
         assert meta["entry_count"] == "2"
 
-    def test_atomic_overwrite_existing_source(self, tmp_path: Path) -> None:
+    def test_existing_source_without_overwrite_is_untouched(self, tmp_path: Path) -> None:
+        dest = tmp_path / "sources"
+        first = tmp_path / "first.csv"
+        first.write_text("term,rank\n猫,5\n", encoding="utf-8")
+        import_frequency_source(first, dest, source_id="same")
+        index_before = (dest / "same" / "index.sqlite").read_bytes()
+        source_before = (dest / "same" / "source.csv").read_bytes()
+
+        second = tmp_path / "second.csv"
+        second.write_text("term,rank\n犬,3\n鳥,7\n", encoding="utf-8")
+        with pytest.raises(SetupError, match="already exists"):
+            import_frequency_source(second, dest, source_id="same")
+
+        assert (dest / "same" / "index.sqlite").read_bytes() == index_before
+        assert (dest / "same" / "source.csv").read_bytes() == source_before
+        assert _read_entries(dest, "same") == [("猫", None, 5)]
+        leftover = [p.name for p in dest.iterdir() if p.name != "same"]
+        assert leftover == []
+
+    def test_atomic_overwrite_existing_source_when_enabled(self, tmp_path: Path) -> None:
         dest = tmp_path / "sources"
         first = tmp_path / "first.csv"
         first.write_text("term,rank\n猫,5\n", encoding="utf-8")
@@ -679,12 +742,38 @@ class TestSourceIdAndAtomicity:
 
         second = tmp_path / "second.csv"
         second.write_text("term,rank\n犬,3\n鳥,7\n", encoding="utf-8")
-        result = import_frequency_source(second, dest, source_id="same")
+        result = import_frequency_source(second, dest, source_id="same", overwrite=True)
         assert result.entry_count == 2
         assert _read_entries(dest, "same") == [("犬", None, 3), ("鳥", None, 7)]
         # No leftover staging or backup dirs.
         leftover = [p.name for p in dest.iterdir() if p.name != "same"]
         assert leftover == []
+
+    def test_overwrite_refuses_foreign_same_name_with_plausible_meta(self, tmp_path: Path) -> None:
+        dest = tmp_path / "sources"
+        foreign = dest / "same"
+        foreign.mkdir(parents=True)
+        db_path = foreign / "index.sqlite"
+        conn = sqlite3.connect(db_path)
+        try:
+            conn.execute("CREATE TABLE entries (payload TEXT)")
+            conn.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)")
+            conn.execute(
+                "INSERT INTO meta (key, value) VALUES (?, ?)",
+                ("schema_version", str(storage.SCHEMA_VERSION)),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        payload = foreign / "keep.txt"
+        payload.write_text("foreign", encoding="utf-8")
+        source = tmp_path / "source.csv"
+        source.write_text("term,rank\n猫,5\n", encoding="utf-8")
+
+        with pytest.raises(SetupError, match="not an Anki Miner-managed frequency source"):
+            import_frequency_source(source, dest, source_id="same", overwrite=True)
+
+        assert payload.read_text(encoding="utf-8") == "foreign"
 
 
 class TestDispatchErrors:
@@ -732,5 +821,11 @@ class TestCsvSourceNamePreserved:
         import_frequency_source(self._write_csv(tmp_path / "JPDB.csv"), dest, source_id="s1")
         existing = storage.read_meta(dest / "s1" / "index.sqlite")["source_name"]
         assert existing == "JPDB"
-        import_frequency_source(self._write_csv(tmp_path / "source.csv"), dest, source_id="s1", source_name=existing)
+        import_frequency_source(
+            self._write_csv(tmp_path / "source.csv"),
+            dest,
+            source_id="s1",
+            source_name=existing,
+            overwrite=True,
+        )
         assert storage.read_meta(dest / "s1" / "index.sqlite")["source_name"] == "JPDB"

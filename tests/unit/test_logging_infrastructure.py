@@ -126,6 +126,124 @@ class TestConfigureLogging:
                 if handler is old or isinstance(handler, _RecordingHandler):
                     root.removeHandler(handler)
 
+    def test_failed_replacement_keeps_early_sink_alive_and_logs_reason(self, tmp_path, monkeypatch):
+        from anki_miner.gui import app as app_module
+
+        records: list[logging.LogRecord] = []
+
+        class _EarlySink(logging.Handler):
+            def emit(self, record: logging.LogRecord) -> None:
+                records.append(record)
+
+        def _fail_replacement(*args, **kwargs):
+            raise PermissionError("configured log path is unwritable")
+
+        root = logging.getLogger()
+        old = _EarlySink()
+        old._anki_miner_sink = True  # type: ignore[attr-defined]
+        root.addHandler(old)
+        monkeypatch.setattr(app_module, "_OwnerOnlyRotatingFileHandler", _fail_replacement)
+        try:
+            app_module._configure_logging(tmp_path / "configured.log")
+
+            assert old in root.handlers
+            assert old._closed is False
+            assert any(
+                record.levelno == logging.WARNING
+                and "keeping existing log sink" in record.getMessage()
+                and record.exc_info is not None
+                for record in records
+            )
+        finally:
+            root.removeHandler(old)
+            old.close()
+
+    def test_success_eagerly_opens_replacement_then_closes_early_sink(self, tmp_path):
+        from anki_miner.gui import app as app_module
+
+        root = logging.getLogger()
+        anki_logger = logging.getLogger("anki_miner")
+        root_level = root.level
+        anki_level = anki_logger.level
+        early = logging.FileHandler(tmp_path / "early.log", encoding="utf-8")
+        early._anki_miner_sink = True  # type: ignore[attr-defined]
+        root.addHandler(early)
+        configured = tmp_path / "configured.log"
+        try:
+            app_module._configure_logging(configured)
+
+            sinks = [handler for handler in root.handlers if getattr(handler, "_anki_miner_sink", False)]
+            assert len(sinks) == 1
+            replacement = sinks[0]
+            assert replacement is not early
+            assert early._closed is True
+            assert early.stream is None
+            assert configured.exists()
+            assert isinstance(replacement, logging.handlers.RotatingFileHandler)
+            assert replacement.stream is not None
+            assert replacement.backupCount == 5
+        finally:
+            root.setLevel(root_level)
+            anki_logger.setLevel(anki_level)
+            for handler in list(root.handlers):
+                if handler is early or getattr(handler, "_anki_miner_sink", False):
+                    root.removeHandler(handler)
+                    handler.close()
+
+    def test_effective_log_path_reports_active_sink(self, tmp_path):
+        from anki_miner.gui.launch import get_effective_log_path
+
+        root = logging.getLogger()
+        active_path = tmp_path / "fallback" / "early.log"
+        active_path.parent.mkdir()
+        active = logging.FileHandler(active_path, encoding="utf-8")
+        active._anki_miner_sink = True  # type: ignore[attr-defined]
+        root.addHandler(active)
+        try:
+            assert get_effective_log_path(tmp_path / "configured.log") == active_path
+        finally:
+            root.removeHandler(active)
+            active.close()
+
+    def test_session_boundary_records_required_fields(self, tmp_path, monkeypatch):
+        from anki_miner import __version__
+        from anki_miner.gui import app as app_module
+
+        log_path = tmp_path / "app.log"
+        root = logging.getLogger()
+        anki_logger = logging.getLogger("anki_miner")
+        root_level = root.level
+        anki_level = anki_logger.level
+        monkeypatch.setattr(
+            app_module,
+            "uuid",
+            types.SimpleNamespace(uuid4=lambda: types.SimpleNamespace(hex="12345678rest")),
+            raising=False,
+        )
+        monkeypatch.setattr(app_module, "platform", types.SimpleNamespace(platform=lambda: "TestOS-1"), raising=False)
+        monkeypatch.setattr(app_module.os, "getpid", lambda: 4321)
+        monkeypatch.setattr(app_module.sys, "frozen", True, raising=False)
+        try:
+            app_module._configure_logging(log_path)
+            app_module._log_session_boundary()
+            for handler in root.handlers:
+                if getattr(handler, "_anki_miner_sink", False):
+                    handler.flush()
+
+            content = log_path.read_text(encoding="utf-8")
+            assert "session_id=12345678" in content
+            assert f"version={__version__}" in content
+            assert "platform=TestOS-1" in content
+            assert "frozen=True" in content
+            assert "pid=4321" in content
+        finally:
+            root.setLevel(root_level)
+            anki_logger.setLevel(anki_level)
+            for handler in list(root.handlers):
+                if getattr(handler, "_anki_miner_sink", False):
+                    root.removeHandler(handler)
+                    handler.close()
+
     def test_creates_parent_dir_if_missing(self, tmp_path):
         """_configure_logging creates the parent directory when it doesn't exist."""
         configure_logging = self._import_configure_logging()
@@ -630,7 +748,7 @@ class TestMainUsesConfigLogPath:
     """main() passes config.log_path (not the hardcoded default) to _configure_logging."""
 
     def test_main_passes_config_log_path_to_configure_logging(self, tmp_path):
-        """_configure_logging is called with the path from GUIConfigManager.load_config()."""
+        """_configure_logging uses the config returned by the provenance-aware startup load."""
         from unittest.mock import MagicMock, patch
 
         custom_log = tmp_path / "custom" / "app.log"
@@ -645,8 +763,8 @@ class TestMainUsesConfigLogPath:
 
         with (
             patch(
-                "anki_miner.gui.app.GUIConfigManager.load_config",
-                return_value=mock_config,
+                "anki_miner.gui.app.GUIConfigManager.load_config_with_provenance",
+                return_value=(mock_config, True),
             ),
             patch("anki_miner.gui.app._configure_logging", side_effect=fake_configure_logging),
             patch("anki_miner.gui.app.QApplication"),

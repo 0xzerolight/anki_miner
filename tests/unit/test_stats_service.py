@@ -1,5 +1,7 @@
 """Tests for StatsService."""
 
+import threading
+
 import pytest
 
 from anki_miner.models.stats import MiningSession
@@ -111,15 +113,61 @@ class TestRecordSession:
         sessions = service.get_recent_sessions(limit=3)
         assert len(sessions) == 3
 
-    def test_record_returns_negative_when_not_initialized(self, tmp_path):
+    def test_first_record_initializes_and_persists(self, tmp_path):
         service = StatsService(tmp_path / "stats.db")
-        result = service.record_session(
+        row_id = service.record_session(
             MiningSession(
                 series_name="Test",
                 episode_name="ep01",
             )
         )
-        assert result == -1
+        assert row_id > 0
+        assert service.is_available() is True
+        assert [session.episode_name for session in service.get_recent_sessions()] == ["ep01"]
+
+    def test_record_during_startup_load_is_not_dropped(self, tmp_path, monkeypatch):
+        """A first write can initialize while the best-effort startup load is blocked."""
+        service = StatsService(tmp_path / "stats.db")
+        startup_entered = threading.Event()
+        release_startup = threading.Event()
+        calls_lock = threading.Lock()
+        create_calls = 0
+        original_create_tables = service._create_tables
+
+        def blocking_create_tables(conn):
+            nonlocal create_calls
+            with calls_lock:
+                create_calls += 1
+                is_startup_call = create_calls == 1
+            if is_startup_call:
+                startup_entered.set()
+                assert release_startup.wait(timeout=3)
+            original_create_tables(conn)
+
+        monkeypatch.setattr(service, "_create_tables", blocking_create_tables)
+        # Capture load()'s result: an assertion failing inside the blocked
+        # startup call is swallowed by load()'s broad handler and would
+        # otherwise silently pass this test as a False return.
+        startup_result: list[bool] = []
+        startup_thread = threading.Thread(target=lambda: startup_result.append(service.load()))
+        startup_thread.start()
+        try:
+            assert startup_entered.wait(timeout=3)
+            row_id = service.record_session(
+                MiningSession(
+                    series_name="Test",
+                    episode_name="ep01",
+                )
+            )
+            assert row_id > 0
+            assert release_startup.is_set() is False
+        finally:
+            release_startup.set()
+            startup_thread.join(timeout=3)
+
+        assert startup_thread.is_alive() is False
+        assert startup_result == [True]
+        assert [session.episode_name for session in service.get_recent_sessions()] == ["ep01"]
 
 
 class TestOverallStats:
@@ -197,6 +245,14 @@ class TestDifficulty:
         service.record_difficulty("Test", "ep01", 0, 0, 0)
         rankings = service.get_series_difficulty()
         assert len(rankings) == 0
+
+    def test_first_difficulty_record_initializes_and_persists(self, tmp_path):
+        service = StatsService(tmp_path / "stats.db")
+        service.record_difficulty("Test", "ep01", 100, 25, 80)
+
+        rankings = service.get_series_difficulty()
+        assert len(rankings) == 1
+        assert rankings[0].series_name == "Test"
 
     def test_averages_across_episodes(self, service):
         service.record_difficulty("Show", "ep01", 100, 10, 80)  # 0.10

@@ -171,10 +171,6 @@ class TestSettingsTabAsrWiring:
         saved_configs: list[AnkiMinerConfig] = []
         tab.config_changed.connect(saved_configs.append)
 
-        # Trigger save path (monkeypatch the validation-heavy side-effects)
-        monkeypatch.setattr(tab, "_resolve_pitch_accent_path", lambda: tab.config.pitch_accent_path)
-        monkeypatch.setattr(tab, "_commit_pending_csv_imports", lambda: None)
-
         tab.commit_settings()
 
         assert len(saved_configs) >= 1

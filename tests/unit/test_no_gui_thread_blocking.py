@@ -131,22 +131,9 @@ ALLOWLIST: dict[str, set[str]] = {
         # worker_thread.wait(_SHUTDOWN_WAIT_MS), which has an arg and never matches.
         # The queue-tab lifecycle (audiobook/YouTube/reading, ARC-008) shares this base.
         "widgets/_queue_mining_tab_base.py",
-        # worker.wait() after loop.exec() already returned on worker.finished —
-        # the QThread is finished, so the join returns immediately (cheap).
-        "widgets/dialogs/resource_download_dialog.py",
-        # Prose only: a comment referencing resource_download_dialog's .wait().
-        "widgets/dialogs/setup_wizard/setup_wizard.py",
         # Prose only: shutdown explains why the worker-side curation event must
         # be poisoned before its bounded QThread join.
         "controllers/background_tasks.py",
-    },
-    # time.sleep — only inside `_robust_rmtree`'s Windows-retry loop, and that
-    # helper is only ever called from a `_delete` work callable dispatched via
-    # run_off_thread (settings-panel "remove" actions). Off-thread.
-    r"time\.sleep\(": {
-        "widgets/panels/audio_pack_settings_panel.py",
-        "widgets/panels/dictionary_settings_panel.py",
-        "widgets/panels/frequency_settings_panel.py",
     },
     # processEvents — a single deliberate pump in ui_settings_panel so the busy
     # cursor paints before an UNAVOIDABLE synchronous repolish of the whole widget

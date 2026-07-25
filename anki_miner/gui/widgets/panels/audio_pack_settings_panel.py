@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import os
-import shutil
-import stat
-import time
+from collections.abc import Callable
 from pathlib import Path
 
 from PyQt6.QtCore import QPoint, Qt, pyqtSignal
@@ -32,51 +29,22 @@ from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
     _ChainPanelStrings,
     _RegistryView,
 )
+from anki_miner.services._sqlite_index import prove_owned_slot, resolve_managed_slot
 from anki_miner.services.audio_packs.registry import AudioPackMeta, AudioPackRegistry
+from anki_miner.utils import robust_fs
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.robust_fs import RmtreeOutcome, robust_rmtree
+
+shutil = robust_fs.shutil
 
 
-# Windows-lock robustness helpers — duplicated across the chain panels (same
-# pattern, deliberate copy rather than cross-panel import per audio_packs
-# deliberate-decoupling precedent; kept module-local so the panel tests'
-# ``shutil`` / ``_robust_rmtree`` monkeypatch seams resolve here).
-def _on_rmtree_error(func, path, _exc_info):
-    """rmtree onerror handler: clear the read-only bit then retry once.
-
-    Windows refuses to delete read-only files; sqlite-backed index dirs sometimes
-    inherit that attribute. Clearing S_IWRITE and re-invoking the failing op
-    (unlink / rmdir) lets the walk continue. Any other failure re-raises.
-    """
-    try:
-        os.chmod(path, stat.S_IWRITE)
-        func(path)
-    except OSError:
-        raise
-
-
-def _robust_rmtree(target: Path, *, retries: int = 3, delay_s: float = 0.1) -> None:
-    """rmtree with Windows-aware retry.
-
-    Two failure modes seen on Win11: read-only file attributes (handled inline by
-    ``_on_rmtree_error``) and transient ``[WinError 32] file in use`` from sqlite
-    handles still being released by GC. The retry loop absorbs the second case
-    best-effort; final failure surfaces to the caller as the last OSError so the
-    UI can show the same dialog as before.
-    """
-    last_exc: OSError | None = None
-    for _ in range(retries):
-        try:
-            shutil.rmtree(target, onerror=_on_rmtree_error)
-            return
-        except OSError as e:
-            last_exc = e
-            time.sleep(delay_s)
-    assert last_exc is not None
-    raise last_exc
+def _robust_rmtree(target: Path) -> RmtreeOutcome:
+    """Panel-local seam for post-commit cleanup."""
+    return robust_rmtree(target, mode="outcome")
 
 
 class _PackRow(QWidget):
-    """One row in the chain list: checkbox + label + format badge + count + missing badge."""
+    """One row in the chain list: checkbox + label + format/count + repair status."""
 
     toggled = pyqtSignal()
 
@@ -88,14 +56,21 @@ class _PackRow(QWidget):
         count: int,
         *,
         dir_missing: bool = False,
+        schema_stale: bool = False,
     ):
         super().__init__()
         self.entry = entry
         self.dir_missing = dir_missing
+        self.schema_stale = schema_stale
         layout = QHBoxLayout(self)
         layout.setContentsMargins(4, 2, 4, 2)
 
         self.checkbox = QCheckBox()
+        # Text-less toggle: without an accessible name a screen reader announces
+        # only "check box", and the source it belongs to is conveyed purely by
+        # the sibling QLabel. 11 such toggles were unnamed across the 4 chain panels.
+        self.checkbox.setAccessibleName(tr_format(self.tr("Enable %1"), display_name))
+        self.checkbox.setToolTip(tr_format(self.tr("Enable or disable %1"), display_name))
         self.checkbox.setChecked(entry.enabled)
         self.checkbox.stateChanged.connect(lambda _s: self.toggled.emit())
         layout.addWidget(self.checkbox)
@@ -113,7 +88,11 @@ class _PackRow(QWidget):
             count_label.setStyleSheet("color: gray; font-size: 10px;")
             layout.addWidget(count_label)
 
-        if dir_missing:
+        if schema_stale:
+            stale_label = QLabel(self.tr("⚠ re-import required (app upgrade)"))
+            stale_label.setStyleSheet("color: #d97706; font-size: 10px;")
+            layout.addWidget(stale_label)
+        elif dir_missing:
             missing_label = QLabel(self.tr("⚠ folder missing — re-import"))
             missing_label.setStyleSheet("color: #d97706; font-size: 10px;")
             layout.addWidget(missing_label)
@@ -207,12 +186,46 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
     def __init__(self, packs_root: Path, parent=None):
         super().__init__("Audio Pack Settings", parent=parent)
         self._packs_root = packs_root
+        self._release_callback: Callable[[], bool] | None = None
         self._strings = _ChainPanelStrings(
             loading=self.tr("Loading…"),
             remove_failed_title=self.tr("Remove failed"),
             could_not_delete_template=self.tr("Could not delete %1:\n%2\n\nThe audio pack was not removed."),
+            files_left_title=self.tr("Files left untouched"),
+            files_left_template=self.tr(
+                "The chain entry was removed, but files at %1 were left untouched because "
+                "the folder could not be proven to belong to Anki Miner."
+            ),
+            intact_failure_template=self.tr("Could not remove %1:\n%2\n\nThe files are intact. Try again."),
+            partial_failure_template=self.tr(
+                "Could not complete removal of %1:\n%2\n\nThe files were partially changed. "
+                "Re-import or repair this audio pack before retrying."
+            ),
+            config_pending_failure_template=self.tr(
+                "Could not restore %1 after its configuration update failed:\n%2\n\n"
+                "The files are no longer in the installed location; a configuration update "
+                "is pending. Restart Anki Miner before retrying."
+            ),
+            post_save_warning_template=self.tr(
+                "Removal of %1 was saved, but Anki Miner could not refresh it:\n%2\n\n"
+                "The removal was saved and will remain after restart."
+            ),
+            cleanup_pending_template=self.tr(
+                "%1 was removed, but its tombstone at %2 could not be deleted:\n%3\n\n"
+                "The removal is saved; cleanup is pending and will be retried at startup."
+            ),
         )
         self._setup_fields()
+
+    def set_release_callback(self, cb: Callable[[], bool] | None) -> None:
+        """Wire the pre-remove resource-release hook."""
+        self._release_callback = cb
+
+    def request_resource_release(self) -> bool:
+        """Ask the app to close cached resource handles before replacement."""
+        if self._release_callback is None:
+            return True
+        return self._release_callback()
 
     def _setup_fields(self) -> None:
         self.add_section(self.tr("Active Audio Sources"))
@@ -352,6 +365,10 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         """Enable/disable the retry button while its off-thread sweep runs."""
         self._retry_missing_btn.setEnabled(enabled)
 
+    def _set_mutation_controls_enabled(self, enabled: bool) -> None:
+        self._add_btn.setEnabled(enabled)
+        self._add_online_btn.setEnabled(enabled)
+
     def set_chain(
         self,
         chain: tuple[AudioSourceEntry, ...],
@@ -387,15 +404,25 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
 
     def _on_add_online_source(self) -> None:
         """Open the Add-Source dialog and append the chosen custom entry."""
-        dialog = _AddSourceDialog(self)
-        if dialog.exec() != QDialog.DialogCode.Accepted:
+        if not self.prepare_for_mutation():
             return
-        self.add_source_entry(
-            AudioSourceEntry(kind=dialog.selected_kind(), url=dialog.url_value(), enabled=True)  # type: ignore[arg-type]
-        )
+        token = self.hold_mutation("add-online-source")
+        try:
+            dialog = _AddSourceDialog(self)
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return
+            self.add_source_entry(
+                AudioSourceEntry(
+                    kind=dialog.selected_kind(),  # type: ignore[arg-type]
+                    url=dialog.url_value(),
+                    enabled=True,
+                )
+            )
+        finally:
+            self.release(token)
 
-    def _describe_entry(self, entry: AudioSourceEntry, view: _RegistryView | None) -> tuple[str, str, int, bool]:
-        """Return ``(display, format_label, entry_count, dir_missing)`` for a row."""
+    def _describe_entry(self, entry: AudioSourceEntry, view: _RegistryView | None) -> tuple[str, str, int, bool, bool]:
+        """Return display, format, count, missing-dir, and stale-schema state."""
         if entry.kind == "pack":
             meta = view.get(entry.pack_id) if (view is not None and entry.pack_id) else None
             return (
@@ -403,14 +430,15 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
                 meta.format if meta else "",
                 meta.entry_count if meta else 0,
                 meta is not None and not meta.pack_dir_exists,
+                meta is not None and not meta.schema_ok,
             )
         if entry.kind == "googletts":
-            return self.tr("Google Translate (synthetic TTS)"), "online", 0, False
+            return self.tr("Google Translate (synthetic TTS)"), "online", 0, False, False
         if entry.kind in ("custom", "custom_json"):
             label = self.tr("Custom JSON") if entry.kind == "custom_json" else self.tr("Custom URL")
-            return (f"{label}: {entry.url}" if entry.url else label), "custom", 0, False
+            return (f"{label}: {entry.url}" if entry.url else label), "custom", 0, False, False
         # jpod101 (built-in online)
-        return self.tr("JapanesePod101 (online)"), "online", 0, False
+        return self.tr("JapanesePod101 (online)"), "online", 0, False, False
 
     # ------------------------------------------------------------------
     # Chain-panel hooks
@@ -422,8 +450,15 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         return _RegistryView(registry.packs.get)
 
     def _make_row(self, entry: AudioSourceEntry, view: _RegistryView | None) -> QWidget:
-        display, fmt, count, dir_missing = self._describe_entry(entry, view)
-        row = _PackRow(entry, display, fmt, count, dir_missing=dir_missing)
+        display, fmt, count, dir_missing, schema_stale = self._describe_entry(entry, view)
+        row = _PackRow(
+            entry,
+            display,
+            fmt,
+            count,
+            dir_missing=dir_missing,
+            schema_stale=schema_stale,
+        )
         row.toggled.connect(self._on_row_toggled)
         return row
 
@@ -447,7 +482,16 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         return self._describe_entry(entry, self._view)[0]
 
     def _entry_disk_dir(self, entry: AudioSourceEntry) -> Path | None:
-        return (self._packs_root / entry.pack_id) if entry.pack_id else None
+        if not entry.pack_id:
+            return None
+        try:
+            return resolve_managed_slot(self._packs_root, entry.pack_id)
+        except ValueError:
+            return None
+
+    def _owns_entry_disk_dir(self, entry: AudioSourceEntry, target: Path) -> bool:
+        pack_id = entry.pack_id
+        return pack_id is not None and prove_owned_slot(target.parent, pack_id, "audio")
 
     def _confirm_remove(self, display: str) -> bool:
         reply = QMessageBox.question(
@@ -464,14 +508,44 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         )
         return reply == QMessageBox.StandardButton.Yes
 
-    def _rmtree_dir(self, target: Path) -> None:
-        _robust_rmtree(target)
+    def _confirm_chain_only_remove(self, display: str) -> bool:
+        reply = QMessageBox.question(
+            self,
+            self.tr("Remove audio pack"),
+            tr_format(
+                self.tr(
+                    "Remove '%1' from the audio chain?\n\nIndex files on disk will be left untouched because the folder could not be proven to belong to Anki Miner."
+                ),
+                display,
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return reply == QMessageBox.StandardButton.Yes
+
+    def _acquire_release_for_remove(self) -> bool:
+        if not self.request_resource_release():
+            QMessageBox.warning(
+                self,
+                self.tr("Remove failed"),
+                self.tr(
+                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                    "Wait for the active task to finish and try again."
+                ),
+            )
+            return False
+        return True
+
+    def _rmtree_dir(self, target: Path) -> RmtreeOutcome:
+        return _robust_rmtree(target)
 
     def _on_row_context_menu(self, pos: QPoint) -> None:
         """Right-click a pack row to re-import it.
 
         Built-in online rows (jpod101, googletts) have no menu — they can't be re-imported.
         """
+        if self._scan_in_flight or self.has_active_mutation():
+            return
         item = self._list.itemAt(pos)
         if item is None:
             return
@@ -481,11 +555,6 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         entry = self._chain[index]
         if entry.kind in ("jpod101", "googletts") or entry.pack_id is None:
             return
-        # _view is always set after _rebuild_list; guard is belt-and-suspenders.
-        meta = self._view.get(entry.pack_id) if self._view is not None else None
-        if meta is None:
-            return
-
         menu = QMenu(self._list)
         reimport_action = menu.addAction(self.tr("Re-import…"))
         remove_action = menu.addAction(self.tr("Remove"))

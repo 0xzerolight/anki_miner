@@ -15,9 +15,10 @@ This list is generated automatically — see [.github/workflows/contributors.yml
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/cskings14"><img src="https://avatars.githubusercontent.com/u/80647209?s=80&u=a146e7f5082f78a3dd08038df6f878323c3665c0&v=4" width="80" height="80" alt="@cskings14"/><br/><sub><b>cskings14</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/Expri-commits"><img src="https://avatars.githubusercontent.com/u/184641533?s=80&u=f42564ed68ef9633de009517daaa03a030d4cb42&v=4" width="80" height="80" alt="@Expri-commits"/><br/><sub><b>Expri-commits</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/Geniusssmit"><img src="https://avatars.githubusercontent.com/u/24941285?s=80&v=4" width="80" height="80" alt="@Geniusssmit"/><br/><sub><b>Geniusssmit</b></sub></a></td>
-    <td align="center" valign="top" width="12.50%"><a href="https://github.com/Joywinbarboza"><img src="https://avatars.githubusercontent.com/u/115721200?s=80&u=205dc04583c9f1e85b7ec6d613009de62c149c1e&v=4" width="80" height="80" alt="@Joywinbarboza"/><br/><sub><b>Joywinbarboza</b></sub></a></td>
+    <td align="center" valign="top" width="12.50%"><a href="https://github.com/Hit2Skill"><img src="https://avatars.githubusercontent.com/u/104381520?s=80&v=4" width="80" height="80" alt="@Hit2Skill"/><br/><sub><b>Hit2Skill</b></sub></a></td>
   </tr>
   <tr>
+    <td align="center" valign="top" width="12.50%"><a href="https://github.com/Joywinbarboza"><img src="https://avatars.githubusercontent.com/u/115721200?s=80&u=205dc04583c9f1e85b7ec6d613009de62c149c1e&v=4" width="80" height="80" alt="@Joywinbarboza"/><br/><sub><b>Joywinbarboza</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/jsitems"><img src="https://avatars.githubusercontent.com/u/287451076?s=80&v=4" width="80" height="80" alt="@jsitems"/><br/><sub><b>jsitems</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/MsWuschel"><img src="https://avatars.githubusercontent.com/u/210858586?s=80&v=4" width="80" height="80" alt="@MsWuschel"/><br/><sub><b>MsWuschel</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/sdobrau"><img src="https://avatars.githubusercontent.com/u/229150011?s=80&v=4" width="80" height="80" alt="@sdobrau"/><br/><sub><b>sdobrau</b></sub></a></td>
@@ -25,6 +26,9 @@ This list is generated automatically — see [.github/workflows/contributors.yml
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/StyraxBenzoin"><img src="https://avatars.githubusercontent.com/u/66492803?s=80&u=be73ed24296a0d599a7d947876ef73c91115eaf5&v=4" width="80" height="80" alt="@StyraxBenzoin"/><br/><sub><b>StyraxBenzoin</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/trnfree"><img src="https://avatars.githubusercontent.com/u/291092965?s=80&u=fc8863d8d20883cbc4ca5671141e1ae0affa841f&v=4" width="80" height="80" alt="@trnfree"/><br/><sub><b>trnfree</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/trnkobayashi"><img src="https://avatars.githubusercontent.com/u/117138163?s=80&v=4" width="80" height="80" alt="@trnkobayashi"/><br/><sub><b>trnkobayashi</b></sub></a></td>
+  </tr>
+  <tr>
+    <td align="center" valign="top" width="12.50%"><a href="https://github.com/ViniciusTaborda"><img src="https://avatars.githubusercontent.com/u/72284753?s=80&u=121f2d4302b1be7c9116a29d86df5b2a3282e0cb&v=4" width="80" height="80" alt="@ViniciusTaborda"/><br/><sub><b>ViniciusTaborda</b></sub></a></td>
   </tr>
 </table>
 <!-- contributors:end -->

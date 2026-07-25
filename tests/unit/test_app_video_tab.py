@@ -1,7 +1,7 @@
 """Smoke test: VideoTab is registered in the main() wiring.
 
 Uses the shared ``wired_window`` fixture (``tests/unit/conftest.py``), which
-mirrors ``anki_miner.gui.app.main``'s tab-construction block, and asserts the
+calls ``anki_miner.gui.app.compose_main_window``, and asserts the
 "Video" tab is present at index 0, correctly typed, and that it nests the
 Single/Batch/YouTube sub-tabs with per-child presenters.
 """

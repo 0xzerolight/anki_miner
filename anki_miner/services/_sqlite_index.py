@@ -1,12 +1,13 @@
 """Shared SQLite-index plumbing for the index-backed resource families.
 
-Three resource families store their data as ``<root>/<id>/index.sqlite`` folders
+Four resource families store their data as ``<root>/<id>/index.sqlite`` folders
 with a small ``meta`` key/value table and a ``meta.json`` sidecar: dictionaries
 (:mod:`anki_miner.services.dictionary.storage`), frequency sources
-(:mod:`anki_miner.services.frequency.storage`), and audio packs
-(:mod:`anki_miner.services.audio_packs.storage`). This module owns the
+(:mod:`anki_miner.services.frequency.storage`), audio packs
+(:mod:`anki_miner.services.audio_packs.storage`), and pitch accent sources
+(:mod:`anki_miner.services.pitch_accent.storage`). This module owns the
 infrastructure they share so a fix (e.g. the URI-escaping guard in
-:func:`open_readonly`) lands once instead of being hand-propagated ×3:
+:func:`open_readonly`) lands once instead of being hand-propagated ×4:
 
 * the meta upsert + ``meta.json`` sidecar refresh (:func:`write_meta`),
 * the raw meta read (:func:`read_meta`) and its sidecar-cached variant
@@ -31,9 +32,11 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sqlite3
-from pathlib import Path
-from typing import Callable, TypeVar
+import stat
+from pathlib import Path, PureWindowsPath
+from typing import Callable, Literal, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +46,245 @@ _T = TypeVar("_T")
 # ``meta`` rows as JSON so a registry ``load()`` can skip the SQLite open on
 # every app startup. Refreshed whenever ``write_meta`` runs.
 _META_SIDECAR = "meta.json"
+_OWNERSHIP_MARKER = ".anki-miner-owned.json"
+
+StoreFamily = Literal["dictionary", "frequency", "audio", "pitch"]
+
+_DICTIONARY_ENTRY_COLUMNS = frozenset(("term", "content", "tags", "rules", "sequence"))
+_DICTIONARY_TAG_COLUMNS = frozenset(("name", "category", "ord", "notes", "score"))
+_FREQUENCY_V1_COLUMNS = frozenset(("term", "reading", "rank"))
+_FREQUENCY_V2_COLUMNS = _FREQUENCY_V1_COLUMNS | {"display_value"}
+_AUDIO_ENTRY_COLUMNS = frozenset(("expression", "file", "source", "speaker"))
+_PITCH_ENTRY_COLUMNS = frozenset(("reading", "kanji", "pattern", "nasal", "devoice"))
+
+
+def validate_store_id(store_id: str) -> None:
+    """Require one portable, non-traversing filesystem path component."""
+    if (
+        not isinstance(store_id, str)
+        or not store_id
+        or store_id in (".", "..")
+        or "/" in store_id
+        or "\\" in store_id
+        or "\x00" in store_id
+        or Path(store_id).is_absolute()
+        or bool(PureWindowsPath(store_id).drive)
+    ):
+        raise ValueError(f"Invalid managed store id: {store_id!r}")
+
+
+def resolve_managed_slot(root: Path, store_id: str) -> Path:
+    """Resolve *root* and return its direct, unresolved child *store_id*.
+
+    Generated-artifact syntax is reserved for recovery files. Existing legacy
+    slots with such names remain addressable, but no new slot may claim one.
+    """
+    validate_store_id(store_id)
+    try:
+        resolved_root = root.resolve()
+        final = resolved_root / store_id
+        if final.parent.resolve() != resolved_root:
+            raise ValueError(f"Managed store escapes root: {store_id!r}")
+        if is_generated_store_artifact(store_id) and not os.path.lexists(final):
+            raise ValueError(f"Invalid managed store id: {store_id!r}")
+    except (OSError, RuntimeError) as exc:
+        raise ValueError(f"Could not resolve managed store id {store_id!r}") from exc
+    return final
+
+
+def is_generated_store_artifact(name: str) -> bool:
+    """Return whether *name* is a generated backup/recovery/staging entry."""
+    return name.startswith(".") or any(marker in name for marker in (".bak-", ".tomb-", ".corrupt-", ".staging-"))
+
+
+def write_ownership_marker(directory: Path, slot_id: str, family: StoreFamily) -> None:
+    """Mark a staged/generated directory as owned by one managed slot."""
+    validate_store_id(slot_id)
+    if family not in ("dictionary", "frequency", "audio", "pitch"):
+        raise ValueError(f"Unknown managed store family: {family!r}")
+    directory.mkdir(parents=True, exist_ok=True)
+    marker = directory / _OWNERSHIP_MARKER
+    marker.write_text(
+        json.dumps({"family": family, "slot_id": slot_id}, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def read_ownership_marker(directory: Path) -> tuple[StoreFamily, str] | None:
+    """Read a strict ownership marker without following a marker symlink."""
+    marker = directory / _OWNERSHIP_MARKER
+    try:
+        if marker.is_symlink() or not marker.is_file():
+            return None
+        payload = json.loads(marker.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError, RecursionError):
+        return None
+    if not isinstance(payload, dict) or set(payload) != {"family", "slot_id"}:
+        return None
+    family = payload.get("family")
+    slot_id = payload.get("slot_id")
+    if family not in ("dictionary", "frequency", "audio", "pitch") or not isinstance(slot_id, str):
+        return None
+    try:
+        validate_store_id(slot_id)
+    except ValueError:
+        return None
+    return family, slot_id
+
+
+def _supported_schema_version(family: StoreFamily, version: int) -> bool:
+    if family == "dictionary":
+        from anki_miner.services.dictionary.storage import SCHEMA_VERSION
+
+        return version == SCHEMA_VERSION
+    if family == "frequency":
+        from anki_miner.services.frequency.storage import SCHEMA_VERSION
+
+        return 1 <= version <= SCHEMA_VERSION
+    if family == "pitch":
+        from anki_miner.services.pitch_accent.storage import SCHEMA_VERSION
+
+        return version == SCHEMA_VERSION
+    from anki_miner.services.audio_packs.storage import SCHEMA_VERSION
+
+    return version == SCHEMA_VERSION
+
+
+def _supported_ownership_schema_version(family: StoreFamily, version: int) -> bool:
+    if family == "dictionary":
+        from anki_miner.services.dictionary.storage import SCHEMA_VERSION
+
+        return version in (3, SCHEMA_VERSION)
+    return _supported_schema_version(family, version)
+
+
+def _is_regular_file_nofollow(path: Path) -> bool:
+    try:
+        return stat.S_ISREG(path.lstat().st_mode)
+    except OSError:
+        return False
+
+
+def _validated_index_meta_with_policy(
+    db_path: Path,
+    family: StoreFamily,
+    supports_version: Callable[[StoreFamily, int], bool],
+) -> dict[str, str] | None:
+    if family not in ("dictionary", "frequency", "audio", "pitch") or not _is_regular_file_nofollow(db_path):
+        return None
+    try:
+        conn = open_readonly(db_path)
+        try:
+            meta = {
+                key: value
+                for key, value in conn.execute("SELECT key, value FROM meta")
+                if isinstance(key, str) and isinstance(value, str)
+            }
+            version = int(meta.get("schema_version", ""))
+            if not supports_version(family, version):
+                return None
+            entry_columns = {row[1] for row in conn.execute("PRAGMA table_info(entries)") if isinstance(row[1], str)}
+            if family == "dictionary":
+                tag_columns = {row[1] for row in conn.execute("PRAGMA table_info(tags)") if isinstance(row[1], str)}
+                if not entry_columns >= _DICTIONARY_ENTRY_COLUMNS:
+                    return None
+                if not tag_columns >= _DICTIONARY_TAG_COLUMNS:
+                    return None
+            elif family == "frequency":
+                required = _FREQUENCY_V1_COLUMNS if version == 1 else _FREQUENCY_V2_COLUMNS
+                if not required <= entry_columns:
+                    return None
+            elif family == "pitch":
+                if not entry_columns >= _PITCH_ENTRY_COLUMNS:
+                    return None
+            elif not entry_columns >= _AUDIO_ENTRY_COLUMNS:
+                return None
+            return meta
+        finally:
+            conn.close()
+    except (OSError, sqlite3.Error, TypeError, ValueError):
+        return None
+
+
+def _validated_index_meta(db_path: Path, family: StoreFamily) -> dict[str, str] | None:
+    return _validated_index_meta_with_policy(db_path, family, _supported_schema_version)
+
+
+def _validated_ownership_index_meta(db_path: Path, family: StoreFamily) -> dict[str, str] | None:
+    return _validated_index_meta_with_policy(db_path, family, _supported_ownership_schema_version)
+
+
+def validate_index_schema(db_path: Path, family: StoreFamily) -> bool:
+    """Validate one family's supported version and queried physical columns."""
+    return _validated_index_meta(db_path, family) is not None
+
+
+def _prove_owned_directory(directory: Path, slot_id: str, family: StoreFamily) -> bool:
+    if directory.is_symlink() or not directory.is_dir():
+        return False
+    marker_path = directory / _OWNERSHIP_MARKER
+    if os.path.lexists(marker_path):
+        return read_ownership_marker(directory) == (family, slot_id)
+    meta = _validated_ownership_index_meta(directory / "index.sqlite", family)
+    if meta is None:
+        return False
+    if family == "dictionary":
+        return "source_name" in meta and "schema_version" in meta
+    if family in ("frequency", "pitch"):
+        return "schema_version" in meta
+    return meta.get("pack_id") == slot_id
+
+
+def prove_owned_slot(root: Path, slot_id: str, family: StoreFamily) -> bool:
+    """Prove canonical slot ownership by exact marker or legacy physical schema."""
+    try:
+        slot = resolve_managed_slot(root, slot_id)
+    except ValueError:
+        return False
+    return _prove_owned_directory(slot, slot_id, family)
+
+
+def prove_owned_generation(
+    root: Path,
+    slot_id: str,
+    family: StoreFamily,
+    generation: Path,
+) -> bool:
+    """Prove one direct generated sibling belongs to *slot_id* and *family*."""
+    try:
+        resolved_root = root.resolve()
+        validate_store_id(slot_id)
+        if generation.parent.resolve() != resolved_root:
+            return False
+    except (OSError, RuntimeError, ValueError):
+        return False
+    return _prove_owned_directory(generation, slot_id, family)
+
+
+def readonly_sqlite_uri(db_path: Path) -> str:
+    """Build the ``file:`` read-only URI for ``db_path``.
+
+    ``Path.as_uri()`` percent-encodes URI-significant characters (``#``, ``?``,
+    ``%``) so they can't truncate the path, but on Windows it renders
+    extended-length prefixes (``\\\\?\\C:\\...`` / ``\\\\?\\UNC\\server\\share``)
+    as a ``file://%3F/...`` authority that sqlite rejects — silently skipping
+    valid stores. Strip the extended-length prefix back to the plain drive/UNC
+    form before conversion; sqlite re-applies long-path handling itself.
+    """
+    resolved = db_path.resolve()
+    stripped = _strip_extended_length_prefix(str(resolved))
+    if stripped is not None:
+        resolved = Path(stripped)
+    return resolved.as_uri() + "?mode=ro"
+
+
+def _strip_extended_length_prefix(raw: str) -> str | None:
+    """Return ``raw`` without a Windows extended-length prefix, or None if absent."""
+    if raw.startswith("\\\\?\\UNC\\"):
+        return "\\\\" + raw[8:]
+    if raw.startswith("\\\\?\\"):
+        return raw[4:]
+    return None
 
 
 def write_meta(
@@ -78,7 +320,7 @@ def read_meta(db_path: Path) -> dict[str, str]:
     """Read all ``meta`` rows. Returns an empty dict if the file is missing."""
     if not db_path.exists():
         return {}
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(readonly_sqlite_uri(db_path), uri=True)
     try:
         return {
             key: value
@@ -97,10 +339,13 @@ def read_meta_cached(
 ) -> dict[str, str]:
     """Read ``meta`` rows via the ``meta.json`` sidecar when it is fresh.
 
-    Falls through to ``read_meta_fn`` and rewrites the sidecar when:
+    Falls through to ``read_meta_fn`` without publishing a sidecar when:
     * the sidecar is missing,
     * ``index.sqlite`` is newer than the sidecar,
     * the sidecar is unreadable / not valid JSON.
+
+    Only the explicit writer path, :func:`write_meta`, publishes the sidecar;
+    reads never repair or refresh it.
 
     ``read_meta_fn`` is passed in (rather than calling :func:`read_meta`
     directly) so each storage module routes the fall-through through *its own*
@@ -118,14 +363,11 @@ def read_meta_cached(
     except (OSError, UnicodeError, json.JSONDecodeError, RecursionError) as e:
         logger.debug("meta sidecar miss for %s: %s", db_path, e)
 
-    meta = read_meta_fn(db_path)
-    write_meta_sidecar(db_path, meta, sidecar_name=sidecar_name)
-    return meta
+    return read_meta_fn(db_path)
 
 
 def write_meta_sidecar(db_path: Path, meta: dict[str, str], *, sidecar_name: str = _META_SIDECAR) -> None:
-    """Best-effort sidecar write. Cache misses are logged, not raised — the
-    next :func:`read_meta_cached` call simply falls back to the SQLite read."""
+    """Best-effort sidecar write. Publication failures are logged, not raised."""
     sidecar = db_path.parent / sidecar_name
     try:
         sidecar.write_text(json.dumps(meta), encoding="utf-8")
@@ -141,14 +383,12 @@ def open_readonly(db_path: Path) -> sqlite3.Connection:
     threads. The connection is read-only (``PRAGMA query_only=ON``) so concurrent
     reads are safe under sqlite3's serialized access mode.
     """
-    # Build the file: URI via Path.as_uri() so URI-significant characters in the
-    # path (``#`` fragment, ``?`` query, ``%`` escape) are percent-encoded. A
-    # raw f-string would let a root path containing any of these truncate the
-    # path and point sqlite at the wrong (or nonexistent) file. as_uri() needs
-    # an absolute path, so resolve first.
-    uri = db_path.resolve().as_uri() + "?mode=ro"
-    conn = sqlite3.connect(uri, uri=True, check_same_thread=False)
-    conn.execute("PRAGMA query_only=ON")
+    conn = sqlite3.connect(readonly_sqlite_uri(db_path), uri=True, check_same_thread=False)
+    try:
+        conn.execute("PRAGMA query_only=ON")
+    except Exception:
+        conn.close()
+        raise
     return conn
 
 
@@ -165,8 +405,7 @@ def scan_index_root(
     Each direct subdirectory containing an ``index.sqlite`` is a candidate. For
     each candidate the meta is read via :func:`read_meta_cached` (sidecar-cached)
     and handed to ``parse(child, db_path, meta)``; a non-``None`` return is stored
-    under ``child.name`` (a ``None`` return means "skip this child" — the audio
-    layer uses it for its drop-schema-mismatch-at-scan policy).
+    under ``child.name`` (a ``None`` return means "skip this child").
 
     Parameters let each family keep its behavior:
     * ``child_prefilter`` runs *before* the ``index.sqlite`` check and the meta
@@ -196,10 +435,13 @@ def scan_index_root(
     for child in children:
         if not child.is_dir():
             continue
-        if child_prefilter is not None and not child_prefilter(child):
+        if child_prefilter is None:
+            if is_generated_store_artifact(child.name):
+                continue
+        elif not child_prefilter(child):
             continue
         db = child / "index.sqlite"
-        if not db.exists():
+        if not _is_regular_file_nofollow(db):
             continue
         try:
             meta = read_meta_cached(db, read_meta)

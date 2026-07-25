@@ -540,6 +540,26 @@
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>App</name>
+    <message>
+        <source>Anki Miner Is Already Running</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another copy of Anki Miner appears to be running. Running two copies at once can corrupt the known-words and statistics databases.
+
+Continue anyway?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Continue anyway</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Quit</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>AsrModelDownloadWorker</name>
     <message>
         <source>Downloading %1…</source>
@@ -575,11 +595,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Importing audio pack…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancel</source>
+        <source>Pack %1 of %2: %3</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -603,11 +619,35 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Pack %1 of %2: %3</source>
+        <source>Configuration Update Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Choose audio pack folder to re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import Blocked</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -626,6 +666,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <source>Re-import Failed</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
@@ -641,6 +685,49 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
 %2
 
 The audio pack was not removed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this audio pack before retrying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -740,6 +827,16 @@ The audio pack was not removed.</source>
 
 Only the index files are deleted — your original audio files are untouched.
 This cannot be undone. You would need to re-import to use this pack again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove '%1' from the audio chain?
+
+Index files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1615,6 +1712,18 @@ Total cards created: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Nothing to overwrite — the freshly computed values are identical to the existing content.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No new values were found for the selected fields.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>{count} field value(s) already up to date (identical to the computed value).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
         <translation type="unfinished" />
     </message>
@@ -2307,6 +2416,14 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Configuration Update Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Importing dictionary…</source>
         <translation type="unfinished" />
     </message>
@@ -2319,15 +2436,27 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Invalid Zip</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Zip does not match slot</source>
+        <source>No Recoverable Source</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>This zip is for '%1', but you are re-importing '%2'. Pick the matching zip.</source>
+        <source>No recoverable source was found for '%1'. Restore its saved source.zip or configured JMdict XML and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2335,7 +2464,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before re-importing dictionaries.</source>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2375,9 +2504,9 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No dictionaries with saved sources were found.
+        <source>No dictionaries eligible for automatic repair were found.
 
-Skipped (no saved source — right-click a dictionary row → Re-import… to seed):
+Skipped (not eligible for automatic repair; use per-row Re-import…):
 </source>
         <translation type="unfinished" />
     </message>
@@ -2390,7 +2519,7 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Reimporting dictionaries…</source>
+        <source>Dictionary %1 of %2: %3</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2398,7 +2527,7 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Skipped (no saved source — right-click a dictionary row → Re-import… to seed):</source>
+        <source>Skipped (not eligible for automatic repair; use per-row Re-import…):</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2415,10 +2544,6 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
     </message>
     <message>
         <source>Done.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Dictionary %1 of %2: %3</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2458,6 +2583,49 @@ Skipped (no saved source — right-click a dictionary row → Re-import… to se
 %2
 
 The dictionary was not removed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this dictionary before retrying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2555,7 +2723,13 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before removing dictionaries.</source>
+        <source>Remove '%1' from the dictionary list?
+
+Files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3013,6 +3187,10 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Not installed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>File not found</source>
         <translation type="unfinished" />
     </message>
@@ -3317,10 +3495,6 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Frequency source (*.zip *.csv *.tsv);;All Files (*)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source> (skipped %1 malformed entries)</source>
         <translation type="unfinished" />
     </message>
@@ -3337,6 +3511,14 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Configuration Update Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Importing frequency source…</source>
         <translation type="unfinished" />
     </message>
@@ -3349,11 +3531,31 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Scan Failed</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Choose frequency source to re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import Blocked</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3372,6 +3574,10 @@ This cannot be undone. You would need to reimport from the source zip.</source>
         <source>Re-import Failed</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
     <message>
@@ -3387,6 +3593,49 @@ This cannot be undone. You would need to reimport from the source zip.</source>
 %2
 
 The frequency source was not removed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this frequency source before retrying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3429,7 +3678,7 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before removing frequency sources.</source>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3611,6 +3860,10 @@ Add %3 word(s) to your known list?</source>
 </context><context>
     <name>MainWindow</name>
     <message>
+        <source>Open Log Folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Video</source>
         <translation type="unfinished" />
     </message>
@@ -3715,10 +3968,6 @@ Add %3 word(s) to your known list?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Open Log Folder</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Open the log folder in your file manager</source>
         <translation type="unfinished" />
     </message>
@@ -3744,6 +3993,14 @@ Add %3 word(s) to your known list?</source>
     </message>
     <message>
         <source>Join the community on Discord</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary Change Blocked</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The startup JMdict migration is still stopping. Wait for it to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3877,7 +4134,7 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Card Backfill</source>
+        <source>Backfill</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4350,7 +4607,31 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Volume</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Volume File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Manga</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A .mokuro volume, or a .cbz/.zip archive with its .mokuro beside or inside it. No extraction needed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine the selected volume into Anki cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manga Folder</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4362,7 +4643,7 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Mine</source>
+        <source>Mine Folder</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4383,6 +4664,10 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Subtitle files are mined in the Subtitles tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a .mokuro, .cbz, or .zip volume first.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4748,7 +5033,7 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>A mining run is in progress. Stop it before downloading resources.</source>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4776,6 +5061,18 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resource Download Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The download worker finished without a completion result.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>✓ %1 — %2</source>
         <translation type="unfinished" />
     </message>
@@ -4793,6 +5090,26 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Resource Download Cancelled (Some Resources Installed)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Some resources were installed before cancellation.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resource Download Cancelled</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No resources were installed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resource items not processed: %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Resources Installed</source>
         <translation type="unfinished" />
     </message>
@@ -4801,15 +5118,23 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Resource Download Failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>No resources were processed.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Resources are downloaded from their original sources; their licenses apply.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No valid pitch accent entries were found.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent validation failed: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 entries</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -4831,7 +5156,23 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Resources updated.</source>
+        <source>Download cancelled. Some resources were installed before cancellation.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download cancelled. No resources were installed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Some resources were installed; some failed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No resources were installed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources installed.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -4955,6 +5296,14 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Reset to Defaults…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset settings to defaults. Installed dictionaries, audio, frequency lists, and your theme are kept.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Export Settings…</source>
         <translation type="unfinished" />
     </message>
@@ -5064,7 +5413,37 @@ Imported values override your current settings; anything not in the file is kept
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Invalid imported fields were ignored; current values were kept: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Auto-update of yt-dlp was disabled (settings imported from an older version).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings from version 2.8.3 were mapped conservatively to schema 2.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings Imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>✓ Imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset all settings to their defaults?
+
+Your installed dictionaries, audio, frequency lists, and theme are kept.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>✓ Reset to defaults</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6111,6 +6490,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Use system file dialogs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Use the operating system's native file pickers instead of the app's built-in ones. Native dialogs can freeze the app on some Windows systems with flaky network drives or cloud storage, which is why this is off by default.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
         <translation type="unfinished" />
     </message>
@@ -6595,6 +6982,10 @@ Continue with import?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>⚠ folder missing — re-import</source>
         <translation type="unfinished" />
     </message>
@@ -6602,6 +6993,14 @@ Continue with import?</source>
     <name>app</name>
     <message>
         <source>Anki Miner — Unexpected Error</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1: %2
+
+Version: %3
+Platform: %4
+Log file: %5</source>
         <translation type="unfinished" />
     </message>
 </context></TS>

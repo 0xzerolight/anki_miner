@@ -1,7 +1,7 @@
 """Smoke test: ReadingTab is registered in the main() wiring.
 
 Uses the shared ``wired_window`` fixture (``tests/unit/conftest.py``), which
-mirrors ``anki_miner.gui.app.main``'s tab-construction block, and asserts the
+calls ``anki_miner.gui.app.compose_main_window``, and asserts the
 "Reading" tab is present, correctly typed, ordered right after Audio, and that
 it nests the Manga/Novels/Subtitles/Text sub-tabs behind a single shared
 presenter.

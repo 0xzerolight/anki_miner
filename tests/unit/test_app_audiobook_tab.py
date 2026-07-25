@@ -1,7 +1,7 @@
 """Smoke test: AudiobookTab is registered in the main() wiring (Issue #71).
 
 Uses the shared ``wired_window`` fixture (``tests/unit/conftest.py``), which
-mirrors ``anki_miner.gui.app.main``'s tab-construction block, and asserts the
+calls ``anki_miner.gui.app.compose_main_window``, and asserts the
 "Audio" tab is present, correctly typed, and ordered right after Deck Builder.
 """
 

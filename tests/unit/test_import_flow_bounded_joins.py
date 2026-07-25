@@ -1,21 +1,18 @@
-"""Bounded-join regression tests for the import/probe flows (GUI-freeze hardening).
+"""Worker-predecessor regression tests for import/probe flows.
 
 Every controller that joins a *predecessor* worker before dropping its
 reference used to call an untimed ``prev.wait()`` on the GUI thread — a hung
 import/probe worker would freeze the GUI forever ("Not responding"). Those
-calls now go through bounded helpers in :mod:`anki_miner.gui.utils.run_off_thread`,
-which is bounded. Every import flow refuses a replacement on timeout, retains
-the predecessor, and resumes a chained flow only after that predecessor emits
-``finished``.
+Single-worker import flows now refuse a replacement immediately, with no GUI
+thread wait. Chained import flows retain the predecessor and resume only after
+it emits ``finished``. Other shutdown paths in this file use bounded helpers in
+:mod:`anki_miner.gui.utils.run_off_thread`.
 
-These tests inject a *stuck* stub worker (ignores ``cancel()``, stays
-"running", ``wait(timeout_ms)`` returns ``False``) as the predecessor and
-assert each flow logs a warning and follows its pinned ownership policy without
-hanging the GUI thread.
+These tests inject a *stuck* stub worker and assert each flow logs a warning,
+does not call ``cancel()`` or ``wait()``, and follows its ownership policy.
 
-A *clean* predecessor (``wait`` returns ``True``) joins silently. Stub workers
-are used throughout — no real subprocesses or QThreads — so the suite stays
-fast and deterministic.
+Stub workers are used throughout — no real subprocesses or QThreads — so the
+suite stays fast and deterministic.
 """
 
 from __future__ import annotations
@@ -175,8 +172,12 @@ def _stub_import_worker() -> MagicMock:
     instance.progress = MagicMock()
     instance.import_finished = MagicMock()
     instance.failed = MagicMock()
+    instance.cancelled = MagicMock()
+    instance.finished = MagicMock()
     instance.cancel = MagicMock()
     instance.start = MagicMock()
+    instance.set_trace_id = MagicMock()
+    instance.is_cancelled = False
     instance.isRunning = MagicMock(return_value=False)
     return instance
 
@@ -200,13 +201,18 @@ class TestFrequencyBoundedJoin:
         )
         return new
 
-    def test_timeout_predecessor_remains_tracked_and_blocks_replacement(self, tab, monkeypatch, tmp_path, caplog):
+    def test_running_predecessor_is_refused_without_gui_wait(self, tab, monkeypatch, tmp_path, caplog):
         new = self._patch_worker(monkeypatch)
         src = tmp_path / "f.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
         monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **kw: (str(src), ""))
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
-        _silence_dialogs(monkeypatch)
+        warnings: list[tuple[str, str]] = []
+        monkeypatch.setattr(
+            QMessageBox,
+            "warning",
+            lambda _parent, title, body, *a, **kw: warnings.append((title, body)) or 0,
+        )
 
         flow = tab._frequency_import_flow
         stuck = _StuckWorker()
@@ -219,8 +225,18 @@ class TestFrequencyBoundedJoin:
         assert stuck in flow._retained_import_workers
         assert stuck in flow.iter_close_workers()
         new.start.assert_not_called()
-        assert stuck.cancel_calls == 1
-        assert any("frequency import worker did not stop" in r.message for r in caplog.records)
+        new.deleteLater.assert_called_once()
+        assert stuck.cancel_calls == 0
+        assert stuck.wait_calls == 0
+        assert warnings
+        assert "still" in warnings[0][1].lower()
+        assert any("frequency import worker is still running" in r.message for r in caplog.records)
+
+        stuck.finish()
+
+        assert flow._active_import_worker is None
+        assert stuck not in flow._retained_import_workers
+        new.start.assert_not_called()
 
     def test_finished_in_shared_connect_gap_starts_replacement_and_closes_modal(self, tab, monkeypatch, tmp_path):
         new = self._patch_worker(monkeypatch)
@@ -231,6 +247,10 @@ class TestFrequencyBoundedJoin:
         monkeypatch.setattr(
             "anki_miner.gui.controllers.import_flow_common.QProgressDialog",
             MagicMock(return_value=dialog),
+        )
+        monkeypatch.setattr(
+            "anki_miner.gui.controllers.import_flow_common.QTimer",
+            MagicMock(return_value=MagicMock()),
         )
 
         flow = tab._frequency_import_flow
@@ -243,9 +263,11 @@ class TestFrequencyBoundedJoin:
         assert predecessor not in flow._retained_import_workers
         new.start.assert_called_once()
         new.cancelled.connect.call_args.args[0]()
+        dialog.close.assert_not_called()
+        new.finished.connect.call_args.args[0]()
         dialog.close.assert_called_once()
 
-    def test_clean_predecessor_no_warning(self, tab, monkeypatch, tmp_path, caplog):
+    def test_stopped_predecessor_starts_replacement_without_warning(self, tab, monkeypatch, tmp_path, caplog):
         new = self._patch_worker(monkeypatch)
         src = tmp_path / "f.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
@@ -254,13 +276,13 @@ class TestFrequencyBoundedJoin:
         _silence_dialogs(monkeypatch)
 
         flow = tab._frequency_import_flow
-        flow._active_import_worker = _CleanWorker()
+        flow._active_import_worker = _DeletedWorker()
 
         with caplog.at_level("WARNING"):
             flow.add_source()
 
         assert flow._active_import_worker is new
-        assert not any("did not stop" in r.message for r in caplog.records)
+        assert not caplog.records
 
     def test_reimport_stuck_predecessor_blocks_replacement(self, tab, monkeypatch, caplog):
         new = self._patch_worker(monkeypatch)
@@ -272,14 +294,17 @@ class TestFrequencyBoundedJoin:
         _silence_dialogs(monkeypatch)
 
         flow = tab._frequency_import_flow
-        flow._active_import_worker = _StuckWorker()
+        stuck = _StuckWorker()
+        flow._active_import_worker = stuck
 
         with caplog.at_level("WARNING"):
             flow.reimport_source("jpdb")
 
         assert flow._active_import_worker in flow.iter_close_workers()
         new.start.assert_not_called()
-        assert any("frequency import worker did not stop" in r.message for r in caplog.records)
+        assert stuck.cancel_calls == 0
+        assert stuck.wait_calls == 0
+        assert any("frequency import worker is still running" in r.message for r in caplog.records)
 
 
 # ===========================================================================
@@ -307,7 +332,7 @@ class TestAudioPackBoundedJoin:
         )
         return new
 
-    def test_add_pack_timeout_retains_predecessor_until_finished(self, tab, monkeypatch, tmp_path, caplog):
+    def test_add_pack_running_predecessor_resumes_only_after_finished(self, tab, monkeypatch, tmp_path, caplog):
         new = self._prepare_add_pack(monkeypatch, tmp_path)
         _silence_dialogs(monkeypatch)
 
@@ -322,7 +347,9 @@ class TestAudioPackBoundedJoin:
         assert stuck in flow._retained_import_workers
         assert stuck in flow.iter_close_workers()
         new.start.assert_not_called()
-        assert any("audio pack import worker did not stop" in r.message for r in caplog.records)
+        assert stuck.cancel_calls == 0
+        assert stuck.wait_calls == 0
+        assert any("audio pack import worker is still running" in r.message for r in caplog.records)
 
         stuck.finish()
 
@@ -331,12 +358,13 @@ class TestAudioPackBoundedJoin:
         new.start.assert_called_once()
 
     def test_add_pack_finished_in_successor_connect_gap_starts_once_and_closes_modal(self, tab, monkeypatch, tmp_path):
+        from anki_miner.gui.controllers import import_flow_common
+
         new = self._prepare_add_pack(monkeypatch, tmp_path)
+        _silence_dialogs(monkeypatch)
         dialog = MagicMock()
-        monkeypatch.setattr(
-            "anki_miner.gui.controllers.audio_pack_import_flow.QProgressDialog",
-            MagicMock(return_value=dialog),
-        )
+        monkeypatch.setattr(import_flow_common, "QProgressDialog", MagicMock(return_value=dialog))
+        monkeypatch.setattr(import_flow_common, "QTimer", MagicMock(return_value=MagicMock()))
 
         flow = tab._audio_pack_import_flow
         predecessor = _ConnectGapWorker(connection_number=2)
@@ -348,15 +376,18 @@ class TestAudioPackBoundedJoin:
         assert predecessor not in flow._retained_import_workers
         new.start.assert_called_once()
         new.cancelled.connect.call_args.args[0]()
+        dialog.close.assert_not_called()
+        new.finished.connect.call_args.args[0]()
         dialog.close.assert_called_once()
 
     def test_add_pack_cancel_ignores_deleted_worker_wrapper(self, tab, monkeypatch, tmp_path):
+        from anki_miner.gui.controllers import import_flow_common
+
         new = self._prepare_add_pack(monkeypatch, tmp_path)
+        _silence_dialogs(monkeypatch)
         dialog = MagicMock()
-        monkeypatch.setattr(
-            "anki_miner.gui.controllers.audio_pack_import_flow.QProgressDialog",
-            MagicMock(return_value=dialog),
-        )
+        monkeypatch.setattr(import_flow_common, "QProgressDialog", MagicMock(return_value=dialog))
+        monkeypatch.setattr(import_flow_common, "QTimer", MagicMock(return_value=MagicMock()))
 
         flow = tab._audio_pack_import_flow
         flow.add_pack()
@@ -368,6 +399,9 @@ class TestAudioPackBoundedJoin:
 
         new.start.assert_called_once()
         assert deleted.cancel_calls == 0
+        new.cancel.assert_called_once()
+        new.cancelled.connect.call_args.args[0]()
+        new.finished.connect.call_args.args[0]()
 
     def test_reimport_pack_stuck_predecessor_blocks_replacement(self, tab, monkeypatch, tmp_path, caplog):
         new = self._patch_worker(monkeypatch)
@@ -377,14 +411,17 @@ class TestAudioPackBoundedJoin:
         _silence_dialogs(monkeypatch)
 
         flow = tab._audio_pack_import_flow
-        flow._active_import_worker = _StuckWorker()
+        stuck = _StuckWorker()
+        flow._active_import_worker = stuck
 
         with caplog.at_level("WARNING"):
             flow.reimport_pack("nhk16")
 
         assert flow._active_import_worker in flow.iter_close_workers()
         new.start.assert_not_called()
-        assert any("audio pack import worker did not stop" in r.message for r in caplog.records)
+        assert stuck.cancel_calls == 0
+        assert stuck.wait_calls == 0
+        assert any("audio pack import worker is still running" in r.message for r in caplog.records)
 
 
 # ===========================================================================
@@ -395,6 +432,7 @@ class TestAudioPackBoundedJoin:
 class TestDictionaryBoundedJoin:
     def _prepare_reimport_all(self, tab, monkeypatch):
         from anki_miner.config import ChainEntry
+        from anki_miner.services._sqlite_index import write_ownership_marker
         from anki_miner.services.dictionary.registry import DictMeta
 
         mod = "anki_miner.gui.controllers.dictionary_import_flow"
@@ -406,9 +444,14 @@ class TestDictionaryBoundedJoin:
         )
 
         # Seed a saved source.zip for the indexed dict so a job is produced.
+        # Must be a REAL Yomitan zip whose derived id matches the slot — the
+        # saved-source validation (wave-4) rejects unreadable/mismatched zips.
+        from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip
+
         dicts_root = tab.config.dicts_root
         (dicts_root / "mydict").mkdir(parents=True)
-        (dicts_root / "mydict" / "source.zip").write_bytes(b"zip")
+        write_ownership_marker(dicts_root / "mydict", "mydict", "dictionary")
+        build_yomitan_zip(dicts_root / "mydict" / "source.zip", title="mydict", revision="")
 
         registry = MagicMock()
         registry.load = MagicMock()
@@ -430,7 +473,7 @@ class TestDictionaryBoundedJoin:
         monkeypatch.setattr(panel, "refresh_registry", lambda: None)
         return new
 
-    def test_reimport_all_timeout_retains_predecessor_until_finished(self, tab, monkeypatch, caplog):
+    def test_reimport_all_running_predecessor_resumes_only_after_finished(self, tab, monkeypatch, caplog):
         new = self._prepare_reimport_all(tab, monkeypatch)
         _silence_dialogs(monkeypatch)
 
@@ -445,7 +488,9 @@ class TestDictionaryBoundedJoin:
         assert stuck in flow._retained_import_workers
         assert stuck in flow.iter_close_workers()
         new.start.assert_not_called()
-        assert any("dictionary import worker did not stop" in r.message for r in caplog.records)
+        assert stuck.cancel_calls == 0
+        assert stuck.wait_calls == 0
+        assert any("dictionary import worker is still running" in r.message for r in caplog.records)
 
         stuck.finish()
 
@@ -454,11 +499,13 @@ class TestDictionaryBoundedJoin:
         new.start.assert_called_once()
 
     def test_reimport_all_finished_in_successor_connect_gap_starts_once_and_closes_modal(self, tab, monkeypatch):
-        mod = "anki_miner.gui.controllers.dictionary_import_flow"
+        from anki_miner.gui.controllers import import_flow_common
+
         new = self._prepare_reimport_all(tab, monkeypatch)
         _silence_dialogs(monkeypatch)
         dialog = MagicMock()
-        monkeypatch.setattr(f"{mod}.QProgressDialog", MagicMock(return_value=dialog))
+        monkeypatch.setattr(import_flow_common, "QProgressDialog", MagicMock(return_value=dialog))
+        monkeypatch.setattr(import_flow_common, "QTimer", MagicMock(return_value=MagicMock()))
 
         flow = tab._dict_import_flow
         predecessor = _ConnectGapWorker(connection_number=2)
@@ -470,13 +517,18 @@ class TestDictionaryBoundedJoin:
         assert predecessor not in flow._retained_import_workers
         new.start.assert_called_once()
         new.cancelled.connect.call_args.args[0]()
+        dialog.close.assert_not_called()
+        new.finished.connect.call_args.args[0]()
         dialog.close.assert_called_once()
 
     def test_reimport_all_cancel_ignores_deleted_worker_wrapper(self, tab, monkeypatch):
-        mod = "anki_miner.gui.controllers.dictionary_import_flow"
+        from anki_miner.gui.controllers import import_flow_common
+
         new = self._prepare_reimport_all(tab, monkeypatch)
+        _silence_dialogs(monkeypatch)
         dialog = MagicMock()
-        monkeypatch.setattr(f"{mod}.QProgressDialog", MagicMock(return_value=dialog))
+        monkeypatch.setattr(import_flow_common, "QProgressDialog", MagicMock(return_value=dialog))
+        monkeypatch.setattr(import_flow_common, "QTimer", MagicMock(return_value=MagicMock()))
 
         flow = tab._dict_import_flow
         flow.reimport_all()
@@ -488,84 +540,14 @@ class TestDictionaryBoundedJoin:
 
         new.start.assert_called_once()
         assert deleted.cancel_calls == 0
+        new.cancel.assert_called_once()
+        new.cancelled.connect.call_args.args[0]()
+        new.finished.connect.call_args.args[0]()
 
 
 # ===========================================================================
 # Pitch zip modal import
 # ===========================================================================
-
-
-class TestZipImportBoundedJoin:
-    def test_modal_worker_stuck_join_logs_and_proceeds(self, tab, monkeypatch, tmp_path, caplog):
-        """A wedged modal worker is bounded-joined; the flow still returns."""
-        from PyQt6.QtCore import QEventLoop
-
-        from anki_miner.gui.controllers.zip_import_flow import YomitanCsvLabels
-        from anki_miner.gui.widgets.enhanced import FileSelector
-        from anki_miner.services.pitch_accent import YomitanPitchImportResult
-
-        zip_path = tmp_path / "pitch.zip"
-        zip_path.write_bytes(b"zip")
-
-        worker = _StuckWorker()
-        worker.progress = MagicMock()
-        worker.import_finished = MagicMock()
-        worker.failed = MagicMock()
-        worker.cancelled = MagicMock()
-        worker.start = MagicMock()
-
-        # Drive the local QEventLoop deterministically: quit it as soon as it
-        # starts so the method advances to the bounded join.
-        def _fake_exec(self_loop):
-            return 0
-
-        monkeypatch.setattr(QEventLoop, "exec", _fake_exec)
-
-        flow = tab._zip_import_flow
-        selector = MagicMock(spec=FileSelector)
-        selector.get_path = MagicMock(return_value=str(zip_path))
-
-        labels = YomitanCsvLabels(
-            progress="Importing…",
-            overwrite_title="Overwrite",
-            failure_title="Failed",
-            success_title="Done",
-        )
-
-        # Inject a successful result so the method completes past the join.
-        def _factory(_zip, pending):
-            # Stash the success holder by simulating on_done having fired.
-            return worker
-
-        # The result holder is local; the worker never emits, so simulate a
-        # successful done by patching the result assertion path: fire on_done
-        # via the connected slot after start.
-        original_start = worker.start
-
-        def _start_then_done():
-            original_start()
-            on_done = worker.import_finished.connect.call_args[0][0]
-            on_done(
-                YomitanPitchImportResult(source_name="src", source_revision="r1", entry_count=1, skipped_display_only=0)
-            )
-
-        worker.start = _start_then_done
-
-        with caplog.at_level("WARNING"):
-            result = flow.run_modal_zip_import(
-                selector=selector,
-                dest_name="pitch_accent.csv",
-                worker_factory=_factory,
-                worker_slot_attr="_active_pitch_worker",
-                commit_slot_attr="_pending_pitch_commit",
-                decline_fallback=tmp_path / "fallback.csv",
-                labels=labels,
-            )
-
-        # Returned (did not hang) and warned about the stuck join.
-        assert result is not None
-        assert worker.wait_calls == 1
-        assert any("pitch zip import worker did not stop" in r.message for r in caplog.records)
 
 
 # ===========================================================================

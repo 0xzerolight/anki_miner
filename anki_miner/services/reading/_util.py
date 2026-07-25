@@ -8,6 +8,7 @@ and the module path is a stable test surface; do not rename it.
 from __future__ import annotations
 
 import re
+import zipfile
 from pathlib import Path
 
 from anki_miner.exceptions import SetupError
@@ -28,6 +29,35 @@ def read_text_capped(path: Path, cap: int, description: str) -> str:
     if size > cap:
         raise SetupError(f"{description} '{path.name}' is {size:,} bytes (cap {cap:,}); refusing to load.")
     return path.read_text(encoding="utf-8")
+
+
+def read_zip_member_text_capped(archive: Path, entry: str, cap: int, description: str) -> str:
+    """UTF-8 read of one archive member with a declared-size gate.
+
+    Mirrors :func:`read_text_capped` for archive members: the ZipInfo's
+    declared ``file_size`` is checked against ``cap`` before any bytes are
+    read (CPython enforces the declared size/CRC at read time, so a lying
+    header can't overshoot the gate). Every failure mode — missing/corrupt
+    archive, missing member, over-cap member, non-UTF-8 bytes — raises
+    :class:`SetupError` so callers get one exception type to wrap or skip.
+    """
+    try:
+        with zipfile.ZipFile(archive) as zf:
+            try:
+                info = zf.getinfo(entry)
+            except KeyError:
+                raise SetupError(f"{description} '{entry}' not found in '{archive.name}'.") from None
+            if info.file_size > cap:
+                raise SetupError(
+                    f"{description} '{entry}' is {info.file_size:,} bytes (cap {cap:,}); refusing to load."
+                )
+            raw = zf.read(entry)
+    except (zipfile.BadZipFile, OSError) as e:
+        raise SetupError(f"Cannot read '{archive.name}': {e}") from e
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError as e:
+        raise SetupError(f"{description} '{entry}' in '{archive.name}' is not valid UTF-8.") from e
 
 
 # Listings junk dropped from both directory walks and archive namelists so the

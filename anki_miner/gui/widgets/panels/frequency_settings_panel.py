@@ -12,10 +12,6 @@ feature on (``config.frequency_active``). There is no separate on/off checkbox.
 
 from __future__ import annotations
 
-import os
-import shutil
-import stat
-import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -38,35 +34,15 @@ from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
     _ChainPanelStrings,
     _RegistryView,
 )
+from anki_miner.services._sqlite_index import prove_owned_slot, resolve_managed_slot
 from anki_miner.services.frequency.registry import FreqSourceMeta, FrequencySourceRegistry
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.robust_fs import RmtreeOutcome, robust_rmtree
 
 
-# Windows-lock robustness helpers — duplicated from audio_pack_settings_panel.py
-# (same pattern, deliberate copy rather than cross-panel import per the
-# panels' deliberate-decoupling precedent; kept module-local so the panel tests'
-# ``shutil`` / ``_robust_rmtree`` monkeypatch seams resolve here).
-def _on_rmtree_error(func, path, _exc_info):
-    """rmtree onerror handler: clear the read-only bit then retry once."""
-    try:
-        os.chmod(path, stat.S_IWRITE)
-        func(path)
-    except OSError:
-        raise
-
-
-def _robust_rmtree(target: Path, *, retries: int = 3, delay_s: float = 0.1) -> None:
-    """rmtree with Windows-aware retry (read-only attrs + transient locks)."""
-    last_exc: OSError | None = None
-    for _ in range(retries):
-        try:
-            shutil.rmtree(target, onerror=_on_rmtree_error)
-            return
-        except OSError as e:
-            last_exc = e
-            time.sleep(delay_s)
-    assert last_exc is not None
-    raise last_exc
+def _robust_rmtree(target: Path) -> RmtreeOutcome:
+    """Panel-local seam for post-commit cleanup."""
+    return robust_rmtree(target, mode="outcome")
 
 
 # Human-readable format labels keyed by the importer's ``format`` value.
@@ -98,6 +74,11 @@ class _FreqRow(QWidget):
         layout.setContentsMargins(4, 2, 4, 2)
 
         self.checkbox = QCheckBox()
+        # Text-less toggle: without an accessible name a screen reader announces
+        # only "check box", and the source it belongs to is conveyed purely by
+        # the sibling QLabel. 11 such toggles were unnamed across the 4 chain panels.
+        self.checkbox.setAccessibleName(tr_format(self.tr("Enable %1"), display_name))
+        self.checkbox.setToolTip(tr_format(self.tr("Enable or disable %1"), display_name))
         self.checkbox.setChecked(entry.enabled)
         self.checkbox.stateChanged.connect(lambda _s: self.toggled.emit())
         layout.addWidget(self.checkbox)
@@ -145,22 +126,48 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
     def __init__(self, freqs_root: Path, parent=None):
         super().__init__("Frequency Sources", parent=parent)
         self._freqs_root = freqs_root
-        # Optional callback invoked before destructive remove to ask the rest of
-        # the app to close cached sqlite handles. Returns True on success.
-        # Defaults to no-op (frequency providers are rebuilt per run, not held
-        # open like the definition service), but kept for API parity + Windows
-        # robustness should that ever change.
+        # Optional callback invoked before destructive replacement/removal to
+        # ask the rest of the app to close cached sqlite handles.
         self._release_callback: Callable[[], bool] | None = None
         self._strings = _ChainPanelStrings(
             loading=self.tr("Loading…"),
             remove_failed_title=self.tr("Remove failed"),
             could_not_delete_template=self.tr("Could not delete %1:\n%2\n\nThe frequency source was not removed."),
+            files_left_title=self.tr("Files left untouched"),
+            files_left_template=self.tr(
+                "The chain entry was removed, but files at %1 were left untouched because "
+                "the folder could not be proven to belong to Anki Miner."
+            ),
+            intact_failure_template=self.tr("Could not remove %1:\n%2\n\nThe files are intact. Try again."),
+            partial_failure_template=self.tr(
+                "Could not complete removal of %1:\n%2\n\nThe files were partially changed. "
+                "Re-import or repair this frequency source before retrying."
+            ),
+            config_pending_failure_template=self.tr(
+                "Could not restore %1 after its configuration update failed:\n%2\n\n"
+                "The files are no longer in the installed location; a configuration update "
+                "is pending. Restart Anki Miner before retrying."
+            ),
+            post_save_warning_template=self.tr(
+                "Removal of %1 was saved, but Anki Miner could not refresh it:\n%2\n\n"
+                "The removal was saved and will remain after restart."
+            ),
+            cleanup_pending_template=self.tr(
+                "%1 was removed, but its tombstone at %2 could not be deleted:\n%3\n\n"
+                "The removal is saved; cleanup is pending and will be retried at startup."
+            ),
         )
         self._setup_fields()
 
     def set_release_callback(self, cb: Callable[[], bool] | None) -> None:
-        """Wire the pre-remove resource-release hook (see ``_acquire_release_for_remove``)."""
+        """Wire the resource-release hook used by reimport and remove."""
         self._release_callback = cb
+
+    def request_resource_release(self) -> bool:
+        """Ask the app to close cached resource handles before replacement."""
+        if self._release_callback is None:
+            return True
+        return self._release_callback()
 
     def _setup_fields(self) -> None:
         self.add_section(self.tr("Active Frequency Sources"))
@@ -230,6 +237,9 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
             out.append(FreqEntry(source_id=entry.source_id, enabled=enabled))
         return tuple(out)
 
+    def _set_mutation_controls_enabled(self, enabled: bool) -> None:
+        self._add_btn.setEnabled(enabled)
+
     # ------------------------------------------------------------------
     # Chain-panel hooks
     # ------------------------------------------------------------------
@@ -258,7 +268,15 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
         return meta.source_name if meta else (source_id or "(missing)")
 
     def _entry_disk_dir(self, entry: FreqEntry) -> Path | None:
-        return (self._freqs_root / entry.source_id) if entry.source_id else None
+        if not entry.source_id:
+            return None
+        try:
+            return resolve_managed_slot(self._freqs_root, entry.source_id)
+        except ValueError:
+            return None
+
+    def _owns_entry_disk_dir(self, entry: FreqEntry, target: Path) -> bool:
+        return bool(entry.source_id) and prove_owned_slot(target.parent, entry.source_id, "frequency")
 
     def _confirm_remove(self, display: str) -> bool:
         reply = QMessageBox.question(
@@ -279,17 +297,20 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
     def _acquire_release_for_remove(self) -> bool:
         # Drop any cached sqlite handles before rmtree (Windows lock safety).
         # No-op unless a release callback is wired.
-        if self._release_callback is not None and not self._release_callback():
+        if not self.request_resource_release():
             QMessageBox.warning(
                 self,
                 self.tr("Remove failed"),
-                self.tr("A mining run is in progress. Stop it before removing frequency sources."),
+                self.tr(
+                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                    "Wait for the active task to finish and try again."
+                ),
             )
             return False
         return True
 
-    def _rmtree_dir(self, target: Path) -> None:
-        _robust_rmtree(target)
+    def _rmtree_dir(self, target: Path) -> RmtreeOutcome:
+        return _robust_rmtree(target)
 
     def _on_row_context_menu(self, pos: QPoint) -> None:
         """Right-click a source row to re-import or remove it."""
@@ -298,7 +319,7 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
         # self._chain then targets an arbitrary real source the user never
         # clicked — and Remove would rmtree it. Bail, mirroring the dictionary
         # panel's "meta is None → return" guard.
-        if self._scan_in_flight:
+        if self._scan_in_flight or self.has_active_mutation():
             return
         item = self._list.itemAt(pos)
         if item is None:

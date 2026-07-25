@@ -28,6 +28,41 @@ from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader, StatCar
 from anki_miner.models.stats import DifficultyEntry, Milestone, MiningSession, OverallStats
 from anki_miner.services.stats_service import StatsService
 
+#: Rows a populated analytics table must show before it reads as "a table".
+MIN_VISIBLE_ROWS = 6
+
+
+def _configure_single_line_rows(table: QTableWidget) -> None:
+    """Pin rows to one line and size the height floor from that row height.
+
+    Both analytics tables used ``ResizeToContents`` on the VERTICAL header. With
+    ``Stretch`` columns the cell text wraps, so rows grew to 59px (110px at 150%
+    text) and the flat 200px ``setMinimumHeight`` showed **0.78 rows of 20** --
+    the Issue #102 symptom on a tab that never got the #102 fix.
+
+    Two things were wrong and both are fixed here: content drove the row height,
+    and the floor was a font-independent constant. A floor is only meaningful
+    relative to the rows it holds, so derive it. This keeps working at any text
+    scale, which a hardcoded 200 could not.
+    """
+    # The row height was never the thing to pin: ResizeToContents was only
+    # producing tall rows because wordWrap let the delegate ask for 2+ lines.
+    # Turning wrap off makes a row exactly one line, and ResizeToContents then
+    # tracks the font scale for free -- no pixel constant to go stale.
+    table.setWordWrap(False)
+    table.setTextElideMode(Qt.TextElideMode.ElideRight)
+    v_header = table.verticalHeader()
+    if v_header:
+        v_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+
+    # The floor is derived from that row height for the same reason: a flat 200
+    # showed 0.78 rows once rows grew. Derived, it holds at any text scale.
+    row_h = table.fontMetrics().height() + SPACING.sm * 2
+    h_header = table.horizontalHeader()
+    header_h = h_header.sizeHint().height() if h_header is not None else 0
+    frame = 2 * table.frameWidth()
+    table.setMinimumHeight(header_h + frame + MIN_VISIBLE_ROWS * row_h)
+
 
 @dataclass(frozen=True)
 class _AnalyticsBundle:
@@ -101,6 +136,22 @@ class AnalyticsTab(QWidget):
         main_layout.addWidget(scroll_area)
         self.setLayout(main_layout)
 
+    def changeEvent(self, a0):  # noqa: N802  (Qt override)
+        """Re-derive table row metrics whenever the font changes.
+
+        Text size is applied live (Settings -> UI), so a row height computed once
+        at construction goes stale the moment the user changes it -- which is the
+        same "pixel constant frozen against a font that later grows" mistake the
+        row sizing exists to fix.
+        """
+        from PyQt6.QtCore import QEvent
+
+        super().changeEvent(a0)
+        if a0 is not None and a0.type() == QEvent.Type.FontChange:
+            for table in (getattr(self, "sessions_table", None), getattr(self, "difficulty_table", None)):
+                if table is not None:
+                    _configure_single_line_rows(table)
+
     def _setup_accessibility(self) -> None:
         self.setAccessibleName(self.tr("Analytics Tab"))
         self.setAccessibleDescription(
@@ -165,11 +216,8 @@ class AnalyticsTab(QWidget):
         configure_table_header(self.sessions_table)
         self.sessions_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.sessions_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.sessions_table.setMinimumHeight(200)
 
-        v_header = self.sessions_table.verticalHeader()
-        if v_header:
-            v_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        _configure_single_line_rows(self.sessions_table)
         self.sessions_table.hide()
 
         layout.addWidget(self.sessions_table)
@@ -205,11 +253,8 @@ class AnalyticsTab(QWidget):
         configure_table_header(self.difficulty_table)
         self.difficulty_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.difficulty_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.difficulty_table.setMinimumHeight(200)
 
-        v_header = self.difficulty_table.verticalHeader()
-        if v_header:
-            v_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        _configure_single_line_rows(self.difficulty_table)
         self.difficulty_table.hide()
 
         layout.addWidget(self.difficulty_table)

@@ -5,7 +5,6 @@ from pathlib import Path
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
-    QFileDialog,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -16,6 +15,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.base import ElidingLabel, make_label_fit_text
 from anki_miner.utils.i18n import tr_format
@@ -47,6 +47,7 @@ class FileSelector(QWidget):
         placeholder: str = "",
         label_width: int | None = None,
         default_dir: Path | str | None = None,
+        optional: bool = False,
         parent=None,
     ):
         """Initialize the file selector.
@@ -60,6 +61,11 @@ class FileSelector(QWidget):
                 selector in a section can share one width so their input fields
                 line up. When None, falls back to a 100px minimum.
             default_dir: Default directory the Browse dialog opens at when the field is empty.
+            optional: When True, a non-empty but ABSENT path renders the
+                neutral state ("Not installed") instead of the red error
+                border — for optional resources whose default path simply
+                doesn't exist yet on a clean install (Issue #100). Validity
+                reporting (``path_validated``/``is_valid``) is unchanged.
             parent: Optional parent widget
         """
         super().__init__(parent)
@@ -69,6 +75,7 @@ class FileSelector(QWidget):
         self._placeholder = placeholder
         self._label_width = label_width
         self._default_dir = default_dir
+        self._optional = optional
         self._is_valid = False
 
         self._label_text = label
@@ -90,7 +97,14 @@ class FileSelector(QWidget):
             self.label = QLabel(self._label_text)
             self.label.setObjectName("field-label")
             if self._label_width is not None:
-                self.label.setFixedWidth(self._label_width)
+                # Minimum, not fixed: text size is applied LIVE (Settings -> UI)
+                # without rebuilding tabs, so a width frozen at construction is
+                # stale the moment the user scales text -- which is how a 105px
+                # box ended up holding 274px of German. A minimum lets the label
+                # grow to its recomputed sizeHint (the neighbouring input is
+                # Expanding and yields the space); the tradeoff is that an
+                # over-long label breaks column alignment instead of clipping.
+                self.label.setMinimumWidth(self._label_width)
             else:
                 self.label.setMinimumWidth(100)
             make_label_fit_text(self.label)
@@ -179,7 +193,7 @@ class FileSelector(QWidget):
         start_dir = resolve_start_dir(self.input.text(), file_mode=self._file_mode, default_dir=self._default_dir)
         if self._file_mode:
             # File selection
-            file_path, _ = QFileDialog.getOpenFileName(
+            file_path, _ = file_dialogs.get_open_file_name(
                 self,
                 tr_format(self.tr("Select %1"), self._label_text),
                 start_dir,
@@ -191,7 +205,7 @@ class FileSelector(QWidget):
                 self.input.setToolTip(file_path)
         else:
             # Folder selection
-            folder_path = QFileDialog.getExistingDirectory(
+            folder_path = file_dialogs.get_existing_directory(
                 self,
                 tr_format(self.tr("Select %1"), self._label_text),
                 start_dir,
@@ -221,8 +235,10 @@ class FileSelector(QWidget):
 
         self._is_valid = is_valid
 
-        # Update input styling
-        self.input.setProperty("error", not is_valid)
+        # Update input styling. An optional resource whose path is simply
+        # absent shows the neutral state, not the red error border (its
+        # validity still reports False below — only the styling differs).
+        self.input.setProperty("error", not is_valid and not self._optional)
         self.input.setProperty("success", is_valid)
 
         # Force style refresh
@@ -245,6 +261,8 @@ class FileSelector(QWidget):
             self.status_label.setText(self.tr("No file selected") if self._file_mode else self.tr("No folder selected"))
         elif self._is_valid:
             self.status_label.setText(Path(path_str).name)
+        elif self._optional:
+            self.status_label.setText(self.tr("Not installed"))
         else:
             self.status_label.setText(self.tr("File not found") if self._file_mode else self.tr("Folder not found"))
 

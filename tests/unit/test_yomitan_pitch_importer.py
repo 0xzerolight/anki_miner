@@ -13,8 +13,27 @@ from anki_miner.services.pitch_accent import (
     YomitanPitchImportResult,
     import_yomitan_pitch_zip,
 )
-from anki_miner.services.pitch_accent_service import PitchAccentService
+from anki_miner.services.pitch_accent_service import (
+    PitchMapsStore,
+    build_pitch_maps,
+    iter_pitch_csv_rows,
+)
 from tests.fixtures.pitch.build_yomitan_pitch_fixture import build_yomitan_pitch_zip
+
+
+class _CsvPitchStore(PitchMapsStore):
+    """CSV-backed store shim: parity oracle for the deleted single-file
+    PitchAccentService, composed from the same production pieces the indexed
+    provider uses (iter_pitch_csv_rows + build_pitch_maps + PitchMapsStore).
+    """
+
+    def __init__(self, path):
+        super().__init__()
+        self._path = path
+
+    def load(self):
+        self._set_maps(build_pitch_maps(iter_pitch_csv_rows(self._path)))
+        return True
 
 
 class TestHappyPath:
@@ -33,7 +52,7 @@ class TestHappyPath:
         assert lines[1:] == sorted(lines[1:])
 
         # PitchAccentService accepts the output unchanged.
-        service = PitchAccentService(dest)
+        service = _CsvPitchStore(dest)
         service.load()
         assert service.lookup("猫") == "1"
         assert service.lookup("箸") == "1,2"
@@ -60,7 +79,7 @@ class TestMultiPosition:
         text = dest.read_text(encoding="utf-8")
         # row format: reading,kanji,pattern -> "はし,箸,0,2" (csv writer quotes when needed)
         assert "0,2" in text
-        service = PitchAccentService(dest)
+        service = _CsvPitchStore(dest)
         service.load()
         assert service.lookup("箸") == "0,2"
 
@@ -161,7 +180,7 @@ class TestHLStringPositions:
         dest = tmp_path / "out.csv"
         result = import_yomitan_pitch_zip(zip_path, dest)
         assert result.entry_count == 1
-        service = PitchAccentService(dest)
+        service = _CsvPitchStore(dest)
         service.load()
         assert service.lookup("箸") == "LHL"
         # "LHL" → H→L transition at index 2 → downstep position 2; はし is 2 mora
@@ -176,7 +195,7 @@ class TestHLStringPositions:
         )
         dest = tmp_path / "out.csv"
         import_yomitan_pitch_zip(zip_path, dest)
-        service = PitchAccentService(dest)
+        service = _CsvPitchStore(dest)
         service.load()
         # comma-joined pattern is auto-quoted so it stays one CSV column.
         assert service.lookup("箸") == "LHL,0"
@@ -255,7 +274,7 @@ class TestNasalDevoiceRetention:
         )
         dest = tmp_path / "out.csv"
         import_yomitan_pitch_zip(zip_path, dest)
-        service = PitchAccentService(dest)
+        service = _CsvPitchStore(dest)
         service.load()
         entry = service.lookup_entry("本箱", "ほんばこ")
         assert entry is not None
@@ -411,7 +430,7 @@ class TestDedup:
         dest = tmp_path / "out.csv"
         result = import_yomitan_pitch_zip(zip_path, dest)
         assert result.entry_count == 1
-        service = PitchAccentService(dest)
+        service = _CsvPitchStore(dest)
         service.load()
         assert service.lookup("猫") == "1"
 

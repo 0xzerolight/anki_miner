@@ -797,6 +797,22 @@ class TestValidationService:
             assert success is False
             assert "not found on note type" in message
 
+        def test_active_card_type_marker_is_checked(self, test_config):
+            from dataclasses import replace
+
+            service = ValidationService(replace(test_config, card_type="click"))
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "result": [value for value in test_config.anki_fields.values() if value],
+                "error": None,
+            }
+
+            with patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response):
+                success, message = service._check_field_names_exist()
+
+            assert success is False
+            assert "IsClickCard" in message
+
         def test_error_response_returns_failure(self, test_config):
             service = ValidationService(test_config)
 

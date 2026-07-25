@@ -186,6 +186,23 @@ def _parse_returning(words, line_index, counts):
     return _parse
 
 
+def test_missing_offline_dictionary_raises_before_reading_parse(test_config):
+    subtitle_parser = MagicMock(name="SubtitleParser")
+    definition_service = MagicMock(name="DefinitionService")
+    definition_service.has_usable_offline_provider.return_value = False
+    proc = _make_processor(
+        test_config,
+        subtitle_parser=subtitle_parser,
+        definition_service=definition_service,
+    )
+
+    with pytest.raises(SetupError) as exc_info:
+        proc.process_reading(_document([_unit(0)]))
+
+    assert "Tools → Download Recommended Resources" in str(exc_info.value)
+    subtitle_parser.parse_text_units.assert_not_called()
+
+
 def _sources(anki_service) -> list[str]:
     return [p.extra_fields["source"] for p in anki_service.last_card_data if p.extra_fields]
 

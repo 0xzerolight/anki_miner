@@ -295,7 +295,7 @@ class AnkiSettingsPanel(FormPanel):
         # Auxiliary Data Fields section
         self.add_section(self.tr("Auxiliary Data Fields"))
 
-        auxiliary_helper = QLabel(self.tr("Need pitch_accent.csv in ~/.anki_miner/. Blank = skip."))
+        auxiliary_helper = QLabel(self.tr("Pitch fields need a source in Settings → Pitch Accent. Blank = skip."))
         auxiliary_helper.setObjectName("helper-text")
         auxiliary_helper.setWordWrap(True)
         self.add_widget(auxiliary_helper)

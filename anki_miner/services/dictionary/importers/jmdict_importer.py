@@ -21,6 +21,7 @@ ever wired up to fetch XML directly, swap ``xml.etree.ElementTree`` for
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import tempfile
 import xml.etree.ElementTree as ET  # noqa: S405 - see module docstring
@@ -31,7 +32,12 @@ from pathlib import Path
 from typing import Callable, Iterator
 
 from anki_miner.exceptions import SetupError
-from anki_miner.services._staging import promote_staged_dir
+from anki_miner.services._sqlite_index import (
+    prove_owned_slot,
+    resolve_managed_slot,
+    write_ownership_marker,
+)
+from anki_miner.services._staging import promote_staged_dir, repair_managed_slot
 from anki_miner.services.dictionary.storage import (
     SCHEMA_VERSION,
     DictRow,
@@ -62,13 +68,27 @@ def import_jmdict_xml(
     *,
     progress: ProgressFn | None = None,
     cancel_check: Callable[[], bool] | None = None,
+    overwrite: bool = True,
 ) -> JMdictImportResult:
     """Import JMdict XML into ``dest_root/jmdict-english/index.sqlite``.
 
-    Always overwrites the target — JMdict only has one canonical dict_id.
+    Overwrites by default; startup migration uses no-clobber publication.
     """
     if not xml_path.exists():
         raise SetupError(f"JMdict XML not found: {xml_path}")
+
+    try:
+        final = resolve_managed_slot(dest_root, JMDICT_DICT_ID)
+    except ValueError as exc:
+        raise SetupError(str(exc)) from exc
+    if os.path.lexists(final):
+        if not overwrite:
+            raise SetupError(f"Dictionary '{JMDICT_DICT_ID}' already exists")
+        if not prove_owned_slot(final.parent, JMDICT_DICT_ID, "dictionary"):
+            raise SetupError(
+                f"Dictionary '{JMDICT_DICT_ID}' exists but is not an Anki Miner-managed dictionary; "
+                "refusing to overwrite it"
+            )
 
     try:
         tree = ET.parse(str(xml_path))  # noqa: S314 - see module docstring
@@ -82,6 +102,7 @@ def import_jmdict_xml(
     with tempfile.TemporaryDirectory(prefix="anki_miner_jmdict_") as tmp:
         staging = Path(tmp) / JMDICT_DICT_ID
         staging.mkdir(parents=True, exist_ok=True)
+        write_ownership_marker(staging, JMDICT_DICT_ID, "dictionary")
         db_path = staging / "index.sqlite"
         create_index(db_path)
 
@@ -164,6 +185,9 @@ def import_jmdict_xml(
 
         row_count = bulk_insert(db_path, rows())
 
+        if cancel_check and cancel_check():
+            raise SetupError("Import cancelled")
+
         write_meta(
             db_path,
             {
@@ -176,16 +200,42 @@ def import_jmdict_xml(
             },
         )
 
-        dest_root.mkdir(parents=True, exist_ok=True)
-        final = dest_root / JMDICT_DICT_ID
+        if cancel_check and cancel_check():
+            raise SetupError("Import cancelled")
 
-        # JMdict has one canonical dict_id, so always overwrite.
-        promote_staged_dir(staging, final, mover=shutil.move, overwrite=True)
+        final.parent.mkdir(parents=True, exist_ok=True)
+
+        if cancel_check and cancel_check():
+            raise SetupError("Import cancelled")
+        promote_staged_dir(staging, final, mover=shutil.move, overwrite=overwrite)
 
         if progress:
             progress(total_entries, total_entries, "Done")
 
         return JMdictImportResult(dict_id=JMDICT_DICT_ID, entry_count=row_count)
+
+
+def repair_jmdict_xml(
+    xml_path: Path,
+    dest_root: Path,
+    *,
+    progress: ProgressFn | None = None,
+    cancel_check: Callable[[], bool] | None = None,
+) -> JMdictImportResult:
+    """Explicitly repair JMdict, retaining an invalid prior slot as quarantine."""
+    return repair_managed_slot(
+        xml_path,
+        dest_root,
+        JMDICT_DICT_ID,
+        "dictionary",
+        lambda source, overwrite: import_jmdict_xml(
+            source,
+            dest_root,
+            progress=progress,
+            cancel_check=cancel_check,
+            overwrite=overwrite,
+        ),
+    )
 
 
 def _format_senses_html(senses: list[list[str]]) -> str:

@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import shutil
-import stat
-import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -29,43 +25,15 @@ from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
     ChainSettingsPanelBase,
     _ChainPanelStrings,
 )
+from anki_miner.services._sqlite_index import prove_owned_slot, resolve_managed_slot
 from anki_miner.services.dictionary.registry import DictionaryRegistry, DictMeta
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.robust_fs import RmtreeOutcome, robust_rmtree
 
 
-def _on_rmtree_error(func, path, _exc_info):
-    """rmtree onerror handler: clear the read-only bit then retry once.
-
-    Windows refuses to delete read-only files; Yomitan zip extractions sometimes
-    inherit that attribute. Clearing S_IWRITE and re-invoking the failing op
-    (unlink / rmdir) lets the walk continue. Any other failure re-raises.
-    """
-    try:
-        os.chmod(path, stat.S_IWRITE)
-        func(path)
-    except OSError:
-        raise
-
-
-def _robust_rmtree(target: Path, *, retries: int = 3, delay_s: float = 0.1) -> None:
-    """rmtree with Windows-aware retry.
-
-    Two failure modes seen on Win11: read-only file attributes (handled inline by
-    ``_on_rmtree_error``) and transient ``[WinError 32] file in use`` from sqlite
-    read-only handles still being released by GC. The retry loop absorbs the
-    second case best-effort; final failure surfaces to the caller as the last
-    OSError so the UI can show the same dialog as before.
-    """
-    last_exc: OSError | None = None
-    for _ in range(retries):
-        try:
-            shutil.rmtree(target, onerror=_on_rmtree_error)
-            return
-        except OSError as e:
-            last_exc = e
-            time.sleep(delay_s)
-    assert last_exc is not None
-    raise last_exc
+def _robust_rmtree(target: Path) -> RmtreeOutcome:
+    """Panel-local seam for post-commit cleanup."""
+    return robust_rmtree(target, mode="outcome")
 
 
 class _ChainRow(QWidget):
@@ -90,6 +58,11 @@ class _ChainRow(QWidget):
         layout.setContentsMargins(4, 2, 4, 2)
 
         self.checkbox = QCheckBox()
+        # Text-less toggle: without an accessible name a screen reader announces
+        # only "check box", and the source it belongs to is conveyed purely by
+        # the sibling QLabel. 11 such toggles were unnamed across the 4 chain panels.
+        self.checkbox.setAccessibleName(tr_format(self.tr("Enable %1"), display_name))
+        self.checkbox.setToolTip(tr_format(self.tr("Enable or disable %1"), display_name))
         self.checkbox.setChecked(entry.enabled)
         self.checkbox.stateChanged.connect(lambda _s: self.toggled.emit())
         layout.addWidget(self.checkbox)
@@ -147,6 +120,29 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
             loading=self.tr("Loading…"),
             remove_failed_title=self.tr("Remove failed"),
             could_not_delete_template=self.tr("Could not delete %1:\n%2\n\nThe dictionary was not removed."),
+            files_left_title=self.tr("Files left untouched"),
+            files_left_template=self.tr(
+                "The chain entry was removed, but files at %1 were left untouched because "
+                "the folder could not be proven to belong to Anki Miner."
+            ),
+            intact_failure_template=self.tr("Could not remove %1:\n%2\n\nThe files are intact. Try again."),
+            partial_failure_template=self.tr(
+                "Could not complete removal of %1:\n%2\n\nThe files were partially changed. "
+                "Re-import or repair this dictionary before retrying."
+            ),
+            config_pending_failure_template=self.tr(
+                "Could not restore %1 after its configuration update failed:\n%2\n\n"
+                "The files are no longer in the installed location; a configuration update "
+                "is pending. Restart Anki Miner before retrying."
+            ),
+            post_save_warning_template=self.tr(
+                "Removal of %1 was saved, but Anki Miner could not refresh it:\n%2\n\n"
+                "The removal was saved and will remain after restart."
+            ),
+            cleanup_pending_template=self.tr(
+                "%1 was removed, but its tombstone at %2 could not be deleted:\n%3\n\n"
+                "The removal is saved; cleanup is pending and will be retried at startup."
+            ),
         )
         self._setup_fields()
 
@@ -165,8 +161,8 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         reaching into ``_release_callback`` directly (Issue #32).
 
         Returns ``True`` when no callback is wired or the callback succeeded;
-        ``False`` when the callback refused (typically a mining run is in
-        flight, see ``MainWindow.release_dictionary_resources``).
+        ``False`` when the callback refused because indexed resources are in
+        use (see ``MainWindow.release_dictionary_resources``).
         """
         if self._release_callback is None:
             return True
@@ -216,6 +212,14 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
             widget = self._list.itemWidget(item)
             if isinstance(widget, _ChainRow) and widget.reimport_button is not None:
                 widget.reimport_button.setEnabled(enabled)
+
+    def _set_mutation_controls_enabled(self, enabled: bool) -> None:
+        self.dicts_root_selector.setEnabled(enabled)
+        self._reset_dicts_root_btn.setEnabled(enabled)
+        self._add_btn.setEnabled(enabled)
+        self._reimport_btn.setEnabled(enabled)
+        self._restore_btn.setEnabled(enabled)
+        self.set_per_row_reimport_enabled(enabled)
 
     def _setup_fields(self) -> None:
         # Storage folder picker — first so it sits above the dictionary chain.
@@ -301,26 +305,9 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         layout.addLayout(buttons)
         self.add_field("", container)
 
-        # Pitch accent: file selector only. Activation is resource-driven —
-        # importing a pitch file turns the feature on (config.pitch_active);
-        # there is no separate on/off checkbox.
-        self.add_section(self.tr("Pitch Accent"))
-        self.pitch_accent_selector = FileSelector(
-            label="",
-            file_mode=True,
-            file_filter="Pitch accent (*.csv *.tsv *.txt *.zip);;All Files (*)",
-            placeholder=self.tr("Select pitch accent CSV/TSV or Yomitan zip..."),
-            default_dir=ANKI_MINER_HOME,
-        )
-        self.add_field(
-            self.tr("Pitch Accent File"),
-            self.pitch_accent_selector,
-            helper=self.tr(
-                "CSV/TSV with columns (reading, kanji, pattern), or a "
-                "Yomitan-format pitch zip (e.g. Kanjium, NHK). Yomitan zips "
-                "are imported into ~/.anki_miner/pitch_accent.csv on Save."
-            ),
-        )
+        # Pitch accent sources now live in their own Settings → Pitch Accent
+        # tab (multi-source first-hit-wins chain), like the frequency sources
+        # below. The old single-file picker that used to sit here was removed.
 
         # Frequency sources now live in their own Settings → Frequency tab
         # (multi-source additive chain). The old single-file picker that used
@@ -365,16 +352,8 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         row = _ChainRow(entry, display, fmt, count, stale=stale)
         row.toggled.connect(self._on_row_toggled)
         if stale and row.reimport_button is not None and meta is not None:
-            # JMdict per-row Re-import fires the existing global signal so users
-            # land in the same import flow regardless of where they clicked.
-            # Other formats use the per-dict signal.
-            if meta.format == "jmdict":
-                row.reimport_button.clicked.connect(self.reimport_jmdict_requested.emit)
-            else:
-                dict_id = meta.dict_id
-                row.reimport_button.clicked.connect(
-                    lambda _checked=False, d=dict_id: self.reimport_dict_requested.emit(d)
-                )
+            dict_id = meta.dict_id
+            row.reimport_button.clicked.connect(lambda _checked=False, d=dict_id: self.reimport_dict_requested.emit(d))
         return row
 
     def _is_protected_entry(self, entry: ChainEntry) -> bool:
@@ -387,7 +366,16 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         return meta.source_name if meta else (dict_id or "(missing)")
 
     def _entry_disk_dir(self, entry: ChainEntry) -> Path | None:
-        return (self._dicts_root / entry.dict_id) if entry.dict_id else None
+        if not entry.dict_id:
+            return None
+        try:
+            return resolve_managed_slot(self._dicts_root, entry.dict_id)
+        except ValueError:
+            return None
+
+    def _owns_entry_disk_dir(self, entry: ChainEntry, target: Path) -> bool:
+        dict_id = entry.dict_id
+        return dict_id is not None and prove_owned_slot(target.parent, dict_id, "dictionary")
 
     def _confirm_remove(self, display: str) -> bool:
         reply = QMessageBox.question(
@@ -396,6 +384,21 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
             tr_format(
                 self.tr(
                     "Remove '%1' and delete its files from disk?\n\nThis cannot be undone. You would need to reimport from the source zip."
+                ),
+                display,
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return reply == QMessageBox.StandardButton.Yes
+
+    def _confirm_chain_only_remove(self, display: str) -> bool:
+        reply = QMessageBox.question(
+            self,
+            self.tr("Remove dictionary"),
+            tr_format(
+                self.tr(
+                    "Remove '%1' from the dictionary list?\n\nFiles on disk will be left untouched because the folder could not be proven to belong to Anki Miner."
                 ),
                 display,
             ),
@@ -413,13 +416,16 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
             QMessageBox.warning(
                 self,
                 self.tr("Remove failed"),
-                self.tr("A mining run is in progress. Stop it before removing dictionaries."),
+                self.tr(
+                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                    "Wait for the active task to finish and try again."
+                ),
             )
             return False
         return True
 
-    def _rmtree_dir(self, target: Path) -> None:
-        _robust_rmtree(target)
+    def _rmtree_dir(self, target: Path) -> RmtreeOutcome:
+        return _robust_rmtree(target)
 
     def _on_row_context_menu(self, pos: QPoint) -> None:
         """Right-click a dictionary row to re-import or remove it.
@@ -427,15 +433,15 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         Reuses the stale-row re-import signals so the same handler
         (`DictionaryImportFlow.reimport_dict`) drives the import flow regardless
         of entry point. Jisho rows have no menu — the online fallback can't be
-        re-imported. Missing meta (dict files vanished from disk) also skip
-        because we can't decide between yomitan and jmdict dispatch.
+        re-imported. The controller selects a recoverable source from the slot
+        id even when registry metadata is missing or corrupt.
         """
         # While an async scan is in flight the list shows a single disabled
         # "Loading…" placeholder, not real rows. Resolving a right-click through
         # self._chain then targets an arbitrary real dictionary the user never
         # clicked — and Remove would rmtree it. Bail, mirroring the frequency
         # panel's identical guard.
-        if self._scan_in_flight:
+        if self._scan_in_flight or self.has_active_mutation():
             return
         item = self._list.itemAt(pos)
         if item is None:
@@ -446,11 +452,6 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         entry = self._chain[index]
         if entry.kind == "jisho" or entry.dict_id is None:
             return
-        registry = self._view
-        meta = registry.get(entry.dict_id) if registry is not None else None
-        if meta is None:
-            return
-
         menu = QMenu(self._list)
         reimport_action = menu.addAction(self.tr("Re-import…"))
         remove_action = menu.addAction(self.tr("Remove"))
@@ -458,9 +459,6 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         global_pos = viewport.mapToGlobal(pos) if viewport is not None else self._list.mapToGlobal(pos)
         chosen = menu.exec(global_pos)
         if chosen is reimport_action:
-            if meta.format == "jmdict":
-                self.reimport_jmdict_requested.emit()
-            else:
-                self.reimport_dict_requested.emit(entry.dict_id)
+            self.reimport_dict_requested.emit(entry.dict_id)
         elif chosen is remove_action:
             self.remove(index)

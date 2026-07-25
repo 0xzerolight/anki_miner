@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -133,6 +134,27 @@ def test_load_false_on_missing_db(tmp_path: Path):
     provider = IndexedFreqProvider("ghost", tmp_path / "ghost" / "index.sqlite", "Ghost")
     assert provider.load() is False
     assert provider.is_available() is False
+
+
+def test_load_closes_connection_when_schema_detection_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    db = tmp_path / "index.sqlite"
+    db.touch()
+    conn = MagicMock()
+    conn.execute.side_effect = sqlite3.DatabaseError("schema detection failed")
+    monkeypatch.setattr(
+        ifp_module,
+        "read_meta_cached",
+        lambda _db: {"schema_version": str(storage.SCHEMA_VERSION)},
+    )
+    monkeypatch.setattr(ifp_module, "open_readonly", MagicMock(return_value=conn))
+    provider = IndexedFreqProvider("broken", db, "Broken")
+
+    assert provider.load() is False
+    assert provider.is_available() is False
+    conn.close.assert_called_once_with()
 
 
 def test_name_property(tmp_path: Path):

@@ -1,7 +1,7 @@
 """Tests for import-flow worker surfacing through SettingsTab.iter_close_workers (OVH-004, 059, 060).
 
 SettingsTab.iter_close_workers must expose every live import worker from the
-three import flows (DictionaryImportFlow, AudioPackImportFlow, ZipImportFlow)
+four import flows (DictionaryImportFlow, AudioPackImportFlow, FrequencyImportFlow, PitchImportFlow)
 so BackgroundTaskController._join_worker_for_close can cancel + bounded-join
 them at closeEvent time.  An idle (None) worker must be tolerated.
 """
@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import QWidget
 
 from anki_miner.gui.controllers.audio_pack_import_flow import AudioPackImportFlow
 from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
-from anki_miner.gui.controllers.zip_import_flow import ZipImportFlow
+from anki_miner.gui.controllers.pitch_import_flow import PitchImportFlow
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -73,6 +73,7 @@ class TestAudioPackImportFlowIterCloseWorkers:
             panel=MagicMock(),
             get_config=MagicMock(),
             persist_chain=MagicMock(),
+            notify_config_changed=MagicMock(),
         )
 
     def test_idle_flow_returns_none_entry(self):
@@ -92,35 +93,32 @@ class TestAudioPackImportFlowIterCloseWorkers:
         assert isinstance(flow.iter_close_workers(), tuple)
 
 
-class TestZipImportFlowIterCloseWorkers:
-    """ZipImportFlow.iter_close_workers returns both CSV import worker handles."""
+class TestPitchImportFlowIterCloseWorkers:
+    """PitchImportFlow.iter_close_workers returns its active worker handle."""
 
-    def _make_flow(self, qapp) -> ZipImportFlow:
-        parent = QWidget()
-        # qapp is the global fixture — QWidget must be constructed after it
-        return ZipImportFlow(parent)
+    def _make_flow(self) -> PitchImportFlow:
+        return PitchImportFlow(
+            parent=MagicMock(spec=QWidget),
+            panel=MagicMock(),
+            get_config=MagicMock(),
+            persist_chain=MagicMock(),
+            notify_config_changed=MagicMock(),
+        )
 
-    def test_idle_flow_returns_one_none_entry(self, qapp, qtbot):
-        parent = QWidget()
-        qtbot.addWidget(parent)
-        flow = ZipImportFlow(parent)
+    def test_idle_flow_returns_none_entry(self):
+        flow = self._make_flow()
         workers = flow.iter_close_workers()
         assert workers == (None,)
 
-    def test_live_pitch_worker_returned(self, qapp, qtbot):
-        parent = QWidget()
-        qtbot.addWidget(parent)
-        flow = ZipImportFlow(parent)
+    def test_live_worker_returned(self):
+        flow = self._make_flow()
         w = _fake_worker()
-        flow._active_pitch_worker = w
+        flow._active_import_worker = w
         workers = flow.iter_close_workers()
-        assert w in workers
-        assert len(workers) == 1
+        assert workers == (w,)
 
-    def test_returns_tuple(self, qapp, qtbot):
-        parent = QWidget()
-        qtbot.addWidget(parent)
-        flow = ZipImportFlow(parent)
+    def test_returns_tuple(self):
+        flow = self._make_flow()
         assert isinstance(flow.iter_close_workers(), tuple)
 
 
@@ -143,7 +141,7 @@ class _FakeSettingsTabWithImportFlows:
         dict_import_worker=None,
         audio_pack_import_worker=None,
         frequency_import_worker=None,
-        zip_pitch_worker=None,
+        pitch_import_worker=None,
     ) -> None:
         self._anki_probe = MagicMock()
         self._anki_probe.iter_close_workers.return_value = (anki_probe_worker,)
@@ -153,8 +151,8 @@ class _FakeSettingsTabWithImportFlows:
         self._audio_pack_import_flow.iter_close_workers.return_value = (audio_pack_import_worker,)
         self._frequency_import_flow = MagicMock()
         self._frequency_import_flow.iter_close_workers.return_value = (frequency_import_worker,)
-        self._zip_import_flow = MagicMock()
-        self._zip_import_flow.iter_close_workers.return_value = (zip_pitch_worker,)
+        self._pitch_import_flow = MagicMock()
+        self._pitch_import_flow.iter_close_workers.return_value = (pitch_import_worker,)
 
     def iter_close_workers(self) -> tuple:
         return (
@@ -162,7 +160,7 @@ class _FakeSettingsTabWithImportFlows:
             *self._dict_import_flow.iter_close_workers(),
             *self._audio_pack_import_flow.iter_close_workers(),
             *self._frequency_import_flow.iter_close_workers(),
-            *self._zip_import_flow.iter_close_workers(),
+            *self._pitch_import_flow.iter_close_workers(),
         )
 
 
@@ -192,9 +190,9 @@ class TestSettingsTabIterCloseWorkersChaining:
         workers = tab.iter_close_workers()
         assert w in workers
 
-    def test_zip_pitch_worker_included(self):
+    def test_pitch_import_worker_included(self):
         w = _fake_worker()
-        tab = _FakeSettingsTabWithImportFlows(zip_pitch_worker=w)
+        tab = _FakeSettingsTabWithImportFlows(pitch_import_worker=w)
         workers = tab.iter_close_workers()
         assert w in workers
 
@@ -215,7 +213,7 @@ class TestSettingsTabIterCloseWorkersChaining:
             dict_import_worker=w2,
             audio_pack_import_worker=w3,
             frequency_import_worker=w4,
-            zip_pitch_worker=w5,
+            pitch_import_worker=w5,
         )
         workers = tab.iter_close_workers()
         assert set(workers) == {w1, w2, w3, w4, w5}
@@ -238,7 +236,7 @@ class _FakeRealSettingsTab:
         from anki_miner.gui.controllers.audio_pack_import_flow import AudioPackImportFlow
         from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
         from anki_miner.gui.controllers.frequency_import_flow import FrequencyImportFlow
-        from anki_miner.gui.controllers.zip_import_flow import ZipImportFlow
+        from anki_miner.gui.controllers.pitch_import_flow import PitchImportFlow
         from anki_miner.gui.widgets.settings_tab import SettingsTab
 
         # Bind the real method without calling __init__
@@ -263,15 +261,22 @@ class _FakeRealSettingsTab:
             panel=MagicMock(),
             get_config=MagicMock(),
             persist_chain=MagicMock(),
+            notify_config_changed=MagicMock(),
         )
         self._frequency_import_flow = FrequencyImportFlow(
             parent=parent,
             panel=MagicMock(),
             get_config=MagicMock(),
             persist_chain=MagicMock(),
+            notify_config_changed=MagicMock(),
         )
-        parent_widget = MagicMock(spec=QWidget)
-        self._zip_import_flow = ZipImportFlow(parent_widget)
+        self._pitch_import_flow = PitchImportFlow(
+            parent=parent,
+            panel=MagicMock(),
+            get_config=MagicMock(),
+            persist_chain=MagicMock(),
+            notify_config_changed=MagicMock(),
+        )
 
 
 class TestRealSettingsTabIterCloseWorkers:
@@ -282,7 +287,7 @@ class TestRealSettingsTabIterCloseWorkers:
         workers = tab.iter_close_workers()
         # 2 from AnkiProbeController (fetch fields, fetch decks)
         # + 1 DictionaryImportFlow (import) + 1 AudioPackImportFlow
-        # + 1 FrequencyImportFlow + 1 ZipImportFlow = 6 entries, all None idle.
+        # + 1 FrequencyImportFlow + 1 PitchImportFlow = 6 entries, all None idle.
         assert len(workers) == 6
         assert all(w is None for w in workers)
 
@@ -307,10 +312,10 @@ class TestRealSettingsTabIterCloseWorkers:
         workers = tab.iter_close_workers()
         assert w in workers
 
-    def test_zip_pitch_worker_surfaces(self):
+    def test_pitch_import_worker_surfaces(self):
         tab = _FakeRealSettingsTab()
         w = _fake_worker()
-        tab._zip_import_flow._active_pitch_worker = w
+        tab._pitch_import_flow._active_import_worker = w
         workers = tab.iter_close_workers()
         assert w in workers
 

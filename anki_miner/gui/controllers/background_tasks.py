@@ -31,6 +31,10 @@ if TYPE_CHECKING:
 
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.gui.main_window import MainWindow
+    from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
+        ChainSettingsPanelBase,
+        MutationToken,
+    )
     from anki_miner.gui.workers.import_worker import ImportWorker
     from anki_miner.gui.workers.install_worker import InstallWorker
     from anki_miner.gui.workers.restyle_cards_worker import RestyleCardsWorker
@@ -111,6 +115,8 @@ class BackgroundTaskController(QObject):
         self.update_worker: UpdateWorkerThread | None = None
         self.ytdlp_update_worker: YtdlpUpdateWorker | None = None
         self.jmdict_migration_worker: ImportWorker | None = None
+        self._dictionary_mutation_panel: ChainSettingsPanelBase | None = None
+        self._jmdict_migration_lease: tuple[ImportWorker, ChainSettingsPanelBase, MutationToken] | None = None
         # The five resource install/download handles are all InstallWorker now
         # (ARC-010), but stay separate attributes so each releases independently
         # and the shutdown join can address them by name.
@@ -132,6 +138,10 @@ class BackgroundTaskController(QObject):
         self._close_finalized = False
 
     # --- Task starters -----------------------------------------------------
+
+    def set_dictionary_mutation_panel(self, panel: ChainSettingsPanelBase) -> None:
+        """Set the C2 token owner used by the startup JMdict migration."""
+        self._dictionary_mutation_panel = panel
 
     def start_validation(self, service: ValidationService) -> bool:
         """Start a system validation worker unless one is already running.
@@ -401,34 +411,95 @@ class BackgroundTaskController(QObject):
         if not _needs_jmdict_migration(config.jmdict_path, dicts_root, config.dictionary_chain):
             return False
 
-        self.jmdict_migration_worker = ImportWorker.for_jmdict(config.jmdict_path, dicts_root)
-        self.jmdict_migration_worker.import_finished.connect(self.jmdict_migration_finished)
-        self.jmdict_migration_worker.failed.connect(lambda err: logger.warning("JMdict migration failed: %s", err))
+        panel = self._dictionary_mutation_panel
+        token = panel.hold_mutation("jmdict-migration") if panel is not None else None
+        try:
+            worker = ImportWorker.for_jmdict(config.jmdict_path, dicts_root, overwrite=False)
+        except Exception:
+            if panel is not None and token is not None:
+                panel.release(token)
+            raise
+        self.jmdict_migration_worker = worker
+        if panel is not None and token is not None:
+            self._jmdict_migration_lease = (worker, panel, token)
+        worker.import_finished.connect(
+            lambda dict_id, meta, root=dicts_root, version=config.config_version: self._publish_jmdict_migration_result(
+                root, version, dict_id, meta
+            )
+        )
+        worker.failed.connect(lambda err: logger.warning("JMdict migration failed: %s", err))
+        worker.finished.connect(lambda w=worker: self._finish_jmdict_migration(w))
         logger.info("Starting one-time JMdict SQLite migration")
-        self.jmdict_migration_worker.start()
+        try:
+            worker.start()
+        except Exception:
+            self._finish_jmdict_migration(worker)
+            raise
+        return True
+
+    def _publish_jmdict_migration_result(
+        self,
+        starting_root: Path,
+        starting_config_version: int,
+        dict_id: str,
+        meta: dict,
+    ) -> None:
+        """Forward migration completion only for its starting config generation."""
+        current_config = self._window.config
+        if current_config.dicts_root != starting_root or current_config.config_version != starting_config_version:
+            logger.info(
+                "Discarding stale JMdict migration completion for %s at config generation %d",
+                starting_root,
+                starting_config_version,
+            )
+            return
+        self.jmdict_migration_finished.emit(dict_id, meta)
+
+    def _finish_jmdict_migration(self, worker: ImportWorker) -> None:
+        """Release the worker handle and its C2 root token exactly once."""
+        owned = self.jmdict_migration_worker is worker
+        if owned:
+            self.jmdict_migration_worker = None
+        lease = self._jmdict_migration_lease
+        if lease is not None and lease[0] is worker:
+            self._jmdict_migration_lease = None
+            lease[1].release(lease[2])
+            owned = True
+        if owned:
+            delete_later = getattr(worker, "deleteLater", None)
+            if callable(delete_later):
+                delete_later()
+
+    def prepare_dictionary_mutation(self) -> bool:
+        """Cancel/join startup JMdict migration; refuse on bounded-wait timeout."""
+        worker = self.jmdict_migration_worker
+        retained = join_or_retain(worker, 1000)
+        self.jmdict_migration_worker = retained
+        if retained is not None:
+            logger.warning("Refusing dictionary mutation while JMdict migration is still stopping")
+            return False
+        if worker is not None:
+            self._finish_jmdict_migration(worker)
         return True
 
     def cancel_jmdict_migration(self) -> None:
         """Cancel and bounded-join an in-flight legacy JMdict XML migration.
 
         The recommended-resource download imports into the same on-disk slot
-        the migration writes (``dicts_root/jmdict-english/``, both with
-        overwrite) — concurrent writers could leave the inferior XML build as
-        the last writer. Called before the setup wizard or the resource
-        download dialog opens so the migration worker (the only non-modal
-        writer to that slot) is out of the picture first.
+        the migration writes (``dicts_root/jmdict-english/``). Called before the
+        setup wizard or the resource download dialog opens after the refusal-
+        capable preflight has already joined the worker.
 
         ``join_or_retain`` retains the handle on a timed-out wait instead of
         clearing it: the worker is unparented, so dropping the sole reference
         to a still-running QThread would destroy it mid-run and abort the
-        process. A timed-out (still cancelling) worker is race-safe anyway —
-        the importer's per-entry cancel check raises before the staged dir is
-        ever promoted into the slot — and shutdown() still joins the retained
-        handle. A cancelled migration re-evaluates on the next boot.
+        process. Dictionary mutations refuse while that retained worker remains
+        active, and shutdown() still joins it. A cancelled migration
+        re-evaluates on the next boot.
         """
         if still_running(self.jmdict_migration_worker):
             logger.info("Cancelling in-flight JMdict migration before resource download/wizard")
-        self.jmdict_migration_worker = join_or_retain(self.jmdict_migration_worker, 1000)
+        self.prepare_dictionary_mutation()
 
     def set_prewarm(self, worker: QThread) -> None:
         """Adopt the best-effort cache prewarm worker.

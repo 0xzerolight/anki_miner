@@ -23,7 +23,9 @@ from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.widgets.settings_tab import SettingsTab
+from anki_miner.services._sqlite_index import write_ownership_marker
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, create_index, write_meta
+from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip
 
 
 def _run_scan_sync(work, on_done, on_error):
@@ -40,8 +42,9 @@ def _make_dict_on_disk(
     fmt: str,
     source_name: str,
     with_source_zip: bool = True,
+    schema_version: int = SCHEMA_VERSION,
 ) -> Path:
-    """Create a dict folder with index.sqlite (current schema) and optional source.zip."""
+    """Create a dict folder with index.sqlite and optional source.zip."""
     dict_dir = dicts_root / dict_id
     dict_dir.mkdir(parents=True, exist_ok=True)
     db_path = dict_dir / "index.sqlite"
@@ -49,14 +52,14 @@ def _make_dict_on_disk(
     write_meta(
         db_path,
         {
-            "schema_version": str(SCHEMA_VERSION),
+            "schema_version": str(schema_version),
             "format": fmt,
             "source_name": source_name,
             "entry_count": "0",
         },
     )
     if with_source_zip:
-        (dict_dir / "source.zip").write_bytes(b"PK\x03\x04 fake zip bytes")
+        build_yomitan_zip(dict_dir / "source.zip", title=dict_id, revision="")
     return dict_dir
 
 
@@ -95,8 +98,11 @@ def stubbed_workers(monkeypatch):
         inst.import_finished = MagicMock()
         inst.failed = MagicMock()
         inst.cancelled = MagicMock()
+        inst.finished = MagicMock()
         inst.cancel = MagicMock()
         inst.start = MagicMock()
+        inst.set_trace_id = MagicMock()
+        inst.is_cancelled = False
         inst.isRunning = MagicMock(return_value=True)
         instances.append(inst)
         return inst
@@ -130,17 +136,35 @@ def _silence_dialogs(monkeypatch) -> list[tuple[str, str]]:
     return captured
 
 
+def _capture_warnings(monkeypatch) -> list[tuple[str, str]]:
+    captured: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        QMessageBox,
+        "warning",
+        lambda parent, title, body, *a, **kw: captured.append((title, body)) or 0,
+    )
+    return captured
+
+
 def _complete_in_flight_worker(stubbed_workers, idx: int = -1) -> None:
-    """Trigger the import_finished callback on the last (or indexed) stubbed worker."""
+    """Emit the domain result, then the worker's native-finished barrier."""
     worker = stubbed_workers["instances"][idx]
     on_done = worker.import_finished.connect.call_args.args[0]
     on_done("dict_id_ignored", {"entry_count": 0})
+    _emit_native_finished(worker)
+
+
+def _emit_native_finished(worker: MagicMock) -> None:
+    worker.isRunning.return_value = False
+    for connect_call in tuple(worker.finished.connect.call_args_list):
+        connect_call.args[0]()
 
 
 def _fail_in_flight_worker(stubbed_workers, msg: str, idx: int = -1) -> None:
     worker = stubbed_workers["instances"][idx]
     on_failed = worker.failed.connect.call_args.args[0]
     on_failed(msg)
+    _emit_native_finished(worker)
 
 
 def test_reimport_all_two_yomitan(tab_for_reimport_all, monkeypatch, stubbed_workers):
@@ -159,12 +183,18 @@ def test_reimport_all_two_yomitan(tab_for_reimport_all, monkeypatch, stubbed_wor
     config_changed_emissions: list[object] = []
     tab.config_changed.connect(config_changed_emissions.append)
     summaries = _silence_dialogs(monkeypatch)
+    warnings = _capture_warnings(monkeypatch)
 
     tab._dict_import_flow.reimport_all()
 
-    # Worker 1 launched; complete it → worker 2 launched.
+    # Worker 1 launched; its domain result alone must not launch worker 2.
+    assert stubbed_workers["yomitan_factory"].call_count == 1, warnings
+    first = stubbed_workers["instances"][0]
+    first.import_finished.connect.call_args.args[0]("dict_id_ignored", {"entry_count": 0})
     assert stubbed_workers["yomitan_factory"].call_count == 1
-    _complete_in_flight_worker(stubbed_workers)
+    assert config_changed_emissions == []
+    assert summaries == []
+    _emit_native_finished(first)
     assert stubbed_workers["yomitan_factory"].call_count == 2
     _complete_in_flight_worker(stubbed_workers)
 
@@ -184,6 +214,10 @@ def test_reimport_all_two_yomitan(tab_for_reimport_all, monkeypatch, stubbed_wor
     assert title == "Reimport All"
     assert "Reimported 2" in body
     assert "Dict A" in body and "Dict B" in body
+    assert "Cancelled" not in body
+    assert warnings == []
+    for worker in stubbed_workers["instances"]:
+        worker.cancel.assert_not_called()
 
 
 def test_reimport_all_skips_legacy_without_source_zip(tab_for_reimport_all, monkeypatch, stubbed_workers):
@@ -214,6 +248,67 @@ def test_reimport_all_skips_legacy_without_source_zip(tab_for_reimport_all, monk
     assert "Skipped" in body
 
 
+def test_reimport_all_only_ids_scopes_jobs_and_missing_sources(tab_for_reimport_all, monkeypatch, stubbed_workers):
+    """Upgrade repair reimports and reports only stale IDs supplied by its scan."""
+    tab = tab_for_reimport_all
+    dicts_root = tab.config.dicts_root
+    _make_dict_on_disk(
+        dicts_root,
+        "stale-saved",
+        fmt="yomitan",
+        source_name="Stale Saved",
+        schema_version=SCHEMA_VERSION - 1,
+    )
+    _make_dict_on_disk(
+        dicts_root,
+        "stale-missing",
+        fmt="yomitan",
+        source_name="Stale Missing",
+        with_source_zip=False,
+        schema_version=SCHEMA_VERSION - 1,
+    )
+    _make_dict_on_disk(dicts_root, "current", fmt="yomitan", source_name="Current")
+    _make_dict_on_disk(
+        dicts_root,
+        "disabled-stale",
+        fmt="yomitan",
+        source_name="Disabled Stale",
+        schema_version=SCHEMA_VERSION - 1,
+    )
+    _make_dict_on_disk(
+        dicts_root,
+        "unrelated-stale",
+        fmt="yomitan",
+        source_name="Unrelated Stale",
+        with_source_zip=False,
+        schema_version=SCHEMA_VERSION - 1,
+    )
+    tab.dictionary_panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="stale-saved", enabled=True),
+            ChainEntry(kind="indexed", dict_id="stale-missing", enabled=True),
+            ChainEntry(kind="indexed", dict_id="current", enabled=True),
+            ChainEntry(kind="indexed", dict_id="disabled-stale", enabled=False),
+            ChainEntry(kind="indexed", dict_id="unrelated-stale", enabled=True),
+        )
+    )
+    summaries = _silence_dialogs(monkeypatch)
+
+    tab._dict_import_flow.reimport_all(only_ids=frozenset({"stale-saved", "stale-missing"}))
+    _complete_in_flight_worker(stubbed_workers)
+
+    stubbed_workers["yomitan_factory"].assert_called_once()
+    args, kwargs = stubbed_workers["yomitan_factory"].call_args
+    assert Path(args[0]).parent.name == "stale-saved"
+    assert kwargs["dict_id"] == "stale-saved"
+    _, body = summaries[-1]
+    assert "Stale Saved" in body
+    assert "Stale Missing" in body
+    assert "Current" not in body
+    assert "Disabled Stale" not in body
+    assert "Unrelated Stale" not in body
+
+
 def test_reimport_all_includes_jmdict(tab_for_reimport_all, monkeypatch, stubbed_workers):
     """JMdict-format dict in the chain is reimported via config.jmdict_path."""
     tab = tab_for_reimport_all
@@ -230,6 +325,7 @@ def test_reimport_all_includes_jmdict(tab_for_reimport_all, monkeypatch, stubbed
     stubbed_workers["jmdict_factory"].assert_called_once()
     args, _kwargs = stubbed_workers["jmdict_factory"].call_args
     assert Path(args[0]) == tab.config.jmdict_path
+    _complete_in_flight_worker(stubbed_workers)
 
 
 def test_reimport_all_jmdict_skipped_when_xml_missing(tab_for_reimport_all, monkeypatch, stubbed_workers):
@@ -249,6 +345,82 @@ def test_reimport_all_jmdict_skipped_when_xml_missing(tab_for_reimport_all, monk
     _, body = summaries[-1]
     assert "JMdict (English)" in body
     assert "Skipped" in body or "No dictionaries with saved sources" in body
+
+
+def test_reimport_all_repairs_only_owned_metadata_less_slot(
+    tab_for_reimport_all,
+    monkeypatch,
+    stubbed_workers,
+):
+    tab = tab_for_reimport_all
+    root = tab.config.dicts_root
+    owned = root / "owned"
+    owned.mkdir()
+    write_ownership_marker(owned, "owned", "dictionary")
+    build_yomitan_zip(owned / "source.zip", title="Owned", revision="")
+    foreign = root / "foreign"
+    foreign.mkdir()
+    (foreign / "source.zip").write_bytes(b"PK\x03\x04")
+    tab.dictionary_panel.set_chain(
+        (
+            ChainEntry(kind="indexed", dict_id="owned", enabled=True),
+            ChainEntry(kind="indexed", dict_id="foreign", enabled=True),
+        )
+    )
+    summaries = _silence_dialogs(monkeypatch)
+
+    tab._dict_import_flow.reimport_all()
+    _complete_in_flight_worker(stubbed_workers)
+
+    stubbed_workers["yomitan_factory"].assert_called_once()
+    args, kwargs = stubbed_workers["yomitan_factory"].call_args
+    assert args[0] == owned / "source.zip"
+    assert kwargs["dict_id"] == "owned"
+    assert kwargs["overwrite"] is True
+    assert "foreign" in summaries[-1][1]
+
+
+def test_reimport_all_skips_saved_zip_for_other_dictionary(
+    tab_for_reimport_all,
+    monkeypatch,
+    stubbed_workers,
+):
+    tab = tab_for_reimport_all
+    root = tab.config.dicts_root
+    slot = _make_dict_on_disk(root, "expected", fmt="yomitan", source_name="Expected")
+    build_yomitan_zip(slot / "source.zip", title="Other Dictionary")
+    tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="expected", enabled=True),))
+    summaries = _silence_dialogs(monkeypatch)
+
+    tab._dict_import_flow.reimport_all()
+
+    stubbed_workers["yomitan_factory"].assert_not_called()
+    assert "Expected" in summaries[-1][1]
+    assert "Skipped" in summaries[-1][1]
+
+
+def test_reimport_all_corrupt_saved_jmdict_zip_falls_back_to_configured_xml(
+    tab_for_reimport_all,
+    monkeypatch,
+    stubbed_workers,
+):
+    tab = tab_for_reimport_all
+    slot = _make_dict_on_disk(
+        tab.config.dicts_root,
+        "jmdict-english",
+        fmt="jmdict",
+        source_name="JMdict (English)",
+    )
+    (slot / "source.zip").write_bytes(b"PK\x03\x04")
+    tab.config.jmdict_path.write_text("<JMdict/>", encoding="utf-8")
+    tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=True),))
+    _silence_dialogs(monkeypatch)
+
+    tab._dict_import_flow.reimport_all()
+
+    stubbed_workers["yomitan_factory"].assert_not_called()
+    stubbed_workers["jmdict_factory"].assert_called_once()
+    _complete_in_flight_worker(stubbed_workers)
 
 
 def test_reimport_all_cancel_stops_chain(tab_for_reimport_all, monkeypatch, stubbed_workers):
@@ -356,12 +528,10 @@ def test_reimport_all_release_refusal_blocks_workers(tab_for_reimport_all, monke
     assert any(title == "Re-import Blocked" for title, _ in warnings), warnings
 
 
-def test_reimport_all_joins_predecessor_before_reassign(tab_for_reimport_all, monkeypatch, stubbed_workers):
-    """T-09: launch_next runs inside the predecessor's queued finished slot.
-    Reassigning _active_import_worker there drops the only reference to a still-
-    running QThread → "QThread: Destroyed while thread is still running". The
-    predecessor must be joined (.wait()) BEFORE the new worker is assigned.
-    """
+def test_reimport_all_defers_reassignment_until_native_finished_without_wait(
+    tab_for_reimport_all, monkeypatch, stubbed_workers
+):
+    """A domain result cannot replace its still-running predecessor."""
     tab = tab_for_reimport_all
     dicts_root = tab.config.dicts_root
     _make_dict_on_disk(dicts_root, "dict-a", fmt="yomitan", source_name="Dict A")
@@ -377,28 +547,81 @@ def test_reimport_all_joins_predecessor_before_reassign(tab_for_reimport_all, mo
     tab._dict_import_flow.reimport_all()
     assert stubbed_workers["yomitan_factory"].call_count == 1
     first = stubbed_workers["instances"][0]
-    # The predecessor is still running when its queued finished slot fires.
-    first.isRunning.return_value = True
 
-    # Record the active worker at the instant wait() is called on the predecessor.
-    active_at_wait: list[object] = []
+    on_done = first.import_finished.connect.call_args.args[0]
+    on_done("dict_id_ignored", {"entry_count": 0})
 
-    def record_active_and_join(*_args, **_kwargs) -> bool:
-        active_at_wait.append(tab._dict_import_flow._active_import_worker)
-        return True
+    assert stubbed_workers["yomitan_factory"].call_count == 1
+    assert tab._dict_import_flow._active_import_worker is first
+    first.wait.assert_not_called()
+    first.cancel.assert_not_called()
 
-    first.wait.side_effect = record_active_and_join
+    _emit_native_finished(first)
 
-    # Fire the predecessor's finished slot — this synchronously calls launch_next.
-    _complete_in_flight_worker(stubbed_workers, idx=0)
-
-    # Predecessor joined.
-    assert first.wait.called, "predecessor QThread must be joined before reassignment"
-    # And it was joined BEFORE the second worker replaced it as _active_import_worker.
-    assert active_at_wait == [first], "wait() must run while the predecessor is still the active worker"
-    # Sanity: the second worker did get launched and is now active.
     assert stubbed_workers["yomitan_factory"].call_count == 2
     assert tab._dict_import_flow._active_import_worker is stubbed_workers["instances"][1]
+
+
+def test_reimport_all_shutdown_while_waiting_does_not_dispatch_after_predecessor_finishes(
+    tab_for_reimport_all, monkeypatch, stubbed_workers
+):
+    """Direct shutdown cancels the batch but leaves its predecessor for the close join."""
+    tab = tab_for_reimport_all
+    dicts_root = tab.config.dicts_root
+    _make_dict_on_disk(dicts_root, "dict-a", fmt="yomitan", source_name="Dict A")
+    tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="dict-a", enabled=True),))
+    _silence_dialogs(monkeypatch)
+
+    predecessor = stubbed_workers["yomitan_factory"]()
+    stubbed_workers["yomitan_factory"].reset_mock()
+    tab._dict_import_flow._active_import_worker = predecessor
+
+    tab._dict_import_flow.reimport_all()
+    assert stubbed_workers["yomitan_factory"].call_count == 0
+
+    tab.shutdown()
+
+    assert predecessor in tab.iter_close_workers()
+    predecessor.cancel.assert_not_called()
+    _emit_native_finished(predecessor)
+    assert stubbed_workers["yomitan_factory"].call_count == 0
+
+
+def test_reimport_all_refresh_failure_warns_and_restores_controls(
+    tab_for_reimport_all, monkeypatch, stubbed_workers, qtbot
+):
+    tab = tab_for_reimport_all
+    dicts_root = tab.config.dicts_root
+    _make_dict_on_disk(dicts_root, "dict-a", fmt="yomitan", source_name="Dict A")
+    tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="dict-a", enabled=True),))
+    warnings: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        QMessageBox,
+        "warning",
+        lambda parent, title, body, *a, **kw: warnings.append((title, body)) or 0,
+    )
+    _silence_dialogs(monkeypatch)
+
+    def fail_notify() -> None:
+        raise RuntimeError("refresh callback failed")
+
+    tab._dict_import_flow._notify_config_changed = fail_notify
+    tab._dict_import_flow.reimport_all()
+    worker = stubbed_workers["instances"][0]
+    worker.import_finished.connect.call_args.args[0]("dict-a", {})
+
+    assert warnings == []
+    assert tab.dictionary_panel._reimport_btn.isEnabled() is False
+
+    _emit_native_finished(worker)
+
+    # The batch-finish refresh dispatches an async registry rescan that holds a
+    # panel mutation token; controls re-enable once its completion callback
+    # lands on the event loop, not synchronously at native finished.
+    qtbot.waitUntil(lambda: tab.dictionary_panel._reimport_btn.isEnabled(), timeout=3000)
+    assert len(warnings) == 1
+    assert warnings[0][0] == "Configuration Update Failed"
+    assert "refresh callback failed" in warnings[0][1]
 
 
 # ---------------------------------------------------------------------------

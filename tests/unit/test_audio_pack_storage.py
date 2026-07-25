@@ -224,6 +224,25 @@ class TestEmptyReadingWildcard:
         finally:
             conn.close()
 
+    def test_lookup_rows_expose_stored_reading(self, tmp_path: Path):
+        # The fetcher's wildcard ambiguity guard counts distinct readings, so
+        # lookup must project the reading column (None for wildcard rows).
+        db_path = tmp_path / "index.sqlite"
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                AudioPackRow(expression="橋", reading="はし", source="nhk", file="hashi.mp3"),
+                AudioPackRow(expression="橋", reading=None, source="forvo", file="forvo.mp3"),
+            ],
+        )
+        conn = open_readonly(db_path)
+        try:
+            readings = {r.reading for r in lookup(conn, "橋", "")}
+            assert readings == {"はし", None}
+        finally:
+            conn.close()
+
     def test_empty_reading_returns_all_speakers(self, tmp_path: Path):
         db_path = tmp_path / "index.sqlite"
         create_index(db_path)
@@ -416,22 +435,21 @@ class TestReadMetaCached:
         sidecar.unlink()
         meta = read_meta_cached(db_path)
         assert meta["pack_id"] == "nhk16"
-        # Fall-through rewrites the sidecar.
-        assert sidecar.is_file()
+        assert not sidecar.exists()
 
     def test_cached_read_falls_back_when_sqlite_newer(self, tmp_path: Path):
         db_path = self._setup_pack(tmp_path)
         sidecar = db_path.parent / "meta.json"
         old = sidecar.stat().st_mtime - 100
         os.utime(sidecar, (old, old))
+        stale_mtime_ns = sidecar.stat().st_mtime_ns
         with patch(
             "anki_miner.services.audio_packs.storage.read_meta",
             wraps=read_meta,
         ) as wrapped:
             read_meta_cached(db_path)
         assert wrapped.call_count == 1
-        # Sidecar gets rewritten with current mtime.
-        assert sidecar.stat().st_mtime > old
+        assert sidecar.stat().st_mtime_ns == stale_mtime_ns
 
     def test_cached_read_handles_corrupt_sidecar(self, tmp_path: Path):
         db_path = self._setup_pack(tmp_path)
@@ -439,8 +457,7 @@ class TestReadMetaCached:
         sidecar.write_text("{not valid json", encoding="utf-8")
         meta = read_meta_cached(db_path)
         assert meta["pack_id"] == "nhk16"
-        # Sidecar is rewritten with valid JSON.
-        assert json.loads(sidecar.read_text(encoding="utf-8"))["pack_id"] == "nhk16"
+        assert sidecar.read_text(encoding="utf-8") == "{not valid json"
 
     def test_cached_read_missing_db(self, tmp_path: Path):
         assert read_meta_cached(tmp_path / "nonexistent.sqlite") == {}

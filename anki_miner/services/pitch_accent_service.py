@@ -3,7 +3,7 @@
 import csv
 import logging
 import re
-from collections.abc import Sequence
+from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -238,26 +238,98 @@ def _parse_pitch_row(row: list[str]) -> _ParsedRow | None:
     return _ParsedRow(reading=reading, kanji=kanji, entry=PitchEntry(pattern, nasal, devoice))
 
 
-class PitchAccentService:
-    """Load and look up pitch accent patterns from CSV/TSV.
+def iter_pitch_csv_rows(path: Path) -> Iterator[_ParsedRow]:
+    """Stream parsed rows from a pitch CSV/TSV file.
 
-    Supports Kanjium-format and similar pitch accent files:
-    - Legacy: ``reading, kanji, pitch_pattern`` (3 columns)
-    - Enriched: ``reading, kanji, pattern, nasal, devoice`` (5 columns)
-    - Tab or comma separated; header rows auto-skipped.
+    Owns the file-format concerns the old single-file service's ``load()``
+    owned: delimiter auto-detection, optional-header skip, and per-row parsing
+    via :func:`_parse_pitch_row` (5-col enriched, 3-col legacy, anomalous
+    tail-rejoin). Consumers dedupe/first-wins themselves (see
+    :func:`build_pitch_maps` and the pitch source importer).
+
+    Raises:
+        SetupError: If the file is missing or unreadable.
+    """
+    if not path.exists():
+        raise SetupError(
+            f"Pitch accent file not found at: {path}. Download pitch accent data and place it in ~/.anki_miner/"
+        )
+    try:
+        with open(path, encoding="utf-8") as f:
+            sample = f.read(4096)
+            f.seek(0)
+            delimiter = detect_delimiter(sample)
+
+            reader = csv.reader(f, delimiter=delimiter)
+            first_row = True
+            for row in reader:
+                if len(row) < 3:
+                    continue
+                if first_row:
+                    first_row = False
+                    if is_header_row(row):
+                        continue
+                parsed = _parse_pitch_row(row)
+                if parsed is not None:
+                    yield parsed
+    except SetupError:
+        raise
+    except Exception as e:
+        raise SetupError(f"Error loading pitch accent data: {e}") from e
+
+
+PitchMaps = tuple[
+    dict[tuple[str, str], PitchEntry],
+    dict[str, list[PitchEntry]],
+    dict[str, PitchEntry],
+]
+
+
+def build_pitch_maps(parsed_rows: Iterable[_ParsedRow]) -> PitchMaps:
+    """Build the three lookup maps from parsed rows, first occurrence wins.
+
+    Returns ``(by_pair, by_word, by_reading)``:
+    * ``by_pair``: ``(surface, reading) -> PitchEntry`` where surface = kanji,
+      or the reading when the term is kana-only,
+    * ``by_word``: ``surface -> [PitchEntry, ...]`` (homographs keep every
+      reading),
+    * ``by_reading``: ``reading -> PitchEntry`` (first-wins; reading-only
+      fallback + kana lookups).
+    """
+    by_pair: dict[tuple[str, str], PitchEntry] = {}
+    by_word: dict[str, list[PitchEntry]] = {}
+    by_reading: dict[str, PitchEntry] = {}
+    for parsed in parsed_rows:
+        reading, kanji, entry = parsed.reading, parsed.kanji, parsed.entry
+        surface = kanji or reading
+        if not surface:
+            continue
+        key = (surface, reading)
+        if key in by_pair:
+            continue  # first occurrence wins
+        by_pair[key] = entry
+        by_word.setdefault(surface, []).append(entry)
+        if reading and reading not in by_reading:
+            by_reading[reading] = entry
+    return by_pair, by_word, by_reading
+
+
+class PitchMapsStore:
+    """Shared maps-holder base for pitch lookup stores.
+
+    Owns the three in-memory maps (see :func:`build_pitch_maps`), the concrete
+    three-tier reading-scoped ``lookup_entry`` resolution, and the derived
+    lookup API (``lookup`` / ``lookup_detailed`` / ``lookup_batch_detailed``).
+    Subclasses differ only in where ``load()`` reads rows from (the indexed
+    per-source provider reads SQLite; tests may feed rows directly via
+    :meth:`_set_maps`).
 
     Lookups are reading-scoped: entries are keyed on ``(surface, reading)`` so a
     homograph (弾く ひく[0] vs はじく[2]) resolves by the reading passed in rather
     than whichever row loaded first.
     """
 
-    def __init__(self, pitch_accent_path: Path):
-        """Initialize with path to pitch accent file.
-
-        Args:
-            pitch_accent_path: Path to the pitch accent CSV/TSV file.
-        """
-        self._path = pitch_accent_path
+    def __init__(self) -> None:
         # (surface, reading) -> PitchEntry ; surface = kanji, or reading when
         # the term is kana-only.
         self._by_pair: dict[tuple[str, str], PitchEntry] | None = None
@@ -267,75 +339,15 @@ class PitchAccentService:
         self._by_reading: dict[str, PitchEntry] = {}
         self._entry_count: int = 0
 
+    def _set_maps(self, maps: PitchMaps) -> None:
+        """Install built maps (see :func:`build_pitch_maps`); marks the store loaded."""
+        self._by_pair, self._by_word, self._by_reading = maps
+        self._entry_count = len(self._by_pair)
+
     @property
     def entry_count(self) -> int:
         """Number of distinct (surface, reading) pitch entries loaded."""
         return self._entry_count
-
-    def load(self) -> bool:
-        """Load pitch accent data from file.
-
-        Returns:
-            True if loaded successfully.
-
-        Raises:
-            SetupError: If the file is missing or unparseable.
-        """
-        if not self._path.exists():
-            raise SetupError(
-                f"Pitch accent file not found at: {self._path}. "
-                f"Download pitch accent data and place it in ~/.anki_miner/"
-            )
-
-        by_pair: dict[tuple[str, str], PitchEntry] = {}
-        by_word: dict[str, list[PitchEntry]] = {}
-        by_reading: dict[str, PitchEntry] = {}
-        try:
-            with open(self._path, encoding="utf-8") as f:
-                sample = f.read(4096)
-                f.seek(0)
-                delimiter = detect_delimiter(sample)
-
-                reader = csv.reader(f, delimiter=delimiter)
-                first_row = True
-                for row in reader:
-                    if len(row) < 3:
-                        continue
-                    if first_row:
-                        first_row = False
-                        if is_header_row(row):
-                            continue
-                    parsed = _parse_pitch_row(row)
-                    if parsed is None:
-                        continue
-                    reading, kanji, entry = parsed.reading, parsed.kanji, parsed.entry
-                    surface = kanji or reading
-                    if not surface:
-                        continue
-                    key = (surface, reading)
-                    if key in by_pair:
-                        continue  # first occurrence wins
-                    by_pair[key] = entry
-                    by_word.setdefault(surface, []).append(entry)
-                    if reading and reading not in by_reading:
-                        by_reading[reading] = entry
-
-            self._by_pair = by_pair
-            self._by_word = by_word
-            self._by_reading = by_reading
-            self._entry_count = len(by_pair)
-            logger.info(f"Loaded {len(by_pair)} pitch accent entries from {self._path.name}")
-
-            if not by_pair:
-                logger.warning(
-                    f"Pitch accent file {self._path.name} loaded but contained 0 valid entries. "
-                    f"Expected format: reading,kanji,pattern[,nasal,devoice] (CSV or TSV, 3 or 5 columns)."
-                )
-
-            return True
-
-        except Exception as e:
-            raise SetupError(f"Error loading pitch accent data: {e}") from e
 
     def is_available(self) -> bool:
         """Check if pitch accent data has been loaded."""

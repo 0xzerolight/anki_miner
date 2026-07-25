@@ -1,20 +1,22 @@
 """Tests for the manga sub-tab of the Reading tab.
 
-``ReadingMangaTab`` is a single auto-detecting folder card (no queue): pick a
-folder, then Mine. The folder is classified by ``detect`` on click.
+``ReadingMangaTab`` mirrors the Novels tab (Issue #103): a Volume card mines a
+single ``.mokuro``/``.cbz``/``.zip`` file, a Manga Folder card mines whatever
+the folder resolves to. Both are classified by ``detect`` on click (no queue).
 Behaviour under test:
 
-* Mine: classify the folder into one ephemeral ``ReadingQueueItem`` per volume
-  and launch them through the base (a single volume hides the overall bar; a
-  series of >1 shows it).
-* Empty path warns; a ``detect`` ``SetupError`` is surfaced verbatim; neither
-  starts a run or opens the dialog.
-* Buttons: pure derived state — Mine gives way to Cancel during a run.
+* Mine (file) / Mine Folder: classify the pick into one ephemeral
+  ``ReadingQueueItem`` per volume and launch them through the base.
+* Empty/invalid picks warn; a ``detect`` ``SetupError`` is surfaced verbatim;
+  neither starts a run or opens the dialog.
+* Buttons: pure derived state — both Mine buttons give way to Cancel during a
+  run.
 * Per-item signals are READ-ONLY on item state (the worker owns the lifecycle):
   they drive the two progress bars + log the outcome, never write status/cards.
-* Drag-drop routes through the tab: the FileSelector and its inner QLineEdit
-  both have drops disabled, so a drop lands on the tab (folder/manga file fills
-  the selector; a dropped novel earns a cross-tab hint).
+* Drag-drop routes through the tab: the FileSelectors and their inner
+  QLineEdits have drops disabled, so a drop lands on the tab (a manga file
+  fills the Volume selector, a folder the Folder selector; a dropped novel
+  earns a cross-tab hint).
 * D8 (amended): ``_build_curation_context`` builds a page-image context from
   the worker's published manga ``curation_document`` and wires the definition-
   pane ``lookup_fn`` from ``curation_processor``; the media context falls back
@@ -102,17 +104,32 @@ def _url(local_path: str):
 
 
 def _mine(tab, refs, folder: str = "/src/series"):
-    """Select *folder*, patch ``detect`` to return *refs*, click Mine."""
+    """Select *folder*, patch ``detect`` to return *refs*, click Mine Folder."""
     tab.volume_folder_selector.set_path(folder)
+    with patch(_DETECT, return_value=list(refs)):
+        tab._on_folder_mine_clicked()
+
+
+def _volume_file(tmp_path: Path, name: str = "Vol1.cbz") -> Path:
+    """A real on-disk manga file (the Volume Mine handler checks is_file())."""
+    f = tmp_path / name
+    f.write_bytes(b"PK")
+    return f
+
+
+def _mine_file(tab, file: Path, refs):
+    """Select *file* in the Volume card, patch ``detect``, click Mine."""
+    tab.volume_file_selector.set_path(str(file))
     with patch(_DETECT, return_value=list(refs)):
         tab._on_mine_clicked()
 
 
 class TestInitialState:
-    """Idle tab: Mine visible, Cancel hidden, no queue widgets."""
+    """Idle tab: both Mine buttons visible, Cancel hidden, no queue widgets."""
 
     def test_buttons_idle(self, tab):
         assert not tab.mine_button.isHidden()
+        assert not tab.folder_mine_button.isHidden()
         assert tab.cancel_button.isHidden()
         assert tab.worker_thread is None
 
@@ -136,11 +153,79 @@ class TestInitialState:
         assert not hasattr(tab, "current_progress_widget")
         assert not hasattr(tab, "overall_header")
 
-    def test_section_header_says_manga(self, tab):
+    def test_section_headers_volume_and_manga_folder(self, tab):
         from anki_miner.gui.widgets.enhanced import SectionHeader
 
-        headers = tab.findChildren(SectionHeader)
-        assert any(h.title_label.text() == "Manga" for h in headers)
+        titles = {h.title_label.text() for h in tab.findChildren(SectionHeader)}
+        assert "Volume" in titles
+        assert "Manga Folder" in titles
+
+
+class TestMineVolumeFile:
+    """The Volume card mines a single .mokuro/.cbz/.zip file (Issue #103)."""
+
+    def test_mine_file_routes_through_detect(self, tmp_path, tab):
+        queue_cls = tab._queue_worker_cls
+        cbz = _volume_file(tmp_path)
+        with patch(_DETECT, return_value=[_make_ref("mokuro", "Solo Vol")]) as detect:
+            tab.volume_file_selector.set_path(str(cbz))
+            tab._on_mine_clicked()
+        detect.assert_called_once_with(cbz)
+        assert queue_cls.call_count == 1
+        items = queue_cls.call_args.kwargs["items"]
+        # Item titles carry the volume, same as the folder path (Y6).
+        assert [i.title for i in items] == ["Solo Vol — 1"]
+        assert tab.worker_thread is not None
+
+    @pytest.mark.parametrize("name", ["Vol1.mokuro", "Vol1.cbz", "Vol1.zip"])
+    def test_all_manga_extensions_accepted(self, tmp_path, tab, name):
+        queue_cls = tab._queue_worker_cls
+        _mine_file(tab, _volume_file(tmp_path, name), [_make_ref()])
+        assert queue_cls.call_count == 1
+
+    def test_start_swaps_both_mine_buttons(self, tmp_path, tab):
+        _mine_file(tab, _volume_file(tmp_path), [_make_ref()])
+        assert tab.mine_button.isHidden()
+        assert tab.folder_mine_button.isHidden()
+        assert not tab.cancel_button.isHidden()
+
+    def test_empty_file_path_warns_no_run(self, tab):
+        queue_cls = tab._queue_worker_cls
+        tab._on_mine_clicked()
+        assert queue_cls.call_count == 0
+        assert tab.worker_thread is None
+        assert "volume" in tab.log_widget.text_edit.toPlainText().lower()
+
+    def test_wrong_extension_warns_no_run(self, tmp_path, tab):
+        queue_cls = tab._queue_worker_cls
+        stray = tmp_path / "book.epub"
+        stray.write_bytes(b"PK")
+        tab.volume_file_selector.set_path(str(stray))
+        tab._on_mine_clicked()
+        assert queue_cls.call_count == 0
+        assert "volume" in tab.log_widget.text_edit.toPlainText().lower()
+
+    def test_nonexistent_file_warns_no_run(self, tab):
+        queue_cls = tab._queue_worker_cls
+        tab.volume_file_selector.set_path("/src/ghost.cbz")
+        tab._on_mine_clicked()
+        assert queue_cls.call_count == 0
+
+    def test_detect_error_surfaced_no_run(self, tmp_path, tab):
+        queue_cls = tab._queue_worker_cls
+        cbz = _volume_file(tmp_path)
+        tab.volume_file_selector.set_path(str(cbz))
+        with patch(_DETECT, side_effect=SetupError("No .mokuro data found")):
+            tab._on_mine_clicked()
+        assert queue_cls.call_count == 0
+        assert "No .mokuro data found" in tab.log_widget.text_edit.toPlainText()
+
+    def test_run_refused_while_worker_active(self, tmp_path, tab):
+        _mine(tab, [_make_ref()])
+        queue_cls = tab._queue_worker_cls
+        calls_before = queue_cls.call_count
+        _mine_file(tab, _volume_file(tmp_path), [_make_ref("mokuro", "Second")])
+        assert queue_cls.call_count == calls_before  # no second worker
 
 
 class TestMineSingleVolume:
@@ -292,11 +377,11 @@ class TestMineSeries:
 
 
 class TestInvalidPath:
-    """Invalid selections warn and never construct a worker."""
+    """Invalid folder selections warn and never construct a worker."""
 
     def test_empty_path_warns_no_run(self, tab):
         queue_cls = tab._queue_worker_cls
-        tab._on_mine_clicked()
+        tab._on_folder_mine_clicked()
         assert queue_cls.call_count == 0
         assert tab.worker_thread is None
         assert "folder" in tab.log_widget.text_edit.toPlainText().lower()
@@ -305,7 +390,7 @@ class TestInvalidPath:
         queue_cls = tab._queue_worker_cls
         tab.volume_folder_selector.set_path("/src/bad")
         with patch(_DETECT, side_effect=SetupError("no .mokuro volumes inside it")):
-            tab._on_mine_clicked()
+            tab._on_folder_mine_clicked()
         assert queue_cls.call_count == 0
         assert "no .mokuro volumes" in tab.log_widget.text_edit.toPlainText()
 
@@ -313,7 +398,7 @@ class TestInvalidPath:
         queue_cls = tab._queue_worker_cls
         tab.volume_folder_selector.set_path("/src/bad")
         with patch(_DETECT, side_effect=RuntimeError("boom")):
-            tab._on_mine_clicked()
+            tab._on_folder_mine_clicked()
         assert queue_cls.call_count == 0
         assert "boom" in tab.log_widget.text_edit.toPlainText()
 
@@ -489,9 +574,11 @@ def _resolve_drop_target(widget):
 class TestDragDrop:
     """Drops route through the tab; the selector + its input never consume them."""
 
-    def test_selector_and_input_reject_drops(self, tab):
+    def test_selectors_and_inputs_reject_drops(self, tab):
         assert tab.volume_folder_selector.acceptDrops() is False
         assert tab.volume_folder_selector.input.acceptDrops() is False
+        assert tab.volume_file_selector.acceptDrops() is False
+        assert tab.volume_file_selector.input.acceptDrops() is False
         assert tab.acceptDrops() is True
 
     def test_drop_on_input_field_routes_to_tab(self, tmp_path, tab):
@@ -524,19 +611,33 @@ class TestDragDrop:
         assert tab.volume_folder_selector.get_path() == str(folder)
         event.acceptProposedAction.assert_called_once()
 
-    def test_drop_manga_file_fills_selector(self, tab):
+    def test_drop_manga_file_fills_file_selector(self, tab):
         event = MagicMock()
         with patch(_URLS, return_value=[_url("/src/vol.cbz")]):
             tab.dropEvent(event)
-        assert tab.volume_folder_selector.get_path() == "/src/vol.cbz"
+        assert tab.volume_file_selector.get_path() == "/src/vol.cbz"
+        assert tab.volume_folder_selector.get_path() == ""
 
-    def test_drop_first_source_wins(self, tmp_path, tab):
+    def test_drop_routes_file_and_folder_independently(self, tmp_path, tab):
+        # Two-selector routing (novels-tab shape): one drop can fill both.
         folder = tmp_path / "series"
         folder.mkdir()
         event = MagicMock()
         with patch(_URLS, return_value=[_url(str(folder)), _url("/src/other.cbz")]):
             tab.dropEvent(event)
         assert tab.volume_folder_selector.get_path() == str(folder)
+        assert tab.volume_file_selector.get_path() == "/src/other.cbz"
+
+    def test_drop_first_of_each_kind_wins(self, tmp_path, tab):
+        d1 = tmp_path / "a"
+        d1.mkdir()
+        d2 = tmp_path / "b"
+        d2.mkdir()
+        event = MagicMock()
+        with patch(_URLS, return_value=[_url(str(d1)), _url(str(d2)), _url("/src/x.cbz"), _url("/src/y.zip")]):
+            tab.dropEvent(event)
+        assert tab.volume_folder_selector.get_path() == str(d1)
+        assert tab.volume_file_selector.get_path() == "/src/x.cbz"
 
     def test_drop_novel_hints_no_path(self, tab):
         event = MagicMock()

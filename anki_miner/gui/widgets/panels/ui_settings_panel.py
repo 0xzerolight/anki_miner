@@ -31,6 +31,7 @@ from PyQt6.QtCore import Qt, QUrl, pyqtSignal
 from PyQt6.QtGui import QCursor, QDesktopServices
 from PyQt6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
     QGraphicsOpacityEffect,
     QHBoxLayout,
@@ -104,6 +105,7 @@ class UISettingsPanel(QWidget):
     font_scale_changed = pyqtSignal(float)
     zoom_changed = pyqtSignal(float)
     language_changed = pyqtSignal(str)
+    native_dialogs_changed = pyqtSignal(bool)
 
     # Column indices for clarity.
     COL_NAME = 0  # tree expander + name
@@ -115,6 +117,7 @@ class UISettingsPanel(QWidget):
         themes_root: Path,
         ui_zoom: float = 1.0,
         ui_language: str = "en",
+        use_native_file_dialogs: bool = False,
         parent: QWidget | None = None,
     ) -> None:
         """Initialize the panel.
@@ -127,11 +130,14 @@ class UISettingsPanel(QWidget):
                 is no live Theme state to read it from — it is passed in.
             ui_language: The persisted UI language code, used to seed the
                 Language dropdown. Restart-to-apply, so it is passed in.
+            use_native_file_dialogs: Seeds the "Use system file dialogs"
+                checkbox (Issue #100 — non-native Qt dialogs are the default).
             parent: Optional parent widget.
         """
         super().__init__(parent)
         self._themes_root = themes_root
         self._ui_zoom = ui_zoom
+        self._use_native_file_dialogs = use_native_file_dialogs
         self._preview_baseline: str | None = None
         # Star button registry — populated by _populate so favorite toggles
         # can update one row in place instead of rebuilding the entire tree.
@@ -237,6 +243,21 @@ class UISettingsPanel(QWidget):
         font_row.addStretch(1)
 
         layout.addLayout(font_row)
+
+        # File-dialog mode. Qt's built-in dialog is the default because the
+        # OS-native one can hang the GUI thread on some Windows setups
+        # (Explorer shell/cloud enumeration on a bad network — Issue #100).
+        self.native_dialogs_checkbox = QCheckBox(self.tr("Use system file dialogs"))
+        self.native_dialogs_checkbox.setToolTip(
+            self.tr(
+                "Use the operating system's native file pickers instead of the app's built-in ones. "
+                "Native dialogs can freeze the app on some Windows systems with flaky network drives "
+                "or cloud storage, which is why this is off by default."
+            )
+        )
+        self.native_dialogs_checkbox.setChecked(self._use_native_file_dialogs)
+        self.native_dialogs_checkbox.toggled.connect(self._on_native_dialogs_toggled)
+        layout.addWidget(self.native_dialogs_checkbox)
 
         # Theme selection. The intro explains the tree's star/preview behavior,
         # so it sits just above the tree — the language/zoom/text-size controls
@@ -680,6 +701,11 @@ class UISettingsPanel(QWidget):
         self._ui_zoom = int(percent) / 100.0
         self.zoom_restart_note.setVisible(True)
         self.zoom_changed.emit(self._ui_zoom)
+
+    def _on_native_dialogs_toggled(self, checked: bool) -> None:
+        """Persist the file-dialog mode change (applies immediately)."""
+        self._use_native_file_dialogs = checked
+        self.native_dialogs_changed.emit(checked)
 
     def _on_font_scale_selected(self, index: int) -> None:
         """Apply the preset the user picked from the dropdown."""

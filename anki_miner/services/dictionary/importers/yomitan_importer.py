@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import tempfile
 import zipfile
@@ -12,7 +13,12 @@ from pathlib import Path
 from typing import Any, Callable
 
 from anki_miner.exceptions import SetupError
-from anki_miner.services._staging import promote_staged_dir
+from anki_miner.services._sqlite_index import (
+    prove_owned_slot,
+    resolve_managed_slot,
+    write_ownership_marker,
+)
+from anki_miner.services._staging import promote_staged_dir, repair_managed_slot
 from anki_miner.services.dictionary.schema_validation import (
     ensure_bank_array,
     is_valid_term_bank_entry,
@@ -40,9 +46,14 @@ ProgressFn = Callable[[int, int, str], None]
 # the user picked for a reimport slot (derive_dict_id_from_zip), so a small zip
 # carrying a multi-GB highly-compressible index.json cannot OOM the process.
 # The full-import path is already protected by validate_zip_safe's total-size
-# cap before extractall; this guards the peek path that bypasses it. 8 MiB is
+# cap before extraction; this guards the peek path that bypasses it. 8 MiB is
 # orders of magnitude beyond any legitimate index.json.
 MAX_INDEX_JSON_BYTES = 8 * 1024 * 1024
+
+
+def _raise_if_cancelled(cancel_check: Callable[[], bool] | None) -> None:
+    if cancel_check is not None and cancel_check():
+        raise SetupError("Import cancelled")
 
 
 @dataclass(frozen=True)
@@ -75,7 +86,9 @@ def import_yomitan_zip(
         zip_path: Path to the Yomitan-format zip file.
         dest_root: Folder under which <dict_id>/ will be created (typically
                    ~/.anki_miner/dicts/).
-        progress: Optional (current, total, message) callback.
+        progress: Optional (current, total, message) callback. ``total == 0``
+                  means the stage is indeterminate; consumers must call
+                  ``setRange(0, 0)``.
         overwrite: If True and the destination dict_id already exists, the old
                    folder is renamed to <dict_id>.bak-<timestamp> then removed
                    on success. If False, raises SetupError.
@@ -98,10 +111,16 @@ def import_yomitan_zip(
 
     with tempfile.TemporaryDirectory(prefix="anki_miner_yomitan_") as tmp:
         tmp_path = Path(tmp)
+        if progress:
+            progress(0, 0, "Validating archive")
         try:
             with zipfile.ZipFile(zip_path, "r") as zf:
                 validate_zip_safe(zf, tmp_path)
-                zf.extractall(tmp_path)
+                if progress:
+                    progress(0, 0, "Extracting archive")
+                for member in zf.infolist():
+                    _raise_if_cancelled(cancel_check)
+                    zf.extract(member, tmp_path)
         except zipfile.BadZipFile as e:
             raise SetupError(f"Corrupt zip file: {e}") from e
 
@@ -130,13 +149,23 @@ def import_yomitan_zip(
         if dict_id is None:
             dict_id = _derive_dict_id(title, revision)
 
+        try:
+            final_path = resolve_managed_slot(dest_root, dict_id)
+        except ValueError as exc:
+            raise SetupError(str(exc)) from exc
+
         # Fail fast on an already-imported dict BEFORE any staging/rendering
         # work (mirrors Yomitan checking dictionaryExists right after reading
         # index.json). The late check below the atomic rename stays as a
         # race backstop. dest_root may not exist yet — .exists() is False then.
-        final_path = dest_root / dict_id
-        if final_path.exists() and not overwrite:
-            raise SetupError(f"Dictionary '{dict_id}' already exists")
+        if os.path.lexists(final_path):
+            if not overwrite:
+                raise SetupError(f"Dictionary '{dict_id}' already exists")
+            if not prove_owned_slot(final_path.parent, dict_id, "dictionary"):
+                raise SetupError(
+                    f"Dictionary '{dict_id}' exists but is not an Anki Miner-managed dictionary; "
+                    "refusing to overwrite it"
+                )
 
         # Enumerate term bank files for progress totals
         term_files = sorted(tmp_path.glob("term_bank_*.json"))
@@ -146,6 +175,7 @@ def import_yomitan_zip(
         # Stage to a temp dict folder, then atomic-rename
         staging = tmp_path / "_staging" / dict_id
         staging.mkdir(parents=True, exist_ok=True)
+        write_ownership_marker(staging, dict_id, "dictionary")
         db_path = staging / "index.sqlite"
         create_index(db_path)
 
@@ -159,9 +189,8 @@ def import_yomitan_zip(
 
         def rows() -> Any:
             nonlocal total_entries, skipped_malformed
-            for file_idx, term_file in enumerate(term_files, 1):
-                if cancel_check and cancel_check():
-                    raise SetupError("Import cancelled")
+            for term_file in term_files:
+                _raise_if_cancelled(cancel_check)
                 try:
                     entries = json.loads(term_file.read_text(encoding="utf-8"))
                 except json.JSONDecodeError as e:
@@ -224,10 +253,24 @@ def import_yomitan_zip(
                         score=score,
                         sequence=sequence,
                     )
-                if progress:
-                    progress(file_idx, len(term_files), f"Imported {term_file.name}")
 
-        bulk_insert(db_path, rows())
+        if progress:
+            progress(0, 0, "Inserting entries")
+
+        def on_insert_progress(inserted: int) -> None:
+            if progress:
+                progress(inserted, 0, f"Inserted {inserted:,} entries")
+
+        bulk_insert(
+            db_path,
+            rows(),
+            progress=on_insert_progress if progress else None,
+            cancel_check=cancel_check,
+        )
+
+        if progress:
+            progress(0, 0, "Finalizing import")
+        _raise_if_cancelled(cancel_check)
 
         # Tag metadata (schema v3): glob tag_bank_*.json + convert any legacy
         # index.json tagMeta so the provider can expand tag names into hover
@@ -235,8 +278,10 @@ def import_yomitan_zip(
         tag_metas = _collect_tags(tmp_path, index)
         if tag_metas:
             write_tags(db_path, tag_metas)
+        _raise_if_cancelled(cancel_check)
 
         media_warnings = _copy_dict_media(tmp_path, staging / "media", media_paths, dict_id=dict_id)
+        _raise_if_cancelled(cancel_check)
 
         meta = {
             "schema_version": str(SCHEMA_VERSION),
@@ -258,26 +303,26 @@ def import_yomitan_zip(
             meta["styles_css"] = styles_css
 
         write_meta(db_path, meta)
+        _raise_if_cancelled(cancel_check)
 
         # Persist the source zip alongside index.sqlite so "Reimport All" can
         # rebuild without the user re-picking the file. Lives in staging so
         # the atomic rename below promotes it together with the index.
         shutil.copy2(zip_path, staging / "source.zip")
+        _raise_if_cancelled(cancel_check)
 
         # Move staging into dest_root atomically. final_path was computed up
         # front for the early duplicate check; this late check is the race
         # backstop (dir may have appeared since staging began).
-        dest_root.mkdir(parents=True, exist_ok=True)
+        final_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Pre-check stays here (the helper owns only the promote skeleton).
-        if final_path.exists() and not overwrite:
+        if os.path.lexists(final_path) and not overwrite:
             raise SetupError(f"Dictionary '{dict_id}' already exists")
+        _raise_if_cancelled(cancel_check)
         promote_staged_dir(staging, final_path, mover=shutil.move, overwrite=overwrite)
 
-        if progress:
-            progress(len(term_files), len(term_files), "Done")
-
-        return YomitanImportResult(
+        result = YomitanImportResult(
             dict_id=dict_id,
             source_name=title,
             source_revision=revision,
@@ -285,6 +330,36 @@ def import_yomitan_zip(
             skipped_malformed=skipped_malformed,
             media_warnings=tuple(media_warnings),
         )
+
+    if progress:
+        completed = max(total_entries, 1)
+        progress(completed, completed, "Done")
+    return result
+
+
+def repair_yomitan_zip(
+    zip_path: Path,
+    dest_root: Path,
+    *,
+    dict_id: str,
+    progress: ProgressFn | None = None,
+    cancel_check: Callable[[], bool] | None = None,
+) -> YomitanImportResult:
+    """Explicitly repair ``dict_id``, retaining an invalid prior slot as quarantine."""
+    return repair_managed_slot(
+        zip_path,
+        dest_root,
+        dict_id,
+        "dictionary",
+        lambda source, overwrite: import_yomitan_zip(
+            source,
+            dest_root,
+            progress=progress,
+            overwrite=overwrite,
+            cancel_check=cancel_check,
+            dict_id=dict_id,
+        ),
+    )
 
 
 # Informational index.json fields surfaced verbatim to the user. Stored when

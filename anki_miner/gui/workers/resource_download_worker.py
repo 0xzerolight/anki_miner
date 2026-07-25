@@ -2,14 +2,16 @@
 
 Given a list of :class:`ResourceSpec`, downloads each artifact to a temp file
 then routes it to the right importer based on ``kind`` (``dict`` → Yomitan
-dictionary importer, ``freq`` → per-source frequency importer, ``pitch`` → raw
-drop-in TSV write). Each item is wrapped in its own ``try/except`` so one
+dictionary importer, ``freq`` → per-source frequency importer, ``pitch`` →
+per-source pitch importer). Each item is wrapped in its own ``try/except`` so one
 failure never aborts the batch; the per-item outcomes are collected into a
 :class:`ResourceDownloadSummary` emitted at the end.
 
-The ``freq`` route is chain-native: it imports into ``freqs_root/<source_id>/``
-exactly as the ``dict`` route imports into ``dicts_root/<dict_id>/``, and the
-result carries ``source_id`` so the config step can prepend a ``FreqEntry``.
+The ``freq`` and ``pitch`` routes are chain-native: they import into
+``freqs_root/<source_id>/`` / ``pitch_root/<source_id>/`` exactly as the
+``dict`` route imports into ``dicts_root/<dict_id>/``, and the result carries
+``source_id`` so the config step can prepend a ``FreqEntry`` /
+``PitchSourceEntry``.
 
 This worker NEVER mutates config. The summary is its sole output — a later
 task reads ``summary.succeeded`` (plus each result's ``kind`` / ``dict_id`` /
@@ -23,19 +25,20 @@ from __future__ import annotations
 
 import contextlib
 import logging
-import shutil
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import QCoreApplication, pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
 from anki_miner.services.dictionary.superseded import sweep_superseded_dicts
 from anki_miner.services.frequency.source_importer import import_frequency_source
+from anki_miner.services.pitch_accent.source_importer import import_pitch_source
 from anki_miner.services.resource_downloader import download_to_temp
+from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -44,8 +47,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Suffixes import_frequency_source dispatches on; anything else falls back to .zip
-# (the recommended freq resources are Yomitan zips).
+# Suffixes the freq/pitch source importers dispatch on; anything else falls
+# back to .zip (the recommended zip-shaped resources are Yomitan zips).
 _FREQ_SUFFIXES = {".zip", ".csv", ".tsv", ".txt"}
 
 
@@ -95,6 +98,8 @@ class ResourceDownloadSummary:
     """Aggregate of all per-item results from a worker run."""
 
     results: list[ResourceDownloadResult] = field(default_factory=list)
+    cancelled: bool = False
+    requested_count: int = 0
 
     @property
     def succeeded(self) -> list[ResourceDownloadResult]:
@@ -105,6 +110,16 @@ class ResourceDownloadSummary:
     def failed(self) -> list[ResourceDownloadResult]:
         """Results that failed at download or import."""
         return [r for r in self.results if not r.ok]
+
+    @property
+    def completed_count(self) -> int:
+        """Number of items that reached a success or failure outcome."""
+        return len(self.results)
+
+    @property
+    def not_processed_count(self) -> int:
+        """Number of requested items left without an outcome."""
+        return max(self.requested_count - self.completed_count, 0)
 
 
 class ResourceDownloadWorker(CancellableWorker):
@@ -124,7 +139,7 @@ class ResourceDownloadWorker(CancellableWorker):
         *,
         dicts_root: Path,
         freqs_root: Path,
-        pitch_csv: Path,
+        pitch_root: Path,
         download_dir: Path,
         parent=None,
     ) -> None:
@@ -132,7 +147,7 @@ class ResourceDownloadWorker(CancellableWorker):
         self._specs = list(specs)
         self._dicts_root = dicts_root
         self._freqs_root = freqs_root
-        self._pitch_csv = pitch_csv
+        self._pitch_root = pitch_root
         self._download_dir = download_dir
 
     def _progress_for(self, spec_id: str) -> Callable[[int, int, str], None]:
@@ -145,10 +160,11 @@ class ResourceDownloadWorker(CancellableWorker):
 
     def run(self) -> None:
         """Download + import each spec in order, isolating per-item failures."""
-        summary = ResourceDownloadSummary()
+        summary = ResourceDownloadSummary(requested_count=len(self._specs))
 
         for spec in self._specs:
             if self.check_cancelled():
+                summary.cancelled = True
                 break
 
             temp: Path | None = None
@@ -158,7 +174,14 @@ class ResourceDownloadWorker(CancellableWorker):
                     dest_dir=self._download_dir,
                     progress=self._progress_for(spec.id),
                     cancelled_check=lambda: self.is_cancelled,
+                    read_timeout_seconds=1.0,
                 )
+
+                if self.check_cancelled():
+                    summary.cancelled = True
+                    with contextlib.suppress(OSError):
+                        temp.unlink()
+                    break
 
                 dict_id: str | None = None
                 source_id: str | None = None
@@ -198,17 +221,30 @@ class ResourceDownloadWorker(CancellableWorker):
                         self._freqs_root,
                         cancel_check=lambda: self.is_cancelled,
                         progress=self._progress_for(spec.id),
+                        overwrite=True,
                     )
                     source_id = freq_result.source_id
                     detail = f"{freq_result.entry_count} entries"
                 elif spec.kind == "pitch":
-                    self._pitch_csv.parent.mkdir(parents=True, exist_ok=True)
-                    # shutil.move (not os.replace): download_dir and pitch_csv may
-                    # be on different filesystems (download_dir under the system
-                    # temp dir / tmpfs), where os.replace raises a cross-device
-                    # link error. shutil.move falls back to copy+unlink.
-                    shutil.move(str(temp), str(self._pitch_csv))
-                    detail = "downloaded"
+                    # Same suffix re-typing as freq: import_pitch_source
+                    # dispatches on suffix, but download_to_temp stages ``.part``.
+                    # Pin the on-disk slot to the stable catalog id (like dict)
+                    # so a re-download overwrites in place.
+                    temp = _retype_for_suffix(temp, spec.url)
+                    pitch_result = import_pitch_source(
+                        temp,
+                        self._pitch_root,
+                        source_id=spec.id,
+                        source_name=spec.display_name,
+                        cancel_check=lambda: self.is_cancelled,
+                        progress=self._progress_for(spec.id),
+                        overwrite=True,
+                    )
+                    source_id = pitch_result.source_id
+                    detail = tr_format(
+                        QCoreApplication.translate("ResourceDownloadDialog", "%1 entries"),
+                        pitch_result.entry_count,
+                    )
                 else:  # pragma: no cover — catalog kinds are constrained
                     raise ValueError(f"Unknown resource kind: {spec.kind!r}")
 
@@ -228,13 +264,15 @@ class ResourceDownloadWorker(CancellableWorker):
                 )
                 self.item_done.emit(spec.id, True, detail)
             except Exception as exc:  # noqa: BLE001 — isolate per-item failures
-                # Reached only when the route raised: download succeeded but the
-                # importer / pitch move failed, so the temp still exists (the
-                # downloader cleans up only when IT raises; a successful move or
-                # import never reaches here). Best-effort unlink.
+                # The downloader returned a staged file but its route failed.
+                # Downloader-owned failures clean themselves; route failures need
+                # this best-effort unlink.
                 if temp is not None:
                     with contextlib.suppress(OSError):
                         temp.unlink()
+                if self.is_cancelled:
+                    summary.cancelled = True
+                    break
                 logger.debug("resource %s failed: %s", spec.id, exc, exc_info=True)
                 summary.results.append(
                     ResourceDownloadResult(
@@ -248,4 +286,6 @@ class ResourceDownloadWorker(CancellableWorker):
                 )
                 self.item_done.emit(spec.id, False, str(exc))
 
+        if self.is_cancelled:
+            summary.cancelled = True
         self.finished_summary.emit(summary)

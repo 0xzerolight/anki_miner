@@ -33,7 +33,7 @@ MAIN_TABS: frozenset[str] = frozenset(
 )
 # Stable settings sub-tab keys (resolved by SettingsTab.open_subtab).
 SETTINGS_SUBTABS: frozenset[str] = frozenset(
-    {"anki", "media", "dictionaries", "audio", "frequency", "filtering", "youtube", "subtitles", "ui"}
+    {"anki", "media", "dictionaries", "audio", "frequency", "pitch", "filtering", "youtube", "subtitles", "ui"}
 )
 # Valid sub-tab keys per container main tab (resolved by the container's
 # duck-typed ``open_subtab``). Main tabs absent here have no sub-tabs.
@@ -388,7 +388,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Capabilities", "Add pitch-accent information to your cards (numeric or romaji)."
         ),
         category=_CAT_SOURCES,
-        target=CapabilityTarget("settings", "dictionaries"),
+        target=CapabilityTarget("settings", "pitch"),
         keywords=("pitch", "accent", "intonation", "heiban", "nakadaka", "downstep"),
     ),
     # --- Audio -------------------------------------------------------------

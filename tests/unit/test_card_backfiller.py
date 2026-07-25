@@ -516,6 +516,7 @@ class TestScanFillPolicy:
         freq = FakeFrequencyService({("猫", "ねこ"): [("JPDB", 42, None)]})
         plan = scan_backfill(anki, backfill_config, _services(freq=freq), _options({"frequency"}, overwrite=True))
         assert "JPDB" in _changes_by_key(plan, 1)["frequency"]
+        assert plan.identical_skips == 0
 
     def test_overwrite_skips_identical_value(self, backfill_config):
         from anki_miner.services.frequency.render import render_frequency_html
@@ -525,6 +526,31 @@ class TestScanFillPolicy:
         freq = FakeFrequencyService({("猫", "ねこ"): [("JPDB", 42, None)]})
         plan = scan_backfill(anki, backfill_config, _services(freq=freq), _options({"frequency"}, overwrite=True))
         assert plan.notes == ()
+        assert plan.identical_skips == 1
+
+    def test_overwrite_mixed_identical_and_differing_notes(self, backfill_config):
+        from anki_miner.services.frequency.render import render_frequency_html
+
+        current = render_frequency_html([("JPDB", 42, None)])
+        anki = FakeAnkiService(
+            {
+                1: _note(1, word="猫", ExpressionReading="ねこ", Frequency=current),
+                2: _note(2, word="犬", ExpressionReading="いぬ", Frequency="<ul><li>old</li></ul>"),
+            }
+        )
+        freq = FakeFrequencyService({("猫", "ねこ"): [("JPDB", 42, None)], ("犬", "いぬ"): [("JPDB", 7, None)]})
+        plan = scan_backfill(anki, backfill_config, _services(freq=freq), _options({"frequency"}, overwrite=True))
+        assert [note.note_id for note in plan.notes] == [2]
+        assert plan.identical_skips == 1
+
+    def test_overwrite_lookup_miss_yields_empty_plan_without_identicals(self, backfill_config):
+        # No frequency coverage for the word: the filled target produces NO
+        # proposal, so the empty plan must not be attributed to identical values.
+        anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", Frequency="<ul><li>old</li></ul>")})
+        freq = FakeFrequencyService({})
+        plan = scan_backfill(anki, backfill_config, _services(freq=freq), _options({"frequency"}, overwrite=True))
+        assert plan.notes == ()
+        assert plan.identical_skips == 0
 
     def test_unmapped_selected_key_ignored(self, backfill_config):
         config = replace(backfill_config, anki_fields={**backfill_config.anki_fields, "frequency_sort": ""})

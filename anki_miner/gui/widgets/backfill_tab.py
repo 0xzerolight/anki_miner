@@ -23,10 +23,12 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QMessageBox,
     QProgressBar,
+    QScrollArea,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -34,6 +36,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.utils.qt_helpers import install_no_scroll_on_inputs
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.workers.backfill_worker import BackfillApplyWorker, BackfillScanWorker
 from anki_miner.gui.workers.base_worker import SingleCallWorker
@@ -71,7 +74,11 @@ class CardBackfillTab(QWidget):
     # ------------------------------------------------------------------
 
     def _build_ui(self) -> None:
-        layout = QVBoxLayout(self)
+        # Issue #102: the fixed chrome above the table (headers, hint, checkboxes,
+        # buttons) can consume the whole logical height on scaled displays. The
+        # table keeps a hard floor and the tab scrolls instead of crushing it.
+        container = QWidget()
+        layout = QVBoxLayout(container)
 
         layout.addWidget(SectionHeader(self.tr("Card Backfill")))
         hint = QLabel(
@@ -133,6 +140,7 @@ class CardBackfillTab(QWidget):
             [self.tr("Expression"), self.tr("Field"), self.tr("Current"), self.tr("New")]
         )
         self.preview_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.preview_table.setMinimumHeight(240)
         header = self.preview_table.horizontalHeader()
         if header is not None:
             header.setStretchLastSection(True)
@@ -153,6 +161,17 @@ class CardBackfillTab(QWidget):
         self.status_label = QLabel("")
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll_area.setWidget(container)
+        install_no_scroll_on_inputs(container)
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.addWidget(scroll_area)
 
     # ------------------------------------------------------------------
     # Gating / config
@@ -299,8 +318,23 @@ class CardBackfillTab(QWidget):
             )
             if plan.total_field_changes > shown_rows:
                 parts.append(self.tr("Showing first {rows} rows.").format(rows=shown_rows))
-        else:
+        elif not plan.options.overwrite:
             parts.append(self.tr("Nothing to fill — all selected fields already have values."))
+        elif plan.identical_skips > 0:
+            parts.append(
+                self.tr("Nothing to overwrite — the freshly computed values are identical to the existing content.")
+            )
+        else:
+            # Overwrite scan with zero identical skips: the lookups produced no
+            # proposals (word not covered / field absent), so claiming the
+            # values are "identical" or "already present" would be false.
+            parts.append(self.tr("No new values were found for the selected fields."))
+        if plan.identical_skips > 0:
+            parts.append(
+                self.tr("{count} field value(s) already up to date (identical to the computed value).").format(
+                    count=plan.identical_skips
+                )
+            )
         if plan.sentinel_only_sorts:
             parts.append(
                 self.tr("{count} sort value(s) are the 9999999 no-frequency-found placeholder.").format(

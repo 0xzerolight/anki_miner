@@ -2,7 +2,7 @@
 
 import dataclasses
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -126,6 +126,20 @@ def test_create_episode_processor_default_builds_fresh_anki_service(base_config)
     p1 = service_factory.create_episode_processor(base_config, _NullPresenter())
     p2 = service_factory.create_episode_processor(base_config, _NullPresenter())
     assert p1.anki_service is not p2.anki_service
+
+
+def test_build_definition_service_reuses_loaded_registry(base_config):
+    registry = MagicMock(name="registry")
+    providers = [MagicMock(name="provider")]
+    registry.build_provider_chain.return_value = providers
+
+    with (
+        patch.object(service_factory, "_load_dict_registry", return_value=registry),
+        patch.object(service_factory, "DefinitionService") as service_cls,
+    ):
+        service_factory.build_definition_service(base_config)
+
+    service_cls.assert_called_once_with(base_config, providers=providers, registry=registry)
 
 
 # ---------------------------------------------------------------------------
@@ -323,22 +337,31 @@ class TestFrequencyServiceWiring:
 
 
 class TestPitchServiceWiring:
-    """Pitch activation is derived from the pitch file being present — no on/off
-    flag, and independent of any mapped pitch Anki field."""
+    """Pitch activation is derived from the chain having an enabled source — no
+    on/off flag, and independent of any mapped pitch Anki field."""
 
-    def _config(self, tmp_path: Path, pitch_path: Path) -> AnkiMinerConfig:
+    def _config(self, tmp_path: Path, *, with_source: bool) -> AnkiMinerConfig:
+        from anki_miner.config import PitchSourceEntry
+
+        chain: tuple[PitchSourceEntry, ...] = ()
+        if with_source:
+            from anki_miner.services.pitch_accent.source_importer import import_pitch_source
+
+            csv = tmp_path / "pitch.csv"
+            csv.write_text("たべる,食べる,0\nのむ,飲む,1\n", encoding="utf-8")
+            source_id = import_pitch_source(csv, tmp_path / "pitch", source_id="testpitch").source_id
+            chain = (PitchSourceEntry(source_id),)
         return dataclasses.replace(
             AnkiMinerConfig(),
             dicts_root=tmp_path / "dicts",
             known_words_db_path=tmp_path / "known_words.db",
             stats_db_path=tmp_path / "stats.db",
-            pitch_accent_path=pitch_path,
+            pitch_root=tmp_path / "pitch",
+            pitch_chain=chain,
         )
 
-    def test_present_file_builds_service_without_mapped_field(self, tmp_path: Path):
-        pitch = tmp_path / "pitch.csv"
-        pitch.write_text("たべる,食べる,0\nのむ,飲む,1\n", encoding="utf-8")
-        cfg = self._config(tmp_path, pitch)
+    def test_chained_source_builds_service_without_mapped_field(self, tmp_path: Path):
+        cfg = self._config(tmp_path, with_source=True)
 
         assert not any(
             cfg.anki_fields.get(k) for k in ("pitch_position", "pitch_category", "pitch_graph", "pitch_text")
@@ -348,13 +371,25 @@ class TestPitchServiceWiring:
         services = service_factory.create_services(cfg)
 
         assert services.pitch_accent_service is not None
+        assert services.pitch_accent_service.lookup_entry("食べる", "たべる") is not None
 
-    def test_absent_file_yields_none(self, tmp_path: Path):
-        cfg = self._config(tmp_path, tmp_path / "missing.csv")
+    def test_empty_chain_yields_none(self, tmp_path: Path):
+        cfg = self._config(tmp_path, with_source=False)
 
         assert cfg.pitch_active is False
         services = service_factory.create_services(cfg)
 
+        assert services.pitch_accent_service is None
+
+    def test_enabled_entry_missing_on_disk_yields_none(self, tmp_path: Path):
+        from anki_miner.config import PitchSourceEntry
+
+        cfg = dataclasses.replace(
+            self._config(tmp_path, with_source=False),
+            pitch_chain=(PitchSourceEntry("ghost"),),
+        )
+        assert cfg.pitch_active is True
+        services = service_factory.create_services(cfg)
         assert services.pitch_accent_service is None
 
 
@@ -442,10 +477,12 @@ class TestSharedLookupServices:
         return import_frequency_source(csv, freqs_root, source_id="testfreq").source_id
 
     def _config(self, tmp_path: Path) -> AnkiMinerConfig:
-        from anki_miner.config import FreqEntry
+        from anki_miner.config import FreqEntry, PitchSourceEntry
+        from anki_miner.services.pitch_accent.source_importer import import_pitch_source
 
         pitch = tmp_path / "pitch.csv"
         pitch.write_text("たべる,食べる,0\nのむ,飲む,1\n", encoding="utf-8")
+        pitch_id = import_pitch_source(pitch, tmp_path / "pitch", source_id="testpitch").source_id
         source_id = self._import_freq_source(tmp_path / "freqs", tmp_path)
         return dataclasses.replace(
             AnkiMinerConfig(),
@@ -454,7 +491,8 @@ class TestSharedLookupServices:
             stats_db_path=tmp_path / "stats.db",
             freqs_root=tmp_path / "freqs",
             frequency_chain=(FreqEntry(source_id=source_id),),
-            pitch_accent_path=pitch,
+            pitch_root=tmp_path / "pitch",
+            pitch_chain=(PitchSourceEntry(pitch_id),),
         )
 
     def test_create_shared_lookup_services_builds_all(self, tmp_path: Path):
@@ -489,7 +527,7 @@ class TestSharedLookupServices:
         try:
             with (
                 patch.object(service_factory, "_load_dict_registry") as mock_reg,
-                patch.object(service_factory, "PitchAccentService") as mock_pitch,
+                patch.object(service_factory, "PitchSourceRegistry") as mock_pitch,
                 patch.object(service_factory, "FrequencySourceRegistry") as mock_freq,
             ):
                 service_factory.create_services(cfg, shared_lookup=bundle)

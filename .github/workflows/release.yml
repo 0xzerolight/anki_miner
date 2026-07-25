@@ -202,13 +202,43 @@ jobs:
 
       # PyInstaller bootloader handling. The prebuilt PyPI wheel ships a bootloader
       # binary whose hash AV vendors flag (malware reuses it), a major source of the
-      # Defender false positives. On Windows, build it from source (--no-binary) so
-      # the bootloader gets a fresh, unflagged hash; windows-latest has the MSVC
-      # toolchain preinstalled. Other OSes keep the prebuilt wheel. Pin for
+      # Defender false positives. On Windows, PYINSTALLER_COMPILE_BOOTLOADER=1
+      # forces the sdist (--no-binary) to rebuild via waf; windows-latest has the
+      # MSVC toolchain preinstalled. Other OSes keep the prebuilt wheel. Pin for
       # reproducible bundles; bump deliberately.
       - name: Install PyInstaller (Windows, bootloader from source)
         if: runner.os == 'Windows'
-        run: pip install --no-binary pyinstaller pyinstaller==6.20.0
+        env:
+          PYINSTALLER_COMPILE_BOOTLOADER: "1"
+        run: |
+          $ErrorActionPreference = 'Stop'
+          pip install --verbose --no-cache-dir --no-binary=pyinstaller pyinstaller==6.20.0 2>&1 | Tee-Object -FilePath pyinstaller-install.log
+          $pipExit = $LASTEXITCODE
+          if ($pipExit -ne 0) {
+            exit $pipExit
+          }
+
+      - name: Assert bootloader built from source
+        if: runner.os == 'Windows'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $log = Get-Content -LiteralPath pyinstaller-install.log -Raw
+          if ($log -notmatch 'waf' -or $log -notmatch 'bootloader') {
+            throw 'PyInstaller install log lacks bootloader compilation evidence.'
+          }
+
+          $runw = python -c "from pathlib import Path; import PyInstaller; print(Path(PyInstaller.PACKAGEPATH) / 'bootloader' / PyInstaller.PLATFORM / 'runw.exe')"
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+          # Waf evidence proves this install compiled; existence verifies installed
+          # output. mtime is unreliable after pip wheel staging/copying.
+          if (-not (Test-Path -LiteralPath $runw -PathType Leaf)) {
+            throw "No installed Windows-64bit runw.exe found at $runw."
+          }
+          $hash = (Get-FileHash -LiteralPath $runw -Algorithm SHA256).Hash
+          Write-Output "Bootloader path: $runw"
+          Write-Output "Bootloader SHA-256: $hash"
 
       - name: Install PyInstaller (Linux/macOS)
         if: runner.os != 'Windows'
@@ -892,9 +922,110 @@ jobs:
           BUNDLE_SMOKE_GGML_MODEL: ${{ env.SMOKE_GGML_MODEL_PATH }}
         run: scripts/bundle_smoke.sh dist/AnkiMiner
 
+      - name: Install Inno Setup (pinned)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # Chocolatey's innosetup package lags (6.x); install the official
+          # 7.0.2 from the immutable jrsoftware/issrc release asset, pinned by
+          # SHA-256 (hash cross-checked against the GitHub API asset digest).
+          $url = 'https://github.com/jrsoftware/issrc/releases/download/is-7_0_2/innosetup-7.0.2-x64.exe'
+          $expectedSha = '5ad54ca3def786f8f4212552e54cc6d8d61329e2d24a1cfee0571d42c2684ff1'
+          $setup = Join-Path $env:RUNNER_TEMP 'innosetup-7.0.2-x64.exe'
+          Invoke-WebRequest -Uri $url -OutFile $setup
+          $actualSha = (Get-FileHash -Algorithm SHA256 $setup).Hash.ToLowerInvariant()
+          if ($actualSha -ne $expectedSha) {
+            throw "Inno Setup download hash mismatch: expected $expectedSha, got $actualSha"
+          }
+          $installDir = 'C:\InnoSetup7'
+          $proc = Start-Process -FilePath $setup -ArgumentList @(
+            '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$installDir"
+          ) -Wait -PassThru
+          if ($proc.ExitCode -ne 0) {
+            throw "Inno Setup installer exited with $($proc.ExitCode)"
+          }
+          $iscc = Join-Path $installDir 'ISCC.exe'
+          if (-not (Test-Path $iscc)) {
+            throw "ISCC.exe not found at $iscc after install"
+          }
+          # The SHA-256 pin above is the authoritative 7.0.2 identity check.
+          # Do NOT assert (Get-Item $iscc).VersionInfo.ProductVersion: Inno Setup
+          # 7.x ISCC.exe ships ProductVersion 0.0.0.0, and its runtime banner
+          # (ISCC.dpr ShowBanner) carries only the major "Inno Setup 7", never
+          # "7.0.2". Functional sanity check that ISCC runs and self-reports v7;
+          # `iscc /?` prints the banner to stdout then Halt(1), so the native
+          # exit code 1 is expected and not an error.
+          $banner = (& $iscc /? 2>$null | Select-Object -First 1)
+          if ($banner -notlike 'Inno Setup 7*') {
+            throw "Unexpected ISCC banner '$banner' at $iscc"
+          }
+          $installDir | Out-File -FilePath $env:GITHUB_PATH -Append
+
       - name: Build Windows installer
         if: runner.os == 'Windows'
-        run: iscc /DAppVersion=${{ steps.version.outputs.version }} packaging\innosetup\anki_miner.iss
+        shell: pwsh
+        run: |
+          iscc /DAppVersion=${{ steps.version.outputs.version }} packaging\innosetup\anki_miner.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Fast, guard-bearing CI probe. Explicit Windows artifact upload below
+          # names only EXPECTED_VERSION, so this 0.0.1 installer is never shipped.
+          iscc /DAppVersion=0.0.1 /DProbeBuild=1 /Odist packaging\innosetup\anki_miner.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Smoke Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        timeout-minutes: 25
+        env:
+          INSTALLER_PATH: dist/AnkiMiner-${{ steps.version.outputs.version }}-Windows-x86_64-Setup.exe
+          EXPECTED_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          . (Join-Path $PWD 'scripts/windows_installer_smoke_lib.ps1')
+          Invoke-WindowsInstallerSmokeLegs12 `
+            -InstallerPath $env:INSTALLER_PATH `
+            -ExpectedVersion $env:EXPECTED_VERSION `
+            -RepoRoot $PWD.Path
+
+      - name: Smoke Windows installer upgrade (leg3)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        timeout-minutes: 30
+        env:
+          INSTALLER_PATH: dist/AnkiMiner-${{ steps.version.outputs.version }}-Windows-x86_64-Setup.exe
+          PROBE_INSTALLER_PATH: dist/AnkiMiner-0.0.1-Windows-x86_64-Setup.exe
+          EXPECTED_VERSION: ${{ steps.version.outputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          . (Join-Path $PWD 'scripts/windows_installer_smoke_lib.ps1')
+          Invoke-WindowsInstallerSmokeLeg3 `
+            -InstallerPath $env:INSTALLER_PATH `
+            -ProbeInstallerPath $env:PROBE_INSTALLER_PATH `
+            -ExpectedVersion $env:EXPECTED_VERSION `
+            -Repository $env:GITHUB_REPOSITORY `
+            -RepoRoot $PWD.Path
+
+      - name: Upload Windows installer smoke logs
+        if: ${{ failure() && runner.os == 'Windows' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ${{ matrix.artifact_name }}-installer-smoke-logs
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/setup1.log
+            ${{ runner.temp }}/uninstall1.log
+            ${{ runner.temp }}/setup2.log
+            ${{ runner.temp }}/uninstall2.log
+            ${{ runner.temp }}/uninstall-cleanup.log
+            ${{ runner.temp }}/setup-old.log
+            ${{ runner.temp }}/setup-upgrade.log
+            ${{ runner.temp }}/setup-downgrade-probe.log
+            ${{ runner.temp }}/uninstall-upgrade.log
 
       - name: Build AppImage (Linux)
         if: runner.os == 'Linux'

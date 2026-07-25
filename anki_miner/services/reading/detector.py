@@ -17,13 +17,20 @@ document metadata.
 from __future__ import annotations
 
 import json
+import zipfile
 from pathlib import Path
 from typing import Any, Literal
 
 from anki_miner.exceptions import SetupError
 from anki_miner.models.reading import ReadingDocument, ReadingSourceRef
 
-from ._util import MAX_MOKURO_JSON_BYTES, is_junk_path, natural_sort_key, read_text_capped
+from ._util import (
+    MAX_MOKURO_JSON_BYTES,
+    is_junk_path,
+    natural_sort_key,
+    read_text_capped,
+    read_zip_member_text_capped,
+)
 
 # Required top-level keys in a ``.mokuro`` sidecar. Unknown keys are ignored —
 # community files carry extras like ``chars``/``spine_width``.
@@ -55,9 +62,11 @@ def detect(path: Path) -> list[ReadingSourceRef]:
     Cascade (first match wins):
 
     1. ``*.mokuro`` file → one manga volume.
-    2. ``.cbz``/``.zip`` → its sibling ``.mokuro`` (required, else error).
-    3. directory → its ``*.mokuro`` children (title dir), else the sibling
-       ``<name>.mokuro`` (user dropped the image dir itself), else error.
+    2. ``.cbz``/``.zip`` → its sibling ``.mokuro``, else an embedded
+       ``.mokuro`` member inside the archive (Issue #103), else error.
+    3. directory → its ``*.mokuro`` children and embedded-``.mokuro``
+       archives (title dir), else the sibling ``<name>.mokuro`` (user
+       dropped the image dir itself), else error.
     4. ``.epub``/``.txt`` → one book (metadata deferred to the loader).
     5. ``.srt``/``.ass``/``.ssa``/``.vtt`` → one subtitle document (metadata
        deferred to the loader).
@@ -82,8 +91,8 @@ def detect(path: Path) -> list[ReadingSourceRef]:
 
     raise SetupError(
         f"'{path.name}' is not a recognized reading source. Supported: .mokuro, "
-        ".cbz/.zip (with a matching .mokuro), .epub, .txt, subtitle files "
-        "(.srt/.ass/.ssa/.vtt), or a folder of .mokuro volumes."
+        ".cbz/.zip (with a matching .mokuro beside or inside it), .epub, .txt, "
+        "subtitle files (.srt/.ass/.ssa/.vtt), or a folder of .mokuro volumes."
     )
 
 
@@ -195,15 +204,34 @@ def _subtitle_ref(path: Path) -> ReadingSourceRef:
 
 
 def _detect_archive(archive_path: Path) -> list[ReadingSourceRef]:
-    """A dropped ``.cbz``/``.zip`` resolves through its sibling ``.mokuro``."""
+    """A dropped ``.cbz``/``.zip`` resolves through its ``.mokuro`` OCR data.
+
+    The sibling sidecar always wins (the standard mokuro-CLI layout); a
+    self-contained archive carrying its ``.mokuro`` as a member is the
+    fallback (Issue #103).
+    """
     sidecar = archive_path.with_suffix(".mokuro")
     if sidecar.is_file():
         return [_mokuro_ref(sidecar)]
-    raise SetupError(f"No .mokuro sidecar found for '{archive_path.name}'. Expected '{sidecar.name}' alongside it.")
+    embedded = _embedded_mokuro_ref(archive_path, strict=True)
+    if embedded is not None:
+        return [embedded]
+    raise SetupError(
+        f"No .mokuro data found for '{archive_path.name}'. Expected '{sidecar.name}' "
+        "alongside it, or a .mokuro member inside the archive."
+    )
 
 
 def _detect_directory(directory: Path) -> list[ReadingSourceRef]:
-    """A dropped directory is a title dir, a dropped image dir, or not mokuro."""
+    """A dropped directory is a title dir, a dropped image dir, or not mokuro.
+
+    A title dir's volumes are its ``.mokuro`` children plus any self-contained
+    ``.cbz``/``.zip`` archives carrying an embedded ``.mokuro`` member. A
+    sidecar covers its same-stem archive (one volume, not two), and among
+    embedded-only same-stem archives ``.cbz`` beats ``.zip`` (mirroring
+    :func:`_resolve_image_root`). A broken/OCR-less archive contributes
+    nothing — it must never abort the folder scan.
+    """
     children = sorted(
         (
             child
@@ -212,8 +240,33 @@ def _detect_directory(directory: Path) -> list[ReadingSourceRef]:
         ),
         key=lambda child: natural_sort_key(child.name),
     )
-    if children:
-        return [_mokuro_ref(child) for child in children]
+    sidecar_stems = {child.stem for child in children}
+    archives = sorted(
+        (
+            child
+            for child in directory.iterdir()
+            if child.is_file()
+            and child.suffix.lower() in _ARCHIVE_EXTS
+            and child.stem not in sidecar_stems
+            and not is_junk_path(child.name)
+        ),
+        # Same-stem .cbz/.zip pairs: keep the first per stem, .cbz preferred.
+        key=lambda child: (natural_sort_key(child.name), _ARCHIVE_EXTS.index(child.suffix.lower())),
+    )
+    seen_stems: set[str] = set()
+    embedded_pairs: list[tuple[Path, ReadingSourceRef]] = []
+    for archive in archives:
+        if archive.stem in seen_stems:
+            continue
+        seen_stems.add(archive.stem)
+        ref = _embedded_mokuro_ref(archive, strict=False)
+        if ref is not None:
+            embedded_pairs.append((archive, ref))
+
+    if children or embedded_pairs:
+        volumes = [(child, _mokuro_ref(child)) for child in children] + embedded_pairs
+        volumes.sort(key=lambda pair: natural_sort_key(pair[0].name))
+        return [ref for _, ref in volumes]
 
     # User dropped the image dir itself: look for a sibling "<name>.mokuro".
     sidecar = directory.parent / (directory.name + ".mokuro")
@@ -222,7 +275,55 @@ def _detect_directory(directory: Path) -> list[ReadingSourceRef]:
 
     raise SetupError(
         f"'{directory.name}' is not a recognized reading source: no .mokuro "
-        "volumes inside it and no matching .mokuro sidecar beside it."
+        "volumes or embedded-.mokuro archives inside it and no matching "
+        ".mokuro sidecar beside it."
+    )
+
+
+def _embedded_mokuro_ref(archive_path: Path, *, strict: bool) -> ReadingSourceRef | None:
+    """Probe an archive for exactly one embedded ``.mokuro`` member.
+
+    Returns a fully-populated ref (``path`` = ``image_root`` = the archive,
+    ``ocr_entry`` = the member) or ``None`` when the archive has no ``.mokuro``
+    member. Failure containment is the caller's contract:
+
+    * ``strict=True`` (a directly-selected archive): ambiguous/unreadable
+      archives and malformed members raise :class:`SetupError` so the user
+      sees why their pick failed.
+    * ``strict=False`` (a title-dir scan): ANY failure returns ``None`` — one
+      broken archive in a series folder must never abort the whole scan.
+    """
+    try:
+        try:
+            with zipfile.ZipFile(archive_path) as zf:
+                members = [
+                    name for name in zf.namelist() if name.lower().endswith(".mokuro") and not is_junk_path(name)
+                ]
+        except (zipfile.BadZipFile, OSError) as e:
+            raise SetupError(f"Cannot read archive '{archive_path.name}': {e}") from e
+        if not members:
+            return None
+        if len(members) > 1:
+            raise SetupError(
+                f"'{archive_path.name}' contains multiple .mokuro members "
+                f"({', '.join(sorted(members))}); expected exactly one volume."
+            )
+        entry = members[0]
+        meta = _parse_mokuro_meta(
+            read_zip_member_text_capped(archive_path, entry, MAX_MOKURO_JSON_BYTES, ".mokuro member"),
+            f"{archive_path.name}:{entry}",
+        )
+    except SetupError:
+        if strict:
+            raise
+        return None
+    return ReadingSourceRef(
+        kind="mokuro",
+        path=archive_path,
+        image_root=archive_path,
+        title=str(meta["title"]),
+        volume=str(meta["volume"]),
+        ocr_entry=entry,
     )
 
 
@@ -265,19 +366,28 @@ def _read_mokuro_meta(mokuro_path: Path) -> dict[str, Any]:
         raw = read_text_capped(mokuro_path, MAX_MOKURO_JSON_BYTES, ".mokuro file")
     except OSError as e:
         raise SetupError(f"Cannot read .mokuro file '{mokuro_path.name}': {e}") from e
+    return _parse_mokuro_meta(raw, mokuro_path.name)
 
+
+def _parse_mokuro_meta(raw: str, display_name: str) -> dict[str, Any]:
+    """Validate ``.mokuro`` JSON text (sidecar file or archive member).
+
+    Carries ALL the schema validation — JSON parse, object top level,
+    required keys, and pages-is-an-array — so the sidecar and embedded
+    paths cannot drift.
+    """
     try:
         data = json.loads(raw)
     except json.JSONDecodeError as e:
-        raise SetupError(f"Invalid .mokuro file '{mokuro_path.name}': {e}") from e
+        raise SetupError(f"Invalid .mokuro file '{display_name}': {e}") from e
 
     if not isinstance(data, dict):
-        raise SetupError(f"Invalid .mokuro file '{mokuro_path.name}': expected a JSON object at the top level.")
+        raise SetupError(f"Invalid .mokuro file '{display_name}': expected a JSON object at the top level.")
 
     missing = [key for key in _MOKURO_REQUIRED_KEYS if key not in data]
     if missing:
-        raise SetupError(f"Invalid .mokuro file '{mokuro_path.name}': missing required key(s): {', '.join(missing)}.")
+        raise SetupError(f"Invalid .mokuro file '{display_name}': missing required key(s): {', '.join(missing)}.")
     if not isinstance(data["pages"], list):
-        raise SetupError(f"Invalid .mokuro file '{mokuro_path.name}': pages must be an array.")
+        raise SetupError(f"Invalid .mokuro file '{display_name}': pages must be an array.")
 
     return data

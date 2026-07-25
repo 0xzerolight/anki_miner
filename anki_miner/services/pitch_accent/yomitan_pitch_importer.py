@@ -84,6 +84,74 @@ class YomitanPitchImportResult:
     skipped_malformed: int = 0
 
 
+def extract_pitch_rows(
+    banks: Any,
+    *,
+    progress: ProgressFn | None = None,
+    cancel_check: Callable[[], bool] | None = None,
+) -> tuple[dict[tuple[str, str], tuple[str, str, str]], int]:
+    """Extract normalized pitch rows from opened Yomitan meta banks.
+
+    Shared between the legacy single-CSV importer and the per-source chain
+    importer (:mod:`anki_miner.services.pitch_accent.source_importer`).
+
+    Returns ``(entries_out, skipped_display_only)`` where ``entries_out`` keys
+    on ``(kanji_or_empty, reading)`` — homographs with distinct readings both
+    survive, first occurrence wins to match the CSV loader — and each value is
+    ``(pattern, nasal_field, devoice_field)``, each a single CSV field.
+    """
+    entries_out: dict[tuple[str, str], tuple[str, str, str]] = {}
+    skipped_display_only = 0
+
+    for bank in banks.iter_banks(progress=progress, cancel_check=cancel_check):
+        # Entries are already structurally validated by iter_banks (list,
+        # arity >= 3, non-blank term); only the mode/data logic remains.
+        for entry in bank:
+            if entry[1] != "pitch":
+                continue
+            term = str(entry[0]).strip()
+
+            data = entry[2]
+            if not isinstance(data, dict):
+                skipped_display_only += 1
+                continue
+
+            reading_raw = data.get("reading", "")
+            reading = str(reading_raw).strip() if reading_raw is not None else ""
+            pitches = data.get("pitches", [])
+            if not isinstance(pitches, list):
+                pitches = []
+
+            positions: list[int | str] = []
+            nasal: list[int] = []
+            devoice: list[int] = []
+            for p in pitches:
+                if not isinstance(p, dict):
+                    continue
+                position = _valid_position(p.get("position"))
+                if position is None:
+                    continue
+                positions.append(position)
+                nasal.extend(_to_number_array(p.get("nasal")))
+                devoice.extend(_to_number_array(p.get("devoice")))
+
+            if not reading or not positions:
+                skipped_display_only += 1
+                continue
+
+            kanji = term if term != reading else ""
+            pattern = ",".join(str(p) for p in positions)
+            # Dedupe positions preserving order (a bare integer nasal repeated
+            # across pitches shouldn't double up in the merged field).
+            nasal_field = ",".join(str(n) for n in dict.fromkeys(nasal))
+            devoice_field = ",".join(str(d) for d in dict.fromkeys(devoice))
+            key = (kanji, reading)
+            if key not in entries_out:
+                entries_out[key] = (pattern, nasal_field, devoice_field)
+
+    return entries_out, skipped_display_only
+
+
 def import_yomitan_pitch_zip(
     zip_path: Path,
     dest_csv: Path,
@@ -107,57 +175,7 @@ def import_yomitan_pitch_zip(
             unsafe zip paths.
     """
     with open_yomitan_meta_banks(zip_path, kind="pitch") as banks:
-        # Key on (kanji_or_term, reading) so homographs with distinct readings
-        # both survive. First occurrence wins to match PitchAccentService.load.
-        # Value: (pattern, nasal_field, devoice_field) — each a single CSV field.
-        entries_out: dict[tuple[str, str], tuple[str, str, str]] = {}
-        skipped_display_only = 0
-
-        for bank in banks.iter_banks(progress=progress, cancel_check=cancel_check):
-            # Entries are already structurally validated by iter_banks (list,
-            # arity >= 3, non-blank term); only the mode/data logic remains.
-            for entry in bank:
-                if entry[1] != "pitch":
-                    continue
-                term = str(entry[0]).strip()
-
-                data = entry[2]
-                if not isinstance(data, dict):
-                    skipped_display_only += 1
-                    continue
-
-                reading_raw = data.get("reading", "")
-                reading = str(reading_raw).strip() if reading_raw is not None else ""
-                pitches = data.get("pitches", [])
-                if not isinstance(pitches, list):
-                    pitches = []
-
-                positions: list[int | str] = []
-                nasal: list[int] = []
-                devoice: list[int] = []
-                for p in pitches:
-                    if not isinstance(p, dict):
-                        continue
-                    position = _valid_position(p.get("position"))
-                    if position is None:
-                        continue
-                    positions.append(position)
-                    nasal.extend(_to_number_array(p.get("nasal")))
-                    devoice.extend(_to_number_array(p.get("devoice")))
-
-                if not reading or not positions:
-                    skipped_display_only += 1
-                    continue
-
-                kanji = term if term != reading else ""
-                pattern = ",".join(str(p) for p in positions)
-                # Dedupe positions preserving order (a bare integer nasal repeated
-                # across pitches shouldn't double up in the merged field).
-                nasal_field = ",".join(str(n) for n in dict.fromkeys(nasal))
-                devoice_field = ",".join(str(d) for d in dict.fromkeys(devoice))
-                key = (kanji, reading)
-                if key not in entries_out:
-                    entries_out[key] = (pattern, nasal_field, devoice_field)
+        entries_out, skipped_display_only = extract_pitch_rows(banks, progress=progress, cancel_check=cancel_check)
 
         title = banks.title
         revision = banks.revision

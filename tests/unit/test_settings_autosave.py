@@ -95,6 +95,24 @@ class TestDebounceWiring:
         assert len(received) == 1
         assert received[0].anki_deck_name == "ABC"
 
+    def test_debounce_retries_while_panel_mutation_token_is_active(self, tab, qtbot):
+        received: list[AnkiMinerConfig] = []
+        timeout_count: list[None] = []
+        tab.config_changed.connect(received.append)
+        tab._debounce_timer.timeout.connect(lambda: timeout_count.append(None))
+        tab._debounce_timer.setInterval(20)
+        token = tab.dictionary_panel.hold_mutation("scan")
+        tab.deck_input.setText("WaitForToken")
+
+        qtbot.waitUntil(lambda: bool(timeout_count), timeout=3000)
+
+        assert received == []
+        assert tab._debounce_timer.isActive()
+
+        with qtbot.waitSignal(tab.config_changed, timeout=3000) as blocker:
+            tab.dictionary_panel.release(token)
+        assert blocker.args[0].anki_deck_name == "WaitForToken"
+
 
 class TestPerFieldValidation:
     def test_invalid_regex_keeps_last_good_and_commits_rest(self, tab, test_config, no_modals):
@@ -212,44 +230,6 @@ class TestPerFieldValidation:
         assert received[-1].dicts_root == new_root
 
 
-class TestPitchSelectorResync:
-    def test_cancelled_zip_import_resyncs_selector_and_commits_rest(self, tab, test_config, no_modals, monkeypatch):
-        monkeypatch.setattr(tab._zip_import_flow, "run_modal_zip_import", lambda **kw: None)
-        received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
-        tab.dictionary_panel.pitch_accent_selector.set_path("/tmp/pitch.zip")
-        tab.deck_input.setText("PitchDeck")
-
-        tab.commit_settings()
-
-        assert len(received) == 1
-        assert received[0].anki_deck_name == "PitchDeck"
-        assert received[0].pitch_accent_path == test_config.pitch_accent_path
-        selector_path = tab.dictionary_panel.pitch_accent_selector.get_path()
-        assert selector_path == str(test_config.pitch_accent_path)
-
-    def test_declined_overwrite_resyncs_selector(self, tab, test_config, no_modals, monkeypatch):
-        # Overwrite-decline returns the fallback path (NOT None); the selector
-        # must still be re-synced or the next commit re-pops the modal.
-        monkeypatch.setattr(
-            tab._zip_import_flow,
-            "run_modal_zip_import",
-            lambda **kw: test_config.pitch_accent_path,
-        )
-        tab.dictionary_panel.pitch_accent_selector.set_path("/tmp/pitch.zip")
-
-        tab.commit_settings()
-
-        selector_path = tab.dictionary_panel.pitch_accent_selector.get_path()
-        assert selector_path == str(test_config.pitch_accent_path)
-
-    def test_selector_resync_does_not_arm_debounce(self, tab, test_config, no_modals, monkeypatch):
-        monkeypatch.setattr(tab._zip_import_flow, "run_modal_zip_import", lambda **kw: None)
-        tab.dictionary_panel.pitch_accent_selector.set_path("/tmp/pitch.zip")
-        tab.commit_settings()
-        assert not tab._debounce_timer.isActive()
-
-
 class TestFlushAndShutdown:
     def test_flush_commits_pending_edit_exactly_once(self, tab, no_modals):
         received: list[AnkiMinerConfig] = []
@@ -265,22 +245,6 @@ class TestFlushAndShutdown:
 
         tab.flush_pending_settings()
         assert len(received) == 1
-
-    def test_flush_skips_modal_zip_import(self, tab, test_config, no_modals, monkeypatch):
-        def _boom(**kwargs):  # pragma: no cover - failure path
-            raise AssertionError("modal zip import ran during close flush")
-
-        monkeypatch.setattr(tab._zip_import_flow, "run_modal_zip_import", _boom)
-        received: list[AnkiMinerConfig] = []
-        tab.config_changed.connect(received.append)
-        tab.dictionary_panel.pitch_accent_selector.set_path("/tmp/pending.zip")
-        tab.deck_input.setText("CloseDeck")
-
-        tab.flush_pending_settings()
-
-        assert len(received) == 1
-        assert received[0].anki_deck_name == "CloseDeck"
-        assert received[0].pitch_accent_path == test_config.pitch_accent_path
 
     def test_shutdown_stops_armed_timer(self, tab):
         tab.deck_input.setText("Pending")

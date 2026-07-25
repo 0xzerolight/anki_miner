@@ -87,7 +87,7 @@ class TestLoad:
         assert meta.db_path == final_dir / "index.sqlite"
         assert isinstance(meta.pack_dir, Path)
 
-    def test_null_sqlite_schema_scalar_skips_pack(self, tmp_path: Path):
+    def test_null_sqlite_schema_scalar_retains_stale_pack(self, tmp_path: Path):
         packs_root, final_dir, pack_id = _import_pack(tmp_path)
         db = final_dir / "index.sqlite"
         with sqlite3.connect(db) as conn:
@@ -97,7 +97,7 @@ class TestLoad:
         reg = AudioPackRegistry(packs_root)
         reg.load()
 
-        assert pack_id not in reg.packs
+        assert reg.packs[pack_id].schema_ok is False
 
     def test_pack_dir_exists_true_when_pack_dir_present(self, tmp_path: Path):
         packs_root, _, pack_id = _import_pack(tmp_path)
@@ -187,11 +187,27 @@ class TestLoad:
                 "pack_dir": str(bak),
             },
         )
+        tomb = packs_root / "nhk16.tomb-124"
+        tomb.mkdir()
+        tomb_db = tomb / "index.sqlite"
+        create_index(tomb_db)
+        write_meta(
+            tomb_db,
+            {
+                "pack_id": "nhk16",
+                "source": "nhk16",
+                "format": "nhk16",
+                "entry_count": "1",
+                "schema_version": str(SCHEMA_VERSION),
+                "pack_dir": str(tomb),
+            },
+        )
 
         reg = AudioPackRegistry(packs_root)
         reg.load()
         assert pack_id in reg.packs
         assert "nhk16.bak-123" not in reg.packs
+        assert "nhk16.tomb-124" not in reg.packs
         assert "nhk16" not in reg.packs  # backup must not masquerade as the pack
 
     def test_corrupt_meta_skipped_with_warning(self, tmp_path: Path, caplog):
@@ -208,7 +224,7 @@ class TestLoad:
         assert "bad_pack" not in reg.packs
         assert any("bad_pack" in r.message or "bad_pack" in str(r) for r in caplog.records)
 
-    def test_schema_mismatch_skipped_with_warning(self, tmp_path: Path, caplog):
+    def test_schema_mismatch_retained_as_stale_with_warning(self, tmp_path: Path, caplog):
         root = tmp_path / "audio_packs"
         old_dir = root / "old_pack"
         old_dir.mkdir(parents=True)
@@ -230,7 +246,10 @@ class TestLoad:
             reg = AudioPackRegistry(root)
             reg.load()
 
-        assert "old_pack" not in reg.packs
+        stale = reg.packs["old_pack"]
+        assert stale.schema_ok is False
+        assert stale.source == "s"
+        assert stale.entry_count == 1
         assert any("old_pack" in r.message or "schema_version" in r.message for r in caplog.records)
 
     def test_load_clears_previous_state(self, tmp_path: Path):
@@ -307,6 +326,20 @@ class TestBuildFetcherChain:
 
         assert result == []
         assert any(pack_id in r.message for r in caplog.records)
+
+    def test_stale_pack_excluded_from_fetcher_chain(self, tmp_path: Path, caplog):
+        packs_root, final_dir, pack_id = _import_pack(tmp_path)
+        write_meta(final_dir / "index.sqlite", {"schema_version": str(SCHEMA_VERSION + 1)})
+        reg = AudioPackRegistry(packs_root)
+        reg.load()
+        config = _config_with_chain(AudioSourceEntry(kind="pack", pack_id=pack_id))
+
+        with caplog.at_level(logging.WARNING):
+            result = reg.build_fetcher_chain(config, tmp_path / "cache")
+
+        assert reg.packs[pack_id].schema_ok is False
+        assert result == []
+        assert any(pack_id in r.message and "schema_version" in r.message for r in caplog.records)
 
     def test_valid_pack_produces_fetcher(self, tmp_path: Path):
         packs_root, _, pack_id = _import_pack(tmp_path)

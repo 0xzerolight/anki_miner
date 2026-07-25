@@ -10,6 +10,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.models import ValidationIssue, ValidationResult
 from anki_miner.services._ankiconnect import post_action
+from anki_miner.services.anki_note_builder import configured_target_field_names
 from anki_miner.utils import ensure_directory
 from anki_miner.utils.alass_resolver import resolve_alass
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
@@ -183,9 +184,9 @@ class ValidationService:
 
         # Pitch/frequency "resource missing" warnings were removed with the
         # use_pitch_accent / use_frequency_data flags: activation is now derived
-        # from the resource being present (pitch_active = file exists;
-        # frequency_active = an enabled source in the chain), so a "wanted but
-        # missing" state is no longer representable.
+        # from the resource being present (pitch_active / frequency_active = an
+        # enabled source in the chain), so a "wanted but missing" state is no
+        # longer representable.
 
         return ValidationResult(
             ankiconnect_ok=ankiconnect_ok,
@@ -431,7 +432,7 @@ class ValidationService:
             return False, f"Error checking fields: {e}"
 
         actual_fields = set(actual_fields_list)
-        configured_fields = {v for v in self.config.anki_fields.values() if v}
+        configured_fields = configured_target_field_names(self.config)
         missing = configured_fields - actual_fields
         if missing:
             return False, (

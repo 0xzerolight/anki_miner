@@ -331,6 +331,32 @@ def test_remove_invalid_index_noop(qapp, qtbot, tmp_path):
     assert len(panel.get_chain()) == 1
 
 
+def test_remove_foreign_same_name_is_chain_only(qtbot, monkeypatch, tmp_path):
+    foreign = tmp_path / "foreign"
+    foreign.mkdir()
+    payload = foreign / "keep.txt"
+    payload.write_text("foreign", encoding="utf-8")
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.frequency_settings_panel.QMessageBox.question",
+        lambda *a, **kw: QMessageBox.StandardButton.Yes,
+    )
+    warnings: list[str] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
+        lambda _parent, _title, body, *a, **kw: warnings.append(body),
+    )
+    panel = FrequencySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((FreqEntry(source_id="foreign", enabled=True),))
+
+    panel.remove(0)
+    qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
+
+    assert panel.get_chain() == ()
+    assert payload.read_text(encoding="utf-8") == "foreign"
+    assert any("left untouched" in body for body in warnings)
+
+
 def test_context_menu_bails_during_scan_placeholder(qapp, qtbot, tmp_path, monkeypatch):
     """Right-clicking the Loading placeholder must not open a destructive menu (Bug S3)."""
     from unittest.mock import MagicMock
@@ -380,23 +406,25 @@ def test_add_button_emits_add_requested(qapp, qtbot, tmp_path):
 
 def test_release_callback_blocks_remove(qapp, qtbot, tmp_path, confirm_remove, monkeypatch):
     _make_source_on_disk(tmp_path, "jpdb")
-    warned: list[int] = []
+    warned: list[str] = []
     monkeypatch.setattr(
         fsp_mod.QMessageBox,
         "warning",
-        lambda *a, **kw: warned.append(1),
+        lambda _parent, _title, body, *a, **kw: warned.append(body),
     )
     panel = FrequencySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     panel.set_chain((FreqEntry(source_id="jpdb", enabled=True),))
-    panel.set_release_callback(lambda: False)  # mining in flight
+    panel.set_release_callback(lambda: False)  # indexed resources in use
 
     panel.remove(0)
 
     # Refused: entry kept, dir kept, warning shown.
     assert len(panel.get_chain()) == 1
     assert (tmp_path / "jpdb").exists()
-    assert warned == [1]
+    assert len(warned) == 1
+    assert "Indexed resources are in use" in warned[0]
+    assert all(task in warned[0] for task in ("mining", "startup prewarm", "card backfill"))
 
 
 # ---------------------------------------------------------------------------
@@ -435,13 +463,13 @@ class TestOffThreadDiskWork:
 
         main_id = threading.get_ident()
         rmtree_threads: list[int] = []
-        real_rmtree = fsp_mod.shutil.rmtree
+        real_rmtree = fsp_mod.robust_rmtree
 
         def _spy_rmtree(path, *a, **kw):
             rmtree_threads.append(threading.get_ident())
             return real_rmtree(path, *a, **kw)
 
-        monkeypatch.setattr(fsp_mod.shutil, "rmtree", _spy_rmtree)
+        monkeypatch.setattr(fsp_mod, "robust_rmtree", _spy_rmtree)
 
         _make_source_on_disk(tmp_path, "jpdb")
         panel = FrequencySettingsPanel(tmp_path)
@@ -449,7 +477,7 @@ class TestOffThreadDiskWork:
         panel.set_chain((FreqEntry(source_id="jpdb", enabled=True),))
 
         panel.remove(0)
-        qtbot.waitUntil(lambda: not (tmp_path / "jpdb").exists(), timeout=3000)
+        qtbot.waitUntil(lambda: bool(rmtree_threads), timeout=3000)
         assert rmtree_threads and all(t != main_id for t in rmtree_threads), rmtree_threads
 
 

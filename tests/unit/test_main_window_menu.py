@@ -178,6 +178,26 @@ def test_discord_button_opens_invite_url(main_window, monkeypatch):
     assert captured[0].toString() == "https://discord.com/invite/aDtQyZzUVP"
 
 
+def test_open_log_folder_uses_effective_sink_path(main_window, monkeypatch, tmp_path):
+    from anki_miner.gui import main_window as main_window_module
+
+    effective_path = tmp_path / "fallback" / "AnkiMiner-early-crash.log"
+    opened = []
+    monkeypatch.setattr(
+        main_window_module,
+        "get_effective_log_path",
+        lambda configured_path: effective_path,
+        raising=False,
+    )
+    monkeypatch.setattr(main_window_module, "open_log_folder", lambda log_path: opened.append(log_path), raising=False)
+
+    action = _find_action(_help_menu(main_window), "Open Log Folder")
+    assert action is not None
+    action.trigger()
+
+    assert opened == [effective_path]
+
+
 def test_about_dialog_builds_and_shows_version(qtbot):
     """AboutDialog constructs headless and renders the version."""
     from PyQt6.QtWidgets import QLabel
