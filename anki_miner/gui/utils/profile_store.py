@@ -23,7 +23,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 from anki_miner.config import AnkiMinerConfig
@@ -41,6 +41,11 @@ MAX_PROFILES = 50
 _NAME_KEY = "profile_name"
 
 _PROFILES_DIRNAME = "profiles"
+
+# Every separator, on every platform — not just the running one. A restored or
+# hand-edited gui_config.json can carry a Windows-style active_profile_id and be
+# read back on Linux. See _validate_id.
+_ID_SEPARATORS = frozenset(sep for sep in ("/", "\\", os.sep, os.altsep) if sep)
 
 # Sentinel for the raw reads. Distinct object so a legitimately-decoded ``None``
 # is not mistaken for a read failure.
@@ -95,6 +100,15 @@ class ProfileStore:
                             directory,
                         )
                         break
+                    if entry.name.startswith("."):
+                        # atomic_write_path stages ".<stem>-<rand>.json" siblings,
+                        # which pass the .json test below. Its finally-unlink does
+                        # not run on SIGKILL or power loss, so a crash mid-write
+                        # would otherwise leave a permanent phantom profile: a
+                        # second entry showing the same display name, blocking
+                        # create/rename with an unexplainable "already exists" the
+                        # UI offers no way to clear, and eating a MAX_PROFILES slot.
+                        continue
                     if entry.name.endswith(".json") and entry.is_file():
                         paths.append(Path(entry.path))
         except FileNotFoundError:
@@ -130,9 +144,14 @@ class ProfileStore:
 
         Raises:
             FileNotFoundError: If no file exists for ``profile_id``.
-            OSError: If the file cannot be read.
-            ValueError: If the file is undecodable, oversized, or not a JSON
-                object (json.JSONDecodeError is a ValueError).
+            ValueError: If ``profile_id`` is not a plain filename stem, or the
+                file is unreadable, oversized, undecodable, not a JSON object,
+                or holds a value the config rejects. Note that a file which
+                exists but cannot be read (permission denied, I/O error) also
+                lands HERE and not on OSError: read_json_bounded swallows read
+                OSErrors into its sentinel, which _parse_and_migrate turns into
+                _ConfigReadError — itself a ValueError. No read-side OSError
+                escapes this method.
             TypeError: If the decoded data cannot build an AnkiMinerConfig.
         """
         path = cls._path_for(profile_id)
@@ -155,6 +174,7 @@ class ProfileStore:
         files get no .bak of their own.
 
         Raises:
+            ValueError: If ``profile_id`` is not a plain filename stem.
             OSError: If the directory or file cannot be written.
         """
         directory = cls.profiles_dir()
@@ -201,11 +221,14 @@ class ProfileStore:
         real user files carry stale sub-keys).
 
         Raises:
-            ValueError: If ``name`` is blank, collides case-insensitively with
-                another profile's display name, or the file is undecodable or
-                not a JSON object.
+            ValueError: If ``profile_id`` is not a plain filename stem, ``name``
+                is blank or collides case-insensitively with another profile's
+                display name, or the file is unreadable, oversized, undecodable,
+                or not a JSON object. As in ``read_profile``, an existing but
+                unreadable file lands here rather than on OSError — the bounded
+                reader swallows read OSErrors into its sentinel.
             FileNotFoundError: If no file exists for ``profile_id``.
-            OSError: If the file cannot be read or written.
+            OSError: If the rewritten file cannot be written.
         """
         clean = cls._validate_name(name, cls.list_profiles(), exclude_id=profile_id)
 
@@ -229,6 +252,7 @@ class ProfileStore:
         one" and any confirmation live with the caller.
 
         Raises:
+            ValueError: If ``profile_id`` is not a plain filename stem.
             FileNotFoundError: If no file exists for ``profile_id``.
             OSError: If the file cannot be removed.
         """
@@ -240,7 +264,36 @@ class ProfileStore:
 
     @classmethod
     def _path_for(cls, profile_id: str) -> Path:
+        """Map an id to its file, refusing any id that could escape the dir."""
+        cls._validate_id(profile_id)
         return cls.profiles_dir() / f"{profile_id}.json"
+
+    @staticmethod
+    def _validate_id(profile_id: str) -> None:
+        """Reject ids that are not a plain filename stem.
+
+        This is the layer that owns the id→path mapping, so the guard belongs
+        here rather than in each caller. Every id this module mints is
+        ``slugify`` output ([a-z0-9-] only), so its own flows never trip it —
+        but ids also arrive from disk. ``GUIConfigManager.read_active_profile_id``
+        returns ANY non-empty string found in gui_config.json with no character
+        validation, and that value is the designed input to the boot reconcile.
+        Without this check a hand-edited or restored config carrying
+        ``"active_profile_id": "../gui_config"`` would make ``read_profile``
+        load the live config as a profile, ``write_profile`` stamp a
+        ``profile_name`` into it, and ``delete`` unlink the user's settings.
+
+        Raises:
+            ValueError: If ``profile_id`` is empty, contains a path separator
+                or ``..``, or does not resolve to a bare filename.
+        """
+        if not profile_id:
+            raise ValueError("Profile id must not be empty")
+        if ".." in profile_id or any(sep in profile_id for sep in _ID_SEPARATORS):
+            raise ValueError(f"Invalid profile id: {profile_id!r}")
+        filename = f"{profile_id}.json"
+        if PurePosixPath(filename).name != filename or PureWindowsPath(filename).name != filename:
+            raise ValueError(f"Invalid profile id: {profile_id!r}")
 
     @staticmethod
     def _read_display_name(path: Path) -> str:

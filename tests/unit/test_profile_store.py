@@ -101,6 +101,97 @@ class TestListProfiles:
 
         assert len(ProfileStore.list_profiles()) == MAX_PROFILES
 
+    def test_crash_orphaned_atomic_write_temp_is_not_a_phantom_profile(self):
+        """A dot-prefixed .json is a crashed atomic_write_path staging file.
+
+        atomic_write_path stages ``.<stem>-<rand>.json`` beside the destination
+        and unlinks it in a ``finally`` — which SIGKILL and power loss skip. The
+        leftover holds a full copy including ``profile_name``, so listing it
+        would show a duplicate entry the user cannot explain or remove, and it
+        would block ``create``/``rename`` on that name forever.
+        """
+        ProfileStore.write_profile("anime", create_default_config(), name="Anime")
+        directory = ProfileStore.profiles_dir()
+        (directory / ".anime-th1nspjm.json").write_text(json.dumps({"profile_name": "Anime"}), encoding="utf-8")
+
+        assert ProfileStore.list_profiles() == (Profile(id="anime", name="Anime"),)
+
+        # ...and the orphan does not poison the case-insensitive name check.
+        ProfileStore.delete("anime")
+        assert ProfileStore.create("Anime", create_default_config()) == Profile(id="anime", name="Anime")
+
+
+class TestProfileIdTraversal:
+    """A disk-sourced id must never address anything outside profiles_dir().
+
+    ``GUIConfigManager.read_active_profile_id()`` returns ANY non-empty string
+    found in gui_config.json with no character validation, and that value is the
+    designed input to the boot reconcile — so a hand-edited or restored config
+    carrying ``"active_profile_id": "../gui_config"`` reaches ``_path_for``
+    verbatim and would otherwise address the live config itself.
+    """
+
+    ESCAPING_IDS = [
+        "../gui_config",
+        "..",
+        "sub/anime",
+        "/etc/anki_miner_profile",
+        "..\\gui_config",
+        "sub\\anime",
+        "",
+    ]
+
+    @staticmethod
+    def _seed_live_config() -> Path:
+        live = GUIConfigManager.CONFIG_FILE
+        live.parent.mkdir(parents=True, exist_ok=True)
+        live.write_text(json.dumps({"anki_deck_name": "Live"}), encoding="utf-8")
+        return live
+
+    @pytest.mark.parametrize("profile_id", ESCAPING_IDS)
+    def test_read_profile_rejects_an_escaping_id(self, profile_id: str):
+        # ValueError, not the FileNotFoundError a merely-absent profile gives.
+        with pytest.raises(ValueError):
+            ProfileStore.read_profile(profile_id)
+
+    @pytest.mark.parametrize("profile_id", ESCAPING_IDS)
+    def test_write_profile_rejects_an_escaping_id(self, profile_id: str):
+        with pytest.raises(ValueError):
+            ProfileStore.write_profile(profile_id, create_default_config(), name="Evil")
+
+    @pytest.mark.parametrize("profile_id", ESCAPING_IDS)
+    def test_delete_rejects_an_escaping_id(self, profile_id: str):
+        with pytest.raises(ValueError):
+            ProfileStore.delete(profile_id)
+
+    @pytest.mark.parametrize("profile_id", ESCAPING_IDS)
+    def test_rename_rejects_an_escaping_id(self, profile_id: str):
+        with pytest.raises(ValueError):
+            ProfileStore.rename(profile_id, "Pwned")
+
+    def test_read_profile_cannot_load_the_live_config(self):
+        self._seed_live_config()
+
+        with pytest.raises(ValueError):
+            ProfileStore.read_profile("../gui_config")
+
+    def test_write_profile_cannot_stamp_the_live_config(self):
+        live = self._seed_live_config()
+        before = live.read_bytes()
+
+        with pytest.raises(ValueError):
+            ProfileStore.write_profile("../gui_config", create_default_config(), name="Evil")
+
+        assert live.read_bytes() == before
+
+    def test_delete_cannot_unlink_the_live_config(self):
+        live = self._seed_live_config()
+
+        with pytest.raises(ValueError):
+            ProfileStore.delete("../gui_config")
+
+        assert live.is_file()
+
 
 class TestRoundTrip:
     def test_write_then_read_returns_an_equal_config(self):
@@ -178,6 +269,8 @@ class TestReadProfileMigration:
                 "anki_deck_name": "Legacy Deck",
                 "use_offline_dict": True,  # removed field from an old version
                 "auto_update_ytdlp": True,
+                # Stored empty, i.e. predating the default-ON wordset rollout.
+                "excluded_wordsets": [],
                 "profile_name": "Legacy",
             },
         )
@@ -185,9 +278,11 @@ class TestReadProfileMigration:
         loaded = ProfileStore.read_profile("legacy")
 
         assert loaded.anki_deck_name == "Legacy Deck"
-        # The schema < 3 shim ran, proving the file went through _migrate_dict.
+        # Both shims ran, proving the file went through _migrate_dict: schema < 3
+        # forces the updater off, schema < 2 re-seeds the empty wordset list.
         assert loaded.auto_update_ytdlp is False
         assert loaded.excluded_wordsets == create_default_config().excluded_wordsets
+        assert loaded.excluded_wordsets
 
 
 class TestCreate:
