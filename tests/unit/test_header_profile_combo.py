@@ -1,0 +1,327 @@
+"""Header settings-profile combo: population, snap-back, and the wheel guard.
+
+The re-entrancy tests here are load-bearing rather than decorative.
+``ProfileController.switch_to`` calls ``set_profiles`` from a ``finally`` on
+every terminal path, the success path included, so a ``currentIndexChanged``
+escaping the rebuild re-enters ``switch_to`` before the first call has returned.
+"""
+
+from __future__ import annotations
+
+import pytest
+from PyQt6.QtCore import QPoint, QPointF, Qt
+from PyQt6.QtGui import QWheelEvent
+from PyQt6.QtWidgets import QApplication, QComboBox
+
+from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.utils.profile_store import Profile
+from anki_miner.gui.widgets.header_widget import (
+    MANAGE_PROFILES_SENTINEL,
+    PROFILE_COMBO_MAX_WIDTH,
+    HeaderWidget,
+)
+
+ANIME = Profile(id="anime", name="Anime")
+NOVELS = Profile(id="novels", name="Novels")
+MANGA = Profile(id="manga", name="Manga")
+
+
+@pytest.fixture(autouse=True)
+def reset_theme_state():
+    """Pin the global Qt/Theme state the width assertions measure against.
+
+    The combo's ``sizeHint`` is font-driven, and an app stylesheet left behind by
+    any earlier test file in the same xdist worker changes the font of a
+    *polished* widget — which is every visible one. Clearing it for the duration
+    (and putting it back) keeps the widths reproducible whatever ran before.
+    """
+    Theme.initialize(active="light", favorites=("light", "dark"), user_dir=None, state_listener=None)
+    app = QApplication.instance()
+    previous = app.styleSheet() if isinstance(app, QApplication) else None
+    if previous is not None:
+        app.setStyleSheet("")
+    yield
+    if previous is not None:
+        app.setStyleSheet(previous)
+
+
+def _header(qtbot) -> HeaderWidget:
+    header = HeaderWidget()
+    qtbot.addWidget(header)
+    return header
+
+
+def _wheel_event(widget: QComboBox, degrees: int = -120) -> QWheelEvent:
+    """Build a real QWheelEvent aimed at ``widget``'s centre.
+
+    PyQt6 requires the real class here — a stub raises a SIP ``TypeError``.
+    """
+    pos = QPointF(widget.rect().center())
+    return QWheelEvent(
+        pos,
+        widget.mapToGlobal(widget.rect().center()).toPointF(),
+        QPoint(0, 0),
+        QPoint(0, degrees),
+        Qt.MouseButton.NoButton,
+        Qt.KeyboardModifier.NoModifier,
+        Qt.ScrollPhase.NoScrollPhase,
+        False,
+    )
+
+
+# ----------------------------------------------------------------------
+# Visibility
+# ----------------------------------------------------------------------
+
+
+def test_a_fresh_header_hides_the_profile_block(qtbot):
+    """Nothing has populated the combo yet, so the header looks unchanged."""
+    header = _header(qtbot)
+
+    assert header.profile_label.isHidden()
+    assert header.profile_combo.isHidden()
+
+
+def test_one_profile_hides_the_block(qtbot):
+    """A one-profile world must look exactly like no profiles at all."""
+    header = _header(qtbot)
+
+    header.set_profiles([ANIME], "anime")
+
+    assert header.profile_label.isHidden()
+    assert header.profile_combo.isHidden()
+
+
+def test_two_profiles_show_the_block(qtbot):
+    header = _header(qtbot)
+
+    header.set_profiles([ANIME, NOVELS], "anime")
+
+    assert not header.profile_label.isHidden()
+    assert not header.profile_combo.isHidden()
+
+
+def test_dropping_back_to_one_profile_hides_the_block_again(qtbot):
+    """Idempotent both ways: deleting a profile puts the header back."""
+    header = _header(qtbot)
+    header.set_profiles([ANIME, NOVELS], "anime")
+
+    header.set_profiles([ANIME], "anime")
+
+    assert header.profile_label.isHidden()
+    assert header.profile_combo.isHidden()
+
+
+def test_an_empty_sequence_is_safe(qtbot):
+    header = _header(qtbot)
+    header.set_profiles([ANIME, NOVELS], "anime")
+
+    header.set_profiles((), None)
+
+    assert header.profile_combo.isHidden()
+    # Only the sentinel is left, and it is never reported as a profile change.
+    assert header.profile_combo.count() == 1
+    assert header.profile_combo.itemData(0) == MANAGE_PROFILES_SENTINEL
+
+
+# ----------------------------------------------------------------------
+# Population
+# ----------------------------------------------------------------------
+
+
+def test_items_carry_names_as_text_and_ids_as_data(qtbot):
+    header = _header(qtbot)
+
+    header.set_profiles([ANIME, NOVELS], "anime")
+    combo = header.profile_combo
+
+    assert combo.itemText(0) == "Anime"
+    assert combo.itemData(0) == "anime"
+    assert combo.itemText(1) == "Novels"
+    assert combo.itemData(1) == "novels"
+    # Sentinel last, after the real profiles.
+    assert combo.itemData(combo.count() - 1) == MANAGE_PROFILES_SENTINEL
+
+
+def test_set_profiles_selects_the_active_id(qtbot):
+    header = _header(qtbot)
+
+    header.set_profiles([ANIME, NOVELS], "novels")
+
+    assert header.profile_combo.currentData() == "novels"
+
+
+def test_an_unknown_active_id_lands_on_a_real_profile_not_the_sentinel(qtbot):
+    """A profile deleted outside the app must not leave the sentinel showing."""
+    header = _header(qtbot)
+
+    header.set_profiles([ANIME, NOVELS], "deleted-outside-the-app")
+
+    assert header.profile_combo.currentData() == "anime"
+
+
+def test_a_none_active_id_lands_on_a_real_profile_not_the_sentinel(qtbot):
+    header = _header(qtbot)
+
+    header.set_profiles([ANIME, NOVELS], None)
+
+    assert header.profile_combo.currentData() == "anime"
+
+
+# ----------------------------------------------------------------------
+# Signals
+# ----------------------------------------------------------------------
+
+
+def test_selecting_a_profile_emits_profile_changed_with_its_id(qtbot):
+    header = _header(qtbot)
+    header.set_profiles([ANIME, NOVELS], "anime")
+
+    with qtbot.waitSignal(header.profile_changed) as blocker:
+        header.profile_combo.setCurrentIndex(1)
+
+    assert blocker.args == ["novels"]
+
+
+def test_selecting_the_sentinel_opens_the_manager_without_a_profile_change(qtbot):
+    header = _header(qtbot)
+    header.set_profiles([ANIME, NOVELS], "anime")
+    combo = header.profile_combo
+    sentinel_index = combo.findData(MANAGE_PROFILES_SENTINEL)
+
+    with qtbot.assertNotEmitted(header.profile_changed), qtbot.waitSignal(header.open_profile_manager):
+        combo.setCurrentIndex(sentinel_index)
+
+    # Snapped back, so the sentinel never sits "selected" in the closed combo.
+    assert combo.currentData() == "anime"
+
+
+def test_set_profiles_emits_nothing_even_when_it_moves_the_selection(qtbot):
+    """The re-entrancy contract ProfileController's ``finally`` depends on."""
+    header = _header(qtbot)
+    header.set_profiles([ANIME, NOVELS], "anime")
+    assert header.profile_combo.currentIndex() == 0
+
+    with qtbot.assertNotEmitted(header.profile_changed), qtbot.assertNotEmitted(header.open_profile_manager):
+        header.set_profiles([ANIME, NOVELS], "novels")
+
+    # Vacuity guard: the call really did move the selection.
+    assert header.profile_combo.currentIndex() == 1
+
+
+def test_set_profiles_snaps_the_combo_back_after_a_refused_switch(qtbot):
+    """``currentIndexChanged`` has already moved the combo when a switch is refused."""
+    header = _header(qtbot)
+    header.set_profiles([ANIME, NOVELS], "anime")
+    header.profile_combo.setCurrentIndex(1)
+    assert header.profile_combo.currentData() == "novels"
+
+    # The controller refused and re-syncs the header to what is actually live.
+    with qtbot.assertNotEmitted(header.profile_changed):
+        header.set_profiles([ANIME, NOVELS], "anime")
+
+    assert header.profile_combo.currentIndex() == 0
+    assert header.profile_combo.currentData() == "anime"
+
+
+def test_the_sentinel_snaps_back_to_the_live_profile_not_the_clicked_one(qtbot):
+    """A selection is a request, not an outcome — ``set_profiles`` is the truth."""
+    header = _header(qtbot)
+    header.set_profiles([ANIME, NOVELS], "anime")
+    # User picks Novels; nothing applied it (a refusal, or no wiring yet).
+    header.profile_combo.setCurrentIndex(1)
+
+    with qtbot.waitSignal(header.open_profile_manager):
+        header.profile_combo.setCurrentIndex(header.profile_combo.findData(MANAGE_PROFILES_SENTINEL))
+
+    assert header.profile_combo.currentData() == "anime"
+
+
+# ----------------------------------------------------------------------
+# Accessibility
+# ----------------------------------------------------------------------
+
+
+def test_the_profile_combo_is_named_for_screen_readers(qtbot):
+    header = _header(qtbot)
+
+    assert header.profile_combo.accessibleName()
+    assert header.profile_combo.accessibleDescription()
+    assert header.profile_label.buddy() is header.profile_combo
+
+
+def test_the_theme_combo_is_named_for_screen_readers(qtbot):
+    header = _header(qtbot)
+
+    assert header.theme_combo.accessibleName()
+
+
+# ----------------------------------------------------------------------
+# Long names
+# ----------------------------------------------------------------------
+
+
+def test_a_long_profile_name_does_not_widen_the_combo(qtbot):
+    header = _header(qtbot)
+    long_name = "X" * 200
+    combo = header.profile_combo
+
+    # Baseline taken in the SAME visibility state: a hidden combo is unpolished,
+    # so under an app stylesheet it reports a different (stale-font) hint.
+    header.set_profiles([ANIME, NOVELS], "anime")
+    baseline = combo.sizeHint().width()
+
+    header.set_profiles([Profile(id="long", name=long_name), NOVELS], "long")
+
+    assert combo.sizeHint().width() <= PROFILE_COMBO_MAX_WIDTH
+    # Stronger and font-independent: the hint does not depend on the items at all.
+    assert combo.sizeHint().width() == baseline
+    assert combo.maximumWidth() <= PROFILE_COMBO_MAX_WIDTH
+
+
+def test_a_long_profile_name_is_elided_but_kept_whole_in_the_tooltip(qtbot):
+    header = _header(qtbot)
+    long_name = "X" * 200
+
+    header.set_profiles([Profile(id="long", name=long_name), NOVELS], "long")
+    combo = header.profile_combo
+
+    assert combo.itemText(0) != long_name
+    assert len(combo.itemText(0)) < len(long_name)
+    # Nothing is lost: the full name on the tooltip, the id in itemData.
+    assert combo.itemData(0, Qt.ItemDataRole.ToolTipRole) == long_name
+    assert combo.itemData(0) == "long"
+
+
+# ----------------------------------------------------------------------
+# Wheel guard
+# ----------------------------------------------------------------------
+
+
+def test_wheel_over_the_unfocused_profile_combo_changes_nothing(qtbot):
+    """Issue #99's hazard with the worst payload: a scroll swapping every setting."""
+    header = _header(qtbot)
+    header.set_profiles([ANIME, NOVELS, MANGA], "anime")
+    combo = header.profile_combo
+
+    assert not combo.hasFocus()
+    before = combo.currentIndex()
+
+    # Vacuity guard. `count() >= 2` would not be enough: if the item the wheel
+    # lands on were the sentinel, the snap-back handler would restore the index
+    # and emit open_profile_manager instead of profile_changed, so both
+    # assertions below would pass even with the guard removed.
+    assert combo.itemData(before + 1) not in (None, MANAGE_PROFILES_SENTINEL)
+
+    with qtbot.assertNotEmitted(header.profile_changed), qtbot.assertNotEmitted(header.open_profile_manager):
+        QApplication.sendEvent(combo, _wheel_event(combo))
+
+    assert combo.currentIndex() == before
+
+
+def test_the_profile_combo_is_a_child_of_the_header(qtbot):
+    """``install_no_scroll_on_inputs`` sweeps ``findChildren``, which only sees
+    the combo once ``setLayout`` has reparented it."""
+    header = _header(qtbot)
+
+    assert header.profile_combo in header.findChildren(QComboBox)
