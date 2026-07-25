@@ -18,7 +18,7 @@ on:
       - scripts/dump_engine_goldens.py
       - scripts/engine_golden_contract_v2.py
       - scripts/prepare_golden_unidic.py
-      - scripts/golden-runtime-requirements.txt
+      - scripts/golden-runtime-requirements.pip
       - tests/fixtures/goldens/**
   pull_request:
     branches: [main]
@@ -70,14 +70,14 @@ jobs:
         with:
           python-version: "3.13.7"
           cache: pip
-          cache-dependency-path: tool/scripts/golden-runtime-requirements.txt
+          cache-dependency-path: tool/scripts/golden-runtime-requirements.pip
 
       - name: Install frozen golden runtime
         run: |
           python -m pip install \
             --require-hashes \
             --only-binary=:all: \
-            --requirement tool/scripts/golden-runtime-requirements.txt
+            --requirement tool/scripts/golden-runtime-requirements.pip
 
       - name: Prepare pinned external UniDic data
         run: |
@@ -142,7 +142,7 @@ jobs:
                   raise SystemExit(f"invalid {section} aggregate provenance")
           pins = {
               line.split()[0].split("==", 1)[0].lower().replace("_", "-"): line.split()[0].split("==", 1)[1]
-              for line in Path("tool/scripts/golden-runtime-requirements.txt").read_text(encoding="utf-8").splitlines()
+              for line in Path("tool/scripts/golden-runtime-requirements.pip").read_text(encoding="utf-8").splitlines()
               if line[:1].isalpha()
           }
           installed = {
