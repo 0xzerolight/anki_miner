@@ -832,11 +832,14 @@ class UISettingsPanel(QWidget):
         finally:
             self.native_dialogs_checkbox.blockSignals(False)
 
-        # The themes folder button and its tooltip must name the config's root.
-        # Deliberate asymmetry: the tree does NOT re-scan it, because Theme
-        # discovers themes once at boot, so a new root's JSON files can only
-        # become rows after a restart. The button has no such excuse — left
-        # alone it would open (and create) the PREVIOUS config's directory.
+        # The themes folder button and its tooltip must name the config's root;
+        # left alone it would open (and create) the PREVIOUS config's directory.
+        # This panel never re-scans the root itself, because discovery belongs to
+        # Theme and re-runs only inside Theme.initialize — at boot (app.py) and
+        # in the profile switch's whole-config re-seed, which runs BEFORE this
+        # fan-out. So a config swap already arrives with the incoming root
+        # discovered and _populate below renders it; what still cannot happen
+        # live is picking up JSON files dropped into the folder mid-session.
         self._themes_root = config.themes_root
         self.open_folder_btn.setToolTip(self._themes_folder_tooltip())
 
