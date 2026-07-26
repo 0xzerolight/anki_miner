@@ -49,6 +49,11 @@ from anki_miner.gui.utils.profile_store import Profile, ProfileStore
 from anki_miner.gui.widgets.header_widget import HeaderWidget
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
+# Captured at import, BEFORE any fixture stubs it: ``patch_heavy_init`` replaces
+# save_config with a no-op, and the composed-window case needs the real writer
+# back so gui_config.json and its active_profile_id marker actually land.
+_REAL_SAVE_CONFIG = GUIConfigManager.save_config
+
 # ---------------------------------------------------------------------------
 # Fakes
 # ---------------------------------------------------------------------------
@@ -542,18 +547,19 @@ class TestSwitchRefusals:
 
 
 class TestRealMutationGuard:
-    """The one composed case: a real MainWindow with real chain panels.
+    """The composed REFUSAL case: a real MainWindow with real chain panels.
 
     ``release_dictionary_resources`` is NOT the guard here — ``SettingsTab``
     does not implement it, so it would skip the chain panels' mutation tokens
     entirely and let a switch swap all four chains under a running import.
+    ``TestComposedWindowSwitch`` below is its success-path counterpart.
     """
 
     def test_a_held_chain_mutation_token_refuses_the_switch(self, wired_window, profile_a, profile_b):
         window, _titles, _tabs = wired_window
         header_calls: list[tuple] = []
-        # HeaderWidget.set_profiles arrives with the header profile combo; until
-        # then the controller's terminal path needs it injected.
+        # Recorded rather than driven: this case only needs to know WHICH
+        # profile the terminal path pointed the header at.
         window.header.set_profiles = lambda profiles, active_id: header_calls.append((tuple(profiles), active_id))
         settings_tab = window.tabs.widget(window._settings_tab_index())
         path_a, path_b = _two_profiles(profile_a, profile_b)
@@ -578,6 +584,137 @@ class TestRealMutationGuard:
         assert (_file_bytes(path_a), _file_bytes(path_b)) == before
         assert GUIConfigManager.ACTIVE_PROFILE_ID == "a"
         assert header_calls[-1][1] == "a"
+
+
+class TestComposedWindowSwitch:
+    """A SUCCESSFUL switch through a real MainWindow, SettingsTab and HeaderWidget.
+
+    Everywhere else in this file the window is ``_FakeWindow``, which cannot
+    show that the Settings panels actually repaint or that the header combo
+    actually moves. This is the seam where a switch whose diff is entirely
+    appearance — theme, favorites, font scale, language — is exercised against
+    the collaborators that decide whether it is drawn, and it is the one that
+    catches ``SettingsTab.update_config`` short-circuiting on
+    ``_EXTERNAL_ONLY_FIELDS``.
+    """
+
+    @pytest.fixture
+    def composed(self, wired_window, monkeypatch):
+        """``(window, settings_tab, saves)`` with a REAL, recorded save_config.
+
+        ``patch_heavy_init`` stubs ``save_config`` to a no-op, which would make
+        the marker and the commit boundary unobservable. Put the real one back
+        (it writes into the isolated test home) behind a recorder that captures
+        ``ACTIVE_PROFILE_ID`` from INSIDE the save — the only moment the
+        pointer's position relative to the write can be seen at all.
+        """
+        window, _titles, _tabs = wired_window
+        saves: list[tuple[AnkiMinerConfig, str | None]] = []
+
+        def save(config: AnkiMinerConfig) -> None:
+            saves.append((config, GUIConfigManager.ACTIVE_PROFILE_ID))
+            _REAL_SAVE_CONFIG(config)
+
+        monkeypatch.setattr(GUIConfigManager, "save_config", staticmethod(save))
+        return window, window.tabs.widget(window._settings_tab_index()), saves
+
+    @staticmethod
+    def _drawn_favorites(ui_panel) -> set[str]:
+        """The favorite stars the theme tree is CURRENTLY drawing."""
+        return {key for key, button in ui_panel._star_buttons.items() if button.isChecked()}
+
+    def test_an_appearance_only_switch_moves_every_surface(self, composed, test_config):
+        window, settings_tab, saves = composed
+        outgoing = replace(test_config, theme="light", theme_favorites=("light",), ui_font_scale=1.0, ui_language="en")
+        _seed("a", outgoing, "A")
+        _seed("b", replace(outgoing, theme="dark", theme_favorites=("dark", "light"), ui_font_scale=1.5), "B")
+        # Both sides through the file round trip, as the running app has them:
+        # _parse_and_migrate normalises anki_fields, so an in-memory outgoing
+        # config would add a panel-relevant diff the real window never sees and
+        # the repaint would happen for the wrong reason.
+        window.config = replace(ProfileStore.read_profile("a"), ui_font_scale=1.25)
+        settings_tab.update_config(window.config)
+        GUIConfigManager.ACTIVE_PROFILE_ID = "a"
+        Theme.initialize(active="light", favorites=("light",), user_dir=None, font_scale=1.25, state_listener=None)
+        before = window.config
+        saves.clear()  # drop the setup writes; count only the switch's
+
+        result = window.profile_controller.switch_to("b")
+
+        assert result == SwitchResult(switched=True, reason=None)
+        # Vacuity guard for the repaint assertions below: the whole diff really
+        # does fall inside the allowlist SettingsTab.update_config skips on, so
+        # the fan-out could not have repainted the panels by itself.
+        changed = {
+            field.name
+            for field in dataclasses.fields(window.config)
+            if getattr(window.config, field.name) != getattr(before, field.name)
+        }
+        assert changed and changed <= SettingsTab._EXTERNAL_ONLY_FIELDS
+
+        # One save, with the pointer ALREADY moved: the marker and the settings
+        # it labels have to reach disk in the same write.
+        assert len(saves) == 1
+        assert saves[0][1] == "b"
+        assert saves[0][0].theme == "dark"
+        assert GUIConfigManager.read_active_profile_id() == "b"
+
+        # The outgoing snapshot captured the live value, not the stale file.
+        assert ProfileStore.read_profile("a").ui_font_scale == 1.25
+
+        # The panels repainted.
+        ui_panel = settings_tab.ui_panel
+        assert settings_tab.config is window.config
+        assert ui_panel.font_scale_combo.currentData() == 150
+        assert self._drawn_favorites(ui_panel) == {"dark", "light"}
+        # The stars and the singleton the next star click writes through agree.
+        assert self._drawn_favorites(ui_panel) == set(Theme.get_favorites()) & set(ui_panel._star_buttons)
+
+        # The header ended on the profile that is live.
+        assert window.header.profile_combo.currentData() == "b"
+
+    def test_a_language_switch_repaints_the_combo_and_its_restart_note(self, composed, test_config):
+        window, settings_tab, saves = composed
+        outgoing = replace(test_config, ui_language="en")
+        _seed("a", outgoing, "A")
+        _seed("b", replace(outgoing, ui_language="ja"), "B")
+        window.config = ProfileStore.read_profile("a")
+        settings_tab.update_config(window.config)
+        GUIConfigManager.ACTIVE_PROFILE_ID = "a"
+        ui_panel = settings_tab.ui_panel
+        assert ui_panel.language_combo.currentData() == "en"
+        assert ui_panel.language_restart_note.isHidden()
+
+        assert window.profile_controller.switch_to("b").switched
+
+        assert ui_panel.language_combo.currentData() == "ja"
+        assert not ui_panel.language_restart_note.isHidden()
+
+    def test_an_edit_inside_the_debounce_lands_in_the_outgoing_profile(self, composed, test_config):
+        """The plan's manual verification step, as a test.
+
+        The switch's mutation guard runs ``commit_pending_settings_for_mutation``
+        as its preflight, so an edit still sitting in the 1000 ms auto-save
+        debounce is committed into the live config BEFORE the outgoing snapshot
+        is taken. Without that flush the edit is snapshotted away and then
+        overwritten by the incoming config's reload — silently lost.
+        """
+        window, settings_tab, saves = composed
+        _seed("a", test_config, "A")
+        _seed("b", replace(test_config, anki_deck_name="Deck B"), "B")
+        window.config = ProfileStore.read_profile("a")
+        settings_tab.update_config(window.config)
+        GUIConfigManager.ACTIVE_PROFILE_ID = "a"
+        edited = window.config.max_sentence_chars + 7
+
+        settings_tab.filtering_panel.max_sentence_chars_spinbox.setValue(edited)
+        # Vacuity guard: the edit really is still pending, i.e. the switch runs
+        # INSIDE the debounce window rather than after it has fired.
+        assert settings_tab._settings_dirty and settings_tab._debounce_timer.isActive()
+
+        assert window.profile_controller.switch_to("b").switched
+
+        assert ProfileStore.read_profile("a").max_sentence_chars == edited
 
 
 # ---------------------------------------------------------------------------
