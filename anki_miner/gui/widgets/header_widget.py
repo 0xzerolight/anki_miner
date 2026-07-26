@@ -350,15 +350,18 @@ class HeaderWidget(QWidget):
         flag, not a counter: a nested block/unblock pair would unblock the combo
         halfway through an outer rebuild that is relying on it.
         """
-        for index in range(self.profile_combo.count()):
-            if self.profile_combo.itemData(index) == self._active_profile_id:
-                self.profile_combo.setCurrentIndex(index)
-                return
+        if self._active_profile_id is not None:
+            for index in range(self.profile_combo.count()):
+                if self.profile_combo.itemData(index) == self._active_profile_id:
+                    self.profile_combo.setCurrentIndex(index)
+                    return
 
-        # No active id, or one with no stored file (deleted outside the app, or
-        # a boot whose reconcile could not attribute the live config). Land on
-        # the first real profile so the sentinel is never left showing.
-        for index in range(self.profile_combo.count()):
-            if self.profile_combo.itemData(index) != MANAGE_PROFILES_SENTINEL:
-                self.profile_combo.setCurrentIndex(index)
-                return
+        # No active id, or one naming no listed profile (its file was deleted
+        # outside the app, or a boot whose reconcile could not attribute the live
+        # config). Select NOTHING rather than landing on the first profile:
+        # displaying one as active while it is not makes it the single entry the
+        # user cannot switch to, because the combo is already sitting on it and
+        # clicking it emits no currentIndexChanged. An empty combo is honest
+        # about the session belonging to no profile, and leaves every entry one
+        # click away.
+        self.profile_combo.setCurrentIndex(-1)

@@ -151,21 +151,47 @@ def test_set_profiles_selects_the_active_id(qtbot):
     assert header.profile_combo.currentData() == "novels"
 
 
-def test_an_unknown_active_id_lands_on_a_real_profile_not_the_sentinel(qtbot):
-    """A profile deleted outside the app must not leave the sentinel showing."""
+@pytest.mark.parametrize(
+    "active_id",
+    [
+        pytest.param(None, id="no-active-id"),
+        pytest.param("deleted-outside-the-app", id="id-matching-no-item"),
+    ],
+)
+def test_an_unattributable_session_selects_nothing(qtbot, active_id):
+    """Neither case may DISPLAY a profile as active.
+
+    Both are reachable: ``ProfileController._reconcile`` returns
+    ``(profiles, None)`` when the live config cannot be attributed and the
+    recovery create fails (e.g. at MAX_PROFILES), and any ``_sync_header`` after
+    the active profile's file is deleted outside the app carries an id matching
+    no item.
+    """
     header = _header(qtbot)
 
-    header.set_profiles([ANIME, NOVELS], "deleted-outside-the-app")
+    header.set_profiles([ANIME, NOVELS], active_id)
 
-    assert header.profile_combo.currentData() == "anime"
+    assert header.profile_combo.currentIndex() == -1
+    assert header.profile_combo.currentData() is None
+    assert header.profile_combo.currentText() == ""
 
 
-def test_a_none_active_id_lands_on_a_real_profile_not_the_sentinel(qtbot):
+@pytest.mark.parametrize("active_id", [None, "deleted-outside-the-app"])
+def test_an_unattributable_session_leaves_every_profile_reachable(qtbot, active_id):
+    """The regression: a DISPLAYED-but-not-active profile is unclickable.
+
+    Landing on index 0 put the combo on the profile it claimed was active, so
+    clicking that entry changed no index, emitted no ``currentIndexChanged``,
+    and the controller was never asked to switch — the one profile the header
+    named was the one profile the user could not select.
+    """
     header = _header(qtbot)
+    header.set_profiles([ANIME, NOVELS], active_id)
 
-    header.set_profiles([ANIME, NOVELS], None)
+    with qtbot.waitSignal(header.profile_changed) as blocker:
+        header.profile_combo.setCurrentIndex(0)
 
-    assert header.profile_combo.currentData() == "anime"
+    assert blocker.args == ["anime"]
 
 
 # ----------------------------------------------------------------------
