@@ -56,7 +56,13 @@ class TestDebounceWiring:
         assert not tab._debounce_timer.isActive()
 
     def test_line_edit_arms_debounce(self, tab):
-        tab.deck_input.setText("NewDeck")
+        # Deliberately a QLineEdit: the deck row is a QComboBox now, so this
+        # test would no longer cover the QLineEdit branch of _wire_edit_signals.
+        tab.anki_panel.anki_tags_input.setText("new-tag")
+        assert tab._debounce_timer.isActive()
+
+    def test_combo_arms_debounce(self, tab):
+        tab.anki_panel.set_deck_name("NewDeck")
         assert tab._debounce_timer.isActive()
 
     def test_checkbox_arms_debounce(self, tab):
@@ -81,7 +87,7 @@ class TestDebounceWiring:
     def test_debounced_edit_commits(self, tab, qtbot):
         tab._debounce_timer.setInterval(0)
         with qtbot.waitSignal(tab.config_changed, timeout=3000) as blocker:
-            tab.deck_input.setText("Debounced")
+            tab.anki_panel.set_deck_name("Debounced")
         assert blocker.args[0].anki_deck_name == "Debounced"
 
     def test_burst_coalesces_to_single_commit(self, tab, qtbot):
@@ -89,7 +95,7 @@ class TestDebounceWiring:
         tab.config_changed.connect(received.append)
         tab._debounce_timer.setInterval(50)
         for value in ("A", "AB", "ABC"):
-            tab.deck_input.setText(value)
+            tab.anki_panel.set_deck_name(value)
         qtbot.waitUntil(lambda: bool(received), timeout=3000)
         qtbot.wait(200)
         assert len(received) == 1
@@ -102,7 +108,7 @@ class TestDebounceWiring:
         tab._debounce_timer.timeout.connect(lambda: timeout_count.append(None))
         tab._debounce_timer.setInterval(20)
         token = tab.dictionary_panel.hold_mutation("scan")
-        tab.deck_input.setText("WaitForToken")
+        tab.anki_panel.set_deck_name("WaitForToken")
 
         qtbot.waitUntil(lambda: bool(timeout_count), timeout=3000)
 
@@ -120,7 +126,7 @@ class TestPerFieldValidation:
         tab.config_changed.connect(received.append)
         tab.filtering_panel.use_subtitle_regex_checkbox.setChecked(True)
         tab.filtering_panel.subtitle_regex_edit.setText("[")
-        tab.deck_input.setText("StillSaves")
+        tab.anki_panel.set_deck_name("StillSaves")
 
         tab.commit_settings()
 
@@ -188,7 +194,7 @@ class TestPerFieldValidation:
         assert "✓" in tab.save_status_label.text()
 
     def test_valid_commit_flashes_saved(self, tab, no_modals):
-        tab.deck_input.setText("FlashDeck")
+        tab.anki_panel.set_deck_name("FlashDeck")
         tab.commit_settings()
         assert "✓" in tab.save_status_label.text()
 
@@ -196,7 +202,7 @@ class TestPerFieldValidation:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
         tab.dictionary_panel.dicts_root_selector.set_path("/nonexistent/nowhere")
-        tab.deck_input.setText("RootDeck")
+        tab.anki_panel.set_deck_name("RootDeck")
 
         tab.commit_settings()
 
@@ -209,7 +215,7 @@ class TestPerFieldValidation:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
         tab.youtube_panel.set_cookies_file(Path("/nonexistent/cookies.txt"))
-        tab.deck_input.setText("CookieDeck")
+        tab.anki_panel.set_deck_name("CookieDeck")
 
         tab.commit_settings()
 
@@ -234,7 +240,7 @@ class TestFlushAndShutdown:
     def test_flush_commits_pending_edit_exactly_once(self, tab, no_modals):
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
-        tab.deck_input.setText("Flushed")
+        tab.anki_panel.set_deck_name("Flushed")
         assert tab._debounce_timer.isActive()
 
         tab.flush_pending_settings()
@@ -247,7 +253,7 @@ class TestFlushAndShutdown:
         assert len(received) == 1
 
     def test_shutdown_stops_armed_timer(self, tab):
-        tab.deck_input.setText("Pending")
+        tab.anki_panel.set_deck_name("Pending")
         assert tab._debounce_timer.isActive()
         tab.shutdown()
         assert not tab._debounce_timer.isActive()

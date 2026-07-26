@@ -2069,7 +2069,7 @@ class EpisodeProcessor:
             )
 
     def _preflight_card_target(self) -> None:
-        """Fail fast on a misconfigured Anki target; auto-create the deck (Issue #52)."""
+        """Fail fast on a misconfigured Anki target (Issue #52)."""
         self.anki_service.verify_card_target()
 
     def check_offline_dictionary(self) -> None:

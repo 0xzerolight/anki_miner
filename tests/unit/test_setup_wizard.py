@@ -506,19 +506,32 @@ def test_deck_page_writes_deck_to_config(qtbot, wiz_config):
     assert wiz.working_config().anki_deck_name == "Fresh Deck"
 
 
-def test_deck_page_is_complete_when_name_nonempty(qtbot, wiz_config):
+def test_deck_page_signals_completeness_after_the_fetch(qtbot, wiz_config):
+    """Without this emit QWizard never re-queries isComplete and Next stays disabled."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(wiz_config, anki_deck_name="Existing"))
+    qtbot.addWidget(wiz)
+    page = wiz.deck_page
+    with qtbot.waitSignal(page.completeChanged, timeout=1000):
+        page._on_decks_fetched(["Default", "Existing"])
+    assert page.isComplete() is True
+
+
+def test_deck_page_blocks_a_deck_anki_does_not_have(qtbot, wiz_config):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
     page = wiz.deck_page
-    page.deck_combo.setCurrentText("")
+    page._on_decks_fetched(["Default", "Existing"])
+    page.deck_combo.setCurrentText("Brand New Deck")
     assert page.isComplete() is False
-    page.deck_combo.setCurrentText("Anything")
+    page.deck_combo.setCurrentText("Existing")
     assert page.isComplete() is True
 
 
-def test_deck_page_unknown_deck_shows_autocreate_hint(qtbot, wiz_config):
+def test_deck_page_unknown_deck_tells_user_to_create_it_in_anki(qtbot, wiz_config):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
     wiz = SetupWizard(wiz_config)
@@ -527,7 +540,9 @@ def test_deck_page_unknown_deck_shows_autocreate_hint(qtbot, wiz_config):
     page._on_decks_fetched(["Default", "Existing"])
     page.deck_combo.setCurrentText("Brand New Deck")
     page._update_deck_hint()
-    assert "created automatically" in page.deck_hint.text().lower()
+    hint = page.deck_hint.text().lower()
+    assert "created automatically" not in hint
+    assert "anki" in hint
 
 
 # ---------------------------------------------------------------------------

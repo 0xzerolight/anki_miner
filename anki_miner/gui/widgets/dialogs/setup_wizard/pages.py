@@ -165,7 +165,7 @@ class AnkiConnectPage(QWizardPage):
 
 
 class DeckPage(QWizardPage):
-    """Step 2: choose the target deck (auto-created at mine time if missing)."""
+    """Step 2: choose the target deck (must already exist in Anki)."""
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
@@ -198,8 +198,11 @@ class DeckPage(QWizardPage):
         self._on_refresh_clicked()
 
     def isComplete(self) -> bool:
-        # Never hard-blocks: any non-empty name is acceptable (auto-created at mine time).
-        return bool(self.deck_combo.currentText().strip())
+        # Decks are no longer auto-created at mine time, so only a deck Anki
+        # actually reports can be accepted here. Every path that mutates
+        # _fetched_decks must emit completeChanged or Next stays disabled.
+        name = self.deck_combo.currentText().strip()
+        return bool(name) and name in self._fetched_decks
 
     def _on_text_changed(self, _text: str) -> None:
         self._update_deck_hint()
@@ -226,8 +229,16 @@ class DeckPage(QWizardPage):
         self._worker = worker
         self._wizard.register_worker(worker)
         worker.result_ready.connect(self._on_decks_fetched)
-        worker.error.connect(lambda _m: self.refresh_button.setEnabled(True))
+        worker.error.connect(self._on_decks_error)
+        # isComplete() now depends on _fetched_decks, and QWizard only
+        # re-queries it on completeChanged — every path that touches that list
+        # must emit or Next freezes. Mirrors NoteTypePage.
+        self.completeChanged.emit()
         worker.start()
+
+    def _on_decks_error(self, _message: str) -> None:
+        self.refresh_button.setEnabled(True)
+        self.completeChanged.emit()
 
     def _on_decks_fetched(self, deck_names: object) -> None:
         self.refresh_button.setEnabled(True)
@@ -240,14 +251,19 @@ class DeckPage(QWizardPage):
         self.deck_combo.setCurrentText(current or self._wizard.working_config().anki_deck_name)
         self.deck_combo.blockSignals(False)
         self._update_deck_hint()
+        # The repopulate above runs with signals blocked, so _on_text_changed —
+        # the only other emitter — never fires. Without this the Next button is
+        # never re-evaluated after the list lands and stays disabled forever.
+        self.completeChanged.emit()
 
     def _update_deck_hint(self) -> None:
         name = self.deck_combo.currentText().strip()
-        if not name:
-            self.deck_hint.setText(self.tr("Enter a deck name."))
-        elif self._fetched_decks and name not in self._fetched_decks:
-            # Reuse the phrasing from validation_service's deck-not-found message.
-            self.deck_hint.setText(self.tr("Deck not found — it will be created automatically when mining starts."))
+        if not self._fetched_decks:
+            self.deck_hint.setText(self.tr("Could not load decks. Is Anki running with AnkiConnect?"))
+        elif not name:
+            self.deck_hint.setText(self.tr("Pick a deck."))
+        elif name not in self._fetched_decks:
+            self.deck_hint.setText(self.tr("No such deck. Create it in Anki, then press Refresh."))
         else:
             self.deck_hint.setText("")
 

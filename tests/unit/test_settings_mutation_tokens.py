@@ -239,7 +239,7 @@ def test_mutation_preflight_commits_dirty_settings_without_pitch_selector(test_c
     committed: list[AnkiMinerConfig] = []
     widget = SettingsTab(test_config, commit_config=committed.append)
     qtbot.addWidget(widget)
-    widget.deck_input.setText("PreflightDeck")
+    widget.anki_panel.set_deck_name("PreflightDeck")
     assert widget._settings_dirty is True
 
     try:

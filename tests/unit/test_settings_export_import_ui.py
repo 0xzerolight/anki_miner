@@ -92,7 +92,7 @@ class TestImportButton:
         tab.update_config(received[0])
         qtbot.waitUntil(lambda: not tab.subtitles_panel._state_in_flight, timeout=5000)
         # Panels reloaded to show the imported values.
-        assert tab.deck_input.text() == "ImportedDeck"
+        assert tab.anki_panel.get_deck_name() == "ImportedDeck"
         assert "✓" in tab.save_status_label.text()
 
     def test_import_confirm_no_is_noop(self, tab, test_config, tmp_path, monkeypatch, messageboxes):
@@ -105,7 +105,7 @@ class TestImportButton:
         tab.import_settings_button.click()
 
         assert received == []
-        assert tab.deck_input.text() == test_config.anki_deck_name
+        assert tab.anki_panel.get_deck_name() == test_config.anki_deck_name
 
     def test_import_file_dialog_cancelled_is_noop(self, tab, monkeypatch, messageboxes):
         monkeypatch.setattr(QFileDialog, "getOpenFileName", staticmethod(lambda *a, **k: ("", "")))

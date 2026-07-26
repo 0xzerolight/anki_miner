@@ -6,7 +6,114 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QComboBox
+
 from anki_miner.gui.widgets.panels.anki_settings_panel import AnkiSettingsPanel
+
+
+def test_deck_and_notetype_are_strict_combos(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    assert isinstance(panel.deck_combo, QComboBox)
+    assert isinstance(panel.notetype_combo, QComboBox)
+    assert not panel.deck_combo.isEditable()
+    assert not panel.notetype_combo.isEditable()
+
+
+def test_refresh_buttons_are_visible_and_labelled(qtbot):
+    """A strict combo makes Refresh the only way back from an empty list.
+
+    These were empty ghost buttons — an invisible hit box. With a QLineEdit you
+    could still type the name, so it merely looked odd; with a strict combo,
+    open Settings while Anki is closed and there is nothing clickable to
+    recover with (the first-show fetch is one-shot).
+    """
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    for button in (panel.deck_sync_button, panel.notetype_sync_button):
+        assert button.text().strip()
+        assert button.toolTip().strip()
+        # An explicit cap here would elide the label back into nothing.
+        assert button.maximumWidth() >= button.sizeHint().width()
+
+
+def test_saved_value_survives_when_anki_is_unreachable(qtbot):
+    """Loading a config with Anki closed must not blank the saved names."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_deck_name("JP::Mining")
+    panel.set_note_type("Lapis")
+    assert panel.get_deck_name() == "JP::Mining"
+    assert panel.get_note_type() == "Lapis"
+
+
+def test_refreshing_the_list_keeps_the_current_selection(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_deck_name("JP::Mining")
+    panel.set_available_decks(["Default", "JP::Mining", "JP::Sentences"])
+    assert panel.get_deck_name() == "JP::Mining"
+    assert panel.deck_combo.count() == 3
+
+
+def test_refreshing_keeps_a_selection_absent_from_anki(qtbot):
+    """A saved deck Anki no longer has stays selected rather than vanishing."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_deck_name("Deleted Deck")
+    panel.set_available_decks(["Default"])
+    assert panel.get_deck_name() == "Deleted Deck"
+    assert panel.deck_combo.count() == 2
+
+
+def test_a_phantom_entry_is_marked(qtbot):
+    """A name Anki does not have carries the not-in-Anki tooltip; a real one does not."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_deck_name("Ghost")
+    panel.set_available_decks(["Default"])
+    ghost = panel.deck_combo.findText("Ghost")
+    real = panel.deck_combo.findText("Default")
+    assert panel.deck_combo.itemData(ghost, Qt.ItemDataRole.ToolTipRole)
+    assert panel.deck_combo.itemData(real, Qt.ItemDataRole.ToolTipRole) is None
+    # The item text is the config value and must stay byte-exact.
+    assert panel.deck_combo.itemText(ghost) == "Ghost"
+
+
+def test_empty_fetch_leaves_the_current_selection_alone(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_deck_name("JP::Mining")
+    panel.set_available_decks([])
+    assert panel.get_deck_name() == "JP::Mining"
+
+
+def test_repeated_loads_do_not_duplicate_items(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_deck_name("JP::Mining")
+    panel.set_deck_name("JP::Mining")
+    assert panel.deck_combo.count() == 1
+
+
+def test_picking_a_real_deck_clears_the_not_in_anki_warning(qtbot):
+    """The warning must not outlive the problem it describes."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_deck_name("Ghost")
+    panel.set_available_decks(["Default", "JP::Mining"])
+    panel.set_deck_status(False, "Deck 'Ghost' is not in Anki — pick one below.")
+    panel.deck_combo.setCurrentIndex(panel.deck_combo.findText("JP::Mining"))
+    assert panel.deck_status.text() == ""
+
+
+def test_setting_an_empty_name_clears_the_selection(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_note_type("Lapis")
+    panel.set_note_type("")
+    assert panel.get_note_type() == ""
 
 
 def test_glossary_field_get_set_roundtrip(qtbot):

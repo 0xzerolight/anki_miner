@@ -117,6 +117,16 @@ class FakeAnkiConnect:
         with self._lock:
             self._models[name] = list(fields)
 
+    def seed_deck(self, name: str) -> None:
+        """Register a deck without going through ``createDeck``.
+
+        Gateway-less driver tests hit the app's preflight, which now VERIFIES
+        the deck exists (it no longer creates it); the ``fake_anki`` fixture
+        seeds it here. ``_decks`` otherwise holds only "Default".
+        """
+        with self._lock:
+            self._decks.add(name)
+
     def note_count(self, deck: str | None = None) -> int:
         """Notes in ``deck`` (or the whole collection) — a test-side read-back."""
         with self._lock:

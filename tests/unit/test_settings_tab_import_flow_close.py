@@ -285,10 +285,11 @@ class TestRealSettingsTabIterCloseWorkers:
     def test_idle_tab_returns_all_nones(self):
         tab = _FakeRealSettingsTab()
         workers = tab.iter_close_workers()
-        # 2 from AnkiProbeController (fetch fields, fetch decks)
+        # 4 from AnkiProbeController (fetch fields, fetch decks, name-list
+        # decks, name-list note types)
         # + 1 DictionaryImportFlow (import) + 1 AudioPackImportFlow
-        # + 1 FrequencyImportFlow + 1 PitchImportFlow = 6 entries, all None idle.
-        assert len(workers) == 6
+        # + 1 FrequencyImportFlow + 1 PitchImportFlow = 8 entries, all None idle.
+        assert len(workers) == 8
         assert all(w is None for w in workers)
 
     def test_dict_import_worker_surfaces(self):

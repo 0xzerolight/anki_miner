@@ -156,7 +156,7 @@ Uses bundled name wordsets derived from [JMnedict](https://www.edrdg.org/enamdic
 | Issue                    | Solution                                                                         |
 |--------------------------|----------------------------------------------------------------------------------|
 | "Cannot connect to Anki" | Start Anki and ensure AnkiConnect is installed.                                  |
-| "Deck not found"         | The deck is created automatically when mining starts; if you meant a different deck, update the name in Settings. |
+| "Deck not found"         | Pick an existing deck in Settings -> Anki. Decks are not created for you; make it in Anki first if you need a new one. |
 | "Note type not found"    | Configure your note type's field names in Settings -> Anki.                       |
 | "ffmpeg not found"       | Install ffmpeg and add it to PATH.                                               |
 | No definitions found     | Add a Yomitan dictionary in Settings -> Add Dictionary… (recommended), or enable the Jisho fallback (slower, rate-limited). |

@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import replace
 from typing import Literal, cast
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import QCoreApplication, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -85,12 +85,51 @@ def auto_map_fields(field_names: list[str]) -> dict[str, str]:
     return mapping
 
 
+def select_or_insert(combo: QComboBox, name: str, *, known: bool = True) -> None:
+    """Select ``name`` in ``combo``, inserting it first if it isn't listed.
+
+    The deck / note-type combos are non-editable, so a value that is not an
+    item cannot be displayed — and ``currentText()`` would then read back ""
+    which the settings auto-save would persist over the user's real config.
+    Loading runs before any AnkiConnect fetch and may run with Anki closed, so
+    "not listed" is the normal startup case, not an error.
+
+    An empty ``name`` clears the selection (``setCurrentIndex(-1)``) — the only
+    way to express "nothing chosen" on a strict combo, and what the
+    fetch-fields guard checks for.
+
+    ``known=False`` tags the inserted entry with a tooltip so a phantom is
+    distinguishable from a name that really exists. Only the tooltip: an
+    item ForegroundRole renders nowhere here (Qt never applies it to the
+    CLOSED combo, and common.qss sets an explicit colour on
+    ``QComboBox QAbstractItemView`` that wins in the popup). The visible
+    signal is the red status line under the combo, driven by the refresh.
+    """
+    if not name:
+        combo.setCurrentIndex(-1)
+        return
+    index = combo.findText(name)
+    if index < 0:
+        combo.addItem(name)
+        index = combo.findText(name)
+        if not known:
+            combo.setItemData(
+                index,
+                QCoreApplication.translate(
+                    "AnkiSettingsPanel",
+                    "Not in Anki — mining will fail until you pick a real one or create it in Anki.",
+                ),
+                Qt.ItemDataRole.ToolTipRole,
+            )
+    combo.setCurrentIndex(index)
+
+
 class AnkiSettingsPanel(FormPanel):
     """Panel for Anki connection and configuration settings.
 
     Provides:
-    - Deck name input with sync button
-    - Note type input with sync button
+    - Deck name dropdown with refresh button
+    - Note type dropdown with refresh button
     - AnkiConnect URL configuration
     - Connection status indicator
     - Test connection button
@@ -108,8 +147,8 @@ class AnkiSettingsPanel(FormPanel):
     fetch_fields_requested = pyqtSignal()
 
     # Dynamically created by _add_labeled_field_with_button via setattr
-    deck_input: QLineEdit
-    note_type_input: QLineEdit
+    deck_combo: QComboBox
+    notetype_combo: QComboBox
     deck_sync_button: ModernButton
     notetype_sync_button: ModernButton
 
@@ -157,14 +196,14 @@ class AnkiSettingsPanel(FormPanel):
 
         self.add_layout(button_layout)
 
-        # Deck name with sync button
+        # Deck name with refresh button
         self._add_labeled_field_with_button(
             label_text=self.tr("Deck Name"),
-            input_widget_name="deck_input",
-            placeholder=self.tr("Enter deck name..."),
+            input_widget_name="deck_combo",
+            placeholder=self.tr("Select a deck…"),
             tooltip="",
             button_name="deck_sync_button",
-            button_tooltip=self.tr("Sync deck list from Anki"),
+            button_tooltip=self.tr("Reload the deck list from Anki"),
             button_callback=self._on_deck_sync,
             helper_text=self.tr("Target deck for new cards."),
         )
@@ -174,17 +213,22 @@ class AnkiSettingsPanel(FormPanel):
         self.deck_status.setObjectName("validation-status")
         self.add_widget(self.deck_status)
 
-        # Note type with sync button
+        # Note type with refresh button
         self._add_labeled_field_with_button(
             label_text=self.tr("Note Type"),
-            input_widget_name="note_type_input",
-            placeholder=self.tr("Enter note type name..."),
+            input_widget_name="notetype_combo",
+            placeholder=self.tr("Select a note type…"),
             tooltip="",
             button_name="notetype_sync_button",
-            button_tooltip=self.tr("Sync note type list from Anki"),
+            button_tooltip=self.tr("Reload the note type list from Anki"),
             button_callback=self._on_notetype_sync,
             helper_text=self.tr("Anki note type whose fields you'll map below."),
         )
+
+        # Clear a stale not-in-Anki warning as soon as the user acts on it.
+        # _repopulate blocks signals, so only a real user selection fires these.
+        self.deck_combo.currentIndexChanged.connect(self._on_deck_selection_changed)
+        self.notetype_combo.currentIndexChanged.connect(self._on_notetype_selection_changed)
 
         # Note type status
         self.notetype_status = QLabel()
@@ -434,7 +478,7 @@ class AnkiSettingsPanel(FormPanel):
         button_callback,
         helper_text: str = "",
     ) -> None:
-        """Add a labeled input + inline sync button as a single compact form row.
+        """Add a labeled dropdown + inline refresh button as one compact form row.
 
         The input and button are wrapped in a container widget so the whole pair
         sits in one ``add_field`` row (label beside control), matching the other
@@ -456,9 +500,20 @@ class AnkiSettingsPanel(FormPanel):
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(SPACING.xs)
 
-        # Input
-        input_widget = QLineEdit()
+        # Input. Strict (non-editable) on purpose: these two names must match
+        # Anki exactly, and the list is authoritative — see select_or_insert.
+        input_widget = QComboBox()
+        input_widget.setEditable(False)
         input_widget.setPlaceholderText(placeholder)
+        input_widget.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        # Pair the policy with a minimum length (as header_widget and
+        # single_episode_tab do) or the row collapses when the list is empty.
+        input_widget.setMinimumContentsLength(20)
+        # Large collections: a strict combo loses the old line edit's "type a
+        # fragment" affordance; sorted() in _repopulate plus Qt's prefix
+        # keyboardSearch is the mitigation. NOTE setMaxVisibleItems is ignored
+        # by styles where SH_ComboBox_Popup is true (macOS).
+        input_widget.setMaxVisibleItems(20)
         # Put the helper on the input itself: add_field sets it on the wrapping
         # container, but the input + button cover the container with zero margins
         # and Qt tooltips don't propagate to children, so the container tooltip
@@ -467,24 +522,31 @@ class AnkiSettingsPanel(FormPanel):
         row.addWidget(input_widget, 1)
         setattr(self, input_widget_name, input_widget)
 
-        # Sync button
-        sync_button = ModernButton("", variant="ghost")
+        # Refresh button. LABELLED, not the empty ghost it used to be: with a
+        # strict combo this button is the only way back from an empty list, so
+        # an invisible 40px hit box is a dead end (open Settings with Anki
+        # closed, start Anki, and there is nothing to click — showEvent's fetch
+        # is one-shot). Wording and variant match the wizard's deck/note-type
+        # Refresh so the two surfaces read the same.
+        sync_button = ModernButton(self.tr("Refresh"), variant="secondary")
         sync_button.clicked.connect(button_callback)
         sync_button.setToolTip(button_tooltip)
-        sync_button.setMaximumWidth(40)
         row.addWidget(sync_button)
         setattr(self, button_name, sync_button)
 
         self.add_field(label_text, container, helper=helper_text)
 
     def _on_deck_sync(self) -> None:
-        """Handle deck sync button click."""
-        self.set_deck_status(None, self.tr("Syncing deck list..."))
+        """Handle deck refresh button click.
+
+        Writes no status: ``AnkiProbeController.refresh_name_lists`` is the
+        single owner of both status lines and sets them on entry. Writing here
+        too would set the same message twice per click.
+        """
         self.deck_sync_requested.emit()
 
     def _on_notetype_sync(self) -> None:
-        """Handle note type sync button click."""
-        self.set_notetype_status(None, self.tr("Syncing note type list..."))
+        """Handle note type refresh button click (status owned by the refresh)."""
         self.notetype_sync_requested.emit()
 
     def _on_test_connection(self) -> None:
@@ -695,20 +757,74 @@ class AnkiSettingsPanel(FormPanel):
     # === Simple field accessors (OVH-020) ===
 
     def get_deck_name(self) -> str:
-        """Return the deck name."""
-        return self.deck_input.text()
+        """Return the selected deck name ("" when nothing is selected)."""
+        return self.deck_combo.currentText()
 
     def set_deck_name(self, value: str) -> None:
-        """Set the deck name field."""
-        self.deck_input.setText(value)
+        """Select ``value``; insert it when Anki hasn't listed it, "" clears."""
+        select_or_insert(self.deck_combo, value, known=False)
 
     def get_note_type(self) -> str:
-        """Return the note type name."""
-        return self.note_type_input.text()
+        """Return the selected note type name ("" when nothing is selected)."""
+        return self.notetype_combo.currentText()
 
     def set_note_type(self, value: str) -> None:
-        """Set the note type field."""
-        self.note_type_input.setText(value)
+        """Select ``value``; insert it when Anki hasn't listed it, "" clears."""
+        select_or_insert(self.notetype_combo, value, known=False)
+
+    def set_available_decks(self, names: list[str]) -> None:
+        """Repopulate the deck list, preserving the current selection.
+
+        An empty ``names`` (Anki closed, fetch failed) is a no-op: clearing
+        would drop the user's saved deck. A selection Anki no longer reports is
+        re-inserted, tagged as a phantom so it does not pass for a real deck.
+        """
+        self._repopulate(self.deck_combo, names)
+
+    def set_available_note_types(self, names: list[str]) -> None:
+        """Repopulate the note type list, preserving the current selection."""
+        self._repopulate(self.notetype_combo, names)
+
+    def _on_deck_selection_changed(self) -> None:
+        """Clear the not-in-Anki warning once the user picks a real deck.
+
+        Without this the red "Deck 'X' is not in Anki — pick one below."
+        written by the list refresh stays on screen after the user has done
+        exactly what it asked, which reads as "still broken". Only clears —
+        it never invents a success message, since this panel does not know
+        the fetched list; the refresh owns that.
+        """
+        index = self.deck_combo.currentIndex()
+        if index >= 0 and not self.deck_combo.itemData(index, Qt.ItemDataRole.ToolTipRole):
+            self._clear_status(self.deck_status)
+
+    def _on_notetype_selection_changed(self) -> None:
+        """Clear the not-in-Anki warning once the user picks a real note type."""
+        index = self.notetype_combo.currentIndex()
+        if index >= 0 and not self.notetype_combo.itemData(index, Qt.ItemDataRole.ToolTipRole):
+            self._clear_status(self.notetype_status)
+
+    @staticmethod
+    def _clear_status(label: QLabel) -> None:
+        """Blank a validation-status label and drop its colour property."""
+        label.setText("")
+        label.setProperty("status", "")
+        if style := label.style():
+            style.unpolish(label)
+            style.polish(label)
+
+    @staticmethod
+    def _repopulate(combo: QComboBox, names: list[str]) -> None:
+        if not names:
+            return
+        current = combo.currentText()
+        combo.blockSignals(True)
+        try:
+            combo.clear()
+            combo.addItems(sorted(names))
+            select_or_insert(combo, current, known=current in names)
+        finally:
+            combo.blockSignals(False)
 
     def get_ankiconnect_url(self) -> str:
         """Return the AnkiConnect URL."""

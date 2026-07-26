@@ -494,7 +494,7 @@ def test_corrupt_subtitle_fails_run_no_hang(tmp_path: Path, qtbot, fake_anki) ->
     path is the GUI-bug surface: an unhandled failure must not hang the wait, and
     the tab must return to idle so it stays usable. The run fails at phase 1 —
     before media extraction — so no ffmpeg is needed; the fake only serves the
-    preflight (``modelNames``/``modelFieldNames``/``createDeck``).
+    preflight (``modelNames``/``modelFieldNames``/``deckNames``).
     """
     e2e = E2EConfig(test_home=tmp_path, ankiconnect_url=fake_anki.url)
     cfg = build_app_config(e2e, tmp_path, bypass_known_words=True)

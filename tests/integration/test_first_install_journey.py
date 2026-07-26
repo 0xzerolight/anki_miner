@@ -26,6 +26,7 @@ from anki_miner import __version__
 from anki_miner.config import ChainEntry, create_default_config
 from anki_miner.gui import app as app_module
 from anki_miner.gui.controllers import dictionary_import_flow, import_flow_common
+from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
 from anki_miner.gui.controllers.background_tasks import BackgroundTaskController
 from anki_miner.gui.main_window import MainWindow
 from anki_miner.gui.utils import stall_watchdog as stall_watchdog_module
@@ -152,6 +153,13 @@ def test_first_install_journey(
         return False
 
     monkeypatch.setattr(BackgroundTaskController, "start_validation", reject_startup_validation)
+
+    # SettingsTab.showEvent lazily fetches the deck / note-type dropdown lists.
+    # It fires on the tab switch below (the window is already visible), which
+    # would spawn two real AnkiConnect QThreads and fail this test on the socket
+    # tripwire. Patch the class: the tab is built inside compose_main_window,
+    # so an instance-level patch would be too late.
+    monkeypatch.setattr(AnkiProbeController, "refresh_name_lists", lambda _self: None)
 
     def record_information(
         _parent: QWidget | None,

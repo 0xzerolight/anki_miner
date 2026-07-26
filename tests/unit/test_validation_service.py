@@ -158,7 +158,23 @@ class TestValidationService:
 
             assert success is False
             assert "not found" in message.lower()
-            assert "created automatically" in message
+            assert "created automatically" not in message
+
+        def test_missing_deck_message_no_longer_promises_autocreate(self, test_config):
+            """The message must not promise the removed auto-creation behaviour."""
+            from dataclasses import replace  # noqa: PLC0415 — module convention
+
+            service = ValidationService(replace(test_config, anki_deck_name="Nope"))
+
+            mock_response = MagicMock()
+            mock_response.json.return_value = {"result": ["Default", "Real"], "error": None}
+
+            with patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response):
+                success, message = service._check_deck_exists()
+
+            assert success is False
+            assert "Nope" in message
+            assert "created automatically" not in message
 
         def test_deck_not_found_lists_available(self, test_config):
             """Missing deck message should still list available decks."""
@@ -599,8 +615,8 @@ class TestValidationService:
             assert result.ffmpeg_ok is True
             assert any(i.component == "AnkiConnect" for i in result.issues)
 
-        def test_missing_deck_produces_warning_not_error(self, test_config):
-            """A missing deck should surface as WARNING (auto-created at mining time), not ERROR."""
+        def test_missing_deck_produces_error_not_warning(self, test_config):
+            """A missing deck fails the run (no auto-creation), so it must surface as ERROR."""
             service = ValidationService(test_config)
 
             anki_resp = MagicMock()
@@ -647,10 +663,10 @@ class TestValidationService:
             assert result.deck_exists is False
             deck_issues = [i for i in result.issues if i.component == "Anki Deck"]
             assert len(deck_issues) == 1
-            assert deck_issues[0].severity == "WARNING"
-            assert "created automatically" in deck_issues[0].message
-            # No ERROR-level issue for the deck
-            assert not any(i.component == "Anki Deck" and i.severity == "ERROR" for i in result.issues)
+            assert deck_issues[0].severity == "ERROR"
+            assert "created automatically" not in deck_issues[0].message
+            # No WARNING-level issue for the deck
+            assert not any(i.component == "Anki Deck" and i.severity == "WARNING" for i in result.issues)
 
         def test_ffmpeg_failure(self, test_config):
             """ffmpeg not found should be reported as error."""
