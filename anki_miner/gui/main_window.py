@@ -31,6 +31,7 @@ from anki_miner.gui.constants import (
     WINDOW_MIN_WIDTH,
 )
 from anki_miner.gui.controllers import BackgroundTaskController
+from anki_miner.gui.controllers.profile_controller import ProfileController
 from anki_miner.gui.launch import get_effective_log_path
 from anki_miner.gui.presenters import GUIPresenter
 from anki_miner.gui.resources import get_resource_dir
@@ -38,6 +39,7 @@ from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.utils.config_manager import GUIConfigManager
+from anki_miner.gui.utils.profile_store import ProfileStore
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
 from anki_miner.gui.widgets.header_widget import HeaderWidget
@@ -117,6 +119,12 @@ class MainWindow(QMainWindow):
         self.background_tasks.ytdlp_update_result.connect(self._on_ytdlp_update_result)
         self.background_tasks.jmdict_migration_finished.connect(self._on_jmdict_migration_finished)
 
+        # Settings-profile sequencing (boot reconcile / switch / create). Owned
+        # here beside the other window-level controller, and constructed BEFORE
+        # _setup_ui so the header can connect to it; it touches nothing until
+        # commit_boot calls bootstrap().
+        self.profile_controller = ProfileController(self)
+
         # Config-bound services (validation + the AnkiService shared across undo
         # callbacks). Rebuilt on every config change via update_config — see
         # _build_config_bound_services — so an AnkiConnect URL/port edit reaches
@@ -141,6 +149,16 @@ class MainWindow(QMainWindow):
         """Commit startup state, then start boot work unless suppressed."""
         if self._boot_committed:
             return
+
+        # FIRST, and deliberately OUTSIDE the suppress_optional gate.
+        # First: the last_known_version save below is a save, and a save that
+        # runs before the reconcile has seeded GUIConfigManager.ACTIVE_PROFILE_ID
+        # writes gui_config.json with no profile marker.
+        # Outside the gate: bootstrap is pure local file I/O — no network, no
+        # dialogs — and the suppressed path is the installer smoke, which
+        # asserts on the gui_config.json that same save produces. The wrapper is
+        # here only for its log-and-swallow.
+        self._run_optional_boot_step("settings profiles", self.profile_controller.bootstrap)
 
         if not suppress_optional:
             self._run_optional_boot_step(
@@ -214,6 +232,10 @@ class MainWindow(QMainWindow):
         self.header = HeaderWidget()
         self.header.theme_changed.connect(self._on_theme_changed)
         self.header.open_theme_settings.connect(self._open_theme_settings)
+        # The combo only ever proposes a switch: the controller decides, shows
+        # any refusal itself and snaps the combo back on every terminal path.
+        self.header.profile_changed.connect(self.profile_controller.switch_to)
+        self.header.open_profile_manager.connect(self._open_profile_manager)
         self.central_layout.addWidget(self.header)
 
         # Create tab widget
@@ -524,6 +546,26 @@ class MainWindow(QMainWindow):
         open_subtab = getattr(settings_widget, "open_ui_subtab", None)
         if callable(open_subtab):
             open_subtab()
+
+    def _open_profile_manager(self) -> None:
+        """Open the settings-profile manager (header sentinel / Settings → UI).
+
+        ``exec``, never ``show``: the dialog sets no modality of its own, and a
+        modeless one would be repainted mid-CRUD by the settings reload a switch
+        fans out — the hazard the modal shape exists to avoid.
+        """
+        from anki_miner.gui.widgets.dialogs.profile_manager_dialog import ProfileManagerDialog
+
+        ProfileManagerDialog(self.profile_controller, self._refresh_profile_header, self).exec()
+
+    def _refresh_profile_header(self) -> None:
+        """Re-point the header combo at the stored profiles.
+
+        Handed to the profile manager for its rename/delete paths: those go
+        straight to ``ProfileStore``, so unlike switch/create they never pass
+        through the controller's own header refresh.
+        """
+        self.header.set_profiles(ProfileStore.list_profiles(), GUIConfigManager.ACTIVE_PROFILE_ID)
 
     def _report_issue(self) -> None:
         """Open the GitHub issues page in the default browser."""

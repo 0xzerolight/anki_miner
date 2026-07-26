@@ -941,6 +941,10 @@ def compose_main_window(
     # applied — re-emitting would loop back through `_on_theme_changed`).
     settings_tab.ui_panel.favorites_changed.connect(window.header.refresh_favorites)
     settings_tab.ui_panel.state_changed.connect(lambda *_: window.header.update_theme_selector())
+    # "Manage Profiles…" is re-emitted by the tab rather than handled there: the
+    # window owns the dialog, because a switch reloads every panel in this tab
+    # from the incoming config. Same handler as the header's combo sentinel.
+    settings_tab.manage_profiles_requested.connect(window._open_profile_manager)
     window.tabs.addTab(settings_tab, QCoreApplication.translate("MainWindow", "Settings"))
 
     # Non-Settings config refreshes (e.g. JMdict migration finishing in the
