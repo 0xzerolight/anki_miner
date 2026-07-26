@@ -918,6 +918,43 @@ class TestFetchVideoProgress:
         assert len(merging_calls) == 1
 
 
+class TestStaleExtractorMapping:
+    """Format-unavailable stderr must point at yt-dlp freshness, not at --format.
+
+    YouTube keeps rolling out DRM and SABR-only experiments per client; an older
+    yt-dlp then finds no usable format and says "Requested format is not available",
+    which reads like a bad format selector rather than "your yt-dlp is too old".
+    """
+
+    @pytest.mark.parametrize(
+        "stderr_line",
+        [
+            "ERROR: [youtube] abc123: Requested format is not available. Use --list-formats",
+            "WARNING: Only images are available for download. use --list-formats to see them",
+            "WARNING: This video is drm protected and only images are available for download",
+            "WARNING: Some android client https formats have been skipped (SABR-only experiment)",
+        ],
+    )
+    def test_maps_to_an_actionable_message(
+        self, service: YouTubeFetcherService, tmp_path: Path, stderr_line: str
+    ) -> None:
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen([stderr_line], returncode=1)),
+            pytest.raises(YouTubeFetchError, match="Update yt-dlp now"),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+    def test_unrelated_failure_keeps_the_generic_message(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        """Do not blame yt-dlp's age for every non-zero exit."""
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen(["ERROR: Video unavailable"], returncode=1)),
+            pytest.raises(YouTubeFetchError, match="exited non-zero"),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+
 class TestFetchVideoErrors:
     def test_bot_detection(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         lines = ["ERROR: Sign in to confirm you're not a bot"]

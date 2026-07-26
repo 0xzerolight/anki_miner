@@ -736,6 +736,26 @@ class YouTubeFetcherService:
                 )
             raise CookieDatabaseLockedError(msg)
 
+        # Extractor-freshness failures. YouTube keeps rolling out DRM and SABR-only
+        # streaming experiments per client, and an older yt-dlp then finds no usable
+        # format at all. The raw stderr for this is "Requested format is not
+        # available", which reads like a bad --format string rather than "your yt-dlp
+        # is too old" — so name the actual remedy.
+        stale_extractor_markers = (
+            "requested format is not available",
+            "only images are available",
+            "drm protected",
+            "sabr",
+        )
+        if any(marker in joined_lower for marker in stale_extractor_markers):
+            raise YouTubeFetchError(
+                "YouTube served no downloadable format for this video, which usually "
+                "means yt-dlp is out of date (YouTube's DRM/SABR experiments break "
+                "older versions). Use Settings → YouTube → Update yt-dlp now, or "
+                "enable 'Keep yt-dlp up to date automatically', then retry. "
+                f"yt-dlp said: {_tail(tail, 5)}"
+            )
+
         raise YouTubeFetchError(f"yt-dlp exited non-zero: {_tail(tail, 20)}")
 
     def _resolve_outputs(self, workspace: Path, video_id: str, sub_mode: SubMode) -> FetchedMedia:
