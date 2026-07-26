@@ -892,3 +892,32 @@ def test_stale_dict_aborts_build_before_preview(qapp):
         base.process_episode.assert_not_called()
     finally:
         worker._stop_patch.stop()
+
+
+def test_ensure_deck_runs_before_any_episode_is_processed(qapp):
+    """Pre-flight verifies the deck exists, so creation must come first.
+
+    verify_card_target no longer creates the deck, so Deck Builder passes it
+    only because ensure_deck runs before the per-pair process_episode loop.
+    ensure_deck and process_episode live on different mocks, so ordering needs
+    a shared recorder; attach_mock preserves each child's configured
+    return_value (side_effect would clobber process_episode's ProcessingResult).
+    """
+    counts = collections.Counter({"a": 1})
+    base = _fake_processor(counts)
+    ep1 = _fake_processor(counts)
+
+    recorder = MagicMock()
+    recorder.attach_mock(base.anki_service.ensure_deck, "ensure_deck")
+    recorder.attach_mock(ep1.process_episode, "process_episode")
+
+    worker, _factory = _make_worker(qapp, _make_request([_make_pair("ep1")]), processors=[base, ep1])
+    try:
+        worker.confirm()
+        worker.run()
+        names = [call[0] for call in recorder.mock_calls]
+        assert "ensure_deck" in names
+        assert "process_episode" in names
+        assert names.index("ensure_deck") < names.index("process_episode")
+    finally:
+        worker._stop_patch.stop()

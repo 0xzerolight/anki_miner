@@ -34,9 +34,10 @@ def fake_anki():
 
     The pre-seed matters for gateway-less driver tests: a process run hits the
     app's preflight (``verify_card_target``: ``modelNames`` +
-    ``modelFieldNames``), which raises ``SetupError`` unless the harness note
-    type already exists. Soak paths would create it via the gateway's
-    ``ensure_test_model()`` anyway; the seed makes both paths uniform.
+    ``modelFieldNames`` + ``deckNames``), which raises ``SetupError`` unless the
+    harness note type AND deck already exist. The deck seed is load-bearing
+    since preflight stopped auto-creating it. Soak paths would create both via
+    the gateway anyway; the seed makes every path uniform.
 
     Tests using this fixture talk real loopback HTTP — mark them
     ``@pytest.mark.network`` or the socket tripwire fails them.
@@ -46,6 +47,7 @@ def fake_anki():
 
     server = FakeAnkiConnect().start()
     server.seed_model(E2EConfig().note_type, ["Front", "Back"])
+    server.seed_deck(E2EConfig().deck_name)
     try:
         yield server
     finally:
