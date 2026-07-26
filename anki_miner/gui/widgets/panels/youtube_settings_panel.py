@@ -4,7 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QSpinBox, QWidget
+from PyQt6.QtWidgets import QCheckBox, QComboBox, QHBoxLayout, QLabel, QSpinBox, QWidget
 
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton
@@ -88,6 +88,32 @@ class YouTubeSettingsPanel(FormPanel):
             self.tr("Playlist max videos"),
             self.playlist_max_spinbox,
             helper=self.tr("When adding a playlist, at most this many videos are queued."),
+        )
+
+        # Keep yt-dlp current. This had no UI at all, so the only way to change it was
+        # hand-editing gui_config.json — and it is the setting that decides whether
+        # YouTube mining keeps working, since yt-dlp breaks whenever YouTube changes.
+        self.auto_update_checkbox = QCheckBox(self.tr("Keep yt-dlp up to date automatically"))
+        self.add_field(
+            self.tr("Auto-update"),
+            self.auto_update_checkbox,
+            helper=self.tr(
+                "Checks once a day on startup and downloads into Anki Miner's own folder. "
+                "Leaving this off means YouTube mining will eventually stop working."
+            ),
+        )
+
+        # Explicit yt-dlp override, also previously UI-less. The escape hatch when the
+        # app-managed copy takes precedence and the user wants their own binary instead.
+        self.ytdlp_location_selector = FileSelector(
+            label="",
+            file_mode=True,
+            placeholder=self.tr("Optional: path to your own yt-dlp executable..."),
+        )
+        self.add_field(
+            self.tr("yt-dlp location"),
+            self.ytdlp_location_selector,
+            helper=self.tr("Overrides automatic detection. Leave empty unless you need a specific build."),
         )
 
         # yt-dlp updater: manual trigger + status. yt-dlp also self-updates in
@@ -174,6 +200,26 @@ class YouTubeSettingsPanel(FormPanel):
         """Return the current playlist-max spinbox value."""
         return self.playlist_max_spinbox.value()
 
+    def set_auto_update_ytdlp(self, value: bool) -> None:
+        """Set the auto-update checkbox."""
+        self.auto_update_checkbox.setChecked(bool(value))
+
+    def get_auto_update_ytdlp(self) -> bool:
+        """Return the auto-update checkbox state."""
+        return self.auto_update_checkbox.isChecked()
+
+    def set_ytdlp_location(self, value: object) -> None:
+        """Populate the yt-dlp override field from a config value (Path/str/None)."""
+        self.ytdlp_location_selector.set_path(str(value) if value else "")
+
+    def get_ytdlp_location(self) -> str:
+        """Return the yt-dlp override path text (empty string when unset).
+
+        Uses ``path_or_none()`` — never ``strip()`` — so a path inside a folder whose
+        name ends in a space survives verbatim.
+        """
+        return self.ytdlp_location_selector.path_or_none() or ""
+
     # ------------------------------------------------------------------
     # Config marshalling contract (OVH-019)
     # ------------------------------------------------------------------
@@ -187,6 +233,8 @@ class YouTubeSettingsPanel(FormPanel):
         self.set_cookies_file(config.youtube_cookies_file)
         self.set_max_duration_seconds(config.youtube_max_duration_s)
         self.set_playlist_max(config.youtube_playlist_max)
+        self.set_auto_update_ytdlp(config.auto_update_ytdlp)
+        self.set_ytdlp_location(config.ytdlp_location)
 
     def contribute(self, config):
         """Return a new config with this panel's fields applied.
@@ -199,10 +247,13 @@ class YouTubeSettingsPanel(FormPanel):
         so an invalid path aborts Save before ``contribute`` is ever called.
         """
         cookies_file_str = self.get_cookies_file()
+        ytdlp_location_str = self.get_ytdlp_location()
         return replace(
             config,
             youtube_cookies_from_browser=self.get_cookies_from_browser(),
             youtube_cookies_file=Path(cookies_file_str) if cookies_file_str else None,
             youtube_max_duration_s=self.get_max_duration_seconds(),
             youtube_playlist_max=self.get_playlist_max(),
+            auto_update_ytdlp=self.get_auto_update_ytdlp(),
+            ytdlp_location=Path(ytdlp_location_str) if ytdlp_location_str else None,
         )

@@ -2,6 +2,8 @@
 
 import subprocess
 import sys
+from dataclasses import replace
+from datetime import date
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -1000,6 +1002,106 @@ class TestCheckAlass:
 
         assert ok is False
         assert "timed out" in message
+
+    def test_uses_double_dash_version_flag(self, test_config):
+        """alass wants --version, unlike ffmpeg's single-dash -version.
+
+        Both now share _check_tool, so the flag has to be passed per tool; getting it
+        wrong would make a present binary look broken.
+        """
+        service = ValidationService(test_config)
+        mock_result = MagicMock(returncode=0, stdout="alass 0.6.0")
+
+        with patch("anki_miner.services.validation_service.subprocess.run", return_value=mock_result) as run:
+            service._check_alass()
+
+        assert run.call_args.args[0][1] == "--version"
+
+
+class TestCheckYtdlp:
+    """yt-dlp is optional (YouTube tab only), so absence is a WARNING."""
+
+    def test_success(self, test_config):
+        service = ValidationService(test_config)
+        mock_result = MagicMock(returncode=0, stdout="2026.06.09\n")
+
+        with patch("anki_miner.services.validation_service.subprocess.run", return_value=mock_result) as run:
+            ok, message = service._check_ytdlp()
+
+        assert ok is True
+        assert "2026.06.09" in message
+        assert run.call_args.args[0][1] == "--version"
+
+    def test_not_found_points_at_the_installer(self, test_config):
+        service = ValidationService(test_config)
+
+        with patch(
+            "anki_miner.services.validation_service.subprocess.run",
+            side_effect=FileNotFoundError(),
+        ):
+            ok, message = service._check_ytdlp()
+
+        assert ok is False
+        assert "Update yt-dlp now" in message
+
+    def test_unverified_managed_binary_reports_instead_of_raising(self, test_config):
+        """resolve_ytdlp can raise; validate_setup documents itself as never raising.
+
+        Every other check resolves outside its try, which is safe only because those
+        resolvers cannot raise. This one must resolve inside, or an unverified
+        app-managed binary on PATH takes the whole startup validation down over an
+        optional tool.
+        """
+        service = ValidationService(test_config)
+
+        with patch(
+            "anki_miner.services.validation_service.resolve_ytdlp",
+            side_effect=FileNotFoundError("Refusing unverified managed yt-dlp executable on PATH"),
+        ):
+            ok, message = service._check_ytdlp()
+
+        assert ok is False
+        assert "unverified" in message.lower()
+
+    def test_validate_setup_does_not_raise_on_unverified_binary(self, test_config):
+        service = ValidationService(test_config)
+
+        with (
+            patch(
+                "anki_miner.services.validation_service.resolve_ytdlp",
+                side_effect=FileNotFoundError("Refusing unverified managed yt-dlp executable on PATH"),
+            ),
+            patch.object(ValidationService, "_check_ankiconnect", return_value=(False, "down")),
+        ):
+            result = service.validate_setup()
+
+        assert any(issue.component == "yt-dlp" and issue.severity == "WARNING" for issue in result.issues)
+
+
+class TestYtdlpStalenessWarning:
+    """The nudge is gated on auto-update being OFF."""
+
+    def test_silent_when_auto_update_enabled(self, test_config):
+        service = ValidationService(replace(test_config, auto_update_ytdlp=True))
+        assert service._ytdlp_staleness_warning("2020.01.01 [app-managed]") is None
+
+    def test_warns_when_opted_out_and_binary_is_old(self, test_config):
+        service = ValidationService(replace(test_config, auto_update_ytdlp=False))
+        message = service._ytdlp_staleness_warning("2020.01.01 [system PATH]")
+        assert message is not None
+        assert "2020.01.01" in message
+        assert "Settings → YouTube" in message
+
+    def test_silent_for_a_recent_binary(self, test_config):
+        service = ValidationService(replace(test_config, auto_update_ytdlp=False))
+        today = date.today().strftime("%Y.%m.%d")
+        assert service._ytdlp_staleness_warning(f"{today} [app-managed]") is None
+
+    @pytest.mark.parametrize("version_text", ["", "nightly", "2026.06 [x]", "not-a-date [x]"])
+    def test_silent_on_unparseable_versions(self, test_config, version_text):
+        """Nightly/dev builds must not produce a false alarm."""
+        service = ValidationService(replace(test_config, auto_update_ytdlp=False))
+        assert service._ytdlp_staleness_warning(version_text) is None
 
     def test_missing_alass_produces_warning_not_error_in_validate_setup(self, test_config, monkeypatch):
         """Missing alass must NOT make validate_setup fail — it must surface as WARNING."""

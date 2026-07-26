@@ -7241,6 +7241,30 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>加入播放清單時，最多將此數量的影片排入佇列。</translation>
     </message>
     <message>
+        <source>Keep yt-dlp up to date automatically</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Auto-update</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Checks once a day on startup and downloads into Anki Miner's own folder. Leaving this off means YouTube mining will eventually stop working.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Optional: path to your own yt-dlp executable...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>yt-dlp location</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Overrides automatic detection. Leave empty unless you need a specific build.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Update yt-dlp now</source>
         <translation>立即更新 yt-dlp</translation>
     </message>

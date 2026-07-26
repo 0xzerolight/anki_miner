@@ -3,10 +3,12 @@
 import logging
 import subprocess
 import sys
+from datetime import date, datetime
+from pathlib import Path
 
 import requests
 
-from anki_miner.config import AnkiMinerConfig
+from anki_miner.config import AnkiMinerConfig, paths
 from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.models import ValidationIssue, ValidationResult
 from anki_miner.services._ankiconnect import post_action
@@ -15,25 +17,52 @@ from anki_miner.utils import ensure_directory
 from anki_miner.utils.alass_resolver import resolve_alass
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.subprocess_utils import no_window_kwargs
+from anki_miner.utils.ytdlp_resolver import resolve_ytdlp
 
 logger = logging.getLogger(__name__)
 
+#: Age at which a resolved yt-dlp earns a staleness nudge. Generous on purpose:
+#: yt-dlp ships roughly monthly and a bundled binary is already weeks old on release
+#: day, so this must not fire on a healthy install that simply has auto-update off
+#: and a recent manual download.
+_YTDLP_STALE_AFTER_DAYS = 120
+
 
 def _classify_resolved(base: str, resolved: str) -> str:
-    """Classify a resolved ffmpeg/ffprobe path for the success message.
+    """Classify a resolved external-binary path for the success message.
 
     Returns a short bracketed suffix describing where the binary came from:
 
     - ``[system PATH]`` — the resolver returned the bare literal (PATH lookup).
     - ``[bundled]`` — the resolved path lives under the frozen ``sys._MEIPASS``.
+    - ``[app-managed]`` — an in-app download under ``ANKI_MINER_HOME``.
+    - ``[venv]`` — a console script beside ``sys.executable`` (a pip/pipx install).
     - ``[custom path]`` — an explicit config override / any other absolute path.
+
+    The app-managed and venv cases exist because yt-dlp resolves through tiers the
+    ffmpeg-era version of this function had no concept of; labelling both
+    "[custom path]" told the user their binary came from a setting they never set.
     """
     if resolved == base:
         return "[system PATH]"
     meipass = getattr(sys, "_MEIPASS", None)
     if meipass is not None and resolved.startswith(str(meipass)):
         return "[bundled]"
+    resolved_path = Path(resolved)
+    if _is_within(resolved_path, paths.ANKI_MINER_HOME):
+        return "[app-managed]"
+    if _is_within(resolved_path, Path(sys.executable).parent):
+        return "[venv]"
     return "[custom path]"
+
+
+def _is_within(candidate: Path, directory: Path) -> bool:
+    """True when *candidate* sits inside *directory* (best-effort, never raises)."""
+    try:
+        candidate.resolve().relative_to(directory.resolve())
+    except (ValueError, OSError):
+        return False
+    return True
 
 
 class ValidationService:
@@ -58,6 +87,11 @@ class ValidationService:
             in the ValidationResult.
         """
         issues = []
+        # Success messages are otherwise discarded (issues carry only failures), but
+        # the Settings → YouTube status line needs the resolved version + tier. This
+        # check already runs off the GUI thread, so surfacing it here is what keeps a
+        # `--version` subprocess off a panel-load path.
+        tool_versions: dict[str, str] = {}
 
         # Check AnkiConnect
         ankiconnect_ok, anki_msg = self._check_ankiconnect()
@@ -102,6 +136,30 @@ class ValidationService:
                     message=alass_msg,
                 )
             )
+
+        # Check yt-dlp (optional — YouTube mining only; absent is non-fatal).
+        # Previously unchecked entirely, which is why a missing yt-dlp stayed
+        # invisible until the user hit a per-row "Probe failed" in the YouTube tab.
+        ytdlp_ok, ytdlp_msg = self._check_ytdlp()
+        tool_versions["yt-dlp"] = ytdlp_msg if ytdlp_ok else ""
+        if not ytdlp_ok:
+            issues.append(
+                ValidationIssue(
+                    component="yt-dlp",
+                    severity="WARNING",
+                    message=ytdlp_msg,
+                )
+            )
+        else:
+            stale_msg = self._ytdlp_staleness_warning(ytdlp_msg)
+            if stale_msg is not None:
+                issues.append(
+                    ValidationIssue(
+                        component="yt-dlp",
+                        severity="WARNING",
+                        message=stale_msg,
+                    )
+                )
 
         # Check deck exists (only if AnkiConnect is working)
         deck_ok = False
@@ -195,6 +253,7 @@ class ValidationService:
             deck_exists=deck_ok,
             note_type_exists=note_type_ok,
             issues=issues,
+            tool_versions=tool_versions,
         )
 
     def check_ankiconnect(self) -> tuple[bool, str]:
@@ -238,20 +297,32 @@ class ValidationService:
         return True, f"AnkiConnect v{version if version is not None else 'unknown'} is running"
 
     @staticmethod
-    def _check_tool(name: str, resolved_path: str) -> tuple[bool, str]:
-        """Run ``<resolved_path> -version`` and classify the result.
+    def _check_tool(
+        name: str,
+        resolved_path: str,
+        *,
+        version_flag: str = "-version",
+        missing_message: str | None = None,
+    ) -> tuple[bool, str]:
+        """Run ``<resolved_path> <version_flag>`` and classify the result.
 
-        Shared body for the ffmpeg/ffprobe checks. ``name`` is the bare tool
-        name used in messages and bundled/system/custom classification;
-        ``resolved_path`` is the already-resolved binary to invoke (so a frozen
-        bundle validates the bundled binary, not whatever is on PATH).
+        Shared body for every external-binary check. ``name`` is the bare tool name
+        used in messages and bundled/system/custom classification; ``resolved_path``
+        is the already-resolved binary to invoke (so a frozen bundle validates the
+        bundled binary, not whatever is on PATH).
+
+        Args:
+            version_flag: ffmpeg/ffprobe use the single-dash ``-version``; alass and
+                yt-dlp use ``--version``.
+            missing_message: Overrides the generic not-found text for optional tools
+                that want to name the feature the user loses.
 
         Returns:
             Tuple of (success, message)
         """
         try:
             result = subprocess.run(
-                [resolved_path, "-version"],
+                [resolved_path, version_flag],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -266,7 +337,7 @@ class ValidationService:
             return True, f"{version_line} {_classify_resolved(name, resolved_path)}"
 
         except FileNotFoundError:
-            return False, f"{name} not found. Install it and ensure it's in PATH"
+            return False, missing_message or f"{name} not found. Install it and ensure it's in PATH"
         except subprocess.TimeoutExpired:
             return False, f"{name} check timed out"
         except Exception as e:
@@ -308,32 +379,78 @@ class ValidationService:
             Tuple of (success, message).  ``ok=False`` means alass is absent
             or misbehaving; callers should surface this as a WARNING.
         """
-        resolved = resolve_alass(self.config)
+        return self._check_tool(
+            "alass",
+            resolve_alass(self.config),
+            version_flag="--version",
+            missing_message=(
+                "alass not found — subtitle retiming will be unavailable; " "install alass or set its path in Settings"
+            ),
+        )
+
+    def _check_ytdlp(self) -> tuple[bool, str]:
+        """Check if yt-dlp is installed and accessible (optional/non-fatal).
+
+        yt-dlp gates one tab (Video → YouTube), so a missing binary is a WARNING,
+        not a startup blocker.
+
+        Unlike every other check here, ``resolve_ytdlp`` is called INSIDE the try:
+        it can raise ``FileNotFoundError`` when PATH resolves an unverified
+        app-managed binary, and :meth:`validate_setup` has no blanket handler and
+        documents itself as never raising. Resolving outside would take the whole
+        startup validation down over an optional tool.
+
+        Returns:
+            Tuple of (success, message).
+        """
         try:
-            result = subprocess.run(
-                [resolved, "--version"],
-                capture_output=True,
-                text=True,
-                timeout=10,
-                **no_window_kwargs(),
-            )
-
-            if result.returncode != 0:
-                return False, "alass returned non-zero exit code"
-
-            version_line = result.stdout.split("\n")[0] if result.stdout else "unknown"
-            return True, f"{version_line} {_classify_resolved('alass', resolved)}"
-
+            resolved = resolve_ytdlp(self.config)
         except FileNotFoundError:
             return (
                 False,
-                "alass not found — subtitle retiming will be unavailable; " "install alass or set its path in Settings",
+                "yt-dlp is present but unverified, so it will not be used. "
+                "Re-run Settings → YouTube → Update yt-dlp now.",
             )
-        except subprocess.TimeoutExpired:
-            return False, "alass check timed out"
-        except Exception as e:
-            logger.exception("Unexpected error checking alass")
-            return False, f"Unexpected error: {e}"
+        return self._check_tool(
+            "yt-dlp",
+            resolved,
+            version_flag="--version",
+            missing_message=(
+                "yt-dlp not found — YouTube mining will be unavailable; "
+                "use Settings → YouTube → Update yt-dlp now to install it"
+            ),
+        )
+
+    def _ytdlp_staleness_warning(self, version_message: str) -> str | None:
+        """Nudge opted-out users whose yt-dlp has aged out, else None.
+
+        yt-dlp versions are ``YYYY.MM.DD``, so the first token of ``--version`` output
+        dates the binary directly.
+
+        Fires only while ``auto_update_ytdlp`` is False. That gate is load-bearing: a
+        bundled binary is pinned at build time and is already weeks old on release
+        day, so an ungated nudge would nag every fresh install about a setting that is
+        already on. Gated, it reaches exactly the audience that needs it — existing
+        users carrying the old opt-out default.
+        """
+        if self.config.auto_update_ytdlp:
+            return None
+
+        token = version_message.split()[0] if version_message else ""
+        try:
+            released = datetime.strptime(token, "%Y.%m.%d").date()
+        except ValueError:
+            # Nightly/dev builds and unexpected shapes: silence beats a false alarm.
+            return None
+
+        age_days = (date.today() - released).days
+        if age_days < _YTDLP_STALE_AFTER_DAYS:
+            return None
+        return (
+            f"yt-dlp is {age_days} days old ({token}). YouTube changes often break older "
+            "versions — enable 'Keep yt-dlp up to date automatically' in "
+            "Settings → YouTube, or click Update yt-dlp now."
+        )
 
     def _check_deck_exists(self) -> tuple[bool, str]:
         """Check if the target deck exists in Anki.

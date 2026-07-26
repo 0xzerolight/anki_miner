@@ -951,6 +951,12 @@ class MainWindow(QMainWindow):
         ffmpeg_ok = all(issue.component != "ffmpeg" for issue in result.issues)
         self.status_bar.set_system_status(ankiconnect_ok, ffmpeg_ok)
 
+        # Route the yt-dlp verdict into Settings → YouTube. Validation is the single
+        # producer here on purpose: it already ran `yt-dlp --version` off the GUI
+        # thread, so the panel never has to spawn a subprocess on a load path (which
+        # the repo's GUI-thread tripwire forbids).
+        self._set_ytdlp_status_from_validation(result)
+
         # Drive the Settings → Anki connection badge so Test Connection and the
         # deck/note-type sync buttons (which all route through validation)
         # produce visible feedback (T-53). The badge otherwise sticks at
@@ -987,6 +993,33 @@ class MainWindow(QMainWindow):
         panel = getattr(self.tabs.widget(idx), "anki_panel", None)
         if panel is not None:
             panel.set_connection_status(status)
+
+    def _set_ytdlp_status_from_validation(self, result: object) -> None:
+        """Push the yt-dlp validation verdict onto Settings → YouTube.
+
+        Validation is the single producer of this text: it resolves and probes the
+        binary off the GUI thread and reports both the version and which tier it came
+        from. Having the panel compute it at load time instead would put a
+        ``yt-dlp --version`` subprocess on the GUI thread.
+
+        A no-op when the Settings tab is absent (mid-teardown, or a bare window in
+        tests), so validation never crashes for want of a status line.
+        """
+        idx = self._settings_tab_index()
+        if idx < 0:
+            return
+        tab = self.tabs.widget(idx)
+        setter = getattr(tab, "set_ytdlp_status", None)
+        if setter is None:
+            return
+
+        issues = getattr(result, "issues", None) or []
+        problems = [issue.message for issue in issues if getattr(issue, "component", "") == "yt-dlp"]
+        if problems:
+            setter(problems[0])
+            return
+        versions = getattr(result, "tool_versions", None) or {}
+        setter(versions.get("yt-dlp", ""))
 
     def reload_settings_panels(self) -> None:
         """Repaint the Settings tab's panels from the live config.
