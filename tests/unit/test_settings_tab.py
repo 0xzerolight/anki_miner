@@ -924,7 +924,7 @@ class TestDictionaryRemovedPersistsNarrowly:
             widget.config_changed.connect(received.append)
 
             # Unrelated pending edit the user has NOT saved.
-            widget.anki_panel.deck_input.setText("unsaved_deck")
+            widget.anki_panel.set_deck_name("unsaved_deck")
 
             widget.dictionary_panel.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
             # chain_changed is the signal that drives persist (OVH-032).
@@ -1077,3 +1077,19 @@ class TestSubtitlesPanelRegistration:
 
         assert len(received) == 1
         assert received[0].alass_location is None
+
+
+def test_offline_load_and_save_preserves_deck_and_note_type(tab, test_config):
+    """With Anki closed the combos have no fetched items; a save must not blank the config.
+
+    This is the regression select_or_insert exists to prevent: a strict combo
+    can only show values that are items, so a saved deck that was never
+    inserted would read back as "" and the next auto-save would wipe it out of
+    gui_config.json.
+    """
+    cfg = replace(test_config, anki_deck_name="JP::Mining", anki_note_type="Lapis")
+    tab.config = cfg
+    tab._load_config()
+    saved = tab.anki_panel.contribute(cfg)
+    assert saved.anki_deck_name == "JP::Mining"
+    assert saved.anki_note_type == "Lapis"

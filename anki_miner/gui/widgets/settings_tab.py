@@ -1226,13 +1226,6 @@ class SettingsTab(QWidget):
         self._audio_pack_import_flow.cancel_active_batch()
         self._anki_probe.shutdown()
 
-    # === Expose panel inputs for backward compatibility ===
-
-    @property
-    def deck_input(self):
-        """Get deck input widget."""
-        return self.anki_panel.deck_input
-
     # === Dictionary chain persistence ===
 
     def _sync_persisted_config(self, config: AnkiMinerConfig) -> None:
