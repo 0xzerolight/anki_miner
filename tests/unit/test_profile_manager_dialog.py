@@ -321,6 +321,9 @@ class TestSwitch:
 
         widget.switch_button.click()
 
+        # Positive witness first: without it this test stays green if the click
+        # stops reaching the controller at all, which is the opposite defect.
+        assert controller.switch_calls == [novels.id]
         assert not messageboxes["warning"], "the controller already reported this refusal"
 
     def test_degraded_success_is_not_treated_as_a_failure(self, seeded, dialog, controller, messageboxes):
@@ -369,6 +372,8 @@ class TestNewFromCurrent:
 
         widget.new_button.click()
 
+        # Positive witness first — see test_refused_switch_raises_no_second_dialog.
+        assert controller.create_calls == ["Anime"]
         assert not messageboxes["warning"], "the controller already reported this refusal"
 
     def test_new_profile_appears_in_the_list(self, seeded, dialog, controller, test_config, monkeypatch):

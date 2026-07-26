@@ -1310,23 +1310,20 @@ class TestWindowSurface:
             assert isinstance(ready, bool)
 
     def test_the_header_exposes_the_profile_surface(self):
-        """``set_profiles`` lands with the header profile combo (a later task).
+        """The real header still matches what ``_ProfileHeader`` promises.
 
         Asserts the SHAPE, not existence: the controller reaches the header
         through ``cast("_ProfileHeader", window.header)``, and a cast is
         unchecked — ``set_profiles(self, profiles)`` or ``(self, active_id,
         profiles)`` would keep mypy silent and surface as a ``TypeError`` inside
-        a ``finally``, on every terminal path of every switch. Kept as a skip
-        rather than a soft assert so it converts into real coverage the moment
-        the method exists.
+        a ``finally``, on every terminal path of every switch.
         """
         assert hasattr(HeaderWidget, "refresh_favorites")
         inspect.signature(HeaderWidget.refresh_favorites).bind(None)
-        if not hasattr(HeaderWidget, "set_profiles"):
-            pytest.skip("HeaderWidget.set_profiles not present yet")
+        assert hasattr(HeaderWidget, "set_profiles")
 
         profiles = (Profile(id="default", name="Default"),)
-        # Bind the exact call _sync_header makes, with the real arguments, then
+        # Bind the exact call sync_header makes, with the real arguments, then
         # check each landed in the parameter that means what the controller
         # means — bind() alone accepts a swapped (active_id, profiles) order.
         bound = inspect.signature(HeaderWidget.set_profiles).bind(None, profiles, "default")
