@@ -1,0 +1,91 @@
+name: yt-dlp CDN canary
+
+# The yt-dlp updater validates the host a release download redirects to against an
+# exact allowlist. When GitHub migrated release assets to
+# release-assets.githubusercontent.com, that allowlist went stale and EVERY in-app
+# yt-dlp install and update was refused, on every platform, for a month — while CI
+# stayed green, because the unit fakes returned a hardcoded allowlisted host.
+#
+# This job is the tripwire for the next migration. It is deliberately NOT part of
+# ci.yml: it needs the real network, so a GitHub or yt-dlp hiccup must not red an
+# unrelated PR. Weekly is frequent enough — the failure mode is "downloads are
+# broken until someone notices", and this makes someone notice.
+
+on:
+  schedule:
+    # Mondays 06:00 UTC.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ytdlp-cdn-canary
+  cancel-in-progress: false
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install (no extras needed for the canary)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Resolve the real release redirect
+        id: canary
+        env:
+          # Raises the unauthenticated 60-req/hour api.github.com limit.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -o pipefail
+          pytest -m "youtube and network" \
+            tests/integration/test_ytdlp_release_cdn_canary.py \
+            -p no:randomly -n0 -q 2>&1 | tee canary.log
+
+      - name: Open an issue when the CDN host drifts
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = 'yt-dlp release CDN host drifted off the allowlist';
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'ytdlp-cdn',
+            });
+            if (existing.data.length > 0) {
+              core.info(`Issue #${existing.data[0].number} already open; not filing a duplicate.`);
+              return;
+            }
+            const body = [
+              'The weekly canary failed. A real yt-dlp release-asset download now',
+              'redirects to a host that is **not** in `_GITHUB_URL_ALLOWLIST`, which means',
+              'every in-app yt-dlp install and update is currently refused for every user.',
+              '',
+              '**Fix:** add the exact new host to `_GITHUB_URL_ALLOWLIST` in BOTH',
+              '`anki_miner/services/ytdlp_updater.py` and',
+              '`anki_miner/services/update_checker.py`.',
+              '',
+              'Do **not** widen it to a `*.githubusercontent.com` suffix match — `raw.` and',
+              '`gist.` serve arbitrary user-authored bytes, and the `SHA2-256SUMS` fetch is',
+              'guarded by this allowlist alone, so the hash cannot backstop a widened set.',
+              '',
+              `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            ].join('\n');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['ytdlp-cdn', 'bug'],
+            });

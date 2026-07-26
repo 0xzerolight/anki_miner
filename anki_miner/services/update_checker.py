@@ -76,10 +76,17 @@ _TARGET_PATTERNS: dict[str, tuple[str, ...]] = {
 # Allowlist for URLs surfaced to the user (asset downloads + release page).
 # Only HTTPS URLs on these hosts are accepted; everything else is fail-closed
 # (asset → None, release page → omitted from UpdateInfo).  (OVH-064)
+#
+# This module never follows a redirect — it validates the browser_download_url and
+# html_url the API reports and hands them to QDesktopServices.openUrl — so the
+# stale-CDN-host bug that killed ytdlp_updater never affected it. The current host
+# is listed anyway so the two allowlists stay identical in policy; keep them in
+# sync, and keep both EXACT (see the rationale comment in ytdlp_updater.py).
 _GITHUB_URL_ALLOWLIST: frozenset[str] = frozenset(
     {
         "github.com",
         "objects.githubusercontent.com",
+        "release-assets.githubusercontent.com",
         "api.github.com",
     }
 )

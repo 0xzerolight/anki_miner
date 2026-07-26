@@ -26,10 +26,18 @@ from anki_miner.utils import ytdlp_resolver
 
 _ORIGINAL_MAYBE_START_YTDLP_UPDATE = MainWindow._maybe_start_ytdlp_update
 _TAG = "2026.07.20"
-_ASSET_NAME = "yt-dlp"
+# Derived, not literal: these tests force sys.platform = "linux" and the asset
+# name is a production detail. Hardcoding it made the asset URL and the manifest
+# bodies below disagree with the code under test the moment the linux asset moved
+# off the zipapp, which downgraded three of the parametrized cases into vacuous
+# passes on a URL-refusal error instead of the property each one names.
+_ASSET_NAME = ytdlp_updater._ASSET_BY_PLATFORM["linux"]
 _ASSET_URL = f"https://github.com/yt-dlp/yt-dlp/releases/download/{_TAG}/{_ASSET_NAME}"
 _SUMS_URL = f"https://github.com/yt-dlp/yt-dlp/releases/download/{_TAG}/SHA2-256SUMS"
-_ALLOWED_FINAL_URL = "https://objects.githubusercontent.com/yt-dlp-release-asset"
+# The host GitHub 302s release downloads to today. Previously this named the
+# retired objects.githubusercontent.com, which is why the whole suite stayed green
+# while every real download was refused.
+_ALLOWED_FINAL_URL = "https://release-assets.githubusercontent.com/yt-dlp-release-asset"
 
 
 class _FakeResponse(io.BytesIO):
@@ -86,17 +94,22 @@ def _install_network(
     monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", fake_urlopen)
 
 
+_GOOD_ENTRY = b"0" * 64 + b"  " + _ASSET_NAME.encode() + b"\n"
+
+
 @pytest.mark.parametrize(
-    "manifest",
+    ("manifest", "expected_exc", "expected_match"),
     [
-        pytest.param(None, id="missing_sums"),
-        pytest.param(b"0" * 64 + b"  another-file\n", id="missing_entry"),
-        pytest.param((b"0" * 64 + b"  yt-dlp\n") * 2, id="duplicate_entry"),
-        pytest.param(b"0" * 64 + b"  yt-dlp\n", id="wrong_hash"),
+        pytest.param(None, OSError, "SHA2-256SUMS missing", id="missing_sums"),
+        pytest.param(b"0" * 64 + b"  another-file\n", ValueError, "has no entry", id="missing_entry"),
+        pytest.param(_GOOD_ENTRY * 2, ValueError, "duplicate entries", id="duplicate_entry"),
+        pytest.param(_GOOD_ENTRY, ValueError, "does not match", id="wrong_hash"),
     ],
 )
 def test_unverified_ytdlp_asset_never_installs_or_executes(
     manifest: bytes | None,
+    expected_exc: type[BaseException],
+    expected_match: str,
     isolated_ytdlp_home: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -136,7 +149,11 @@ def test_unverified_ytdlp_asset_never_installs_or_executes(
     monkeypatch.setattr(shutil, "which", lambda name: None)
 
     updater = YtdlpUpdater(AnkiMinerConfig())
-    with pytest.raises((OSError, ValueError)):
+    # Assert the specific failure each param names. A bare raises((OSError,
+    # ValueError)) also swallows "Refusing non-release or mismatched ... URL", so a
+    # drifted asset name would let every case pass without reaching the manifest
+    # logic at all.
+    with pytest.raises(expected_exc, match=expected_match):
         updater._download_and_install(_ASSET_URL, _TAG)
 
     final = isolated_ytdlp_home / "bin" / "yt-dlp"
