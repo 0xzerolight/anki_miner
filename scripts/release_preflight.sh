@@ -80,9 +80,11 @@ echo "pyinstaller: $("$VENV/bin/pyinstaller" --version)"
 echo
 
 # --- 3. vendor fetch (SHA-verified, cached) -----------------------------------
-echo "=== vendor ffmpeg + alass ==="
-mkdir -p "$CACHE" vendor/ffmpeg vendor/alass licenses/alass
-if [ "$CLEAN" = "1" ]; then rm -f vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe vendor/alass/alass; fi
+echo "=== vendor ffmpeg + alass + yt-dlp ==="
+mkdir -p "$CACHE" vendor/ffmpeg vendor/alass vendor/yt-dlp licenses/alass licenses/yt-dlp
+if [ "$CLEAN" = "1" ]; then
+  rm -f vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe vendor/alass/alass vendor/yt-dlp/yt-dlp
+fi
 
 verify_sha() { echo "$2  $1" | sha256sum -c - >/dev/null 2>&1; }
 
@@ -111,6 +113,33 @@ if [ ! -f vendor/alass/alass ]; then
   [ -f licenses/alass/LICENSE ] || curl -fL "https://raw.githubusercontent.com/kaegi/alass/v2.0.0/LICENSE" -o licenses/alass/LICENSE || true
 fi
 echo "vendor/alass: $(ls vendor/alass)"
+
+# yt-dlp: version + digest come from .github/ytdlp-pin.json, the same file
+# release.yml reads, so a bump cannot land in one place only. Vendoring it here is
+# not optional bookkeeping — step 5's bundled smoke asserts the binary is present at
+# sys._MEIPASS/bin/, so without this the youtube leg fails.
+YTDLP_PIN=".github/ytdlp-pin.json"
+YTDLP_VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$YTDLP_PIN")"
+YTDLP_ASSET="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["assets"]["linux"]["asset"])' "$YTDLP_PIN")"
+YTDLP_SHA256="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["assets"]["linux"]["sha256"])' "$YTDLP_PIN")"
+YTDLP_INSTALL_AS="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["assets"]["linux"]["install_as"])' "$YTDLP_PIN")"
+YTDLP_URL="https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/${YTDLP_ASSET}"
+
+# Warn-only: a stale pin must not block a local preflight, and the gate itself
+# already degrades to a warning when the GitHub API is unreachable.
+"$VENV/bin/python" scripts/check_ytdlp_pin.py || echo "WARNING: yt-dlp pin check reported a problem (continuing)"
+
+if [ ! -f "vendor/yt-dlp/${YTDLP_INSTALL_AS}" ]; then
+  YTDLP_DL="$CACHE/${YTDLP_ASSET}-${YTDLP_VERSION}"
+  if [ ! -f "$YTDLP_DL" ] || ! verify_sha "$YTDLP_DL" "$YTDLP_SHA256"; then
+    curl -fL "$YTDLP_URL" -o "$YTDLP_DL" || die "yt-dlp download failed"
+  fi
+  verify_sha "$YTDLP_DL" "$YTDLP_SHA256" || die "yt-dlp SHA256 mismatch"
+  cp "$YTDLP_DL" "vendor/yt-dlp/${YTDLP_INSTALL_AS}"
+  chmod +x "vendor/yt-dlp/${YTDLP_INSTALL_AS}"
+  [ -f licenses/yt-dlp/LICENSE ] || curl -fL "https://raw.githubusercontent.com/yt-dlp/yt-dlp/${YTDLP_VERSION}/LICENSE" -o licenses/yt-dlp/LICENSE || true
+fi
+echo "vendor/yt-dlp: $(ls vendor/yt-dlp)"
 echo
 
 # --- 4. PyInstaller build -----------------------------------------------------

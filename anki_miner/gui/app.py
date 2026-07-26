@@ -86,31 +86,73 @@ def _scrub_pyinstaller_env() -> None:
 def _run_bundled_smoke() -> int:
     """Env-var-gated smoke path for PyInstaller bundle validation.
 
-    Triggered by ANKI_MINER_SMOKE=youtube. Verifies yt-dlp and its extractor
-    registry survived PyInstaller's collect_all by walking the registry
-    offline and resolving the Youtube extractor. No network, no YoutubeDL,
-    no bot challenge. Not a CLI surface — the flag is hidden, env-var-only,
-    and exits before any Qt init.
+    Triggered by ANKI_MINER_SMOKE=youtube. Verifies the vendored yt-dlp EXECUTABLE
+    landed in the bundle and runs, plus that the Pillow JPEG codec survived. No
+    network, no YoutubeDL, no bot challenge. Not a CLI surface — the flag is hidden,
+    env-var-only, and exits before any Qt init.
+
+    This used to walk ``yt_dlp``'s extractor registry, which tested a Python package
+    the app never imports at runtime: every call site spawns yt-dlp as a subprocess.
+    The bundle now ships the standalone binary instead, so the smoke asserts the
+    artifact production actually uses.
+
+    The binary is checked at its absolute bundled path rather than through
+    ``ytdlp_resolver``: the resolver deliberately prefers PATH over the bundle (a
+    user's own yt-dlp is usually fresher than a build-time pin), and neither
+    ``bundle_smoke.sh`` nor ``release_preflight.sh`` scrubs PATH — so a
+    resolver-based assertion would fail on any machine that happens to have yt-dlp
+    installed, including a developer with this project's own venv activated.
+    Precedence is covered by unit tests, where PATH is patched deterministically.
     """
     try:
-        from yt_dlp.extractor import (  # type: ignore[import-untyped]
-            gen_extractors,
-            get_info_extractor,
-        )
+        import subprocess
 
-        extractor_count = sum(1 for _ in gen_extractors())
-        if extractor_count < 1000:
+        from anki_miner.utils.bundled_binary import bundled_name, frozen_state
+
+        frozen, meipass = frozen_state()
+        if not frozen or meipass is None:
+            raise RuntimeError("not running from a PyInstaller bundle")
+
+        ytdlp = Path(meipass) / "bin" / bundled_name("yt-dlp")
+        if not ytdlp.is_file():
             raise RuntimeError(
-                f"extractor registry shrunk: {extractor_count} < 1000 "
-                "(expected ~1600; PyInstaller collect_all may have dropped extractors)"
+                f"vendored yt-dlp missing from the bundle at {ytdlp}. CI must populate "
+                "vendor/yt-dlp/ from .github/ytdlp-pin.json before PyInstaller runs."
             )
 
-        youtube_ie = get_info_extractor("Youtube")
-        if youtube_ie is None:
-            raise RuntimeError("Youtube extractor not resolvable from bundle")
+        version_proc = subprocess.run(
+            [str(ytdlp), "--version"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if version_proc.returncode != 0:
+            raise RuntimeError(f"bundled yt-dlp --version exited {version_proc.returncode}: {version_proc.stderr}")
+        lines = (version_proc.stdout or "").strip().splitlines()
+        ytdlp_version = lines[0].strip() if lines else ""
+        if not ytdlp_version:
+            raise RuntimeError("bundled yt-dlp --version printed nothing")
 
-        if not youtube_ie.suitable("https://www.youtube.com/watch?v=9bZkp7q19f0"):
-            raise RuntimeError("YoutubeIE.suitable() rejected a canonical YouTube URL")
+        # Impersonation is why the standalone build is vendored rather than the 3 MB
+        # zipapp: yt-dlp's own release builds embed curl_cffi, and YouTube
+        # increasingly gates on it. Every target line ends in "(unavailable)" when
+        # curl_cffi is absent, so an available target proves it came through.
+        targets_proc = subprocess.run(
+            [str(ytdlp), "--list-impersonate-targets"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        available = [
+            line
+            for line in (targets_proc.stdout or "").splitlines()
+            if line.strip() and "unavailable" not in line.lower() and "----" not in line and "Client" not in line
+        ]
+        if not available:
+            raise RuntimeError(
+                "bundled yt-dlp reports no available impersonate targets — curl_cffi is "
+                "missing, which means a zipapp asset was vendored instead of a standalone build"
+            )
 
         # Prove the Pillow JPEG codec survived bundling — reading-tab cards encode
         # manga pages/covers to JPEG (services/reading/images.py). A bare import is
@@ -126,7 +168,7 @@ def _run_bundled_smoke() -> int:
     except Exception as exc:
         print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
-    print(f"BUNDLED_SMOKE_PASS: yt_dlp extractors={extractor_count}")
+    print(f"BUNDLED_SMOKE_PASS: bundled yt-dlp {ytdlp_version}")
     return 0
 
 

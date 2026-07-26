@@ -1,0 +1,47 @@
+{
+  "_comment": [
+    "Pinned yt-dlp standalone binary vendored into the PyInstaller bundle.",
+    "Single source of truth: read by .github/workflows/release.yml AND",
+    "scripts/release_preflight.sh. ffmpeg's and alass's pins are duplicated across",
+    "those two files; do not repeat that here.",
+    "",
+    "Every asset MUST be a standalone build. The bare 'yt-dlp' asset is a zipimport",
+    "archive whose shebang runs the system python3, so bundling it would make a",
+    "packaged app depend on a host Python it does not ship, and it carries no",
+    "curl_cffi (no impersonation). yt-dlp_macos is a universal2 binary, so one asset",
+    "serves both the arm64 and Intel macOS legs.",
+    "",
+    "Digests are hardcoded rather than verified against the release's own",
+    "SHA2-256SUMS: that manifest is same-origin with the asset, which is exactly the",
+    "weaker property the alass steps avoid by pinning.",
+    "",
+    "yt-dlp ships roughly monthly and dependabot cannot see a curl'd release URL, so",
+    "bumping this is a release-prep step. scripts/check_ytdlp_pin.py gates it: it",
+    "fails the build when this pin is definitively stale, and only warns when GitHub",
+    "is unreachable or rate-limited (a transient API failure must not block a release",
+    "under the never-tag-on-red rule).",
+    "",
+    "To bump: set version, then for each asset run",
+    "  gh release download <version> --repo yt-dlp/yt-dlp --pattern SHA2-256SUMS",
+    "and copy the matching lines."
+  ],
+  "version": "2026.07.04",
+  "max_age_days": 90,
+  "assets": {
+    "linux": {
+      "asset": "yt-dlp_linux",
+      "sha256": "6bbb3d314cde4febe36e5fa1d55462e29c974f63444e707871834f6d8cc210ae",
+      "install_as": "yt-dlp"
+    },
+    "windows": {
+      "asset": "yt-dlp.exe",
+      "sha256": "52fe3c26dcf71fbdc85b528589020bb0b8e383155cfa81b64dd447bbe35e24b8",
+      "install_as": "yt-dlp.exe"
+    },
+    "macos": {
+      "asset": "yt-dlp_macos",
+      "sha256": "498bd0dae17855c599d371d68ec5bafc439a9d8640e838be25c765a9792f261b",
+      "install_as": "yt-dlp"
+    }
+  }
+}

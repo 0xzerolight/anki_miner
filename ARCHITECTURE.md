@@ -325,9 +325,13 @@ GET `https://jisho.org/api/v1/search/words?keyword=<word>`. Rate-limited with co
 
 Subprocess invoked by `YouTubeFetcherService`. Single-video probe uses `--skip-download --dump-single-json --no-playlist`; playlist probe uses `--flat-playlist --dump-single-json` with `--playlist-items 1:limit+1` (the extra entry lets callers detect over-cap playlists); fetch uses `--write-sub` (or `--write-auto-sub` for auto-caption mode) + `--sub-lang ja --sub-format vtt/best --convert-subs srt` + a height-capped format string. Progress parsed from a custom `--progress-template`; post-download merge phases detected by scanning for `[Merger]`/`[SubtitleConvertor]` line signatures. Process tree killed via `psutil` on cancel (yt-dlp spawns ffmpeg as a child for merging; `Popen.terminate()` alone leaks it on Windows). Optional `--cookies-from-browser` (from `config.youtube_cookies_from_browser`) or `--cookies` file (from `config.youtube_cookies_file`) enables bypass of bot-detection prompts and age-restricted content.
 
-### PyInstaller hook for yt-dlp
+### Bundling yt-dlp
 
-yt-dlp lazy-loads ~1600 extractor modules plus optional deps (`websockets`, `mutagen`, `brotli`) that PyInstaller's static analysis misses. `PyInstaller-Hooks/hook-yt_dlp.py` calls `collect_all("yt_dlp")`; `anki_miner.spec` registers it via `hookspath=[".../PyInstaller-Hooks"]`, and the release workflow builds with `pyinstaller anki_miner.spec`. The release workflow's bundled smoke step (`ANKI_MINER_SMOKE=youtube` env var in `anki_miner/gui/app.py`) walks `yt_dlp.extractor.gen_extractors()` offline to verify the registry survived `collect_all`.
+The standalone **binary** is vendored, not the Python package. Every call site spawns yt-dlp as a subprocess, so the importable `yt_dlp` module was never used at runtime; `anki_miner.spec` excludes it. It stays a pip dependency, which is how non-frozen installs get the console script that the resolver's interpreter-sibling tier finds.
+
+`.github/ytdlp-pin.json` is the single source of truth for the pinned version and per-OS SHA-256 digests, read by both `.github/workflows/release.yml` and `scripts/release_preflight.sh`. Both fetch into `vendor/yt-dlp/`, which the spec bundles at `sys._MEIPASS/bin/` — the tier `ytdlp_resolver.py` checks after PATH. Assets must be standalone builds (`yt-dlp_linux`, `yt-dlp.exe`, `yt-dlp_macos`, the last being universal2 so one asset serves both macOS legs); the bare `yt-dlp` asset is a zipapp that shebangs the system `python3` and carries no `curl_cffi`.
+
+`scripts/check_ytdlp_pin.py` gates freshness, since yt-dlp ships roughly monthly and dependabot cannot see a curl'd release-asset URL. It fails on a definitively stale pin or a zipapp asset, and only *warns* when the GitHub API is unreachable or rate-limited, so a transient API hiccup cannot block a release. The bundled smoke (`ANKI_MINER_SMOKE=youtube` in `anki_miner/gui/app.py`) runs `--version` and `--list-impersonate-targets` against the absolute bundled path rather than through the resolver, which prefers PATH and would otherwise resolve a developer's own binary.
 
 ### libmpv (video preview)
 

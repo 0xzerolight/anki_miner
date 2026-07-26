@@ -29,10 +29,13 @@ ENV/
 
 # Release preflight build inputs (scripts/release_preflight.sh) — fetched/built,
 # never committed; CI regenerates them per run. licenses/ffmpeg/ stays tracked
-# (committed GPL text); licenses/alass/LICENSE is fetched at build time.
+# (committed GPL text); licenses/alass/ and licenses/yt-dlp/ are fetched at build
+# time. yt-dlp's pinned version + per-OS digests live in .github/ytdlp-pin.json,
+# which IS tracked — only the downloaded binary is ignored.
 vendor/
 .release-cache/
 licenses/alass/
+licenses/yt-dlp/
 
 # Testing
 .pytest_cache/
