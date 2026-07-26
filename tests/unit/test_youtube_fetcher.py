@@ -163,6 +163,27 @@ class TestProbeMetadata:
         assert info.is_live is False
         assert info.is_age_restricted is False
 
+    def test_manual_ja_is_not_name_filtered(self, service: YouTubeFetcherService) -> None:
+        """``subtitles["ja"]`` is always the genuine manual Japanese track.
+
+        yt-dlp files manual *translations* under ``ja-<origlang>``, not ``ja``
+        (``_video.py``: ``trans_code += f"-{lang_code}"`` alongside the
+        ``" from %s"`` name suffix). So a name filter on this branch could only ever
+        reject a track whose uploader-chosen title happens to contain "from" — which
+        is why the manual branch deliberately does not filter on names.
+        """
+        payload = _make_metadata(subtitles={"ja": [{"ext": "vtt", "name": "Japanese (from the manga)"}]})
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_metadata("https://youtu.be/abc123")
+        assert info.has_manual_ja_subs is True
+
+    def test_manual_translation_key_is_not_mistaken_for_native(self, service: YouTubeFetcherService) -> None:
+        """A ``ja-en`` manual translation must not register as manual Japanese."""
+        payload = _make_metadata(subtitles={"ja-en": [{"ext": "vtt", "name": "Japanese from English"}]})
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_metadata("https://youtu.be/abc123")
+        assert info.has_manual_ja_subs is False
+
     def test_happy_path_native_auto_only(self, service: YouTubeFetcherService) -> None:
         payload = _make_metadata(
             subtitles={},
@@ -347,13 +368,6 @@ class TestHasNativeAutoJa:
         }
         assert self._call(data) is False
 
-    def test_translated_track_name(self) -> None:
-        data = {
-            "automatic_captions": {"ja": [{"name": "Japanese (from English)"}]},
-            "language": "ja",
-        }
-        assert self._call(data) is False
-
     def test_native_ja_track(self) -> None:
         data = {
             "automatic_captions": {"ja": [{"name": "Japanese"}]},
@@ -361,9 +375,73 @@ class TestHasNativeAutoJa:
         }
         assert self._call(data) is True
 
-    def test_language_missing_defaults_ok(self) -> None:
-        # No language key and no translated name -> treat as native.
+    # -- step 1: ja-orig is the authoritative native signal -----------------
+
+    def test_ja_orig_accepted_even_when_language_names_a_dub(self) -> None:
+        """The reported false negative.
+
+        ``language`` is derived from the *selected audio format*
+        (``info_dict.update(best_format)``), so on a Japanese video carrying dubbed
+        audio tracks it can name the dub. Keying on it rejected genuinely native
+        Japanese videos with "No Japanese subtitles available for this video."
+        ``ja-orig`` is registered only for the ASR track's own language, so it
+        survives that.
+        """
+        data = {
+            "automatic_captions": {
+                "ja": [{"name": "Japanese"}],
+                "ja-orig": [{"name": "Japanese (Original)"}],
+            },
+            "language": "en",
+        }
+        assert self._call(data) is True
+
+    # -- step 2: another <lang>-orig proves the original is not Japanese ----
+
+    def test_other_orig_key_rejects_translated_ja(self) -> None:
+        """The false positive that used to slip through when ``language`` was absent.
+
+        Verified live against an English video: it exposes ``ja`` (machine
+        translated, named plainly "Japanese") plus ``en-orig``, and no ``ja-orig``.
+        """
+        data = {
+            "automatic_captions": {
+                "ja": [{"name": "Japanese"}],
+                "en-orig": [{"name": "English (Original)"}],
+            },
+        }
+        assert self._call(data) is False
+
+    # -- step 3: no *-orig at all -> fall back to the language check --------
+
+    def test_language_missing_and_no_orig_keys_defaults_ok(self) -> None:
+        """Absence of ``*-orig`` proves nothing, so keep the old behavior here.
+
+        ``-orig`` registration is conditional: it needs a non-empty
+        ``translationLanguages`` (only web/mweb player responses carry it) or an
+        ``isTranslatable`` track. Rejecting on a bare ``ja`` with no ``language``
+        would newly break genuinely native videos — the exact symptom being fixed.
+        """
         data = {"automatic_captions": {"ja": [{"name": "Japanese"}]}}
+        assert self._call(data) is True
+
+    def test_empty_orig_value_does_not_count_as_a_signal(self) -> None:
+        data = {"automatic_captions": {"ja": [{"name": "Japanese"}], "en-orig": []}}
+        assert self._call(data) is True
+
+    def test_auto_translated_track_name_is_not_a_signal(self) -> None:
+        """Pins that the auto branch does NOT filter on track names.
+
+        yt-dlp appends the " from <lang>" suffix only under ``if is_manual_subs``
+        (``_video.py``), so an auto-translated track is named plainly "Japanese" and a
+        name check here was dead code. This input is not something yt-dlp can
+        actually emit for ``automatic_captions``; the assertion exists so the check is
+        not "restored" on the strength of a plausible-looking name.
+        """
+        data = {
+            "automatic_captions": {"ja": [{"name": "Japanese (from English)"}]},
+            "language": "ja",
+        }
         assert self._call(data) is True
 
 

@@ -390,25 +390,60 @@ class YouTubeFetcherService:
 
     @staticmethod
     def _has_native_auto_ja(data: dict) -> bool:
-        """Detect native Japanese auto-captions, ignoring translated-from-X.
+        """Detect native Japanese auto-captions, ignoring auto-translated ones.
 
-        The mere presence of ``automatic_captions.ja`` does NOT mean the video
-        is actually Japanese: yt-dlp lists auto-translated tracks (e.g. Japanese
-        auto-translated from English) under the same key. So this also checks
-        the top-level ``language`` field and each track's ``name`` for
-        'translated' / 'from X' markers, and treats those as non-native.
+        The mere presence of ``automatic_captions.ja`` does NOT mean the video is
+        Japanese: yt-dlp lists auto-*translated* tracks under the same key. Getting
+        this wrong is user-visible in both directions — a false positive mines
+        machine-translated Japanese, a false negative rejects a perfectly good video
+        with "No Japanese subtitles available for this video."
+
+        The reliable signal is the ``<lang>-orig`` key, not the ``language`` field:
+
+        - yt-dlp registers ``automatic_captions["<code>-orig"]`` only for the ASR
+          track's *own* language (``_video.py``: the ``lang_code == f"a-{code}"``
+          branch, and the ``isTranslatable`` branch), and both of those branches call
+          ``set_audio_lang_from_orig_subs_lang`` — the very function that derives the
+          top-level ``language``.
+        - ``language`` is therefore a *derivative*, and one that
+          ``info_dict.update(best_format)`` later overwrites from the selected audio
+          format. On a video with dubbed audio tracks it can name the dub, not the
+          original, which is how genuinely Japanese videos got rejected.
+
+        Verified against live YouTube: a Japanese video exposes both ``ja`` and
+        ``ja-orig``; an English video exposes ``ja`` (machine-translated) plus
+        ``en-orig`` and no ``ja-orig``.
+
+        Three steps, in order:
+
+        1. ``ja-orig`` present -> native.
+        2. Some *other* ``<lang>-orig`` present -> not native. The ``-orig`` machinery
+           ran and named a non-Japanese original, so the bare ``ja`` here is a
+           translation.
+        3. No ``*-orig`` key at all -> fall back to the ``language`` check. ``-orig``
+           registration is conditional (it needs a non-empty ``translationLanguages``,
+           which only web/mweb player responses carry, or an ``isTranslatable``
+           track), so its absence proves nothing. Rejecting here would newly break
+           genuinely native videos.
+
+        The old per-track ``"from "`` / ``"translated"`` name check is deliberately
+        gone: yt-dlp appends that marker only under ``if is_manual_subs``, so an
+        auto-translated track is named plainly "Japanese" and the check was dead code
+        for this dict. It still works for *manual* subs, which is why the manual
+        branch in :meth:`probe_metadata` keeps it.
         """
         auto = data.get("automatic_captions") or {}
-        if "ja" not in auto or not auto["ja"]:
+        if not auto.get("ja"):
             return False
+
+        if auto.get("ja-orig"):
+            return True
+
+        if any(key.endswith("-orig") and value for key, value in auto.items()):
+            return False
+
         lang = (data.get("language") or "").lower()
-        if lang and lang != "ja":
-            return False
-        for track in auto["ja"]:
-            name = (track.get("name") or "").lower()
-            if "from " in name or "translated" in name:
-                return False
-        return True
+        return not lang or lang == "ja"
 
     # ------------------------------------------------------------------
     # fetch_video
