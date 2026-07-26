@@ -191,10 +191,9 @@ class ProfileController:
             everything a switch has to move: ``_dictionary_mutation_guard``,
             ``release_dictionary_resources``, ``update_config``,
             ``reload_settings_panels``, the header combo and the status bar.
-            Held as a reference (the
-            ``BackgroundTaskController`` idiom) rather than as a bag of
-            injected callables — this class needs six of them and they must all
-            address the same window.
+            Held as a reference (the ``BackgroundTaskController`` idiom) rather
+            than as a bag of injected callables — this class needs seven of them
+            and they must all address the same window.
     """
 
     def __init__(self, window: MainWindow) -> None:
