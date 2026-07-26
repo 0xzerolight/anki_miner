@@ -200,12 +200,19 @@ class AnkiService:
         )
 
     def verify_card_target(self) -> None:
-        """Validate note type + field mapping, then ensure the deck exists.
+        """Validate note type, field mapping, and that the target deck exists.
 
-        Order is checks-then-side-effects: a failed run creates nothing.
+        Pure check — creates nothing. Decks are no longer auto-created on the
+        mining path: the Settings → Anki deck dropdown only offers decks that
+        really exist, so a configured deck that is missing is a user-visible
+        error rather than a silently-created stray deck. ``ensure_deck`` is
+        still used by Deck Builder, which builds a genuinely new deck and calls
+        it BEFORE its per-pair process_episode loop — that ordering is what
+        makes this check pass there (see deck_builder_worker.py).
 
         Raises:
-            SetupError: note type missing, or a configured field absent from it.
+            SetupError: note type missing, a configured field absent from it,
+                or the configured deck absent from the collection.
             AnkiConnectionError: AnkiConnect unreachable or errors.
         """
         models = post_action(self.config.ankiconnect_url, "modelNames", timeout=15) or []
@@ -240,7 +247,15 @@ class AnkiService:
                 f"Check Settings → Anki field mapping."
             )
 
-        self.ensure_deck(self.config.anki_deck_name)
+        decks = post_action(self.config.ankiconnect_url, "deckNames", timeout=15) or []
+        if self.config.anki_deck_name not in decks:
+            available = ", ".join(decks[:5])
+            more = "..." if len(decks) > 5 else ""
+            raise SetupError(
+                f"Deck '{self.config.anki_deck_name}' not found in Anki. "
+                f"Available: {available}{more}. "
+                f"Pick an existing deck in Settings → Anki, or create it in Anki first."
+            )
 
     def _build_vocab_query(self) -> str:
         """Build the findNotes query for known-words detection.
