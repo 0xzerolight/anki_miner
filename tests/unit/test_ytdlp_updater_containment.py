@@ -211,17 +211,26 @@ def test_existing_config_migrated_to_updater_off(tmp_path: Path, monkeypatch: py
     assert GUIConfigManager.load_config().auto_update_ytdlp is True
 
 
-def test_resolver_skips_unverified_managed_binary_and_prefers_path(
+def test_resolver_requires_a_receipt_for_the_managed_binary(
     isolated_ytdlp_home: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    no_sibling_ytdlp,
 ) -> None:
+    """Verification is a precondition of selecting the managed slot.
+
+    Renamed from ``..._and_prefers_path``: the managed tier now outranks PATH so a
+    completed update is not inert (see ytdlp_resolver's module docstring). The
+    containment property this test exists for is unchanged — a receiptless or
+    tampered managed binary is never selected, not even when PATH points straight
+    at it — and is asserted three times below.
+    """
     managed = isolated_ytdlp_home / "bin" / "yt-dlp"
     managed.parent.mkdir(parents=True)
     managed.write_bytes(b"managed")
     managed.chmod(0o755)
-    # Even if the managed slot itself appears on PATH, PATH precedence must not
-    # launder a receiptless app download into a trusted executable.
+    # Even if the managed slot itself appears on PATH, PATH must not launder a
+    # receiptless app download into a trusted executable.
     monkeypatch.setattr(shutil, "which", lambda name: str(managed))
 
     with pytest.raises(FileNotFoundError, match="unverified managed yt-dlp"):
@@ -244,6 +253,15 @@ def test_resolver_skips_unverified_managed_binary_and_prefers_path(
     monkeypatch.setattr(shutil, "which", lambda name: str(path_binary))
     ytdlp_resolver._clear_cache()
 
+    # A re-verified managed copy now wins over an unrelated PATH binary. This is
+    # the assertion that flipped with the tier reorder; the three raises above are
+    # the security property and must keep passing untouched.
+    assert ytdlp_resolver.resolve_ytdlp(AnkiMinerConfig()) == str(managed)
+
+    # ...and with the managed copy gone, PATH is still honored.
+    managed.unlink()
+    receipt.unlink()
+    ytdlp_resolver._clear_cache()
     assert ytdlp_resolver.resolve_ytdlp(AnkiMinerConfig()) == str(path_binary)
 
 

@@ -1817,10 +1817,15 @@ class TestNoWindowSpawn:
 class TestYtdlpResolverIntegration:
     """The fetcher resolves the yt-dlp binary via ytdlp_resolver."""
 
-    def test_default_command_uses_bare_literal(self, service: YouTubeFetcherService) -> None:
-        """With no yt-dlp on PATH and no managed/override binary, cmd[0] falls
-        through to the bare literal 'yt-dlp' (048: prefer-PATH means a real PATH
-        hit would otherwise resolve to its absolute path)."""
+    def test_default_command_uses_bare_literal(self, service: YouTubeFetcherService, no_sibling_ytdlp) -> None:
+        """With nothing resolvable, cmd[0] falls through to the bare literal 'yt-dlp'.
+
+        Patching ``shutil.which`` alone is not enough: yt-dlp is a hard runtime
+        dependency, so its console script sits next to ``sys.executable`` and the
+        resolver's interpreter-sibling tier finds ``.venv/bin/yt-dlp`` on every
+        developer machine and in CI. ``no_sibling_ytdlp`` (tests/conftest.py) points
+        ``sys.executable`` at an empty directory so this really tests the fallback.
+        """
         payload = _make_metadata()
         with (
             patch("anki_miner.utils.ytdlp_resolver.shutil.which", return_value=None),

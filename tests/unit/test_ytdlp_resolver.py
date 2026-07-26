@@ -21,8 +21,13 @@ def base_config(tmp_path):
 
 
 @pytest.fixture(autouse=True)
-def no_path_ytdlp(monkeypatch):
-    """Keep non-PATH resolver tiers deterministic on developer machines."""
+def no_path_ytdlp(monkeypatch, no_sibling_ytdlp):
+    """Keep non-PATH resolver tiers deterministic on developer machines.
+
+    Patching ``shutil.which`` alone is not sufficient: the interpreter-sibling tier
+    never consults PATH, and ``.venv/bin/yt-dlp`` exists wherever the project is
+    installed, so ``no_sibling_ytdlp`` (tests/conftest.py) is pulled in too.
+    """
     monkeypatch.setattr(shutil, "which", lambda name: None)
 
 
@@ -144,6 +149,175 @@ class TestResolveYtdlp:
         monkeypatch.setattr(ytdlp_resolver, "ytdlp_download_dir", lambda: download_dir)
         config = dataclasses.replace(base_config, ytdlp_location=override)
         assert resolve_ytdlp(config) == str(override)
+
+
+class TestTierPrecedence:
+    """Pin the relative order of the managed / PATH / bundled tiers.
+
+    None of this was covered before: every test in this module nulls
+    ``shutil.which``, so PATH never competed with another tier.
+    """
+
+    def test_verified_managed_beats_path(self, base_config, tmp_path, monkeypatch):
+        """A completed update must actually take effect.
+
+        With PATH first, "Update yt-dlp now" installed into ~/.anki_miner/bin but
+        the app kept running the stale PATH binary — and the next check compared
+        against that stale version, re-downloading every 24h forever.
+        """
+        download_dir = tmp_path / "home" / "bin"
+        downloaded = _make_executable(download_dir / "yt-dlp")
+        _write_receipt(downloaded)
+        path_binary = _make_executable(tmp_path / "path-bin" / "yt-dlp")
+        monkeypatch.setattr(shutil, "which", lambda name: str(path_binary))
+        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(ytdlp_resolver, "ytdlp_download_dir", lambda: download_dir)
+        assert resolve_ytdlp(base_config) == str(downloaded)
+
+    def test_path_wins_when_no_managed_copy(self, base_config, tmp_path, monkeypatch):
+        """Users who never used the updater keep their own binary."""
+        download_dir = tmp_path / "home" / "bin"
+        path_binary = _make_executable(tmp_path / "path-bin" / "yt-dlp")
+        monkeypatch.setattr(shutil, "which", lambda name: str(path_binary))
+        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(ytdlp_resolver, "ytdlp_download_dir", lambda: download_dir)
+        assert resolve_ytdlp(base_config) == str(path_binary)
+
+    def test_path_beats_bundled_when_frozen(self, base_config, tmp_path, monkeypatch):
+        """Deliberate divergence from ffmpeg_resolver/alass_resolver.
+
+        yt-dlp breaks whenever YouTube changes something, so a user's own binary is
+        usually fresher than a build-time pin. Bundled-first would silently
+        downgrade the one population that never had the missing-binary bug. Do not
+        "fix" this toward consistency with the sibling resolvers.
+        """
+        bundled = _make_executable(tmp_path / "bin" / "yt-dlp")
+        path_binary = _make_executable(tmp_path / "path-bin" / "yt-dlp")
+        monkeypatch.setattr(shutil, "which", lambda name: str(path_binary))
+        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", True, raising=False)
+        monkeypatch.setattr(ytdlp_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(ytdlp_resolver.sys, "platform", "linux")
+        assert bundled.exists()
+        assert resolve_ytdlp(base_config) == str(path_binary)
+
+    def test_managed_beats_bundled_when_frozen(self, base_config, tmp_path, monkeypatch):
+        """The bundle smoke cannot cover this: it always runs with an empty home.
+
+        ``scripts/bundle_smoke.sh`` points ANKI_MINER_HOME at a fresh mktemp dir, so
+        the managed slot is guaranteed empty there and this precedence is never
+        exercised by the release gate.
+        """
+        download_dir = tmp_path / "home" / "bin"
+        downloaded = _make_executable(download_dir / "yt-dlp")
+        _write_receipt(downloaded)
+        bundled = _make_executable(tmp_path / "bin" / "yt-dlp")
+        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", True, raising=False)
+        monkeypatch.setattr(ytdlp_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
+        monkeypatch.setattr(ytdlp_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(ytdlp_resolver, "ytdlp_download_dir", lambda: download_dir)
+        assert bundled.exists()
+        assert resolve_ytdlp(base_config) == str(downloaded)
+
+
+class TestInterpreterSiblingTier:
+    """The pip/pipx console script next to ``sys.executable``.
+
+    ``pipx install anki_miner`` puts a working yt-dlp in the pipx venv's ``bin/``,
+    which is not on PATH, so without this tier it is never found.
+    """
+
+    def test_sibling_used_when_nothing_else_resolves(self, base_config, tmp_path, monkeypatch):
+        venv_bin = tmp_path / "venv" / "bin"
+        sibling = _make_executable(venv_bin / "yt-dlp")
+        monkeypatch.setattr(ytdlp_resolver.sys, "executable", str(venv_bin / "python"))
+        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(ytdlp_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(ytdlp_resolver, "ytdlp_download_dir", lambda: tmp_path / "home" / "bin")
+        ytdlp_resolver._clear_cache()
+        assert resolve_ytdlp(base_config) == str(sibling)
+
+    def test_sibling_skipped_when_frozen(self, base_config, tmp_path, monkeypatch):
+        """In a frozen bundle ``sys.executable`` is the app, not an interpreter."""
+        app_dir = tmp_path / "app"
+        _make_executable(app_dir / "yt-dlp")
+        monkeypatch.setattr(ytdlp_resolver.sys, "executable", str(app_dir / "AnkiMiner"))
+        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", True, raising=False)
+        monkeypatch.setattr(ytdlp_resolver.sys, "_MEIPASS", str(tmp_path / "meipass"), raising=False)
+        monkeypatch.setattr(ytdlp_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(ytdlp_resolver, "ytdlp_download_dir", lambda: tmp_path / "home" / "bin")
+        ytdlp_resolver._clear_cache()
+        assert resolve_ytdlp(base_config) == "yt-dlp"
+
+    def test_sibling_inside_managed_dir_is_refused(self, base_config, tmp_path, monkeypatch):
+        """The sibling tier must not become a second laundering route.
+
+        If ``sys.executable`` sits in (or symlinks into) the managed directory, a
+        receiptless managed binary must still never be selected — the same property
+        the PATH tier is guarded for.
+        """
+        download_dir = tmp_path / "home" / "bin"
+        receiptless = _make_executable(download_dir / "yt-dlp")
+        assert receiptless.exists()
+        monkeypatch.setattr(ytdlp_resolver.sys, "executable", str(download_dir / "python"))
+        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(ytdlp_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(ytdlp_resolver, "ytdlp_download_dir", lambda: download_dir)
+        ytdlp_resolver._clear_cache()
+        assert resolve_ytdlp(base_config) == "yt-dlp"
+
+    def test_rejected_managed_path_hit_still_raises_with_sibling_present(self, base_config, tmp_path, monkeypatch):
+        """The fail-closed raise must stay ahead of the sibling tier.
+
+        Otherwise a rejected receiptless managed binary falls through to a real
+        executable and the containment the raise exists for is silently defeated.
+        """
+        download_dir = tmp_path / "home" / "bin"
+        receiptless = _make_executable(download_dir / "yt-dlp")
+        venv_bin = tmp_path / "venv" / "bin"
+        _make_executable(venv_bin / "yt-dlp")
+        monkeypatch.setattr(shutil, "which", lambda name: str(receiptless))
+        monkeypatch.setattr(ytdlp_resolver.sys, "executable", str(venv_bin / "python"))
+        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(ytdlp_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(ytdlp_resolver, "ytdlp_download_dir", lambda: download_dir)
+        ytdlp_resolver._clear_cache()
+        with pytest.raises(FileNotFoundError, match="unverified managed yt-dlp"):
+            resolve_ytdlp(base_config)
+
+
+class TestYtdlpAvailable:
+    """``ytdlp_available`` must absorb the fail-closed raise, unlike alass_available."""
+
+    def test_true_for_a_verified_managed_copy(self, base_config, tmp_path, monkeypatch):
+        download_dir = tmp_path / "home" / "bin"
+        downloaded = _make_executable(download_dir / "yt-dlp")
+        _write_receipt(downloaded)
+        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(ytdlp_resolver, "ytdlp_download_dir", lambda: download_dir)
+        assert ytdlp_resolver.ytdlp_available(base_config) is True
+
+    def test_false_when_nothing_resolves(self, base_config, tmp_path, monkeypatch):
+        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(ytdlp_resolver, "ytdlp_download_dir", lambda: tmp_path / "home" / "bin")
+        assert ytdlp_resolver.ytdlp_available(base_config) is False
+
+    def test_false_instead_of_raising_on_rejected_managed_path_hit(self, base_config, tmp_path, monkeypatch):
+        """The rejection must not escape as FileNotFoundError.
+
+        ValidationService.validate_setup documents itself as never raising and has
+        no blanket try around its checks, so an availability probe that propagates
+        would take the whole startup validation down.
+        """
+        download_dir = tmp_path / "home" / "bin"
+        receiptless = _make_executable(download_dir / "yt-dlp")
+        monkeypatch.setattr(shutil, "which", lambda name: str(receiptless))
+        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(ytdlp_resolver, "ytdlp_download_dir", lambda: download_dir)
+        ytdlp_resolver._clear_cache()
+        with pytest.raises(FileNotFoundError):
+            ytdlp_resolver.resolve_ytdlp(base_config)
+        ytdlp_resolver._clear_cache()
+        assert ytdlp_resolver.ytdlp_available(base_config) is False
 
 
 class TestCaching:
