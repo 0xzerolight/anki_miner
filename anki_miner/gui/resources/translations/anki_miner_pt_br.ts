@@ -360,8 +360,8 @@
         <translation>Campos de Dados Auxiliares</translation>
     </message>
     <message>
-        <source>Need pitch_accent.csv in ~/.anki_miner/. Blank = skip.</source>
-        <translation>Requer pitch_accent.csv em ~/.anki_miner/. Em branco = pular.</translation>
+        <source>Pitch fields need a source in Settings → Pitch Accent. Blank = skip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Pitch Position Field</source>
@@ -1610,6 +1610,14 @@ Total de cartões criados: %2</translation>
         <translation>Mude a interface para outro idioma.</translation>
     </message>
     <message>
+        <source>Settings profiles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Keep several named snapshots of every setting and switch between them in one click.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Speech-to-text (no subtitles needed)</source>
         <translation>Fala-para-texto (sem precisar de legendas)</translation>
     </message>
@@ -2180,20 +2188,28 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
 </context><context>
     <name>DeckBuilderTab</name>
     <message>
-        <source>Input</source>
-        <translation>Entrada</translation>
-    </message>
-    <message>
         <source>Video Folder:</source>
         <translation>Pasta de vídeos:</translation>
     </message>
     <message>
-        <source>Select folder with video files…</source>
-        <translation>Selecione a pasta com arquivos de vídeo…</translation>
-    </message>
-    <message>
         <source>Subtitle Folder:</source>
         <translation>Pasta de legendas:</translation>
+    </message>
+    <message>
+        <source>Deck Name:</source>
+        <translation>Nome do baralho:</translation>
+    </message>
+    <message>
+        <source>Word Selection:</source>
+        <translation>Seleção de palavras:</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>Entrada</translation>
+    </message>
+    <message>
+        <source>Select folder with video files…</source>
+        <translation>Selecione a pasta com arquivos de vídeo…</translation>
     </message>
     <message>
         <source>Select folder with subtitle files…</source>
@@ -2204,16 +2220,8 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
         <translation>Configurações do baralho</translation>
     </message>
     <message>
-        <source>Deck Name:</source>
-        <translation>Nome do baralho:</translation>
-    </message>
-    <message>
         <source>Enter deck name…</source>
         <translation>Digite o nome do baralho…</translation>
-    </message>
-    <message>
-        <source>Word Selection:</source>
-        <translation>Seleção de palavras:</translation>
     </message>
     <message>
         <source>All vocabulary</source>
@@ -2744,22 +2752,6 @@ A remoção está salva; a limpeza está pendente e será repetida na inicializa
     <message>
         <source>Remove</source>
         <translation>Remover</translation>
-    </message>
-    <message>
-        <source>Pitch Accent</source>
-        <translation>Acento Tonal</translation>
-    </message>
-    <message>
-        <source>Select pitch accent CSV/TSV or Yomitan zip...</source>
-        <translation>Selecionar CSV/TSV de acento tonal ou zip do Yomitan...</translation>
-    </message>
-    <message>
-        <source>Pitch Accent File</source>
-        <translation>Arquivo de Acento Tonal</translation>
-    </message>
-    <message>
-        <source>CSV/TSV with columns (reading, kanji, pattern), or a Yomitan-format pitch zip (e.g. Kanjium, NHK). Yomitan zips are imported into ~/.anki_miner/pitch_accent.csv on Save.</source>
-        <translation>CSV/TSV com colunas (leitura, kanji, padrão), ou um zip de acento tonal no formato Yomitan (por exemplo, Kanjium, NHK). Zips do Yomitan são importados para ~/.anki_miner/pitch_accent.csv ao salvar.</translation>
     </message>
     <message>
         <source>Jisho (online fallback)</source>
@@ -3783,8 +3775,28 @@ Isso não pode ser desfeito. Você precisaria reimportar para usar esta fonte no
 </context><context>
     <name>HeaderWidget</name>
     <message>
+        <source>Settings profile:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings profile</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switches every Anki Miner setting to the selected profile.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Active settings profile. Switching swaps every setting; pick 'Manage profiles…' to add, rename or remove them.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Theme:</source>
         <translation>Tema:</translation>
+    </message>
+    <message>
+        <source>Theme</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>All themes…</source>
@@ -3793,6 +3805,10 @@ Isso não pode ser desfeito. Você precisaria reimportar para usar esta fonte no
     <message>
         <source>Active theme. Top-right shows favorites; pick 'All themes…' to manage them. (Ctrl+T cycles favorites). Installed: %1</source>
         <translation>Tema ativo. O canto superior direito mostra os favoritos; escolha 'Todos os temas…' para gerenciá-los. (Ctrl+T alterna entre os favoritos). Instalados: %1</translation>
+    </message>
+    <message>
+        <source>Manage profiles…</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>KnownWordsManagerDialog</name>
@@ -4475,6 +4491,211 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
         <translation>Biblioteca de remoção de silêncio instalada com sucesso.</translation>
     </message>
 </context><context>
+    <name>PitchImportFlow</name>
+    <message>
+        <source>Choose pitch accent source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation type="unfinished"> (%1 entradas malformadas ignoradas)</translation>
+    </message>
+    <message>
+        <source>Pitch Source Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation type="unfinished">%1 entradas importadas de '%2'.</translation>
+    </message>
+    <message>
+        <source>Configuration Update Failed</source>
+        <translation type="unfinished">Falha na atualização da configuração</translation>
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation type="unfinished">Importação concluída, mas a atualização da configuração falhou: %1</translation>
+    </message>
+    <message>
+        <source>Importing pitch source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">Cancelar</translation>
+    </message>
+    <message>
+        <source>Import Failed</source>
+        <translation type="unfinished">Falha na Importação</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation type="unfinished">Outra importação ainda está sendo concluída. Aguarde a conclusão e tente novamente.</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">Cancelando…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation type="unfinished">O processo de importação terminou sem retornar um resultado.</translation>
+    </message>
+    <message>
+        <source>Scan Failed</source>
+        <translation type="unfinished">Falha na varredura</translation>
+    </message>
+    <message>
+        <source>Choose pitch source to re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import Blocked</source>
+        <translation type="unfinished">Reimportação Bloqueada</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation type="unfinished">Os recursos indexados estão em uso pela mineração, pelo pré-aquecimento de inicialização ou pelo preenchimento retroativo de cartões. Aguarde a tarefa ativa terminar e tente novamente.</translation>
+    </message>
+    <message>
+        <source>Pitch Source Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation type="unfinished">%1 reimportada com sucesso.</translation>
+    </message>
+    <message>
+        <source>Re-importing pitch source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import Failed</source>
+        <translation type="unfinished">Falha na Reimportação</translation>
+    </message>
+    <message>
+        <source>Pitch accent source (%1);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>PitchSettingsPanel</name>
+    <message>
+        <source>Loading…</source>
+        <translation type="unfinished">Carregando…</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation type="unfinished">Falha na remoção</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The pitch source was not removed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation type="unfinished">Arquivos Não Modificados</translation>
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation type="unfinished">A entrada da cadeia foi removida, mas os arquivos em %1 não foram modificados porque não foi possível comprovar que a pasta pertence ao Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation type="unfinished">Não foi possível remover %1:
+%2
+
+Os arquivos estão intactos. Tente novamente.</translation>
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this pitch source before retrying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation type="unfinished">Não foi possível restaurar %1 após a falha na atualização de sua configuração:
+%2
+
+Os arquivos não estão mais no local instalado; há uma atualização de configuração pendente. Reinicie o Anki Miner antes de tentar novamente.</translation>
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation type="unfinished">A remoção de %1 foi salva, mas o Anki Miner não conseguiu atualizá-la:
+%2
+
+A remoção foi salva e permanecerá após a reinicialização.</translation>
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <translation type="unfinished">%1 foi removido, mas seu marcador de remoção em %2 não pôde ser excluído:
+%3
+
+A remoção está salva; a limpeza está pendente e será repetida na inicialização.</translation>
+    </message>
+    <message>
+        <source>Active Pitch Accent Sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sources are checked top to bottom — the first source with a pitch entry for a word wins. Lower sources only fill words the higher ones miss.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>+ Add Source…</source>
+        <translation type="unfinished">+ Adicionar Fonte…</translation>
+    </message>
+    <message>
+        <source>Move up</source>
+        <translation type="unfinished">Mover para cima</translation>
+    </message>
+    <message>
+        <source>Move up (wins lookups first)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation type="unfinished">Mover para baixo</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation type="unfinished">Remover</translation>
+    </message>
+    <message>
+        <source>Remove pitch source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove '%1' from the pitch accent chain?
+
+Only the index files are deleted.
+This cannot be undone. You would need to re-import to use this source again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation type="unfinished">Os recursos indexados estão em uso pela mineração, pelo pré-aquecimento de inicialização ou pelo preenchimento retroativo de cartões. Aguarde a tarefa ativa terminar e tente novamente.</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation type="unfinished">Reimportar…</translation>
+    </message>
+</context><context>
     <name>PlaylistAddController</name>
     <message>
         <source>Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.</source>
@@ -4539,6 +4760,138 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
     <message>
         <source>Added %1 videos from playlist '%2'.</source>
         <translation>Adicionados %1 vídeos da playlist '%2'.</translation>
+    </message>
+</context><context>
+    <name>ProfileController</name>
+    <message>
+        <source>Language</source>
+        <translation type="unfinished">Idioma</translation>
+    </message>
+    <message>
+        <source>Interface scale</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Statistics database</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Log file</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Recovered settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Recovered settings %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not create the profile '%1': %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not save the current profile '%1': %2. Nothing was switched.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not read the profile file %1: %2. Nothing was switched.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switched to '%1', but the running window could not be fully refreshed: %2. Restart Anki Miner if something looks wrong.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings Profiles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restart Anki Miner to apply: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings are still being saved, or a dictionary change is in progress. Try again in a moment.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining or card backfill is still using the dictionaries. Stop it and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not apply the profile '%1': %2. Your current settings are unchanged.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ProfileManagerDialog</name>
+    <message>
+        <source>Settings Profiles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A profile is a complete snapshot of every setting — dictionaries, filters, media, Anki fields, appearance. Switching swaps all of them at once, after saving your current settings back into the active profile.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>New from Current…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save the settings you are using now as a new profile and switch to it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Rename…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switch To</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished">Fechar</translation>
+    </message>
+    <message>
+        <source>%1 (active)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>New Profile</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Name for the new profile:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Rename Profile</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>New name for '%1':</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Rename Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete Profile</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete the profile '%1'? Its saved settings cannot be recovered.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete Failed</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ProgressWidget</name>
@@ -5235,14 +5588,6 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
         <translation>Os recursos são baixados de suas fontes originais; aplicam-se as respectivas licenças.</translation>
     </message>
     <message>
-        <source>No valid pitch accent entries were found.</source>
-        <translation>Nenhuma entrada válida de acento tonal foi encontrada.</translation>
-    </message>
-    <message>
-        <source>Pitch accent validation failed: %1</source>
-        <translation>Falha na validação do acento tonal: %1</translation>
-    </message>
-    <message>
         <source>%1 entries</source>
         <translation>%1 entradas</translation>
     </message>
@@ -5379,6 +5724,10 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
     <message>
         <source>Frequency</source>
         <translation>Frequência</translation>
+    </message>
+    <message>
+        <source>Pitch Accent</source>
+        <translation type="unfinished">Acento Tonal</translation>
     </message>
     <message>
         <source>Filtering</source>
@@ -5563,22 +5912,6 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
         <translation>✓ Redefinido para o padrão</translation>
     </message>
     <message>
-        <source>Importing pitch accent dictionary…</source>
-        <translation>Importando dicionário de acento tonal…</translation>
-    </message>
-    <message>
-        <source>Overwrite Pitch Accent File?</source>
-        <translation>Sobrescrever Arquivo de Acento Tonal?</translation>
-    </message>
-    <message>
-        <source>Pitch Accent Import Failed</source>
-        <translation>Falha na Importação do Acento Tonal</translation>
-    </message>
-    <message>
-        <source>Pitch accent dictionary imported</source>
-        <translation>Dicionário de acento tonal importado</translation>
-    </message>
-    <message>
         <source>Retry missing expression audio</source>
         <translation>Tentar novamente áudio de expressão ausente</translation>
     </message>
@@ -5687,10 +6020,6 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
         <translation>Arquivos Recentes:</translation>
     </message>
     <message>
-        <source>Select recent file pair...</source>
-        <translation>Selecionar par de arquivos recente...</translation>
-    </message>
-    <message>
         <source>Video File:</source>
         <translation>Arquivo de Vídeo:</translation>
     </message>
@@ -5701,6 +6030,10 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
     <message>
         <source>Subtitle Offset:</source>
         <translation>Deslocamento da Legenda:</translation>
+    </message>
+    <message>
+        <source>Select recent file pair...</source>
+        <translation>Selecionar par de arquivos recente...</translation>
     </message>
     <message>
         <source> seconds</source>
@@ -6632,16 +6965,20 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
         <translation>Abrir pasta de temas</translation>
     </message>
     <message>
-        <source>Open %1; drop theme JSON files here to install on next launch.</source>
-        <translation>Abrir %1; solte aqui os arquivos JSON de tema para instalar na próxima inicialização.</translation>
-    </message>
-    <message>
         <source>Revert</source>
         <translation>Reverter</translation>
     </message>
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>Restaura o tema que estava ativo quando esta aba foi aberta.</translation>
+    </message>
+    <message>
+        <source>Manage Profiles…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Keep several complete settings snapshots and switch between them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Active</source>
@@ -6670,6 +7007,10 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
     <message>
         <source>%1 of %2 %3 variants favorited. Click to favorite all.</source>
         <translation>%1 de %2 variantes de %3 favoritadas. Clique para favoritar todas.</translation>
+    </message>
+    <message>
+        <source>Open %1; drop theme JSON files here to install on next launch.</source>
+        <translation>Abrir %1; solte aqui os arquivos JSON de tema para instalar na próxima inicialização.</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -7026,32 +7367,6 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
         <translation>Progresso</translation>
     </message>
 </context><context>
-    <name>ZipImportFlow</name>
-    <message>
-        <source>%1 already exists and will be replaced.
-
-Continue with import?</source>
-        <translation>%1 já existe e será substituído.
-
-Continuar com a importação?</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Cancelar</translation>
-    </message>
-    <message>
-        <source> (skipped %1 display-only entries)</source>
-        <translation> (%1 entradas somente de exibição ignoradas)</translation>
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation> (%1 entradas malformadas ignoradas)</translation>
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation>%1 entradas importadas de '%2'.</translation>
-    </message>
-</context><context>
     <name>_AddSourceDialog</name>
     <message>
         <source>Add Audio Source</source>
@@ -7068,6 +7383,14 @@ Continuar com a importação?</translation>
 </context><context>
     <name>_ChainRow</name>
     <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>&lt;i&gt; — re-import to refresh&lt;/i&gt;</source>
         <translation>&lt;i&gt; — reimporte para atualizar&lt;/i&gt;</translation>
     </message>
@@ -7081,6 +7404,14 @@ Continuar com a importação?</translation>
     </message>
 </context><context>
     <name>_FreqRow</name>
+    <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>word-based</source>
         <translation>baseada em palavras</translation>
@@ -7100,6 +7431,14 @@ Continuar com a importação?</translation>
 </context><context>
     <name>_PackRow</name>
     <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 entries</source>
         <translation>%1 entradas</translation>
     </message>
@@ -7110,6 +7449,24 @@ Continuar com a importação?</translation>
     <message>
         <source>⚠ folder missing — re-import</source>
         <translation>⚠ pasta ausente — reimportar</translation>
+    </message>
+</context><context>
+    <name>_PitchRow</name>
+    <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 entries</source>
+        <translation type="unfinished">%1 entradas</translation>
+    </message>
+    <message>
+        <source>⚠ missing — re-import</source>
+        <translation type="unfinished">⚠ ausente — reimportar</translation>
     </message>
 </context><context>
     <name>app</name>

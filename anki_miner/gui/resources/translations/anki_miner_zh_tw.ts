@@ -360,8 +360,8 @@
         <translation>輔助資料欄位</translation>
     </message>
     <message>
-        <source>Need pitch_accent.csv in ~/.anki_miner/. Blank = skip.</source>
-        <translation>需要在 ~/.anki_miner/ 中放置 pitch_accent.csv。留空 = 略過。</translation>
+        <source>Pitch fields need a source in Settings → Pitch Accent. Blank = skip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Pitch Position Field</source>
@@ -1610,6 +1610,14 @@ Total cards created: %2</source>
         <translation>將介面切換為另一種語言。</translation>
     </message>
     <message>
+        <source>Settings profiles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Keep several named snapshots of every setting and switch between them in one click.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Speech-to-text (no subtitles needed)</source>
         <translation>語音轉文字（無需字幕）</translation>
     </message>
@@ -2180,20 +2188,28 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
 </context><context>
     <name>DeckBuilderTab</name>
     <message>
-        <source>Input</source>
-        <translation>輸入</translation>
-    </message>
-    <message>
         <source>Video Folder:</source>
         <translation>影片資料夾：</translation>
     </message>
     <message>
-        <source>Select folder with video files…</source>
-        <translation>選擇含有影片檔案的資料夾…</translation>
-    </message>
-    <message>
         <source>Subtitle Folder:</source>
         <translation>字幕資料夾：</translation>
+    </message>
+    <message>
+        <source>Deck Name:</source>
+        <translation>牌組名稱：</translation>
+    </message>
+    <message>
+        <source>Word Selection:</source>
+        <translation>單字選擇：</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>輸入</translation>
+    </message>
+    <message>
+        <source>Select folder with video files…</source>
+        <translation>選擇含有影片檔案的資料夾…</translation>
     </message>
     <message>
         <source>Select folder with subtitle files…</source>
@@ -2204,16 +2220,8 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>牌組設定</translation>
     </message>
     <message>
-        <source>Deck Name:</source>
-        <translation>牌組名稱：</translation>
-    </message>
-    <message>
         <source>Enter deck name…</source>
         <translation>輸入牌組名稱…</translation>
-    </message>
-    <message>
-        <source>Word Selection:</source>
-        <translation>單字選擇：</translation>
     </message>
     <message>
         <source>All vocabulary</source>
@@ -2744,22 +2752,6 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
     <message>
         <source>Remove</source>
         <translation>移除</translation>
-    </message>
-    <message>
-        <source>Pitch Accent</source>
-        <translation>高低音調</translation>
-    </message>
-    <message>
-        <source>Select pitch accent CSV/TSV or Yomitan zip...</source>
-        <translation>選擇高低音調 CSV／TSV 或 Yomitan zip...</translation>
-    </message>
-    <message>
-        <source>Pitch Accent File</source>
-        <translation>高低音調檔案</translation>
-    </message>
-    <message>
-        <source>CSV/TSV with columns (reading, kanji, pattern), or a Yomitan-format pitch zip (e.g. Kanjium, NHK). Yomitan zips are imported into ~/.anki_miner/pitch_accent.csv on Save.</source>
-        <translation>含有（讀音、漢字、音調型）欄位的 CSV／TSV，或 Yomitan 格式的音調 zip（例如 Kanjium、NHK）。Yomitan zip 會在儲存時匯入 ~/.anki_miner/pitch_accent.csv。</translation>
     </message>
     <message>
         <source>Jisho (online fallback)</source>
@@ -3772,8 +3764,28 @@ This cannot be undone. You would need to re-import to use this source again.</so
 </context><context>
     <name>HeaderWidget</name>
     <message>
+        <source>Settings profile:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings profile</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switches every Anki Miner setting to the selected profile.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Active settings profile. Switching swaps every setting; pick 'Manage profiles…' to add, rename or remove them.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Theme:</source>
         <translation>主題：</translation>
+    </message>
+    <message>
+        <source>Theme</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>All themes…</source>
@@ -3782,6 +3794,10 @@ This cannot be undone. You would need to re-import to use this source again.</so
     <message>
         <source>Active theme. Top-right shows favorites; pick 'All themes…' to manage them. (Ctrl+T cycles favorites). Installed: %1</source>
         <translation>啟用中的主題。右上方顯示最愛；選擇「所有主題…」以管理。（Ctrl+T 循環切換最愛）。已安裝：%1</translation>
+    </message>
+    <message>
+        <source>Manage profiles…</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>KnownWordsManagerDialog</name>
@@ -4464,6 +4480,211 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>靜音移除函式庫安裝成功。</translation>
     </message>
 </context><context>
+    <name>PitchImportFlow</name>
+    <message>
+        <source>Choose pitch accent source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation type="unfinished"> （已跳過 %1 筆格式錯誤的項目）</translation>
+    </message>
+    <message>
+        <source>Pitch Source Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation type="unfinished">已從「%2」匯入 %1 個項目。</translation>
+    </message>
+    <message>
+        <source>Configuration Update Failed</source>
+        <translation type="unfinished">設定更新失敗</translation>
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation type="unfinished">匯入已完成，但設定更新失敗：%1</translation>
+    </message>
+    <message>
+        <source>Importing pitch source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">取消</translation>
+    </message>
+    <message>
+        <source>Import Failed</source>
+        <translation type="unfinished">匯入失敗</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation type="unfinished">另一項匯入作業尚未完成，請稍候完成後再試一次。</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">取消中……</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation type="unfinished">匯入工作已結束，但未傳回完成結果。</translation>
+    </message>
+    <message>
+        <source>Scan Failed</source>
+        <translation type="unfinished">掃描失敗</translation>
+    </message>
+    <message>
+        <source>Choose pitch source to re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import Blocked</source>
+        <translation type="unfinished">重新匯入已封鎖</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation type="unfinished">索引資源正被採集、啟動預熱或卡片回填使用中。請等待進行中的工作完成後再試一次。</translation>
+    </message>
+    <message>
+        <source>Pitch Source Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation type="unfinished">已成功重新匯入 %1。</translation>
+    </message>
+    <message>
+        <source>Re-importing pitch source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import Failed</source>
+        <translation type="unfinished">重新匯入失敗</translation>
+    </message>
+    <message>
+        <source>Pitch accent source (%1);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>PitchSettingsPanel</name>
+    <message>
+        <source>Loading…</source>
+        <translation type="unfinished">載入中…</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation type="unfinished">移除失敗</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The pitch source was not removed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation type="unfinished">檔案保持不變</translation>
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation type="unfinished">此串接項目已移除，但位於 %1 的檔案因無法證明該資料夾屬於 Anki Miner 而保持不變。</translation>
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation type="unfinished">無法移除 %1：
+%2
+
+檔案完整無損。請再試一次。</translation>
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this pitch source before retrying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation type="unfinished">設定更新失敗後，無法還原 %1：
+%2
+
+檔案已不在安裝位置；設定更新正待處理。請在重試前重新啟動 Anki Miner。</translation>
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation type="unfinished">%1 的移除已儲存，但 Anki Miner 無法重新整理：
+%2
+
+此移除已儲存，重新啟動後仍會保留。</translation>
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <translation type="unfinished">%1 已移除，但位於 %2 的墓碑標記無法刪除：
+%3
+
+此移除已儲存；清理作業待處理，將於啟動時重試。</translation>
+    </message>
+    <message>
+        <source>Active Pitch Accent Sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sources are checked top to bottom — the first source with a pitch entry for a word wins. Lower sources only fill words the higher ones miss.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>+ Add Source…</source>
+        <translation type="unfinished">＋ 新增來源…</translation>
+    </message>
+    <message>
+        <source>Move up</source>
+        <translation type="unfinished">上移</translation>
+    </message>
+    <message>
+        <source>Move up (wins lookups first)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation type="unfinished">下移</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation type="unfinished">移除</translation>
+    </message>
+    <message>
+        <source>Remove pitch source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove '%1' from the pitch accent chain?
+
+Only the index files are deleted.
+This cannot be undone. You would need to re-import to use this source again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation type="unfinished">索引資源正被採集、啟動預熱或卡片回填使用中。請等待進行中的工作完成後再試一次。</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation type="unfinished">重新匯入…</translation>
+    </message>
+</context><context>
     <name>PlaylistAddController</name>
     <message>
         <source>Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.</source>
@@ -4528,6 +4749,138 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Added %1 videos from playlist '%2'.</source>
         <translation>已從播放清單「%2」加入 %1 部影片。</translation>
+    </message>
+</context><context>
+    <name>ProfileController</name>
+    <message>
+        <source>Language</source>
+        <translation type="unfinished">語言</translation>
+    </message>
+    <message>
+        <source>Interface scale</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Statistics database</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Log file</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Recovered settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Recovered settings %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not create the profile '%1': %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not save the current profile '%1': %2. Nothing was switched.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not read the profile file %1: %2. Nothing was switched.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switched to '%1', but the running window could not be fully refreshed: %2. Restart Anki Miner if something looks wrong.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings Profiles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restart Anki Miner to apply: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings are still being saved, or a dictionary change is in progress. Try again in a moment.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining or card backfill is still using the dictionaries. Stop it and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not apply the profile '%1': %2. Your current settings are unchanged.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ProfileManagerDialog</name>
+    <message>
+        <source>Settings Profiles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A profile is a complete snapshot of every setting — dictionaries, filters, media, Anki fields, appearance. Switching swaps all of them at once, after saving your current settings back into the active profile.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>New from Current…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save the settings you are using now as a new profile and switch to it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Rename…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switch To</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished">關閉</translation>
+    </message>
+    <message>
+        <source>%1 (active)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>New Profile</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Name for the new profile:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Rename Profile</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>New name for '%1':</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Rename Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete Profile</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete the profile '%1'? Its saved settings cannot be recovered.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete Failed</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ProgressWidget</name>
@@ -5224,14 +5577,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>資源從其原始來源下載；其授權條款適用。</translation>
     </message>
     <message>
-        <source>No valid pitch accent entries were found.</source>
-        <translation>找不到有效的高低音調項目。</translation>
-    </message>
-    <message>
-        <source>Pitch accent validation failed: %1</source>
-        <translation>高低音調驗證失敗：%1</translation>
-    </message>
-    <message>
         <source>%1 entries</source>
         <translation>%1 個項目</translation>
     </message>
@@ -5368,6 +5713,10 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Frequency</source>
         <translation>頻率</translation>
+    </message>
+    <message>
+        <source>Pitch Accent</source>
+        <translation type="unfinished">高低音調</translation>
     </message>
     <message>
         <source>Filtering</source>
@@ -5552,22 +5901,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>✓ 已重設為預設值</translation>
     </message>
     <message>
-        <source>Importing pitch accent dictionary…</source>
-        <translation>正在匯入高低音調字典…</translation>
-    </message>
-    <message>
-        <source>Overwrite Pitch Accent File?</source>
-        <translation>要覆寫高低音調檔案嗎？</translation>
-    </message>
-    <message>
-        <source>Pitch Accent Import Failed</source>
-        <translation>高低音調匯入失敗</translation>
-    </message>
-    <message>
-        <source>Pitch accent dictionary imported</source>
-        <translation>已匯入高低音調字典</translation>
-    </message>
-    <message>
         <source>Retry missing expression audio</source>
         <translation>重試缺少的詞語音訊</translation>
     </message>
@@ -5676,10 +6009,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>最近的檔案：</translation>
     </message>
     <message>
-        <source>Select recent file pair...</source>
-        <translation>選擇最近的檔案配對…</translation>
-    </message>
-    <message>
         <source>Video File:</source>
         <translation>影片檔案：</translation>
     </message>
@@ -5690,6 +6019,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Subtitle Offset:</source>
         <translation>字幕偏移：</translation>
+    </message>
+    <message>
+        <source>Select recent file pair...</source>
+        <translation>選擇最近的檔案配對…</translation>
     </message>
     <message>
         <source> seconds</source>
@@ -6620,16 +6953,20 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>開啟主題資料夾</translation>
     </message>
     <message>
-        <source>Open %1; drop theme JSON files here to install on next launch.</source>
-        <translation>開啟 %1；將佈景主題 JSON 檔案拖放至此，即可在下次啟動時安裝。</translation>
-    </message>
-    <message>
         <source>Revert</source>
         <translation>還原</translation>
     </message>
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>還原開啟此分頁時使用中的主題。</translation>
+    </message>
+    <message>
+        <source>Manage Profiles…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Keep several complete settings snapshots and switch between them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Active</source>
@@ -6658,6 +6995,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>%1 of %2 %3 variants favorited. Click to favorite all.</source>
         <translation>%2 個 %3 變體中已將 %1 個加入我的最愛。點按以全部加入。</translation>
+    </message>
+    <message>
+        <source>Open %1; drop theme JSON files here to install on next launch.</source>
+        <translation>開啟 %1；將佈景主題 JSON 檔案拖放至此，即可在下次啟動時安裝。</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -7014,32 +7355,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>進度</translation>
     </message>
 </context><context>
-    <name>ZipImportFlow</name>
-    <message>
-        <source>%1 already exists and will be replaced.
-
-Continue with import?</source>
-        <translation>%1 已存在，將被取代。
-
-是否繼續匯入？</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>取消</translation>
-    </message>
-    <message>
-        <source> (skipped %1 display-only entries)</source>
-        <translation>（已略過 %1 個僅供顯示的項目）</translation>
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation> （已跳過 %1 筆格式錯誤的項目）</translation>
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation>已從「%2」匯入 %1 個項目。</translation>
-    </message>
-</context><context>
     <name>_AddSourceDialog</name>
     <message>
         <source>Add Audio Source</source>
@@ -7056,6 +7371,14 @@ Continue with import?</source>
 </context><context>
     <name>_ChainRow</name>
     <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>&lt;i&gt; — re-import to refresh&lt;/i&gt;</source>
         <translation>&lt;i&gt; — 重新匯入以重新整理&lt;/i&gt;</translation>
     </message>
@@ -7069,6 +7392,14 @@ Continue with import?</source>
     </message>
 </context><context>
     <name>_FreqRow</name>
+    <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>word-based</source>
         <translation>以單字為基礎</translation>
@@ -7088,6 +7419,14 @@ Continue with import?</source>
 </context><context>
     <name>_PackRow</name>
     <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 entries</source>
         <translation>%1 個項目</translation>
     </message>
@@ -7098,6 +7437,24 @@ Continue with import?</source>
     <message>
         <source>⚠ folder missing — re-import</source>
         <translation>⚠ 資料夾遺失 — 重新匯入</translation>
+    </message>
+</context><context>
+    <name>_PitchRow</name>
+    <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 entries</source>
+        <translation type="unfinished">%1 個項目</translation>
+    </message>
+    <message>
+        <source>⚠ missing — re-import</source>
+        <translation type="unfinished">⚠ 遺失 — 重新匯入</translation>
     </message>
 </context><context>
     <name>app</name>
