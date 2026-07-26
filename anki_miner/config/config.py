@@ -414,13 +414,26 @@ class AnkiMinerConfig:
     youtube_cookies_file: Path | None = None
     youtube_ffmpeg_location: Path | None = None
     # Optional explicit override for the yt-dlp executable. When unset,
-    # anki_miner.utils.ytdlp_resolver prefers PATH, then a verified app-managed
-    # copy (~/.anki_miner/bin/), a bundled binary, or the bare literal fallback.
+    # anki_miner.utils.ytdlp_resolver prefers a verified app-managed copy
+    # (~/.anki_miner/bin/), then PATH, then a bundled binary, then the bare literal.
     ytdlp_location: Path | None = None
-    # Opt-in: when True, the GUI runs a throttled background yt-dlp self-update
-    # on startup (auto-download to ~/.anki_miner/bin/, kept current). Independent
-    # of check_for_updates (the app updater).
-    auto_update_ytdlp: bool = False
+    # When True, the GUI runs a throttled background yt-dlp self-update on startup
+    # (auto-download to ~/.anki_miner/bin/, kept current). Independent of
+    # check_for_updates (the app updater).
+    #
+    # Defaults ON, but only reaches genuinely fresh installs: GUIConfigManager
+    # serializes every dataclass field, and this field predates
+    # CONFIG_SCHEMA_VERSION 3, so every config file the app has ever written already
+    # carries an explicit value that a load preserves. Existing users keep whatever
+    # they had and are nudged instead, via the stale-binary validation warning, which
+    # fires only while this is False.
+    #
+    # Default-ON is what keeps YouTube mining working: yt-dlp breaks whenever YouTube
+    # changes something, and a bundled binary is pinned at build time. It is safe now
+    # in a way it was not when P0 containment 048 forced it off — the download is
+    # host-allowlisted, SHA-256 verified against the release manifest, atomically
+    # installed, and receipt-gated before the resolver will select it.
+    auto_update_ytdlp: bool = True
 
     # --- Bundled media tooling ---
     # Optional explicit overrides for the ffmpeg/ffprobe executables. When unset,

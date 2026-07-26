@@ -73,6 +73,17 @@ class GUIConfigManager:
     # _migrate_dict). The three chain rebuilds remain permanent deserializers,
     # not version shims, and are unaffected. Version 3 disables the legacy
     # default-ON yt-dlp updater once; a v3 config may explicitly opt back in.
+    #
+    # NOTE on auto_update_ytdlp: its dataclass default is now True again. That looks
+    # like it reverses the version-3 shim but does not, and it needs NO new shim.
+    # The field predates CONFIG_SCHEMA_VERSION 3 and _config_to_serializable_dict
+    # writes every dataclass field, so any file stamped >= 3 already carries an
+    # explicit value that a load preserves; files stamped < 3 still hit the clamp in
+    # _migrate_dict. The new default therefore reaches only installs with no config
+    # file at all. Do NOT add a "schema >= 3 and key missing -> False" rule to
+    # compensate: _migrate_dict is shared with import_settings, whose contract is
+    # that absent keys keep current values, so such a rule would silently disable
+    # the updater on every settings import that omits the key.
     CONFIG_SCHEMA_VERSION = 3
 
     @classmethod

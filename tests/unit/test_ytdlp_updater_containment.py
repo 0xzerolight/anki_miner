@@ -10,6 +10,7 @@ import io
 import json
 import os
 import shutil
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -167,21 +168,59 @@ def test_unverified_ytdlp_asset_never_installs_or_executes(
     assert all(command[0] != str(final) for command in run_commands)
 
 
-def test_default_startup_starts_no_downloader(monkeypatch: pytest.MonkeyPatch) -> None:
+def _run_maybe_start(config: AnkiMinerConfig, monkeypatch: pytest.MonkeyPatch) -> tuple[list, list]:
+    """Drive MainWindow._maybe_start_ytdlp_update against *config*, recording effects."""
     scheduled: list[tuple[int, object]] = []
     starts: list[object] = []
-    config = AnkiMinerConfig()
     window = SimpleNamespace(
         config=config,
         background_tasks=SimpleNamespace(start_ytdlp_update=lambda *args, **kwargs: starts.append((args, kwargs))),
     )
     monkeypatch.setattr(QTimer, "singleShot", lambda delay, callback: scheduled.append((delay, callback)))
-
     _ORIGINAL_MAYBE_START_YTDLP_UPDATE(window)
+    return scheduled, starts
 
-    assert config.auto_update_ytdlp is False
+
+def test_opted_out_startup_starts_no_downloader(monkeypatch: pytest.MonkeyPatch) -> None:
+    """auto_update_ytdlp=False must start nothing at startup.
+
+    This is the containment property from 048, and it is unchanged. What changed is
+    only which configs *have* False: the dataclass default is now True, so this test
+    sets it explicitly rather than relying on the default.
+    """
+    config = replace(AnkiMinerConfig(), auto_update_ytdlp=False)
+    scheduled, starts = _run_maybe_start(config, monkeypatch)
+
     assert scheduled == []
     assert starts == []
+
+
+def test_fresh_default_startup_schedules_the_updater(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A fresh install opts in, so the throttled background check is scheduled.
+
+    Deliberate behavior change: keeping yt-dlp current is what keeps YouTube mining
+    working, and a bundled binary is pinned at build time. It reaches only installs
+    with no config file — every file the app has written carries an explicit value.
+    The download itself remains host-allowlisted, SHA-256 verified, atomically
+    installed, and receipt-gated before the resolver will select it.
+    """
+    config = AnkiMinerConfig()
+    assert config.auto_update_ytdlp is True
+    scheduled, starts = _run_maybe_start(config, monkeypatch)
+
+    # Deferred via singleShot rather than run inline, so the window paints before any
+    # network call. starts stays empty until the scheduled callback actually fires.
+    assert len(scheduled) == 1
+    assert starts == []
+
+    delay, callback = scheduled[0]
+    assert delay == 0
+    callback()
+    assert len(starts) == 1
+    args, kwargs = starts[0]
+    # force=False keeps the 24h throttle in charge of the startup check.
+    assert kwargs == {"force": False}
+    assert args == (config,)
 
 
 def test_existing_config_migrated_to_updater_off(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
