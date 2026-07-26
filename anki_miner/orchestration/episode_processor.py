@@ -2109,6 +2109,7 @@ class EpisodeProcessor:
         curation_callback: Callable[[list], list | None] | None = None,
         on_fetched: Callable[[FetchedMedia], None] | None = None,
         source_label: str | None = None,
+        fallback_allowed: bool = False,
     ) -> ProcessingResult:
         """Fetch a YouTube video + subs then run the standard mining pipeline.
 
@@ -2128,6 +2129,11 @@ class EpisodeProcessor:
                 the video and subtitle files into.
             sub_mode: "manual_only" or "auto_only" — chosen by the user based
                 on what probe_metadata reported as available.
+            fallback_allowed: Forwarded to the fetcher. When True (the worker
+                passes ``VideoInfo.has_auto_ja_subs``), a ``manual_only`` fetch may
+                fall back to the video's *native* auto-captions if the listed manual
+                track is unavailable at download time. Gated on the probe's verdict
+                so the fallback can never reach a machine-translated track.
             cancel_event: Threading event set by the worker on cancellation;
                 forwarded to the fetcher so in-flight yt-dlp can be killed,
                 and passed through to ``process_episode``, which bridges it
@@ -2190,6 +2196,7 @@ class EpisodeProcessor:
                 sub_mode,
                 progress_cb=fetch_progress_cb,
                 cancel_event=cancel_event,
+                fallback_allowed=fallback_allowed,
             )
 
         if on_fetched is not None:

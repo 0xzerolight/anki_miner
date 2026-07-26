@@ -20,6 +20,7 @@ from anki_miner.exceptions.youtube import (
     BotDetectionError,
     CookieDatabaseLockedError,
     FfmpegNotFoundError,
+    NoJapaneseSubtitlesError,
     VideoTooLongError,
     YouTubeFetchError,
     YtdlpNotFoundError,
@@ -494,9 +495,43 @@ class TestFetchVideoCommand:
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
         cmd = captured["cmd"]
         assert "--write-sub" in cmd
+        # No fallback_allowed -> the auto flag stays off, so a non-native auto
+        # track can never be substituted for the requested manual one.
         assert "--write-auto-sub" not in cmd
         assert "--sub-lang" in cmd and cmd[cmd.index("--sub-lang") + 1] == "ja"
         assert "--convert-subs" in cmd and cmd[cmd.index("--convert-subs") + 1] == "srt"
+
+    def test_manual_only_with_fallback_allowed_adds_both_flags(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        """Both flags = yt-dlp's own manual-preferred fallback.
+
+        ``process_subtitles`` loads manual subs first and fills only the languages
+        they do not cover from ``automatic_captions``, so both flags together write
+        exactly one file and prefer the manual track. That is the whole fallback
+        mechanism — no second yt-dlp invocation is needed.
+        """
+        _make_happy_outputs(tmp_path)
+        captured: dict[str, Any] = {}
+
+        def fake_popen(cmd: list[str], **kwargs: Any) -> _FakePopen:
+            captured["cmd"] = cmd
+            return _FakePopen(lines=[], returncode=0)
+
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", side_effect=fake_popen),
+        ):
+            service.fetch_video(
+                "https://youtu.be/abc123",
+                "abc123",
+                tmp_path,
+                "manual_only",
+                fallback_allowed=True,
+            )
+        cmd = captured["cmd"]
+        assert "--write-sub" in cmd
+        assert "--write-auto-sub" in cmd
 
     def test_auto_only_adds_write_auto_sub(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         _make_happy_outputs(tmp_path)
@@ -511,6 +546,30 @@ class TestFetchVideoCommand:
             patch("subprocess.Popen", side_effect=fake_popen),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "auto_only")
+        cmd = captured["cmd"]
+        assert "--write-auto-sub" in cmd
+        assert "--write-sub" not in cmd
+
+    def test_auto_only_ignores_fallback_allowed(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        """There is nothing to fall back *from* when auto is already the request."""
+        _make_happy_outputs(tmp_path)
+        captured: dict[str, Any] = {}
+
+        def fake_popen(cmd: list[str], **kwargs: Any) -> _FakePopen:
+            captured["cmd"] = cmd
+            return _FakePopen(lines=[], returncode=0)
+
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", side_effect=fake_popen),
+        ):
+            service.fetch_video(
+                "https://youtu.be/abc123",
+                "abc123",
+                tmp_path,
+                "auto_only",
+                fallback_allowed=True,
+            )
         cmd = captured["cmd"]
         assert "--write-auto-sub" in cmd
         assert "--write-sub" not in cmd
@@ -912,6 +971,62 @@ class TestFetchVideoErrors:
             pytest.raises(YouTubeFetchError, match="zero-byte subtitle"),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+    def test_video_without_subtitle_raises_no_japanese_subtitles(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        """The video landed but no subtitle did — a deterministic failure.
+
+        yt-dlp reports "There are no subtitles for the requested languages" as an
+        info line and exits 0. It writes subtitles before the video, so by this point
+        the whole video has already downloaded. The dedicated subclass is what stops
+        the queue worker from retrying and paying for a second download.
+        """
+        _touch(tmp_path / "abc123.mp4", b"fake-mp4")
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
+            pytest.raises(NoJapaneseSubtitlesError, match="wrote no Japanese subtitle"),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+    def test_no_japanese_subtitles_error_is_a_youtube_fetch_error(self) -> None:
+        """Subclass, not sibling.
+
+        ``YouTubeFetchError`` is the documented catch-all for ``fetch_video`` and
+        ``process_youtube_url``; a sibling (the ``FfmpegNotFoundError`` shape) would
+        leak past every caller relying on it.
+        """
+        assert issubclass(NoJapaneseSubtitlesError, YouTubeFetchError)
+
+    def test_vtt_subtitle_accepted_when_conversion_did_not_run(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        """``--convert-subs srt`` is an ffmpeg postprocessor and can be skipped.
+
+        pysubs2 parses vtt natively, so refusing the surviving vtt threw away a
+        usable subtitle and reported "expected output files are missing" instead.
+        """
+        _touch(tmp_path / "abc123.mp4", b"fake-mp4")
+        _touch(tmp_path / "abc123.ja.vtt", b"WEBVTT\n\n00:01.000 --> 00:02.000\nhello\n")
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
+        ):
+            result = service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+        assert result.subtitle_file.name == "abc123.ja.vtt"
+
+    def test_srt_preferred_when_both_srt_and_vtt_survive(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        """A kept original alongside the converted file is not an ambiguity."""
+        _touch(tmp_path / "abc123.mp4", b"fake-mp4")
+        _touch(tmp_path / "abc123.ja.vtt", b"WEBVTT\n")
+        _touch(tmp_path / "abc123.ja.srt", b"1\n00:00:01,000 --> 00:00:02,000\nhello\n")
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
+        ):
+            result = service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+        assert result.subtitle_file.name == "abc123.ja.srt"
 
 
 def test_ytdlp_hang_killed_by_deadline(service: YouTubeFetcherService, tmp_path: Path) -> None:
