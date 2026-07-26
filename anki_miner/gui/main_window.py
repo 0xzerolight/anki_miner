@@ -39,7 +39,6 @@ from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.utils.config_manager import GUIConfigManager
-from anki_miner.gui.utils.profile_store import ProfileStore
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
 from anki_miner.gui.widgets.header_widget import HeaderWidget
@@ -553,19 +552,15 @@ class MainWindow(QMainWindow):
         ``exec``, never ``show``: the dialog sets no modality of its own, and a
         modeless one would be repainted mid-CRUD by the settings reload a switch
         fans out — the hazard the modal shape exists to avoid.
+
+        The refresh hook is the controller's own ``sync_header``: the dialog's
+        rename/delete paths go straight to ``ProfileStore`` and never pass
+        through a switch, so they need the same re-point every terminal path of
+        a switch already runs.
         """
         from anki_miner.gui.widgets.dialogs.profile_manager_dialog import ProfileManagerDialog
 
-        ProfileManagerDialog(self.profile_controller, self._refresh_profile_header, self).exec()
-
-    def _refresh_profile_header(self) -> None:
-        """Re-point the header combo at the stored profiles.
-
-        Handed to the profile manager for its rename/delete paths: those go
-        straight to ``ProfileStore``, so unlike switch/create they never pass
-        through the controller's own header refresh.
-        """
-        self.header.set_profiles(ProfileStore.list_profiles(), GUIConfigManager.ACTIVE_PROFILE_ID)
+        ProfileManagerDialog(self.profile_controller, self.profile_controller.sync_header, self).exec()
 
     def _report_issue(self) -> None:
         """Open the GitHub issues page in the default browser."""

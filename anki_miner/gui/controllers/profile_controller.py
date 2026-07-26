@@ -363,7 +363,7 @@ class ProfileController:
     def switch_to(self, profile_id: str) -> SwitchResult:
         """Make ``profile_id`` the live config, or refuse without side effects."""
         if profile_id == GUIConfigManager.ACTIVE_PROFILE_ID:
-            self._sync_header()
+            self.sync_header()
             return SwitchResult(switched=False)
 
         try:
@@ -374,7 +374,7 @@ class ProfileController:
             # currentIndexChanged has already moved the combo to B by the time a
             # refusal is decided, and a combo showing B while A is live is the
             # worst state for a control that swaps every setting.
-            self._sync_header()
+            self.sync_header()
         self._warn(result)
         return result
 
@@ -384,7 +384,7 @@ class ProfileController:
             with self._window._dictionary_mutation_guard(_MUTATION_KIND) as ready:
                 result = self._create_locked(name) if ready else SwitchResult(switched=False, reason=self._busy())
         finally:
-            self._sync_header()
+            self.sync_header()
         self._warn(result)
         return result
 
@@ -619,8 +619,14 @@ class ProfileController:
         """
         return cast("_ProfileHeader", self._window.header)
 
-    def _sync_header(self) -> None:
-        """Point the header combo at whatever the session actually ended on."""
+    def sync_header(self) -> None:
+        """Point the header combo at whatever the session actually ended on.
+
+        Public because it is also the profile manager's refresh hook: its
+        rename/delete paths go straight to ``ProfileStore`` and never pass
+        through a switch, so they need the same re-point this class runs from
+        every terminal path.
+        """
         self._header().set_profiles(ProfileStore.list_profiles(), GUIConfigManager.ACTIVE_PROFILE_ID)
 
     def _warn(self, result: SwitchResult) -> None:
