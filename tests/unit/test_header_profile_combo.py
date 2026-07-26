@@ -10,16 +10,12 @@ from __future__ import annotations
 
 import pytest
 from PyQt6.QtCore import QPoint, QPointF, Qt
-from PyQt6.QtGui import QWheelEvent
+from PyQt6.QtGui import QFont, QWheelEvent
 from PyQt6.QtWidgets import QApplication, QComboBox
 
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.profile_store import Profile
-from anki_miner.gui.widgets.header_widget import (
-    MANAGE_PROFILES_SENTINEL,
-    PROFILE_COMBO_MAX_WIDTH,
-    HeaderWidget,
-)
+from anki_miner.gui.widgets.header_widget import MANAGE_PROFILES_SENTINEL, HeaderWidget
 
 ANIME = Profile(id="anime", name="Anime")
 NOVELS = Profile(id="novels", name="Novels")
@@ -299,10 +295,39 @@ def test_a_long_profile_name_does_not_widen_the_combo(qtbot):
 
     header.set_profiles([Profile(id="long", name=long_name), NOVELS], "long")
 
-    assert combo.sizeHint().width() <= PROFILE_COMBO_MAX_WIDTH
-    # Stronger and font-independent: the hint does not depend on the items at all.
+    # Font-independent, so it holds at every ui_font_scale: the hint does not
+    # depend on the items at all.
     assert combo.sizeHint().width() == baseline
-    assert combo.maximumWidth() <= PROFILE_COMBO_MAX_WIDTH
+    assert combo.maximumWidth() >= combo.sizeHint().width()
+
+
+def test_the_width_cap_tracks_the_ui_font_instead_of_clamping_it(qtbot):
+    """The cap is a CHARACTER budget measured in the combo's current font.
+
+    Measured with the flat 220px it replaces: the combo's own 12-character hint
+    is 160px at ui_font_scale 1.0 but 256px at 2.0, so the cap clamped the combo
+    below the width it was sized for exactly when the user asked for bigger text.
+    """
+    header = _header(qtbot)
+    combo = header.profile_combo
+    font = QFont(combo.font())
+
+    font.setPixelSize(12)
+    combo.setFont(font)
+    header.set_profiles([ANIME, NOVELS], "anime")
+    small_hint, small_cap = combo.sizeHint().width(), combo.maximumWidth()
+
+    font.setPixelSize(28)
+    combo.setFont(font)
+    header.set_profiles([ANIME, NOVELS], "anime")
+    large_hint, large_cap = combo.sizeHint().width(), combo.maximumWidth()
+
+    # Vacuity guard: the bigger font really did move the combo's own demand.
+    assert large_hint > small_hint
+    assert large_cap > small_cap
+    # The property the flat cap violated: it never clamps the combo's own hint.
+    assert small_cap >= small_hint
+    assert large_cap >= large_hint
 
 
 def test_a_long_profile_name_is_elided_but_kept_whole_in_the_tooltip(qtbot):
@@ -317,6 +342,38 @@ def test_a_long_profile_name_is_elided_but_kept_whole_in_the_tooltip(qtbot):
     # Nothing is lost: the full name on the tooltip, the id in itemData.
     assert combo.itemData(0, Qt.ItemDataRole.ToolTipRole) == long_name
     assert combo.itemData(0) == "long"
+
+
+def test_the_closed_combo_tooltip_leads_with_the_active_profiles_full_name(qtbot):
+    """ToolTipRole only surfaces in the popup, so the widget tooltip is the
+    only place a long active name is readable without opening the drop-down."""
+    header = _header(qtbot)
+    long_name = "X" * 200
+
+    header.set_profiles([Profile(id="long", name=long_name), NOVELS], "long")
+
+    tooltip = header.profile_combo.toolTip()
+    assert tooltip.startswith(long_name)
+    # The generic explanation is kept, not replaced.
+    assert "Manage profiles…" in tooltip
+
+
+def test_the_tooltip_falls_back_to_the_explanation_with_nothing_active(qtbot):
+    header = _header(qtbot)
+
+    header.set_profiles([ANIME, NOVELS], None)
+
+    assert header.profile_combo.toolTip() == header._profile_tooltip
+
+
+def test_the_tooltip_follows_the_active_profile(qtbot):
+    header = _header(qtbot)
+    header.set_profiles([ANIME, NOVELS], "anime")
+    assert header.profile_combo.toolTip().startswith("Anime")
+
+    header.set_profiles([ANIME, NOVELS], "novels")
+
+    assert header.profile_combo.toolTip().startswith("Novels")
 
 
 # ----------------------------------------------------------------------

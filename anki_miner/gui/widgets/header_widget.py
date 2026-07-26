@@ -31,14 +31,19 @@ ALL_THEMES_SENTINEL = "__open_theme_settings__"
 # from any real profile id, which is ``slugify`` output ([a-z0-9-] only).
 MANAGE_PROFILES_SENTINEL = "__open_profile_manager__"
 
-# Hard ceiling on the profile combo, in device-independent pixels. A profile
-# name is user-supplied free text, so without a cap one long name would push the
-# header — and with it the window's minimum width — out. Two independent layers
-# hold it: the combo sizes itself from _PROFILE_COMBO_MIN_CHARS rather than from
-# its widest item (so its sizeHint is content-independent), and this maximum
-# width is the backstop for a very large UI font.
-PROFILE_COMBO_MAX_WIDTH = 220
+# Ceiling on the profile combo, as a CHARACTER budget rather than a pixel one. A
+# profile name is user-supplied free text, so without a cap one long name would
+# push the header — and with it the window's minimum width — out. Two independent
+# layers hold it: the combo sizes itself from _PROFILE_COMBO_MIN_CHARS rather
+# than from its widest item (so its sizeHint is content-independent), and this
+# budget is the backstop for a very large UI font.
+#
+# Measured in the combo's own font on every set_profiles rather than frozen as
+# pixels: the 12-character hint alone is 160px at ui_font_scale 1.0 but 256px at
+# 2.0, so the flat 220px this replaces clamped the combo BELOW the width it was
+# sized for — truncating the text exactly when the user had asked for bigger.
 _PROFILE_COMBO_MIN_CHARS = 12
+_PROFILE_COMBO_MAX_CHARS = 20
 
 # Budget for the name text itself. Longer names are elided into it for display;
 # the full name is kept on the item's ToolTipRole and the id in its itemData, so
@@ -119,29 +124,25 @@ class HeaderWidget(QWidget):
         self.profile_combo.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         # Size from a fixed character budget rather than from the widest item,
         # so a long profile name cannot widen the header. See
-        # PROFILE_COMBO_MAX_WIDTH.
+        # _PROFILE_COMBO_MAX_CHARS.
         self.profile_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
         self.profile_combo.setMinimumContentsLength(_PROFILE_COMBO_MIN_CHARS)
-        self.profile_combo.setMaximumWidth(PROFILE_COMBO_MAX_WIDTH)
         # A control that silently rewrites every setting must announce itself:
         # without these a screen reader reads only "combo box" (see a1d78b72).
         self.profile_combo.setAccessibleName(self.tr("Settings profile"))
         self.profile_combo.setAccessibleDescription(
             self.tr("Switches every Anki Miner setting to the selected profile.")
         )
-        self.profile_combo.setToolTip(
-            self.tr(
-                "Active settings profile. Switching swaps every setting; "
-                "pick 'Manage profiles…' to add, rename or remove them."
-            )
+        # Assigned before the set_profiles below, which reads it: with an active
+        # profile the combo's tooltip LEADS with that profile's full name, so an
+        # elided name is readable without opening the drop-down (the per-item
+        # ToolTipRole only ever surfaces inside the popup).
+        self._profile_tooltip = self.tr(
+            "Active settings profile. Switching swaps every setting; "
+            "pick 'Manage profiles…' to add, rename or remove them."
         )
         self.profile_label.setBuddy(self.profile_combo)
         profile_layout.addWidget(self.profile_combo)
-
-        # Starts empty, which hides the whole block: an existing user who never
-        # creates a profile sees no change to the header at all.
-        self.set_profiles((), None)
-        self.profile_combo.currentIndexChanged.connect(self._on_profile_changed)
 
         layout.addLayout(profile_layout)
 
@@ -170,6 +171,15 @@ class HeaderWidget(QWidget):
 
         self.setLayout(layout)
         self.setObjectName("header-widget")
+
+        # AFTER setLayout, for the same reparenting reason as the sweep below: a
+        # combo that is not yet a child of a laid-out widget reports the plain
+        # application font instead of the stylesheet's scaled one, so both the
+        # width cap and the elision metrics set_profiles measures would be taken
+        # against the wrong font. Starting empty also hides the whole block, so
+        # an existing user who never creates a profile sees no change here.
+        self.set_profiles((), None)
+        self.profile_combo.currentIndexChanged.connect(self._on_profile_changed)
 
         # MUST run after setLayout: a widget added to a not-yet-installed
         # layout is not reparented onto the container, so before this line
@@ -289,6 +299,13 @@ class HeaderWidget(QWidget):
         """
         self._active_profile_id = active_id
 
+        # Both measurements below (elision budget, width cap) read the combo's
+        # font, and an unpolished widget reports the plain application font
+        # rather than the stylesheet's ui_font_scale-derived one — measured, a
+        # scale-2.0 combo answers with a 6px advance until it is polished, then
+        # 14px. Polishing first is what makes the numbers the real ones.
+        self.profile_combo.ensurePolished()
+
         self.profile_combo.blockSignals(True)
         try:
             self.profile_combo.clear()
@@ -306,11 +323,42 @@ class HeaderWidget(QWidget):
         finally:
             self.profile_combo.blockSignals(False)
 
+        # Re-measured here, not frozen at construction: this runs again after the
+        # app stylesheet has been applied (and after every ui_font_scale change
+        # that repolishes it), which is the only point the combo's real font is
+        # known.
+        self.profile_combo.setMaximumWidth(self._profile_combo_max_width(metrics))
+        self._sync_profile_tooltip(profiles, active_id)
+
         # One profile is indistinguishable from none, so the block stays out of
         # the header until there is a choice to make.
         visible = len(profiles) >= 2
         self.profile_label.setVisible(visible)
         self.profile_combo.setVisible(visible)
+
+    def _profile_combo_max_width(self, metrics: QFontMetrics) -> int:
+        """Backstop width for the profile combo, in the combo's CURRENT font.
+
+        ``sizeHint`` is content-independent here (the size-adjust policy sizes
+        the combo from ``_PROFILE_COMBO_MIN_CHARS``, not from its widest item),
+        so it is a clean measure of the chrome — frame, arrow, margins — wrapped
+        around that many characters. Widening it by the remaining characters in
+        the same font keeps the cap a fixed CHARACTER budget at every
+        ``ui_font_scale``, which a frozen pixel count cannot be.
+        """
+        extra = _PROFILE_COMBO_MAX_CHARS - _PROFILE_COMBO_MIN_CHARS
+        return self.profile_combo.sizeHint().width() + extra * metrics.horizontalAdvance("x")
+
+    def _sync_profile_tooltip(self, profiles: Sequence[Profile], active_id: str | None) -> None:
+        """Lead the combo's tooltip with the active profile's FULL name.
+
+        The per-item ``ToolTipRole`` set above only surfaces inside the open
+        drop-down, so on the closed combo — the one place a name is actually
+        elided — a widget-level tooltip is the only way the full name is
+        readable at all. Without this the generic explanation shadowed it.
+        """
+        name = next((profile.name for profile in profiles if profile.id == active_id), None)
+        self.profile_combo.setToolTip(f"{name}\n\n{self._profile_tooltip}" if name else self._profile_tooltip)
 
     def _on_profile_changed(self, index: int) -> None:
         """Handle profile selection change.

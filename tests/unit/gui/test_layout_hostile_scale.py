@@ -331,10 +331,9 @@ class TestHeaderProfileBlockFitsTheWindowMinimum:
         QApplication.processEvents()
 
         # RELATIVE, deliberately. The combo's hint tracks the font (measured 160px
-        # at scale 1.0, 208 at 1.5, 256 at 2.0) while PROFILE_COMBO_MAX_WIDTH is a
-        # flat 220, so `hint <= PROFILE_COMBO_MAX_WIDTH` is fragile at 1.5 and
-        # simply false at 2.0. The property that matters is that the hint does not
-        # depend on the items at all, and it holds at every scale.
+        # at scale 1.0, 208 at 1.5, 256 at 2.0), and so does its width cap, so no
+        # absolute pixel budget is assertable here at all. The property that
+        # matters is that the hint does not depend on the items, at every scale.
         assert combo.sizeHint().width() == baseline_combo, (
             f"a 200-char profile name widened the combo from {baseline_combo}px to " f"{combo.sizeHint().width()}px"
         )
