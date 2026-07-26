@@ -189,8 +189,9 @@ class ProfileController:
     Args:
         window: Owning main window. Read for the live config and driven for
             everything a switch has to move: ``_dictionary_mutation_guard``,
-            ``release_dictionary_resources``, ``update_config``, the header
-            combo and the status bar. Held as a reference (the
+            ``release_dictionary_resources``, ``update_config``,
+            ``reload_settings_panels``, the header combo and the status bar.
+            Held as a reference (the
             ``BackgroundTaskController`` idiom) rather than as a bag of
             injected callables — this class needs six of them and they must all
             address the same window.
@@ -554,12 +555,15 @@ class ProfileController:
         # The switch is durable from here on, even if the refresh half failed;
         # the pointer stays where it is.
         self._active_name = incoming_name
+        # Before apply_to_app, so the freshly rebuilt panels are covered by that
+        # single repolish rather than needing a second one.
+        refresh_error = commit_error or self._repaint_settings()
         self._apply_theme()
         self._header().refresh_favorites()
         self._note_restart_fields(incoming)
 
-        if commit_error is not None:
-            logger.warning("Settings profile '%s' is live but the refresh failed: %s", profile_id, commit_error)
+        if refresh_error is not None:
+            logger.warning("Settings profile '%s' is live but the refresh failed: %s", profile_id, refresh_error)
             return SwitchResult(
                 switched=True,
                 reason=tr_format(
@@ -569,10 +573,38 @@ class ProfileController:
                         "Restart Anki Miner if something looks wrong.",
                     ),
                     incoming_name,
-                    commit_error,
+                    refresh_error,
                 ),
             )
         return SwitchResult(switched=True)
+
+    def _repaint_settings(self) -> Exception | None:
+        """Force the Settings panels to redraw from the now-live config.
+
+        NOT left to ``update_config``'s ``config_refreshed`` fan-out.
+        ``SettingsTab.update_config`` skips its reload whenever the whole diff
+        falls inside ``_EXTERNAL_ONLY_FIELDS`` — a gate that protects unsaved
+        panel edits during unrelated commits (OVH-007) and must keep doing so.
+        Two profiles differing only in theme / favorites / font scale / language
+        produce exactly that diff (the ``last_known_version`` re-stamp above and
+        ``update_config``'s ``config_version`` bump are both inside the allowlist
+        too, so neither can force the reload), and the tab would go on rendering
+        the profile the user just left — including a theme tree drawing the
+        OUTGOING favorites over an already re-seeded ``Theme`` singleton, so the
+        next star click toggles the opposite of what is drawn.
+
+        Returns:
+            The exception a failed repaint raised, or ``None``. Returned rather
+            than propagated so it is reported exactly like ``update_config``'s
+            own post-save refresh failures: the switch is already durable and a
+            redraw must not undo it.
+        """
+        try:
+            self._window.reload_settings_panels()
+        except Exception as error:  # noqa: BLE001 - a failed redraw must not strand a durable switch
+            logger.exception("Could not repaint the Settings panels for the incoming profile")
+            return error
+        return None
 
     # ------------------------------------------------------------------
     # Internals

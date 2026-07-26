@@ -22,6 +22,7 @@ cannot drift from the window's actual behaviour.
 
 from __future__ import annotations
 
+import dataclasses
 import inspect
 import json
 import logging
@@ -46,6 +47,7 @@ from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.profile_store import Profile, ProfileStore
 from anki_miner.gui.widgets.header_widget import HeaderWidget
+from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 # ---------------------------------------------------------------------------
 # Fakes
@@ -116,6 +118,10 @@ class _FakeWindow:
         self.resources_ready = True
         self.guard_kinds: list[str] = []
         self.release_calls = 0
+        # Configs the controller forced the Settings panels to redraw from, and
+        # an optional error to raise from that call.
+        self.settings_repaints: list[AnkiMinerConfig] = []
+        self.reload_panels_error: Exception | None = None
         # BaseException, not Exception: the real update_config guards this call
         # with ``except Exception``, so a KeyboardInterrupt-shaped error escapes
         # it with the save already done — the post-save rollback case.
@@ -129,6 +135,11 @@ class _FakeWindow:
     def release_dictionary_resources(self) -> bool:
         self.release_calls += 1
         return self.resources_ready
+
+    def reload_settings_panels(self) -> None:
+        if self.reload_panels_error is not None:
+            raise self.reload_panels_error
+        self.settings_repaints.append(self.config)
 
     def _build_config_bound_services(self) -> None:
         if self.build_services_error is not None:
@@ -921,6 +932,71 @@ class TestThemeReseed:
 
 
 # ---------------------------------------------------------------------------
+# Settings repaint
+# ---------------------------------------------------------------------------
+
+
+class TestSettingsRepaint:
+    """``SettingsTab.update_config`` will not repaint for an appearance-only diff.
+
+    Its ``_EXTERNAL_ONLY_FIELDS`` allowlist protects unsaved panel edits during
+    unrelated commits (OVH-007) and stays as it is; a profile switch is the case
+    it gets wrong, because two profiles differing only in theme / favorites /
+    font scale / language produce a diff entirely inside that allowlist. So the
+    controller forces the redraw itself.
+    """
+
+    def test_a_successful_switch_repaints_with_the_committed_config(self, controller, window, profile_a, profile_b):
+        _two_profiles(profile_a, profile_b)
+
+        controller.switch_to("b")
+
+        assert window.settings_repaints == [window.config]
+        assert window.config.anki_deck_name == "Deck B"
+
+    def test_an_appearance_only_switch_still_repaints(self, controller, window, profile_a):
+        """The exact diff ``update_config``'s allowlist swallows."""
+        _seed("a", profile_a, "A")
+        _seed("b", replace(profile_a, theme="dark", theme_favorites=("dark",), ui_font_scale=1.5), "B")
+        # Both sides through the file round trip, as the running app has them:
+        # _parse_and_migrate normalises anki_fields, so an in-memory outgoing
+        # config would show a diff the real window never sees.
+        window.config = ProfileStore.read_profile("a")
+        _activate("a", window.config)
+        outgoing = window.config
+
+        controller.switch_to("b")
+
+        # Vacuity guard: the diff really is inside the allowlist SettingsTab
+        # short-circuits on, so nothing else could have triggered the reload.
+        changed = {
+            field.name
+            for field in dataclasses.fields(window.config)
+            if getattr(window.config, field.name) != getattr(outgoing, field.name)
+        }
+        assert changed and changed <= SettingsTab._EXTERNAL_ONLY_FIELDS
+        assert window.settings_repaints == [window.config]
+
+    def test_a_refused_switch_repaints_nothing(self, controller, window, profile_a, profile_b):
+        _two_profiles(profile_a, profile_b)
+        window.resources_ready = False
+
+        controller.switch_to("b")
+
+        assert window.settings_repaints == []
+
+    def test_a_failed_repaint_is_reported_but_keeps_the_switch(self, controller, window, profile_a, profile_b):
+        _two_profiles(profile_a, profile_b)
+        window.reload_panels_error = RuntimeError("panel blew up")
+
+        result = controller.switch_to("b")
+
+        assert result.switched
+        assert result.reason is not None and "panel blew up" in result.reason
+        assert GUIConfigManager.ACTIVE_PROFILE_ID == "b"
+
+
+# ---------------------------------------------------------------------------
 # Restart note
 # ---------------------------------------------------------------------------
 
@@ -1085,6 +1161,7 @@ class TestWindowSurface:
             "status_bar",
             "update_config",
             "release_dictionary_resources",
+            "reload_settings_panels",
             "_dictionary_mutation_guard",
         ):
             assert hasattr(window, name), name

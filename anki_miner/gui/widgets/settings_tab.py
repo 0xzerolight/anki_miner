@@ -1148,7 +1148,10 @@ class SettingsTab(QWidget):
         for example, a theme change arrives via config_refreshed (OVH-007).
 
         Genuinely panel-relevant changes (e.g. JMdict migration updates
-        dicts_root) still trigger the full reload.
+        dicts_root) still trigger the full reload. A caller that means "adopt
+        this whole config and redraw regardless" wants
+        :meth:`reload_from_config` — the allowlist here is not a hint, and a
+        settings-profile switch has to bypass it.
 
         Args:
             config: New configuration to load
@@ -1162,6 +1165,30 @@ class SettingsTab(QWidget):
             # refresh) or every diff is in the externally-managed allowlist.
             # Skip reload to preserve in-progress widget edits.
             return
+        self._load_config()
+
+    def reload_from_config(self, config: AnkiMinerConfig) -> None:
+        """Adopt ``config`` and repaint every panel, allowlist or not.
+
+        The explicit counterpart to :meth:`update_config`, whose
+        ``_EXTERNAL_ONLY_FIELDS`` short-circuit exists to protect unsaved panel
+        edits during unrelated commits (OVH-007) and must stay exactly as it is.
+        A settings-profile switch is the case that gate gets wrong: two profiles
+        differing only in theme / favorites / font scale / language produce a
+        diff that lies ENTIRELY inside the allowlist (the version stamps ride in
+        it too), so the panels would keep rendering the profile the user just
+        left — a stale language and zoom combo, a hidden restart note, and a
+        theme tree drawing the outgoing favorites while the ``Theme`` singleton
+        already holds the incoming ones, so the next star click toggles the
+        opposite of what is drawn.
+
+        Callers must own the WHOLE config: this discards in-progress panel edits
+        by design, which is why it is a separate entry point rather than a flag.
+
+        Args:
+            config: Configuration to render; becomes ``self.config``.
+        """
+        self.config = config
         self._load_config()
 
     def iter_close_workers(self) -> tuple:

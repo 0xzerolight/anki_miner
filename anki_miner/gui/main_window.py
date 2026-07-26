@@ -993,6 +993,26 @@ class MainWindow(QMainWindow):
         if panel is not None:
             panel.set_connection_status(status)
 
+    def reload_settings_panels(self) -> None:
+        """Repaint the Settings tab's panels from the live config.
+
+        ``SettingsTab.update_config`` deliberately SKIPS its reload when an
+        incoming diff falls entirely inside its externally-managed allowlist, so
+        an unrelated commit cannot destroy unsaved panel edits (OVH-007). A
+        settings-profile switch between two profiles that differ only in
+        appearance produces exactly that diff, so ``ProfileController`` calls
+        this after a durable switch to force the redraw the gate suppressed.
+
+        Same self-healing lookup and same absent-tab tolerance as
+        :meth:`_set_anki_connection_badge`.
+        """
+        idx = self._settings_tab_index()
+        if idx < 0:
+            return
+        reload_panels = getattr(self.tabs.widget(idx), "reload_from_config", None)
+        if callable(reload_panels):
+            reload_panels(self.config)
+
     def _on_processing_result(self, result: ProcessingResult) -> None:
         """Handle processing result from presenter.
 
