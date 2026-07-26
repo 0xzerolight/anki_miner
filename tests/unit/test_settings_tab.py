@@ -982,7 +982,7 @@ class TestDictionaryRemovedPersistsNarrowly:
             widget.config_changed.connect(received.append)
 
             # Unrelated pending edit the user has NOT saved.
-            widget.anki_panel.deck_input.setText("unsaved_deck")
+            widget.anki_panel.set_deck_name("unsaved_deck")
 
             widget.dictionary_panel.set_chain((ChainEntry(kind="jisho", dict_id=None, enabled=True),))
             # chain_changed is the signal that drives persist (OVH-032).
@@ -1135,3 +1135,39 @@ class TestSubtitlesPanelRegistration:
 
         assert len(received) == 1
         assert received[0].alass_location is None
+
+
+def test_offline_load_and_save_preserves_deck_and_note_type(tab, test_config):
+    """With Anki closed the combos have no fetched items; a save must not blank the config.
+
+    This is the regression select_or_insert exists to prevent: a strict combo
+    can only show values that are items, so a saved deck that was never
+    inserted would read back as "" and the next auto-save would wipe it out of
+    gui_config.json.
+    """
+    cfg = replace(test_config, anki_deck_name="JP::Mining", anki_note_type="Lapis")
+    tab.config = cfg
+    tab._load_config()
+    saved = tab.anki_panel.contribute(cfg)
+    assert saved.anki_deck_name == "JP::Mining"
+    assert saved.anki_note_type == "Lapis"
+
+
+def test_sync_buttons_refresh_the_name_lists(tab):
+    from unittest.mock import patch  # noqa: PLC0415 — module convention
+
+    with patch.object(tab._anki_probe, "refresh_name_lists") as refresh:
+        tab.anki_panel.deck_sync_requested.emit()
+        tab.anki_panel.notetype_sync_requested.emit()
+    assert refresh.call_count == 2
+
+
+def test_name_lists_are_fetched_once_on_first_show(tab):
+    """Patching is mandatory: an unpatched show() opens a real AnkiConnect socket."""
+    from unittest.mock import patch  # noqa: PLC0415 — module convention
+
+    with patch.object(tab._anki_probe, "refresh_name_lists") as refresh:
+        tab.show()
+        tab.hide()
+        tab.show()
+    assert refresh.call_count == 1

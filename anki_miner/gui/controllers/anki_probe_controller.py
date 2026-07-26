@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import QMessageBox, QWidget
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.panels import AnkiSettingsPanel, FilteringSettingsPanel
 from anki_miner.gui.workers.base_worker import SingleCallWorker
-from anki_miner.gui.workers.fetch_workers import FetchDecksWorker, FetchFieldsWorker
+from anki_miner.gui.workers.fetch_workers import FetchDecksWorker, FetchFieldsWorker, FetchNotetypesWorker
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.utils.i18n import tr_format
 
@@ -59,6 +59,10 @@ class AnkiProbeController:
         self._fetch_fields_worker: SingleCallWorker | None = None
         # Same GC-safety rationale for the deck-list fetch worker.
         self._fetch_decks_worker: SingleCallWorker | None = None
+        # Same again for the two name-list workers that fill the deck /
+        # note-type dropdowns in the Anki panel.
+        self._name_decks_worker: SingleCallWorker | None = None
+        self._name_notetypes_worker: SingleCallWorker | None = None
 
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close (T-12).
@@ -73,7 +77,12 @@ class AnkiProbeController:
         abandoning them to Qt teardown aborts with "QThread: Destroyed while
         thread is still running".
         """
-        return (self._fetch_fields_worker, self._fetch_decks_worker)
+        return (
+            self._fetch_fields_worker,
+            self._fetch_decks_worker,
+            self._name_decks_worker,
+            self._name_notetypes_worker,
+        )
 
     def shutdown(self) -> None:
         """Cancel every running AnkiConnect worker (cancel only, no wait).
@@ -123,7 +132,11 @@ class AnkiProbeController:
 
         note_type = self._anki_panel.get_note_type().strip()
         if not note_type:
-            self._anki_panel.set_notetype_status(False, "Enter a note type name before fetching fields")
+            # "Select", not "Enter": the note type is a strict dropdown now.
+            self._anki_panel.set_notetype_status(
+                False,
+                QCoreApplication.translate("AnkiProbeController", "Select a note type before fetching fields"),
+            )
             return
 
         ankiconnect_url = self._anki_panel.get_ankiconnect_url().strip()
@@ -239,3 +252,136 @@ class AnkiProbeController:
             QCoreApplication.translate("AnkiProbeController", "Add Deck"),
             message,
         )
+
+    # === Deck / note-type dropdown lists ===
+
+    def refresh_name_lists(self) -> None:
+        """Fill the Anki panel's deck and note-type dropdowns from AnkiConnect.
+
+        Separate from :meth:`fetch_decks`, which serves the excluded-decks
+        picker and opens a dialog with its result. Both lists are fetched
+        concurrently — independent AnkiConnect calls, and the user waits on
+        both. Reads the URL currently shown in the panel so a probe works
+        before Save.
+
+        Every user-visible string here goes through ``QCoreApplication.translate``
+        with a LITERAL context: pylupdate6 cannot resolve a non-literal context
+        (e.g. a ``self._TR`` attribute) and drops the string silently, exactly
+        as it does for an f-string.
+        """
+        ankiconnect_url = self._anki_panel.get_ankiconnect_url().strip()
+        config = self._get_config()
+        probe_config = replace(config, ankiconnect_url=ankiconnect_url or config.ankiconnect_url)
+
+        try:
+            service = AnkiService(probe_config)
+        except ValueError as e:
+            message = tr_format(QCoreApplication.translate("AnkiProbeController", "Cannot build AnkiService: %1"), e)
+            self._anki_panel.set_deck_status(False, message)
+            self._set_notetype_status(False, message)
+            return
+
+        if self._name_decks_worker is None or not self._name_decks_worker.isRunning():
+            self._anki_panel.set_deck_status(
+                None, QCoreApplication.translate("AnkiProbeController", "Loading decks from Anki…")
+            )
+            decks_worker = FetchDecksWorker(service, self._parent)
+            self._name_decks_worker = decks_worker
+            decks_worker.result_ready.connect(self._on_name_decks_fetched)
+            decks_worker.error.connect(self._on_name_decks_error)
+            decks_worker.start()
+
+        if self._name_notetypes_worker is None or not self._name_notetypes_worker.isRunning():
+            self._set_notetype_status(
+                None, QCoreApplication.translate("AnkiProbeController", "Loading note types from Anki…")
+            )
+            types_worker = FetchNotetypesWorker(service, self._parent)
+            self._name_notetypes_worker = types_worker
+            types_worker.result_ready.connect(self._on_name_notetypes_fetched)
+            types_worker.error.connect(self._on_name_notetypes_error)
+            types_worker.start()
+
+    def _set_notetype_status(self, exists: bool | None, message: str) -> None:
+        """Write the note-type status unless the Auto-Map flow is mid-flight.
+
+        Both flows share one label, and refresh_name_lists() fires
+        automatically on first show. This yield alone is NOT sufficient — it
+        only covers the window while Auto-Map is still running. The other
+        ordering (Auto-Map finishes first, then the list lands) is handled by
+        the list flow staying silent on success; see
+        :meth:`_on_name_notetypes_fetched`. Together they mean an actionable
+        message always wins and the low-value count never overwrites a
+        terminal Auto-Map result.
+        """
+        if self._fetch_fields_worker is not None and self._fetch_fields_worker.isRunning():
+            return
+        self._anki_panel.set_notetype_status(exists, message)
+
+    def _on_name_decks_fetched(self, deck_names: object) -> None:
+        if not self._alive(self._anki_panel):
+            return
+        names = [str(n) for n in deck_names] if isinstance(deck_names, list) else []
+        if not names:
+            self._anki_panel.set_deck_status(
+                False,
+                QCoreApplication.translate(
+                    "AnkiProbeController", "Could not load decks. Is Anki running with AnkiConnect?"
+                ),
+            )
+            return
+        self._anki_panel.set_available_decks(names)
+        selected = self._anki_panel.get_deck_name()
+        if selected in names:
+            # %n numerus, not %1: "1 decks loaded" is ungrammatical in every
+            # plural-rule language the app ships.
+            self._anki_panel.set_deck_status(
+                True,
+                QCoreApplication.translate("AnkiProbeController", "%n deck(s) loaded", "", len(names)),
+            )
+        else:
+            # NOT set_deck_status(True, ...): that renders a green success
+            # badge for a config guaranteed to fail the next mine.
+            self._anki_panel.set_deck_status(
+                False,
+                tr_format(
+                    QCoreApplication.translate("AnkiProbeController", "Deck '%1' is not in Anki — pick one below."),
+                    selected,
+                ),
+            )
+
+    def _on_name_decks_error(self, message: str) -> None:
+        if not self._alive(self._anki_panel):
+            return
+        self._anki_panel.set_deck_status(False, message)
+
+    def _on_name_notetypes_fetched(self, model_names: object) -> None:
+        if not self._alive(self._anki_panel):
+            return
+        names = [str(n) for n in model_names] if isinstance(model_names, list) else []
+        if not names:
+            self._set_notetype_status(
+                False,
+                QCoreApplication.translate(
+                    "AnkiProbeController", "Could not load note types. Is Anki running with AnkiConnect?"
+                ),
+            )
+            return
+        self._anki_panel.set_available_note_types(names)
+        selected = self._anki_panel.get_note_type()
+        if selected not in names:
+            self._set_notetype_status(
+                False,
+                tr_format(
+                    QCoreApplication.translate(
+                        "AnkiProbeController", "Note type '%1' is not in Anki — pick one below."
+                    ),
+                    selected,
+                ),
+            )
+        # Deliberately silent on success: this label is shared with Auto-Map
+        # Fields, whose terminal message is worth more than a count.
+
+    def _on_name_notetypes_error(self, message: str) -> None:
+        if not self._alive(self._anki_panel):
+            return
+        self._set_notetype_status(False, message)

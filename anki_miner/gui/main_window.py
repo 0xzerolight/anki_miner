@@ -957,9 +957,10 @@ class MainWindow(QMainWindow):
         # the repo's GUI-thread tripwire forbids).
         self._set_ytdlp_status_from_validation(result)
 
-        # Drive the Settings → Anki connection badge so Test Connection and the
-        # deck/note-type sync buttons (which all route through validation)
-        # produce visible feedback (T-53). The badge otherwise sticks at
+        # Drive the Settings → Anki connection badge so Test Connection (the
+        # only button still routed through validation — the deck/note-type
+        # refresh buttons now reload the dropdowns instead) produces visible
+        # feedback (T-53). The badge otherwise sticks at
         # "Checking connection..." forever — set_connection_status had no
         # callers. Use the authoritative result.ankiconnect_ok flag.
         self._set_anki_connection_badge("connected" if result.ankiconnect_ok else "disconnected")

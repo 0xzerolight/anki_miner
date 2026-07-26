@@ -55,7 +55,7 @@ class TestEpisodePipeline:
     def _make_ankiconnect_responder(config, *, post_preflight_side_effect):
         """Return a side_effect callable that dispatches AnkiConnect responses by action.
 
-        Pre-flight actions (modelNames, modelFieldNames, createDeck) are served
+        Pre-flight actions (modelNames, modelFieldNames, deckNames) are served
         from the config so verify_card_target() succeeds.  All subsequent calls
         (findNotes, notesInfo, addNotes, …) are consumed in order from
         *post_preflight_side_effect*, which should be a list of MagicMock
@@ -77,6 +77,12 @@ class TestEpisodePipeline:
                 return r
             if action == "createDeck":
                 r.json.return_value = {"result": 1, "error": None}
+                return r
+            if action == "deckNames":
+                # Must precede the ordered-queue fallthrough below: an
+                # unhandled deckNames would pop the response queued for a
+                # later call and shift the whole list.
+                r.json.return_value = {"result": [config.anki_deck_name], "error": None}
                 return r
             return _remaining.pop(0)
 
@@ -163,6 +169,8 @@ class TestEpisodePipeline:
                 r.json.return_value = {"result": fields, "error": None}
             elif action == "createDeck":
                 r.json.return_value = {"result": 1, "error": None}
+            elif action == "deckNames":
+                r.json.return_value = {"result": [config.anki_deck_name], "error": None}
             elif action == "findNotes":
                 r.json.return_value = {"result": [], "error": None}
             elif action == "storeMediaFile":
@@ -364,7 +372,7 @@ class TestIPlusOneFilterIntegration:
         """Build a requests.post side_effect that fakes AnkiConnect responses.
 
         Action-dispatching (not ordered): serves the always-on pre-flight
-        (modelNames / modelFieldNames / createDeck), the known-words query
+        (modelNames / modelFieldNames / deckNames), the known-words query
         (findNotes returns a synthetic id per known word, notesInfo the fields),
         and harmless successes for anything else — the capture path cancels at
         curation, before card creation.
@@ -379,6 +387,8 @@ class TestIPlusOneFilterIntegration:
                 r.json.return_value = {"result": [config.anki_note_type], "error": None}
             elif action == "modelFieldNames":
                 r.json.return_value = {"result": fields, "error": None}
+            elif action == "deckNames":
+                r.json.return_value = {"result": [config.anki_deck_name], "error": None}
             elif action == "findNotes":
                 r.json.return_value = {"result": list(range(1, len(known_words) + 1)), "error": None}
             elif action == "notesInfo":

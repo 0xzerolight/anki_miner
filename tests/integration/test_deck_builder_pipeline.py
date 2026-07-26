@@ -65,7 +65,8 @@ def _make_post_action(known_words: set[str], config: AnkiMinerConfig | None = No
 
     - ``modelNames``      → list containing the configured note type (pre-flight).
     - ``modelFieldNames`` → list of configured field names (pre-flight).
-    - ``createDeck``      → fake deck ID.
+    - ``createDeck``      → fake deck ID, and records the deck as existing.
+    - ``deckNames``       → "Default" plus every deck createDeck was asked for.
     - ``findNotes``       → one synthetic ID per known word.
     - ``notesInfo``       → field dicts for the known words.
     - ``canAddNotesWithErrorDetail`` → every submitted note addable (no duplicates).
@@ -73,6 +74,13 @@ def _make_post_action(known_words: set[str], config: AnkiMinerConfig | None = No
     - anything else       → None (safe default).
     """
     _note_id_counter = [1000]
+    # Stateful on purpose. Pre-flight now VERIFIES the deck instead of creating
+    # it, and Deck Builder mines into request.deck_name — NOT
+    # config.anki_deck_name — so answering deckNames from the config would fail
+    # every test here. Tracking what createDeck was asked for also makes this
+    # suite pin the ensure_deck-before-loop ordering: move ensure_deck after the
+    # loop and deckNames no longer contains the deck, so the pipeline goes red.
+    _created: set[str] = set()
 
     def _dispatch(url: str, action: str, params: dict | None = None, timeout: int = 30) -> Any:
         if action == "modelNames":
@@ -82,7 +90,10 @@ def _make_post_action(known_words: set[str], config: AnkiMinerConfig | None = No
             fields = list(config.anki_fields.values()) if config is not None else []
             return fields
         if action == "createDeck":
+            _created.add((params or {}).get("deck", ""))
             return 1234
+        if action == "deckNames":
+            return ["Default", *sorted(_created)]
         if action == "findNotes":
             return list(range(1, len(known_words) + 1)) if known_words else []
         if action == "notesInfo":

@@ -169,7 +169,7 @@ class ValidationService:
                 issues.append(
                     ValidationIssue(
                         component="Anki Deck",
-                        severity="WARNING",
+                        severity="ERROR",
                         message=deck_msg,
                     )
                 )
@@ -486,7 +486,8 @@ class ValidationService:
         available = ", ".join(decks[:5])
         more = "..." if len(decks) > 5 else ""
         return False, (
-            f"Deck '{deck_name}' not found — it will be created automatically when mining starts. "
+            f"Deck '{deck_name}' not found in Anki. "
+            f"Pick an existing deck in Settings → Anki. "
             f"Available: {available}{more}"
         )
 

@@ -846,7 +846,7 @@ class TestCloseEventFlushesSettingsAutosave:
     def test_pending_edit_persists_through_close(self, main_window, test_config, qtbot):
         """End-to-end: an armed debounce edit reaches MainWindow.config on close."""
         settings_tab = self._settings_tab(main_window, test_config, qtbot)
-        settings_tab.deck_input.setText("EditedJustBeforeQuit")
+        settings_tab.anki_panel.set_deck_name("EditedJustBeforeQuit")
         assert settings_tab._debounce_timer.isActive()
 
         _trigger_close(main_window)

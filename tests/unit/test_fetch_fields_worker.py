@@ -90,7 +90,7 @@ class TestSettingsTabFetchFieldsWiring:
     def test_click_with_empty_note_type_does_not_spawn_worker(self, test_config: AnkiMinerConfig, monkeypatch, qtbot):
         tab = SettingsTab(test_config)
         qtbot.addWidget(tab)
-        tab.anki_panel.note_type_input.setText("")  # explicit empty
+        tab.anki_panel.set_note_type("")  # explicit empty
         populate = MagicMock()
         monkeypatch.setattr(tab.anki_panel, "populate_from_field_list", populate)
 
@@ -100,12 +100,12 @@ class TestSettingsTabFetchFieldsWiring:
         worker_cls.assert_not_called()
         populate.assert_not_called()
         # Friendly status on the note-type line.
-        assert "Enter a note type name" in tab.anki_panel.notetype_status.text()
+        assert "Select a note type" in tab.anki_panel.notetype_status.text()
 
     def test_click_routes_fetched_fields_into_populate(self, test_config: AnkiMinerConfig, monkeypatch, qtbot):
         tab = SettingsTab(test_config)
         qtbot.addWidget(tab)
-        tab.anki_panel.note_type_input.setText("Japanese-1.0")
+        tab.anki_panel.set_note_type("Japanese-1.0")
         tab.anki_panel.ankiconnect_url_input.setText("http://localhost:8765")
 
         populate = MagicMock()
@@ -149,7 +149,7 @@ class TestSettingsTabFetchFieldsWiring:
     def test_empty_fetch_result_shows_friendly_status(self, test_config: AnkiMinerConfig, monkeypatch, qtbot):
         tab = SettingsTab(test_config)
         qtbot.addWidget(tab)
-        tab.anki_panel.note_type_input.setText("Missing")
+        tab.anki_panel.set_note_type("Missing")
 
         populate = MagicMock()
         monkeypatch.setattr(tab.anki_panel, "populate_from_field_list", populate)
@@ -173,7 +173,7 @@ class TestSettingsTabFetchFieldsWiring:
     def test_late_field_fetch_does_not_map_into_new_note_type(self, test_config: AnkiMinerConfig, monkeypatch, qtbot):
         tab = SettingsTab(test_config)
         qtbot.addWidget(tab)
-        tab.anki_panel.note_type_input.setText("Type A")
+        tab.anki_panel.set_note_type("Type A")
         populate = MagicMock()
         monkeypatch.setattr(tab.anki_panel, "populate_from_field_list", populate)
 
@@ -183,7 +183,7 @@ class TestSettingsTabFetchFieldsWiring:
             tab.anki_panel.fetch_fields_button.click()
 
         on_fields = worker.result_ready.connect.call_args.args[0]
-        tab.anki_panel.note_type_input.setText("Type B")
+        tab.anki_panel.set_note_type("Type B")
         on_fields(["Expression", "Sentence"])
 
         populate.assert_not_called()

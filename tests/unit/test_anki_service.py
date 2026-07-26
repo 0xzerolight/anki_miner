@@ -3257,21 +3257,35 @@ class TestVerifyCardTarget:
         "Frequency",
     ]
 
-    def test_happy_path_creates_deck_after_checks(self, test_config):
-        """Should call createDeck with config.anki_deck_name after modelNames + modelFieldNames."""
+    def test_happy_path_checks_deck_after_checks(self, test_config):
+        """Should verify the deck via deckNames after modelNames + modelFieldNames."""
 
         service = AnkiService(test_config)
         with patch(
             "anki_miner.services.anki_service.post_action",
-            side_effect=[self._MODELS, self._FIELDS, 1234],
+            side_effect=[self._MODELS, self._FIELDS, ["Default", test_config.anki_deck_name]],
         ) as mock_pa:
             service.verify_card_target()
 
-        calls = mock_pa.call_args_list
-        assert calls[0][0][1] == "modelNames"
-        assert calls[1][0][1] == "modelFieldNames"
-        assert calls[2][0][1] == "createDeck"
-        assert calls[2][1]["params"] == {"deck": test_config.anki_deck_name}
+        actions = [call[0][1] for call in mock_pa.call_args_list]
+        assert actions == ["modelNames", "modelFieldNames", "deckNames"]
+        assert "createDeck" not in actions
+
+    def test_deck_missing_raises_setup_error(self, test_config):
+        """A deck absent from Anki must fail the run, not be created."""
+        service = AnkiService(test_config)
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=[self._MODELS, self._FIELDS, ["Default", "Other"]],
+            ) as mock_pa,
+            pytest.raises(SetupError, match="test_deck"),
+        ):
+            service.verify_card_target()
+
+        actions = [call[0][1] for call in mock_pa.call_args_list]
+        assert actions == ["modelNames", "modelFieldNames", "deckNames"]
+        assert "createDeck" not in actions
 
     def test_note_type_missing_raises_setup_error(self, test_config):
         """Should raise SetupError naming the configured note type when it is absent."""
@@ -3332,7 +3346,7 @@ class TestVerifyCardTarget:
         service = AnkiService(test_config)
         with patch(
             "anki_miner.services.anki_service.post_action",
-            side_effect=[self._MODELS, self._FIELDS, 1234],
+            side_effect=[self._MODELS, self._FIELDS, ["Default", test_config.anki_deck_name]],
         ):
             service.verify_card_target()  # must not raise
 
@@ -3356,7 +3370,7 @@ class TestVerifyCardTarget:
         service = AnkiService(config)
         with patch(
             "anki_miner.services.anki_service.post_action",
-            side_effect=[self._MODELS, [*self._FIELDS, "IsClickCard"], 1234],
+            side_effect=[self._MODELS, [*self._FIELDS, "IsClickCard"], ["Default", test_config.anki_deck_name]],
         ):
             service.verify_card_target()  # must not raise
 
@@ -3384,7 +3398,11 @@ class TestVerifyCardTarget:
         # Note type has the active marker but NOT the three inactive ones.
         with patch(
             "anki_miner.services.anki_service.post_action",
-            side_effect=[self._MODELS, [*self._FIELDS, "IsWordAndSentenceCard"], 1234],
+            side_effect=[
+                self._MODELS,
+                [*self._FIELDS, "IsWordAndSentenceCard"],
+                ["Default", test_config.anki_deck_name],
+            ],
         ):
             service.verify_card_target()  # must not raise
 
