@@ -21,6 +21,23 @@ def test_deck_and_notetype_are_strict_combos(qtbot):
     assert not panel.notetype_combo.isEditable()
 
 
+def test_refresh_buttons_are_visible_and_labelled(qtbot):
+    """A strict combo makes Refresh the only way back from an empty list.
+
+    These were empty ghost buttons — an invisible hit box. With a QLineEdit you
+    could still type the name, so it merely looked odd; with a strict combo,
+    open Settings while Anki is closed and there is nothing clickable to
+    recover with (the first-show fetch is one-shot).
+    """
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    for button in (panel.deck_sync_button, panel.notetype_sync_button):
+        assert button.text().strip()
+        assert button.toolTip().strip()
+        # An explicit cap here would elide the label back into nothing.
+        assert button.maximumWidth() >= button.sizeHint().width()
+
+
 def test_saved_value_survives_when_anki_is_unreachable(qtbot):
     """Loading a config with Anki closed must not blank the saved names."""
     panel = AnkiSettingsPanel()

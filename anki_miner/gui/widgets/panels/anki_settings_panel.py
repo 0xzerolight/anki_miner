@@ -522,11 +522,15 @@ class AnkiSettingsPanel(FormPanel):
         row.addWidget(input_widget, 1)
         setattr(self, input_widget_name, input_widget)
 
-        # Sync button
-        sync_button = ModernButton("", variant="ghost")
+        # Refresh button. LABELLED, not the empty ghost it used to be: with a
+        # strict combo this button is the only way back from an empty list, so
+        # an invisible 40px hit box is a dead end (open Settings with Anki
+        # closed, start Anki, and there is nothing to click — showEvent's fetch
+        # is one-shot). Wording and variant match the wizard's deck/note-type
+        # Refresh so the two surfaces read the same.
+        sync_button = ModernButton(self.tr("Refresh"), variant="secondary")
         sync_button.clicked.connect(button_callback)
         sync_button.setToolTip(button_tooltip)
-        sync_button.setMaximumWidth(40)
         row.addWidget(sync_button)
         setattr(self, button_name, sync_button)
 
