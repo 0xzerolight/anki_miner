@@ -360,8 +360,8 @@
         <translation>Bidang Data Tambahan</translation>
     </message>
     <message>
-        <source>Need pitch_accent.csv in ~/.anki_miner/. Blank = skip.</source>
-        <translation>Perlu pitch_accent.csv di ~/.anki_miner/. Kosong = lewati.</translation>
+        <source>Pitch fields need a source in Settings → Pitch Accent. Blank = skip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Pitch Position Field</source>
@@ -1610,6 +1610,14 @@ Total kartu dibuat: %2</translation>
         <translation>Beralihkan antarmuka ke bahasa lain.</translation>
     </message>
     <message>
+        <source>Settings profiles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Keep several named snapshots of every setting and switch between them in one click.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Speech-to-text (no subtitles needed)</source>
         <translation>Speech-to-text (tanpa perlu subtitel)</translation>
     </message>
@@ -2180,20 +2188,28 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
 </context><context>
     <name>DeckBuilderTab</name>
     <message>
-        <source>Input</source>
-        <translation>Input</translation>
-    </message>
-    <message>
         <source>Video Folder:</source>
         <translation>Folder Video:</translation>
     </message>
     <message>
-        <source>Select folder with video files…</source>
-        <translation>Pilih folder berisi berkas video…</translation>
-    </message>
-    <message>
         <source>Subtitle Folder:</source>
         <translation>Folder Subtitel:</translation>
+    </message>
+    <message>
+        <source>Deck Name:</source>
+        <translation>Nama Dek:</translation>
+    </message>
+    <message>
+        <source>Word Selection:</source>
+        <translation>Pemilihan Kata:</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>Input</translation>
+    </message>
+    <message>
+        <source>Select folder with video files…</source>
+        <translation>Pilih folder berisi berkas video…</translation>
     </message>
     <message>
         <source>Select folder with subtitle files…</source>
@@ -2204,16 +2220,8 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>Pengaturan Dek</translation>
     </message>
     <message>
-        <source>Deck Name:</source>
-        <translation>Nama Dek:</translation>
-    </message>
-    <message>
         <source>Enter deck name…</source>
         <translation>Masukkan nama dek…</translation>
-    </message>
-    <message>
-        <source>Word Selection:</source>
-        <translation>Pemilihan Kata:</translation>
     </message>
     <message>
         <source>All vocabulary</source>
@@ -2744,22 +2752,6 @@ Penghapusan telah disimpan; pembersihan masih tertunda dan akan dicoba lagi saat
     <message>
         <source>Remove</source>
         <translation>Hapus</translation>
-    </message>
-    <message>
-        <source>Pitch Accent</source>
-        <translation>Aksen Nada</translation>
-    </message>
-    <message>
-        <source>Select pitch accent CSV/TSV or Yomitan zip...</source>
-        <translation>Pilih CSV/TSV aksen nada atau zip Yomitan...</translation>
-    </message>
-    <message>
-        <source>Pitch Accent File</source>
-        <translation>Berkas Aksen Nada</translation>
-    </message>
-    <message>
-        <source>CSV/TSV with columns (reading, kanji, pattern), or a Yomitan-format pitch zip (e.g. Kanjium, NHK). Yomitan zips are imported into ~/.anki_miner/pitch_accent.csv on Save.</source>
-        <translation>CSV/TSV dengan kolom (reading, kanji, pattern), atau zip aksen nada format Yomitan (mis. Kanjium, NHK). Zip Yomitan diimpor ke ~/.anki_miner/pitch_accent.csv saat Simpan.</translation>
     </message>
     <message>
         <source>Jisho (online fallback)</source>
@@ -3772,8 +3764,28 @@ Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang untuk menggunakan sumber 
 </context><context>
     <name>HeaderWidget</name>
     <message>
+        <source>Settings profile:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings profile</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switches every Anki Miner setting to the selected profile.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Active settings profile. Switching swaps every setting; pick 'Manage profiles…' to add, rename or remove them.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Theme:</source>
         <translation>Tema:</translation>
+    </message>
+    <message>
+        <source>Theme</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>All themes…</source>
@@ -3782,6 +3794,10 @@ Ini tidak dapat dibatalkan. Anda perlu mengimpor ulang untuk menggunakan sumber 
     <message>
         <source>Active theme. Top-right shows favorites; pick 'All themes…' to manage them. (Ctrl+T cycles favorites). Installed: %1</source>
         <translation>Tema aktif. Kanan atas menampilkan favorit; pilih 'Semua tema…' untuk mengelolanya. (Ctrl+T menggilir favorit). Terpasang: %1</translation>
+    </message>
+    <message>
+        <source>Manage profiles…</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>KnownWordsManagerDialog</name>
@@ -4464,6 +4480,211 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation>Pustaka penghapus keheningan berhasil dipasang.</translation>
     </message>
 </context><context>
+    <name>PitchImportFlow</name>
+    <message>
+        <source>Choose pitch accent source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation type="unfinished"> (melewati %1 entri yang rusak)</translation>
+    </message>
+    <message>
+        <source>Pitch Source Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation type="unfinished">Mengimpor %1 entri dari '%2'.</translation>
+    </message>
+    <message>
+        <source>Configuration Update Failed</source>
+        <translation type="unfinished">Pembaruan Konfigurasi Gagal</translation>
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation type="unfinished">Impor selesai, tetapi pembaruan konfigurasi gagal: %1</translation>
+    </message>
+    <message>
+        <source>Importing pitch source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">Batal</translation>
+    </message>
+    <message>
+        <source>Import Failed</source>
+        <translation type="unfinished">Impor Gagal</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation type="unfinished">Impor lain masih berlangsung. Tunggu hingga selesai lalu coba lagi.</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">Membatalkan…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation type="unfinished">Proses impor selesai tanpa hasil akhir.</translation>
+    </message>
+    <message>
+        <source>Scan Failed</source>
+        <translation type="unfinished">Pemindaian Gagal</translation>
+    </message>
+    <message>
+        <source>Choose pitch source to re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import Blocked</source>
+        <translation type="unfinished">Impor Ulang Diblokir</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation type="unfinished">Sumber daya terindeks sedang digunakan oleh mining, pemanasan awal saat startup, atau pengisian ulang kartu. Tunggu hingga tugas yang aktif selesai lalu coba lagi.</translation>
+    </message>
+    <message>
+        <source>Pitch Source Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation type="unfinished">Berhasil mengimpor ulang %1.</translation>
+    </message>
+    <message>
+        <source>Re-importing pitch source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import Failed</source>
+        <translation type="unfinished">Impor Ulang Gagal</translation>
+    </message>
+    <message>
+        <source>Pitch accent source (%1);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>PitchSettingsPanel</name>
+    <message>
+        <source>Loading…</source>
+        <translation type="unfinished">Memuat…</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation type="unfinished">Penghapusan gagal</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The pitch source was not removed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation type="unfinished">Berkas tidak disentuh</translation>
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation type="unfinished">Entri rantai telah dihapus, tetapi berkas di %1 tidak disentuh karena folder tersebut tidak dapat dipastikan milik Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation type="unfinished">Tidak dapat menghapus %1:
+%2
+
+Berkas masih utuh. Coba lagi.</translation>
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this pitch source before retrying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation type="unfinished">Tidak dapat memulihkan %1 setelah pembaruan konfigurasinya gagal:
+%2
+
+Berkas tidak lagi berada di lokasi instalasi; pembaruan konfigurasi masih tertunda. Mulai ulang Anki Miner sebelum mencoba lagi.</translation>
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation type="unfinished">Penghapusan %1 telah disimpan, tetapi Anki Miner tidak dapat menyegarkannya:
+%2
+
+Penghapusan telah disimpan dan akan tetap berlaku setelah mulai ulang.</translation>
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <translation type="unfinished">%1 telah dihapus, tetapi tombstone-nya di %2 tidak dapat dihapus:
+%3
+
+Penghapusan telah disimpan; pembersihan masih tertunda dan akan dicoba lagi saat startup.</translation>
+    </message>
+    <message>
+        <source>Active Pitch Accent Sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sources are checked top to bottom — the first source with a pitch entry for a word wins. Lower sources only fill words the higher ones miss.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>+ Add Source…</source>
+        <translation type="unfinished">+ Tambah Sumber…</translation>
+    </message>
+    <message>
+        <source>Move up</source>
+        <translation type="unfinished">Naik</translation>
+    </message>
+    <message>
+        <source>Move up (wins lookups first)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation type="unfinished">Turun</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation type="unfinished">Hapus</translation>
+    </message>
+    <message>
+        <source>Remove pitch source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove '%1' from the pitch accent chain?
+
+Only the index files are deleted.
+This cannot be undone. You would need to re-import to use this source again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation type="unfinished">Sumber daya terindeks sedang digunakan oleh mining, pemanasan awal saat startup, atau pengisian ulang kartu. Tunggu hingga tugas yang aktif selesai lalu coba lagi.</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation type="unfinished">Impor ulang…</translation>
+    </message>
+</context><context>
     <name>PlaylistAddController</name>
     <message>
         <source>Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.</source>
@@ -4528,6 +4749,138 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     <message>
         <source>Added %1 videos from playlist '%2'.</source>
         <translation>Menambahkan %1 video dari playlist '%2'.</translation>
+    </message>
+</context><context>
+    <name>ProfileController</name>
+    <message>
+        <source>Language</source>
+        <translation type="unfinished">Bahasa</translation>
+    </message>
+    <message>
+        <source>Interface scale</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Statistics database</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Log file</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Recovered settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Recovered settings %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not create the profile '%1': %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not save the current profile '%1': %2. Nothing was switched.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not read the profile file %1: %2. Nothing was switched.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switched to '%1', but the running window could not be fully refreshed: %2. Restart Anki Miner if something looks wrong.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings Profiles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restart Anki Miner to apply: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings are still being saved, or a dictionary change is in progress. Try again in a moment.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining or card backfill is still using the dictionaries. Stop it and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not apply the profile '%1': %2. Your current settings are unchanged.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ProfileManagerDialog</name>
+    <message>
+        <source>Settings Profiles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A profile is a complete snapshot of every setting — dictionaries, filters, media, Anki fields, appearance. Switching swaps all of them at once, after saving your current settings back into the active profile.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>New from Current…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save the settings you are using now as a new profile and switch to it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Rename…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switch To</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished">Tutup</translation>
+    </message>
+    <message>
+        <source>%1 (active)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>New Profile</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Name for the new profile:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Rename Profile</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>New name for '%1':</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Rename Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete Profile</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete the profile '%1'? Its saved settings cannot be recovered.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete Failed</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ProgressWidget</name>
@@ -5224,14 +5577,6 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation>Sumber daya diunduh dari sumber aslinya; lisensinya berlaku.</translation>
     </message>
     <message>
-        <source>No valid pitch accent entries were found.</source>
-        <translation>Tidak ditemukan entri aksen nada yang valid.</translation>
-    </message>
-    <message>
-        <source>Pitch accent validation failed: %1</source>
-        <translation>Validasi aksen nada gagal: %1</translation>
-    </message>
-    <message>
         <source>%1 entries</source>
         <translation>%1 entri</translation>
     </message>
@@ -5368,6 +5713,10 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     <message>
         <source>Frequency</source>
         <translation>Frekuensi</translation>
+    </message>
+    <message>
+        <source>Pitch Accent</source>
+        <translation type="unfinished">Aksen Nada</translation>
     </message>
     <message>
         <source>Filtering</source>
@@ -5552,22 +5901,6 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>✓ Disetel ulang ke default</translation>
     </message>
     <message>
-        <source>Importing pitch accent dictionary…</source>
-        <translation>Mengimpor kamus aksen nada…</translation>
-    </message>
-    <message>
-        <source>Overwrite Pitch Accent File?</source>
-        <translation>Timpa Berkas Aksen Nada?</translation>
-    </message>
-    <message>
-        <source>Pitch Accent Import Failed</source>
-        <translation>Impor Aksen Nada Gagal</translation>
-    </message>
-    <message>
-        <source>Pitch accent dictionary imported</source>
-        <translation>Kamus aksen nada diimpor</translation>
-    </message>
-    <message>
         <source>Retry missing expression audio</source>
         <translation>Coba ulang audio ekspresi yang hilang</translation>
     </message>
@@ -5676,10 +6009,6 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Berkas Terkini:</translation>
     </message>
     <message>
-        <source>Select recent file pair...</source>
-        <translation>Pilih pasangan berkas terkini...</translation>
-    </message>
-    <message>
         <source>Video File:</source>
         <translation>Berkas Video:</translation>
     </message>
@@ -5690,6 +6019,10 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     <message>
         <source>Subtitle Offset:</source>
         <translation>Offset Subtitel:</translation>
+    </message>
+    <message>
+        <source>Select recent file pair...</source>
+        <translation>Pilih pasangan berkas terkini...</translation>
     </message>
     <message>
         <source> seconds</source>
@@ -6620,16 +6953,20 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>Buka folder tema</translation>
     </message>
     <message>
-        <source>Open %1; drop theme JSON files here to install on next launch.</source>
-        <translation>Buka %1; letakkan berkas JSON tema di sini untuk menginstalnya pada peluncuran berikutnya.</translation>
-    </message>
-    <message>
         <source>Revert</source>
         <translation>Kembalikan</translation>
     </message>
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>Pulihkan tema yang aktif saat tab ini dibuka.</translation>
+    </message>
+    <message>
+        <source>Manage Profiles…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Keep several complete settings snapshots and switch between them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Active</source>
@@ -6658,6 +6995,10 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
     <message>
         <source>%1 of %2 %3 variants favorited. Click to favorite all.</source>
         <translation>%1 dari %2 varian %3 difavoritkan. Klik untuk memfavoritkan semua.</translation>
+    </message>
+    <message>
+        <source>Open %1; drop theme JSON files here to install on next launch.</source>
+        <translation>Buka %1; letakkan berkas JSON tema di sini untuk menginstalnya pada peluncuran berikutnya.</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -7014,32 +7355,6 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>Progres</translation>
     </message>
 </context><context>
-    <name>ZipImportFlow</name>
-    <message>
-        <source>%1 already exists and will be replaced.
-
-Continue with import?</source>
-        <translation>%1 sudah ada dan akan diganti.
-
-Lanjutkan impor?</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Batal</translation>
-    </message>
-    <message>
-        <source> (skipped %1 display-only entries)</source>
-        <translation> (melewati %1 entri hanya-tampilan)</translation>
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation> (melewati %1 entri yang rusak)</translation>
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation>Mengimpor %1 entri dari '%2'.</translation>
-    </message>
-</context><context>
     <name>_AddSourceDialog</name>
     <message>
         <source>Add Audio Source</source>
@@ -7056,6 +7371,14 @@ Lanjutkan impor?</translation>
 </context><context>
     <name>_ChainRow</name>
     <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>&lt;i&gt; — re-import to refresh&lt;/i&gt;</source>
         <translation>&lt;i&gt; — impor ulang untuk menyegarkan&lt;/i&gt;</translation>
     </message>
@@ -7069,6 +7392,14 @@ Lanjutkan impor?</translation>
     </message>
 </context><context>
     <name>_FreqRow</name>
+    <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>word-based</source>
         <translation>berbasis kata</translation>
@@ -7088,6 +7419,14 @@ Lanjutkan impor?</translation>
 </context><context>
     <name>_PackRow</name>
     <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 entries</source>
         <translation>%1 entri</translation>
     </message>
@@ -7098,6 +7437,24 @@ Lanjutkan impor?</translation>
     <message>
         <source>⚠ folder missing — re-import</source>
         <translation>⚠ folder hilang — impor ulang</translation>
+    </message>
+</context><context>
+    <name>_PitchRow</name>
+    <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 entries</source>
+        <translation type="unfinished">%1 entri</translation>
+    </message>
+    <message>
+        <source>⚠ missing — re-import</source>
+        <translation type="unfinished">⚠ hilang — impor ulang</translation>
     </message>
 </context><context>
     <name>app</name>

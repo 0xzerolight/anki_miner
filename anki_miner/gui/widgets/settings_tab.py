@@ -102,6 +102,9 @@ class SettingsTab(QWidget):
         vulkan_model_download_requested: Emitted when the Subtitles panel's
             "Download Vulkan model" button is clicked. Carries the selected
             acoustic model name.
+        manage_profiles_requested: Re-emitted from the UI panel's "Manage
+            Profiles…" button. The window opens the dialog, not this tab: a
+            profile switch reloads every panel here from the incoming config.
     """
 
     validation_requested = pyqtSignal()
@@ -112,6 +115,7 @@ class SettingsTab(QWidget):
     cuda_pack_download_requested = pyqtSignal()
     vad_pack_download_requested = pyqtSignal()
     vulkan_model_download_requested = pyqtSignal(str)  # Emits model name
+    manage_profiles_requested = pyqtSignal()
 
     # Fields written OUTSIDE the Settings Save path (theme selector, update
     # banner, first-run flags).  An update_config call that touches ONLY these
@@ -425,6 +429,9 @@ class SettingsTab(QWidget):
         self.ui_panel.zoom_changed.connect(self._on_zoom_changed)
         self.ui_panel.native_dialogs_changed.connect(self._on_native_dialogs_changed)
         self.ui_panel.language_changed.connect(self._on_language_changed)
+        # Straight through to the window — the dialog must not be owned by a
+        # panel that a profile switch reloads underneath it.
+        self.ui_panel.manage_profiles_requested.connect(self.manage_profiles_requested)
 
         # YouTube panel: manual "Update yt-dlp now" → re-emit to MainWindow
         # (app.py routes it to background_tasks.start_ytdlp_update(force=True)).
@@ -634,6 +641,9 @@ class SettingsTab(QWidget):
             self.dictionary_panel.set_chain(self.config.dictionary_chain)
 
             # Audio source chain (same — immediate persist via its own signal).
+            # The root goes first so the chain renders against the current root
+            # and only one rescan is triggered.
+            self.audio_panel.set_packs_root(self.config.audio_packs_root)
             self.audio_panel.set_chain(self.config.expression_audio_chain)
             self.audio_panel.set_reading_tts(
                 self.config.reading_tts_enabled,
@@ -645,16 +655,20 @@ class SettingsTab(QWidget):
             # immediately via its own signal. Frequency activation is derived from an
             # enabled source being present (config.frequency_active) — no toggle. The
             # max-rank threshold is owned by filtering_panel and already loaded above.
+            self.frequency_panel.set_freqs_root(self.config.freqs_root)
             self.frequency_panel.set_chain(self.config.frequency_chain)
 
             # Pitch source chain (same — immediate persist via its own signal).
             # Activation is derived from an enabled source (config.pitch_active).
+            self.pitch_panel.set_pitch_root(self.config.pitch_root)
             self.pitch_panel.set_chain(self.config.pitch_chain)
 
             # Update settings — standalone checkbox outside all panels.
             self.check_for_updates_checkbox.setChecked(self.config.check_for_updates)
 
-            self.ui_panel.set_language(self.config.ui_language)
+            # UI panel is outside _save_panels (it persists via its own signals),
+            # so it owns its whole repaint here — signal-safe by construction.
+            self.ui_panel.load_from_config(self.config)
         finally:
             self._loading = False
 
@@ -1134,7 +1148,10 @@ class SettingsTab(QWidget):
         for example, a theme change arrives via config_refreshed (OVH-007).
 
         Genuinely panel-relevant changes (e.g. JMdict migration updates
-        dicts_root) still trigger the full reload.
+        dicts_root) still trigger the full reload. A caller that means "adopt
+        this whole config and redraw regardless" wants
+        :meth:`reload_from_config` — the allowlist here is not a hint, and a
+        settings-profile switch has to bypass it.
 
         Args:
             config: New configuration to load
@@ -1148,6 +1165,30 @@ class SettingsTab(QWidget):
             # refresh) or every diff is in the externally-managed allowlist.
             # Skip reload to preserve in-progress widget edits.
             return
+        self._load_config()
+
+    def reload_from_config(self, config: AnkiMinerConfig) -> None:
+        """Adopt ``config`` and repaint every panel, allowlist or not.
+
+        The explicit counterpart to :meth:`update_config`, whose
+        ``_EXTERNAL_ONLY_FIELDS`` short-circuit exists to protect unsaved panel
+        edits during unrelated commits (OVH-007) and must stay exactly as it is.
+        A settings-profile switch is the case that gate gets wrong: two profiles
+        differing only in theme / favorites / font scale / language produce a
+        diff that lies ENTIRELY inside the allowlist (the version stamps ride in
+        it too), so the panels would keep rendering the profile the user just
+        left — a stale language and zoom combo, a hidden restart note, and a
+        theme tree drawing the outgoing favorites while the ``Theme`` singleton
+        already holds the incoming ones, so the next star click toggles the
+        opposite of what is drawn.
+
+        Callers must own the WHOLE config: this discards in-progress panel edits
+        by design, which is why it is a separate entry point rather than a flag.
+
+        Args:
+            config: Configuration to render; becomes ``self.config``.
+        """
+        self.config = config
         self._load_config()
 
     def iter_close_workers(self) -> tuple:

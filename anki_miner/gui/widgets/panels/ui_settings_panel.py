@@ -44,6 +44,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.i18n import available_languages
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.resources.styles.theme import (
@@ -98,6 +99,9 @@ class UISettingsPanel(QWidget):
         zoom_changed: Emitted with the new whole-UI zoom factor.
         language_changed: Emitted with the selected language code when the user
             picks a new UI language (not on programmatic ``set_language``).
+        manage_profiles_requested: Emitted when the user asks for the settings
+            profile manager. The panel deliberately does not own the dialog —
+            switching a profile reloads this very panel.
     """
 
     state_changed = pyqtSignal(str, tuple)
@@ -106,6 +110,7 @@ class UISettingsPanel(QWidget):
     zoom_changed = pyqtSignal(float)
     language_changed = pyqtSignal(str)
     native_dialogs_changed = pyqtSignal(bool)
+    manage_profiles_requested = pyqtSignal()
 
     # Column indices for clarity.
     COL_NAME = 0  # tree expander + name
@@ -138,7 +143,22 @@ class UISettingsPanel(QWidget):
         self._themes_root = themes_root
         self._ui_zoom = ui_zoom
         self._use_native_file_dialogs = use_native_file_dialogs
+        # Construction-time values = what Qt is actually running with: the panel
+        # is built once at app boot from the boot config, and both language and
+        # zoom only take effect at startup. ``load_from_config`` compares against
+        # these so an A → B → A round trip clears the restart note again instead
+        # of latching it on for the rest of the session.
+        self._boot_language = ui_language
+        self._boot_zoom = ui_zoom
         self._preview_baseline: str | None = None
+        # The theme this panel last *saw*: the previous load's ``config.theme``,
+        # or whatever the panel itself made live since. ``load_from_config``
+        # compares against it to tell a genuine external theme change (profile
+        # switch, Import Settings, the header combo) apart from the panel's own
+        # live preview — the preview is exactly what Revert exists to undo, so a
+        # reload triggered by some unrelated field must not re-point the revert
+        # baseline at the previewed theme. ``None`` until the first load.
+        self._last_seen_theme: str | None = None
         # Star button registry — populated by _populate so favorite toggles
         # can update one row in place instead of rebuilding the entire tree.
         # Key → variant star button; key → (family_item, family_name, entries)
@@ -302,12 +322,7 @@ class UISettingsPanel(QWidget):
         buttons.setSpacing(SPACING.sm)
 
         self.open_folder_btn = ModernButton(self.tr("Open themes folder"), variant="secondary")
-        self.open_folder_btn.setToolTip(
-            tr_format(
-                self.tr("Open %1; drop theme JSON files here to install on next launch."),
-                self._themes_root,
-            )
-        )
+        self.open_folder_btn.setToolTip(self._themes_folder_tooltip())
         self.open_folder_btn.clicked.connect(self._open_themes_folder)
         buttons.addWidget(self.open_folder_btn)
 
@@ -317,6 +332,17 @@ class UISettingsPanel(QWidget):
         buttons.addWidget(self.revert_btn)
 
         buttons.addStretch()
+
+        # Panel-level action, right-aligned past the stretch so it does not read
+        # as a third theme button. It only asks; MainWindow owns the dialog,
+        # because a profile switch reloads this panel from the new config.
+        self.manage_profiles_btn = ModernButton(self.tr("Manage Profiles…"), variant="secondary")
+        self.manage_profiles_btn.setToolTip(
+            self.tr("Keep several complete settings snapshots and switch between them.")
+        )
+        self.manage_profiles_btn.clicked.connect(self._on_manage_profiles)
+        buttons.addWidget(self.manage_profiles_btn)
+
         layout.addLayout(buttons)
 
         self.setLayout(layout)
@@ -623,6 +649,17 @@ class UISettingsPanel(QWidget):
         new_cell = self._build_family_star_cell(family_name, entries, favorites)
         self.tree.setItemWidget(family_item, self.COL_STAR, new_cell)
 
+    def _themes_folder_tooltip(self) -> str:
+        """Tooltip for the "Open themes folder" button, naming the current root.
+
+        Shared by ``_setup_ui`` and ``load_from_config`` so the displayed path
+        can follow a config swap without duplicating the translatable string.
+        """
+        return tr_format(
+            self.tr("Open %1; drop theme JSON files here to install on next launch."),
+            self._themes_root,
+        )
+
     def _open_themes_folder(self) -> None:
         """Open (creating if necessary) the user themes directory."""
         try:
@@ -631,6 +668,10 @@ class UISettingsPanel(QWidget):
             logger.warning("Could not create themes dir %s: %s", self._themes_root, e)
             return
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(self._themes_root)))
+
+    def _on_manage_profiles(self) -> None:
+        """Ask the window to open the settings-profile manager."""
+        self.manage_profiles_requested.emit()
 
     def _revert_preview(self) -> None:
         """Restore the theme that was active when the panel was opened."""
@@ -644,6 +685,11 @@ class UISettingsPanel(QWidget):
 
     def _apply_to_app(self, mode: str) -> None:
         """Repaint the application with the given theme key."""
+        # Single choke point for "the panel made this theme live" (preview and
+        # Revert both route through here), so load_from_config can recognise a
+        # later reload carrying this theme as the panel's own change rather than
+        # an external swap. See _last_seen_theme.
+        self._last_seen_theme = mode
         app = QApplication.instance()
         if isinstance(app, QApplication):
             Theme.apply_to_app(app, mode)
@@ -764,3 +810,75 @@ class UISettingsPanel(QWidget):
             return
         self.language_restart_note.setVisible(True)
         self.language_changed.emit(code)
+
+    # ---- External config reload -----------------------------------------
+
+    def load_from_config(self, config: AnkiMinerConfig) -> None:
+        """Repaint every control from ``config`` without emitting a signal.
+
+        This panel is deliberately outside ``SettingsTab._save_panels`` (it
+        persists through its own signals, not the Save round-trip), so nothing
+        else repaints it when the whole config is replaced from the outside —
+        Reset to Defaults, Import Settings, or any other ``update_config`` →
+        ``config_refreshed`` fan-out. Without this the zoom/text-size combos,
+        the native-dialogs checkbox and the theme tree keep showing the previous
+        config's values and the user's next edit starts from a stale baseline.
+
+        Every mutation here is signal-safe. The panel's change handlers feed
+        ``config_changed`` → ``MainWindow.update_config``, so one unguarded
+        ``setChecked``/``setCurrentIndex`` would write the panel's *stale* state
+        straight back into the config being loaded.
+
+        Text size and the active theme live on the ``Theme`` singleton (the
+        panel writes through it for live preview), so they are re-read from
+        there rather than set here — callers that swap the whole config re-seed
+        ``Theme`` before calling.
+        """
+        # Blocks signals internally.
+        self.set_language(config.ui_language)
+
+        # Zoom has no live Theme state (it is injected as QT_SCALE_FACTOR before
+        # QApplication exists), so the backing field is the source of truth.
+        self._ui_zoom = config.ui_zoom
+        self._sync_zoom_combo()  # blocks signals internally
+
+        self._sync_font_scale_combo()  # blocks signals internally
+
+        self._use_native_file_dialogs = config.use_native_file_dialogs
+        self.native_dialogs_checkbox.blockSignals(True)
+        try:
+            self.native_dialogs_checkbox.setChecked(config.use_native_file_dialogs)
+        finally:
+            self.native_dialogs_checkbox.blockSignals(False)
+
+        # The themes folder button and its tooltip must name the config's root;
+        # left alone it would open (and create) the PREVIOUS config's directory.
+        # This panel never re-scans the root itself, because discovery belongs to
+        # Theme and re-runs only inside Theme.initialize — at boot (app.py) and
+        # in the profile switch's whole-config re-seed, which runs BEFORE this
+        # fan-out. So a config swap already arrives with the incoming root
+        # discovered and _populate below renders it; what still cannot happen
+        # live is picking up JSON files dropped into the folder mid-session.
+        self._themes_root = config.themes_root
+        self.open_folder_btn.setToolTip(self._themes_folder_tooltip())
+
+        # Rebuild the tree so the Active marker, favorites stars and selection
+        # follow the re-seeded Theme. _populate blocks the tree's signals, so no
+        # state_changed escapes. Unconditional: favorites (and, for a whole-config
+        # swap, the entire Theme state) can move without config.theme changing.
+        self._populate()
+        # Re-point Revert at the now-active theme; reverting to the pre-swap one
+        # would fight the config that was just loaded. Two guards:
+        #   * never before the first show — showEvent owns that first capture,
+        #     and SettingsTab._load_config also runs during construction;
+        #   * only when the incoming theme is not one this panel itself made
+        #     live. A reload can be triggered by ANY non-external field (e.g.
+        #     toggling "Use system file dialogs"), and it carries the previewed
+        #     theme along with it; resetting there would silently destroy the
+        #     revert target mid-preview and leave Revert a no-op.
+        if self._preview_baseline is not None and config.theme != self._last_seen_theme:
+            self.reset_baseline()
+        self._last_seen_theme = config.theme
+
+        self.language_restart_note.setVisible(config.ui_language != self._boot_language)
+        self.zoom_restart_note.setVisible(config.ui_zoom != self._boot_zoom)

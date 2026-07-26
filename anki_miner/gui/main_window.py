@@ -31,6 +31,7 @@ from anki_miner.gui.constants import (
     WINDOW_MIN_WIDTH,
 )
 from anki_miner.gui.controllers import BackgroundTaskController
+from anki_miner.gui.controllers.profile_controller import ProfileController
 from anki_miner.gui.launch import get_effective_log_path
 from anki_miner.gui.presenters import GUIPresenter
 from anki_miner.gui.resources import get_resource_dir
@@ -117,6 +118,12 @@ class MainWindow(QMainWindow):
         self.background_tasks.ytdlp_update_result.connect(self._on_ytdlp_update_result)
         self.background_tasks.jmdict_migration_finished.connect(self._on_jmdict_migration_finished)
 
+        # Settings-profile sequencing (boot reconcile / switch / create). Owned
+        # here beside the other window-level controller, and constructed BEFORE
+        # _setup_ui so the header can connect to it; it touches nothing until
+        # commit_boot calls bootstrap().
+        self.profile_controller = ProfileController(self)
+
         # Config-bound services (validation + the AnkiService shared across undo
         # callbacks). Rebuilt on every config change via update_config — see
         # _build_config_bound_services — so an AnkiConnect URL/port edit reaches
@@ -141,6 +148,16 @@ class MainWindow(QMainWindow):
         """Commit startup state, then start boot work unless suppressed."""
         if self._boot_committed:
             return
+
+        # FIRST, and deliberately OUTSIDE the suppress_optional gate.
+        # First: the last_known_version save below is a save, and a save that
+        # runs before the reconcile has seeded GUIConfigManager.ACTIVE_PROFILE_ID
+        # writes gui_config.json with no profile marker.
+        # Outside the gate: bootstrap is pure local file I/O — no network, no
+        # dialogs — and the suppressed path is the installer smoke, which
+        # asserts on the gui_config.json that same save produces. The wrapper is
+        # here only for its log-and-swallow.
+        self._run_optional_boot_step("settings profiles", self.profile_controller.bootstrap)
 
         if not suppress_optional:
             self._run_optional_boot_step(
@@ -214,6 +231,10 @@ class MainWindow(QMainWindow):
         self.header = HeaderWidget()
         self.header.theme_changed.connect(self._on_theme_changed)
         self.header.open_theme_settings.connect(self._open_theme_settings)
+        # The combo only ever proposes a switch: the controller decides, shows
+        # any refusal itself and snaps the combo back on every terminal path.
+        self.header.profile_changed.connect(self.profile_controller.switch_to)
+        self.header.open_profile_manager.connect(self._open_profile_manager)
         self.central_layout.addWidget(self.header)
 
         # Create tab widget
@@ -524,6 +545,22 @@ class MainWindow(QMainWindow):
         open_subtab = getattr(settings_widget, "open_ui_subtab", None)
         if callable(open_subtab):
             open_subtab()
+
+    def _open_profile_manager(self) -> None:
+        """Open the settings-profile manager (header sentinel / Settings → UI).
+
+        ``exec``, never ``show``: the dialog sets no modality of its own, and a
+        modeless one would be repainted mid-CRUD by the settings reload a switch
+        fans out — the hazard the modal shape exists to avoid.
+
+        The refresh hook is the controller's own ``sync_header``: the dialog's
+        rename/delete paths go straight to ``ProfileStore`` and never pass
+        through a switch, so they need the same re-point every terminal path of
+        a switch already runs.
+        """
+        from anki_miner.gui.widgets.dialogs.profile_manager_dialog import ProfileManagerDialog
+
+        ProfileManagerDialog(self.profile_controller, self.profile_controller.sync_header, self).exec()
 
     def _report_issue(self) -> None:
         """Open the GitHub issues page in the default browser."""
@@ -950,6 +987,26 @@ class MainWindow(QMainWindow):
         panel = getattr(self.tabs.widget(idx), "anki_panel", None)
         if panel is not None:
             panel.set_connection_status(status)
+
+    def reload_settings_panels(self) -> None:
+        """Repaint the Settings tab's panels from the live config.
+
+        ``SettingsTab.update_config`` deliberately SKIPS its reload when an
+        incoming diff falls entirely inside its externally-managed allowlist, so
+        an unrelated commit cannot destroy unsaved panel edits (OVH-007). A
+        settings-profile switch between two profiles that differ only in
+        appearance produces exactly that diff, so ``ProfileController`` calls
+        this after a durable switch to force the redraw the gate suppressed.
+
+        Same self-healing lookup and same absent-tab tolerance as
+        :meth:`_set_anki_connection_badge`.
+        """
+        idx = self._settings_tab_index()
+        if idx < 0:
+            return
+        reload_panels = getattr(self.tabs.widget(idx), "reload_from_config", None)
+        if callable(reload_panels):
+            reload_panels(self.config)
 
     def _on_processing_result(self, result: ProcessingResult) -> None:
         """Handle processing result from presenter.

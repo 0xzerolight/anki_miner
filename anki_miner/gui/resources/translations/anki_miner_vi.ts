@@ -360,8 +360,8 @@
         <translation>Trường Dữ liệu Phụ trợ</translation>
     </message>
     <message>
-        <source>Need pitch_accent.csv in ~/.anki_miner/. Blank = skip.</source>
-        <translation>Cần có pitch_accent.csv trong ~/.anki_miner/. Để trống = bỏ qua.</translation>
+        <source>Pitch fields need a source in Settings → Pitch Accent. Blank = skip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Pitch Position Field</source>
@@ -1610,6 +1610,14 @@ Tổng số thẻ đã tạo: %2</translation>
         <translation>Chuyển giao diện sang ngôn ngữ khác.</translation>
     </message>
     <message>
+        <source>Settings profiles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Keep several named snapshots of every setting and switch between them in one click.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Speech-to-text (no subtitles needed)</source>
         <translation>Chuyển giọng nói thành văn bản (không cần phụ đề)</translation>
     </message>
@@ -2180,20 +2188,28 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
 </context><context>
     <name>DeckBuilderTab</name>
     <message>
-        <source>Input</source>
-        <translation>Đầu vào</translation>
-    </message>
-    <message>
         <source>Video Folder:</source>
         <translation>Thư mục video:</translation>
     </message>
     <message>
-        <source>Select folder with video files…</source>
-        <translation>Chọn thư mục chứa tệp video…</translation>
-    </message>
-    <message>
         <source>Subtitle Folder:</source>
         <translation>Thư mục phụ đề:</translation>
+    </message>
+    <message>
+        <source>Deck Name:</source>
+        <translation>Tên bộ thẻ:</translation>
+    </message>
+    <message>
+        <source>Word Selection:</source>
+        <translation>Lựa chọn từ:</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>Đầu vào</translation>
+    </message>
+    <message>
+        <source>Select folder with video files…</source>
+        <translation>Chọn thư mục chứa tệp video…</translation>
     </message>
     <message>
         <source>Select folder with subtitle files…</source>
@@ -2204,16 +2220,8 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
         <translation>Cài đặt bộ thẻ</translation>
     </message>
     <message>
-        <source>Deck Name:</source>
-        <translation>Tên bộ thẻ:</translation>
-    </message>
-    <message>
         <source>Enter deck name…</source>
         <translation>Nhập tên bộ thẻ…</translation>
-    </message>
-    <message>
-        <source>Word Selection:</source>
-        <translation>Lựa chọn từ:</translation>
     </message>
     <message>
         <source>All vocabulary</source>
@@ -2744,22 +2752,6 @@ Việc xóa đã được lưu; việc dọn dẹp đang chờ xử lý và sẽ
     <message>
         <source>Remove</source>
         <translation>Xóa</translation>
-    </message>
-    <message>
-        <source>Pitch Accent</source>
-        <translation>Trọng âm cao độ</translation>
-    </message>
-    <message>
-        <source>Select pitch accent CSV/TSV or Yomitan zip...</source>
-        <translation>Chọn CSV/TSV trọng âm cao độ hoặc zip Yomitan...</translation>
-    </message>
-    <message>
-        <source>Pitch Accent File</source>
-        <translation>Tệp trọng âm cao độ</translation>
-    </message>
-    <message>
-        <source>CSV/TSV with columns (reading, kanji, pattern), or a Yomitan-format pitch zip (e.g. Kanjium, NHK). Yomitan zips are imported into ~/.anki_miner/pitch_accent.csv on Save.</source>
-        <translation>CSV/TSV với các cột (cách đọc, kanji, mẫu), hoặc một zip trọng âm định dạng Yomitan (ví dụ Kanjium, NHK). Zip Yomitan được nhập vào ~/.anki_miner/pitch_accent.csv khi Lưu.</translation>
     </message>
     <message>
         <source>Jisho (online fallback)</source>
@@ -3772,8 +3764,28 @@ Không thể hoàn tác. Bạn sẽ cần nhập lại để dùng nguồn này 
 </context><context>
     <name>HeaderWidget</name>
     <message>
+        <source>Settings profile:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings profile</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switches every Anki Miner setting to the selected profile.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Active settings profile. Switching swaps every setting; pick 'Manage profiles…' to add, rename or remove them.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Theme:</source>
         <translation>Giao diện:</translation>
+    </message>
+    <message>
+        <source>Theme</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>All themes…</source>
@@ -3782,6 +3794,10 @@ Không thể hoàn tác. Bạn sẽ cần nhập lại để dùng nguồn này 
     <message>
         <source>Active theme. Top-right shows favorites; pick 'All themes…' to manage them. (Ctrl+T cycles favorites). Installed: %1</source>
         <translation>Giao diện đang hoạt động. Góc trên bên phải hiển thị mục yêu thích; chọn 'Tất cả giao diện…' để quản lý chúng. (Ctrl+T xoay vòng mục yêu thích). Đã cài: %1</translation>
+    </message>
+    <message>
+        <source>Manage profiles…</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>KnownWordsManagerDialog</name>
@@ -4464,6 +4480,211 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation>Đã cài đặt thư viện loại bỏ khoảng lặng thành công.</translation>
     </message>
 </context><context>
+    <name>PitchImportFlow</name>
+    <message>
+        <source>Choose pitch accent source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation type="unfinished"> (đã bỏ qua %1 mục sai định dạng)</translation>
+    </message>
+    <message>
+        <source>Pitch Source Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation type="unfinished">Đã nhập %1 mục từ '%2'.</translation>
+    </message>
+    <message>
+        <source>Configuration Update Failed</source>
+        <translation type="unfinished">Cập nhật cấu hình thất bại</translation>
+    </message>
+    <message>
+        <source>Import completed, but the configuration update failed: %1</source>
+        <translation type="unfinished">Nhập xong, nhưng cập nhật cấu hình thất bại: %1</translation>
+    </message>
+    <message>
+        <source>Importing pitch source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">Hủy</translation>
+    </message>
+    <message>
+        <source>Import Failed</source>
+        <translation type="unfinished">Nhập thất bại</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation type="unfinished">Một lượt nhập khác vẫn đang hoàn tất. Vui lòng đợi rồi thử lại.</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">Đang hủy…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation type="unfinished">Tiến trình nhập đã kết thúc mà không có kết quả hoàn tất.</translation>
+    </message>
+    <message>
+        <source>Scan Failed</source>
+        <translation type="unfinished">Quét thất bại</translation>
+    </message>
+    <message>
+        <source>Choose pitch source to re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import Blocked</source>
+        <translation type="unfinished">Nhập lại bị chặn</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation type="unfinished">Tài nguyên đã lập chỉ mục đang được sử dụng cho khai thác, làm nóng khi khởi động, hoặc điền dữ liệu còn thiếu cho thẻ. Hãy đợi tác vụ đang hoạt động hoàn tất rồi thử lại.</translation>
+    </message>
+    <message>
+        <source>Pitch Source Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation type="unfinished">Đã nhập lại %1 thành công.</translation>
+    </message>
+    <message>
+        <source>Re-importing pitch source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import Failed</source>
+        <translation type="unfinished">Nhập lại thất bại</translation>
+    </message>
+    <message>
+        <source>Pitch accent source (%1);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>PitchSettingsPanel</name>
+    <message>
+        <source>Loading…</source>
+        <translation type="unfinished">Đang tải…</translation>
+    </message>
+    <message>
+        <source>Remove failed</source>
+        <translation type="unfinished">Gỡ bỏ thất bại</translation>
+    </message>
+    <message>
+        <source>Could not delete %1:
+%2
+
+The pitch source was not removed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Files left untouched</source>
+        <translation type="unfinished">Tệp được giữ nguyên</translation>
+    </message>
+    <message>
+        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation type="unfinished">Mục trong chuỗi đã được xóa, nhưng các tệp tại %1 vẫn được giữ nguyên vì không thể xác minh thư mục này thuộc về Anki Miner.</translation>
+    </message>
+    <message>
+        <source>Could not remove %1:
+%2
+
+The files are intact. Try again.</source>
+        <translation type="unfinished">Không thể xóa %1:
+%2
+
+Các tệp vẫn còn nguyên vẹn. Hãy thử lại.</translation>
+    </message>
+    <message>
+        <source>Could not complete removal of %1:
+%2
+
+The files were partially changed. Re-import or repair this pitch source before retrying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not restore %1 after its configuration update failed:
+%2
+
+The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <translation type="unfinished">Không thể khôi phục %1 sau khi cập nhật cấu hình của nó thất bại:
+%2
+
+Các tệp không còn ở vị trí đã cài đặt; một cập nhật cấu hình đang chờ xử lý. Hãy khởi động lại Anki Miner trước khi thử lại.</translation>
+    </message>
+    <message>
+        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
+%2
+
+The removal was saved and will remain after restart.</source>
+        <translation type="unfinished">Việc xóa %1 đã được lưu, nhưng Anki Miner không thể làm mới nó:
+%2
+
+Việc xóa đã được lưu và sẽ vẫn còn hiệu lực sau khi khởi động lại.</translation>
+    </message>
+    <message>
+        <source>%1 was removed, but its tombstone at %2 could not be deleted:
+%3
+
+The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <translation type="unfinished">%1 đã bị xóa, nhưng tệp đánh dấu xóa của nó tại %2 không thể bị xóa:
+%3
+
+Việc xóa đã được lưu; việc dọn dẹp đang chờ xử lý và sẽ được thử lại khi khởi động.</translation>
+    </message>
+    <message>
+        <source>Active Pitch Accent Sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sources are checked top to bottom — the first source with a pitch entry for a word wins. Lower sources only fill words the higher ones miss.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>+ Add Source…</source>
+        <translation type="unfinished">+ Thêm nguồn…</translation>
+    </message>
+    <message>
+        <source>Move up</source>
+        <translation type="unfinished">Di chuyển lên</translation>
+    </message>
+    <message>
+        <source>Move up (wins lookups first)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation type="unfinished">Di chuyển xuống</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation type="unfinished">Xóa</translation>
+    </message>
+    <message>
+        <source>Remove pitch source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove '%1' from the pitch accent chain?
+
+Only the index files are deleted.
+This cannot be undone. You would need to re-import to use this source again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation type="unfinished">Tài nguyên đã lập chỉ mục đang được sử dụng cho khai thác, làm nóng khi khởi động, hoặc điền dữ liệu còn thiếu cho thẻ. Hãy đợi tác vụ đang hoạt động hoàn tất rồi thử lại.</translation>
+    </message>
+    <message>
+        <source>Re-import…</source>
+        <translation type="unfinished">Nhập lại…</translation>
+    </message>
+</context><context>
     <name>PlaylistAddController</name>
     <message>
         <source>Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.</source>
@@ -4528,6 +4749,138 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     <message>
         <source>Added %1 videos from playlist '%2'.</source>
         <translation>Đã thêm %1 video từ danh sách phát '%2'.</translation>
+    </message>
+</context><context>
+    <name>ProfileController</name>
+    <message>
+        <source>Language</source>
+        <translation type="unfinished">Ngôn ngữ</translation>
+    </message>
+    <message>
+        <source>Interface scale</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Statistics database</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Log file</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Recovered settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Recovered settings %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not create the profile '%1': %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not save the current profile '%1': %2. Nothing was switched.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not read the profile file %1: %2. Nothing was switched.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switched to '%1', but the running window could not be fully refreshed: %2. Restart Anki Miner if something looks wrong.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings Profiles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restart Anki Miner to apply: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings are still being saved, or a dictionary change is in progress. Try again in a moment.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining or card backfill is still using the dictionaries. Stop it and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not apply the profile '%1': %2. Your current settings are unchanged.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ProfileManagerDialog</name>
+    <message>
+        <source>Settings Profiles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A profile is a complete snapshot of every setting — dictionaries, filters, media, Anki fields, appearance. Switching swaps all of them at once, after saving your current settings back into the active profile.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>New from Current…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save the settings you are using now as a new profile and switch to it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Rename…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switch To</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished">Đóng</translation>
+    </message>
+    <message>
+        <source>%1 (active)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>New Profile</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Name for the new profile:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Rename Profile</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>New name for '%1':</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Rename Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete Profile</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete the profile '%1'? Its saved settings cannot be recovered.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete Failed</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ProgressWidget</name>
@@ -5224,14 +5577,6 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation>Tài nguyên được tải xuống từ nguồn gốc của chúng; giấy phép của chúng được áp dụng.</translation>
     </message>
     <message>
-        <source>No valid pitch accent entries were found.</source>
-        <translation>Không tìm thấy mục trọng âm cao độ hợp lệ nào.</translation>
-    </message>
-    <message>
-        <source>Pitch accent validation failed: %1</source>
-        <translation>Xác thực trọng âm cao độ thất bại: %1</translation>
-    </message>
-    <message>
         <source>%1 entries</source>
         <translation>%1 mục</translation>
     </message>
@@ -5368,6 +5713,10 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     <message>
         <source>Frequency</source>
         <translation>Tần suất</translation>
+    </message>
+    <message>
+        <source>Pitch Accent</source>
+        <translation type="unfinished">Trọng âm cao độ</translation>
     </message>
     <message>
         <source>Filtering</source>
@@ -5552,22 +5901,6 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>✓ Đã đặt lại về mặc định</translation>
     </message>
     <message>
-        <source>Importing pitch accent dictionary…</source>
-        <translation>Đang nhập từ điển trọng âm cao độ…</translation>
-    </message>
-    <message>
-        <source>Overwrite Pitch Accent File?</source>
-        <translation>Ghi đè tệp trọng âm cao độ?</translation>
-    </message>
-    <message>
-        <source>Pitch Accent Import Failed</source>
-        <translation>Nhập trọng âm cao độ thất bại</translation>
-    </message>
-    <message>
-        <source>Pitch accent dictionary imported</source>
-        <translation>Đã nhập từ điển trọng âm cao độ</translation>
-    </message>
-    <message>
         <source>Retry missing expression audio</source>
         <translation>Thử lại âm thanh biểu đạt bị thiếu</translation>
     </message>
@@ -5676,10 +6009,6 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Tệp gần đây:</translation>
     </message>
     <message>
-        <source>Select recent file pair...</source>
-        <translation>Chọn cặp tệp gần đây...</translation>
-    </message>
-    <message>
         <source>Video File:</source>
         <translation>Tệp video:</translation>
     </message>
@@ -5690,6 +6019,10 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     <message>
         <source>Subtitle Offset:</source>
         <translation>Độ lệch phụ đề:</translation>
+    </message>
+    <message>
+        <source>Select recent file pair...</source>
+        <translation>Chọn cặp tệp gần đây...</translation>
     </message>
     <message>
         <source> seconds</source>
@@ -6620,16 +6953,20 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>Mở thư mục chủ đề</translation>
     </message>
     <message>
-        <source>Open %1; drop theme JSON files here to install on next launch.</source>
-        <translation>Mở %1; thả các tệp JSON chủ đề vào đây để cài đặt trong lần khởi chạy tiếp theo.</translation>
-    </message>
-    <message>
         <source>Revert</source>
         <translation>Hoàn tác</translation>
     </message>
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>Khôi phục chủ đề đã hoạt động khi tab này được mở.</translation>
+    </message>
+    <message>
+        <source>Manage Profiles…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Keep several complete settings snapshots and switch between them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Active</source>
@@ -6658,6 +6995,10 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
     <message>
         <source>%1 of %2 %3 variants favorited. Click to favorite all.</source>
         <translation>%1 trên %2 biến thể %3 được yêu thích. Nhấp để yêu thích tất cả.</translation>
+    </message>
+    <message>
+        <source>Open %1; drop theme JSON files here to install on next launch.</source>
+        <translation>Mở %1; thả các tệp JSON chủ đề vào đây để cài đặt trong lần khởi chạy tiếp theo.</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -7014,32 +7355,6 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>Tiến độ</translation>
     </message>
 </context><context>
-    <name>ZipImportFlow</name>
-    <message>
-        <source>%1 already exists and will be replaced.
-
-Continue with import?</source>
-        <translation>%1 đã tồn tại và sẽ bị thay thế.
-
-Tiếp tục nhập?</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Hủy</translation>
-    </message>
-    <message>
-        <source> (skipped %1 display-only entries)</source>
-        <translation> (đã bỏ qua %1 mục chỉ hiển thị)</translation>
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation> (đã bỏ qua %1 mục sai định dạng)</translation>
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation>Đã nhập %1 mục từ '%2'.</translation>
-    </message>
-</context><context>
     <name>_AddSourceDialog</name>
     <message>
         <source>Add Audio Source</source>
@@ -7056,6 +7371,14 @@ Tiếp tục nhập?</translation>
 </context><context>
     <name>_ChainRow</name>
     <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>&lt;i&gt; — re-import to refresh&lt;/i&gt;</source>
         <translation>&lt;i&gt; — nhập lại để làm mới&lt;/i&gt;</translation>
     </message>
@@ -7069,6 +7392,14 @@ Tiếp tục nhập?</translation>
     </message>
 </context><context>
     <name>_FreqRow</name>
+    <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>word-based</source>
         <translation>dựa trên từ</translation>
@@ -7088,6 +7419,14 @@ Tiếp tục nhập?</translation>
 </context><context>
     <name>_PackRow</name>
     <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 entries</source>
         <translation>%1 mục</translation>
     </message>
@@ -7098,6 +7437,24 @@ Tiếp tục nhập?</translation>
     <message>
         <source>⚠ folder missing — re-import</source>
         <translation>⚠ thiếu thư mục — nhập lại</translation>
+    </message>
+</context><context>
+    <name>_PitchRow</name>
+    <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 entries</source>
+        <translation type="unfinished">%1 mục</translation>
+    </message>
+    <message>
+        <source>⚠ missing — re-import</source>
+        <translation type="unfinished">⚠ thiếu — nhập lại</translation>
     </message>
 </context><context>
     <name>app</name>

@@ -164,6 +164,27 @@ class PitchSettingsPanel(ChainSettingsPanelBase):
             return True
         return self._release_callback()
 
+    def set_pitch_root(self, pitch_root: Path) -> None:
+        """Update the pitch root (e.g. after a config swap) and invalidate caches.
+
+        Mirrors ``DictionarySettingsPanel.set_dicts_root``. Without it a config
+        carrying a different ``pitch_root`` leaves this panel scanning the old
+        root for the rest of the session, and the destructive remove flow
+        resolves ``resolve_managed_slot`` against the wrong directory. This
+        panel has no storage-folder selector, so there is nothing to re-sync.
+        """
+        if pitch_root == self._pitch_root:
+            # _load_config runs after every auto-save commit that touches a
+            # non-external field, and the root is the same almost every time.
+            # Rescanning anyway would flash a "Loading…" placeholder and take a
+            # hold_mutation("scan") token (disabling Add) on every settings edit.
+            return
+        self._pitch_root = pitch_root
+        self._view = None
+        # Root changed → cached scan is stale; rescan off-thread (no-op before
+        # first show, where _scanned is still False).
+        self._scan_and_render_async()
+
     def _setup_fields(self) -> None:
         self.add_section(self.tr("Active Pitch Accent Sources"))
         container = QWidget()

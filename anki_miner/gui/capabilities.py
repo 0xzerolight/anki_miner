@@ -511,6 +511,26 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("language", "ui language", "localization", "locale", "translate interface"),
     ),
     Capability(
+        id="settings-profiles",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Settings profiles"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Keep several named snapshots of every setting and switch between them in one click.",
+        ),
+        category=_CAT_APPEARANCE,
+        target=CapabilityTarget("settings", "ui"),
+        keywords=(
+            "profile",
+            "profiles",
+            "settings profile",
+            "preset",
+            "switch settings",
+            "multiple setups",
+            "different decks",
+            "anime vs novels",
+        ),
+    ),
+    Capability(
         id="asr",
         title=QT_TRANSLATE_NOOP("Capabilities", "Speech-to-text (no subtitles needed)"),
         description=QT_TRANSLATE_NOOP(

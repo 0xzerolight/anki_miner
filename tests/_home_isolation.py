@@ -42,7 +42,8 @@ HOME_CONSUMERS = (
 
 def apply_home_patches(tmp_home: Path) -> list[tuple[object, str, object]]:
     """Redirect every imported home snapshot + ``GUIConfigManager.CONFIG_FILE`` to
-    ``tmp_home``; return ``(obj, attr, original)`` triples for exact restoration.
+    ``tmp_home`` (and reset ``GUIConfigManager.ACTIVE_PROFILE_ID``); return
+    ``(obj, attr, original)`` triples for exact restoration.
 
     Patches each module's OWN bound name (see ``HOME_CONSUMERS``) because
     ``from ...paths import ANKI_MINER_HOME`` snapshots an independent binding that
@@ -60,7 +61,9 @@ def apply_home_patches(tmp_home: Path) -> list[tuple[object, str, object]]:
         saved.append((module, attr, getattr(module, attr)))
         setattr(module, attr, build(tmp_home))
 
-    # GUIConfigManager.CONFIG_FILE is a CLASS attribute, not a module global.
+    # GUIConfigManager.CONFIG_FILE is a CLASS attribute, not a module global —
+    # a HOME_CONSUMERS entry patches MODULE-level names and would silently
+    # no-op here, which is exactly why this block is hardcoded.
     try:
         cm_module = importlib.import_module("anki_miner.gui.utils.config_manager")
         gcm_cls = getattr(cm_module, "GUIConfigManager", None)
@@ -69,6 +72,13 @@ def apply_home_patches(tmp_home: Path) -> list[tuple[object, str, object]]:
     if gcm_cls is not None and hasattr(gcm_cls, "CONFIG_FILE"):
         saved.append((gcm_cls, "CONFIG_FILE", gcm_cls.CONFIG_FILE))
         gcm_cls.CONFIG_FILE = tmp_home / "gui_config.json"
+    # Same story for ACTIVE_PROFILE_ID (also a class attribute), except it is
+    # process-lifetime MUTABLE state rather than a path: reset it so a test
+    # that sets it can't leak into a later test, where an unrelated save would
+    # stamp a stale profile id into that test's gui_config.json.
+    if gcm_cls is not None and hasattr(gcm_cls, "ACTIVE_PROFILE_ID"):
+        saved.append((gcm_cls, "ACTIVE_PROFILE_ID", gcm_cls.ACTIVE_PROFILE_ID))
+        gcm_cls.ACTIVE_PROFILE_ID = None
     return saved
 
 

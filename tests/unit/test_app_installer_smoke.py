@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -26,7 +27,17 @@ from anki_miner.services import alass_installer
 def forbidden(*args, **kwargs):
     raise AssertionError("suppressed installer-smoke startup work ran")
 
-main_window.MainWindow._run_optional_boot_step = staticmethod(forbidden)
+_real_boot_step = main_window.MainWindow._run_optional_boot_step
+
+def only_profiles(name, step):
+    # The settings-profile reconcile is the ONE boot step the suppressed path
+    # runs: it is pure local file I/O and it seeds the active-profile marker
+    # that the config save below — the file this smoke asserts on — stamps.
+    if name != "settings profiles":
+        raise AssertionError("suppressed installer-smoke startup work ran: " + name)
+    _real_boot_step(name, step)
+
+main_window.MainWindow._run_optional_boot_step = staticmethod(only_profiles)
 main_window.MainWindow._maybe_create_shortcut_on_first_run = forbidden
 main_window.MainWindow._maybe_offer_first_run_setup = forbidden
 main_window.MainWindow._maybe_prompt_stale_dictionaries = forbidden
@@ -110,10 +121,11 @@ def test_commit_boot_suppression_keeps_only_required_version_commit(
     patch_heavy_init(config)
     saved = []
     monkeypatch.setattr(main_window_module.GUIConfigManager, "save_config", saved.append)
+    steps: list[str] = []
     monkeypatch.setattr(
         main_window_module.MainWindow,
         "_run_optional_boot_step",
-        staticmethod(lambda *args, **kwargs: pytest.fail("optional boot step ran")),
+        staticmethod(lambda name, step: steps.append(name)),
     )
     monkeypatch.setattr(
         main_window_module.QTimer,
@@ -133,6 +145,9 @@ def test_commit_boot_suppression_keeps_only_required_version_commit(
     assert window._boot_committed is True
     assert window.config.last_known_version == __version__
     assert [item.last_known_version for item in saved] == [__version__]
+    # Exactly one step survives suppression: the settings-profile reconcile,
+    # which seeds the active-profile marker the save above has to carry.
+    assert steps == ["settings profiles"]
 
 
 def test_composition_suppression_builds_every_tab_without_availability_probes(
@@ -185,6 +200,12 @@ def test_installer_smoke_runs_full_gui_and_writes_ready_result(tmp_path: Path) -
     assert (home / "gui_config.json").is_file()
     assert (home / "anki_miner.log").is_file()
     assert (home / "dicts").is_dir()
+    # End-to-end proof of the boot-step placement, in a real process with the
+    # real save_config: the reconcile created the default profile AND ran early
+    # enough that the marker reached gui_config.json.
+    assert (home / "profiles" / "default.json").is_file()
+    saved_config = json.loads((home / "gui_config.json").read_text(encoding="utf-8"))
+    assert saved_config["active_profile_id"] == "default"
 
 
 def test_installer_smoke_failure_exits_nonzero_without_dialog(tmp_path: Path) -> None:
