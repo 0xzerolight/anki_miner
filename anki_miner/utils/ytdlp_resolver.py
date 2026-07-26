@@ -3,14 +3,38 @@
 Resolution order (first hit wins):
 
 1. **Config override** — ``config.ytdlp_location`` when set and the file exists.
-2. **PATH** — the executable returned by ``shutil.which("yt-dlp")``.
-3. **Verified downloaded copy** — ``ytdlp_download_dir()/<name>``
+2. **Verified downloaded copy** — ``ytdlp_download_dir()/<name>``
    (``~/.anki_miner/bin/``) when executable and covered by a matching SHA-256
    receipt. Legacy pre-receipt files are never selected.
-4. **Bundled** — inside a PyInstaller frozen bundle, ``sys._MEIPASS/bin/<name>``
-   (kept as a forward-compat tier; nothing is added to the spec today).
-5. **Fallback** — the bare literal ``"yt-dlp"`` when PATH did not resolve the
-   unverified managed slot.
+3. **PATH** — the executable returned by ``shutil.which("yt-dlp")``.
+4. **Bundled** — inside a PyInstaller frozen bundle, ``sys._MEIPASS/bin/<name>``.
+5. **Fail closed** — raise when PATH resolved the *unverified* managed slot.
+6. **Interpreter sibling** — non-frozen only: ``Path(sys.executable).parent/<name>``,
+   the console script a ``pip``/``pipx`` install puts next to the interpreter.
+7. **Fallback** — the bare literal ``"yt-dlp"``.
+
+**Why the managed copy outranks PATH (tier 2 before 3).** A managed copy only
+exists because the user pressed "Update yt-dlp now" or enabled auto-update, so it
+is both deliberate and the freshest binary on the machine. With PATH first, a
+successful update was inert: the app kept running the stale PATH binary, and the
+next check compared against that stale version and re-downloaded every 24h forever.
+
+**Why PATH still outranks the bundle (tier 3 before 4), unlike**
+:mod:`anki_miner.utils.ffmpeg_resolver` **and** :mod:`anki_miner.utils.alass_resolver`,
+which both check the bundle first. This asymmetry is deliberate, not an oversight —
+do not "fix" it for consistency. ffmpeg and alass have no self-updater and are not
+version-sensitive, so a bundled-first order costs them nothing. yt-dlp breaks
+whenever YouTube changes something, so a user's own package-manager or pip binary is
+usually *fresher* than a build-time pin. Bundled-first would silently downgrade
+users who already have a working yt-dlp on PATH — the one population that never had
+this bug — to a pinned binary that ages for the whole release cycle. The bundle's
+job is to make a fresh install work at all, which it does from tier 4.
+
+**Why the interpreter sibling comes after the fail-closed raise (6 after 5).**
+``yt-dlp`` is a hard runtime dependency, so its console script sits next to
+``sys.executable`` in any venv — including during the test suite. Placing this tier
+before the raise would let a rejected receiptless managed binary fall through to a
+real executable, quietly defeating the containment the raise exists for.
 
 Mirrors :mod:`anki_miner.utils.ffmpeg_resolver`: module-level ``_CACHE`` dict,
 ``_clear_cache()`` test/updater hook, and the shared ``frozen_state()`` /
@@ -37,6 +61,7 @@ from anki_miner.utils.bundled_binary import bundled_name, frozen_state
 
 __all__ = [
     "resolve_ytdlp",
+    "ytdlp_available",
     "ytdlp_binary_name",
     "ytdlp_download_dir",
     "ytdlp_verification_receipt_path",
@@ -145,6 +170,28 @@ def resolve_ytdlp(config) -> str:
     return resolved
 
 
+def ytdlp_available(config) -> bool:
+    """Return True when a yt-dlp executable is actually reachable for *config*.
+
+    Deliberately NOT a copy of :func:`anki_miner.utils.alass_resolver.alass_available`,
+    which calls its resolver bare. :func:`resolve_ytdlp` can raise
+    ``FileNotFoundError`` (the fail-closed rejection of an unverified managed binary
+    on PATH), and callers here are availability *probes* on paths documented as
+    never raising — most importantly ``ValidationService.validate_setup``. So the
+    raise is absorbed into ``False``: an unusable binary and no binary are the same
+    answer to "can we mine YouTube".
+    """
+    try:
+        resolved = resolve_ytdlp(config)
+    except FileNotFoundError:
+        return False
+    if resolved == "yt-dlp":
+        # The bare literal means nothing above the fallback tier resolved; it is
+        # only usable if the OS can find it at spawn time.
+        return shutil.which("yt-dlp") is not None
+    return Path(resolved).exists()
+
+
 def _compute(
     override: Any,
     frozen: bool,
@@ -164,30 +211,48 @@ def _compute(
         ):
             return str(override_path)
 
-    # 2. Prefer an executable that actually exists on PATH. Do not return the
-    #    bare literal here: it would shadow a verified managed copy when PATH
-    #    has no yt-dlp. A PATH entry resolving to the managed slot still needs
-    #    the receipt check below; PATH must not launder that file.
+    # A PATH entry resolving to the managed slot must still pass the receipt check;
+    # PATH must not launder that file. Computed here because the fail-closed step
+    # below reads it.
     managed_path_hit = path_ytdlp is not None and (
         _is_managed_path(path_ytdlp, downloaded) or _is_within_directory(path_ytdlp, download_dir)
     )
-    if path_ytdlp is not None and not managed_path_hit:
-        return path_ytdlp
 
-    # 3. App-managed copy, but only with a receipt matching its current bytes.
+    # 2. App-managed copy, but only with a receipt matching its current bytes.
+    #    Ahead of PATH so a completed update actually takes effect — see the
+    #    module docstring.
     if _is_verified_managed_binary(downloaded):
         return str(downloaded)
 
-    # 4. Bundled binary inside the frozen distributable (forward-compat tier).
+    # 3. An executable that actually exists on PATH. Do not return the bare
+    #    literal here: it would shadow the bundled tier below.
+    if path_ytdlp is not None and not managed_path_hit:
+        return path_ytdlp
+
+    # 4. Bundled binary inside the frozen distributable. Deliberately after PATH
+    #    (unlike ffmpeg/alass) — see the module docstring.
     if frozen and meipass is not None:
         bundled = Path(meipass) / "bin" / bundled_name("yt-dlp")
         if _is_runnable(bundled):
             return str(bundled)
 
-    # 5. A bare fallback would repeat PATH lookup and execute the rejected
-    #    managed hit. Fail closed after all trusted tiers instead.
+    # 5. Fail closed on a rejected managed PATH hit. This MUST stay ahead of the
+    #    sibling tier and the bare fallback: both would otherwise hand back a
+    #    working executable and defeat the rejection.
     if managed_path_hit:
         raise FileNotFoundError("Refusing unverified managed yt-dlp executable on PATH")
 
-    # Historical fallback when PATH had no yt-dlp at resolution time.
+    # 6. The console script a pip/pipx install drops next to the interpreter.
+    #    `pipx install anki_miner` puts a working yt-dlp in the pipx venv's bin/,
+    #    which is not on PATH, so without this tier it is never found. Frozen
+    #    builds skip it: there sys.executable is the app itself, not an interpreter.
+    #    Guarded exactly like PATH so it cannot become a second laundering route
+    #    into the managed directory.
+    if not frozen:
+        sibling = Path(sys.executable).parent / ytdlp_binary_name()
+        sibling_is_managed = _is_managed_path(sibling, downloaded) or _is_within_directory(sibling, download_dir)
+        if not sibling_is_managed and _is_runnable(sibling):
+            return str(sibling)
+
+    # Historical fallback when nothing above resolved.
     return "yt-dlp"

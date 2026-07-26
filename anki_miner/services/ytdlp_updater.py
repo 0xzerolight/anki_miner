@@ -37,9 +37,14 @@ logger = logging.getLogger(__name__)
 # Latest-release endpoint for the yt-dlp project (no auth / key — free API).
 GITHUB_API_URL = "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest"
 
-# Per-OS release asset name. yt-dlp ships a standalone binary per platform.
+# Per-OS release asset name. Every entry MUST be a *standalone* build: the bare
+# "yt-dlp" asset is a zipimport archive whose shebang runs the system python3, so
+# installing it would make the app depend on a host Python it does not ship. The
+# standalone builds also carry their own curl_cffi, which is what makes yt-dlp's
+# --list-impersonate-targets non-empty. tests/unit/test_ytdlp_updater.py pins
+# these names so a well-meaning "the small one is fine" edit fails.
 _ASSET_BY_PLATFORM: dict[str, str] = {
-    "linux": "yt-dlp",
+    "linux": "yt-dlp_linux",
     "win32": "yt-dlp.exe",
     "darwin": "yt-dlp_macos",
 }
@@ -50,10 +55,25 @@ _RELEASE_DOWNLOAD_PREFIX = "/yt-dlp/yt-dlp/releases/download/"
 # Allowlist for URLs we contact / download from. Only HTTPS on these hosts is
 # accepted; everything else is fail-closed. (Mirrors update_checker's allowlist —
 # copied rather than imported to keep the modules decoupled.)
+#
+# release-assets.githubusercontent.com is where GitHub currently 302s release
+# asset downloads; objects.githubusercontent.com is the previous host, kept so an
+# older or regional redirect still resolves. Both are checked only AFTER the
+# redirect: the request URL itself is pinned to github.com by
+# _release_tag_from_asset_url, so widening this set cannot widen what we ask for.
+#
+# Keep this an EXACT host set. A "*.githubusercontent.com" suffix match looks
+# tempting and is a real weakening: raw. and gist. serve arbitrary user-authored
+# bytes at attacker-chosen paths, whereas these two are opaque blob storage. It is
+# also not covered by the SHA-256 check — the SHA2-256SUMS fetch below is itself
+# guarded only by this allowlist plus TLS, so "the hash protects us" is circular
+# for that leg. Omitting the current CDN host here is what silently broke every
+# download between the 2026-06 ship date and this fix.
 _GITHUB_URL_ALLOWLIST: frozenset[str] = frozenset(
     {
         "github.com",
         "objects.githubusercontent.com",
+        "release-assets.githubusercontent.com",
         "api.github.com",
     }
 )

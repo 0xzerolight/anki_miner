@@ -7241,6 +7241,30 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>Khi thêm một danh sách phát, tối đa số video này sẽ được xếp vào hàng đợi.</translation>
     </message>
     <message>
+        <source>Keep yt-dlp up to date automatically</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Auto-update</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Checks once a day on startup and downloads into Anki Miner's own folder. Leaving this off means YouTube mining will eventually stop working.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Optional: path to your own yt-dlp executable...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>yt-dlp location</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Overrides automatic detection. Leave empty unless you need a specific build.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Update yt-dlp now</source>
         <translation>Cập nhật yt-dlp ngay</translation>
     </message>

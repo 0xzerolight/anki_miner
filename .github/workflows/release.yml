@@ -440,6 +440,107 @@ jobs:
           Get-ChildItem vendor\alass
 
       # =====================================================================
+      # yt-dlp — the standalone BINARY, vendored into vendor/yt-dlp/ so the spec
+      # bundles it at sys._MEIPASS/bin/. Without this a fresh packaged install
+      # cannot mine YouTube at all: the resolver falls through to the bare literal
+      # "yt-dlp" and CreateProcess fails.
+      #
+      # Version + digests come from .github/ytdlp-pin.json, shared with
+      # scripts/release_preflight.sh so the two cannot drift. Digests are pinned
+      # rather than read from the release's own SHA2-256SUMS (same-origin — the
+      # weaker property the alass steps avoid). yt-dlp is Unlicense; its bundled
+      # executables also carry ISC/MIT and others, so THIRD_PARTY_LICENSES.txt
+      # ships alongside.
+      #
+      # The freshness gate runs first: yt-dlp ships roughly monthly and dependabot
+      # cannot see a curl'd release URL, so a forgotten bump would otherwise ship a
+      # stale extractor silently.
+      # =====================================================================
+      - name: Check the yt-dlp pin is fresh
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/check_ytdlp_pin.py
+
+      - name: Fetch yt-dlp binary (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          PIN=.github/ytdlp-pin.json
+          VERSION="$(jq -r '.version' "$PIN")"
+          ASSET="$(jq -r '.assets.linux.asset' "$PIN")"
+          SHA256="$(jq -r '.assets.linux.sha256' "$PIN")"
+          INSTALL_AS="$(jq -r '.assets.linux.install_as' "$PIN")"
+          curl -fL "https://github.com/yt-dlp/yt-dlp/releases/download/${VERSION}/${ASSET}" -o ytdlp-dl
+          echo "${SHA256}  ytdlp-dl" | sha256sum -c -
+          mkdir -p vendor/yt-dlp
+          cp ytdlp-dl "vendor/yt-dlp/${INSTALL_AS}"
+          chmod +x "vendor/yt-dlp/${INSTALL_AS}"
+          rm -f ytdlp-dl
+          mkdir -p licenses/yt-dlp
+          curl -fL "https://raw.githubusercontent.com/yt-dlp/yt-dlp/${VERSION}/LICENSE" \
+            -o licenses/yt-dlp/LICENSE
+          curl -fL "https://raw.githubusercontent.com/yt-dlp/yt-dlp/${VERSION}/THIRD_PARTY_LICENSES.txt" \
+            -o licenses/yt-dlp/THIRD_PARTY_LICENSES.txt
+          echo "Bundled yt-dlp ${VERSION} landed in vendor/yt-dlp/:"
+          ls -la vendor/yt-dlp/
+
+      - name: Fetch yt-dlp binary (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          PIN=.github/ytdlp-pin.json
+          VERSION="$(jq -r '.version' "$PIN")"
+          ASSET="$(jq -r '.assets.macos.asset' "$PIN")"
+          SHA256="$(jq -r '.assets.macos.sha256' "$PIN")"
+          INSTALL_AS="$(jq -r '.assets.macos.install_as' "$PIN")"
+          # yt-dlp_macos is universal2, so this one asset serves both the arm64 and
+          # Intel legs.
+          curl -fL "https://github.com/yt-dlp/yt-dlp/releases/download/${VERSION}/${ASSET}" -o ytdlp-dl
+          echo "${SHA256}  ytdlp-dl" | shasum -a 256 -c -
+          mkdir -p vendor/yt-dlp
+          cp ytdlp-dl "vendor/yt-dlp/${INSTALL_AS}"
+          chmod +x "vendor/yt-dlp/${INSTALL_AS}"
+          rm -f ytdlp-dl
+          mkdir -p licenses/yt-dlp
+          curl -fL "https://raw.githubusercontent.com/yt-dlp/yt-dlp/${VERSION}/LICENSE" \
+            -o licenses/yt-dlp/LICENSE
+          curl -fL "https://raw.githubusercontent.com/yt-dlp/yt-dlp/${VERSION}/THIRD_PARTY_LICENSES.txt" \
+            -o licenses/yt-dlp/THIRD_PARTY_LICENSES.txt
+          echo "Bundled yt-dlp ${VERSION} landed in vendor/yt-dlp/:"
+          ls -la vendor/yt-dlp/
+
+      - name: Fetch yt-dlp binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $pin = Get-Content .github/ytdlp-pin.json -Raw | ConvertFrom-Json
+          $version = $pin.version
+          $asset = $pin.assets.windows.asset
+          $sha256 = $pin.assets.windows.sha256
+          $installAs = $pin.assets.windows.install_as
+          $url = "https://github.com/yt-dlp/yt-dlp/releases/download/$version/$asset"
+          curl.exe -fL $url -o ytdlp-dl.exe
+          $actual = (Get-FileHash ytdlp-dl.exe -Algorithm SHA256).Hash.ToLower()
+          if ($actual -ne $sha256) {
+            Write-Error "SHA256 mismatch for ${asset}: expected $sha256 got $actual"
+            exit 1
+          }
+          New-Item -ItemType Directory -Force -Path vendor\yt-dlp | Out-Null
+          Copy-Item ytdlp-dl.exe "vendor\yt-dlp\$installAs" -Force
+          Remove-Item ytdlp-dl.exe -Force
+          New-Item -ItemType Directory -Force -Path licenses\yt-dlp | Out-Null
+          curl.exe -fL "https://raw.githubusercontent.com/yt-dlp/yt-dlp/$version/LICENSE" `
+            -o licenses\yt-dlp\LICENSE
+          curl.exe -fL "https://raw.githubusercontent.com/yt-dlp/yt-dlp/$version/THIRD_PARTY_LICENSES.txt" `
+            -o licenses\yt-dlp\THIRD_PARTY_LICENSES.txt
+          Write-Host "Bundled yt-dlp $version landed in vendor/yt-dlp/:"
+          Get-ChildItem vendor\yt-dlp
+
+      # =====================================================================
       # libmpv — fetched from the repo-owned vendor-libmpv-* release (produced
       # by .github/workflows/vendor-libmpv.yml; see RELEASING.md "Vendored
       # libmpv"). Pinned URL + SHA256, fail-closed, like every other fetch.

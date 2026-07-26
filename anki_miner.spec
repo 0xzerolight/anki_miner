@@ -57,6 +57,24 @@ if os.path.isdir(vendor_alass):
         if os.path.isfile(_full):
             alass_binaries.append((_full, "bin"))
 
+# Bundle the vendored yt-dlp standalone binary. CI and scripts/release_preflight.sh
+# populate vendor/yt-dlp/ from the pin in .github/ytdlp-pin.json before invoking
+# PyInstaller; local dev builds leave it absent (empty list → unchanged behavior).
+# The "bin" dest matches sys._MEIPASS/bin/, the tier anki_miner/utils/ytdlp_resolver.py
+# checks after PATH. Without this the resolver fell through to the bare literal
+# "yt-dlp" and a fresh packaged install could not mine YouTube at all.
+#
+# Must be a standalone build, never the bare "yt-dlp" zipapp asset: that one shebangs
+# the system python3 (which a packaged app does not ship) and carries no curl_cffi, so
+# --list-impersonate-targets would come back empty.
+ytdlp_binaries = []
+vendor_ytdlp = os.path.join(project_root, "vendor", "yt-dlp")
+if os.path.isdir(vendor_ytdlp):
+    for _fn in sorted(os.listdir(vendor_ytdlp)):
+        _full = os.path.join(vendor_ytdlp, _fn)
+        if os.path.isfile(_full):
+            ytdlp_binaries.append((_full, "bin"))
+
 # Bundle the vendored libmpv shared library. CI populates vendor/libmpv/ from the
 # repo-owned vendor-libmpv-* release before invoking PyInstaller; local dev builds
 # leave it absent (empty list → unchanged behavior). Dest is "." (the _MEIPASS
@@ -165,7 +183,7 @@ if platform.system() == "Windows":
 a = Analysis(
     [os.path.join(project_root, "anki_miner", "gui", "launch.py")],
     pathex=[project_root],
-    binaries=ffmpeg_binaries + alass_binaries + libmpv_binaries,
+    binaries=ffmpeg_binaries + alass_binaries + libmpv_binaries + ytdlp_binaries,
     datas=[
         # GUI resources (stylesheets and icons)
         (
@@ -233,6 +251,15 @@ a = Analysis(
         # does `import av` at package load), so it MUST be bundled or the offline
         # ASR bundle smoke fails with ModuleNotFoundError: No module named 'av'.
         "onnxruntime",
+        # yt-dlp ships as the vendored standalone EXECUTABLE (vendor/yt-dlp above),
+        # which is the only form the app ever uses — every call site spawns it as a
+        # subprocess. The Python package was collected wholesale for no runtime
+        # benefit (~16 MB, 13 MB of it extractors) and is dropped here.
+        #
+        # Kept as a pip dependency on purpose: non-frozen installs (pip/pipx/source)
+        # get its console script, which ytdlp_resolver's interpreter-sibling tier
+        # finds. This exclude only affects the frozen bundle.
+        "yt_dlp",
     ],
     noarchive=False,
     optimize=0,

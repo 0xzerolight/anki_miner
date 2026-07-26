@@ -7253,6 +7253,30 @@ Gehen Sie zu Einstellungen → ASR, um es vor dem Erstellen von Untertiteln heru
         <translation>Beim Hinzufügen einer Wiedergabeliste werden höchstens so viele Videos in die Warteschlange gestellt.</translation>
     </message>
     <message>
+        <source>Keep yt-dlp up to date automatically</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Auto-update</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Checks once a day on startup and downloads into Anki Miner's own folder. Leaving this off means YouTube mining will eventually stop working.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Optional: path to your own yt-dlp executable...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>yt-dlp location</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Overrides automatic detection. Leave empty unless you need a specific build.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Update yt-dlp now</source>
         <translation>yt-dlp jetzt aktualisieren</translation>
     </message>

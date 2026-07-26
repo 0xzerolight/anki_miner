@@ -41,3 +41,25 @@ class YtdlpNotFoundError(YouTubeFetchError):
     """
 
     pass
+
+
+class NoJapaneseSubtitlesError(YouTubeFetchError):
+    """Raised when yt-dlp exited 0 but wrote no Japanese subtitle file.
+
+    yt-dlp reports "There are no subtitles for the requested languages" as an
+    *info* line and exits 0, and it writes subtitles before the video, so the whole
+    video downloads after yt-dlp already knew there was nothing to write.
+
+    This is a deterministic failure: retrying downloads the same video a second time
+    and fails identically. ``YouTubeQueueWorker`` catches this subclass ahead of its
+    generic ``YouTubeFetchError`` retry so the second download never happens.
+
+    Deliberately a *subclass* of :class:`YouTubeFetchError`, unlike
+    :class:`FfmpegNotFoundError` which opts out of the retry by not inheriting from
+    it: ``YouTubeFetchError`` is the documented catch-all for ``fetch_video`` and
+    ``process_youtube_url``, so a sibling would leak past every caller that relies on
+    it. Except clauses are matched in order, which is what makes the narrower catch
+    work.
+    """
+
+    pass

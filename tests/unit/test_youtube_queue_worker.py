@@ -16,7 +16,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from anki_miner.exceptions import SetupError
-from anki_miner.exceptions.youtube import YouTubeFetchError
+from anki_miner.exceptions.youtube import NoJapaneseSubtitlesError, YouTubeFetchError
 from anki_miner.gui.workers.youtube_queue_worker import (
     YouTubeQueueWorker,
     _QueueMiningProgressAdapter,
@@ -171,6 +171,55 @@ def test_retry_twice_fails_emits_error_and_queue_continues(make_worker, mock_pro
         (2, "R_C", None, 1),
     ]
     assert len(caps["queue_finished"].calls) == 1
+
+
+def test_no_japanese_subtitles_is_not_retried(make_worker, mock_processor):
+    """A missing subtitle must fail on the first attempt (attempts=1).
+
+    yt-dlp writes subtitles before the video, so this error only surfaces after the
+    whole video has already downloaded. Retrying pays for a second full download and
+    fails identically. The clause for this subclass sits ahead of the generic
+    YouTubeFetchError retry, which is what keeps attempts at 1.
+    """
+    items = [_make_item(video_id="a"), _make_item(video_id="b")]
+
+    def _side_effect(**kw):
+        if kw["video_id"] == "a":
+            raise NoJapaneseSubtitlesError("wrote no Japanese subtitle (mode=manual_only)")
+        return f"R_{kw['video_id'].upper()}"
+
+    mock_processor.process_youtube_url.side_effect = _side_effect
+
+    worker = make_worker(items=items)
+    caps = _connect_all(worker)
+    worker.run()
+
+    assert caps["finished"].calls == [
+        (0, None, "NoJapaneseSubtitlesError: wrote no Japanese subtitle (mode=manual_only)", 1),
+        (1, "R_B", None, 1),
+    ]
+    # The queue keeps going; only that item fails.
+    assert len(caps["queue_finished"].calls) == 1
+
+
+def test_fallback_allowed_is_threaded_from_the_probe_verdict(make_worker, mock_processor):
+    """The fetch may only fall back to auto-captions the probe certified as native.
+
+    Passing the flag unconditionally would let a manual_only video whose manual track
+    vanished silently mine a machine-translated track — the exact false positive
+    ``_has_native_auto_ja`` exists to prevent.
+    """
+    native = _make_item(video_id="a")
+    native.video_info = replace(native.video_info, has_auto_ja_subs=True)
+    not_native = _make_item(video_id="b")
+    not_native.video_info = replace(not_native.video_info, has_auto_ja_subs=False)
+
+    worker = make_worker(items=[native, not_native])
+    _connect_all(worker)
+    worker.run()
+
+    passed = [call.kwargs["fallback_allowed"] for call in mock_processor.process_youtube_url.call_args_list]
+    assert passed == [True, False]
 
 
 # ---------------------------------------------------------------------------

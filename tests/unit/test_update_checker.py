@@ -3,6 +3,8 @@
 import json
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from anki_miner.services.update_checker import (
     UpdateChecker,
     UpdateInfo,
@@ -390,6 +392,20 @@ class TestValidateGithubUrl:
     def test_objects_githubusercontent_https_accepted(self):
         url = "https://objects.githubusercontent.com/github-production-release-asset/abc123/AnkiMiner-2.4.0-x86_64.AppImage"
         assert _validate_github_url(url) is True
+
+    def test_release_assets_githubusercontent_https_accepted(self):
+        """Keep this allowlist identical in policy to ytdlp_updater's.
+
+        GitHub now serves release assets from this host. The two modules are
+        deliberate copies of each other, so they must not drift.
+        """
+        url = "https://release-assets.githubusercontent.com/github-production-release-asset/abc/AnkiMiner.AppImage"
+        assert _validate_github_url(url) is True
+
+    @pytest.mark.parametrize("host", ["raw.githubusercontent.com", "gist.githubusercontent.com"])
+    def test_user_content_subdomains_rejected(self, host):
+        """Exact host set, never a ``*.githubusercontent.com`` suffix match."""
+        assert _validate_github_url(f"https://{host}/o/r/main/payload") is False
 
     def test_api_github_com_https_accepted(self):
         assert _validate_github_url("https://api.github.com/repos/foo/bar/releases/latest") is True

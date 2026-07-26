@@ -10,6 +10,7 @@ import io
 import json
 import os
 import shutil
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -26,10 +27,18 @@ from anki_miner.utils import ytdlp_resolver
 
 _ORIGINAL_MAYBE_START_YTDLP_UPDATE = MainWindow._maybe_start_ytdlp_update
 _TAG = "2026.07.20"
-_ASSET_NAME = "yt-dlp"
+# Derived, not literal: these tests force sys.platform = "linux" and the asset
+# name is a production detail. Hardcoding it made the asset URL and the manifest
+# bodies below disagree with the code under test the moment the linux asset moved
+# off the zipapp, which downgraded three of the parametrized cases into vacuous
+# passes on a URL-refusal error instead of the property each one names.
+_ASSET_NAME = ytdlp_updater._ASSET_BY_PLATFORM["linux"]
 _ASSET_URL = f"https://github.com/yt-dlp/yt-dlp/releases/download/{_TAG}/{_ASSET_NAME}"
 _SUMS_URL = f"https://github.com/yt-dlp/yt-dlp/releases/download/{_TAG}/SHA2-256SUMS"
-_ALLOWED_FINAL_URL = "https://objects.githubusercontent.com/yt-dlp-release-asset"
+# The host GitHub 302s release downloads to today. Previously this named the
+# retired objects.githubusercontent.com, which is why the whole suite stayed green
+# while every real download was refused.
+_ALLOWED_FINAL_URL = "https://release-assets.githubusercontent.com/yt-dlp-release-asset"
 
 
 class _FakeResponse(io.BytesIO):
@@ -86,17 +95,22 @@ def _install_network(
     monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", fake_urlopen)
 
 
+_GOOD_ENTRY = b"0" * 64 + b"  " + _ASSET_NAME.encode() + b"\n"
+
+
 @pytest.mark.parametrize(
-    "manifest",
+    ("manifest", "expected_exc", "expected_match"),
     [
-        pytest.param(None, id="missing_sums"),
-        pytest.param(b"0" * 64 + b"  another-file\n", id="missing_entry"),
-        pytest.param((b"0" * 64 + b"  yt-dlp\n") * 2, id="duplicate_entry"),
-        pytest.param(b"0" * 64 + b"  yt-dlp\n", id="wrong_hash"),
+        pytest.param(None, OSError, "SHA2-256SUMS missing", id="missing_sums"),
+        pytest.param(b"0" * 64 + b"  another-file\n", ValueError, "has no entry", id="missing_entry"),
+        pytest.param(_GOOD_ENTRY * 2, ValueError, "duplicate entries", id="duplicate_entry"),
+        pytest.param(_GOOD_ENTRY, ValueError, "does not match", id="wrong_hash"),
     ],
 )
 def test_unverified_ytdlp_asset_never_installs_or_executes(
     manifest: bytes | None,
+    expected_exc: type[BaseException],
+    expected_match: str,
     isolated_ytdlp_home: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -136,7 +150,11 @@ def test_unverified_ytdlp_asset_never_installs_or_executes(
     monkeypatch.setattr(shutil, "which", lambda name: None)
 
     updater = YtdlpUpdater(AnkiMinerConfig())
-    with pytest.raises((OSError, ValueError)):
+    # Assert the specific failure each param names. A bare raises((OSError,
+    # ValueError)) also swallows "Refusing non-release or mismatched ... URL", so a
+    # drifted asset name would let every case pass without reaching the manifest
+    # logic at all.
+    with pytest.raises(expected_exc, match=expected_match):
         updater._download_and_install(_ASSET_URL, _TAG)
 
     final = isolated_ytdlp_home / "bin" / "yt-dlp"
@@ -150,21 +168,59 @@ def test_unverified_ytdlp_asset_never_installs_or_executes(
     assert all(command[0] != str(final) for command in run_commands)
 
 
-def test_default_startup_starts_no_downloader(monkeypatch: pytest.MonkeyPatch) -> None:
+def _run_maybe_start(config: AnkiMinerConfig, monkeypatch: pytest.MonkeyPatch) -> tuple[list, list]:
+    """Drive MainWindow._maybe_start_ytdlp_update against *config*, recording effects."""
     scheduled: list[tuple[int, object]] = []
     starts: list[object] = []
-    config = AnkiMinerConfig()
     window = SimpleNamespace(
         config=config,
         background_tasks=SimpleNamespace(start_ytdlp_update=lambda *args, **kwargs: starts.append((args, kwargs))),
     )
     monkeypatch.setattr(QTimer, "singleShot", lambda delay, callback: scheduled.append((delay, callback)))
-
     _ORIGINAL_MAYBE_START_YTDLP_UPDATE(window)
+    return scheduled, starts
 
-    assert config.auto_update_ytdlp is False
+
+def test_opted_out_startup_starts_no_downloader(monkeypatch: pytest.MonkeyPatch) -> None:
+    """auto_update_ytdlp=False must start nothing at startup.
+
+    This is the containment property from 048, and it is unchanged. What changed is
+    only which configs *have* False: the dataclass default is now True, so this test
+    sets it explicitly rather than relying on the default.
+    """
+    config = replace(AnkiMinerConfig(), auto_update_ytdlp=False)
+    scheduled, starts = _run_maybe_start(config, monkeypatch)
+
     assert scheduled == []
     assert starts == []
+
+
+def test_fresh_default_startup_schedules_the_updater(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A fresh install opts in, so the throttled background check is scheduled.
+
+    Deliberate behavior change: keeping yt-dlp current is what keeps YouTube mining
+    working, and a bundled binary is pinned at build time. It reaches only installs
+    with no config file — every file the app has written carries an explicit value.
+    The download itself remains host-allowlisted, SHA-256 verified, atomically
+    installed, and receipt-gated before the resolver will select it.
+    """
+    config = AnkiMinerConfig()
+    assert config.auto_update_ytdlp is True
+    scheduled, starts = _run_maybe_start(config, monkeypatch)
+
+    # Deferred via singleShot rather than run inline, so the window paints before any
+    # network call. starts stays empty until the scheduled callback actually fires.
+    assert len(scheduled) == 1
+    assert starts == []
+
+    delay, callback = scheduled[0]
+    assert delay == 0
+    callback()
+    assert len(starts) == 1
+    args, kwargs = starts[0]
+    # force=False keeps the 24h throttle in charge of the startup check.
+    assert kwargs == {"force": False}
+    assert args == (config,)
 
 
 def test_existing_config_migrated_to_updater_off(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -194,17 +250,26 @@ def test_existing_config_migrated_to_updater_off(tmp_path: Path, monkeypatch: py
     assert GUIConfigManager.load_config().auto_update_ytdlp is True
 
 
-def test_resolver_skips_unverified_managed_binary_and_prefers_path(
+def test_resolver_requires_a_receipt_for_the_managed_binary(
     isolated_ytdlp_home: Path,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    no_sibling_ytdlp,
 ) -> None:
+    """Verification is a precondition of selecting the managed slot.
+
+    Renamed from ``..._and_prefers_path``: the managed tier now outranks PATH so a
+    completed update is not inert (see ytdlp_resolver's module docstring). The
+    containment property this test exists for is unchanged — a receiptless or
+    tampered managed binary is never selected, not even when PATH points straight
+    at it — and is asserted three times below.
+    """
     managed = isolated_ytdlp_home / "bin" / "yt-dlp"
     managed.parent.mkdir(parents=True)
     managed.write_bytes(b"managed")
     managed.chmod(0o755)
-    # Even if the managed slot itself appears on PATH, PATH precedence must not
-    # launder a receiptless app download into a trusted executable.
+    # Even if the managed slot itself appears on PATH, PATH must not launder a
+    # receiptless app download into a trusted executable.
     monkeypatch.setattr(shutil, "which", lambda name: str(managed))
 
     with pytest.raises(FileNotFoundError, match="unverified managed yt-dlp"):
@@ -227,6 +292,15 @@ def test_resolver_skips_unverified_managed_binary_and_prefers_path(
     monkeypatch.setattr(shutil, "which", lambda name: str(path_binary))
     ytdlp_resolver._clear_cache()
 
+    # A re-verified managed copy now wins over an unrelated PATH binary. This is
+    # the assertion that flipped with the tier reorder; the three raises above are
+    # the security property and must keep passing untouched.
+    assert ytdlp_resolver.resolve_ytdlp(AnkiMinerConfig()) == str(managed)
+
+    # ...and with the managed copy gone, PATH is still honored.
+    managed.unlink()
+    receipt.unlink()
+    ytdlp_resolver._clear_cache()
     assert ytdlp_resolver.resolve_ytdlp(AnkiMinerConfig()) == str(path_binary)
 
 

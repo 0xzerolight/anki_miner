@@ -33,9 +33,23 @@ def home(tmp_path, monkeypatch):
     return h
 
 
+# Derive the per-OS asset name from the production map instead of hardcoding it.
+# These tests force sys.platform = "linux", and the linux asset name changed from
+# the "yt-dlp" zipapp to the "yt-dlp_linux" standalone build; a literal here made
+# every asset URL and manifest body silently disagree with the code under test.
+_LINUX_ASSET = ytdlp_updater._ASSET_BY_PLATFORM["linux"]
+_ALL_ASSETS = [*ytdlp_updater._ASSET_BY_PLATFORM.values(), "SHA2-256SUMS"]
+
+
+def _asset_url(asset_name=None, tag="2024.03.10"):
+    """Canonical release-download URL for *asset_name* (default: this OS's asset)."""
+    name = _LINUX_ASSET if asset_name is None else asset_name
+    return f"https://github.com/yt-dlp/yt-dlp/releases/download/{tag}/{name}"
+
+
 def _releases_json(tag="2024.03.10", asset_names=None):
     if asset_names is None:
-        asset_names = ["yt-dlp", "yt-dlp.exe", "yt-dlp_macos", "SHA2-256SUMS"]
+        asset_names = list(_ALL_ASSETS)
     return {
         "tag_name": tag,
         "html_url": "https://github.com/yt-dlp/yt-dlp/releases/tag/" + tag,
@@ -49,8 +63,17 @@ def _releases_json(tag="2024.03.10", asset_names=None):
     }
 
 
+# The host GitHub actually 302s release downloads to today. Using the *current*
+# host as the default is deliberate: the previous default was the retired
+# objects.githubusercontent.com, which made every fake redirect land on a host the
+# production allowlist happened to still accept — so the suite stayed green for a
+# month while real downloads failed on every platform. Back-compat for the old
+# host is asserted explicitly in TestValidateGithubUrl instead of by default.
+_REDIRECT_HOST_URL = "https://release-assets.githubusercontent.com/yt-dlp-release-asset"
+
+
 class _FakeResponse(io.BytesIO):
-    def __init__(self, body, final_url="https://objects.githubusercontent.com/yt-dlp-release-asset"):
+    def __init__(self, body, final_url=_REDIRECT_HOST_URL):
         super().__init__(body)
         self._final_url = final_url
 
@@ -79,14 +102,52 @@ class TestValidateGithubUrl:
     def test_accepts_objects_host(self):
         assert ytdlp_updater._validate_github_url("https://objects.githubusercontent.com/x") is True
 
+    def test_accepts_release_assets_host(self):
+        """The host GitHub 302s release downloads to today.
+
+        Omitting it is what made every yt-dlp download fail on every platform
+        between the feature shipping and this fix.
+        """
+        assert ytdlp_updater._validate_github_url("https://release-assets.githubusercontent.com/x") is True
+
     def test_rejects_off_host(self):
         assert ytdlp_updater._validate_github_url("https://evil.example.com/x") is False
+
+    @pytest.mark.parametrize("host", ["raw.githubusercontent.com", "gist.githubusercontent.com"])
+    def test_rejects_user_content_subdomains(self, host):
+        """The allowlist is an exact host set, never a *.githubusercontent.com suffix.
+
+        raw. and gist. serve arbitrary user-authored bytes at attacker-chosen
+        paths, unlike the opaque release-blob hosts. A suffix match would admit
+        them, and the SHA2-256SUMS fetch is guarded by this check alone, so the
+        hash cannot backstop a widened host set for that leg.
+        """
+        assert ytdlp_updater._validate_github_url(f"https://{host}/o/r/main/evil") is False
 
     def test_rejects_http_scheme(self):
         assert ytdlp_updater._validate_github_url("http://github.com/x") is False
 
     def test_rejects_empty(self):
         assert ytdlp_updater._validate_github_url("") is False
+
+
+class TestAssetByPlatform:
+    """The per-OS asset map must name standalone builds, never the zipapp.
+
+    The bare "yt-dlp" asset is a zipimport archive that runs the system python3
+    and carries no curl_cffi, so installing it would make the packaged app depend
+    on a host Python it does not ship and would silently lose impersonation.
+    """
+
+    def test_no_platform_uses_the_zipapp_asset(self):
+        assert "yt-dlp" not in ytdlp_updater._ASSET_BY_PLATFORM.values()
+
+    def test_expected_standalone_assets(self):
+        assert ytdlp_updater._ASSET_BY_PLATFORM == {
+            "linux": "yt-dlp_linux",
+            "win32": "yt-dlp.exe",
+            "darwin": "yt-dlp_macos",
+        }
 
 
 class TestLocalVersion:
@@ -125,7 +186,7 @@ class TestLatestVersionAndAsset:
         updater = YtdlpUpdater(config)
         version, url = updater.latest_version_and_asset()
         assert version == "2024.03.10"
-        assert url.endswith("/yt-dlp")
+        assert url.endswith(f"/{_LINUX_ASSET}")
 
     def test_windows_asset(self, config, home, monkeypatch):
         monkeypatch.setattr(ytdlp_updater.sys, "platform", "win32")
@@ -145,7 +206,7 @@ class TestLatestVersionAndAsset:
         monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
         payload = {
             "tag_name": "2024.03.10",
-            "assets": [{"name": "yt-dlp", "browser_download_url": "https://evil.example.com/yt-dlp"}],
+            "assets": [{"name": _LINUX_ASSET, "browser_download_url": f"https://evil.example.com/{_LINUX_ASSET}"}],
         }
         monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", _fake_urlopen_json(payload))
         updater = YtdlpUpdater(config)
@@ -156,7 +217,7 @@ class TestLatestVersionAndAsset:
 
     def test_missing_sums_manifest_rejects_asset(self, config, home, monkeypatch):
         monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
-        payload = _releases_json(asset_names=["yt-dlp"])
+        payload = _releases_json(asset_names=[_LINUX_ASSET])
         monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", _fake_urlopen_json(payload))
         updater = YtdlpUpdater(config)
         version, url = updater.latest_version_and_asset()
@@ -313,7 +374,7 @@ class TestDownloadAndInstall:
     def _fake_body(self, monkeypatch, data: bytes):
         import hashlib
 
-        manifest = f"{hashlib.sha256(data).hexdigest()}  yt-dlp\n".encode()
+        manifest = f"{hashlib.sha256(data).hexdigest()}  {_LINUX_ASSET}\n".encode()
 
         def _open(request, timeout=None):  # noqa: ARG001
             if request.full_url.endswith("/SHA2-256SUMS"):
@@ -326,10 +387,7 @@ class TestDownloadAndInstall:
         monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
         self._fake_body(monkeypatch, b"x" * (2 * 1024 * 1024))
         updater = YtdlpUpdater(config)
-        dest = updater._download_and_install(
-            "https://github.com/yt-dlp/yt-dlp/releases/download/2024.03.10/yt-dlp",
-            "2024.03.10",
-        )
+        dest = updater._download_and_install(_asset_url(), "2024.03.10")
         assert dest.exists()
         assert dest.read_bytes() == b"x" * (2 * 1024 * 1024)
         assert os.access(dest, os.X_OK)
@@ -340,14 +398,76 @@ class TestDownloadAndInstall:
         monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
         self._fake_body(monkeypatch, b"tiny")
         updater = YtdlpUpdater(config)
-        with pytest.raises(ValueError):
-            updater._download_and_install(
-                "https://github.com/yt-dlp/yt-dlp/releases/download/2024.03.10/yt-dlp",
-                "2024.03.10",
-            )
+        # match= is load-bearing: _download_and_install raises ValueError for a
+        # refused URL shape and for a manifest miss too, so a bare raises() would
+        # keep passing on those and silently stop testing the size floor.
+        with pytest.raises(ValueError, match="implausibly small"):
+            updater._download_and_install(_asset_url(), "2024.03.10")
         # Partial/garbage cleaned up; nothing installed.
         assert not (updater.download_dir() / "yt-dlp").exists()
         assert list(updater.download_dir().glob("*.tmp")) == []
+
+    @pytest.mark.parametrize(
+        "final_url",
+        [
+            "https://evil.example.com/yt-dlp",
+            "https://raw.githubusercontent.com/o/r/main/yt-dlp",
+            "http://github.com/yt-dlp/yt-dlp/releases/download/2024.03.10/yt-dlp_linux",
+        ],
+    )
+    def test_off_allowlist_redirect_refused(self, config, home, monkeypatch, final_url):
+        """A redirect landing off the allowlist must refuse before anything installs.
+
+        This branch had no coverage at all: every fake response defaulted to an
+        allowlisted host, so the reject path was never executed and the retired-CDN
+        regression shipped green.
+        """
+        data = b"x" * (2 * 1024 * 1024)
+
+        def _open(request, timeout=None):  # noqa: ARG001
+            return _FakeResponse(data, final_url=final_url)
+
+        monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
+        monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", _open)
+        updater = YtdlpUpdater(config)
+        with pytest.raises(ValueError, match="off-allowlist URL"):
+            updater._download_and_install(_asset_url(), "2024.03.10")
+        # Nothing promoted, nothing staged, nothing left behind.
+        assert not (updater.download_dir() / "yt-dlp").exists()
+        assert not (updater.download_dir() / "yt-dlp.verified").exists()
+        assert list(updater.download_dir().glob("*.tmp")) == []
+
+    def test_off_allowlist_redirect_surfaces_as_failed_result(self, config, home, monkeypatch):
+        """check_and_update must report the refusal, not raise (never-raises contract)."""
+
+        def _open(request, timeout=None):  # noqa: ARG001
+            return _FakeResponse(b"x" * (2 * 1024 * 1024), final_url="https://evil.example.com/yt-dlp")
+
+        monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
+        monkeypatch.setattr(YtdlpUpdater, "local_version", lambda self: "2024.01.01")
+        monkeypatch.setattr(
+            YtdlpUpdater,
+            "latest_version_and_asset",
+            lambda self: ("2024.03.10", _asset_url()),
+        )
+        monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", _open)
+        result = YtdlpUpdater(config).check_and_update(force=True)
+        assert result.action == "failed"
+        assert "off-allowlist URL" in result.message
+
+    def test_zipapp_asset_url_refused(self, config, home, monkeypatch):
+        """A URL naming the bare "yt-dlp" zipapp must not install on Linux.
+
+        Guards the _ASSET_BY_PLATFORM pin from the other direction: even a
+        correctly-shaped github.com release URL is refused when it names an asset
+        this platform does not expect.
+        """
+        monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
+        self._fake_body(monkeypatch, b"x" * (2 * 1024 * 1024))
+        updater = YtdlpUpdater(config)
+        with pytest.raises(ValueError, match="non-release or mismatched"):
+            updater._download_and_install(_asset_url("yt-dlp"), "2024.03.10")
+        assert not (updater.download_dir() / "yt-dlp").exists()
 
     def test_partial_download_cleanup_on_error(self, config, home, monkeypatch):
         monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
@@ -363,15 +483,12 @@ class TestDownloadAndInstall:
                 raise OSError("connection reset")
 
             def geturl(self):
-                return "https://objects.githubusercontent.com/yt-dlp-release-asset"
+                return _REDIRECT_HOST_URL
 
         monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", lambda *a, **k: _Broken())
         updater = YtdlpUpdater(config)
         with pytest.raises(OSError):
-            updater._download_and_install(
-                "https://github.com/yt-dlp/yt-dlp/releases/download/2024.03.10/yt-dlp",
-                "2024.03.10",
-            )
+            updater._download_and_install(_asset_url(), "2024.03.10")
         assert list(updater.download_dir().glob("*.tmp")) == []
 
     def test_cancel_mid_download_cleans_up(self, config, home, monkeypatch):
@@ -379,9 +496,6 @@ class TestDownloadAndInstall:
         self._fake_body(monkeypatch, b"x" * (2 * 1024 * 1024))
         updater = YtdlpUpdater(config, cancel=lambda: True)
         with pytest.raises(RuntimeError):
-            updater._download_and_install(
-                "https://github.com/yt-dlp/yt-dlp/releases/download/2024.03.10/yt-dlp",
-                "2024.03.10",
-            )
+            updater._download_and_install(_asset_url(), "2024.03.10")
         assert not (updater.download_dir() / "yt-dlp").exists()
         assert list(updater.download_dir().glob("*.tmp")) == []

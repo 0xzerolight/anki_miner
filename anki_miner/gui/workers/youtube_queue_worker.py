@@ -58,7 +58,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.exceptions.youtube import YouTubeFetchError
+from anki_miner.exceptions.youtube import NoJapaneseSubtitlesError, YouTubeFetchError
 from anki_miner.gui.workers._queue_progress import (
     QueueMiningProgressAdapter as _QueueMiningProgressAdapter,
 )
@@ -138,6 +138,17 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
                 result = self._mine_one(idx, item, workspace)
                 last_error = None
                 break
+            except NoJapaneseSubtitlesError as exc:
+                # MUST precede the YouTubeFetchError clause below (except clauses
+                # match in order, and this is a subclass of it). yt-dlp writes
+                # subtitles before the video, so by the time this fires the whole
+                # video has already downloaded for nothing. The outcome is
+                # deterministic, so retrying just pays for a second full download and
+                # fails identically.
+                if self.is_cancelled:
+                    return True
+                last_error = f"{type(exc).__name__}: {exc}"
+                break
             except YouTubeFetchError as exc:
                 if self.is_cancelled:
                     # Mid-fetch cancellation: don't retry, don't emit
@@ -212,6 +223,11 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
             curation_callback=self._curation_callback,
             on_fetched=self._capture_curation_media,
             source_label=item.video_info.title,
+            # The probe already certified whether this video has NATIVE Japanese
+            # auto-captions. Passing it lets the fetch fall back to them when a
+            # listed manual track turns out to be unavailable, without ever falling
+            # back to a machine translation.
+            fallback_allowed=item.video_info.has_auto_ja_subs,
         )
 
     def _capture_curation_media(self, fetched: FetchedMedia) -> None:

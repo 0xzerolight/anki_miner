@@ -140,10 +140,18 @@ class TestYouTubeConfig:
         config = AnkiMinerConfig(ytdlp_location=temp_dir / "yt-dlp")
         assert config.ytdlp_location == temp_dir / "yt-dlp"
 
-    def test_auto_update_ytdlp_defaults_false(self):
-        """auto_update_ytdlp is opt-in so startup downloads nothing by default."""
+    def test_auto_update_ytdlp_defaults_true(self):
+        """Fresh installs keep yt-dlp current; existing configs are unaffected.
+
+        yt-dlp breaks whenever YouTube changes something and a bundled binary is
+        pinned at build time, so default-OFF meant a fresh install slowly stopped
+        working with no visible cause. The flip reaches only installs with no config
+        file: this field predates CONFIG_SCHEMA_VERSION 3 and every field is
+        serialized on save, so any existing file carries an explicit value that a
+        load preserves (see the note on GUIConfigManager.CONFIG_SCHEMA_VERSION).
+        """
         config = AnkiMinerConfig()
-        assert config.auto_update_ytdlp is False
+        assert config.auto_update_ytdlp is True
 
 
 def test_dictionary_chain_default():

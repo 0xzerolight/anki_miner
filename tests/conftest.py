@@ -688,3 +688,30 @@ def sample_subtitle_file(temp_dir, sample_subtitle_content):
     subtitle_file = temp_dir / "test.ass"
     subtitle_file.write_text(sample_subtitle_content, encoding="utf-8")
     return subtitle_file
+
+
+@pytest.fixture
+def no_sibling_ytdlp(tmp_path, monkeypatch):
+    """Neutralize the resolver's interpreter-sibling yt-dlp tier.
+
+    ``yt-dlp`` is a hard runtime dependency, so ``pip install -e .`` drops its
+    console script right next to ``sys.executable`` — ``.venv/bin/yt-dlp`` exists
+    on every developer machine and in CI. ``ytdlp_resolver`` has a tier for exactly
+    that (it is how ``pipx`` installs are found), which means any test asserting the
+    bare-literal fallback silently starts asserting an absolute venv path instead.
+
+    Patching ``shutil.which`` is not enough — this tier never consults PATH. Request
+    this fixture in any test that expects ``resolve_ytdlp`` to fall through to
+    ``"yt-dlp"``, and in any test pinning the fail-closed raise.
+
+    Deliberately NOT autouse: ``sys.executable`` is load-bearing elsewhere
+    (``shortcut_service``, the ASR engine), so this stays opt-in.
+    """
+    from anki_miner.utils import ytdlp_resolver
+
+    empty_bin = tmp_path / "no-ytdlp-here"
+    empty_bin.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(ytdlp_resolver.sys, "executable", str(empty_bin / "python"))
+    ytdlp_resolver._clear_cache()
+    yield empty_bin
+    ytdlp_resolver._clear_cache()

@@ -136,6 +136,12 @@ class ValidationResult:
     note_type_exists: bool
     issues: list[ValidationIssue] = field(default_factory=list)
     ffprobe_ok: bool = True
+    #: Per-tool success text ("<version> [tier]") for tools that passed, keyed by
+    #: tool name. ``issues`` carries only failures, so without this the version and
+    #: resolution tier a check already computed were thrown away — and a UI wanting
+    #: to show them had to re-run a `--version` subprocess, on the GUI thread.
+    #: Defaulted so existing constructions keep working.
+    tool_versions: dict[str, str] = field(default_factory=dict)
 
     @property
     def all_passed(self) -> bool:

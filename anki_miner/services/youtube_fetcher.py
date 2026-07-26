@@ -22,6 +22,7 @@ from anki_miner.exceptions.youtube import (
     BotDetectionError,
     CookieDatabaseLockedError,
     FfmpegNotFoundError,
+    NoJapaneseSubtitlesError,
     VideoTooLongError,
     YouTubeFetchError,
     YtdlpNotFoundError,
@@ -390,25 +391,60 @@ class YouTubeFetcherService:
 
     @staticmethod
     def _has_native_auto_ja(data: dict) -> bool:
-        """Detect native Japanese auto-captions, ignoring translated-from-X.
+        """Detect native Japanese auto-captions, ignoring auto-translated ones.
 
-        The mere presence of ``automatic_captions.ja`` does NOT mean the video
-        is actually Japanese: yt-dlp lists auto-translated tracks (e.g. Japanese
-        auto-translated from English) under the same key. So this also checks
-        the top-level ``language`` field and each track's ``name`` for
-        'translated' / 'from X' markers, and treats those as non-native.
+        The mere presence of ``automatic_captions.ja`` does NOT mean the video is
+        Japanese: yt-dlp lists auto-*translated* tracks under the same key. Getting
+        this wrong is user-visible in both directions — a false positive mines
+        machine-translated Japanese, a false negative rejects a perfectly good video
+        with "No Japanese subtitles available for this video."
+
+        The reliable signal is the ``<lang>-orig`` key, not the ``language`` field:
+
+        - yt-dlp registers ``automatic_captions["<code>-orig"]`` only for the ASR
+          track's *own* language (``_video.py``: the ``lang_code == f"a-{code}"``
+          branch, and the ``isTranslatable`` branch), and both of those branches call
+          ``set_audio_lang_from_orig_subs_lang`` — the very function that derives the
+          top-level ``language``.
+        - ``language`` is therefore a *derivative*, and one that
+          ``info_dict.update(best_format)`` later overwrites from the selected audio
+          format. On a video with dubbed audio tracks it can name the dub, not the
+          original, which is how genuinely Japanese videos got rejected.
+
+        Verified against live YouTube: a Japanese video exposes both ``ja`` and
+        ``ja-orig``; an English video exposes ``ja`` (machine-translated) plus
+        ``en-orig`` and no ``ja-orig``.
+
+        Three steps, in order:
+
+        1. ``ja-orig`` present -> native.
+        2. Some *other* ``<lang>-orig`` present -> not native. The ``-orig`` machinery
+           ran and named a non-Japanese original, so the bare ``ja`` here is a
+           translation.
+        3. No ``*-orig`` key at all -> fall back to the ``language`` check. ``-orig``
+           registration is conditional (it needs a non-empty ``translationLanguages``,
+           which only web/mweb player responses carry, or an ``isTranslatable``
+           track), so its absence proves nothing. Rejecting here would newly break
+           genuinely native videos.
+
+        The old per-track ``"from "`` / ``"translated"`` name check is deliberately
+        gone: yt-dlp appends that marker only under ``if is_manual_subs``, so an
+        auto-translated track is named plainly "Japanese" and the check was dead code
+        for this dict. It still works for *manual* subs, which is why the manual
+        branch in :meth:`probe_metadata` keeps it.
         """
         auto = data.get("automatic_captions") or {}
-        if "ja" not in auto or not auto["ja"]:
+        if not auto.get("ja"):
             return False
+
+        if auto.get("ja-orig"):
+            return True
+
+        if any(key.endswith("-orig") and value for key, value in auto.items()):
+            return False
+
         lang = (data.get("language") or "").lower()
-        if lang and lang != "ja":
-            return False
-        for track in auto["ja"]:
-            name = (track.get("name") or "").lower()
-            if "from " in name or "translated" in name:
-                return False
-        return True
+        return not lang or lang == "ja"
 
     # ------------------------------------------------------------------
     # fetch_video
@@ -422,20 +458,30 @@ class YouTubeFetcherService:
         sub_mode: SubMode,
         progress_cb: Callable[[str, float | None], None] | None = None,
         cancel_event: threading.Event | None = None,
+        *,
+        fallback_allowed: bool = False,
     ) -> FetchedMedia:
         """Download the video + Japanese subtitles into *workspace*.
+
+        Args:
+            fallback_allowed: When *sub_mode* is ``"manual_only"``, also accept
+                native auto-captions if the manual track turns out to be
+                unavailable at download time. Callers pass the probe's
+                ``has_auto_ja_subs`` so the fallback can only reach a track already
+                certified native — never a machine translation.
 
         Raises:
             FfmpegNotFoundError: ffmpeg preflight failed.
             BotDetectionError / CookieDatabaseLockedError: well-known yt-dlp
                 failure modes detected in the tail of stderr.
+            NoJapaneseSubtitlesError: yt-dlp succeeded but wrote no subtitle.
             YouTubeFetchError: any other non-zero exit, cancellation, or
                 missing/zero-byte output file.
         """
         logger.info("youtube fetch starting: id=%s workspace=%s", video_id, workspace)
         self._preflight_ffmpeg()
 
-        cmd = self._build_fetch_cmd(url, workspace, sub_mode)
+        cmd = self._build_fetch_cmd(url, workspace, sub_mode, fallback_allowed=fallback_allowed)
 
         tail: collections.deque[str] = collections.deque(maxlen=50)
         postprocessing_seen = False
@@ -532,7 +578,14 @@ class YouTubeFetcherService:
                 "ffmpeg not found on PATH. Install ffmpeg or set the 'youtube_ffmpeg_location' config option."
             )
 
-    def _build_fetch_cmd(self, url: str, workspace: Path, sub_mode: SubMode) -> list[str]:
+    def _build_fetch_cmd(
+        self,
+        url: str,
+        workspace: Path,
+        sub_mode: SubMode,
+        *,
+        fallback_allowed: bool = False,
+    ) -> list[str]:
         max_height = YOUTUBE_MAX_HEIGHT
         # Route the workspace directory through --paths (a literal path) and keep
         # -o a bare, relative template. Embedding the (user-configurable) temp
@@ -543,8 +596,23 @@ class YouTubeFetcherService:
         fmt = f"bestvideo[height<={max_height}]+bestaudio/best[height<={max_height}]"
 
         cmd: list[str] = [self._ytdlp()]
+        # yt-dlp already implements manual-preferred-with-auto-fallback: in
+        # process_subtitles, manual subs load first and automatic_captions only fill
+        # languages not already present, so passing both flags writes exactly one
+        # file and prefers the manual track. No second invocation needed.
+        #
+        # The auto flag is gated on fallback_allowed rather than passed
+        # unconditionally, because for a non-Japanese-audio video
+        # automatic_captions["ja"] is a MACHINE TRANSLATION (yt-dlp requests it with
+        # {'tlang': ...}). Ungated, a manual_only video whose manual track vanished
+        # between probe and fetch would silently mine translated Japanese — exactly
+        # the false positive _has_native_auto_ja exists to prevent. Callers pass the
+        # probe's has_auto_ja_subs, so the fallback only fires where the auto track
+        # was already certified native.
         if sub_mode == "manual_only":
             cmd.append("--write-sub")
+            if fallback_allowed:
+                cmd.append("--write-auto-sub")
         elif sub_mode == "auto_only":
             cmd.append("--write-auto-sub")
         else:  # pragma: no cover - exhaustiveness guard
@@ -668,6 +736,26 @@ class YouTubeFetcherService:
                 )
             raise CookieDatabaseLockedError(msg)
 
+        # Extractor-freshness failures. YouTube keeps rolling out DRM and SABR-only
+        # streaming experiments per client, and an older yt-dlp then finds no usable
+        # format at all. The raw stderr for this is "Requested format is not
+        # available", which reads like a bad --format string rather than "your yt-dlp
+        # is too old" — so name the actual remedy.
+        stale_extractor_markers = (
+            "requested format is not available",
+            "only images are available",
+            "drm protected",
+            "sabr",
+        )
+        if any(marker in joined_lower for marker in stale_extractor_markers):
+            raise YouTubeFetchError(
+                "YouTube served no downloadable format for this video, which usually "
+                "means yt-dlp is out of date (YouTube's DRM/SABR experiments break "
+                "older versions). Use Settings → YouTube → Update yt-dlp now, or "
+                "enable 'Keep yt-dlp up to date automatically', then retry. "
+                f"yt-dlp said: {_tail(tail, 5)}"
+            )
+
         raise YouTubeFetchError(f"yt-dlp exited non-zero: {_tail(tail, 20)}")
 
     def _resolve_outputs(self, workspace: Path, video_id: str, sub_mode: SubMode) -> FetchedMedia:
@@ -675,8 +763,16 @@ class YouTubeFetcherService:
         video_candidates: list[Path] = []
         subtitle_candidates: list[Path] = []
         for c in candidates:
-            # Subtitle after --convert-subs srt -> "<id>.ja.srt"
-            if c.name.endswith(".ja.srt"):
+            # Normally "<id>.ja.srt" (--convert-subs srt). Accept the un-converted
+            # "<id>.ja.vtt" too: --convert-subs runs as an ffmpeg postprocessor, so if
+            # it is skipped or fails the vtt is all that survives — and pysubs2 parses
+            # vtt natively, so refusing it threw away a perfectly usable subtitle and
+            # reported "expected output files are missing" instead.
+            #
+            # No "ja-orig" handling here on purpose: yt-dlp matches --sub-lang with a
+            # regex fullmatch, so "ja" can never select the "ja-orig" track and such a
+            # file can never be written.
+            if c.name.endswith(".ja.srt") or c.name.endswith(".ja.vtt"):
                 subtitle_candidates.append(c)
                 continue
             if c.suffix.lower() in _VIDEO_EXTS:
@@ -685,13 +781,28 @@ class YouTubeFetcherService:
         if len(video_candidates) > 1:
             names = sorted(p.name for p in video_candidates)
             raise YouTubeFetchError(f"Multiple video outputs found in workspace: {names}")
-        if len(subtitle_candidates) > 1:
-            names = sorted(p.name for p in subtitle_candidates)
+
+        # Prefer srt when both survive (a kept-original vtt alongside the converted
+        # srt is not an ambiguity), and only complain about a genuine tie.
+        srt_candidates = [p for p in subtitle_candidates if p.name.endswith(".srt")]
+        preferred = srt_candidates or subtitle_candidates
+        if len(preferred) > 1:
+            names = sorted(p.name for p in preferred)
             raise YouTubeFetchError(f"Multiple subtitle outputs found in workspace: {names}")
 
         video_file = video_candidates[0] if video_candidates else None
-        subtitle_file = subtitle_candidates[0] if subtitle_candidates else None
+        subtitle_file = preferred[0] if preferred else None
 
+        if video_file is not None and subtitle_file is None:
+            # yt-dlp writes subtitles before the video and reports
+            # "There are no subtitles for the requested languages" as an info line
+            # while still exiting 0, so we only learn this after paying for the whole
+            # download. Deterministic, so the queue worker must not retry it.
+            raise NoJapaneseSubtitlesError(
+                "yt-dlp downloaded the video but wrote no Japanese subtitle "
+                f"(mode={sub_mode}). The track listed at probe time was not available "
+                "at download time."
+            )
         if video_file is None or subtitle_file is None:
             raise YouTubeFetchError(
                 f"yt-dlp exited 0 but expected output files are missing (video={video_file}, subtitle={subtitle_file})"

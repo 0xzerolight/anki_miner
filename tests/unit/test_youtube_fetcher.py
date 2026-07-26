@@ -20,6 +20,7 @@ from anki_miner.exceptions.youtube import (
     BotDetectionError,
     CookieDatabaseLockedError,
     FfmpegNotFoundError,
+    NoJapaneseSubtitlesError,
     VideoTooLongError,
     YouTubeFetchError,
     YtdlpNotFoundError,
@@ -162,6 +163,27 @@ class TestProbeMetadata:
         assert info.has_auto_ja_subs is False
         assert info.is_live is False
         assert info.is_age_restricted is False
+
+    def test_manual_ja_is_not_name_filtered(self, service: YouTubeFetcherService) -> None:
+        """``subtitles["ja"]`` is always the genuine manual Japanese track.
+
+        yt-dlp files manual *translations* under ``ja-<origlang>``, not ``ja``
+        (``_video.py``: ``trans_code += f"-{lang_code}"`` alongside the
+        ``" from %s"`` name suffix). So a name filter on this branch could only ever
+        reject a track whose uploader-chosen title happens to contain "from" — which
+        is why the manual branch deliberately does not filter on names.
+        """
+        payload = _make_metadata(subtitles={"ja": [{"ext": "vtt", "name": "Japanese (from the manga)"}]})
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_metadata("https://youtu.be/abc123")
+        assert info.has_manual_ja_subs is True
+
+    def test_manual_translation_key_is_not_mistaken_for_native(self, service: YouTubeFetcherService) -> None:
+        """A ``ja-en`` manual translation must not register as manual Japanese."""
+        payload = _make_metadata(subtitles={"ja-en": [{"ext": "vtt", "name": "Japanese from English"}]})
+        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+            info = service.probe_metadata("https://youtu.be/abc123")
+        assert info.has_manual_ja_subs is False
 
     def test_happy_path_native_auto_only(self, service: YouTubeFetcherService) -> None:
         payload = _make_metadata(
@@ -347,13 +369,6 @@ class TestHasNativeAutoJa:
         }
         assert self._call(data) is False
 
-    def test_translated_track_name(self) -> None:
-        data = {
-            "automatic_captions": {"ja": [{"name": "Japanese (from English)"}]},
-            "language": "ja",
-        }
-        assert self._call(data) is False
-
     def test_native_ja_track(self) -> None:
         data = {
             "automatic_captions": {"ja": [{"name": "Japanese"}]},
@@ -361,9 +376,73 @@ class TestHasNativeAutoJa:
         }
         assert self._call(data) is True
 
-    def test_language_missing_defaults_ok(self) -> None:
-        # No language key and no translated name -> treat as native.
+    # -- step 1: ja-orig is the authoritative native signal -----------------
+
+    def test_ja_orig_accepted_even_when_language_names_a_dub(self) -> None:
+        """The reported false negative.
+
+        ``language`` is derived from the *selected audio format*
+        (``info_dict.update(best_format)``), so on a Japanese video carrying dubbed
+        audio tracks it can name the dub. Keying on it rejected genuinely native
+        Japanese videos with "No Japanese subtitles available for this video."
+        ``ja-orig`` is registered only for the ASR track's own language, so it
+        survives that.
+        """
+        data = {
+            "automatic_captions": {
+                "ja": [{"name": "Japanese"}],
+                "ja-orig": [{"name": "Japanese (Original)"}],
+            },
+            "language": "en",
+        }
+        assert self._call(data) is True
+
+    # -- step 2: another <lang>-orig proves the original is not Japanese ----
+
+    def test_other_orig_key_rejects_translated_ja(self) -> None:
+        """The false positive that used to slip through when ``language`` was absent.
+
+        Verified live against an English video: it exposes ``ja`` (machine
+        translated, named plainly "Japanese") plus ``en-orig``, and no ``ja-orig``.
+        """
+        data = {
+            "automatic_captions": {
+                "ja": [{"name": "Japanese"}],
+                "en-orig": [{"name": "English (Original)"}],
+            },
+        }
+        assert self._call(data) is False
+
+    # -- step 3: no *-orig at all -> fall back to the language check --------
+
+    def test_language_missing_and_no_orig_keys_defaults_ok(self) -> None:
+        """Absence of ``*-orig`` proves nothing, so keep the old behavior here.
+
+        ``-orig`` registration is conditional: it needs a non-empty
+        ``translationLanguages`` (only web/mweb player responses carry it) or an
+        ``isTranslatable`` track. Rejecting on a bare ``ja`` with no ``language``
+        would newly break genuinely native videos — the exact symptom being fixed.
+        """
         data = {"automatic_captions": {"ja": [{"name": "Japanese"}]}}
+        assert self._call(data) is True
+
+    def test_empty_orig_value_does_not_count_as_a_signal(self) -> None:
+        data = {"automatic_captions": {"ja": [{"name": "Japanese"}], "en-orig": []}}
+        assert self._call(data) is True
+
+    def test_auto_translated_track_name_is_not_a_signal(self) -> None:
+        """Pins that the auto branch does NOT filter on track names.
+
+        yt-dlp appends the " from <lang>" suffix only under ``if is_manual_subs``
+        (``_video.py``), so an auto-translated track is named plainly "Japanese" and a
+        name check here was dead code. This input is not something yt-dlp can
+        actually emit for ``automatic_captions``; the assertion exists so the check is
+        not "restored" on the strength of a plausible-looking name.
+        """
+        data = {
+            "automatic_captions": {"ja": [{"name": "Japanese (from English)"}]},
+            "language": "ja",
+        }
         assert self._call(data) is True
 
 
@@ -416,9 +495,43 @@ class TestFetchVideoCommand:
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
         cmd = captured["cmd"]
         assert "--write-sub" in cmd
+        # No fallback_allowed -> the auto flag stays off, so a non-native auto
+        # track can never be substituted for the requested manual one.
         assert "--write-auto-sub" not in cmd
         assert "--sub-lang" in cmd and cmd[cmd.index("--sub-lang") + 1] == "ja"
         assert "--convert-subs" in cmd and cmd[cmd.index("--convert-subs") + 1] == "srt"
+
+    def test_manual_only_with_fallback_allowed_adds_both_flags(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        """Both flags = yt-dlp's own manual-preferred fallback.
+
+        ``process_subtitles`` loads manual subs first and fills only the languages
+        they do not cover from ``automatic_captions``, so both flags together write
+        exactly one file and prefer the manual track. That is the whole fallback
+        mechanism — no second yt-dlp invocation is needed.
+        """
+        _make_happy_outputs(tmp_path)
+        captured: dict[str, Any] = {}
+
+        def fake_popen(cmd: list[str], **kwargs: Any) -> _FakePopen:
+            captured["cmd"] = cmd
+            return _FakePopen(lines=[], returncode=0)
+
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", side_effect=fake_popen),
+        ):
+            service.fetch_video(
+                "https://youtu.be/abc123",
+                "abc123",
+                tmp_path,
+                "manual_only",
+                fallback_allowed=True,
+            )
+        cmd = captured["cmd"]
+        assert "--write-sub" in cmd
+        assert "--write-auto-sub" in cmd
 
     def test_auto_only_adds_write_auto_sub(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         _make_happy_outputs(tmp_path)
@@ -433,6 +546,30 @@ class TestFetchVideoCommand:
             patch("subprocess.Popen", side_effect=fake_popen),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "auto_only")
+        cmd = captured["cmd"]
+        assert "--write-auto-sub" in cmd
+        assert "--write-sub" not in cmd
+
+    def test_auto_only_ignores_fallback_allowed(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        """There is nothing to fall back *from* when auto is already the request."""
+        _make_happy_outputs(tmp_path)
+        captured: dict[str, Any] = {}
+
+        def fake_popen(cmd: list[str], **kwargs: Any) -> _FakePopen:
+            captured["cmd"] = cmd
+            return _FakePopen(lines=[], returncode=0)
+
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", side_effect=fake_popen),
+        ):
+            service.fetch_video(
+                "https://youtu.be/abc123",
+                "abc123",
+                tmp_path,
+                "auto_only",
+                fallback_allowed=True,
+            )
         cmd = captured["cmd"]
         assert "--write-auto-sub" in cmd
         assert "--write-sub" not in cmd
@@ -781,6 +918,43 @@ class TestFetchVideoProgress:
         assert len(merging_calls) == 1
 
 
+class TestStaleExtractorMapping:
+    """Format-unavailable stderr must point at yt-dlp freshness, not at --format.
+
+    YouTube keeps rolling out DRM and SABR-only experiments per client; an older
+    yt-dlp then finds no usable format and says "Requested format is not available",
+    which reads like a bad format selector rather than "your yt-dlp is too old".
+    """
+
+    @pytest.mark.parametrize(
+        "stderr_line",
+        [
+            "ERROR: [youtube] abc123: Requested format is not available. Use --list-formats",
+            "WARNING: Only images are available for download. use --list-formats to see them",
+            "WARNING: This video is drm protected and only images are available for download",
+            "WARNING: Some android client https formats have been skipped (SABR-only experiment)",
+        ],
+    )
+    def test_maps_to_an_actionable_message(
+        self, service: YouTubeFetcherService, tmp_path: Path, stderr_line: str
+    ) -> None:
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen([stderr_line], returncode=1)),
+            pytest.raises(YouTubeFetchError, match="Update yt-dlp now"),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+    def test_unrelated_failure_keeps_the_generic_message(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        """Do not blame yt-dlp's age for every non-zero exit."""
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen(["ERROR: Video unavailable"], returncode=1)),
+            pytest.raises(YouTubeFetchError, match="exited non-zero"),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+
 class TestFetchVideoErrors:
     def test_bot_detection(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         lines = ["ERROR: Sign in to confirm you're not a bot"]
@@ -834,6 +1008,62 @@ class TestFetchVideoErrors:
             pytest.raises(YouTubeFetchError, match="zero-byte subtitle"),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+    def test_video_without_subtitle_raises_no_japanese_subtitles(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        """The video landed but no subtitle did — a deterministic failure.
+
+        yt-dlp reports "There are no subtitles for the requested languages" as an
+        info line and exits 0. It writes subtitles before the video, so by this point
+        the whole video has already downloaded. The dedicated subclass is what stops
+        the queue worker from retrying and paying for a second download.
+        """
+        _touch(tmp_path / "abc123.mp4", b"fake-mp4")
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
+            pytest.raises(NoJapaneseSubtitlesError, match="wrote no Japanese subtitle"),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+    def test_no_japanese_subtitles_error_is_a_youtube_fetch_error(self) -> None:
+        """Subclass, not sibling.
+
+        ``YouTubeFetchError`` is the documented catch-all for ``fetch_video`` and
+        ``process_youtube_url``; a sibling (the ``FfmpegNotFoundError`` shape) would
+        leak past every caller relying on it.
+        """
+        assert issubclass(NoJapaneseSubtitlesError, YouTubeFetchError)
+
+    def test_vtt_subtitle_accepted_when_conversion_did_not_run(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        """``--convert-subs srt`` is an ffmpeg postprocessor and can be skipped.
+
+        pysubs2 parses vtt natively, so refusing the surviving vtt threw away a
+        usable subtitle and reported "expected output files are missing" instead.
+        """
+        _touch(tmp_path / "abc123.mp4", b"fake-mp4")
+        _touch(tmp_path / "abc123.ja.vtt", b"WEBVTT\n\n00:01.000 --> 00:02.000\nhello\n")
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
+        ):
+            result = service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+        assert result.subtitle_file.name == "abc123.ja.vtt"
+
+    def test_srt_preferred_when_both_srt_and_vtt_survive(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        """A kept original alongside the converted file is not an ambiguity."""
+        _touch(tmp_path / "abc123.mp4", b"fake-mp4")
+        _touch(tmp_path / "abc123.ja.vtt", b"WEBVTT\n")
+        _touch(tmp_path / "abc123.ja.srt", b"1\n00:00:01,000 --> 00:00:02,000\nhello\n")
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
+        ):
+            result = service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+        assert result.subtitle_file.name == "abc123.ja.srt"
 
 
 def test_ytdlp_hang_killed_by_deadline(service: YouTubeFetcherService, tmp_path: Path) -> None:
@@ -1817,10 +2047,15 @@ class TestNoWindowSpawn:
 class TestYtdlpResolverIntegration:
     """The fetcher resolves the yt-dlp binary via ytdlp_resolver."""
 
-    def test_default_command_uses_bare_literal(self, service: YouTubeFetcherService) -> None:
-        """With no yt-dlp on PATH and no managed/override binary, cmd[0] falls
-        through to the bare literal 'yt-dlp' (048: prefer-PATH means a real PATH
-        hit would otherwise resolve to its absolute path)."""
+    def test_default_command_uses_bare_literal(self, service: YouTubeFetcherService, no_sibling_ytdlp) -> None:
+        """With nothing resolvable, cmd[0] falls through to the bare literal 'yt-dlp'.
+
+        Patching ``shutil.which`` alone is not enough: yt-dlp is a hard runtime
+        dependency, so its console script sits next to ``sys.executable`` and the
+        resolver's interpreter-sibling tier finds ``.venv/bin/yt-dlp`` on every
+        developer machine and in CI. ``no_sibling_ytdlp`` (tests/conftest.py) points
+        ``sys.executable`` at an empty directory so this really tests the fallback.
+        """
         payload = _make_metadata()
         with (
             patch("anki_miner.utils.ytdlp_resolver.shutil.which", return_value=None),
