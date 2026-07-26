@@ -170,6 +170,12 @@ class GUIConfigManager:
         JSON, non-object root, absent key, or a value that is not a non-empty
         string) yields ``None``, i.e. "no active profile".
         """
+        if not cls.CONFIG_FILE.exists():
+            # Checked here rather than left to the bounded reader, which logs a
+            # WARNING for a file it cannot open: a fresh install has no config
+            # yet, and "no active profile" is the normal answer, not a fault.
+            # load_config_with_provenance guards the same way.
+            return None
         raw = read_json_bounded(cls.CONFIG_FILE, _CONFIG_MAX_BYTES, _INVALID_CONFIG, "config")
         if raw is _INVALID_CONFIG or not isinstance(raw, dict):
             return None

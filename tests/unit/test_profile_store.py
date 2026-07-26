@@ -254,6 +254,21 @@ class TestProfileIdTraversal:
 
         assert live.is_file()
 
+    @pytest.mark.parametrize("profile_id", [".hidden", ".", ".anime-2"])
+    def test_a_leading_dot_id_is_rejected_rather_than_written_and_then_hidden(self, profile_id: str):
+        """create/list must not disagree about what exists.
+
+        ``scan_profiles`` skips dot-prefixed entries (they are
+        ``atomic_write_path``'s staging siblings), so a dot id accepted here
+        would write a real profile no listing ever reports: invisible in the
+        manager, unreachable from the header, and permanently holding its name.
+        """
+        with pytest.raises(ValueError):
+            ProfileStore.write_profile(profile_id, create_default_config(), name="Hidden")
+
+        assert ProfileStore.list_profiles() == ()
+        assert not (ProfileStore.profiles_dir() / f"{profile_id}.json").exists()
+
 
 class TestRoundTrip:
     def test_write_then_read_returns_an_equal_config(self):

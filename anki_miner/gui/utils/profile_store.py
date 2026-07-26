@@ -309,13 +309,20 @@ class ProfileStore:
         load the live config as a profile, ``write_profile`` stamp a
         ``profile_name`` into it, and ``delete`` unlink the user's settings.
 
+        A leading dot is rejected for a second reason: :meth:`scan_profiles`
+        skips dot-prefixed entries (they are ``atomic_write_path``'s staging
+        siblings), so allowing one here would let ``create`` mint a profile that
+        never appears in any listing — invisible in the manager, unreachable
+        from the header, and blocking its own name forever.
+
         Raises:
-            ValueError: If ``profile_id`` is empty, contains a path separator
-                or ``..``, or does not resolve to a bare filename.
+            ValueError: If ``profile_id`` is empty, starts with a dot, contains
+                a path separator or ``..``, or does not resolve to a bare
+                filename.
         """
         if not profile_id:
             raise ValueError("Profile id must not be empty")
-        if ".." in profile_id or any(sep in profile_id for sep in _ID_SEPARATORS):
+        if profile_id.startswith(".") or ".." in profile_id or any(sep in profile_id for sep in _ID_SEPARATORS):
             raise ValueError(f"Invalid profile id: {profile_id!r}")
         filename = f"{profile_id}.json"
         if PurePosixPath(filename).name != filename or PureWindowsPath(filename).name != filename:

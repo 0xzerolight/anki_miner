@@ -769,6 +769,20 @@ class TestActiveProfileIdMarker:
         assert not tmp_config.exists()
         assert GUIConfigManager.read_active_profile_id() is None
 
+    def test_a_missing_config_is_read_silently(self, tmp_config: Path, caplog):
+        """A fresh install has no config yet; that is not a fault to warn about.
+
+        Without the exists() guard the bounded reader logs a WARNING for the
+        file it cannot open, on every first boot, from a step whose whole answer
+        is the perfectly ordinary "no active profile".
+        """
+        assert not tmp_config.exists()
+
+        with caplog.at_level("WARNING"):
+            assert GUIConfigManager.read_active_profile_id() is None
+
+        assert caplog.records == []
+
     @pytest.mark.parametrize(
         "raw",
         [
