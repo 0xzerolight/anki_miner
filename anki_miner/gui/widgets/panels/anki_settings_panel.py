@@ -533,13 +533,16 @@ class AnkiSettingsPanel(FormPanel):
         self.add_field(label_text, container, helper=helper_text)
 
     def _on_deck_sync(self) -> None:
-        """Handle deck sync button click."""
-        self.set_deck_status(None, self.tr("Syncing deck list..."))
+        """Handle deck refresh button click.
+
+        Writes no status: ``AnkiProbeController.refresh_name_lists`` is the
+        single owner of both status lines and sets them on entry. Writing here
+        too would set the same message twice per click.
+        """
         self.deck_sync_requested.emit()
 
     def _on_notetype_sync(self) -> None:
-        """Handle note type sync button click."""
-        self.set_notetype_status(None, self.tr("Syncing note type list..."))
+        """Handle note type refresh button click (status owned by the refresh)."""
         self.notetype_sync_requested.emit()
 
     def _on_test_connection(self) -> None:

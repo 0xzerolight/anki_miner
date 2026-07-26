@@ -1,8 +1,9 @@
 """Tests for app.py wiring SettingsTab validation requests to MainWindow (T-53).
 
 Regression for the dead Anki panel: ``SettingsTab.validation_requested`` (fed by
-Test Connection + both sync buttons) was connected to nothing, so those buttons
-did nothing and the connection badge never updated. The production wiring that
+Test Connection) was connected to nothing, so the button did nothing and the
+connection badge never updated. The two deck/note-type refresh buttons used to
+feed it too; they now drive ``AnkiProbeController.refresh_name_lists`` instead. The production wiring that
 fixes this lives in ``anki_miner.gui.app._connect_settings_validation``; these
 tests call that real helper (not a shadow of ``main()``) so the connection
 cannot silently regress.
@@ -50,12 +51,13 @@ class TestSettingsValidationWiring:
         settings_tab.anki_panel.test_connection_requested.emit()
         assert calls == [True]
 
-    def test_deck_sync_button_runs_validation(self, wired):
-        _window, settings_tab, calls = wired
-        settings_tab.anki_panel.deck_sync_requested.emit()
-        assert calls == [True]
+    def test_sync_buttons_no_longer_run_validation(self, wired):
+        """The refresh buttons reload the dropdowns; only Test Connection validates."""
+        from unittest.mock import patch  # noqa: PLC0415
 
-    def test_notetype_sync_button_runs_validation(self, wired):
         _window, settings_tab, calls = wired
-        settings_tab.anki_panel.notetype_sync_requested.emit()
-        assert calls == [True]
+        with patch.object(settings_tab._anki_probe, "refresh_name_lists") as refresh:
+            settings_tab.anki_panel.deck_sync_requested.emit()
+            settings_tab.anki_panel.notetype_sync_requested.emit()
+        assert calls == []
+        assert refresh.call_count == 2

@@ -178,6 +178,11 @@ class SettingsTab(QWidget):
         self._loading = False
         self._committing = False
         self._settings_dirty = False
+        # One-shot lazy fetch of the deck / note-type dropdown contents. At
+        # construction it would put a 15 s-timeout AnkiConnect call on the
+        # startup path for users who never open Settings; on every show it
+        # would re-hit Anki each visit. Same pattern as BackfillTab.showEvent.
+        self._names_requested = False
         self._setup_ui()
         for panel in (self.dictionary_panel, self.audio_panel, self.frequency_panel, self.pitch_panel):
             panel.set_mutation_preflight(self.commit_pending_settings_for_mutation)
@@ -372,8 +377,14 @@ class SettingsTab(QWidget):
     def _connect_signals(self) -> None:
         """Connect panel signals to tab handlers."""
         # Anki panel signals
-        self.anki_panel.deck_sync_requested.connect(self.validation_requested.emit)
-        self.anki_panel.notetype_sync_requested.connect(self.validation_requested.emit)
+        # Lambda, not `.connect(self._anki_probe.refresh_name_lists)`: connecting
+        # the bound method captures the function object at connect time, so a
+        # later patch.object(tab._anki_probe, "refresh_name_lists") does NOT
+        # intercept it — the signal still calls the real method, which starts two
+        # AnkiConnect QThreads and fails the test on the socket tripwire. Late
+        # attribute lookup through a lambda is patchable.
+        self.anki_panel.deck_sync_requested.connect(lambda: self._anki_probe.refresh_name_lists())
+        self.anki_panel.notetype_sync_requested.connect(lambda: self._anki_probe.refresh_name_lists())
         self.anki_panel.test_connection_requested.connect(self.validation_requested.emit)
         self.anki_panel.fetch_fields_requested.connect(self._anki_probe.fetch_fields)
 
@@ -615,6 +626,19 @@ class SettingsTab(QWidget):
         # Issue #99: keep hover-scroll from mutating spin/combo values in the panel.
         install_no_scroll_on_inputs(widget)
         return scroll_area
+
+    def showEvent(self, a0) -> None:  # noqa: N802 - Qt override
+        """Fetch the deck / note-type lists the first time Settings is shown.
+
+        Fires whenever the tab becomes VISIBLE — including from a tab switch on
+        an already-visible window, not just an explicit ``show()``. Any test
+        that makes this tab visible must stub ``refresh_name_lists`` or it will
+        open a real AnkiConnect socket and trip the network guard.
+        """
+        super().showEvent(a0)
+        if not self._names_requested:
+            self._names_requested = True
+            self._anki_probe.refresh_name_lists()
 
     def _load_config(self) -> None:
         """Load current configuration into UI.

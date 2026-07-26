@@ -1093,3 +1093,23 @@ def test_offline_load_and_save_preserves_deck_and_note_type(tab, test_config):
     saved = tab.anki_panel.contribute(cfg)
     assert saved.anki_deck_name == "JP::Mining"
     assert saved.anki_note_type == "Lapis"
+
+
+def test_sync_buttons_refresh_the_name_lists(tab):
+    from unittest.mock import patch  # noqa: PLC0415 — module convention
+
+    with patch.object(tab._anki_probe, "refresh_name_lists") as refresh:
+        tab.anki_panel.deck_sync_requested.emit()
+        tab.anki_panel.notetype_sync_requested.emit()
+    assert refresh.call_count == 2
+
+
+def test_name_lists_are_fetched_once_on_first_show(tab):
+    """Patching is mandatory: an unpatched show() opens a real AnkiConnect socket."""
+    from unittest.mock import patch  # noqa: PLC0415 — module convention
+
+    with patch.object(tab._anki_probe, "refresh_name_lists") as refresh:
+        tab.show()
+        tab.hide()
+        tab.show()
+    assert refresh.call_count == 1
