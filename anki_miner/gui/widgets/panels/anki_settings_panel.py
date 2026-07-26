@@ -478,7 +478,7 @@ class AnkiSettingsPanel(FormPanel):
         button_callback,
         helper_text: str = "",
     ) -> None:
-        """Add a labeled input + inline sync button as a single compact form row.
+        """Add a labeled dropdown + inline refresh button as one compact form row.
 
         The input and button are wrapped in a container widget so the whole pair
         sits in one ``add_field`` row (label beside control), matching the other

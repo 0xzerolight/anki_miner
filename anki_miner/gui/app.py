@@ -493,10 +493,11 @@ def register_mining_tab(
 def _connect_settings_validation(window: MainWindow, settings_tab: SettingsTab) -> None:
     """Connect the Settings tab's validation requests to the window (T-53).
 
-    ``SettingsTab.validation_requested`` is emitted by Test Connection and the
-    deck/note-type sync buttons (the Anki panel forwards all three into it).
-    It was declared and forwarded but never connected, so those buttons did
-    nothing and the connection badge stuck at "Checking connection...". Wiring
+    ``SettingsTab.validation_requested`` is emitted by Test Connection. It was
+    declared and forwarded but never connected, so the button did nothing and
+    the connection badge stuck at "Checking connection...". (The deck/note-type
+    refresh buttons used to feed this too; they now drive
+    ``AnkiProbeController.refresh_name_lists``.) Wiring
     it to ``_run_validation`` runs a validation pass; the result flows back
     through ``_on_validation_result``, which now updates the badge.
 
@@ -903,10 +904,10 @@ def compose_main_window(
     # POST-SAVE committed object out to every tab. This prevents a scan worker's
     # stale pre-save config snapshot from regaining authority after save.
     settings_tab.config_changed.connect(lambda cfg: window.update_config(cfg))
-    # Make Test Connection + the deck/note-type sync buttons live: they all
-    # emit SettingsTab.validation_requested, which was previously connected to
-    # nothing (T-53). Routing it to _run_validation also drives the Anki
-    # connection badge via _on_validation_result.
+    # Make Test Connection live: it emits SettingsTab.validation_requested,
+    # which was previously connected to nothing (T-53). Routing it to
+    # _run_validation also drives the Anki connection badge via
+    # _on_validation_result.
     _connect_settings_validation(window, settings_tab)
     # yt-dlp manual update: the YouTube panel's "Update yt-dlp now" button →
     # forced background update. Results flow back to MainWindow (status bar /
