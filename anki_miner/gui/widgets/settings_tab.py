@@ -1194,7 +1194,7 @@ class SettingsTab(QWidget):
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close (T-12).
 
-        Chains the three AnkiConnect probe workers (T-66) with the active
+        Chains the four AnkiConnect probe workers (T-66) with the active
         import workers from all four import flows (OVH-004, 059, 060) so
         ``BackgroundTaskController._join_worker_for_close`` sees every live
         Settings-tab QThread.  ``None`` entries (idle flows) are filtered
