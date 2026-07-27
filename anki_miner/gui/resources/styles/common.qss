@@ -44,6 +44,16 @@ QLabel#caption {
     border-radius: ${border-radius-small}px;
 }
 
+/* Chain priority rows (D13): title on line one, the row's own facts below it. */
+QLabel#chain-row-title {
+    font-weight: 500;
+}
+
+QLabel#chain-row-meta,
+QLabel#chain-row-warning {
+    font-size: ${font-size-caption}px;
+}
+
 QLabel#small {
     font-size: ${font-size-small}px;
     padding: 2px 0;
@@ -1456,6 +1466,18 @@ QLabel#helper-text {
 
 QLabel#output-location-value {
     color: ${color-text-muted};
+}
+
+/* Chain priority rows (D13). Each row states its own facts on its own second
+   line, so the metadata carries the muted role and only real breakage spends
+   the warning colour. Replaces the inline `gray` / `#d97706` stylesheets the
+   four chain panels each wrote by hand, which no theme could reach. */
+QLabel#chain-row-meta {
+    color: ${color-text-muted};
+}
+
+QLabel#chain-row-warning {
+    color: ${color-warning};
 }
 
 /* --- Sakura-specific: Decorative elements --- */

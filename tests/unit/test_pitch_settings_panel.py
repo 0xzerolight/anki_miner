@@ -109,8 +109,8 @@ def test_missing_and_stale_sources_flagged(qapp, qtbot, tmp_path):
         (PitchSourceEntry("gone"), PitchSourceEntry("stale")),
         registry_meta={"stale": _make_meta("stale", schema_ok=False, version=99)},
     )
-    assert panel._row_widget(0).missing is True
-    assert panel._row_widget(1).missing is True
+    assert panel._row_widget(0).warning_text != ""
+    assert panel._row_widget(1).warning_text != ""
 
 
 def test_set_get_chain_round_trip(qapp, qtbot, tmp_path):
@@ -188,4 +188,4 @@ def test_registry_scan_discovers_disk_sources(qapp, qtbot, tmp_path):
     panel.set_chain((PitchSourceEntry("ondisk"),))  # no registry_meta → async scan
     qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=5000)
     row = panel._row_widget(0)
-    assert row is not None and row.missing is False
+    assert row is not None and row.warning_text == ""

@@ -166,7 +166,7 @@ def test_missing_source_badge_shown(qapp, qtbot, tmp_path):
     )
     row = panel._row_widget(0)
     assert row is not None
-    assert row.missing is True
+    assert row.warning_text != ""
     texts = [lbl.text() for lbl in row.findChildren(QLabel)]
     assert any("missing" in t for t in texts), texts
 
@@ -181,7 +181,7 @@ def test_schema_mismatch_renders_missing(qapp, qtbot, tmp_path):
     )
     row = panel._row_widget(0)
     assert row is not None
-    assert row.missing is True
+    assert row.warning_text != ""
 
 
 def test_present_source_no_missing_badge(qapp, qtbot, tmp_path):
@@ -194,7 +194,7 @@ def test_present_source_no_missing_badge(qapp, qtbot, tmp_path):
     )
     row = panel._row_widget(0)
     assert row is not None
-    assert row.missing is False
+    assert row.warning_text == ""
 
 
 # ---------------------------------------------------------------------------

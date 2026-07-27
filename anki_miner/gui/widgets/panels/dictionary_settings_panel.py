@@ -7,22 +7,19 @@ from pathlib import Path
 
 from PyQt6.QtCore import QPoint, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
-    QCheckBox,
     QHBoxLayout,
-    QLabel,
-    QListWidget,
     QMenu,
     QMessageBox,
-    QPushButton,
-    QVBoxLayout,
     QWidget,
 )
 
 from anki_miner.config import ChainEntry
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui.widgets.base import ScreenIssue
-from anki_miner.gui.widgets.enhanced import FileSelector
+from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton
+from anki_miner.gui.widgets.panels.chain_priority_list import ChainRowSpec, ChainSourceRow
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
+    ChainListLabels,
     ChainSettingsPanelBase,
     _ChainPanelStrings,
 )
@@ -37,66 +34,6 @@ def _robust_rmtree(target: Path) -> RmtreeOutcome:
     return robust_rmtree(target, mode="outcome")
 
 
-class _ChainRow(QWidget):
-    """One row in the chain list: checkbox + label + format badge + count."""
-
-    toggled = pyqtSignal()
-
-    def __init__(
-        self,
-        entry: ChainEntry,
-        display_name: str,
-        format_label: str,
-        count: int,
-        *,
-        stale: bool = False,
-    ):
-        super().__init__()
-        self.entry = entry
-        self.stale = stale
-        self.reimport_button: QPushButton | None = None
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(4, 2, 4, 2)
-
-        self.checkbox = QCheckBox()
-        # Text-less toggle: without an accessible name a screen reader announces
-        # only "check box", and the source it belongs to is conveyed purely by
-        # the sibling QLabel. 11 such toggles were unnamed across the 4 chain panels.
-        self.checkbox.setAccessibleName(tr_format(self.tr("Enable %1"), display_name))
-        self.checkbox.setToolTip(tr_format(self.tr("Enable or disable %1"), display_name))
-        self.checkbox.setChecked(entry.enabled)
-        self.checkbox.stateChanged.connect(lambda _s: self.toggled.emit())
-        layout.addWidget(self.checkbox)
-
-        label_text = f"⚠ {display_name}" if stale else display_name
-        name_label = QLabel(label_text)
-        layout.addWidget(name_label, 1)
-
-        if stale:
-            self.stale_label = QLabel(self.tr("<i> — re-import to refresh</i>"))
-            self.stale_label.setStyleSheet("color: gray; font-size: 10px;")
-            layout.addWidget(self.stale_label)
-
-        if format_label:
-            badge = QLabel(format_label)
-            if entry.kind == "jisho":
-                badge.setStyleSheet("color: #d97706; font-size: 10px;")
-            else:
-                badge.setStyleSheet("color: gray; font-size: 10px;")
-            layout.addWidget(badge)
-        if count:
-            count_label = QLabel(tr_format(self.tr("%1 entries"), f"{count:,}"))
-            count_label.setStyleSheet("color: gray; font-size: 10px;")
-            layout.addWidget(count_label)
-
-        if stale:
-            self.reimport_button = QPushButton(self.tr("Re-import"))
-            layout.addWidget(self.reimport_button)
-
-    def get_enabled(self) -> bool:
-        return self.checkbox.isChecked()
-
-
 class DictionarySettingsPanel(ChainSettingsPanelBase):
     """Reorderable chain of dictionary providers."""
 
@@ -108,7 +45,6 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
 
     ANCHOR_NAMESPACE = "dictionaries"
 
-    _ROW_CLASS = _ChainRow
     _SCAN_ERROR_LABEL = "Dictionary registry scan failed"
     _REMOVE_ERROR_NOUN = "dictionary folder"
 
@@ -205,11 +141,7 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         another is in flight — clobbering ``_active_import_worker`` would
         orphan the first worker.
         """
-        for i in range(self._list.count()):
-            item = self._list.item(i)
-            widget = self._list.itemWidget(item)
-            if isinstance(widget, _ChainRow) and widget.reimport_button is not None:
-                widget.reimport_button.setEnabled(enabled)
+        self._set_row_repair_enabled(enabled)
 
     def _set_mutation_controls_enabled(self, enabled: bool) -> None:
         self.dicts_root_selector.setEnabled(enabled)
@@ -217,7 +149,6 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         self._add_btn.setEnabled(enabled)
         self._reimport_btn.setEnabled(enabled)
         self._restore_btn.setEnabled(enabled)
-        self.set_per_row_reimport_enabled(enabled)
 
     def _setup_fields(self) -> None:
         # Storage folder picker — first so it sits above the dictionary chain.
@@ -236,7 +167,7 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         self.dicts_root_selector.set_path(str(self._dicts_root))
         storage_layout.addWidget(self.dicts_root_selector, 1)
 
-        self._reset_dicts_root_btn = QPushButton(self.tr("Reset to default"))
+        self._reset_dicts_root_btn = ModernButton(self.tr("Reset to default"), variant="secondary")
         self._reset_dicts_root_btn.clicked.connect(self._on_reset_dicts_root)
         # FileSelector is two rows tall (input+Browse, then status caption); top-
         # align so Reset lines up with the Browse button in the top row, not the
@@ -255,29 +186,11 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         )
 
         self.add_section(self.tr("Active Dictionaries"))
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
 
-        chain_blurb = QLabel(self.tr("Top entry fills the MainDefinition field."))
-        layout.addWidget(chain_blurb)
-
-        self._list = QListWidget()
-        self._list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
-        self._list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self._list.customContextMenuRequested.connect(self._on_row_context_menu)
-        layout.addWidget(self._list)
-
-        buttons = QHBoxLayout()
-        self._add_btn = QPushButton(self.tr("+ Add Dictionary…"))
-        self._add_btn.clicked.connect(self.add_dict_requested.emit)
-        buttons.addWidget(self._add_btn)
-
-        self._reimport_btn = QPushButton(self.tr("Reimport All"))
+        self._reimport_btn = ModernButton(self.tr("Reimport All"), variant="secondary")
         self._reimport_btn.clicked.connect(self.reimport_all_requested.emit)
-        buttons.addWidget(self._reimport_btn)
 
-        self._restore_btn = QPushButton(self.tr("Restore from Disk"))
+        self._restore_btn = ModernButton(self.tr("Restore from Disk"), variant="secondary")
         self._restore_btn.setToolTip(
             self.tr(
                 "Re-add dictionaries found in the storage folder that aren't in the "
@@ -285,25 +198,26 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
             )
         )
         self._restore_btn.clicked.connect(self.rescan_requested.emit)
-        buttons.addWidget(self._restore_btn)
 
-        self._up_btn = QPushButton("↑")
-        self._up_btn.setAccessibleName(self.tr("Move up"))
-        self._up_btn.setToolTip(self.tr("Move up in priority"))
-        self._up_btn.clicked.connect(lambda: self.move_up(self._list.currentRow()))
-        buttons.addWidget(self._up_btn)
+        container = self._build_chain_container(
+            ChainListLabels(
+                explanation=self.tr(
+                    "Dictionaries are tried top to bottom — the first one with an entry "
+                    "for a word wins, and its definition fills the MainDefinition field."
+                ),
+                add=self.tr("Add dictionary…"),
+                remove=self.tr("Remove dictionary"),
+                remove_tooltip=self.tr("Remove the selected dictionary and delete its files"),
+                move_up=self.tr("Move up"),
+                move_up_tooltip=self.tr("Move up in priority"),
+                move_down=self.tr("Move down"),
+                move_down_tooltip=self.tr("Move down in priority"),
+            ),
+            extra_actions=(self._reimport_btn, self._restore_btn),
+        )
+        self._add_btn.clicked.connect(self.add_dict_requested.emit)
+        self._list.customContextMenuRequested.connect(self._on_row_context_menu)
 
-        self._down_btn = QPushButton("↓")
-        self._down_btn.setAccessibleName(self.tr("Move down"))
-        self._down_btn.setToolTip(self.tr("Move down in priority"))
-        self._down_btn.clicked.connect(lambda: self.move_down(self._list.currentRow()))
-        buttons.addWidget(self._down_btn)
-
-        self._remove_btn = QPushButton(self.tr("Remove"))
-        self._remove_btn.clicked.connect(lambda: self.remove(self._list.currentRow()))
-        buttons.addWidget(self._remove_btn)
-
-        layout.addLayout(buttons)
         # One stable anchor for the whole chain. Row widgets are rebuilt on every
         # scan and reorder, so search must never bind to them (D13).
         self.add_field(
@@ -311,7 +225,11 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
             container,
             anchor="chain",
             anchor_focus=self._list,
-            anchor_text=lambda: (chain_blurb.text(), self._add_btn.text(), self._restore_btn.text()),
+            anchor_text=lambda: (
+                self._explanation_label.text(),
+                self._add_btn.text(),
+                self._restore_btn.text(),
+            ),
         )
 
         # Pitch accent sources now live in their own Settings → Pitch Accent
@@ -328,42 +246,57 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         self._chain = list(chain)
         self._rebuild_list()
 
-    def get_chain(self) -> tuple[ChainEntry, ...]:
-        # Sync enabled flags from row widgets
-        out: list[ChainEntry] = []
-        for i, entry in enumerate(self._chain):
-            row = self._row_widget(i)
-            enabled = row.get_enabled() if row is not None else entry.enabled
-            out.append(ChainEntry(kind=entry.kind, dict_id=entry.dict_id, enabled=enabled))
-        return tuple(out)
-
     # ------------------------------------------------------------------
     # Chain-panel hooks
     # ------------------------------------------------------------------
+
+    def _entry_with_enabled(self, entry: ChainEntry, enabled: bool) -> ChainEntry:
+        return ChainEntry(kind=entry.kind, dict_id=entry.dict_id, enabled=enabled)
 
     def _build_view(self) -> DictionaryRegistry:
         registry = DictionaryRegistry(self._dicts_root)
         registry.load()
         return registry
 
-    def _make_row(self, entry: ChainEntry, view: DictionaryRegistry | None) -> QWidget:
+    def _row_spec(self, entry: ChainEntry, view: DictionaryRegistry | None) -> ChainRowSpec:
         meta: DictMeta | None = None
+        warning = ""
+        metadata: tuple[str, ...]
         if entry.kind == "indexed":
             meta = view.get(entry.dict_id) if (view is not None and entry.dict_id) else None
             display = meta.source_name if meta else (entry.dict_id or "(missing)")
-            fmt = meta.format if meta else "missing"
-            count = meta.entry_count if meta else 0
+            if meta is not None:
+                # Zero entries is a fact about an installed dictionary; unknown
+                # metadata is the absence of one, so it stays off the row.
+                metadata = (meta.format, tr_format(self.tr("%1 entries"), f"{meta.entry_count:,}"))
+            else:
+                metadata = (self.tr("not installed"),)
+                warning = self.tr("⚠ missing — re-import")
         else:
             display = self.tr("Jisho (online fallback)")
-            fmt = self.tr("⚠ rate-limited, slower")
-            count = 0
+            metadata = (self.tr("online"),)
+            warning = self.tr("⚠ rate-limited, slower")
         stale = meta is not None and not meta.schema_ok
-        row = _ChainRow(entry, display, fmt, count, stale=stale)
-        row.toggled.connect(self._on_row_toggled)
-        if stale and row.reimport_button is not None and meta is not None:
-            dict_id = meta.dict_id
-            row.reimport_button.clicked.connect(lambda _checked=False, d=dict_id: self.reimport_dict_requested.emit(d))
-        return row
+        if stale:
+            warning = self.tr("⚠ re-import to refresh")
+        return ChainRowSpec(
+            entry=entry,
+            title=display,
+            metadata=metadata,
+            enabled_text=self.tr("Enabled"),
+            enabled_accessible_text=tr_format(self.tr("Enable %1"), display),
+            enabled_tooltip=tr_format(self.tr("Enable or disable %1"), display),
+            warning=warning,
+            repair_text=self.tr("Re-import") if stale else "",
+        )
+
+    def _connect_row_repair(self, row: ChainSourceRow) -> None:
+        if row.repair_button is None:
+            return
+        dict_id = row.entry.dict_id
+        if not dict_id:
+            return
+        row.repair_button.clicked.connect(lambda _checked=False, d=dict_id: self.reimport_dict_requested.emit(d))
 
     def _is_protected_entry(self, entry: ChainEntry) -> bool:
         return entry.kind == "jisho"  # Jisho can be disabled but not removed

@@ -209,7 +209,7 @@ def test_missing_folder_badge_shown(qapp, qtbot, tmp_path):
     )
     row = panel._row_widget(0)
     assert row is not None
-    assert row.dir_missing is True
+    assert row.warning_text != ""
     labels = row.findChildren(QLabel)
     texts = [lbl.text() for lbl in labels]
     assert any("folder missing" in t for t in texts), texts
@@ -225,7 +225,7 @@ def test_present_folder_no_missing_badge(qapp, qtbot, tmp_path):
     )
     row = panel._row_widget(0)
     assert row is not None
-    assert row.dir_missing is False
+    assert row.warning_text == ""
     labels = row.findChildren(QLabel)
     texts = [lbl.text() for lbl in labels]
     assert not any("folder missing" in t for t in texts)
@@ -753,14 +753,17 @@ def test_checkbox_reflected_in_get_chain(qapp, qtbot, tmp_path):
 
 
 def test_add_button_emits_add_pack_requested(qapp, qtbot, tmp_path):
+    """The one Add control offers both paths from a menu, not two primaries."""
     panel = AudioPackSettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     fired: list[None] = []
     panel.add_pack_requested.connect(lambda: fired.append(None))
 
-    panel._add_btn.click()
+    panel._add_pack_action.trigger()
 
     assert fired == [None]
+    assert panel._add_btn.menu() is panel._add_menu
+    assert [action.text() for action in panel._add_menu.actions()] == ["Audio Pack…", "Online Source…"]
 
 
 # ---------------------------------------------------------------------------
