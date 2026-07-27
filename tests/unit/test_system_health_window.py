@@ -319,3 +319,19 @@ def test_reveal_setting_asks_settings_to_jump(main_window, qtbot):
 
 def test_reveal_setting_is_a_no_op_without_a_settings_tab(main_window):
     main_window.reveal_setting("dictionaries.chain")  # must not raise
+
+
+def test_every_fix_button_lands_on_a_real_control(qtbot, test_config):
+    """A Fix deep link that Settings cannot resolve is a button that does nothing.
+
+    ``jump_to_setting`` ignores unknown ids by design, so a typo or a renamed
+    anchor degrades to silence rather than to a crash — which is exactly why it
+    needs a test that the ids are real.
+    """
+    from anki_miner.gui.widgets.settings_tab import SettingsTab
+
+    settings_tab = SettingsTab(test_config)
+    qtbot.addWidget(settings_tab)
+    known = {anchor.stable_id for anchor in settings_tab.setting_anchors()}
+
+    assert set(HEALTH_FIX_ANCHORS.values()) <= known

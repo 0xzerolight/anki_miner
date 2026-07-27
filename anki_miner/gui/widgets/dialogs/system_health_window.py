@@ -39,6 +39,7 @@ __all__ = [
     "HEALTH_FAIL",
     "HEALTH_FIX_ANCHORS",
     "HEALTH_GROUPS",
+    "HEALTH_KEYS",
     "HEALTH_OK",
     "HEALTH_UNKNOWN",
     "HEALTH_WARN",
