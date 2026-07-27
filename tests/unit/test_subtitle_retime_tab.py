@@ -1088,3 +1088,42 @@ def test_tracks_probe_error_is_handled(qtbot, tmp_path):
 
     mock_class.assert_not_called()
     assert tab.tracks_button.isEnabled()
+
+
+# ---------------------------------------------------------------------------
+# Hand-off from the subtitle timing viewer (D35)
+# ---------------------------------------------------------------------------
+
+
+def test_set_single_inputs_prefills_both_selectors(qtbot, tmp_path):
+    """The timing viewer hands over an exact pair; nothing is re-derived here."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    video = tmp_path / "ep01.mkv"
+    subtitle = tmp_path / "ep01.ja.ass"
+
+    tab.set_single_inputs(video, subtitle)
+
+    assert tab.video_file_selector.get_path() == str(video)
+    assert tab.subtitle_file_selector.get_path() == str(subtitle)
+
+
+def test_set_single_inputs_forces_single_file_mode(qtbot, tmp_path):
+    """A hand-off of one pair must not land in folder mode."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+
+    tab.set_single_inputs(tmp_path / "ep01.mkv", tmp_path / "ep01.ass")
+
+    assert tab.file_mode_button.isChecked()
+    assert not tab.video_file_selector.isHidden()
+    assert tab.video_folder_selector.isHidden()
+
+
+def test_set_single_inputs_resets_the_audio_track_override(qtbot, tmp_path):
+    """A new video means the previous per-run track pick no longer applies."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab._audio_track_override = 2
+
+    tab.set_single_inputs(tmp_path / "other.mkv", tmp_path / "other.ass")
+
+    assert tab._audio_track_override is None

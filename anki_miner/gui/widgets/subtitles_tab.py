@@ -19,6 +19,7 @@ Close contract:
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Iterator
 
 from PyQt6.QtCore import QCoreApplication
@@ -101,6 +102,16 @@ class SubtitlesTab(QWidget):
         index = self._subtab_index.get(key)
         if index is not None:
             self._inner_tabs.setCurrentIndex(index)
+
+    def open_retime(self, video_path: Path, subtitle_path: Path) -> None:
+        """Reveal Retime with a single-file pair already loaded (D35 hand-off).
+
+        The subtitle timing viewer's "Align automatically" ends here: the viewer
+        closes, and the user arrives at the aligner with both files in place and
+        only the Retime button left to press. Nothing starts by itself.
+        """
+        self.retime_tab.set_single_inputs(video_path, subtitle_path)
+        self.open_subtab("retime")
 
     def current_subtab_key(self) -> str | None:
         """The stable key of the sub-tab on show, or ``None`` if unmappable.
