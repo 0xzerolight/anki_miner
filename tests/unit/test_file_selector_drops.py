@@ -257,3 +257,29 @@ class TestTheValidatorIsTheConsumersOwn:
         _drop(widget, _mime(QUrl.fromLocalFile(str(shouty)).toString()))
 
         assert Path(widget.get_path()).name == "EP01.MKV"
+
+
+class TestTheLitBorderActuallyWins:
+    """QSS specificity is equal here, so load ORDER is what decides.
+
+    ``QLineEdit[success="true"]`` and ``QLineEdit[dropState="valid"]`` are both a
+    type selector plus one attribute. A field holding a valid path already
+    carries ``success``, so the drop state has to come later in the sheet or a
+    drag over a filled field would look like nothing was happening.
+    """
+
+    def test_the_drop_state_rules_come_after_the_validity_rules(self):
+        from anki_miner.gui.resources.styles.theme import Theme
+
+        qss = Theme.get_stylesheet("dark")
+
+        assert qss.index('QLineEdit[dropState="valid"]') > qss.index('QLineEdit[success="true"]')
+        assert qss.index('QLineEdit[dropState="invalid"]') > qss.index('QLineEdit[error="true"]')
+
+    def test_both_drop_states_resolve_their_colour_tokens(self):
+        from anki_miner.gui.resources.styles.theme import Theme
+
+        qss = Theme.get_stylesheet("dark")
+        for state in ("valid", "invalid"):
+            block = qss.split(f'QLineEdit[dropState="{state}"]', 1)[1].split("}", 1)[0]
+            assert "${" not in block

@@ -138,6 +138,13 @@ class TestYouTubeTakesALink:
         assert "Video and Audio tabs" in logged
         youtube_tab._add_flow.begin.assert_not_called()
 
+    def test_a_queue_reorder_drag_is_left_to_the_list(self, youtube_tab):
+        """An internal move carries neither URL nor text and is not this screen's."""
+        event = _enter(youtube_tab, _mime())
+
+        assert youtube_tab.url_edit.property("dropState") in (None, "")
+        assert event.isAccepted() is False
+
     def test_the_light_goes_out_when_the_drag_leaves(self, youtube_tab):
         _enter(youtube_tab, _mime(urls=(_YT_URL,)))
 

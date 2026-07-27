@@ -354,6 +354,17 @@ class YouTubeTab(_ListQueueMiningTabBase):
                 return text
         return None
 
+    @staticmethod
+    def _carries_a_payload(event: QDragEnterEvent | QDropEvent) -> bool:
+        """Whether the drag holds anything this screen could have an answer to.
+
+        A queue reorder carries neither a URL nor text, and it belongs to the
+        list widget. Reacting to it would flash the URL box red every time a row
+        was dragged past the edge of the list.
+        """
+        mime = event.mimeData()
+        return mime is not None and (mime.hasUrls() or mime.hasText())
+
     def _light_url_field(self, state: str) -> None:
         """Mark the URL box as the destination while a drag is over the tab."""
         self.url_edit.setProperty("dropState", state)
@@ -363,7 +374,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
 
     def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:  # noqa: N802 - Qt override
         """Light the URL box for a YouTube link; take anything else to refuse it."""
-        if event is None:
+        if event is None or not self._carries_a_payload(event):
             return
         self._light_url_field("valid" if self._dropped_youtube_url(event) is not None else "invalid")
         event.acceptProposedAction()
