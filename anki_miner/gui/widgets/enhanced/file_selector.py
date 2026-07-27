@@ -250,7 +250,14 @@ class FileSelector(QWidget):
         self.path_validated.emit(is_valid, path_str)
 
     def _update_status(self) -> None:
-        """Update the status label.
+        """Update the helper row under the input, and whether it is there at all.
+
+        The row only appears when it has something the user can act on. A blank
+        field is not a fault -- announcing "No file selected" under all 31 pickers
+        made every untouched form read as unfinished, and spent a row of height
+        per picker saying so -- and a valid path is already spelled out in the
+        input above it. Both keep their text for tooltips and diagnostics; they
+        just stop taking up space.
 
         ``ElidingLabel`` owns truncation, tooltip, and re-elision on resize, so we just
         hand it the full text.
@@ -259,12 +266,26 @@ class FileSelector(QWidget):
 
         if not path_str:
             self.status_label.setText(self.tr("No file selected") if self._file_mode else self.tr("No folder selected"))
+            actionable = False
         elif self._is_valid:
             self.status_label.setText(Path(path_str).name)
+            actionable = False
         elif self._optional:
             self.status_label.setText(self.tr("Not installed"))
+            actionable = True
         else:
-            self.status_label.setText(self.tr("File not found") if self._file_mode else self.tr("Folder not found"))
+            self.status_label.setText(
+                self.tr("File not found. Choose an existing file.")
+                if self._file_mode
+                else self.tr("Folder not found. Choose an existing folder.")
+            )
+            actionable = True
+
+        self.status_label.setVisible(actionable)
+        # A hidden child is skipped by the layout entirely, so this widget's
+        # height changes when the row comes and goes -- the parent form has to be
+        # told, or it keeps laying the selector out at its previous size.
+        self.updateGeometry()
 
     def get_path(self) -> str:
         """Get the current path.

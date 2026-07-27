@@ -60,4 +60,4 @@ def test_default_selector_missing_file_stays_error(qtbot, tmp_path):
     sel.set_path(_missing(tmp_path))
 
     assert sel.input.property("error") is True
-    assert sel.status_label.text() == "File not found"
+    assert sel.status_label.text() == "File not found. Choose an existing file."

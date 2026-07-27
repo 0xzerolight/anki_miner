@@ -19,6 +19,8 @@ measuring Qt's defaults instead.
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
@@ -33,6 +35,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import CellRole, configure_data_view, data_row_height, make_table_item
+from anki_miner.gui.widgets.enhanced.file_selector import FileSelector
 from anki_miner.gui.widgets.enhanced.modern_button import ModernButton
 
 #: The 1px box every control carries in ``common.qss``, top and bottom.
@@ -162,6 +165,80 @@ class TestDataRowsGiveUpTheirSlack:
         assert visible >= 9, f"only {visible:.1f} rows in a 300px table"
 
 
+class TestFileSelectorSpeaksOnlyWhenItHasSomethingToSay:
+    """The helper row under all 31 pickers announced "No file selected" for a
+    field the user had simply not filled in yet — the clearest "unfinished"
+    signal in the audit's screenshots, and 31 rows of height spent saying it.
+    """
+
+    def test_a_blank_picker_shows_no_helper_row(self, qtbot):
+        selector = FileSelector(label="Video file:")
+        qtbot.addWidget(selector)
+
+        assert selector.status_label.isHidden()
+
+    def test_a_valid_path_shows_no_helper_row(self, qtbot, tmp_path):
+        existing = tmp_path / "episode.mkv"
+        existing.write_text("", encoding="utf-8")
+        selector = FileSelector(label="Video file:")
+        qtbot.addWidget(selector)
+
+        selector.set_path(str(existing))
+
+        assert selector.status_label.isHidden()
+
+    def test_a_missing_required_path_says_what_to_do(self, qtbot, tmp_path):
+        selector = FileSelector(label="Video file:")
+        qtbot.addWidget(selector)
+
+        selector.set_path(str(tmp_path / "gone.mkv"))
+
+        assert not selector.status_label.isHidden()
+        assert selector.status_label.text() == "File not found. Choose an existing file."
+
+    def test_a_missing_folder_says_what_to_do(self, qtbot, tmp_path):
+        selector = FileSelector(label="Media folder:", file_mode=False)
+        qtbot.addWidget(selector)
+
+        selector.set_path(str(tmp_path / "gone"))
+
+        assert not selector.status_label.isHidden()
+        assert selector.status_label.text() == "Folder not found. Choose an existing folder."
+
+    def test_a_missing_optional_resource_still_reports_itself(self, qtbot, tmp_path):
+        selector = FileSelector(label="Pitch accents:", optional=True)
+        qtbot.addWidget(selector)
+
+        selector.set_path(str(tmp_path / "pitch_accent.csv"))
+
+        assert not selector.status_label.isHidden()
+        assert selector.status_label.text() == "Not installed"
+
+    def test_the_helper_row_costs_nothing_until_it_appears(self, qtbot, font_scale):
+        """Hidden is not the same as blank: a blank row still takes its height."""
+        font_scale(1.0)
+        selector = FileSelector(label="Video file:")
+        qtbot.addWidget(selector)
+        selector.ensurePolished()
+
+        quiet = selector.minimumSizeHint().height()
+        selector.set_path("/definitely/not/here.mkv")
+
+        assert quiet <= selector.input.minimumSizeHint().height()
+        assert selector.minimumSizeHint().height() > quiet
+
+    def test_the_path_is_still_named_for_diagnostics(self, qtbot, tmp_path):
+        """Hidden, not emptied: the text stays readable to tests and tooling."""
+        existing = tmp_path / "episode.mkv"
+        existing.write_text("", encoding="utf-8")
+        selector = FileSelector(label="Video file:")
+        qtbot.addWidget(selector)
+
+        selector.set_path(str(existing))
+
+        assert selector.status_label.text() == "episode.mkv"
+
+
 class TestCardsShareOneDensity:
     """Fourteen screens hand-built the same card and each set its own margins."""
 
@@ -228,3 +305,40 @@ def quiet_show(monkeypatch):
 
     monkeypatch.setattr(SettingsTab, "showEvent", lambda self, event: QWidget.showEvent(self, event))
     monkeypatch.setattr(AnalyticsTab, "refresh_data", lambda self, *a, **k: None)
+
+
+def test_the_mining_form_lost_height_without_losing_a_control(qtbot, test_config, font_scale):
+    """The receipt for the whole task, on the app's flagship screen.
+
+    The yardstick is the app's own ``WINDOW_MIN_HEIGHT``: this page used to
+    demand 866px of column before the window chrome was even drawn — more than
+    the whole minimum window — and now demands 734. That is not the same claim as
+    "fits without scrolling" at 800px: the Activity console's own 200px floor and
+    the two section headings still push the column past the viewport once chrome
+    is subtracted, and both belong to other tasks.
+
+    The control inventory is asserted alongside the height, because shorter is
+    only the goal while nothing went missing.
+    """
+    from anki_miner.gui.constants import WINDOW_MIN_HEIGHT
+    from anki_miner.gui.widgets.base.sizing import PAGE_SCROLL_OBJECT_NAME
+    from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
+
+    font_scale(1.0)
+    tab = SingleEpisodeTab(config=test_config, presenter=MagicMock(), progress_callback=MagicMock())
+    qtbot.addWidget(tab)
+    tab.resize(1024, 700)
+    tab.show()
+    qtbot.waitExposed(tab)
+    QApplication.processEvents()
+
+    from PyQt6.QtWidgets import QScrollArea
+
+    shells = tab.findChildren(QScrollArea, PAGE_SCROLL_OBJECT_NAME)
+    assert shells, "the mining page has no page shell to measure"
+    column = shells[0].widget()
+
+    assert column.minimumSizeHint().height() < WINDOW_MIN_HEIGHT
+    assert tab.video_selector.isVisible() and tab.subtitle_selector.isVisible()
+    assert tab.process_button.isVisible() and tab.timing_button.isVisible() and tab.tracks_button.isVisible()
+    tab.hide()
