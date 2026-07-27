@@ -31,7 +31,13 @@ from anki_miner.gui.utils.qt_helpers import (
     make_table_item,
 )
 from anki_miner.gui.utils.run_off_thread import run_off_thread
-from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, configure_scrolled_page
+from anki_miner.gui.widgets.base import (
+    PageWidth,
+    ScreenIssue,
+    ScreenIssueHost,
+    configure_card_layout,
+    configure_scrolled_page,
+)
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader, StatCard
 from anki_miner.models.stats import (
     DifficultyEntry,
@@ -93,7 +99,7 @@ class _AnalyticsBundle:
     milestones: list[Milestone]
 
 
-class AnalyticsTab(QWidget):
+class AnalyticsTab(ScreenIssueHost, QWidget):
     """Tab displaying mining analytics, difficulty rankings, and milestones."""
 
     #: Tables and queue rows genuinely use the extra width.
@@ -150,6 +156,8 @@ class AnalyticsTab(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.addWidget(scroll_area)
         self.setLayout(main_layout)
+        # Above the numbers, because the numbers are what went stale (D24).
+        self.install_issue_banner(main_layout)
 
     def changeEvent(self, a0):  # noqa: N802  (Qt override)
         """Re-derive table row metrics whenever the font changes.
@@ -345,15 +353,32 @@ class AnalyticsTab(QWidget):
     def _on_refresh_done(self, bundle: object) -> None:
         """GUI thread: render the pre-fetched bundle and tick the TTL clock."""
         self._refresh_in_flight = False
+        # Success is the only thing that clears a refresh issue (D24).
+        self.clear_screen_issue()
         if not isinstance(bundle, _AnalyticsBundle):  # defensive; never expected
             return
         self._apply_bundle(bundle)
         self._last_refresh = time.monotonic()
 
     def _on_refresh_error(self, msg: str) -> None:
-        """GUI thread: clear the in-flight flag and log the failure."""
+        """GUI thread: clear the in-flight flag, log, and say so on screen.
+
+        The whole tab *is* the fetch, so a failure that only reached the log
+        left the user reading stale numbers with no way to tell (D24). The
+        in-flight flag is cleared first on purpose: the banner offers Retry,
+        and Retry is a ``refresh_data`` call the guard would otherwise swallow.
+        """
         self._refresh_in_flight = False
         logging.getLogger(__name__).error("Failed to refresh analytics data: %s", msg)
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=self.tr("Analytics could not be refreshed."),
+                details=msg,
+                action_id="analytics.retry",
+                action_text=self.tr("Retry"),
+            ),
+            action=lambda: self.refresh_data(force=True),
+        )
 
     def _apply_bundle(self, bundle: _AnalyticsBundle) -> None:
         """Render every section from a pre-fetched bundle (GUI thread)."""

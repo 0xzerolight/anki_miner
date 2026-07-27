@@ -140,3 +140,77 @@ def test_unavailable_service_short_circuits(qtbot):
         assert service.get_overall_stats.call_count == 0
     finally:
         tab.deleteLater()
+
+
+class TestRefreshFailureIsVisible:
+    """A failed refresh used to reach only the log (D24, string 10).
+
+    Analytics is the one screen whose whole content is the fetch, so a silent
+    failure leaves the user reading stale numbers with no way to know.
+    """
+
+    def test_a_failed_refresh_raises_a_screen_issue(self, qtbot):
+        service = _make_service()
+        service.get_overall_stats.side_effect = RuntimeError("database is locked")
+        tab = AnalyticsTab(service)
+        qtbot.addWidget(tab)
+        try:
+            tab.refresh_data(force=True)
+            qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
+            issue = tab.issue_banner().current_issue()
+            assert issue.summary == "Analytics could not be refreshed."
+            assert "database is locked" not in issue.summary
+            assert "database is locked" in issue.details
+        finally:
+            tab.deleteLater()
+
+    def test_the_in_flight_guard_is_clear_before_the_banner_appears(self, qtbot):
+        """Retry is offered, so the guard it depends on must already be released."""
+        service = _make_service()
+        service.get_overall_stats.side_effect = RuntimeError("database is locked")
+        tab = AnalyticsTab(service)
+        qtbot.addWidget(tab)
+        seen: list[bool] = []
+        try:
+            original = tab.show_screen_issue
+
+            def _record(issue, **kwargs):
+                seen.append(tab._refresh_in_flight)
+                original(issue, **kwargs)
+
+            tab.show_screen_issue = _record  # type: ignore[method-assign]
+            tab.refresh_data(force=True)
+            qtbot.waitUntil(lambda: bool(seen), timeout=3000)
+            assert seen == [False]
+        finally:
+            tab.deleteLater()
+
+    def test_the_repair_action_retries_the_refresh(self, qtbot):
+        service = _make_service()
+        service.get_overall_stats.side_effect = RuntimeError("database is locked")
+        tab = AnalyticsTab(service)
+        qtbot.addWidget(tab)
+        try:
+            tab.refresh_data(force=True)
+            qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
+            service.get_overall_stats.side_effect = None
+            tab.issue_banner().action_button.click()
+            qtbot.waitUntil(lambda: tab._last_refresh is not None, timeout=3000)
+            assert tab.issue_banner().current_issue() is None
+        finally:
+            tab.deleteLater()
+
+    def test_a_successful_refresh_clears_a_stale_issue(self, qtbot):
+        service = _make_service()
+        service.get_overall_stats.side_effect = RuntimeError("database is locked")
+        tab = AnalyticsTab(service)
+        qtbot.addWidget(tab)
+        try:
+            tab.refresh_data(force=True)
+            qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
+            service.get_overall_stats.side_effect = None
+            tab.refresh_data(force=True)
+            qtbot.waitUntil(lambda: tab._last_refresh is not None, timeout=3000)
+            assert tab.issue_banner().current_issue() is None
+        finally:
+            tab.deleteLater()
