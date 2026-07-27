@@ -185,7 +185,98 @@ class _MemoizedCuration:
         return self._value
 
 
-class SequentialQueueWorker(ProcessorOwningWorker, Generic[ItemT]):
+class RunBoundaryControls:
+    """Pause and Finish-current, consumed only between items (D29-A).
+
+    Mixed into every worker that drives a list of items, so the batch worker and
+    the three sequential queue workers answer the two boundary verbs the same
+    way rather than each inventing a gate.
+
+    The subclass declares the two signals itself -- PyQt6 only binds a
+    ``pyqtSignal`` declared on a ``QObject`` subclass -- and calls
+    :meth:`_init_boundary_controls` from its constructor. It must also release
+    the gate from its ``cancel()``: a paused worker blocked on a closed gate
+    never sees the cancel, and a bounded shutdown join then spends its whole
+    timeout before retaining a laggard thread.
+    """
+
+    #: Supplied by ``CancellableWorker``. ``run_paused`` / ``run_resumed`` are
+    #: deliberately left unannotated: they are ``pyqtSignal``s on the concrete
+    #: worker, and a mixin-level annotation would collide with that declaration.
+    is_cancelled: bool
+
+    def _init_boundary_controls(self) -> None:
+        """Open the gate and clear both requests. Call from ``__init__``."""
+        self._pause_requested = threading.Event()
+        self._stop_after_current = threading.Event()
+        self._resume_gate = threading.Event()
+        self._resume_gate.set()
+        self._paused = threading.Event()
+
+    def request_pause_after_current(self) -> None:
+        """Stop cleanly at the next item boundary, keeping the run alive."""
+        self._pause_requested.set()
+
+    def resume(self) -> None:
+        """Continue a paused run, or withdraw a pause that has not landed yet."""
+        self._pause_requested.clear()
+        self._resume_gate.set()
+
+    def request_stop_after_current(self) -> None:
+        """Let the current item finish, then end the run.
+
+        Distinct from Cancel, which abandons the item in flight (D22 keeps that
+        one verb prompt-free). The gate is opened too, so a run already paused
+        stops instead of waiting for a Resume that is not coming.
+        """
+        self._stop_after_current.set()
+        self._resume_gate.set()
+
+    @property
+    def is_paused(self) -> bool:
+        """Whether the run is currently sitting at an item boundary."""
+        return self._paused.is_set()
+
+    @property
+    def pause_pending(self) -> bool:
+        """Whether a pause has been asked for but not yet reached a boundary."""
+        return self._pause_requested.is_set()
+
+    def _release_boundary_gate(self) -> None:
+        """Unblock a paused run. Called from the worker's ``cancel()``."""
+        self._resume_gate.set()
+
+    def _wait_at_boundary(self) -> bool:
+        """Honour Pause / Finish-current before the next item is claimed.
+
+        This is the ONLY place either request is consumed, which is what makes
+        the guarantee in D29-A true: a pause never lands inside ffmpeg, a
+        SQLite write, media extraction or an open curator, so the progress
+        numbers, the lock state and the receipt stay consistent with each other.
+
+        Returns:
+            ``False`` when the run must stop here (cancelled, or asked to finish
+            after the item that just completed).
+        """
+        if self._stop_after_current.is_set():
+            return False
+        if self._pause_requested.is_set():
+            self._pause_requested.clear()
+            self._resume_gate.clear()
+            self._paused.set()
+            self.run_paused.emit()  # type: ignore[attr-defined]
+        while not self._resume_gate.is_set():
+            if self.is_cancelled:
+                break
+            self._resume_gate.wait(_PAUSE_POLL_S)
+        if self._paused.is_set():
+            self._paused.clear()
+            if not self.is_cancelled and not self._stop_after_current.is_set():
+                self.run_resumed.emit()  # type: ignore[attr-defined]
+        return not self.is_cancelled and not self._stop_after_current.is_set()
+
+
+class SequentialQueueWorker(RunBoundaryControls, ProcessorOwningWorker, Generic[ItemT]):
     """Base for workers that mine a queue of items one at a time.
 
     Subclasses parametrize the item type (``SequentialQueueWorker[FooItem]``)
@@ -266,54 +357,12 @@ class SequentialQueueWorker(ProcessorOwningWorker, Generic[ItemT]):
         self._item_curation: _MemoizedCuration | None = None
         # D29 boundary controls. The gate starts open; only a consumed pause
         # request closes it, and cancel() always reopens it.
-        self._pause_requested = threading.Event()
-        self._stop_after_current = threading.Event()
-        self._resume_gate = threading.Event()
-        self._resume_gate.set()
-        self._paused = threading.Event()
-
-    # ------------------------------------------------------------------
-    # Pause / finish-current (D29-A)
-    # ------------------------------------------------------------------
-
-    def request_pause_after_current(self) -> None:
-        """Stop cleanly at the next item boundary, keeping the run alive."""
-        self._pause_requested.set()
-
-    def resume(self) -> None:
-        """Continue a paused run, or withdraw a pause that has not landed yet."""
-        self._pause_requested.clear()
-        self._resume_gate.set()
-
-    def request_stop_after_current(self) -> None:
-        """Let the current item finish, then end the run.
-
-        Distinct from Cancel, which abandons the item in flight (D22 keeps that
-        one verb prompt-free). The gate is opened too, so a run already paused
-        stops instead of waiting for a Resume that is not coming.
-        """
-        self._stop_after_current.set()
-        self._resume_gate.set()
-
-    @property
-    def is_paused(self) -> bool:
-        """Whether the run is currently sitting at an item boundary."""
-        return self._paused.is_set()
-
-    @property
-    def pause_pending(self) -> bool:
-        """Whether a pause has been asked for but not yet reached a boundary."""
-        return self._pause_requested.is_set()
+        self._init_boundary_controls()
 
     def cancel(self) -> None:
-        """Request cancellation, always releasing the pause gate.
-
-        The gate release is not optional: a paused worker blocked on it would
-        never see the cancel, and the bounded shutdown join would then spend its
-        whole timeout before retaining a laggard thread.
-        """
+        """Request cancellation, always releasing the pause gate."""
         super().cancel()
-        self._resume_gate.set()
+        self._release_boundary_gate()
 
     @property
     def curation_processor(self) -> EpisodeProcessor | None:
@@ -404,35 +453,6 @@ class SequentialQueueWorker(ProcessorOwningWorker, Generic[ItemT]):
                 # that suppresses queue_finished entirely.
                 return
         self.queue_finished.emit()
-
-    def _wait_at_boundary(self) -> bool:
-        """Honour Pause / Finish-current before the next item is claimed.
-
-        This is the ONLY place either request is consumed, which is what makes
-        the guarantee in D29-A true: a pause never lands inside ffmpeg, a
-        SQLite write, media extraction or an open curator, so the progress
-        numbers, the lock state and the receipt stay consistent with each other.
-
-        Returns:
-            ``False`` when the run must stop here (cancelled, or asked to finish
-            after the item that just completed).
-        """
-        if self._stop_after_current.is_set():
-            return False
-        if self._pause_requested.is_set():
-            self._pause_requested.clear()
-            self._resume_gate.clear()
-            self._paused.set()
-            self.run_paused.emit()
-        while not self._resume_gate.is_set():
-            if self.is_cancelled:
-                break
-            self._resume_gate.wait(_PAUSE_POLL_S)
-        if self._paused.is_set():
-            self._paused.clear()
-            if not self.is_cancelled and not self._stop_after_current.is_set():
-                self.run_resumed.emit()
-        return not self.is_cancelled and not self._stop_after_current.is_set()
 
     # ------------------------------------------------------------------
     # Bounded automatic retry (D30-B)
