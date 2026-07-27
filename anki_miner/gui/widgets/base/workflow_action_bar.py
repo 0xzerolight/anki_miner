@@ -137,6 +137,27 @@ class WorkflowActionBar(QWidget):
             self._action_layout.addWidget(button)
         if primary is not None:
             self._action_layout.addWidget(primary)
+        self._remeasure()
+
+    def _remeasure(self) -> None:
+        """Re-cost the bar's own height after its row gained or lost a widget.
+
+        A Qt box layout caches its size hint and only recomputes it when it is
+        marked dirty -- and adding an item to a *nested* layout marks only that
+        nested layout. The row and the column above it went on answering with
+        the height they cached at construction, when the bar held nothing but an
+        empty stage label. Anything that asked the bar how tall it was before it
+        had ever been on screen -- sizing a window, ``adjustSize`` on a page --
+        got that empty-bar answer, laid out short, and jumped as soon as the
+        first real layout pass corrected it. Marking the whole chain dirty is
+        what makes the answer true straight away.
+        """
+        self._action_layout.invalidate()
+        self._row.invalidate()
+        layout = self.layout()
+        if layout is not None:
+            layout.invalidate()
+        self.updateGeometry()
 
     # ------------------------------------------------------------------
     # Activity drawer
@@ -158,6 +179,7 @@ class WorkflowActionBar(QWidget):
         """
         self._drawer = drawer if drawer is not None else log
         self.activity_button.setVisible(log is not None)
+        self._remeasure()
         if log is None:
             return
         problem_logged = getattr(log, "problem_logged", None)
@@ -380,6 +402,7 @@ class WorkflowActionBar(QWidget):
         self._action_layout.setSpacing(SPACING.xs)
         row.addLayout(self._action_layout)
 
+        self._row = row
         outer.addLayout(row)
         self.setLayout(outer)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -439,8 +462,12 @@ def install_workflow_shell(
         splitter.setStretchFactor(1, 0)
 
     layout.addWidget(splitter, 1)
-    layout.addWidget(capped_page_column(bar, kind))
+    # Activity is attached before the bar is capped: the cap is never allowed
+    # below the bar's own minimum, and a bar that has not been told whether it
+    # has an Activity control yet reports a minimum too small for that guard to
+    # be worth anything.
     bar.attach_activity(log, drawer)
+    layout.addWidget(capped_page_column(bar, kind))
     return bar
 
 

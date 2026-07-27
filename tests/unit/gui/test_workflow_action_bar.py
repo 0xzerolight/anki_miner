@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import QPushButton, QScrollArea, QVBoxLayout, QWidget
 
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.controllers.task_registry import TaskRegistry, TaskSpec
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets.base import PageWidth, WorkflowActionBar, install_workflow_shell
 from anki_miner.gui.widgets.log_widget import LogWidget
 
@@ -286,3 +287,32 @@ def test_activity_button_toggles_the_drawer(qtbot):
     assert bar.is_activity_open()
     bar.activity_button.setChecked(False)
     assert not bar.is_activity_open()
+
+
+# -------------------------------------------------------------- fixed height
+
+
+def test_the_bar_reports_its_action_height_before_it_is_ever_shown(qtbot):
+    """The height the bar advertises must already account for its buttons.
+
+    The actions live in a layout nested inside the row inside the bar, and a Qt
+    box layout does not mark itself dirty when a *child* layout gains an item.
+    The row therefore kept answering with the empty-bar height it cached at
+    construction until something forced a full relayout -- so any page that
+    asked how tall the bar was before it was ever on screen (which is what
+    sizing a window does) laid itself out short and then jumped.
+    """
+    _page_widget, _scroll, bar, _log = _page(qtbot)
+    primary = QPushButton("Start mining")
+
+    bar.set_actions(primary, ())
+
+    assert bar.sizeHint().height() >= primary.sizeHint().height() + 2 * SPACING.xs
+
+
+def test_the_activity_control_counts_towards_the_bar_height_immediately(qtbot):
+    """Same nested-layout cache, reached through the shell rather than a screen."""
+    _page_widget, _scroll, bar, _log = _page(qtbot)
+
+    assert not bar.activity_button.isHidden()
+    assert bar.sizeHint().height() >= bar.activity_button.sizeHint().height() + 2 * SPACING.xs
