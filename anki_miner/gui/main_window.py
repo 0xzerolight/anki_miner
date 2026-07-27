@@ -122,6 +122,8 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # close runs closeEvent again after the window has been hidden, and the
         # hidden window's geometry is not what the user left behind.
         self._session_state_saved = False
+        # Set once closeEvent has committed to quitting — see is_shutting_down.
+        self._close_committed = False
 
         # Load configuration
         self.config = config if config is not None else GUIConfigManager.load_config()
@@ -1448,6 +1450,19 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                 return False
         return True
 
+    def is_shutting_down(self) -> bool:
+        """True once ``closeEvent`` has committed to quitting the application.
+
+        ``QWidget.close()`` reports ``False`` for a close the shutdown policy
+        *deferred* as well as for one that was refused: the deferred arm ignores
+        the event so Qt keeps the window and its still-running QThreads alive,
+        then quits from a poll once the last laggard exits. A caller that reads
+        that ``False`` as "the window is staying" undoes work that should still
+        happen — the restart-to-apply path (D39b) cancelled its own relaunch
+        that way whenever a worker outlived the join grace.
+        """
+        return self._close_committed
+
     def closeEvent(self, event) -> None:
         """Handle window close event.
 
@@ -1465,6 +1480,13 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # geometry is not what the user left behind. One-shot, so a second close
         # attempt during that poll cannot overwrite the good value (D7).
         self._save_session_state()
+
+        # Past this point the application is going, on both arms below: the
+        # immediate one accepts the event, and the deferred one ignores it only
+        # to keep the running QThreads alive until the poll quits. Callers that
+        # asked for the close need to be able to tell those two apart from a
+        # genuine refusal — see is_shutting_down.
+        self._close_committed = True
 
         # Claim the one-time optional-boot slot before anything is joined. A
         # first-run wizard can still be open when the app is asked to quit, and
