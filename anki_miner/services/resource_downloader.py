@@ -11,17 +11,32 @@ mirrors ``JPod101AudioFetcher`` in ``expression_audio_fetcher.py``. Unlike that
 fetcher, this function RAISES on failure (the worker catches per item).
 """
 
+import contextlib
+import hashlib
 import logging
+import os
 import tempfile
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
+from typing import BinaryIO, cast
 
 import requests
 
 from anki_miner.exceptions import SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services._install_common import cleanup_part
+from anki_miner.services.download_resume import (
+    CHECKPOINT_BYTES,
+    CHECKPOINT_SECONDS,
+    RestoredPartial,
+    ResumeManifest,
+    ResumeState,
+    default_resume_root,
+    is_identity_encoding,
+    parse_content_range,
+    strong_validator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +67,18 @@ PROGRESS_MIN_INTERVAL_S = 0.2
 _DOWNLOADING = "Downloading"
 _CANCELLED = "Download cancelled"
 _FAILED = "Download failed"
+
+# Ranged bytes are only meaningful when the body is stored bytes: a gzipped
+# range would put our byte offsets in a different coordinate system than the
+# server's. Ask for identity and refuse anything else on the resumed leg.
+_IDENTITY_HEADERS = {"Accept-Encoding": "identity"}
+
+# The only statuses that mean "your partial is not usable, fetch the whole thing
+# again": the server ignored the range (200), the validator no longer holds
+# (412), or the range is out of bounds (416). A 206 that fails its own checks
+# joins them. Everything else is a transport or server fault, and answering one
+# by discarding 580 MB is precisely the bug D16-C exists to fix.
+_RESTART_CLEAN_STATUSES = frozenset({200, 206, 412, 416})
 
 # Transient-failure retry policy (Issue #100: the reporter's JMdict download
 # failed once on a flaky network and the wizard left them with no dictionary).
@@ -142,6 +169,8 @@ def download_to_temp(
     cancelled_check: CancelledCheck | None = None,
     max_bytes: int | None = None,
     read_timeout_seconds: float | None = None,
+    resume_key: str | None = None,
+    resume_root: Path | None = None,
 ) -> Path:
     """Download *url* to a ``.part`` temp file in *dest_dir* and return it.
 
@@ -165,19 +194,34 @@ def download_to_temp(
         read_timeout_seconds: Optional per-call read timeout. ``None`` keeps the
             shared 60-second default; cancellation-sensitive callers may pass a
             shorter interval so stalled reads return to their cancel check.
+        resume_key: Stable, collision-free identifier for THIS artifact (D16-C).
+            With one, the partial body survives cancellation, a transport drop
+            and quitting the app, and the next call continues it — but only when
+            the server proves the representation is unchanged; every other
+            answer silently restarts from byte zero. Without one the transfer is
+            all-or-nothing, exactly as before. Two different artifacts must
+            never share a key.
+        resume_root: Directory holding resume state. Defaults to
+            ``<home>/runtime_state/downloads``.
 
     Returns:
         Path to the staged ``.part`` temp file.
 
     Raises:
         SetupError: On cancellation, HTTP error, size-cap exceeded, or any
-            network/OS failure. The partial temp file is always cleaned up.
+            network/OS failure. The staged temp file is always cleaned up; the
+            durable resume state survives only cancellation and retryable
+            transport failures.
     """
     if max_bytes is None:
         max_bytes = MAX_DOWNLOAD_BYTES
     timeout = _TIMEOUT if read_timeout_seconds is None else (_TIMEOUT[0], read_timeout_seconds)
 
     dest_dir.mkdir(parents=True, exist_ok=True)
+
+    state: ResumeState | None = None
+    if resume_key is not None:
+        state = ResumeState(default_resume_root() if resume_root is None else resume_root, resume_key)
 
     last_exc: Exception | None = None
     for attempt in range(1, _MAX_ATTEMPTS + 1):
@@ -191,9 +235,14 @@ def download_to_temp(
                 cancelled_check=cancelled_check,
                 max_bytes=max_bytes,
                 timeout=timeout,
+                state=state,
             )
-        except SetupError:
-            # Cancel / size-cap / truncation — never retried.
+        except SetupError as exc:
+            # Cancel / size-cap / truncation — never retried. Only cancellation
+            # keeps the partial: the user asked for a pause, and the other two
+            # mean the bytes on disk are not trustworthy.
+            if state is not None and not _is_cancellation(exc):
+                state.discard()
             raise
         except (requests.RequestException, OSError) as exc:
             if attempt < _MAX_ATTEMPTS and _is_retryable(exc):
@@ -210,6 +259,11 @@ def download_to_temp(
                 _sleep_with_cancel(_BACKOFF_SECONDS[attempt - 1], cancelled_check)
                 continue
             logger.debug("resource download failed for %s: %s", url, exc)
+            # A transport failure we have run out of attempts for still leaves
+            # trustworthy bytes behind: the next launch offers to resume them.
+            # A permanent HTTP failure does not.
+            if state is not None and not _is_retryable(exc):
+                state.discard()
             raise SetupError(f"Failed to download {url}: {exc}") from exc
 
     # Unreachable: the final attempt either returned or raised above.
@@ -226,6 +280,83 @@ def _sleep_with_cancel(seconds: float, cancelled_check: CancelledCheck | None) -
         waited += _BACKOFF_POLL_SECONDS
 
 
+def _is_cancellation(exc: SetupError) -> bool:
+    """Whether ``exc`` is the cancellation the user asked for, not a fault."""
+    return str(exc) == "Download cancelled"
+
+
+def _open_stream(
+    session: requests.Session,
+    url: str,
+    timeout: tuple[float, float],
+    state: ResumeState | None,
+) -> tuple[requests.Response, RestoredPartial | None]:
+    """Open the body, resuming only when the server proves nothing changed.
+
+    Returns the streaming response and, when the response is a validated
+    ``206``, the partial it continues. Every rejection path discards the stored
+    partial and re-requests from byte zero — a ``200`` is never appended to.
+    A 5xx on the ranged request is re-raised instead: that is a transient server
+    fault, and throwing away 580 MB over one bad gateway is the bug D16-C exists
+    to fix.
+    """
+    restored = state.restore(url) if state is not None else None
+    if restored is None:
+        response = session.get(url, headers=dict(_IDENTITY_HEADERS), timeout=timeout, stream=True)
+        response.raise_for_status()
+        return response, None
+
+    manifest = restored.manifest
+    headers = dict(_IDENTITY_HEADERS)
+    headers["Range"] = f"bytes={manifest.length}-"
+    if manifest.if_range:
+        headers["If-Range"] = manifest.if_range
+    response = session.get(url, headers=headers, timeout=timeout, stream=True)
+
+    if _resume_is_provable(response, manifest):
+        return response, restored
+
+    if response.status_code not in _RESTART_CLEAN_STATUSES:
+        # A 5xx is a transient server fault and a 4xx that is not a range
+        # refusal is a permanent one. Neither says the artifact changed, so
+        # neither is answered by re-fetching it here: the retry loop decides,
+        # and it is the one that knows whether to keep the partial.
+        response.raise_for_status()
+
+    reason = f"status {response.status_code}"
+    response.close()
+    if state is not None:
+        state.discard()
+    logger.debug("resume rejected for %s (%s); restarting from byte zero", url, reason)
+    response = session.get(url, headers=dict(_IDENTITY_HEADERS), timeout=timeout, stream=True)
+    response.raise_for_status()
+    return response, None
+
+
+def _resume_is_provable(response: requests.Response, manifest: ResumeManifest) -> bool:
+    """Whether ``response`` proves it continues exactly the bytes we kept.
+
+    Only an exact ``206`` qualifies, and only with an unencoded body, a
+    ``Content-Range`` starting at our durable length over an unchanged total,
+    and an unchanged validator. ``200``, ``412``, ``416`` and every other answer
+    are false — the caller then restarts clean.
+    """
+    if response.status_code != 206:
+        return False
+    if not is_identity_encoding(response.headers.get("Content-Encoding")):
+        return False
+    span = parse_content_range(response.headers.get("Content-Range"))
+    if span is None:
+        return False
+    start, _end, total = span
+    if start != manifest.length or total != manifest.total:
+        return False
+    return manifest.matches_response(
+        etag=response.headers.get("ETag"),
+        last_modified=response.headers.get("Last-Modified"),
+    )
+
+
 def _download_once(
     url: str,
     *,
@@ -234,6 +365,7 @@ def _download_once(
     cancelled_check: CancelledCheck | None,
     max_bytes: int,
     timeout: tuple[float, float] = _TIMEOUT,
+    state: ResumeState | None = None,
 ) -> Path:
     """Single download attempt; raises raw transport exceptions for the retry loop."""
     tmp_path: Path | None = None
@@ -245,21 +377,44 @@ def _download_once(
     terminal_reported = False
     try:
         with _new_session() as session:
-            response = session.get(url, timeout=timeout, stream=True)
+            response, restored = _open_stream(session, url, timeout, state)
             try:
-                response.raise_for_status()
+                if restored is not None:
+                    # Continuing: the numbers the user sees, and the numbers the
+                    # size cap is judged against, count the whole artifact.
+                    downloaded = restored.manifest.length
+                    total = restored.manifest.total
+                    etag: str | None = restored.manifest.etag
+                    last_modified: str | None = restored.manifest.last_modified
+                    hasher = restored.hasher
+                    keep_partial = True
+                else:
+                    total = int(response.headers.get("Content-Length") or 0)
+                    etag, last_modified = strong_validator(
+                        response.headers.get("ETag"), response.headers.get("Last-Modified")
+                    )
+                    hasher = hashlib.sha256()
+                    keep_partial = state is not None and state.keepable(
+                        total=total, etag=etag, last_modified=last_modified
+                    )
+                    if state is not None and not keep_partial:
+                        # Nothing a later resume could prove — do not leave a
+                        # partial behind that a future launch would offer.
+                        state.discard()
 
-                total = int(response.headers.get("Content-Length") or 0)
-
-                with tempfile.NamedTemporaryFile(dir=dest_dir, suffix=".part", delete=False) as tmp_fd:
-                    tmp_path = Path(tmp_fd.name)
-                    gate.emit(0, total, _DOWNLOADING, force=True)  # Phase start.
+                with _staged_body(dest_dir, state, resuming=restored is not None, keep=keep_partial) as staged:
+                    tmp_path, body = staged
+                    gate.emit(downloaded, total, _DOWNLOADING, force=True)  # Phase start.
                     first_chunk = True
+                    checkpoint_at = time.monotonic() + CHECKPOINT_SECONDS
+                    checkpoint_bytes = downloaded + CHECKPOINT_BYTES
 
                     for chunk in response.iter_content(chunk_size=_CHUNK_SIZE):
                         # Every raw chunk, never throttled: the display cadence
                         # must not become the cancellation cadence.
                         if cancelled_check is not None and cancelled_check():
+                            if keep_partial and state is not None:
+                                _checkpoint(state, body, hasher, url, total, downloaded, etag, last_modified)
                             terminal_reported = True
                             gate.emit(downloaded, total, _CANCELLED, force=True)
                             raise SetupError("Download cancelled")
@@ -268,7 +423,17 @@ def _download_once(
                         downloaded += len(chunk)
                         if downloaded > max_bytes:
                             raise SetupError(f"Download exceeded size cap of {max_bytes} bytes: {url}")
-                        tmp_fd.write(chunk)
+                        body.write(chunk)
+                        hasher.update(chunk)
+                        now = time.monotonic()
+                        if (
+                            keep_partial
+                            and state is not None
+                            and (downloaded >= checkpoint_bytes or now >= checkpoint_at)
+                        ):
+                            _checkpoint(state, body, hasher, url, total, downloaded, etag, last_modified)
+                            checkpoint_bytes = downloaded + CHECKPOINT_BYTES
+                            checkpoint_at = now + CHECKPOINT_SECONDS
                         gate.emit(downloaded, total, _DOWNLOADING, force=first_chunk)
                         first_chunk = False
 
@@ -279,6 +444,12 @@ def _download_once(
                     # a short response can never be promoted to a partial final file.
                     if total and downloaded != total:
                         raise SetupError(f"Download truncated: got {downloaded} of {total} bytes from {url}")
+                    # A resumed artifact is spliced from two responses, so the
+                    # length check above is the only thing standing between the
+                    # user and a file built from two different releases. Refuse
+                    # to hand one back without a declared total to check it with.
+                    if restored is not None and not total:
+                        raise SetupError(f"Resumed download cannot be verified without a total: {url}")
             finally:
                 response.close()
     except BaseException:
@@ -288,10 +459,72 @@ def _download_once(
         # only progress is never left on a mid-transfer number.
         if not terminal_reported:
             gate.emit(downloaded, total, _FAILED, force=True)
-        cleanup_part(tmp_path)
+        # The durable partial is the retry loop's to keep or discard; a plain
+        # staged temp file is always this attempt's litter.
+        if tmp_path is not None and (state is None or state.part_path != tmp_path):
+            cleanup_part(tmp_path)
         raise
 
-    # tmp_path is always set here: NamedTemporaryFile assigns it before any
-    # statement that could leave the try block without raising.
+    if state is not None and tmp_path is not None and state.part_path == tmp_path:
+        return state.promote(_unique_part_path(dest_dir))
     assert tmp_path is not None
     return tmp_path
+
+
+def _checkpoint(
+    state: ResumeState,
+    body: BinaryIO,
+    hasher: "hashlib._Hash",
+    url: str,
+    total: int,
+    length: int,
+    etag: str | None,
+    last_modified: str | None,
+) -> None:
+    """Make the bytes written so far durable and describe them atomically."""
+    state.checkpoint(
+        body,
+        url=url,
+        total=total,
+        length=length,
+        digest=hasher.copy().hexdigest(),
+        etag=etag,
+        last_modified=last_modified,
+    )
+
+
+def _unique_part_path(dest_dir: Path) -> Path:
+    """Return an unused ``.part`` path in ``dest_dir``."""
+    fd, name = tempfile.mkstemp(dir=dest_dir, suffix=".part")
+    os.close(fd)
+    return Path(name)
+
+
+@contextlib.contextmanager
+def _staged_body(
+    dest_dir: Path,
+    state: ResumeState | None,
+    *,
+    resuming: bool,
+    keep: bool,
+) -> Iterator[tuple[Path, BinaryIO]]:
+    """Yield ``(path, handle)`` for the body being written.
+
+    With a durable partial the body IS the resume ``.part`` — written in place
+    so quitting leaves it where the next launch looks. Without one the transfer
+    stages into ``dest_dir`` exactly as it did before D16-C.
+    """
+    if state is not None and keep:
+        state.ensure_root()
+        path = state.part_path
+        handle: BinaryIO = path.open("r+b" if resuming else "wb")
+        if resuming:
+            handle.seek(0, os.SEEK_END)
+        try:
+            yield path, handle
+        finally:
+            handle.close()
+        return
+
+    with tempfile.NamedTemporaryFile(dir=dest_dir, suffix=".part", delete=False) as tmp_fd:
+        yield Path(tmp_fd.name), cast(BinaryIO, tmp_fd)
