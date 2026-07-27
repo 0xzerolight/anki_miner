@@ -1261,6 +1261,17 @@ def test_resources_page_reprobes_after_a_download_rather_than_believing_the_summ
     assert fake.calls.count("dictionary") == 2
 
 
+def test_resources_probe_joins_the_wizards_close_barrier(qtbot, wiz_config, monkeypatch):
+    """A probe started here must not outlive the wizard that started it."""
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    registered: list[object] = []
+    monkeypatch.setattr(wiz, "register_worker", registered.append)
+
+    wiz.resources_page.initializePage()
+
+    assert registered == [wiz.resources_page._live_check]
+
+
 def test_resources_page_drops_a_superseded_probes_answer(qtbot, wiz_config, monkeypatch):
     """Worker identity is the generation counter — an older probe's answer is dropped."""
     wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())

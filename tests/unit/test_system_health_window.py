@@ -302,6 +302,28 @@ def test_starting_a_probe_returns_rows_and_badges_to_checking(main_window, qtbot
     assert main_window.status_bar.anki_status_badge.status == "checking"
 
 
+def test_closing_the_screen_cancels_nothing(main_window, qtbot, monkeypatch):
+    """The window observes a run; it never owns one."""
+    monkeypatch.setattr(main_window.background_tasks, "start_validation", lambda service: True)
+    cancelled: list[str] = []
+    monkeypatch.setattr(
+        main_window.background_tasks,
+        "cancel_jmdict_migration",
+        lambda: cancelled.append("jmdict"),
+    )
+    main_window.open_system_health()
+    window = main_window._system_health_window
+    assert window is not None
+    qtbot.addWidget(window)
+    main_window._run_validation()
+
+    window.close()
+
+    assert cancelled == []
+    # The sweep it was watching is still in flight, and still says so.
+    assert main_window._health_report.get("anki.connect").state == HEALTH_UNKNOWN
+
+
 def test_reveal_setting_asks_settings_to_jump(main_window, qtbot):
     from anki_miner.gui.widgets.settings_tab import SettingsTab
 
