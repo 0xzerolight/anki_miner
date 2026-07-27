@@ -222,6 +222,28 @@ class TestPressFeedback:
 
         assert button.property("pressProgress") == 0.0
 
+    def test_being_disabled_while_held_clears_the_tint(self, qtbot):
+        """A worker can disable a button under the finger; Qt sends no release."""
+        button = ModernButton("Mine Episode")
+        qtbot.addWidget(button)
+
+        with motion.instant():
+            qtbot.mousePress(button, Qt.MouseButton.LeftButton)
+            button.setEnabled(False)
+
+        assert button.property("pressProgress") == 0.0
+
+    def test_being_hidden_while_held_clears_the_tint(self, qtbot):
+        button = ModernButton("Mine Episode")
+        qtbot.addWidget(button)
+        button.show()
+
+        qtbot.mousePress(button, Qt.MouseButton.LeftButton)
+        button.hide()
+
+        assert button.property("pressProgress") == 0.0
+        assert not motion.active_animations(button)
+
     def test_press_and_release_reuse_one_animation(self, qtbot):
         """Two animations driving one property fight over it."""
         button = ModernButton("Mine Episode")

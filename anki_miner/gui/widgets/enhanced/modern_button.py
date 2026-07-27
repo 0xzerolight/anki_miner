@@ -1,8 +1,8 @@
 """Modern button widget with multiple style variants."""
 
 # pyqtProperty is present at runtime but missing from the PyQt6 stubs.
-from PyQt6.QtCore import QRectF, Qt, pyqtProperty  # type: ignore[attr-defined]
-from PyQt6.QtGui import QColor, QPainter, QPaintEvent, QPalette
+from PyQt6.QtCore import QEvent, QRectF, Qt, pyqtProperty  # type: ignore[attr-defined]
+from PyQt6.QtGui import QColor, QHideEvent, QPainter, QPaintEvent, QPalette
 from PyQt6.QtWidgets import QApplication, QPushButton
 
 from anki_miner.gui.resources.styles import BORDER_RADIUS, MOTION
@@ -133,6 +133,24 @@ class ModernButton(QPushButton):
 
     def _end_press(self) -> None:
         motion.animate(self, b"pressProgress", 0.0, duration=MOTION.press, curve=motion.colour_curve())
+
+    def changeEvent(self, event: QEvent | None) -> None:  # noqa: N802 - Qt override
+        """Release the tint if the button is disabled while held.
+
+        Qt drops the ``down`` state on disable without emitting ``released``,
+        and a disabled widget receives no mouse release either -- so without
+        this the tint would still be there when the button comes back.
+        """
+        super().changeEvent(event)
+        if event is not None and event.type() == QEvent.Type.EnabledChange and not self.isEnabled():
+            self._end_press()
+
+    def hideEvent(self, event: QHideEvent | None) -> None:  # noqa: N802 - Qt override
+        """Drop the tint outright: nobody is watching a hidden button fade."""
+        super().hideEvent(event)
+        for animation in motion.active_animations(self):
+            animation.stop()
+        self._set_press_progress(0.0)
 
     def paintEvent(self, event: QPaintEvent | None) -> None:  # noqa: N802 - Qt override
         """Draw the stylesheet's button, then the press tint over it."""
