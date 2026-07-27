@@ -26,7 +26,7 @@ enabled flag can never be bound onto a neighbour's entry.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from PyQt6.QtCore import QModelIndex, Qt, pyqtSignal
@@ -79,8 +79,6 @@ class ChainRowSpec:
     enabled_tooltip: str = ""
     #: Tooltip for any metadata that needs explaining, e.g. "word-based".
     metadata_tooltip: str = ""
-    #: Extra searchable/diagnostic keywords, unused by the widget itself.
-    tags: tuple[str, ...] = field(default_factory=tuple)
 
 
 class ChainSourceRow(QWidget):

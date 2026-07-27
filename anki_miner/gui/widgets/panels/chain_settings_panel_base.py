@@ -108,7 +108,6 @@ class ChainListLabels:
     remove: str
     move_up: str
     move_down: str
-    add_tooltip: str = ""
     remove_tooltip: str = ""
     move_up_tooltip: str = ""
     move_down_tooltip: str = ""
@@ -253,8 +252,6 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         toolbar.setSpacing(SPACING.xs)
 
         self._add_btn = ModernButton(labels.add, variant="primary")
-        if labels.add_tooltip:
-            self._add_btn.setToolTip(labels.add_tooltip)
         toolbar.addWidget(self._add_btn)
         for action in extra_actions:
             toolbar.addWidget(action)
