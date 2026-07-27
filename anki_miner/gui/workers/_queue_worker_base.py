@@ -40,9 +40,11 @@ answer:
   looked temporary" — see :func:`result_retry_eligible` and
   :meth:`SequentialQueueWorker._exception_retryable`.
 * **Boundary-only pause (D29-A).** Pause, Finish-current and Resume are consumed
-  between items, never inside ffmpeg, SQLite, media extraction or curation. The
-  gate is opened unconditionally by :meth:`SequentialQueueWorker.cancel`, because
-  a gate left closed is a shutdown deadlock.
+  between items, never inside ffmpeg, SQLite, media extraction or curation. That
+  half lives on :class:`RunBoundaryControls`, which the batch queue worker also
+  mixes in so all four list-driving workers answer the two verbs identically.
+  The gate is opened unconditionally by every ``cancel()``, because a gate left
+  closed is a shutdown deadlock.
 """
 
 from __future__ import annotations
