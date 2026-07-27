@@ -158,9 +158,10 @@ QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
     border: 1px solid;
 }
 
-QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
-    border-width: 2px;
-}
+/* No `border-width` change on focus. Thickening the border re-runs the QSS box
+   model, so the field's size hint grew by 2px the moment it was tabbed into and
+   every row under it shifted down. The ring is the border *colour*, set in the
+   focus block at the end of this file — colour never moves anything. */
 
 /* Disabled inputs get their real background and text colour from the themed
    :disabled rule further down — `opacity` is inert here.
@@ -213,7 +214,11 @@ QTabBar::tab:selected {
 
 /* ============== TEXT EDIT / LOG STYLES ============== */
 
-QTextEdit {
+/* QPlainTextEdit rides along: Reading -> Text pastes into one, and without a
+   declared border Qt draws its own native frame, which no theme colour and no
+   focus rule can reach — so that screen's main input had no focus ring. */
+QTextEdit,
+QPlainTextEdit {
     border-radius: ${border-radius-default}px;
     border: 1px solid;
     padding: ${spacing-sm}px;
@@ -1007,7 +1012,8 @@ AnimatedTabBar::tab:selected {
 
 /* --- Text Edit / Log --- */
 
-QTextEdit {
+QTextEdit,
+QPlainTextEdit {
     background-color: ${color-surface};
     color: ${color-text};
     border-color: ${color-border};
@@ -1575,3 +1581,54 @@ QLabel#chain-row-warning {
 QLabel#decorative {
     color: ${color-decorative};
 }
+
+/* ============== KEYBOARD FOCUS RING (D48-B, D41) ==============
+   BEGIN focus ring — self-contained; nothing outside this block belongs to it.
+
+   Under D41 the accent is scarce and reserved for four things, and keyboard
+   focus is one of them, so the ring is an accent ring in all 29 themes. Buttons
+   and text inputs get theirs from the role rules above; what is left here is
+   every control that had none.
+
+   Two rules held throughout:
+
+   * **Colour only, or `outline`.** Both leave the control's box exactly as
+     `widgets/base/sizing.py` measured it. A border that appears or thickens on
+     focus does not — it re-runs the box model and the form reflows under the
+     cursor.
+   * **`outline` only where Qt honours it.** Qt paints a stylesheet outline on
+     QPushButton and on item views and silently ignores it on QLineEdit,
+     QComboBox and friends, so it is used only where it actually draws.
+
+   Last in the file on purpose: these selectors tie with the role rules above,
+   and load order is what makes focus the final word on the ring. */
+
+/* Checkable controls. The indicator already reserves a 2px border, so this is a
+   recolour of a box that is drawn either way. `::indicator:focus` — subcontrol
+   then state — is the spelling Qt honours; `:focus::indicator` parses and does
+   nothing. */
+QCheckBox::indicator:focus,
+QRadioButton::indicator:focus {
+    border-color: ${color-border-focus};
+}
+
+/* Text areas and item views all reserve `border: 1px solid` in the structural
+   rules above, so the ring is that border restated in the accent. */
+QTextEdit:focus,
+QPlainTextEdit:focus,
+QTableWidget:focus,
+QListWidget:focus,
+QTreeWidget:focus {
+    border-color: ${color-border-focus};
+}
+
+/* The settings navigator is the one item view drawn without a frame, so it has
+   no border to recolour. Qt honours `outline` on item views, which draws the
+   ring without giving the list a box it was deliberately built without — and
+   the `outline: none` further up stays, because it suppresses the dotted
+   per-item rect, which is a different thing from the view's focus ring. */
+QListWidget#settings-nav:focus {
+    outline: 2px solid ${color-border-focus};
+}
+
+/* END focus ring */

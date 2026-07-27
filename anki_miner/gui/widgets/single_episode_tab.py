@@ -243,10 +243,17 @@ class SingleEpisodeTab(MiningTabBase):
         self.setAccessibleName(self.tr("Episode Mining Tab"))
         self.setAccessibleDescription(self.tr("Process a single video episode to create vocabulary flashcards"))
 
-        # Set proper tab order: video selector -> subtitle selector -> offset -> process
+        # Tab order through the page's own inputs: video -> subtitle -> offset.
+        #
+        # It deliberately stops there. Process Episode used to be chained on the
+        # end, and that was right while the button sat in the form; D6 moved it
+        # into the pinned action bar at the foot of the screen, so the old line
+        # pulled focus from the offset field straight down to the bar and back
+        # up again for Test Timing and Tracks. The bar is laid out in reading
+        # order and comes last in the page, so leaving it alone is what puts the
+        # primary action where the eye already expects it -- last.
         self.setTabOrder(self.video_selector, self.subtitle_selector)
         self.setTabOrder(self.subtitle_selector, self.offset_spinbox)
-        self.setTabOrder(self.offset_spinbox, self.process_button)
 
     def _create_file_selection_group(self) -> QFrame:
         """Create file selection group with enhanced file selectors.
