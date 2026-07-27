@@ -8,7 +8,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -36,7 +36,13 @@ from anki_miner.gui.utils.recent_files import RecentFilesManager
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
-from anki_miner.gui.widgets.base import configure_expanding_container, field_label_width, make_label_fit_text
+from anki_miner.gui.widgets.base import (
+    PageWidth,
+    configure_expanding_container,
+    configure_scrolled_page,
+    field_label_width,
+    make_label_fit_text,
+)
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
 from anki_miner.gui.widgets.log_widget import LogWidget
@@ -65,6 +71,9 @@ class SingleEpisodeTab(MiningTabBase):
     This tab allows users to select a video and subtitle file, adjust subtitle
     offset, and process the episode to mine vocabulary and create Anki cards.
     """
+
+    #: A label beside its control; a wider window buys gutters, not longer inputs.
+    PAGE_WIDTH = PageWidth.FORM
 
     # Test-only seam: emitted synchronously (same-thread DIRECT connection) with
     # the freshly built worker JUST BEFORE ``.start()`` so a test driver can
@@ -123,9 +132,6 @@ class SingleEpisodeTab(MiningTabBase):
         """Set up the user interface."""
         # Create scroll area for tab content
         scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         # Create container widget for scroll area
         container = QWidget()
@@ -190,7 +196,7 @@ class SingleEpisodeTab(MiningTabBase):
         self.presenter.error_signal.connect(self.log_widget.append_error)
 
         container.setLayout(layout)
-        scroll_area.setWidget(container)
+        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
 
         # Main layout just holds the scroll area
         main_layout = QVBoxLayout()

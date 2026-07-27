@@ -5,11 +5,15 @@ from .enhanced_dialog import EnhancedDialog
 from .form_panel import FormPanel
 from .setting_anchor import SettingAnchor, SettingAnchorHost, SettingTextProvider
 from .sizing import (
+    PAGE_SCROLL_OBJECT_NAME,
+    PageWidth,
     configure_expanding_container,
+    configure_scrolled_page,
     field_label_width,
     make_label_fit_text,
     make_widget_expand_vertically,
     make_widget_shrink_to_fit,
+    page_width_cap,
 )
 from .status_badge import StatusBadge
 
@@ -21,6 +25,10 @@ __all__ = [
     "StatusBadge",
     "ElidingLabel",
     "EnhancedDialog",
+    "PAGE_SCROLL_OBJECT_NAME",
+    "PageWidth",
+    "configure_scrolled_page",
+    "page_width_cap",
     "make_label_fit_text",
     "make_widget_expand_vertically",
     "make_widget_shrink_to_fit",

@@ -24,7 +24,6 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -40,6 +39,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
+from anki_miner.gui.widgets.base import PageWidth, configure_scrolled_page
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -68,6 +68,9 @@ class ReadingTextTab(_ReadingMiningTabBase):
     base's ``_build_curation_context`` returns ``(None, lookup_fn)`` from the
     worker's ``curation_processor`` — this tab does NOT override it.
     """
+
+    #: A label beside its control; a wider window buys gutters, not longer inputs.
+    PAGE_WIDTH = PageWidth.FORM
 
     def __init__(
         self,
@@ -100,9 +103,6 @@ class ReadingTextTab(_ReadingMiningTabBase):
     def _setup_ui(self) -> None:
         """Build the tab layout: one Text card, checkbox, one bar, log."""
         scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         container = QWidget()
         layout = QVBoxLayout()
@@ -126,7 +126,7 @@ class ReadingTextTab(_ReadingMiningTabBase):
         layout.addWidget(self.log_widget, 1)
 
         container.setLayout(layout)
-        scroll_area.setWidget(container)
+        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)

@@ -3,14 +3,25 @@
 Provides Unity-style auto-sizing helpers that make widgets adapt to their content
 rather than using fixed dimensions.
 
-``apply_button_size`` and ``metric_row_height`` are the shared replacement for
-hard-coded pixel floors on controls and item-view rows. Derive geometry from live
-font metrics through them rather than writing another constant: a literal floor
-silently stops tracking the UI text scale, which is exactly how the 2026-07-25
-audit's row-crush and clipped-button findings were produced.
+``apply_button_size``, ``metric_row_height`` and ``page_width_cap`` are the shared
+replacement for hard-coded pixel floors on controls, item-view rows and page
+columns. Derive geometry from live font metrics through them rather than writing
+another constant: a literal floor silently stops tracking the UI text scale, which
+is exactly how the 2026-07-25 audit's row-crush and clipped-button findings were
+produced.
 """
 
-from PyQt6.QtWidgets import QLabel, QPushButton, QSizePolicy, QWidget
+from enum import Enum
+
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import (
+    QFrame,
+    QLabel,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QWidget,
+)
 
 from anki_miner.gui.resources.styles import SPACING
 
@@ -18,6 +29,16 @@ from anki_miner.gui.resources.styles import SPACING
 _BUTTON_PADDING_Y = SPACING.xs
 #: Default breathing room above and below an item-view row's text, per edge.
 _ROW_PADDING_Y = SPACING.xxs
+
+#: A comfortable prose measure, in characters. The classic typographic range is
+#: 45-90; 60 sits in the middle of it and is the unit both page widths are built
+#: from, so widening a page means "one more column of reading", not "some more
+#: pixels".
+_READABLE_MEASURE_CH = 60
+
+#: Object name every page shell carries, so QSS and tests have one stable handle
+#: on "the scrolled body of a screen".
+PAGE_SCROLL_OBJECT_NAME = "page-scroll"
 
 
 def field_label_width(*texts: str) -> int:
@@ -133,6 +154,73 @@ def metric_row_height(widget: QWidget, *, vertical_padding: int = _ROW_PADDING_Y
     """
     widget.ensurePolished()
     return widget.fontMetrics().lineSpacing() + 2 * vertical_padding
+
+
+class PageWidth(Enum):
+    """How much horizontal measure a screen's content can usefully spend.
+
+    Values are counts of characters, not pixels -- see :func:`page_width_cap`.
+    A monitor wider than this buys gutters, because a wider "Video file" box
+    carries no more information than a narrow one.
+    """
+
+    #: A label beside its control: two measures side by side.
+    FORM = 2 * _READABLE_MEASURE_CH
+    #: Queues, tables and analytics, whose columns really do use the room.
+    DATA = 3 * _READABLE_MEASURE_CH
+
+
+def page_width_cap(widget: QWidget, kind: PageWidth) -> int:
+    """Return ``kind``'s cap in pixels, measured through ``widget``'s font.
+
+    Uses the advance of ``"0"`` -- the CSS ``ch`` unit, and the one digit every
+    font renders at its tabular width -- so the cap holds the same number of
+    characters at 0.8x text as it does at 1.5x. A pixel constant would instead
+    hand a large-text user the same column with a third of the words in it.
+
+    Args:
+        widget: The widget whose rendered font decides the measure.
+        kind: The page's declared width class.
+
+    Returns:
+        The maximum content width in pixels.
+    """
+    widget.ensurePolished()
+    return kind.value * widget.fontMetrics().horizontalAdvance("0")
+
+
+def configure_scrolled_page(scroll: QScrollArea, content: QWidget, kind: PageWidth) -> None:
+    """Turn ``scroll``/``content`` into a centred page column capped at ``kind``.
+
+    This is the single page shell: it applies the frame, scroll-bar policy and
+    resize behaviour every screen was repeating by hand, then centres the
+    content and caps it. Content width ends up at ``min(viewport, cap)``, so a
+    1024px window is unaffected and a 3440px one grows gutters instead of
+    inputs.
+
+    The cap is never allowed below the content's own minimum. Qt applies a
+    widget's maximum *after* its minimum when a resizable scroll area lays it
+    out, so a smaller cap would not shrink the page -- it would clip it behind
+    the disabled horizontal scrollbar. That corner is reachable in practice at
+    0.8x text, where the FORM cap drops under the widest Settings panel.
+
+    Args:
+        scroll: The page's scroll area. Its widget is set here; do not also call
+            ``setWidget``.
+        content: The column of cards the page builds, fully populated.
+        kind: The page's declared ``PAGE_WIDTH``.
+    """
+    scroll.setObjectName(PAGE_SCROLL_OBJECT_NAME)
+    scroll.setWidgetResizable(True)
+    scroll.setFrameShape(QFrame.Shape.NoFrame)
+    scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    scroll.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
+
+    content.ensurePolished()
+    needed = max(content.minimumWidth(), content.minimumSizeHint().width())
+    content.setMaximumWidth(max(page_width_cap(content, kind), needed))
+
+    scroll.setWidget(content)
 
 
 def configure_expanding_container(widget: QWidget) -> None:

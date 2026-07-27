@@ -23,7 +23,6 @@ import logging
 import os
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFrame,
@@ -39,6 +38,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.constants import VIDEO_FILE_FILTER
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
+from anki_miner.gui.widgets.base import PageWidth, configure_scrolled_page
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.workers.subtitle_gen_worker import SubtitleGenWorker
 from anki_miner.services.asr import _engine, model_manager
@@ -58,6 +58,9 @@ class SubtitleCreationTab(_ToolTabBase):
         config: Frozen application configuration.
         parent: Optional parent widget.
     """
+
+    #: A label beside its control; a wider window buys gutters, not longer inputs.
+    PAGE_WIDTH = PageWidth.FORM
 
     def __init__(
         self,
@@ -118,9 +121,6 @@ class SubtitleCreationTab(_ToolTabBase):
 
     def _setup_ui(self) -> None:
         scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         container = QWidget()
         layout = QVBoxLayout()
@@ -134,7 +134,7 @@ class SubtitleCreationTab(_ToolTabBase):
         layout.addStretch()
 
         container.setLayout(layout)
-        scroll_area.setWidget(container)
+        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
