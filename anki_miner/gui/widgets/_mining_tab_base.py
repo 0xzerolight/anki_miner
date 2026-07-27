@@ -86,7 +86,7 @@ class MiningTabBase(ScreenIssueHost, QWidget):
 
     # Active frozen config. Every mining-tab subclass assigns this in its
     # __init__ (public attribute unified across the whole family, ARC-018);
-    # declared here so base methods (e.g. _mark_known) can read it without a
+    # declared here so base methods (e.g. _commit_known_words) can read it without a
     # per-call type: ignore. Bare annotation only — no runtime class attribute.
     config: AnkiMinerConfig
 
@@ -524,13 +524,18 @@ class MiningTabBase(ScreenIssueHost, QWidget):
     # Known/ignore list (Issue #42)
     # ------------------------------------------------------------------
 
-    def _mark_known(self, forms: set[str]) -> int:
-        """Persist curator-selected forms to the local known/ignore list.
+    def _commit_known_words(self, forms: set[str]) -> int:
+        """Persist the curator's STAGED known forms (D34-B).
 
-        Passed as ``mark_known_callback`` to ``WordCurationDialog``. Delegates to
-        :func:`add_user_known_words`, which writes immediately (source='user') so
-        the words persist even if the dialog is cancelled — same Issue #42 rule
-        the settings tab's rebuild action uses.
+        Passed as ``commit_known_callback`` to ``WordCurationDialog`` and called
+        only from its Confirm path — never when the user clicks Add to Known
+        Words, which merely marks rows "Known · pending". Cancel, Esc, the
+        window X, this tab's Cancel button, teardown and shutdown all discard
+        the stage, so abandoning a review leaves nothing behind. This reverses
+        the immediate write documented against Issue #42.
+
+        Runs ON A WORKER THREAD (the dialog dispatches it through
+        ``run_off_thread``), so it must not touch Qt widgets.
         """
         from anki_miner.services.known_word_db import add_user_known_words
 
@@ -800,7 +805,7 @@ class MiningTabBase(ScreenIssueHost, QWidget):
             dialog = WordCurationDialog(
                 words,
                 self,
-                mark_known_callback=self._mark_known,
+                commit_known_callback=self._commit_known_words,
                 media_context=media_context,
                 lookup_fn=lookup_fn,
             )
@@ -971,9 +976,13 @@ class MiningTabBase(ScreenIssueHost, QWidget):
         ``RuntimeError`` is suppressed for the window whose C++ object has
         already gone: its ``destroyed`` fallback has released the gate anyway,
         and a raise here would abort the caller's cancel/teardown sequence.
+
+        ``force_reject`` rather than ``reject``: the curator refuses a normal
+        reject while a staged Known Words write is in flight, and a teardown
+        that respected that refusal would leave the worker parked forever.
         """
         self._curation_cancelled = True
         dialog = self._active_curation_dialog
         if dialog is not None:
             with contextlib.suppress(RuntimeError):
-                dialog.reject()
+                dialog.force_reject()

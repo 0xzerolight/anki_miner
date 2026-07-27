@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AudioSourceEntry
+from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.widgets.base import ScreenIssue
 from anki_miner.gui.widgets.enhanced import ModernButton
@@ -82,7 +83,18 @@ class _AddSourceDialog(QDialog):
         layout.addWidget(self._buttons)
 
         self._on_kind_changed()
+        # The URL template is a text field, so Return must stay text entry
+        # rather than confirming the dialog (D49); Ctrl+Enter confirms, and only
+        # when the entry is actually valid — the same gate the OK button uses.
+        disown_default_buttons(self)
+        primary_action_shortcut(self, self._accept_if_valid)
         add_min_max_buttons(self)
+
+    def _accept_if_valid(self) -> None:
+        """Confirm only when OK would be clickable, so Ctrl+Enter can't bypass validation."""
+        ok_button = self._buttons.button(QDialogButtonBox.StandardButton.Ok)
+        if ok_button is not None and ok_button.isEnabled():
+            self.accept()
 
     def selected_kind(self) -> str:
         return str(self._kind_combo.currentData())

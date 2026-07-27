@@ -8,7 +8,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QDialogButtonBox, QLabel, QMessageBox
+from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.gui.widgets.panels import audio_pack_settings_panel as asp_mod
@@ -1372,3 +1372,46 @@ class TestReadingTtsControls:
         assert not panel._reading_tts_hint.isVisibleTo(panel)
         panel.set_reading_tts(False, False, False)
         assert not panel._reading_tts_hint.isVisibleTo(panel)
+
+
+class TestAddSourceDialogImeSafety:
+    """D49 — the URL template is a text field, so Return must not confirm."""
+
+    def _dialog(self, qtbot):
+        dlg = asp_mod._AddSourceDialog()
+        qtbot.addWidget(dlg)
+        dlg.show()
+        return dlg
+
+    def test_no_default_button_after_show(self, qapp, qtbot):
+        from PyQt6.QtWidgets import QPushButton
+
+        dlg = self._dialog(qtbot)
+        buttons = dlg.findChildren(QPushButton)
+        assert buttons
+        assert not any(b.isDefault() or b.autoDefault() for b in buttons)
+
+    def test_return_in_url_field_does_not_accept(self, qapp, qtbot):
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtTest import QTest
+
+        dlg = self._dialog(qtbot)
+        dlg._url_edit.setText("http://localhost:5050/?term={term}")
+        dlg._url_edit.setFocus()
+        QTest.keyClick(dlg._url_edit, Qt.Key.Key_Return)
+        assert dlg.isVisible()
+        assert dlg.result() != int(QDialog.DialogCode.Accepted)
+
+    def test_ctrl_return_accepts_a_valid_entry(self, qapp, qtbot):
+        dlg = self._dialog(qtbot)
+        dlg._url_edit.setText("http://localhost:5050/?term={term}")
+        dlg._accept_if_valid()
+        assert dlg.result() == int(QDialog.DialogCode.Accepted)
+
+    def test_ctrl_return_cannot_bypass_the_ok_gate(self, qapp, qtbot):
+        dlg = self._dialog(qtbot)
+        dlg._url_edit.setText("   ")  # OK is disabled for an empty URL
+        assert not dlg._buttons.button(QDialogButtonBox.StandardButton.Ok).isEnabled()
+        dlg._accept_if_valid()
+        assert dlg.isVisible()
+        assert dlg.result() != int(QDialog.DialogCode.Accepted)

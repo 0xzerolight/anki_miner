@@ -7,7 +7,7 @@ logic invoked by keyboard shortcuts.
 
 import pytest
 from PyQt6.QtCore import QItemSelection, QItemSelectionModel, Qt
-from PyQt6.QtWidgets import QApplication, QTableWidget
+from PyQt6.QtWidgets import QApplication, QDialog, QTableWidget
 
 
 @pytest.fixture
@@ -470,67 +470,198 @@ class TestFrequencyColumnSort:
 
 
 class TestAddToKnownWords:
-    """Issue #42 — 'Add to Known Words' from the curator."""
+    """D34-B — 'Add to Known Words' stages; only Confirm writes.
 
-    def _dialog_with_callback(self, qtbot, make_tokenized_words):
+    Reverses the Issue #42 behaviour where the click persisted immediately, so
+    a Cancel that abandoned the run still excluded those words forever.
+    """
+
+    def _dialog_with_callback(self, qtbot, make_tokenized_words, fail=False):
         from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 
         captured: list[set[str]] = []
-        dlg = WordCurationDialog(
-            make_tokenized_words(3), mark_known_callback=lambda forms: captured.append(forms) or len(forms)
-        )
+
+        def commit(forms):
+            captured.append(set(forms))
+            if fail:
+                raise RuntimeError("disk on fire")
+            return len(forms)
+
+        dlg = WordCurationDialog(make_tokenized_words(3), commit_known_callback=commit)
         qtbot.addWidget(dlg)
         return dlg, captured
 
-    def test_calls_callback_with_mined_forms_of_selected_rows(self, qtbot, make_tokenized_words):
+    # --- staging -----------------------------------------------------
+
+    def test_click_writes_nothing(self, qtbot, make_tokenized_words):
         dlg, captured = self._dialog_with_callback(qtbot, make_tokenized_words)
         mined = dlg.table.item(0, 1).text()
         _select_rows(dlg, [0])
         dlg._on_add_to_known()
-        assert captured == [{mined}]
+        assert captured == []
+        assert dlg.pending_known_forms() == {mined}
 
-    def test_marked_rows_are_unchecked_and_excluded(self, qtbot, make_tokenized_words):
+    def test_staged_row_reads_known_pending(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        _select_rows(dlg, [0])
+        dlg._on_add_to_known()
+        assert "pending" in dlg.table.item(0, 0).text().lower()
+
+    def test_staged_rows_are_unchecked_and_excluded(self, qtbot, make_tokenized_words):
         dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
         mined = dlg.table.item(0, 1).text()
         _select_rows(dlg, [0])
         dlg._on_add_to_known()
         assert dlg.table.item(0, 0).checkState() == Qt.CheckState.Unchecked
-        # Excluded from the run's selection.
         assert mined not in {w.mined_form for w in dlg.get_selected_words()}
 
-    def test_marked_row_struck_through(self, qtbot, make_tokenized_words):
+    def test_staged_row_struck_through(self, qtbot, make_tokenized_words):
         dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
         _select_rows(dlg, [0])
         dlg._on_add_to_known()
         assert dlg.table.item(0, 1).font().strikeOut() is True
 
-    def test_marked_row_cannot_be_rechecked_by_select_all(self, qtbot, make_tokenized_words):
+    def test_staged_row_cannot_be_rechecked_by_select_all(self, qtbot, make_tokenized_words):
         dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
         _select_rows(dlg, [0])
         dlg._on_add_to_known()
-        dlg._select_all()  # acts on the highlighted row — the marked one
+        dlg._select_all()  # acts on the highlighted row — the staged one
         assert dlg.table.item(0, 0).checkState() == Qt.CheckState.Unchecked
 
     def test_falls_back_to_current_row_when_no_selection(self, qtbot, make_tokenized_words):
-        dlg, captured = self._dialog_with_callback(qtbot, make_tokenized_words)
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
         _select_rows(dlg, [])
         dlg.table.setCurrentCell(1, 0)
         mined = dlg.table.item(1, 1).text()
         dlg._on_add_to_known()
-        assert captured == [{mined}]
+        assert dlg.pending_known_forms() == {mined}
 
     def test_noop_without_target(self, qtbot, make_tokenized_words):
-        dlg, captured = self._dialog_with_callback(qtbot, make_tokenized_words)
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
         _select_rows(dlg, [])
         dlg.table.setCurrentCell(-1, -1)
         dlg._on_add_to_known()
-        assert captured == []
+        assert dlg.pending_known_forms() == set()
 
-    def test_works_without_callback(self, qtbot, make_tokenized_words):
+    def test_disabled_without_callback(self, qtbot, make_tokenized_words):
         from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 
         dlg = WordCurationDialog(make_tokenized_words(3))
         qtbot.addWidget(dlg)
+        assert not dlg.add_known_button.isEnabled()
         _select_rows(dlg, [0])
-        dlg._on_add_to_known()  # must not raise
-        assert dlg.table.item(0, 0).checkState() == Qt.CheckState.Unchecked
+        dlg._on_add_to_known()  # must not raise, and must stage nothing
+        assert dlg.pending_known_forms() == set()
+        assert dlg.table.item(0, 0).checkState() == Qt.CheckState.Checked
+
+    # --- Confirm commits ---------------------------------------------
+
+    def test_confirm_commits_the_stage_exactly_once(self, qtbot, make_tokenized_words):
+        dlg, captured = self._dialog_with_callback(qtbot, make_tokenized_words)
+        mined = dlg.table.item(0, 1).text()
+        _select_rows(dlg, [0])
+        dlg._on_add_to_known()
+
+        with qtbot.waitSignal(dlg.finished, timeout=3000):
+            dlg.accept()
+
+        assert captured == [{mined}]
+        assert dlg.result() == int(QDialog.DialogCode.Accepted)
+        assert dlg.pending_known_forms() == set()
+
+    def test_confirm_without_a_stage_never_calls_the_callback(self, qtbot, make_tokenized_words):
+        dlg, captured = self._dialog_with_callback(qtbot, make_tokenized_words)
+        dlg.accept()
+        assert captured == []
+        assert dlg.result() == int(QDialog.DialogCode.Accepted)
+
+    # --- Cancel discards ---------------------------------------------
+
+    def test_cancel_discards_the_stage_without_writing(self, qtbot, make_tokenized_words):
+        dlg, captured = self._dialog_with_callback(qtbot, make_tokenized_words)
+        _select_rows(dlg, [0])
+        dlg._on_add_to_known()
+        dlg.reject()
+        assert captured == []
+        assert dlg.result() == int(QDialog.DialogCode.Rejected)
+
+    def test_escape_discards_the_stage_without_writing(self, qtbot, make_tokenized_words):
+        from PyQt6.QtTest import QTest
+
+        dlg, captured = self._dialog_with_callback(qtbot, make_tokenized_words)
+        _select_rows(dlg, [0])
+        dlg._on_add_to_known()
+        dlg.show()
+        QTest.keyClick(dlg, Qt.Key.Key_Escape)
+        assert captured == []
+        assert dlg.result() == int(QDialog.DialogCode.Rejected)
+
+    def test_window_close_discards_the_stage_without_writing(self, qtbot, make_tokenized_words):
+        dlg, captured = self._dialog_with_callback(qtbot, make_tokenized_words)
+        _select_rows(dlg, [0])
+        dlg._on_add_to_known()
+        dlg.show()
+        assert dlg.close()
+        assert captured == []
+        assert dlg.result() == int(QDialog.DialogCode.Rejected)
+
+    def test_force_reject_discards_the_stage_without_writing(self, qtbot, make_tokenized_words):
+        dlg, captured = self._dialog_with_callback(qtbot, make_tokenized_words)
+        _select_rows(dlg, [0])
+        dlg._on_add_to_known()
+        dlg.force_reject()
+        assert captured == []
+        assert dlg.result() == int(QDialog.DialogCode.Rejected)
+
+    # --- failure keeps the review open --------------------------------
+
+    def test_failed_write_leaves_the_review_open_and_unaccepted(self, qtbot, make_tokenized_words):
+        dlg, captured = self._dialog_with_callback(qtbot, make_tokenized_words, fail=True)
+        _select_rows(dlg, [0])
+        dlg._on_add_to_known()
+
+        dlg.accept()
+        qtbot.waitUntil(lambda: dlg.issue_banner().current_issue() is not None, timeout=3000)
+
+        assert captured  # it was attempted
+        assert dlg.result() != int(QDialog.DialogCode.Accepted)
+        # The stage survives so the retry is not silently empty.
+        assert dlg.pending_known_forms()
+        assert dlg.confirm_button.isEnabled()
+        assert dlg.cancel_button.isEnabled()
+
+    def test_cancel_after_a_failed_write_still_discards(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words, fail=True)
+        _select_rows(dlg, [0])
+        dlg._on_add_to_known()
+        dlg.accept()
+        qtbot.waitUntil(lambda: dlg.issue_banner().current_issue() is not None, timeout=3000)
+
+        dlg.reject()
+        assert dlg.result() == int(QDialog.DialogCode.Rejected)
+
+    def test_retry_after_failure_commits_once_more(self, qtbot, make_tokenized_words):
+        from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
+
+        calls: list[set[str]] = []
+
+        def commit(forms):
+            calls.append(set(forms))
+            if len(calls) == 1:
+                raise RuntimeError("transient")
+            return len(forms)
+
+        dlg = WordCurationDialog(make_tokenized_words(3), commit_known_callback=commit)
+        qtbot.addWidget(dlg)
+        _select_rows(dlg, [0])
+        dlg._on_add_to_known()
+        mined = dlg.table.item(0, 1).text()
+
+        dlg.accept()
+        qtbot.waitUntil(lambda: dlg.issue_banner().current_issue() is not None, timeout=3000)
+
+        with qtbot.waitSignal(dlg.finished, timeout=3000):
+            dlg.accept()
+
+        assert calls == [{mined}, {mined}]
+        assert dlg.result() == int(QDialog.DialogCode.Accepted)

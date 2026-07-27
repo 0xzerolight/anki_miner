@@ -88,7 +88,7 @@ def test_single_cancel_click_releases_active_curation_dialog(single_tab):
 
     single_tab._on_cancel_clicked()
 
-    dialog.reject.assert_called_once_with()
+    dialog.force_reject.assert_called_once_with()
     assert single_tab._curation_cancelled is True
 
 
@@ -138,7 +138,7 @@ def test_batch_cancel_click_releases_active_curation_dialog(batch_tab):
 
     batch_tab._on_cancel_clicked()
 
-    dialog.reject.assert_called_once_with()
+    dialog.force_reject.assert_called_once_with()
     assert batch_tab._curation_cancelled is True
 
 

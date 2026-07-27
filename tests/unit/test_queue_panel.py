@@ -159,3 +159,61 @@ def test_clear_queue_empties_rows(panel, monkeypatch):
 
     assert panel.item_count == 0
     assert "empty" in panel.queue_stats_label.text().lower()
+
+
+class TestImeSafeDialogs:
+    """D49 — Return belongs to the input method, never to a dialog's OK button.
+
+    Both of this panel's dialogs own text fields. A default button turns the
+    Return that commits a kana composition into "confirm this dialog", which
+    makes a Japanese series name impossible to type.
+    """
+
+    def test_add_series_prompt_has_no_default_button(self, panel, monkeypatch):
+        from PyQt6.QtWidgets import QInputDialog, QPushButton
+
+        seen: list[QInputDialog] = []
+
+        def capture(self):
+            seen.append(self)
+            self.show()  # Qt promotes a default button from its show handlers
+            return 0  # Rejected
+
+        monkeypatch.setattr(QInputDialog, "exec", capture)
+        panel._add_series()
+
+        assert seen, "_add_series no longer builds an instantiated QInputDialog"
+        buttons = seen[0].findChildren(QPushButton)
+        assert buttons
+        assert not any(b.isDefault() or b.autoDefault() for b in buttons)
+
+    def test_add_series_prompt_confirms_on_ctrl_return(self, panel, monkeypatch):
+        from PyQt6.QtGui import QKeySequence, QShortcut
+        from PyQt6.QtWidgets import QInputDialog
+
+        seen: list[QInputDialog] = []
+        monkeypatch.setattr(QInputDialog, "exec", lambda self: seen.append(self) or 0)
+        panel._add_series()
+
+        keys = {sc.key() for sc in seen[0].findChildren(QShortcut)}
+        assert QKeySequence("Ctrl+Return") in keys
+        assert QKeySequence("Ctrl+Enter") in keys
+
+    def test_edit_dialog_ok_is_neither_default_nor_auto_default(self, panel, monkeypatch):
+        from PyQt6.QtWidgets import QDialog, QPushButton
+
+        widget = _add_widget(panel, "Series", "id-1")
+        seen: list[QDialog] = []
+
+        def capture(self):
+            seen.append(self)
+            self.show()
+            return QDialog.DialogCode.Rejected
+
+        monkeypatch.setattr(QDialog, "exec", capture)
+        panel._edit_item(widget)
+
+        assert seen
+        buttons = seen[0].findChildren(QPushButton)
+        assert buttons
+        assert not any(b.isDefault() or b.autoDefault() for b in buttons)

@@ -184,7 +184,7 @@ def test_shutdown_rejects_open_dialog_so_blocked_worker_resumes(tab):
     tab._active_curation_dialog = dialog
     tab.worker_thread = MagicMock(name="QueueWorker")
     tab.shutdown()
-    dialog.reject.assert_called_once()
+    dialog.force_reject.assert_called_once()
     assert tab._curation_cancelled is True
 
 

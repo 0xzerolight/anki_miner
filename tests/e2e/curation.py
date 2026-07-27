@@ -56,7 +56,7 @@ def _make_fake_curation_dialog(responder: AutoCurationResponder) -> type:
 
     class _FakeCurationDialog(QDialog):
         def __init__(self, *args: Any, **kwargs: Any) -> None:
-            # Real call site: WordCurationDialog(words, parent, mark_known_callback=...,
+            # Real call site: WordCurationDialog(words, parent, commit_known_callback=...,
             # media_context=..., lookup_fn=...). First positional arg is the offered
             # words list, the second the owning tab.
             super().__init__(args[1] if len(args) > 1 else kwargs.get("parent"))
