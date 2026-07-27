@@ -8,7 +8,6 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -30,7 +29,12 @@ from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
-from anki_miner.gui.widgets.base import field_label_width, make_label_fit_text
+from anki_miner.gui.widgets.base import (
+    PageWidth,
+    configure_scrolled_page,
+    field_label_width,
+    make_label_fit_text,
+)
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
@@ -57,6 +61,9 @@ class BatchProcessingTab(MiningTabBase):
     - Dual progress bars (overall + current episode)
     - Enhanced log widget
     """
+
+    #: Tables and queue rows genuinely use the extra width.
+    PAGE_WIDTH = PageWidth.DATA
 
     def __init__(
         self,
@@ -112,9 +119,6 @@ class BatchProcessingTab(MiningTabBase):
         """Set up the user interface."""
         # Create scroll area for tab content
         scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         # Create container widget for scroll area
         container = QWidget()
@@ -168,7 +172,7 @@ class BatchProcessingTab(MiningTabBase):
         self.presenter.error_signal.connect(self.log_widget.append_error)
 
         container.setLayout(layout)
-        scroll_area.setWidget(container)
+        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
 
         # Main layout just holds the scroll area
         main_layout = QVBoxLayout()

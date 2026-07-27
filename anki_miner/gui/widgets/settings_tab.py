@@ -8,10 +8,9 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Protocol, cast, runtime_checkable
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
-    QFrame,
     QHBoxLayout,
     QLabel,
     QMessageBox,
@@ -42,7 +41,12 @@ from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.qt_helpers import install_no_scroll_on_inputs
 from anki_miner.gui.utils.run_off_thread import run_off_thread
-from anki_miner.gui.widgets.base import SettingAnchor, SettingAnchorHost
+from anki_miner.gui.widgets.base import (
+    PageWidth,
+    SettingAnchor,
+    SettingAnchorHost,
+    configure_scrolled_page,
+)
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels import (
     AnkiSettingsPanel,
@@ -107,6 +111,9 @@ class SettingsTab(SettingAnchorHost, QWidget):
             Profiles…" button. The window opens the dialog, not this tab: a
             profile switch reloads every panel here from the incoming config.
     """
+
+    #: A label beside its control; a wider window buys gutters, not longer inputs.
+    PAGE_WIDTH = PageWidth.FORM
 
     ANCHOR_NAMESPACE = "app"
 
@@ -631,10 +638,7 @@ class SettingsTab(SettingAnchorHost, QWidget):
             QScrollArea containing the widget
         """
         scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll_area.setWidget(widget)
+        configure_scrolled_page(scroll_area, widget, self.PAGE_WIDTH)
         # Issue #99: keep hover-scroll from mutating spin/combo values in the panel.
         install_no_scroll_on_inputs(widget)
         return scroll_area

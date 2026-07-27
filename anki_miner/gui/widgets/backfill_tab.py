@@ -23,7 +23,6 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QFrame,
     QHBoxLayout,
     QLabel,
     QMessageBox,
@@ -37,6 +36,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils.qt_helpers import install_no_scroll_on_inputs
+from anki_miner.gui.widgets.base import PageWidth, configure_scrolled_page
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.workers.backfill_worker import BackfillApplyWorker, BackfillScanWorker
 from anki_miner.gui.workers.base_worker import SingleCallWorker
@@ -58,6 +58,9 @@ _CELL_ELIDE = 120
 
 class CardBackfillTab(QWidget):
     """Scan → preview table → Apply, over the configured note type."""
+
+    #: Tables and queue rows genuinely use the extra width.
+    PAGE_WIDTH = PageWidth.DATA
 
     def __init__(self, config: AnkiMinerConfig, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -163,10 +166,7 @@ class CardBackfillTab(QWidget):
         layout.addWidget(self.status_label)
 
         scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll_area.setWidget(container)
+        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
         install_no_scroll_on_inputs(container)
 
         outer = QVBoxLayout(self)

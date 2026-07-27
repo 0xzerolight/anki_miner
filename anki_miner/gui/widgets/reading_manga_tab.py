@@ -30,7 +30,6 @@ import contextlib
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -46,7 +45,11 @@ from PyQt6.QtWidgets import (
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
-from anki_miner.gui.widgets.base import field_label_width
+from anki_miner.gui.widgets.base import (
+    PageWidth,
+    configure_scrolled_page,
+    field_label_width,
+)
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
@@ -105,6 +108,9 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     that the reading base already supplies.
     """
 
+    #: A label beside its control; a wider window buys gutters, not longer inputs.
+    PAGE_WIDTH = PageWidth.FORM
+
     def __init__(
         self,
         config: AnkiMinerConfig,
@@ -145,9 +151,6 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     def _setup_ui(self) -> None:
         """Build the tab layout: Volume + Folder cards, checkbox, bar, log."""
         scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         container = QWidget()
         layout = QVBoxLayout()
@@ -178,7 +181,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         layout.addWidget(self.log_widget, 1)
 
         container.setLayout(layout)
-        scroll_area.setWidget(container)
+        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)

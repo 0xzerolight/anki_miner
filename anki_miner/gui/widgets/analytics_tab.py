@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.qt_helpers import configure_table_header
 from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.widgets.base import PageWidth, configure_scrolled_page
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader, StatCard
 from anki_miner.models.stats import (
     DifficultyEntry,
@@ -88,6 +89,9 @@ class _AnalyticsBundle:
 class AnalyticsTab(QWidget):
     """Tab displaying mining analytics, difficulty rankings, and milestones."""
 
+    #: Tables and queue rows genuinely use the extra width.
+    PAGE_WIDTH = PageWidth.DATA
+
     # showEvent fires on every tab switch. Skip the refresh if data is fresh
     # within this window so rapid tab clicking stays snappy.
     _REFRESH_TTL_SECONDS = 5.0
@@ -104,9 +108,6 @@ class AnalyticsTab(QWidget):
 
     def _setup_ui(self) -> None:
         scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         container = QWidget()
         layout = QVBoxLayout()
@@ -136,7 +137,7 @@ class AnalyticsTab(QWidget):
         layout.addStretch()
 
         container.setLayout(layout)
-        scroll_area.setWidget(container)
+        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)

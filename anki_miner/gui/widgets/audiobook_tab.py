@@ -53,7 +53,11 @@ from anki_miner.gui.widgets._queue_mining_tab_base import (
     _QueueRunStrings,
 )
 from anki_miner.gui.widgets.audiobook_queue_item_widget import AudiobookQueueItemWidget
-from anki_miner.gui.widgets.base import field_label_width
+from anki_miner.gui.widgets.base import (
+    PageWidth,
+    configure_scrolled_page,
+    field_label_width,
+)
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -83,6 +87,9 @@ class AudiobookTab(_ListQueueMiningTabBase):
     running :class:`AudiobookQueueWorker`. Button state is derived from the queue
     contents and the worker handle via :meth:`_recompute_buttons` (base).
     """
+
+    #: Tables and queue rows genuinely use the extra width.
+    PAGE_WIDTH = PageWidth.DATA
 
     _shutdown_log_name = "Audiobook"
     _status_ready = ReadyItemStatus.READY
@@ -153,9 +160,6 @@ class AudiobookTab(_ListQueueMiningTabBase):
         buttons), a Progress card, and a LogWidget.
         """
         scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         container = QWidget()
         layout = QVBoxLayout()
@@ -264,7 +268,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
         layout.addWidget(self.log_widget)
 
         container.setLayout(layout)
-        scroll_area.setWidget(container)
+        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
