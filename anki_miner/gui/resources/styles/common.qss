@@ -105,6 +105,13 @@ QPushButton#critical {
 }
 
 /* Icon buttons */
+/* Glyph-only controls pinned to their own height (the chain editor's reorder
+   arrows and its trash). The global inset above is measured for a word, so on a
+   square box it leaves the glyph a negative content width and clips it away. */
+QPushButton[square="true"] {
+    padding: ${spacing-xxs}px;
+}
+
 QPushButton#iconButton {
     min-width: ${spacing-xl}px;
     min-height: ${spacing-xl}px;

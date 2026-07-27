@@ -122,6 +122,12 @@ class ModernButton(QPushButton):
         # replaces: 36 was slack at 100% text and under the glyphs at 150%, so it
         # made every button taller than its content on the machine the number was
         # chosen on, and shorter than its content on everybody else's.
+        # A square control is pinned to its own height, and the global button
+        # padding is measured for a word: left unchanged it would leave the
+        # glyph a negative content box and clip it to a sliver. The property
+        # lets ``common.qss`` hand this one shape a symmetric inset instead.
+        if square:
+            self.setProperty("square", True)
         apply_button_size(self, square=square)
 
         # Set accessibility properties
