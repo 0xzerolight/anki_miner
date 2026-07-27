@@ -197,3 +197,29 @@ def test_unlocking_restores_the_queue(panel, tmp_path):
     assert panel.clear_button.isEnabled()
     assert panel.list_widget.dragDropMode() is QListWidget.DragDropMode.InternalMove
     assert panel.queue_controls.lock_label.isHidden()
+
+
+def test_a_click_selects_the_row_instead_of_being_swallowed(panel, tmp_path, qtbot):
+    """The row covers the list item, so a press it consumes never selects (D28)."""
+    from PyQt6.QtCore import QPoint, Qt
+
+    widget = _add(panel, "a", tmp_path)
+    _add(panel, "b", tmp_path)
+    panel.show()
+    qtbot.waitExposed(panel)
+
+    qtbot.mouseClick(widget, Qt.MouseButton.LeftButton, pos=QPoint(4, 4))
+
+    assert panel.selected_widgets() == [widget]
+
+
+def test_double_click_still_expands_and_re_hints_the_row(panel, tmp_path):
+    """Expanding must not be clipped by a size hint taken before it happened."""
+    widget = _add(panel, "a", tmp_path)
+    list_item = panel._list_items[id(widget)]
+
+    widget.toggle_expanded()  # collapse
+    collapsed = list_item.sizeHint().height()
+    widget.toggle_expanded()  # expand again
+
+    assert list_item.sizeHint().height() > collapsed

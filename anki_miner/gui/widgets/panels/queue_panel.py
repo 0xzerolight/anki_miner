@@ -210,6 +210,9 @@ class QueuePanel(QFrame):
         list_item.setSizeHint(widget.sizeHint())
         self.list_widget.addItem(list_item)
         self.list_widget.setItemWidget(list_item, widget)
+        # The row expands and collapses; the list item does not learn that on
+        # its own, so a stale hint would clip the details it just opened.
+        widget.size_changed.connect(lambda w=widget: self._resize_row(w))
 
         self.queue_item_widgets.append(widget)
         self._list_items[id(widget)] = list_item
@@ -217,6 +220,12 @@ class QueuePanel(QFrame):
 
         list_item.setHidden(not self._row_visible(widget))
         self._update_stats()
+
+    def _resize_row(self, widget: QueueItemWidget) -> None:
+        """Re-hint the list item after its row changed height."""
+        list_item = self._list_items.get(id(widget))
+        if list_item is not None:
+            list_item.setSizeHint(widget.sizeHint())
 
     def _bind_widget(self, widget: QueueItemWidget) -> QueueItem | None:
         """Give ``widget`` its persistent queue item once both folders validate.
