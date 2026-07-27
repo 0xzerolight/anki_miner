@@ -8,8 +8,12 @@ action while the wizard inspects, explains, links, and re-checks.
 
 The wizard owns one working :class:`AnkiMinerConfig` (mutated only via
 :meth:`update_working_config`) and a lazily-rebuilt shared :class:`AnkiService`.
-``run_setup_wizard`` returns the working config plus whether the close path
-consumes the one-time first-run offer.
+``run_setup_wizard`` returns the working config, whether the close path consumes
+the one-time first-run offer, and whether the user asked for the first action.
+
+Every step re-checks live rather than trusting a result cached when the page was
+built, a dictionary is required rather than optional, and no navigation button
+is the dialog's default so Return stays with the input method (D26, D49).
 """
 
 from __future__ import annotations
@@ -334,10 +338,11 @@ class SetupWizard(QWizard):
 
 
 def run_setup_wizard(parent: QWidget | None, config: AnkiMinerConfig) -> SetupWizardOutcome:
-    """Run the wizard and return partial config plus offer consumption.
+    """Run the wizard and return partial config, offer consumption, first action.
 
     Accepted and explicit Skip consume the first-run offer. Window close, Esc,
-    and other rejection paths do not. Exceptions propagate to the caller.
+    and other rejection paths do not. Only an accepted Finish asks to be taken
+    to Video → Single. Exceptions propagate to the caller.
 
     Args:
         parent: Optional Qt parent for the modal.
