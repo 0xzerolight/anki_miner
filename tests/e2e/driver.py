@@ -48,6 +48,7 @@ from typing import Any
 from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtTest import QTest
+from PyQt6.QtWidgets import QWidget
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
@@ -244,41 +245,51 @@ class EpisodeTabDriver:
             assert sc.isEnabled(), f"QShortcut for {key_seq!r} exists but is disabled"
 
     def assert_tab_order_sane(self) -> None:
-        """Assert the focus/tab order among the tab's primary input widgets is correct.
+        """Assert Tab reaches the tab's landmarks in the order the eye reads them.
 
-        Verifies the order declared in ``_setup_accessibility``:
-        video_selector → subtitle_selector → offset_spinbox → process_button.
+        video_selector → subtitle_selector → offset_spinbox → … → process_button.
+        The gap before the last one is the point: D6 moved Process Episode out of
+        the form and into the pinned action bar at the foot of the page, so it is
+        no longer the offset field's immediate successor — it is simply later,
+        which is where the eye finishes. Only relative order is asserted.
 
-        For each consecutive pair (A, B), walks ``nextInFocusChain()`` from A
-        and asserts B appears before the chain cycles back to A (i.e. B follows
-        A in the overall focus order). The last widget (process_button) is not
-        required to lead back to video_selector — there are many other widgets
-        between them in the full chain. Does NOT require the widget to be shown.
+        The whole cycle is collected once and compared by position rather than
+        walked per pair. The per-pair walk this replaces kept a ``set`` of
+        ``id(widget)``, which is unsound for PyQt: a transient wrapper can be
+        garbage-collected and its address reused by the next one, so the walk
+        could mistake a fresh widget for one already seen and stop early. It
+        survived only because the old explicit ``setTabOrder`` put the button one
+        step away; at ~50 steps it started reporting a break that was not there.
+
+        Does NOT require the widget to be shown.
         """
         tab = self.tab
-        ordered = [
-            tab.video_selector,
-            tab.subtitle_selector,
-            tab.offset_spinbox,
-            tab.process_button,
+        # Held in a list so every wrapper stays alive for the whole comparison —
+        # the same lifetime hazard the id() set fell into.
+        cycle: list[QWidget] = []
+        node = tab.nextInFocusChain()
+        while node is not None and node is not tab and len(cycle) < 5000:
+            cycle.append(node)
+            node = node.nextInFocusChain()
+
+        expected = [
+            ("video_selector", tab.video_selector),
+            ("subtitle_selector", tab.subtitle_selector),
+            ("offset_spinbox", tab.offset_spinbox),
+            ("process_button", tab.process_button),
         ]
-        # Check only consecutive forward pairs (not the wrap-around edge).
-        for i in range(len(ordered) - 1):
-            widget = ordered[i]
-            successor = ordered[i + 1]
-            # Walk until we find successor or cycle back to widget (cycle = broken).
-            seen: set[int] = set()
-            current = widget.nextInFocusChain()
-            found = False
-            while current is not None and id(current) not in seen:
-                if current is successor:
-                    found = True
-                    break
-                seen.add(id(current))
-                current = current.nextInFocusChain()
-            assert found, (
-                f"Tab-order broken: expected {successor.__class__.__name__} "
-                f"to follow {widget.__class__.__name__} in the focus chain"
+        positions: list[tuple[str, int]] = []
+        for name, widget in expected:
+            index = next((i for i, w in enumerate(cycle) if w is widget), None)
+            assert index is not None, f"Tab-order broken: {name} is not in the focus chain at all"
+            positions.append((name, index))
+
+        # strict=False: pairing each entry with its successor is meant to be one
+        # shorter than the list.
+        for (earlier, first), (later, second) in zip(positions, positions[1:], strict=False):
+            assert first < second, (
+                f"Tab-order broken: expected {later} to come after {earlier} "
+                f"in the focus chain, but found them at {first} and {second}"
             )
 
     def schedule_cancel(self, delay_s: float) -> None:
