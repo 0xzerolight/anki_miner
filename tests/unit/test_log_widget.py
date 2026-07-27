@@ -101,6 +101,24 @@ class TestLevelFilters:
         log.filter_buttons["all"].click()
         assert "[INFO] parsed subtitles" in log.text_edit.toPlainText()
 
+    def test_the_active_chip_stays_a_chip(self, log):
+        """It shows its state by being checked, not by claiming to be the screen's
+        primary action — accent belongs to one task action per screen (D41)."""
+        log.filter_buttons["error"].click()
+
+        assert {key: button.objectName() for key, button in log.filter_buttons.items()} == {
+            "all": "ghost",
+            "info": "ghost",
+            "warning": "ghost",
+            "error": "ghost",
+        }
+
+    def test_pause_follow_says_it_is_on_by_being_checked(self, log):
+        log.pause_button.setChecked(True)
+
+        assert log.pause_button.objectName() == "ghost"
+        assert log.pause_button.isChecked()
+
 
 class TestSearch:
     """Case-insensitive search with a shown-of-retained count."""

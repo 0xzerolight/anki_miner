@@ -246,16 +246,6 @@ class LogWidget(QWidget):
         button.setObjectName(variant)
         return button
 
-    def _set_variant(self, button: QPushButton, variant: str) -> None:
-        """Restyle ``button`` through the shared QSS button variants."""
-        if button.objectName() == variant:
-            return
-        button.setObjectName(variant)
-        style = button.style()
-        if style is not None:
-            style.unpolish(button)
-            style.polish(button)
-
     # -------------------------------------------------------------- Public
 
     def append_info(self, message: str) -> None:
@@ -383,10 +373,10 @@ class LogWidget(QWidget):
         self.match_label.setText(tr_format(self.tr("%1 of %2"), shown, len(self._entries)))
 
     def _sync_filter_buttons(self) -> None:
+        # Checked is the whole signal: the shared `:checked` rule paints it (D41).
+        # These chips must not restyle themselves as the screen's primary action.
         for key, button in self.filter_buttons.items():
-            active = key == self._level_filter
-            button.setChecked(active)
-            self._set_variant(button, "primary" if active else "ghost")
+            button.setChecked(key == self._level_filter)
 
     def _on_search_changed(self, text: str) -> None:
         self._search = text.strip().casefold()
@@ -429,7 +419,6 @@ class LogWidget(QWidget):
 
     def _on_pause_toggled(self, checked: bool) -> None:
         self._follow_paused = checked
-        self._set_variant(self.pause_button, "primary" if checked else "ghost")
         if not checked:
             self._scroll_to_bottom()
 
