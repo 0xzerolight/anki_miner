@@ -126,6 +126,10 @@ class BackgroundTaskController(QObject):
         self.onnx_pack_download_worker: InstallWorker | None = None
         self.vulkan_model_download_worker: InstallWorker | None = None
         self.restyle_cards_worker: RestyleCardsWorker | None = None
+        # The recommended-resource download. Adopted rather than started here:
+        # the session owns the run, but the download is now backgroundable, so
+        # closing the app must still find and join its thread.
+        self.resource_download_worker: QThread | None = None
         # Best-effort cache prewarm worker, scheduled by ``app.main()`` after
         # the first paint and adopted via set_prewarm(); cleared once it
         # finishes.
@@ -514,6 +518,22 @@ class BackgroundTaskController(QObject):
         self.prewarm_worker = worker
         worker.finished.connect(lambda: setattr(self, "prewarm_worker", None))
 
+    def adopt_resource_download_worker(self, worker: QThread) -> None:
+        """Own the recommended-resource download thread for shutdown purposes.
+
+        The session that started it renders and activates; only this controller
+        can join it at close. The handle is cleared on the worker's native
+        finish, and deliberately NOT deleted here — the session is still holding
+        it when this fires.
+        """
+        self.resource_download_worker = worker
+        worker.finished.connect(lambda: self._forget_resource_download_worker(worker))
+
+    def _forget_resource_download_worker(self, worker: QThread) -> None:
+        """Drop the handle, unless a newer run has already replaced it."""
+        if self.resource_download_worker is worker:
+            self.resource_download_worker = None
+
     def _release_worker(self, attr: str, worker) -> None:
         """Free a finished window-level worker.
 
@@ -562,6 +582,7 @@ class BackgroundTaskController(QObject):
         join(self.onnx_pack_download_worker)
         join(self.vulkan_model_download_worker)
         join(self.restyle_cards_worker)
+        join(self.resource_download_worker)
 
         join(self.prewarm_worker)
 

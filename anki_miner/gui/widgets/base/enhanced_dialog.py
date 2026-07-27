@@ -126,11 +126,14 @@ class EnhancedDialog(QDialog):
 
         self.setLayout(self._main_layout)
 
-    def set_header(self, icon: str, title: str, subtitle: str = "") -> None:
+    def set_header(self, _icon: str, title: str, subtitle: str = "") -> None:
         """Set the dialog header.
 
         Args:
-            icon: Icon name (unused, kept for API compatibility)
+            _icon: Icon name. Positional-only in practice and deliberately
+                unused: there is no icon provider, and the underscore is what
+                stops the deadcode scan reporting it every time some unrelated
+                module stops happening to bind the name ``icon``.
             title: Main title text
             subtitle: Optional subtitle/description
         """

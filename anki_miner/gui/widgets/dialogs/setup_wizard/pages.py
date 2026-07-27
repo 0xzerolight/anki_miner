@@ -40,6 +40,9 @@ from anki_miner.services.anki_note_builder import configured_target_field_names
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
+    from anki_miner.config import AnkiMinerConfig
+    from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadSession
+
     from .setup_wizard import SetupWizard
 
 # AnkiConnect is an Anki add-on; this is its add-on code on AnkiWeb.
@@ -659,29 +662,73 @@ class ResourcesPage(QWizardPage):
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
 
+        self._session: ResourceDownloadSession | None = None
+
     def isComplete(self) -> bool:
         return True  # Always skippable.
 
     def _on_download_clicked(self) -> None:
-        from anki_miner.gui.widgets.dialogs.resource_download_dialog import run_resource_download
+        """Start the download and hand the page back immediately.
 
+        The flow is asynchronous now, so the page reports through the session's
+        completion signal instead of a return value. Worker ownership goes to
+        the wizard, whose close path already cancels every registered worker and
+        defers ``done()`` until each one's native thread has exited — which is
+        what keeps a run started here from outliving the wizard.
+        """
+        from anki_miner.gui.widgets.dialogs.resource_download_dialog import start_resource_download
+
+        if self._session is not None:
+            return
         self.status_label.clear()
-        outcome = run_resource_download(
-            self, self._wizard.working_config(), release_resources=self._wizard._release_resources
+        session = start_resource_download(
+            self,
+            self._wizard.working_config(),
+            activate=self._activate_resources,
+            release_resources=self._wizard._release_resources,
+            task_registry=getattr(self._wizard.parent(), "task_registry", None),
+            adopt_worker=self._wizard.register_worker,
         )
-        if outcome is None:
+        if session is None:
+            return
+        self._session = session
+        self.download_button.setEnabled(False)
+        session.finished.connect(self._on_download_finished)
+
+    def _activate_resources(self, summary: object) -> AnkiMinerConfig | None:
+        """Fold a completed summary into the wizard's working config.
+
+        Read from ``working_config()`` at activation time, never from a config
+        captured when the download started: the user can have changed the deck
+        or note type on an earlier page while the transfer ran.
+        """
+        from anki_miner.gui.utils.resource_setup import apply_download_summary
+        from anki_miner.gui.workers.resource_download_worker import ResourceDownloadSummary
+
+        if not isinstance(summary, ResourceDownloadSummary) or not summary.succeeded:
+            return None
+        new_config = apply_download_summary(self._wizard.working_config(), summary)
+        self._wizard.update_working_config(new_config)
+        return new_config
+
+    def _on_download_finished(self, outcome: object) -> None:
+        """Report the run's real ending, including imported-but-not-active."""
+        from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome
+
+        self._session = None
+        self.download_button.setEnabled(True)
+        if not isinstance(outcome, ResourceDownloadOutcome):
             return
 
         summary = outcome.summary
-        if summary.succeeded:
-            self._wizard.update_working_config(outcome.config)
-
         if summary.cancelled:
             status = (
                 self.tr("Download cancelled. Some resources were installed before cancellation.")
                 if summary.succeeded
                 else self.tr("Download cancelled. No resources were installed.")
             )
+        elif summary.succeeded and not outcome.activated:
+            status = self.tr("Imported, but not active — Retry setup")
         elif summary.failed:
             status = (
                 self.tr("Some resources were installed; some failed.")

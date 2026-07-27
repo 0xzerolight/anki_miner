@@ -110,6 +110,9 @@ ALLOWLIST: dict[str, set[str]] = {
     # URL, no network I/O. Cheap.
     r"\burllib\b": {
         "widgets/youtube_playlist_flow.py",
+        # `urlparse(spec.url).netloc` when building the sources area: the host
+        # is shown instead of the full URL. Pure string parsing, no I/O.
+        "widgets/dialogs/resource_download_dialog.py",
     },
     # shutil.which — a single cheap PATH scan to test for a binary, cached on the
     # widget (`_alass_is_available` / `_ffmpeg_is_available`); readers use the cache.

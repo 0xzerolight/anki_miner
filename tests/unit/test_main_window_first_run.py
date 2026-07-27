@@ -122,9 +122,7 @@ def test_tools_setup_wizard_handler_calls_run_setup_wizard(main_window, monkeypa
         pytest.param("failed", False, id="failed"),
     ],
 )
-def test_tools_resource_download_applies_only_successful_outcomes(main_window, monkeypatch, state, should_apply):
-    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod
-    from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome
+def test_resource_activation_applies_only_successful_outcomes(main_window, monkeypatch, state, should_apply):
     from anki_miner.gui.workers.resource_download_worker import ResourceDownloadResult, ResourceDownloadSummary
 
     success = ResourceDownloadResult("dict", "dict", "Dictionary", "u", True, "10 entries", dict_id="dict")
@@ -142,14 +140,155 @@ def test_tools_resource_download_applies_only_successful_outcomes(main_window, m
         requested_count=3 if state.startswith("cancelled") else len(results),
     )
     updated = replace(main_window.config, anki_deck_name="Resources outcome applied")
-    outcome = ResourceDownloadOutcome(config=updated, summary=summary)
-    monkeypatch.setattr(dialog_mod, "run_resource_download", lambda *_args, **_kwargs: outcome)
+    monkeypatch.setattr(
+        "anki_miner.gui.utils.resource_setup.apply_download_summary",
+        lambda _config, _summary: updated,
+    )
     applied = []
     monkeypatch.setattr(main_window, "update_config", lambda config, **_kwargs: applied.append(config))
 
-    main_window._download_recommended_resources()
+    returned = main_window._activate_downloaded_resources(summary)
 
     assert applied == ([updated] if should_apply else [])
+    assert returned == (updated if should_apply else None)
+
+
+def test_tools_resource_download_starts_in_the_background_without_a_modal(main_window, monkeypatch):
+    """The Tools entry starts a session and returns; it no longer blocks the app."""
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod
+
+    captured = {}
+
+    def fake_start(parent, config, **kwargs):
+        captured.update(kwargs)
+        captured["parent"] = parent
+        captured["config"] = config
+        return MagicMock(task_id=dialog_mod.TASK_ID)
+
+    monkeypatch.setattr(dialog_mod, "start_resource_download", fake_start)
+    monkeypatch.setattr(main_window.background_tasks, "cancel_jmdict_migration", lambda: None)
+
+    main_window._download_recommended_resources()
+
+    assert captured["parent"] is main_window
+    assert captured["activate"] == main_window._activate_downloaded_resources
+    assert captured["task_registry"] is main_window.task_registry
+    assert captured["adopt_worker"] == main_window.background_tasks.adopt_resource_download_worker
+    assert main_window._resource_download_session is not None
+
+
+def test_starting_the_download_takes_no_mutation_lease(main_window, monkeypatch, qtbot):
+    """D15: the lease belongs to activation, not to the whole several-hundred-MB run."""
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod
+
+    order: list[str] = []
+
+    class FakeDictionaryPanel:
+        def hold_mutation(self, kind):
+            order.append(f"hold:{kind}")
+            return object()
+
+        def release(self, token):
+            order.append("release")
+
+    class FakeSettingsTab(QWidget):
+        def __init__(self):
+            super().__init__()
+            self.dictionary_panel = FakeDictionaryPanel()
+
+        def open_ui_subtab(self):
+            return None
+
+        def commit_pending_settings_for_mutation(self):
+            order.append("preflight")
+            return True
+
+    settings_tab = FakeSettingsTab()
+    qtbot.addWidget(settings_tab)
+    main_window.tabs.addTab(settings_tab, "Settings")
+    monkeypatch.setattr(main_window.background_tasks, "cancel_jmdict_migration", lambda: order.append("cancel"))
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: order.append("start") or MagicMock())
+
+    main_window._download_recommended_resources()
+
+    assert order == ["cancel", "start"]
+
+
+def test_activation_commits_pending_settings_before_reading_the_live_config(main_window, monkeypatch, qtbot, tmp_path):
+    """Judge defect #8: a background run must not activate off a stale config base."""
+    from anki_miner.gui.workers.resource_download_worker import ResourceDownloadResult, ResourceDownloadSummary
+
+    new_root = tmp_path / "committed-root"
+    new_root.mkdir()
+    order: list[str] = []
+    seen: list = []
+
+    class FakeDictionaryPanel:
+        def hold_mutation(self, kind):
+            order.append(f"hold:{kind}")
+            return object()
+
+        def release(self, token):
+            order.append("release")
+
+    class FakeSettingsTab(QWidget):
+        def __init__(self):
+            super().__init__()
+            self.dictionary_panel = FakeDictionaryPanel()
+
+        def open_ui_subtab(self):
+            return None
+
+        def commit_pending_settings_for_mutation(self):
+            order.append("preflight")
+            main_window.config = replace(main_window.config, dicts_root=new_root)
+            return True
+
+    settings_tab = FakeSettingsTab()
+    qtbot.addWidget(settings_tab)
+    main_window.tabs.addTab(settings_tab, "Settings")
+
+    def fake_apply(config, _summary):
+        order.append("apply")
+        seen.append(config)
+        return config
+
+    monkeypatch.setattr("anki_miner.gui.utils.resource_setup.apply_download_summary", fake_apply)
+    monkeypatch.setattr(main_window, "update_config", lambda config, **_kw: order.append("persist"))
+
+    summary = ResourceDownloadSummary(
+        results=[ResourceDownloadResult("dict", "dict", "Dictionary", "u", True, "10 entries", dict_id="dict")]
+    )
+    main_window._activate_downloaded_resources(summary)
+
+    assert order == ["preflight", "hold:resource-download", "apply", "persist", "release"]
+    assert seen[0].dicts_root == new_root  # the committed edit, not the pre-download base
+
+
+def test_activation_refused_by_settings_commit_returns_none(main_window, monkeypatch, qtbot):
+    from anki_miner.gui.workers.resource_download_worker import ResourceDownloadResult, ResourceDownloadSummary
+
+    class FakeSettingsTab(QWidget):
+        dictionary_panel = MagicMock()
+
+        def open_ui_subtab(self):
+            return None
+
+        def commit_pending_settings_for_mutation(self):
+            return False
+
+    settings_tab = FakeSettingsTab()
+    qtbot.addWidget(settings_tab)
+    main_window.tabs.addTab(settings_tab, "Settings")
+    applied = []
+    monkeypatch.setattr(main_window, "update_config", lambda config, **_kw: applied.append(config))
+
+    summary = ResourceDownloadSummary(
+        results=[ResourceDownloadResult("dict", "dict", "Dictionary", "u", True, "10 entries", dict_id="dict")]
+    )
+
+    assert main_window._activate_downloaded_resources(summary) is None
+    assert applied == []
 
 
 # ---------------------------------------------------------------------------
@@ -163,7 +302,7 @@ def test_tools_resource_download_applies_only_successful_outcomes(main_window, m
     [
         (
             "_download_recommended_resources",
-            "anki_miner.gui.widgets.dialogs.resource_download_dialog.run_resource_download",
+            "anki_miner.gui.widgets.dialogs.resource_download_dialog.start_resource_download",
         ),
         ("_run_setup_wizard_tool", "anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard"),
         ("_maybe_offer_first_run_setup", "anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard"),
@@ -194,11 +333,6 @@ def test_handler_refuses_when_jmdict_migration_does_not_stop(main_window, monkey
 @pytest.mark.parametrize(
     ("handler", "dialog_target", "token_kind"),
     [
-        (
-            "_download_recommended_resources",
-            "anki_miner.gui.widgets.dialogs.resource_download_dialog.run_resource_download",
-            "resource-download",
-        ),
         (
             "_run_setup_wizard_tool",
             "anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard",

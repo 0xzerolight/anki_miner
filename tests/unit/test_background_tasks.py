@@ -219,6 +219,7 @@ class TestShutdownJoinsOffThreadWorkers:
             "onnx_pack_download_worker",
             "vulkan_model_download_worker",
             "restyle_cards_worker",
+            "resource_download_worker",
             "prewarm_worker",
         ):
             setattr(ctrl, attr, None)

@@ -974,7 +974,7 @@ def test_notetype_page_empty_fieldlist_shows_unreachable_guidance(qtbot, wiz_con
     ],
 )
 def test_resources_page_reports_download_outcome(qtbot, wiz_config, monkeypatch, state, expected_status):
-    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+    """The page now reports through the session's completion signal."""
     from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome  # noqa: PLC0415
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
     from anki_miner.gui.workers.resource_download_worker import (  # noqa: PLC0415
@@ -995,22 +995,119 @@ def test_resources_page_reports_download_outcome(qtbot, wiz_config, monkeypatch,
     summary.cancelled = state.startswith("cancelled")
     summary.requested_count = 3 if summary.cancelled else len(results)
     updated = replace(wiz_config, anki_deck_name="Resources outcome applied")
-    outcome = ResourceDownloadOutcome(config=updated, summary=summary)
-    monkeypatch.setattr(dialog_mod, "run_resource_download", lambda *_args, **_kwargs: outcome)
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
 
+    wiz.resources_page._on_download_finished(
+        ResourceDownloadOutcome(config=updated, summary=summary, activated=bool(summary.succeeded))
+    )
+
+    assert wiz.resources_page.status_label.text() == expected_status
+    assert wiz.resources_page.download_button.isEnabled()
+
+
+def test_resources_page_activator_reads_the_live_working_config(qtbot, wiz_config, monkeypatch):
+    """Activation must fold into whatever the wizard holds NOW, not a stale copy."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.workers.resource_download_worker import (  # noqa: PLC0415
+        ResourceDownloadResult,
+        ResourceDownloadSummary,
+    )
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    seen = []
+    monkeypatch.setattr(
+        "anki_miner.gui.utils.resource_setup.apply_download_summary",
+        lambda config, _summary: seen.append(config) or replace(config, anki_deck_name="Applied"),
+    )
+    # Simulates a later page edit landing while the download was still running.
+    wiz.update_working_config(replace(wiz_config, anki_note_type="Edited mid-download"))
+
+    summary = ResourceDownloadSummary(
+        results=[ResourceDownloadResult("dict", "dict", "Dictionary", "u", True, "10 entries", dict_id="dict")]
+    )
+    returned = wiz.resources_page._activate_resources(summary)
+
+    assert seen[0].anki_note_type == "Edited mid-download"
+    assert returned is not None
+    assert wiz.working_config().anki_deck_name == "Applied"
+
+
+def test_resources_page_activator_ignores_a_summary_with_no_successes(qtbot, wiz_config):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.workers.resource_download_worker import ResourceDownloadSummary  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+
+    assert wiz.resources_page._activate_resources(ResourceDownloadSummary()) is None
+    assert wiz.working_config() == wiz_config
+
+
+def test_resources_page_reports_imported_but_not_active(qtbot, wiz_config):
+    from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.workers.resource_download_worker import (  # noqa: PLC0415
+        ResourceDownloadResult,
+        ResourceDownloadSummary,
+    )
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    summary = ResourceDownloadSummary(
+        results=[ResourceDownloadResult("dict", "dict", "Dictionary", "u", True, "10 entries", dict_id="dict")]
+    )
+
+    wiz.resources_page._on_download_finished(
+        ResourceDownloadOutcome(config=wiz_config, summary=summary, activated=False)
+    )
+
+    assert wiz.resources_page.status_label.text() == "Imported, but not active \u2014 Retry setup"
+
+
+def test_resources_page_hands_worker_ownership_to_the_wizard(qtbot, wiz_config, monkeypatch):
+    """The wizard's close path is what stops a run outliving the wizard."""
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    captured = {}
+
+    def fake_start(parent, config, **kwargs):
+        captured.update(kwargs)
+        return MagicMock()
+
+    monkeypatch.setattr(dialog_mod, "start_resource_download", fake_start)
+
     wiz.resources_page._on_download_clicked()
 
-    assert wiz.working_config() == (updated if summary.succeeded else wiz_config)
-    assert wiz.resources_page.status_label.text() == expected_status
+    assert captured["adopt_worker"] == wiz.register_worker
+    assert captured["activate"] == wiz.resources_page._activate_resources
+    assert not wiz.resources_page.download_button.isEnabled()
+
+
+def test_resources_page_refuses_a_second_concurrent_run(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    starts = []
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: starts.append(1) or MagicMock())
+
+    wiz.resources_page._on_download_clicked()
+    wiz.resources_page._on_download_clicked()
+
+    assert len(starts) == 1
 
 
 def test_resources_page_clears_stale_status_when_download_does_not_start(qtbot, wiz_config, monkeypatch):
     from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
-    monkeypatch.setattr(dialog_mod, "run_resource_download", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *_args, **_kwargs: None)
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
     wiz.resources_page.status_label.setText("Resources installed.")
@@ -1018,6 +1115,7 @@ def test_resources_page_clears_stale_status_when_download_does_not_start(qtbot, 
     wiz.resources_page._on_download_clicked()
 
     assert wiz.resources_page.status_label.text() == ""
+    assert wiz.resources_page.download_button.isEnabled()
 
 
 # ---------------------------------------------------------------------------

@@ -53,6 +53,7 @@ from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.gui.capabilities import CapabilityTarget
+    from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadSession
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome
 
 logger = logging.getLogger(__name__)
@@ -132,6 +133,10 @@ class MainWindow(QMainWindow):
         # lifetime stays with BackgroundTaskController and the owning tab.
         # Constructed BEFORE _setup_ui so the status strip can bind to it.
         self.task_registry = TaskRegistry(self)
+
+        # The live recommended-resource run, if any. Retained here rather than
+        # Qt-parented: it outlives its own window, which the user can hide.
+        self._resource_download_session: ResourceDownloadSession | None = None
 
         # Config-bound services (validation + the AnkiService shared across undo
         # callbacks). Rebuilt on every config change via update_config — see
@@ -543,10 +548,19 @@ class MainWindow(QMainWindow):
         key lookup the feature browser uses, so a task never has to know a tab
         index. An unknown id is a silent no-op: the run may have been dropped
         between the menu opening and the choice.
+
+        A run owning a transient window of its own is taken back to *that*
+        window: a hidden resource download has nothing to show on the
+        Dictionaries page it would otherwise navigate to.
         """
         snapshot = self.task_registry.snapshot(task_id)
-        if snapshot is not None:
-            self.reveal_capability(snapshot.owner)
+        if snapshot is None:
+            return
+        session = self._resource_download_session
+        if session is not None and getattr(session, "task_id", None) == task_id:
+            session.reveal()
+            return
+        self.reveal_capability(snapshot.owner)
 
     def _open_settings(self) -> None:
         """Open the Settings tab."""
@@ -684,20 +698,54 @@ class MainWindow(QMainWindow):
             on_error(str(exc))
 
     def _download_recommended_resources(self) -> None:
-        """Tools-menu handler: run the resource download dialog, apply result."""
-        from anki_miner.gui.widgets.dialogs.resource_download_dialog import run_resource_download
+        """Tools-menu handler: start the background recommended-resource run.
 
+        The run no longer holds the dictionary-mutation lease for its whole
+        length — mining stays usable while several hundred megabytes transfer.
+        What still happens up front is the same-slot race guard: the recommended
+        dictionary writes into the slot the legacy JMdict XML migration also
+        targets, so an in-flight migration is stopped first.
+        """
+        from anki_miner.gui.widgets.dialogs.resource_download_dialog import start_resource_download
+
+        if not self.prepare_dictionary_mutation():
+            return
+        self.background_tasks.cancel_jmdict_migration()
+        session = start_resource_download(
+            self,
+            self.config,
+            activate=self._activate_downloaded_resources,
+            release_resources=self.release_dictionary_resources,
+            task_registry=self.task_registry,
+            adopt_worker=self.background_tasks.adopt_resource_download_worker,
+        )
+        if session is not None:
+            # Retained here, not Qt-parented: the session outlives its window.
+            self._resource_download_session = session
+
+    def _activate_downloaded_resources(self, summary: object) -> "AnkiMinerConfig | None":
+        """Switch downloaded resources on, or refuse without claiming success.
+
+        Committing pending Settings is step 0 and aborts activation when it
+        fails. It has to be: the download now runs in the background, so the
+        user can have edited Settings while it did, and computing the new config
+        from the base captured when the download started would silently revert
+        that edit. The guard commits first, then this reads the *live*
+        ``self.config``.
+        """
+        from anki_miner.gui.utils.resource_setup import apply_download_summary
+        from anki_miner.gui.workers.resource_download_worker import ResourceDownloadSummary
+
+        if not isinstance(summary, ResourceDownloadSummary) or not summary.succeeded:
+            return None
         with self._dictionary_mutation_guard("resource-download") as ready:
             if not ready:
-                return
-            # The recommended dict downloads into the same slot the legacy
-            # JMdict XML migration writes; stop an in-flight migration first.
-            self.background_tasks.cancel_jmdict_migration()
-            outcome = run_resource_download(self, self.config, release_resources=self.release_dictionary_resources)
-            if outcome is not None and outcome.summary.succeeded:
-                # update_config (not from_settings) propagates via
-                # config_refreshed to all tabs incl. Settings, and persists.
-                self.update_config(outcome.config)
+                return None
+            # update_config (not from_settings) propagates via config_refreshed
+            # to all tabs incl. Settings, and persists.
+            new_config = apply_download_summary(self.config, summary)
+            self.update_config(new_config)
+            return new_config
 
     def _run_capability_browser_tool(self) -> None:
         """Tools-menu handler: open the Find a Feature browser.
