@@ -8,12 +8,12 @@ from PyQt6.QtWidgets import (
     QDoubleSpinBox,
     QHBoxLayout,
     QLabel,
-    QPushButton,
     QVBoxLayout,
 )
 
 from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
+from anki_miner.gui.widgets.enhanced.modern_button import ModernButton
 from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
 
 logger = logging.getLogger(__name__)
@@ -92,12 +92,12 @@ class SubtitleViewer(QDialog):
 
         controls_layout.addStretch()
 
-        # Apply / Cancel buttons
-        apply_btn = QPushButton(self.tr("Apply Offset"))
+        # Apply is this dialog's one task action; Cancel is quiet beside it.
+        apply_btn = ModernButton(self.tr("Apply Offset"), variant="primary")
         apply_btn.clicked.connect(self.accept)
         controls_layout.addWidget(apply_btn)
 
-        cancel_btn = QPushButton(self.tr("Cancel"))
+        cancel_btn = ModernButton(self.tr("Cancel"), variant="secondary")
         cancel_btn.clicked.connect(self.reject)
         controls_layout.addWidget(cancel_btn)
 

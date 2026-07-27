@@ -1,11 +1,18 @@
 """Enhanced dialog base class for consistent dialog styling."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from anki_miner.gui.widgets.enhanced.modern_button import ButtonVariant
 
 
 class EnhancedDialog(QDialog):
@@ -155,19 +162,27 @@ class EnhancedDialog(QDialog):
         self._content_layout.addWidget(widget, stretch)
         return widget
 
-    def add_button(self, text: str, variant: str = "secondary", callback=None) -> QPushButton:
+    def add_button(self, text: str, variant: ButtonVariant = "secondary", callback=None) -> QPushButton:
         """Add a button to the footer.
+
+        Builds a real ``ModernButton`` so the footer obeys the same role rules as
+        the rest of the app: only a ``primary`` button stays eligible to become
+        this dialog's Enter target (D41).
 
         Args:
             text: Button text
-            variant: Button variant (primary, secondary, ghost, danger)
+            variant: Button role — primary, secondary, ghost, danger, critical
             callback: Optional click callback
 
         Returns:
             The created button
         """
-        button = QPushButton(text)
-        button.setObjectName(variant)
+        # Imported here, not at module scope: `widgets.enhanced` reaches back
+        # into `widgets.base` for FileSelector's helpers, so a top-level import
+        # would close the cycle while this package is still initialising.
+        from anki_miner.gui.widgets.enhanced.modern_button import ModernButton
+
+        button = ModernButton(text, variant=variant)
 
         if callback:
             button.clicked.connect(callback)
