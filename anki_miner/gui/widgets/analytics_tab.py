@@ -31,7 +31,7 @@ from anki_miner.gui.utils.qt_helpers import (
     make_table_item,
 )
 from anki_miner.gui.utils.run_off_thread import run_off_thread
-from anki_miner.gui.widgets.base import PageWidth, configure_scrolled_page
+from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, configure_scrolled_page
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader, StatCard
 from anki_miner.models.stats import (
     DifficultyEntry,
@@ -178,8 +178,7 @@ class AnalyticsTab(QWidget):
         group = QFrame()
         group.setObjectName("card")
         layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(layout)
 
         header = SectionHeader(self.tr("Overview"))
         layout.addWidget(header)
@@ -205,8 +204,7 @@ class AnalyticsTab(QWidget):
         group = QFrame()
         group.setObjectName("card")
         layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(layout)
 
         header = SectionHeader(self.tr("Recent Sessions"))
         layout.addWidget(header)
@@ -247,8 +245,7 @@ class AnalyticsTab(QWidget):
         group = QFrame()
         group.setObjectName("card")
         layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(layout)
 
         header = SectionHeader(self.tr("Series Difficulty Ranking"))
         layout.addWidget(header)
@@ -287,8 +284,7 @@ class AnalyticsTab(QWidget):
         group = QFrame()
         group.setObjectName("card")
         layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(layout)
 
         header = SectionHeader(self.tr("Milestones"))
         layout.addWidget(header)

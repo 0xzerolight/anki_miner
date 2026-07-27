@@ -155,6 +155,95 @@ class TestFileSelectorLabelColumnIsLocaleAware:
         assert not self._clipped_labels(tab), "clipped: " + "; ".join(self._clipped_labels(tab))
 
 
+class TestTightenedDensityStillClearsItsText:
+    """D40 took the slack out of every control, row and card, which makes this
+    cell the binding constraint rather than a comfortable one: a control whose
+    height came from a 28px floor was *accidentally* tall enough for 150% text,
+    and one whose height comes from its padding has to be measured.
+
+    Vertical clipping is the failure mode this asserts on, so it reads heights
+    against the widget's own ``fontMetrics``. Horizontal clipping is already
+    covered above by the label-column tests.
+    """
+
+    @staticmethod
+    def _measure(tab) -> tuple[list[str], int]:
+        """Return (controls that clip their own text, controls inspected)."""
+        from PyQt6.QtWidgets import QComboBox, QLineEdit, QPushButton
+
+        out: list[str] = []
+        seen = 0
+        for widget in [
+            *tab.findChildren(QPushButton),
+            *tab.findChildren(QLineEdit),
+            *tab.findChildren(QComboBox),
+        ]:
+            if not widget.isVisible():
+                continue
+            seen += 1
+            need = widget.fontMetrics().height()
+            if widget.height() < need:
+                out.append(f"{type(widget).__name__} {widget.objectName()!r}: {widget.height()}px for {need}px of text")
+        return out, seen
+
+    def test_mining_controls_clear_their_text(self, qtbot, test_config, hostile_scale, longer_translations):
+        from unittest.mock import MagicMock
+
+        from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
+
+        tab = SingleEpisodeTab(config=test_config, presenter=MagicMock(), progress_callback=MagicMock())
+        qtbot.addWidget(tab)
+        tab.resize(1024, 768)
+        tab.show()
+        qtbot.waitExposed(tab)
+        QApplication.processEvents()
+
+        clipped, seen = self._measure(tab)
+        # Vacuity guard: a tab whose controls are all hidden cannot clip.
+        assert seen >= 5, f"only {seen} visible controls to measure"
+        assert not clipped, "; ".join(clipped)
+
+    def test_a_data_table_row_clears_its_text(self, qtbot, test_config, hostile_scale):
+        from PyQt6.QtWidgets import QTableWidgetItem
+
+        from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
+        from anki_miner.services.stats_service import StatsService
+
+        tab = AnalyticsTab(StatsService(test_config.stats_db_path))
+        qtbot.addWidget(tab)
+        table = tab.sessions_table
+        table.setRowCount(3)
+        for row in range(3):
+            for column in range(table.columnCount()):
+                table.setItem(row, column, QTableWidgetItem(f"cell {row}-{column}"))
+        tab.resize(1024, 768)
+        tab.show()
+        qtbot.waitExposed(tab)
+        QApplication.processEvents()
+
+        assert table.rowHeight(0) >= table.fontMetrics().height()
+
+    def test_the_file_picker_helper_row_is_readable_when_it_appears(
+        self, qtbot, test_config, hostile_scale, longer_translations
+    ):
+        """It only shows for a real fault now, so it has to survive this cell."""
+        from unittest.mock import MagicMock
+
+        from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
+
+        tab = SingleEpisodeTab(config=test_config, presenter=MagicMock(), progress_callback=MagicMock())
+        qtbot.addWidget(tab)
+        tab.resize(1024, 768)
+        tab.show()
+        qtbot.waitExposed(tab)
+        tab.video_selector.set_path("/definitely/not/here.mkv")
+        QApplication.processEvents()
+
+        helper = tab.video_selector.status_label
+        assert helper.isVisible()
+        assert helper.height() >= helper.fontMetrics().height()
+
+
 class TestAnalyticsTablesShowUsableRowCount:
     """analytics_tab set ResizeToContents on the VERTICAL header, so rows reached
     59px (110px at 1.5x) and the 200px height floor yielded 0.78 visible rows of 20 --

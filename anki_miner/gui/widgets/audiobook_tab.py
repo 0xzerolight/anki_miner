@@ -55,6 +55,7 @@ from anki_miner.gui.widgets._queue_mining_tab_base import (
 from anki_miner.gui.widgets.audiobook_queue_item_widget import AudiobookQueueItemWidget
 from anki_miner.gui.widgets.base import (
     PageWidth,
+    configure_card_layout,
     configure_scrolled_page,
     field_label_width,
 )
@@ -170,8 +171,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
         queue_card = QFrame()
         queue_card.setObjectName("card")
         queue_layout = QVBoxLayout()
-        queue_layout.setSpacing(SPACING.sm)
-        queue_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(queue_layout)
 
         queue_layout.addWidget(SectionHeader(self.tr("Audio queue")))
 
@@ -253,8 +253,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
         progress_card = QFrame()
         progress_card.setObjectName("card")
         progress_layout = QVBoxLayout()
-        progress_layout.setSpacing(SPACING.sm)
-        progress_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(progress_layout)
 
         progress_layout.addWidget(SectionHeader(self.tr("Progress")))
         self.progress_widget = ProgressWidget()

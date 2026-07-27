@@ -34,7 +34,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.utils.qt_helpers import (
-    CELL_PADDING,
+    CELL_PADDING_Y,
     COPY_ROLE,
     SORT_ROLE,
     CellRole,
@@ -299,7 +299,13 @@ class TestConfigureDataView:
         assert header.defaultSectionSize() == data_row_height(table)
 
     def test_a_row_clears_its_text_plus_the_cell_padding(self, qtbot):
-        """The stylesheet pads every cell; a row sized to the bare text clips it."""
+        """The stylesheet pads every cell; a row sized to the bare text clips it.
+
+        Against the *vertical* padding: since D40 a cell is padded by the
+        smallest step above and below and one step more to its left and right, so
+        the row height and the column width are measured through different
+        constants.
+        """
         table = QTableWidget(1, 1)
         qtbot.addWidget(table)
 
@@ -307,7 +313,7 @@ class TestConfigureDataView:
 
         header = table.verticalHeader()
         assert header is not None
-        assert header.defaultSectionSize() >= table.fontMetrics().height() + 2 * CELL_PADDING
+        assert header.defaultSectionSize() >= table.fontMetrics().height() + 2 * CELL_PADDING_Y
 
     def test_table_row_height_tracks_the_font(self, qtbot):
         small = QTableWidget(1, 1)

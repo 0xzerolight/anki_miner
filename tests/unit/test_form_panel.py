@@ -122,12 +122,16 @@ def _find_section_label(panel: FormPanel, text: str) -> QLabel | None:
     return None
 
 
-def test_form_layout_spacing_is_xs(qtbot):
-    """_new_form_layout must use SPACING.xs (8) between form rows."""
+def test_form_layout_spacing_is_xxs(qtbot):
+    """_new_form_layout must use SPACING.xxs (4) between form rows.
+
+    Tightened by D40: rows inside one card are more closely related to each
+    other than the cards are, so they take the smaller of the two gaps.
+    """
     panel = FormPanel("Spacing Test")
     qtbot.addWidget(panel)
     # _form_layout is the initial form layout created during _setup_ui
-    assert panel._form_layout.spacing() == SPACING.xs
+    assert panel._form_layout.spacing() == SPACING.xxs
 
 
 def test_main_layout_spacing_is_xs(qtbot):

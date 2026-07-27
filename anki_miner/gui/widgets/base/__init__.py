@@ -8,6 +8,8 @@ from .setting_anchor import SettingAnchor, SettingAnchorHost, SettingTextProvide
 from .sizing import (
     PAGE_SCROLL_OBJECT_NAME,
     PageWidth,
+    apply_button_size,
+    configure_card_layout,
     configure_expanding_container,
     configure_scrolled_page,
     field_label_width,
@@ -30,6 +32,8 @@ __all__ = [
     "EnhancedDialog",
     "PAGE_SCROLL_OBJECT_NAME",
     "PageWidth",
+    "apply_button_size",
+    "configure_card_layout",
     "configure_scrolled_page",
     "page_width_cap",
     "make_label_fit_text",

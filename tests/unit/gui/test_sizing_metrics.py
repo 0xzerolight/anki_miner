@@ -7,9 +7,10 @@ pinning literals would just re-create the constant the helpers exist to remove.
 """
 
 import pytest
-from PyQt6.QtWidgets import QFrame, QLabel, QListWidget, QPushButton
+from PyQt6.QtWidgets import QFrame, QLabel, QListWidget, QPushButton, QVBoxLayout
 
-from anki_miner.gui.widgets.base.sizing import apply_button_size, metric_row_height
+from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.widgets.base.sizing import apply_button_size, configure_card_layout, metric_row_height
 
 
 @pytest.fixture(autouse=True)
@@ -112,6 +113,51 @@ class TestApplyButtonSize:
         apply_button_size(button)
 
         assert button.minimumHeight() == once
+
+    def test_the_floor_stays_under_the_stylesheet_box(self, qtbot):
+        """A floor that outranks the stylesheet is not a floor, it is the height.
+
+        ``common.qss`` gives a button the same smallest step of padding plus a
+        1px border, so this must land at or below that or the D40 density would
+        be quietly overridden by its own safety net.
+        """
+        button = QPushButton("Mine Episode")
+        qtbot.addWidget(button)
+
+        apply_button_size(button)
+
+        assert button.minimumHeight() <= button.fontMetrics().height() + 2 * SPACING.xxs + 2
+
+
+class TestConfigureCardLayout:
+    """One card padding for the app, instead of one per hand-built card."""
+
+    def test_sets_the_shared_margins_and_gap(self, qtbot):
+        card = QFrame()
+        qtbot.addWidget(card)
+        layout = QVBoxLayout(card)
+
+        configure_card_layout(layout)
+
+        margins = layout.contentsMargins()
+        assert (margins.left(), margins.top(), margins.right(), margins.bottom()) == (
+            SPACING.sm,
+            SPACING.sm,
+            SPACING.sm,
+            SPACING.sm,
+        )
+        assert layout.spacing() == SPACING.xs
+
+    def test_the_gap_inside_a_card_is_smaller_than_the_card_inset(self, qtbot):
+        """Proximity is the grouping: content is closer to its neighbours than
+        to the border it shares with the rest of the page."""
+        card = QFrame()
+        qtbot.addWidget(card)
+        layout = QVBoxLayout(card)
+
+        configure_card_layout(layout)
+
+        assert layout.spacing() < layout.contentsMargins().top()
 
 
 class TestMetricRowHeight:

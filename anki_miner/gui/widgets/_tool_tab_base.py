@@ -34,9 +34,9 @@ from typing import TYPE_CHECKING, Iterator
 
 from PyQt6.QtWidgets import QFrame, QLabel, QVBoxLayout, QWidget
 
-from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
+from anki_miner.gui.widgets.base import configure_card_layout
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -122,8 +122,7 @@ class _ToolTabBase(QWidget):
         group = QFrame()
         group.setObjectName("card")
         layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(layout)
 
         layout.addWidget(SectionHeader(self._strings.progress))
 

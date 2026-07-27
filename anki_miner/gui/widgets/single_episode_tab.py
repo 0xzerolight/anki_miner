@@ -38,6 +38,7 @@ from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.base import (
     PageWidth,
+    configure_card_layout,
     configure_expanding_container,
     configure_scrolled_page,
     field_label_width,
@@ -241,8 +242,7 @@ class SingleEpisodeTab(MiningTabBase):
         group = QFrame()
         group.setObjectName("card")
         layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(layout)
 
         # Section header
         header = SectionHeader(self.tr("File Selection"))

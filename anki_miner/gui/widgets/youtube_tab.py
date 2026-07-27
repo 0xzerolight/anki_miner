@@ -55,7 +55,7 @@ from anki_miner.gui.widgets._queue_mining_tab_base import (
     _QueueListStrings,
     _QueueRunStrings,
 )
-from anki_miner.gui.widgets.base import PageWidth, configure_scrolled_page
+from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, configure_scrolled_page
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -191,8 +191,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
         queue_card = QFrame()
         queue_card.setObjectName("card")
         queue_layout = QVBoxLayout()
-        queue_layout.setSpacing(SPACING.sm)
-        queue_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(queue_layout)
 
         queue_layout.addWidget(SectionHeader(self.tr("YouTube queue")))
 
@@ -260,8 +259,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
         progress_card = QFrame()
         progress_card.setObjectName("card")
         progress_layout = QVBoxLayout()
-        progress_layout.setSpacing(SPACING.sm)
-        progress_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(progress_layout)
 
         progress_layout.addWidget(SectionHeader(self.tr("Progress")))
         self.progress_widget = ProgressWidget()

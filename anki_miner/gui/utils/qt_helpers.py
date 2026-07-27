@@ -45,10 +45,16 @@ SORT_ROLE = Qt.ItemDataRole.UserRole + 1
 #: The full, untruncated value a cell copies. The display text is elided.
 COPY_ROLE = Qt.ItemDataRole.UserRole + 2
 
-#: The padding common.qss gives every data cell, on every edge. Row heights and
-#: column widths are measured *including* it: a row sized to the text alone is a
-#: row that clips its own text once the stylesheet adds the padding back.
+#: The padding common.qss gives every data cell on its left and right edges.
+#: Column widths are measured *including* it: a column sized to the text alone is
+#: a column that clips its own text once the stylesheet adds the padding back.
 CELL_PADDING = SPACING.xs
+#: The same, above and below (D40). Vertical is the scarce axis — a row only has
+#: to separate itself from the row above, so it spends the smallest step there
+#: and buys back a quarter of the rows in every table, list and tree. Whatever
+#: this is, ``QTableWidget::item``'s vertical padding in ``common.qss`` must
+#: match it, or the taller of the two wins and the shorter one clips.
+CELL_PADDING_Y = SPACING.xxs
 
 
 def urls_from_event(event: QDropEvent | QDragEnterEvent) -> list[QUrl]:
@@ -191,9 +197,9 @@ def data_row_height(widget: QWidget) -> int:
     """Return the one row height every data view uses, measured through ``widget``.
 
     A thin, named application of ``widgets.base.sizing.metric_row_height``: the
-    formula stays in one place, and the padding fed to it is the cell padding the
-    stylesheet will add back, so a row is never sized to its text alone and then
-    made to clip it.
+    formula stays in one place, and the padding fed to it is the *vertical* cell
+    padding the stylesheet will add back, so a row is never sized to its text
+    alone and then made to clip it.
 
     The import is deferred on purpose. ``widgets/base/__init__`` pulls in
     ``enhanced_dialog``, which imports this module, so a module-level import here
@@ -202,7 +208,7 @@ def data_row_height(widget: QWidget) -> int:
     """
     from anki_miner.gui.widgets.base.sizing import metric_row_height
 
-    return metric_row_height(widget, vertical_padding=CELL_PADDING)
+    return metric_row_height(widget, vertical_padding=CELL_PADDING_Y)
 
 
 def tabular_figures(font: QFont) -> QFont:

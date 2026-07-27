@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import QApplication, QPushButton
 
 from anki_miner.gui.resources.styles import BORDER_RADIUS, MOTION
 from anki_miner.gui.utils import motion
+from anki_miner.gui.widgets.base.sizing import apply_button_size
 
 #: Strength of the press tint at full press. Measured across all 29 shipped
 #: themes: this lands every variant's pressed step between 1.22 and 1.62 WCAG
@@ -106,8 +107,11 @@ class ModernButton(QPushButton):
         if variant != "primary":
             self.setAutoDefault(False)
 
-        # Set minimum size for better touch targets
-        self.setMinimumHeight(36)
+        # A floor measured through the rendered font, not the 36px constant this
+        # replaces: 36 was slack at 100% text and under the glyphs at 150%, so it
+        # made every button taller than its content on the machine the number was
+        # chosen on, and shorter than its content on everybody else's.
+        apply_button_size(self)
 
         # Set accessibility properties
         self.setAccessibleName(text if text else self.tr("Button"))
