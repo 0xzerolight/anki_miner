@@ -11,15 +11,56 @@ Two rules this module exists to enforce, both of which the app has violated:
    methods commit composition with Enter. Confirmation is ``Ctrl+Return``, bound
    alongside the keypad's ``Ctrl+Enter`` so both physical keys work.
 
+3. **One source for what is bound and what is advertised.** The global
+   sequences live here as constants and the About card's table is generated
+   from them, so a rebinding cannot leave the printed list behind.
+
 Shortcuts are parented to their owning widget so Qt retains them; an unreferenced
 ``QShortcut`` is garbage-collected and silently stops firing.
 """
 
 from collections.abc import Callable
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, Qt
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import QWidget
+
+#: Opens Settings. The one global binding kept as-is: it is reachable from every
+#: screen and collides with nothing.
+SETTINGS_SEQUENCE = "Ctrl+,"
+
+#: Help. F1 means help on every desktop, so it opens *Find a Feature*; it used
+#: to open About, which answers a different question.
+HELP_SEQUENCE = "F1"
+
+#: Per-tab switching, formatted with the 1-based tab number. The live tab count
+#: decides how many exist -- see ``MainWindow.setup_tab_shortcuts``.
+TAB_SEQUENCE_TEMPLATE = "Ctrl+{number}"
+
+#: How the dual primary-action binding is written for a human. The two real
+#: sequences are in ``_PRIMARY_ACTION_KEYS``; nobody thinks of them as two keys.
+PRIMARY_ACTION_DISPLAY = "Ctrl+Enter"
+
+#: The keyboard table the About card prints, generated from the constants above
+#: so a rebinding cannot drift from what the application advertises -- which is
+#: exactly how About went on offering F1 for itself after F1 became Help.
+#:
+#: The descriptions carry the ``AboutDialog`` context explicitly because they are
+#: declared here but rendered there, and Qt resolves a translation by
+#: (context, source). Deliberately a plain table and not a command registry:
+#: D48-B is essentials only, with no palette and no generated command list.
+SHORTCUT_HELP: tuple[tuple[str, str], ...] = (
+    (
+        f"{TAB_SEQUENCE_TEMPLATE.format(number=1)}..7",
+        QT_TRANSLATE_NOOP("AboutDialog", "Switch tabs"),
+    ),
+    (SETTINGS_SEQUENCE, QT_TRANSLATE_NOOP("AboutDialog", "Open Settings")),
+    (
+        PRIMARY_ACTION_DISPLAY,
+        QT_TRANSLATE_NOOP("AboutDialog", "Run this screen's main action"),
+    ),
+    (HELP_SEQUENCE, QT_TRANSLATE_NOOP("AboutDialog", "Find a Feature")),
+)
 
 #: Confirmation is Ctrl-modified so a bare Enter stays available to input methods.
 #: "Return" is the main-block key and "Enter" is the keypad's; Qt reports them as
