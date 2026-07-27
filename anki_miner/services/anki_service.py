@@ -10,7 +10,7 @@ from PyQt6.QtCore import QCoreApplication
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.interfaces import ProgressCallback
-from anki_miner.models import CardPayload
+from anki_miner.models import AnkiWriteState, CardPayload
 from anki_miner.services._ankiconnect import _expect_list, post_action, post_multi
 from anki_miner.services.anki_media_store import AnkiMediaStore
 from anki_miner.services.anki_note_builder import (
@@ -77,6 +77,26 @@ _DUPLICATE_ERROR_SUBSTRING = "cannot create note because it is a duplicate"
 _UNSUPPORTED_ACTION_SUBSTRING = "unsupported action"
 
 
+def is_transient_anki_transport_error(exc: BaseException) -> bool:
+    """Whether *exc* is an AnkiConnect failure a later attempt could survive.
+
+    Source-proven only, and deliberately narrow: the exception must be an
+    :class:`AnkiConnectionError` chained from a real ``requests`` connection or
+    timeout error — the two ``raise ... from e`` sites in
+    ``_ankiconnect.post_action``/``post_multi``. Everything else keeps its
+    ``__cause__`` empty or carries a deterministic one (an AnkiConnect-side
+    error payload, an HTTP status, an unparseable body), and re-running it just
+    fails the same way.
+
+    Transience alone never authorizes a retry — the caller must also hold
+    :attr:`AnkiWriteState.NO_NOTE_WRITE`, since a dropped connection *during*
+    ``addNotes`` is both transient and unsafe to replay.
+    """
+    if not isinstance(exc, AnkiConnectionError):
+        return False
+    return isinstance(exc.__cause__, (requests.exceptions.ConnectionError, requests.exceptions.Timeout))
+
+
 class AnkiService:
     """Service for interacting with Anki via AnkiConnect (stateless service)."""
 
@@ -95,6 +115,11 @@ class AnkiService:
             ValueError: If required field keys are missing from config
         """
         self.config = config
+        # What this service can prove about note writes (D30). Only ever
+        # escalated by create_cards_batch; reset per mining run by
+        # EpisodeProcessor._run_pipeline, which is the sole run boundary.
+        # A service that has not submitted anything has written nothing.
+        self.anki_write_state: AnkiWriteState = AnkiWriteState.NO_NOTE_WRITE
         self.last_created_note_ids: list[int] = []
         # Number of notes not created during the last create_cards_batch call.
         # Combines both sources:
@@ -604,6 +629,18 @@ class AnkiService:
                 # each an id (int) or null (None); length alignment is load-bearing
                 # for the positional zip below.
                 if submit_notes:
+                    # Note-write provenance (D30). From the moment the request
+                    # leaves this process until a VALIDATED response comes back,
+                    # the honest answer is "we cannot tell": a dropped
+                    # connection or an unreadable body may well have created the
+                    # notes. Anything that escapes between these two lines
+                    # therefore leaves NOTE_WRITE_UNCERTAIN behind, which blocks
+                    # automatic retry. Only the validated response downgrades it
+                    # again — and only back to what held BEFORE this batch, so a
+                    # later all-duplicate batch cannot erase an earlier batch's
+                    # confirmed write.
+                    state_before_request = self.anki_write_state
+                    self.anki_write_state = AnkiWriteState.NOTE_WRITE_UNCERTAIN
                     note_ids = _expect_list(
                         post_action(
                             self.config.ankiconnect_url,
@@ -615,6 +652,10 @@ class AnkiService:
                         len(submit_notes),
                         (int, type(None)),
                     )
+                    if any(nid is not None for nid in note_ids):
+                        self.anki_write_state = AnkiWriteState.NOTE_WRITE_CONFIRMED
+                    else:
+                        self.anki_write_state = state_before_request
                 else:
                     note_ids = []
 

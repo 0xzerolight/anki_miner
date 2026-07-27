@@ -24,6 +24,33 @@ class MiningOutcome(Enum):
     FAILED = "failed"
 
 
+class AnkiWriteState(Enum):
+    """What a run can PROVE about whether Anki notes were written (D30).
+
+    Automatic retry re-runs the whole pipeline, so it is only ever safe when
+    the app can prove no note reached the collection — replaying a run that
+    already created notes duplicates the user's cards.
+
+    The three answers are deliberately asymmetric:
+
+    * :attr:`NO_NOTE_WRITE` — no ``addNotes`` request was ever in flight. The
+      ONLY state an automatic retry may act on.
+    * :attr:`NOTE_WRITE_UNCERTAIN` — an ``addNotes`` request was in flight and
+      no validated response came back. A dropped connection is indistinguishable
+      from a successful write whose reply was lost, so this is the fail-closed
+      answer for every ambiguity, not just proven-lost responses.
+    * :attr:`NOTE_WRITE_CONFIRMED` — AnkiConnect returned at least one non-null
+      note id, so notes definitely exist.
+
+    UNCERTAIN and CONFIRMED both block automatic retry; they are kept apart
+    because only CONFIRMED can also name the created ids.
+    """
+
+    NO_NOTE_WRITE = "no_note_write"
+    NOTE_WRITE_UNCERTAIN = "note_write_uncertain"
+    NOTE_WRITE_CONFIRMED = "note_write_confirmed"
+
+
 class TerminalOutcome(Enum):
     """Whole-run terminal outcome shared by workers and tabs."""
 
@@ -100,11 +127,30 @@ class ProcessingResult:
     video_file: str = ""
     subtitle_file: str = ""
     mined_forms: list[str] = field(default_factory=list)
+    #: Anki note-write provenance for this run (D30). Stamped by
+    #: ``EpisodeProcessor._run_pipeline`` on every result it returns. The
+    #: default is the FAIL-CLOSED answer: a result nobody stamped has made no
+    #: proof, so it must not be treated as safe to replay.
+    anki_write_state: AnkiWriteState = AnkiWriteState.NOTE_WRITE_UNCERTAIN
+    #: True only when the failure came from a source-proven transient cause (a
+    #: connection drop or timeout), which a later attempt may well survive. A
+    #: deterministic failure re-run fails identically, so it stays False.
+    failure_is_transient: bool = False
 
     @property
     def success(self) -> bool:
         """Check if processing was successful (no critical errors)."""
         return len(self.errors) == 0
+
+    @property
+    def auto_retry_eligible(self) -> bool:
+        """Whether this run may be re-run automatically without asking the user.
+
+        Both halves are required and both are checked by identity, never by
+        truthiness: a ``MagicMock`` stand-in or the bare ``"no_note_write"``
+        string must not unlock a retry that could duplicate cards.
+        """
+        return self.failure_is_transient is True and self.anki_write_state is AnkiWriteState.NO_NOTE_WRITE
 
     def __str__(self) -> str:
         return (

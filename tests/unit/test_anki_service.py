@@ -8,10 +8,10 @@ import pytest
 import requests
 
 from anki_miner.exceptions import AnkiConnectionError, SetupError
-from anki_miner.models import CardPayload, MediaData
+from anki_miner.models import AnkiWriteState, CardPayload, MediaData
 from anki_miner.services._ankiconnect import _expect_list, post_action, post_multi
 from anki_miner.services.anki_media_store import _content_addressed_name
-from anki_miner.services.anki_service import AnkiService
+from anki_miner.services.anki_service import AnkiService, is_transient_anki_transport_error
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -3856,3 +3856,172 @@ class TestAddTags:
             pytest.raises(AnkiConnectionError),
         ):
             service.add_tags([1], "t")
+
+
+class TestAnkiWriteState:
+    """Note-write provenance recorded around the ``addNotes`` request (D30).
+
+    ``anki_write_state`` answers one question for the retry policy: can this
+    process prove no note reached the collection? Everything else — a dropped
+    connection mid-request, a response that would not parse — must resolve to
+    NOTE_WRITE_UNCERTAIN, because replaying such a run can duplicate cards.
+    """
+
+    def _items(self, make_tokenized_word, n=1):
+        return [
+            CardPayload(word=make_tokenized_word(lemma=f"w_{i}"), media=MediaData(), definition=f"d_{i}")
+            for i in range(n)
+        ]
+
+    def test_fresh_service_has_written_nothing(self, test_config):
+        assert AnkiService(test_config).anki_write_state is AnkiWriteState.NO_NOTE_WRITE
+
+    def test_failure_before_addnotes_keeps_no_note_write(self, test_config, make_tokenized_word):
+        """The duplicate probe dies before submission — nothing was in flight."""
+        service = AnkiService(test_config)
+        items = self._items(make_tokenized_word, n=2)
+
+        with (
+            patch.object(AnkiService, "_probe_duplicates", side_effect=AnkiConnectionError("down")),
+            pytest.raises(AnkiConnectionError),
+        ):
+            service.create_cards_batch(items)
+
+        assert service.anki_write_state is AnkiWriteState.NO_NOTE_WRITE
+
+    def test_connection_drop_during_addnotes_is_uncertain(self, test_config, make_tokenized_word):
+        """A lost response is indistinguishable from a successful write."""
+        service = AnkiService(test_config)
+        items = self._items(make_tokenized_word, n=2)
+
+        with (
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=requests.exceptions.ConnectionError("reset by peer"),
+            ),
+            pytest.raises(AnkiConnectionError),
+        ):
+            service.create_cards_batch(items)
+
+        assert service.anki_write_state is AnkiWriteState.NOTE_WRITE_UNCERTAIN
+
+    def test_malformed_addnotes_response_is_uncertain(self, test_config, make_tokenized_word):
+        """The request reached Anki; we just cannot read the answer."""
+        service = AnkiService(test_config)
+        items = self._items(make_tokenized_word, n=3)
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=_mock_response(result=[100, 101])),
+            pytest.raises(AnkiConnectionError),
+        ):
+            service.create_cards_batch(items)
+
+        assert service.anki_write_state is AnkiWriteState.NOTE_WRITE_UNCERTAIN
+
+    def test_created_note_confirms_the_write(self, test_config, make_tokenized_word):
+        service = AnkiService(test_config)
+        items = self._items(make_tokenized_word, n=2)
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=_mock_response(result=[100, 101])):
+            service.create_cards_batch(items)
+
+        assert service.anki_write_state is AnkiWriteState.NOTE_WRITE_CONFIRMED
+
+    def test_all_null_response_proves_nothing_was_written(self, test_config, make_tokenized_word):
+        """A validated all-duplicate response restores the pre-request state."""
+        service = AnkiService(test_config)
+        items = self._items(make_tokenized_word, n=2)
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=_mock_response(result=[None, None])):
+            service.create_cards_batch(items)
+
+        assert service.anki_write_state is AnkiWriteState.NO_NOTE_WRITE
+
+    def test_confirmed_batch_then_failing_batch_is_uncertain(self, test_config, make_tokenized_word):
+        """Batch 1 created notes; batch 2's outcome is unknown — the run is unsafe
+        to replay, and batch 1's ids stay recorded for Undo."""
+        service = AnkiService(test_config)
+        items = self._items(make_tokenized_word, n=150)  # 100 + 50
+
+        with (
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=[
+                    _mock_response(result=list(range(100))),
+                    requests.exceptions.ConnectionError("reset by peer"),
+                ],
+            ),
+            pytest.raises(AnkiConnectionError),
+        ):
+            service.create_cards_batch(items)
+
+        assert service.anki_write_state is AnkiWriteState.NOTE_WRITE_UNCERTAIN
+        assert service.last_created_note_ids == list(range(100))
+
+    def test_all_null_second_batch_keeps_the_earlier_confirmation(self, test_config, make_tokenized_word):
+        """Restoring the pre-request state must not downgrade a real confirmation."""
+        service = AnkiService(test_config)
+        items = self._items(make_tokenized_word, n=150)
+
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post",
+            side_effect=[
+                _mock_response(result=list(range(100))),
+                _mock_response(result=[None] * 50),
+            ],
+        ):
+            service.create_cards_batch(items)
+
+        assert service.anki_write_state is AnkiWriteState.NOTE_WRITE_CONFIRMED
+
+    def test_empty_batch_is_not_a_reset_point(self, test_config, make_tokenized_word):
+        """Only a new pipeline run clears the state; a no-op call must not
+        erase a confirmation the same run earned."""
+        service = AnkiService(test_config)
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=_mock_response(result=[100])):
+            service.create_cards_batch(self._items(make_tokenized_word, n=1))
+        service.create_cards_batch([])
+
+        assert service.anki_write_state is AnkiWriteState.NOTE_WRITE_CONFIRMED
+
+
+class TestTransientTransportClassification:
+    """``is_transient_anki_transport_error`` — source-proven causes only."""
+
+    def _raised(self, cause: Exception) -> AnkiConnectionError:
+        try:
+            try:
+                raise cause
+            except Exception as e:
+                raise AnkiConnectionError("boom") from e
+        except AnkiConnectionError as exc:
+            return exc
+
+    @pytest.mark.parametrize(
+        "cause",
+        [
+            requests.exceptions.ConnectionError("refused"),
+            requests.exceptions.ConnectTimeout("slow"),
+            requests.exceptions.ReadTimeout("slow"),
+        ],
+    )
+    def test_connection_and_timeout_causes_are_transient(self, cause):
+        assert is_transient_anki_transport_error(self._raised(cause)) is True
+
+    @pytest.mark.parametrize(
+        "cause",
+        [
+            requests.HTTPError("503 Service Unavailable"),
+            ValueError("not json"),
+        ],
+    )
+    def test_other_causes_are_not_transient(self, cause):
+        """Fail closed: only a proven connection/timeout cause earns a retry."""
+        assert is_transient_anki_transport_error(self._raised(cause)) is False
+
+    def test_ankiconnect_side_error_has_no_cause_and_is_not_transient(self):
+        assert is_transient_anki_transport_error(AnkiConnectionError("deck was not found")) is False
+
+    def test_unrelated_exception_is_not_transient(self):
+        assert is_transient_anki_transport_error(RuntimeError("nope")) is False
