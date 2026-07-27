@@ -118,6 +118,32 @@ class DictionaryRegistry:
                 stale.append(meta)
         return sorted(stale, key=lambda m: m.dict_id)
 
+    def usable_enabled(self, config: AnkiMinerConfig) -> list[DictMeta]:
+        """Enabled indexed chain slots that can actually answer a lookup.
+
+        Three conditions, all read off this snapshot: present on disk,
+        schema-current, and holding at least one entry. They are the same three
+        :meth:`DefinitionService.has_usable_offline_provider` applies to the
+        registry after building and loading the chain — answered here without
+        opening a single SQLite connection, which is what makes this callable
+        from a readiness check that must not take a file lock on the very
+        indexes the user may be about to reimport.
+
+        "An ``index.sqlite`` exists" was never the question worth asking: a
+        schema-stale index is dropped from the chain, and a zero-entry index
+        opens perfectly and returns nothing. Both mine cards with no definition.
+
+        Does NOT call load(); callers control when the scan happens.
+        """
+        usable: list[DictMeta] = []
+        for entry in config.dictionary_chain:
+            if entry.kind != "indexed" or not entry.enabled or entry.dict_id is None:
+                continue
+            meta = self._dicts.get(entry.dict_id)
+            if meta is not None and meta.schema_ok and meta.entry_count > 0:
+                usable.append(meta)
+        return sorted(usable, key=lambda m: m.dict_id)
+
     def build_provider_chain(self, config: AnkiMinerConfig) -> list[DictionaryProvider]:
         """Build the ordered provider chain from config + disk state.
 

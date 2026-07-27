@@ -11,7 +11,7 @@ explains, links, and re-checks.
 
 from __future__ import annotations
 
-import contextlib
+from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
 from typing import TYPE_CHECKING
@@ -42,6 +42,7 @@ from anki_miner.utils.i18n import tr_format
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadSession
+    from anki_miner.services.validation_service import ValidationService
 
     from .setup_wizard import SetupWizard
 
@@ -61,6 +62,51 @@ RESOURCES_HELP_URL = "https://github.com/0xzerolight/anki_miner#recommended-reso
 
 def _open_url(url: str) -> None:
     QDesktopServices.openUrl(QUrl(url))
+
+
+class _LiveCheckPage(QWizardPage):
+    """A page that re-checks one fact about the world, off the GUI thread.
+
+    Every step re-checks live rather than trusting a result cached when the page
+    was built (D26), and each such page runs at most one check at a time. Two
+    rules make that safe; both exist because the obvious spellings are wrong.
+
+    * **Connect bound methods, never closures.** PyQt drops a connection whose
+      receiver ``QObject`` has been destroyed, but a lambda or nested function
+      has no receiver to watch — so its queued result is still delivered, into a
+      page whose C++ object is mid-destruction. That is a segfault, not a
+      ``RuntimeError``, and no amount of guarding inside the slot prevents it.
+    * **The retained worker is the generation counter.** Starting a new check
+      replaces ``_live_check``, so a late answer from any earlier worker no
+      longer matches and is dropped. A separate integer counter would be a
+      second thing to keep in step with the first.
+    """
+
+    def __init__(self, wizard: SetupWizard) -> None:
+        super().__init__(wizard)
+        self._wizard = wizard
+        self._live_check: SingleCallWorker | None = None
+
+    def _start_live_check(
+        self,
+        work: Callable[[], object],
+        *,
+        error_prefix: str,
+        on_result: Callable[[object], None],
+        on_error: Callable[[str], None],
+    ) -> SingleCallWorker:
+        """Run ``work`` off-thread; hand ownership to the wizard's close barrier."""
+        worker = SingleCallWorker(work, error_prefix=error_prefix, parent=self)
+        self._live_check = worker
+        self._wizard.register_worker(worker)
+        worker.result_ready.connect(on_result)
+        worker.error.connect(on_error)
+        worker.start()
+        return worker
+
+    def _is_live_check(self) -> bool:
+        """True when the emitting worker is still the check being waited on."""
+        return self.sender() is self._live_check
 
 
 class AnkiConnectPage(QWizardPage):
@@ -271,18 +317,15 @@ class DeckPage(QWizardPage):
             self.deck_hint.setText("")
 
 
-class NoteTypePage(QWizardPage):
+class NoteTypePage(_LiveCheckPage):
     """Step 3 (richest): choose a note type, auto-map its fields, warn on gaps."""
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
-        self._wizard = wizard
         self._notetypes_worker: SingleCallWorker | None = None
         self._fields_worker: SingleCallWorker | None = None
+        # The field-name warning check; ``_LiveCheckPage`` owns its staleness.
         self._warn_worker: SingleCallWorker | None = None
-        # Monotonic id of the latest field-name check; on_done/on_error ignore any
-        # result whose generation no longer matches (superseded by a newer check).
-        self._warn_generation = 0
         self._fields_generation = 0
         self._desired_note_type = ""
         self._active_fields_request: tuple[int, str] | None = None
@@ -588,56 +631,48 @@ class NoteTypePage(QWizardPage):
 
         ``check_field_names()`` makes a synchronous AnkiConnect HTTP call (10s
         timeout), so it runs on a worker thread; the result updates
-        ``warning_label`` on the GUI thread. Overlapping checks are superseded by
-        a generation counter so only the latest result wins, and a failure
-        (Anki down) never raises into the GUI.
+        ``warning_label`` on the GUI thread. A failure (Anki down) never raises
+        into the GUI.
         """
-        self._warn_generation += 1
-        generation = self._warn_generation
         self.warning_label.setText(self.tr("Checking note type fields..."))
-
-        validation = self._wizard.validation_service()
-
-        def _set_warning(text: str) -> None:
-            # The page may have been torn down while the check was in flight, so
-            # the QLabel's C++ object can already be gone — suppress that, never
-            # raise into the GUI.
-            with contextlib.suppress(RuntimeError):
-                self.warning_label.setText(text)
-
-        def _on_done(result: object) -> None:
-            if generation != self._warn_generation:
-                return  # Superseded by a newer check.
-            ok, message = result if isinstance(result, tuple) else (False, str(result))
-            _set_warning("" if ok else message)
-
-        def _on_error(message: str) -> None:
-            if generation != self._warn_generation:
-                return
-            # Anki unreachable/slow: surface the failure but never raise.
-            _set_warning(message)
-
-        worker = SingleCallWorker(
-            validation.check_field_names,
+        self._warn_worker = self._start_live_check(
+            self._wizard.validation_service().check_field_names,
             error_prefix=self.tr("Could not check note type fields: "),
-            parent=self,
+            on_result=self._on_field_warning_result,
+            on_error=self._on_field_warning_error,
         )
-        self._warn_worker = worker
-        self._wizard.register_worker(worker)
-        worker.result_ready.connect(_on_done)
-        worker.error.connect(_on_error)
-        worker.start()
+
+    def _on_field_warning_result(self, result: object) -> None:
+        if not self._is_live_check():
+            return  # Superseded by a newer check.
+        ok, message = result if isinstance(result, tuple) else (False, str(result))
+        self.warning_label.setText("" if ok else message)
+
+    def _on_field_warning_error(self, message: str) -> None:
+        if not self._is_live_check():
+            return
+        # Anki unreachable/slow: surface the failure but never raise.
+        self.warning_label.setText(message)
 
 
-class ResourcesPage(QWizardPage):
-    """Step 4: optionally download the recommended resource set (skippable)."""
+class ResourcesPage(_LiveCheckPage):
+    """Step 4: install the recommended resources. A dictionary is required.
+
+    The dictionary used to be labelled optional, so setup could be completed in
+    a state guaranteed to fail the first mine: without one, every mined card
+    comes out with no definition (D26). The page therefore gates Next on a live
+    probe of whether an enabled offline dictionary can actually answer a lookup
+    — not on whether the download button was pressed, and not on a result
+    cached from when the page was built. **Skip Setup** remains available on
+    every page for anyone who genuinely cannot download right now.
+    """
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
-        self._wizard = wizard
+        self._dictionary_ready = False
 
         self.setTitle(self.tr("Recommended Resources"))
-        self.setSubTitle(self.tr("Frequency, pitch accent, and a dictionary (optional)."))
+        self.setSubTitle(self.tr("Frequency and pitch accent are optional. A dictionary is required."))
 
         layout = QVBoxLayout(self)
 
@@ -662,14 +697,59 @@ class ResourcesPage(QWizardPage):
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
 
+        # Kept apart from status_label: one reports how the *download* ended,
+        # the other what the app can *do now*. A single label would let a
+        # finished download overwrite the readiness verdict that gates Next.
+        self.dictionary_label = QLabel("")
+        self.dictionary_label.setObjectName("validation-status")
+        self.dictionary_label.setWordWrap(True)
+        layout.addWidget(self.dictionary_label)
+
         # Retained past the run's end: the terminal window offers Retry setup,
         # which calls back into the session. Dropping the reference on finish
         # would collect the session and leave that button inert.
         self._session: ResourceDownloadSession | None = None
         self._download_running = False
 
+    def initializePage(self) -> None:
+        """Ask the disk, every time the page is entered."""
+        self._recheck_dictionary()
+
     def isComplete(self) -> bool:
-        return True  # Always skippable.
+        return self._dictionary_ready
+
+    # --- live dictionary readiness ---
+
+    def _recheck_dictionary(self) -> None:
+        """Probe off-thread whether an offline dictionary can answer a lookup.
+
+        Off-thread because the probe scans the dictionaries folder, which can be
+        a slow network path.
+        """
+        self._dictionary_ready = False
+        self.dictionary_label.setText(self.tr("Checking for an offline dictionary..."))
+        self.completeChanged.emit()
+        self._start_live_check(
+            self._wizard.validation_service().check_offline_dictionary,
+            error_prefix=self.tr("Could not check the offline dictionary: "),
+            on_result=self._on_dictionary_probe_result,
+            on_error=self._on_dictionary_probe_error,
+        )
+
+    def _on_dictionary_probe_result(self, result: object) -> None:
+        if not self._is_live_check():
+            return
+        ok, message = result if isinstance(result, tuple) else (False, str(result))
+        self._dictionary_ready = bool(ok)
+        self.dictionary_label.setText(tr_format(self.tr("Dictionary ready: %1"), message) if ok else message)
+        self.completeChanged.emit()
+
+    def _on_dictionary_probe_error(self, message: str) -> None:
+        if not self._is_live_check():
+            return
+        self._dictionary_ready = False
+        self.dictionary_label.setText(message)
+        self.completeChanged.emit()
 
     def _on_download_clicked(self) -> None:
         """Start the download and hand the page back immediately.
@@ -748,16 +828,54 @@ class ResourcesPage(QWizardPage):
         else:
             status = self.tr("Resources installed.")
         self.status_label.setText(status)
+        # Re-ask rather than infer: a summary saying the dictionary imported is
+        # not the same claim as the chain being able to answer with it.
+        self._recheck_dictionary()
 
 
-class DonePage(QWizardPage):
-    """Step 5: summary of what was set up."""
+#: The final page's required checks, in the order they are reported. Optional
+#: tools (yt-dlp, alass, ffprobe) and optional packs are deliberately absent:
+#: none of them is needed to mine a card, so none of them may block Finish.
+_FINAL_CHECKS = ("ankiconnect", "deck", "note_type", "fields", "dictionary")
+
+
+def _final_sweep(validation: ValidationService) -> dict[str, bool]:
+    """Re-ask every required question, off the GUI thread.
+
+    A module-level function, not a page method: it runs on a worker thread, and
+    a bound method there is one careless attribute access away from touching a
+    widget off-thread.
+
+    Short-circuited the way ``validate_setup`` short-circuits — asking a closed
+    Anki for its deck list produces a timeout, not an answer.
+    """
+    results = dict.fromkeys(_FINAL_CHECKS, False)
+    results["dictionary"] = validation.check_offline_dictionary()[0]
+    results["ankiconnect"] = validation.check_ankiconnect()[0]
+    if not results["ankiconnect"]:
+        return results
+    results["deck"] = validation.check_deck_exists()[0]
+    results["note_type"] = validation.check_note_type_exists()[0]
+    if results["note_type"]:
+        results["fields"] = validation.check_field_names()[0]
+    return results
+
+
+class DonePage(_LiveCheckPage):
+    """Step 5: re-verify the whole setup, then offer the first real action.
+
+    The old summary read the AnkiConnect page's cached ``_reachable`` flag and
+    counted the mapped fields in config — both of which were true several
+    minutes and one Anki restart ago. It could therefore say "AnkiConnect
+    reachable: Yes" over a closed Anki. This page now runs its own sweep on
+    entry and Finish stays disabled until every required check passes.
+    """
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
-        self._wizard = wizard
-        self.setTitle(self.tr("All Set"))
-        self.setSubTitle(self.tr("Review your setup. You can change anything later in Settings."))
+        self._results: dict[str, bool] = {}
+        self.setTitle(self.tr("Ready to Mine"))
+        self.setSubTitle(self.tr("A last check of everything mining needs. You can change it later in Settings."))
         self.setFinalPage(True)
 
         layout = QVBoxLayout(self)
@@ -766,18 +884,50 @@ class DonePage(QWizardPage):
         self.summary_label.setTextFormat(Qt.TextFormat.RichText)
         layout.addWidget(self.summary_label)
 
+    def isComplete(self) -> bool:
+        return all(self._results.get(name, False) for name in _FINAL_CHECKS)
+
     def initializePage(self) -> None:
+        """Run one fresh readiness sweep; render it when it lands."""
+        self._results = {}
+        self.summary_label.setText(self.tr("Checking your setup..."))
+        self.completeChanged.emit()
+
+        self._start_live_check(
+            partial(_final_sweep, self._wizard.validation_service()),
+            error_prefix=self.tr("Could not check your setup: "),
+            on_result=self._on_sweep_result,
+            on_error=self._on_sweep_error,
+        )
+
+    def _on_sweep_result(self, result: object) -> None:
+        if not self._is_live_check():
+            return
+        self._results = dict(result) if isinstance(result, dict) else {}
+        self.summary_label.setText(self._summary_html())
+        self.completeChanged.emit()
+
+    def _on_sweep_error(self, message: str) -> None:
+        if not self._is_live_check():
+            return
+        self._results = {}
+        self.summary_label.setText(message)
+        self.completeChanged.emit()
+
+    def _summary_html(self) -> str:
         cfg = self._wizard.working_config()
-        reachable = getattr(self._wizard.ankiconnect_page, "_reachable", False)
-        mapped_count = sum(1 for v in cfg.anki_fields.values() if v)
-        resources = cfg.frequency_active or cfg.pitch_active
         yes = self.tr("Yes")
         no = self.tr("No")
-        lines = [
-            tr_format(self.tr("AnkiConnect reachable: <b>%1</b>"), yes if reachable else no),
-            tr_format(self.tr("Deck: <b>%1</b>"), cfg.anki_deck_name),
-            tr_format(self.tr("Note type: <b>%1</b>"), cfg.anki_note_type),
-            tr_format(self.tr("Mapped fields: <b>%1</b>"), str(mapped_count)),
-            tr_format(self.tr("Resources configured: <b>%1</b>"), yes if resources else no),
-        ]
-        self.summary_label.setText("<br>".join(lines))
+
+        def mark(name: str) -> str:
+            return yes if self._results.get(name, False) else no
+
+        return "<br>".join(
+            [
+                tr_format(self.tr("AnkiConnect reachable: <b>%1</b>"), mark("ankiconnect")),
+                tr_format(self.tr("Deck '%1' exists: <b>%2</b>"), cfg.anki_deck_name, mark("deck")),
+                tr_format(self.tr("Note type '%1' exists: <b>%2</b>"), cfg.anki_note_type, mark("note_type")),
+                tr_format(self.tr("Every mapped field exists: <b>%1</b>"), mark("fields")),
+                tr_format(self.tr("Offline dictionary ready: <b>%1</b>"), mark("dictionary")),
+            ]
+        )

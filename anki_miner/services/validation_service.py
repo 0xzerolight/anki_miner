@@ -212,33 +212,24 @@ class ValidationService:
                 )
             )
 
-        # Optional resource files: warn (not fail) when the user enabled a
-        # feature but the underlying file is missing, so the GUI can surface
-        # an "enabled but unavailable" state up front instead of silently
-        # falling back at lookup time.
-
-        # Dictionary chain validation — warn if every enabled indexed entry is
-        # missing on disk. The chain falls back to other providers (Jisho), so
-        # this is only a warning, not an error.
-        dicts_root = self.config.dicts_root
-        indexed_entries = [e for e in self.config.dictionary_chain if e.kind == "indexed" and e.enabled]
-        if indexed_entries:
-            missing = [
-                e.dict_id
-                for e in indexed_entries
-                if e.dict_id is None or not (dicts_root / e.dict_id / "index.sqlite").exists()
-            ]
-            if missing:
-                issues.append(
-                    ValidationIssue(
-                        component="Offline Dictionary",
-                        severity="WARNING",
-                        message=(
-                            f"Dictionary index(es) not found on disk: {', '.join(m for m in missing if m)}. "
-                            "Lookups will fall back to other providers in the chain."
-                        ),
-                    )
+        # Offline dictionary readiness. Reported for its own sake, not as a
+        # by-product of a file existing: mining without a usable offline
+        # dictionary produces cards with no definition, which is the failure the
+        # first-run setup used to let people walk into by calling the dictionary
+        # optional. Still a WARNING — the chain can fall back to Jisho — but it
+        # is now emitted for "none configured" too, which the old on-disk check
+        # could not represent.
+        dictionary_ok, dictionary_msg = self._check_offline_dictionary()
+        if dictionary_ok:
+            tool_versions["offline-dictionary"] = dictionary_msg
+        else:
+            issues.append(
+                ValidationIssue(
+                    component="Offline Dictionary",
+                    severity="WARNING",
+                    message=dictionary_msg,
                 )
+            )
 
         # Pitch/frequency "resource missing" warnings were removed with the
         # use_pitch_accent / use_frequency_data flags: activation is now derived
@@ -271,6 +262,30 @@ class ValidationService:
             Tuple of (success, message) — identical to the private method.
         """
         return self._check_field_names_exist()
+
+    def check_deck_exists(self) -> tuple[bool, str]:
+        """Public wrapper over :meth:`_check_deck_exists` (setup wizard).
+
+        Returns:
+            Tuple of (success, message) — identical to the private method.
+        """
+        return self._check_deck_exists()
+
+    def check_note_type_exists(self) -> tuple[bool, str]:
+        """Public wrapper over :meth:`_check_note_type_exists` (setup wizard).
+
+        Returns:
+            Tuple of (success, message) — identical to the private method.
+        """
+        return self._check_note_type_exists()
+
+    def check_offline_dictionary(self) -> tuple[bool, str]:
+        """Public wrapper over :meth:`_check_offline_dictionary` (setup wizard).
+
+        Returns:
+            Tuple of (success, message) — identical to the private method.
+        """
+        return self._check_offline_dictionary()
 
     def _check_ankiconnect(self) -> tuple[bool, str]:
         """Check if AnkiConnect is running and accessible.
@@ -450,6 +465,60 @@ class ValidationService:
             f"yt-dlp is {age_days} days old ({token}). YouTube changes often break older "
             "versions — enable 'Keep yt-dlp up to date automatically' in "
             "Settings → YouTube, or click Update yt-dlp now."
+        )
+
+    def _check_offline_dictionary(self) -> tuple[bool, str]:
+        """Check that an enabled offline dictionary can answer a lookup.
+
+        Reads the registry snapshot only — no provider is constructed, loaded or
+        closed, so nothing here takes a SQLite handle on the very indexes the
+        repair route (Reimport All) may be about to replace. On Windows an open
+        handle is a file lock, so a readiness probe that opened the chain would
+        be able to block its own fix.
+
+        The four failure shapes are reported apart because they have four
+        different repairs: nothing configured, configured but absent, present
+        but schema-stale (needs reimport), and present but empty.
+
+        Returns:
+            Tuple of (success, message). On success the message names the
+            dictionaries and their entry counts.
+        """
+        from anki_miner.services.dictionary.registry import DictionaryRegistry
+
+        enabled = [e for e in self.config.dictionary_chain if e.kind == "indexed" and e.enabled]
+        if not enabled:
+            return False, (
+                "No offline dictionary is enabled, so mined cards will have no definitions. "
+                "Import one in Settings → Dictionaries, or use Tools → Download Recommended Resources."
+            )
+
+        registry = DictionaryRegistry(self.config.dicts_root)
+        registry.load()
+        usable = registry.usable_enabled(self.config)
+        if usable:
+            return True, ", ".join(f"{meta.source_name} ({meta.entry_count:,} entries)" for meta in usable)
+
+        stale = [meta.source_name for meta in registry.stale_enabled(self.config)]
+        if stale:
+            return False, (
+                f"Dictionary index(es) need reimporting after an upgrade: {', '.join(stale)}. "
+                "Use Settings → Dictionaries → Reimport All."
+            )
+        empty = [
+            meta.source_name
+            for meta in (registry.get(e.dict_id) for e in enabled if e.dict_id is not None)
+            if meta is not None and meta.schema_ok and meta.entry_count == 0
+        ]
+        if empty:
+            return False, (
+                f"Dictionary index(es) contain no entries: {', '.join(empty)}. "
+                "Reimport them in Settings → Dictionaries."
+            )
+        missing = [e.dict_id for e in enabled if e.dict_id]
+        return False, (
+            f"Dictionary index(es) not found on disk: {', '.join(missing)}. "
+            "Import them again in Settings → Dictionaries."
         )
 
     def _check_deck_exists(self) -> tuple[bool, str]:
