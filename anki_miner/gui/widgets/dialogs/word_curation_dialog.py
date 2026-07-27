@@ -176,8 +176,31 @@ class WordCurationDialog(QDialog):
         self._setup_ui()
         self._populate_table()
         self._refresh_summary()
+        # Connected FIRST, deliberately: MiningTabBase connects its curation
+        # resolver to the same signal afterwards, and Qt runs direct connections
+        # in connection order, so the mpv core / page decode / dictionary workers
+        # are always released before the tab reads the selection and schedules
+        # this window for deletion. Do not reorder these two connections.
         self.finished.connect(self._stop_player)
         add_min_max_buttons(self)
+        self._configure_as_owned_window()
+
+    def _configure_as_owned_window(self) -> None:
+        """Present the curator as a non-modal window owned by its tab (D33).
+
+        Word curation is a primary interactive surface, not a confirmation step:
+        the mining item waits for the user's decision, but the rest of Anki
+        Miner must stay usable while they read, search and preview. A parented
+        ``QDialog`` is already a non-modal top-level window; these two calls
+        state that contract explicitly so a later ``setModal(True)`` cannot
+        quietly take it away.
+
+        The remaining half is the caller's: ``MiningTabBase`` shows this window
+        with ``show()``. ``exec()`` would force application modality back on
+        regardless of anything set here.
+        """
+        self.setWindowFlag(Qt.WindowType.Window, True)
+        self.setWindowModality(Qt.WindowModality.NonModal)
 
     # ------------------------------------------------------------------
     # UI construction

@@ -175,6 +175,54 @@ class TestBackwardCompat:
 
 
 # ---------------------------------------------------------------------------
+# 1b. Owned non-modal window (decision D33)
+# ---------------------------------------------------------------------------
+
+
+class TestOwnedNonModalWindow:
+    """The curator is a window the user works in, not a modal interruption."""
+
+    def test_is_a_top_level_window(self, qtbot, words):
+        from PyQt6.QtWidgets import QWidget
+
+        parent = QWidget()
+        qtbot.addWidget(parent)
+        dlg = WordCurationDialog(words, parent)
+        qtbot.addWidget(dlg)
+
+        assert dlg.isWindow()
+        assert bool(dlg.windowFlags() & Qt.WindowType.Window)
+        assert dlg.parent() is parent  # owned by its tab, not free-floating
+
+    def test_is_non_modal(self, qtbot, words):
+        dlg = WordCurationDialog(words)
+        qtbot.addWidget(dlg)
+
+        assert dlg.windowModality() == Qt.WindowModality.NonModal
+        assert dlg.isModal() is False
+
+    def test_showing_it_blocks_nothing(self, qtbot, words):
+        from PyQt6.QtGui import QGuiApplication
+        from PyQt6.QtWidgets import QApplication
+
+        dlg = WordCurationDialog(words)
+        qtbot.addWidget(dlg)
+        dlg.show()
+
+        assert QApplication.activeModalWidget() is None
+        assert QGuiApplication.modalWindow() is None
+
+    def test_min_max_hints_survive_the_window_configuration(self, qtbot, words):
+        """``add_min_max_buttons`` and the D33 flags must not clobber each other."""
+        dlg = WordCurationDialog(words)
+        qtbot.addWidget(dlg)
+
+        flags = dlg.windowFlags()
+        assert bool(flags & Qt.WindowType.WindowMinimizeButtonHint)
+        assert bool(flags & Qt.WindowType.WindowMaximizeButtonHint)
+
+
+# ---------------------------------------------------------------------------
 # 2. Player seek on row selection
 # ---------------------------------------------------------------------------
 
