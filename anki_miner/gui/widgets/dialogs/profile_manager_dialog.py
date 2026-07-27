@@ -40,6 +40,7 @@ from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.profile_store import Profile, ProfileStore
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
+from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.utils.i18n import tr_format
 
@@ -60,7 +61,7 @@ class _ProfileSwitcher(Protocol):
     def create_from_current(self, name: str) -> SwitchResult: ...
 
 
-class ProfileManagerDialog(QDialog):
+class ProfileManagerDialog(ScreenIssueHost, QDialog):
     """Create, rename, delete and switch between named settings profiles.
 
     Args:
@@ -150,6 +151,7 @@ class ProfileManagerDialog(QDialog):
 
         layout.addLayout(buttons)
         self.setLayout(layout)
+        self.install_issue_banner(layout)
 
     # ------------------------------------------------------------------
     # Data
@@ -230,7 +232,7 @@ class ProfileManagerDialog(QDialog):
             ProfileStore.rename(profile.id, name)
         except (OSError, ValueError) as exc:
             # Blank name, case-insensitive duplicate, or an unwritable file.
-            self._warn(self.tr("Rename Failed"), exc)
+            self._warn(self.tr("The profile could not be renamed."), exc)
             return
         self._refresh(select_id=profile.id)
         self._on_profiles_changed()
@@ -254,7 +256,7 @@ class ProfileManagerDialog(QDialog):
         try:
             ProfileStore.delete(profile.id)
         except (OSError, ValueError) as exc:
-            self._warn(self.tr("Delete Failed"), exc)
+            self._warn(self.tr("The profile could not be deleted."), exc)
             self._refresh()
             return
         self._refresh()
@@ -270,5 +272,10 @@ class ProfileManagerDialog(QDialog):
         self._controller.switch_to(profile_id)
         self._refresh()
 
-    def _warn(self, title: str, error: Exception) -> None:
-        QMessageBox.warning(self, title, str(error))
+    def _warn(self, summary: str, error: Exception) -> None:
+        """Report a profile operation that failed, inside the dialog (D24).
+
+        ``summary`` is the whole sentence; the exception is the diagnostic and
+        stays behind Details.
+        """
+        self.show_screen_issue(ScreenIssue(summary=summary, details=str(error)))

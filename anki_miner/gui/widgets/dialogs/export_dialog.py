@@ -22,6 +22,7 @@ from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.models.word import WordData
 from anki_miner.services.export_service import ExportService
@@ -46,7 +47,7 @@ _DEFAULT_NAMES = {
 }
 
 
-class ExportDialog(QDialog):
+class ExportDialog(ScreenIssueHost, QDialog):
     """Dialog for exporting vocabulary data in various formats.
 
     Supports CSV, TSV, and vocabulary list (plain/takoboto/jpdb) exports.
@@ -179,6 +180,7 @@ class ExportDialog(QDialog):
         layout.addLayout(footer)
 
         self.setLayout(layout)
+        self.install_issue_banner(layout)
 
         # Signals
         self._format_group.idToggled.connect(self._on_format_changed)
@@ -257,8 +259,10 @@ class ExportDialog(QDialog):
         self.accept()
 
     def _on_export_error(self, message: str) -> None:
+        # The dialog stays open with its settings intact, so the failure belongs
+        # inside it: a modal on top would mean re-choosing everything (D24).
         self._export_btn.setEnabled(True)
-        QMessageBox.critical(self, self.tr("Export Failed"), tr_format(self.tr("Failed to export:\n%1"), message))
+        self.show_screen_issue(ScreenIssue(summary=self.tr("The export could not be written."), details=message))
 
     # ── Helpers ─────────────────────────────────────────────
 

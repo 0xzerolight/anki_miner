@@ -236,7 +236,9 @@ class TestDelete:
 
         widget.delete_button.click()
 
-        assert messageboxes["warning"], "failure dialog expected"
+        issue = widget.issue_banner().current_issue()
+        assert issue is not None, "the failure must be visible"
+        assert "device is on fire" in issue.details
         assert not header_refreshes
 
 
@@ -269,7 +271,7 @@ class TestRename:
 
         widget.rename_button.click()
 
-        assert messageboxes["warning"], "duplicate-name warning expected"
+        assert widget.issue_banner().current_issue() is not None, "duplicate-name failure expected"
         assert {p.name for p in ProfileStore.list_profiles()} == {"Anime", "Novels"}
         assert not header_refreshes
 

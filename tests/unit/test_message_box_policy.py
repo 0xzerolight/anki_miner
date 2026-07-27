@@ -127,10 +127,6 @@ LEDGER: dict[str, str] = {
     "gui/controllers/pitch_import_flow.py::PitchImportFlow.reimport_source": "recoverable",
     "gui/controllers/pitch_import_flow.py::PitchImportFlow.reimport_source._on_error": "recoverable",
     "gui/controllers/profile_controller.py::ProfileController._warn": "recoverable",
-    "gui/widgets/dialogs/export_dialog.py::ExportDialog._on_export_error": "recoverable",
-    "gui/widgets/dialogs/known_words_dialog.py::KnownWordsManagerDialog._on_import_failed": "recoverable",
-    "gui/widgets/dialogs/known_words_dialog.py::KnownWordsManagerDialog._show_import_error": "recoverable",
-    "gui/widgets/dialogs/profile_manager_dialog.py::ProfileManagerDialog._warn": "recoverable",
 }
 
 

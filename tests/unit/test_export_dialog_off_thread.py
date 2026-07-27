@@ -85,12 +85,8 @@ class TestExportOffThread:
         assert infos, "success must surface an info dialog"
         assert accepted == [True], "dialog must accept on success"
 
-    def test_error_callback_surfaces_critical_and_reenables(self, dlg, tmp_path, monkeypatch, capture_off_thread):
+    def test_error_callback_reports_an_issue_and_reenables(self, dlg, tmp_path, monkeypatch, capture_off_thread):
         _stub_service(monkeypatch)
-        criticals: list[tuple[str, str]] = []
-        monkeypatch.setattr(
-            QMessageBox, "critical", lambda *a, **k: criticals.append((a[1], a[2])) or QMessageBox.StandardButton.Ok
-        )
 
         dlg._output_path = tmp_path / "words.csv"
         dlg._on_export()
@@ -98,8 +94,12 @@ class TestExportOffThread:
 
         capture_off_thread["on_error"]("disk full")
 
-        assert criticals, "failure must surface a critical dialog"
-        assert "disk full" in criticals[-1][1]
+        # Inside the dialog, which keeps its settings: a modal on top would mean
+        # re-choosing everything (D24).
+        issue = dlg.issue_banner().current_issue()
+        assert issue is not None
+        assert "disk full" not in issue.summary
+        assert "disk full" in issue.details
         assert dlg._export_btn.isEnabled() is True, "button re-enabled after error"
 
     def test_no_output_path_is_noop(self, dlg, monkeypatch, capture_off_thread):
