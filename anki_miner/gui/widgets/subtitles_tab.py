@@ -1,9 +1,9 @@
-"""Subtitles container tab — nests Generate, Retime, Condense, Card Backfill.
+"""Utilities container tab — nests Generate, Retime, Condense, Update Notes.
 
 Wraps :class:`~anki_miner.gui.widgets.subtitle_creation_tab.SubtitleCreationTab`
 (Generate), :class:`~anki_miner.gui.widgets.subtitle_retime_tab.SubtitleRetimeTab`
 (Retime), :class:`~anki_miner.gui.widgets.condense_tab.CondenseTab` (Condense),
-and :class:`~anki_miner.gui.widgets.backfill_tab.CardBackfillTab` (Card Backfill)
+and :class:`~anki_miner.gui.widgets.backfill_tab.CardBackfillTab` (Update Notes)
 inside a single top-level tab so the main tab bar stays uncluttered.
 
 Close contract:
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
 
 class SubtitlesTab(QWidget):
-    """Container tab holding Generate, Retime, Condense, Card Backfill inner tabs.
+    """Container tab holding Generate, Retime, Condense, Update Notes inner tabs.
 
     Args:
         config: Frozen application configuration.
@@ -75,7 +75,7 @@ class SubtitlesTab(QWidget):
         self.backfill_tab = CardBackfillTab(config)
         self._inner_tabs.addTab(
             self.backfill_tab,
-            QCoreApplication.translate("MainWindow", "Backfill"),
+            QCoreApplication.translate("MainWindow", "Update Notes"),
         )
 
         # Stable sub-tab keys for reveal_capability (see capabilities.SUBTAB_KEYS).

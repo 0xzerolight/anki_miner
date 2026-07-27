@@ -1,9 +1,9 @@
-"""Card Backfill tool tab (Tools → Card Backfill).
+"""Update Existing Notes tool tab (Utilities → Update Notes).
 
 Bulk-fills pitch/frequency/definition/glossary/reading fields on EXISTING
-miner cards after the user installs new resources. Two-step flow: Scan
+miner notes after the user installs new resources. Two-step flow: Scan
 (read-only, off-thread) builds a :class:`BackfillPlan` shown in a preview
-table; Apply writes exactly the previewed values and tags touched notes
+table; the update writes exactly the previewed values and tags touched notes
 ``anki-miner::backfill``. Fill-only-empty by default; overwrite is an explicit
 checkbox.
 
@@ -102,10 +102,10 @@ class CardBackfillTab(QWidget):
         container = QWidget()
         layout = QVBoxLayout(container)
 
-        layout.addWidget(SectionHeader(self.tr("Card Backfill")))
+        layout.addWidget(SectionHeader(self.tr("Update Existing Notes")))
         hint = QLabel(
             self.tr(
-                "Fill missing fields on cards you mined earlier, using the currently "
+                "Fill missing fields on notes you mined earlier, using the currently "
                 "installed dictionaries, frequency sources and pitch data. "
                 "For very large collections, run per-deck. "
                 "Overwrite mode may need a follow-up Restyle to refresh card styling."
@@ -145,7 +145,7 @@ class CardBackfillTab(QWidget):
         # Scan, Apply and Cancel all live in the pinned bar (D6). Scan is the
         # primary until a preview exists; after that Apply takes over and Scan
         # stays reachable as the quiet way to rescan.
-        self.scan_button = ModernButton(self.tr("Scan"), variant="primary")
+        self.scan_button = ModernButton(self.tr("Scan Anki (read-only)"), variant="primary")
         self.scan_button.clicked.connect(self._start_scan)
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.cancel_button.setEnabled(False)
@@ -166,7 +166,7 @@ class CardBackfillTab(QWidget):
             header.setStretchLastSection(True)
         layout.addWidget(self.preview_table, stretch=1)
 
-        self.apply_button = ModernButton(self.tr("Apply"), variant="secondary")
+        self.apply_button = ModernButton(self.tr("Update Notes in Anki"), variant="secondary")
         self.apply_button.setEnabled(False)
         self.apply_button.clicked.connect(self._start_apply)
 
@@ -419,7 +419,7 @@ class CardBackfillTab(QWidget):
             return
         answer = QMessageBox.question(
             self,
-            self.tr("Apply backfill?"),
+            self.tr("Update notes in Anki?"),
             self.tr(
                 "Close Anki's card browser and note editors first.\n\n"
                 "This will modify {notes} note(s) ({fields} field(s)) and tag them "

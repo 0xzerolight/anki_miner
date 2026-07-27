@@ -1,6 +1,6 @@
 """Bulk-fill fields on existing miner cards from currently installed resources.
 
-The Card Backfill tool (Tools → Card Backfill) generalizes the card restyler's
+The Update Existing Notes tool (Utilities → Update Notes) generalizes the card restyler's
 enumerate → chunk → ``notesInfo`` → compute → ``updateNoteFields`` loop
 (``card_restyler.restyle_mined_cards``): after the user installs a pitch CSV,
 frequency sources, or dictionaries, it proposes values for pitch graph/text,
