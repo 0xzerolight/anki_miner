@@ -40,8 +40,6 @@ def test_restyle_survives_corrupt_fields(main_window, monkeypatch):
     from anki_miner.gui import main_window as mw_module
 
     monkeypatch.setattr(mw_module.QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
-    warnings: list = []
-    monkeypatch.setattr(mw_module.QMessageBox, "warning", lambda *a, **k: warnings.append(a))
 
     restyle_started: list = []
     monkeypatch.setattr(
@@ -53,8 +51,11 @@ def test_restyle_survives_corrupt_fields(main_window, monkeypatch):
     bad_config = replace(main_window.config, anki_fields={})
     main_window.config = bad_config
 
-    # Must not raise; must surface a warning and NOT dispatch the restyle worker.
+    # Must not raise; must surface the failure and NOT dispatch the restyle worker.
     main_window._restyle_mined_cards()
 
-    assert warnings, "a warning dialog must be shown"
+    issue = main_window.issue_banner().current_issue()
+    assert issue is not None, "the failure must be visible"
+    assert "field mapping" in issue.summary
+    assert "anki_fields" in issue.details
     assert not restyle_started, "restyle worker must not be dispatched on bad fields"
