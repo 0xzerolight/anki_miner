@@ -20,11 +20,12 @@ import threading
 from collections import deque
 from collections.abc import Callable
 from dataclasses import replace
+from functools import partial
 from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QDragMoveEvent
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWidgets import QDialog, QWidget
 
 from anki_miner.gui.presenters import GUIProgressCallback
 from anki_miner.gui.utils.run_off_thread import run_off_thread
@@ -340,6 +341,17 @@ class MiningTabBase(QWidget):
         self._curation_token = 0
         self._curation_live_token = 0
         self._curation_emit_tokens: deque[int] = deque()
+        # Presentation identity for the non-modal curator window (D33). The
+        # curator is shown, not exec()'d, so the frame that opens it returns
+        # long before the user decides; resolution happens later, in a signal
+        # handler. _curation_dialog_seq stamps every presentation and
+        # _curation_pending_dialog names the one still awaiting a decision
+        # (0 = none). _resolve_curation acts only on a matching stamp, which
+        # makes it exactly-once (finished then destroyed both fire for a normal
+        # accept) and stops a torn-down run's late callback from resolving the
+        # item that is live now.
+        self._curation_dialog_seq = 0
+        self._curation_pending_dialog = 0
         self._curation_requested.connect(self._on_curation_requested)
 
     def _curation_bridge(self, words: list) -> list | None:
@@ -462,11 +474,11 @@ class MiningTabBase(QWidget):
             return None
 
     def _on_curation_requested(self, words: list) -> None:
-        """GUI-thread slot: build context OFF-THREAD, then exec the dialog.
+        """GUI-thread slot: build context OFF-THREAD, then present the curator.
 
         ``_build_curation_context`` parses the episode subtitle (up to ~1s for a
         large file) and is pure (reads worker attrs + parses → returns plain
-        data), so the whole call runs on a worker thread; the dialog is then
+        data), so the whole call runs on a worker thread; the window is then
         shown from the GUI-thread :meth:`_show_curation_dialog` callback.
 
         CRITICAL invariant: ``_curation_event`` MUST be set on EVERY path so the
@@ -475,9 +487,14 @@ class MiningTabBase(QWidget):
         * cancel/poison before dispatch → set here, return;
         * cancel/poison after the parse → set in :meth:`_show_curation_dialog`;
         * build error → :meth:`_show_curation_dialog` is still called (table-only),
-          which sets it via its ``finally``;
-        * dialog construction/exec raising → the ``finally`` in
-          :meth:`_show_curation_dialog`.
+          so the user still curates and the window still resolves;
+        * the user accepting, rejecting, closing or Esc-ing the window, and a
+          window destroyed without deciding → :meth:`_resolve_curation`;
+        * construction / ``show()`` raising → the ``except`` in
+          :meth:`_show_curation_dialog`;
+        * tab Cancel, run teardown and app shutdown →
+          :meth:`_cancel_active_curation_dialog` (which reaches the resolver via
+          ``reject()``) plus :meth:`_poison_curation_gate`.
         """
         # Pop the token for THIS emission (FIFO) so the build callbacks can detect
         # if a teardown/new run supersedes them while the context build is in
@@ -517,19 +534,31 @@ class MiningTabBase(QWidget):
         lookup_fn: Callable[[str], list[tuple[str, str]]] | None,
         token: int | None = None,
     ) -> None:
-        """GUI-thread: exec the curation dialog, ALWAYS release the worker.
+        """GUI-thread: present the curator as a non-modal window (D33).
 
         Re-checks cancel/poison first because a cancel/shutdown may have landed
         during the off-thread context build; in that case the worker is released
-        as cancelled (None) without popping a dialog. Otherwise the ``finally``
-        guarantees ``_curation_event`` is set even if dialog construction/exec
-        raises — otherwise ``_curation_bridge`` hangs forever.
+        as cancelled (None) without popping a window.
+
+        The window is **shown, never exec()'d**: the mining item waits for this
+        decision, but the rest of Anki Miner stays usable while the user reads,
+        searches and previews. That means this method returns while the user is
+        still deciding, so it must NOT release the gate — releasing belongs to
+        :meth:`_resolve_curation`, connected to ``finished``. (Under ``exec()``
+        a ``finally`` did the release, which is correct only because ``exec()``
+        returns *after* the decision; keeping it here would cancel every item
+        the instant its curator opened.)
+
+        The one release this frame still owns is failure: if construction or
+        ``show()`` raises, nothing will ever emit ``finished``, so the parked
+        ``_curation_bridge`` would hang forever. The ``except`` resolves that
+        case and re-raises.
 
         ``token`` identifies the run whose off-thread build produced this call.
         When it no longer matches the live run (a teardown/new run intervened
         while the build was in flight), the build is stale: the originating
         worker was already released by the teardown poison, so this returns
-        without popping a dialog or touching the live run's event. ``None``
+        without popping a window or touching the live run's event. ``None``
         (a direct call with no originating build) skips the check.
         """
         if token is not None and token != self._curation_live_token:
@@ -539,6 +568,7 @@ class MiningTabBase(QWidget):
             self._curation_result = None
             self._curation_event.set()
             return
+        dialog: WordCurationDialog | None = None
         try:
             dialog = WordCurationDialog(
                 words,
@@ -547,44 +577,117 @@ class MiningTabBase(QWidget):
                 media_context=media_context,
                 lookup_fn=lookup_fn,
             )
+            self._curation_dialog_seq += 1
+            presentation = self._curation_dialog_seq
+            self._curation_pending_dialog = presentation
             self._active_curation_dialog = dialog
-            if dialog.exec() == WordCurationDialog.DialogCode.Accepted:
-                # Accepted: the selection (possibly empty) is the result. An
-                # empty list is the "skip just this item" verb — the queue
-                # continues (it stays out of the reject branch below).
-                self._curation_result = dialog.get_selected_words()
-            else:
-                # Rejected (dialog Cancel / window-X / Esc, or a programmatic
-                # reject from the tab Cancel button / teardown / shutdown) means
-                # "stop the run", not "skip one item". None ⇒ cancelled result
-                # downstream; without cancelling the worker, a queue worker turns
-                # that cancelled result into a recorded item and advances, so the
-                # curator re-pops for every remaining queued item (manga/novel
-                # volumes, batch pairs, YouTube/audiobook items). Cancelling the
-                # running worker makes each loop's between-items _cancel_event
-                # check break the run. cancel() is an idempotent Event.set(), so
-                # the reject paths that already cancel are unaffected; it runs
-                # before the finally releases _curation_event, so _cancel_event is
-                # already set when the worker unparks.
-                self._curation_result = None
-                # Reject is a cancel origin: mark it so the tab's terminal
-                # handler shows "Cancelled" instead of a success summary
-                # (result slots are suppressed on cancelled runs).
-                self._cancel_requested = True
-                worker = getattr(self, "worker_thread", None)
-                if worker is not None:
-                    worker.cancel()
-        finally:
+            # WordCurationDialog connects `finished` -> `_stop_player` in its own
+            # __init__. Qt runs direct connections in connection order, so this
+            # later connection always sees a dialog whose mpv core, page decode
+            # and dictionary workers have already been released.
+            dialog.finished.connect(partial(self._resolve_curation, dialog, presentation))
+            # Guarded FALLBACK, not a second completion path: a curator destroyed
+            # without ever emitting `finished` (its parent tab went away) would
+            # otherwise strand the parked worker. Resolution is stamp-guarded, so
+            # the `destroyed` that follows every normal deleteLater() is a no-op.
+            dialog.destroyed.connect(partial(self._on_curation_dialog_destroyed, presentation))
+            dialog.show()
+            dialog.raise_()
+            dialog.activateWindow()
+        except Exception:
+            self._curation_pending_dialog = 0
             self._active_curation_dialog = None
+            self._curation_result = None
             self._curation_event.set()
-            # Schedule the dialog for deletion so its Qt widget tree (table,
-            # QTextBrowser, embedded SubtitlePlayerWidget + mpv core) is
-            # freed deterministically rather than accumulating per mining session
+            if dialog is not None:
+                with contextlib.suppress(RuntimeError):
+                    dialog.deleteLater()
+            raise
+
+    def _resolve_curation(
+        self,
+        dialog: WordCurationDialog | None,
+        presentation: int,
+        code: int,
+    ) -> None:
+        """Record one curator decision and release the parked worker, exactly once.
+
+        Connected to the curator's ``finished``; also reached through
+        :meth:`_on_curation_dialog_destroyed` with ``dialog=None``.
+
+        ``presentation`` binds this call to the window it was connected for. A
+        stamp that no longer matches ``_curation_pending_dialog`` means the
+        decision was already recorded (``finished`` then ``destroyed``) or the
+        window belongs to a run that has since been torn down — either way the
+        live run's event must not be touched, because a stale resolution would
+        feed one item's answer to a different item.
+
+        Ordering inside the guard is load-bearing:
+
+        * the worker is cancelled BEFORE the gate opens, so ``_cancel_event`` is
+          already set when the worker unparks and the queue loop's between-items
+          check breaks the run instead of re-popping the curator for every
+          remaining item;
+        * ``_curation_result`` is written BEFORE ``_curation_event.set()``,
+          because ``_curation_bridge`` reads it the moment ``wait()`` returns.
+        """
+        if presentation != self._curation_pending_dialog:
+            return
+        self._curation_pending_dialog = 0
+        self._active_curation_dialog = None
+
+        selection: list | None = None
+        if dialog is not None and code == QDialog.DialogCode.Accepted:
+            # Accepted: the selection (possibly empty) is the result. An empty
+            # list is the "skip just this item" verb — the queue continues.
+            try:
+                selection = dialog.get_selected_words()
+            except Exception:
+                logger.exception("Curation window could not report its selection; treating it as cancelled")
+        if selection is None:
+            # Rejected (dialog Cancel / window-X / Esc, a programmatic reject
+            # from the tab Cancel button / teardown / shutdown, or a destroyed
+            # window) means "stop the run", not "skip one item". None ⇒
+            # cancelled result downstream; without cancelling the worker, a
+            # queue worker turns that cancelled result into a recorded item and
+            # advances, so the curator re-pops for every remaining queued item
+            # (manga/novel volumes, batch pairs, YouTube/audiobook items).
+            # cancel() is an idempotent Event.set(), so the reject paths that
+            # already cancel are unaffected.
+            self._cancel_requested = True
+            # RuntimeError, not just AttributeError: the `destroyed` fallback can
+            # run after this tab's own C++ object is gone (the window outlived
+            # its parent), and sip raises from __getattr__ for a missing name on
+            # a deleted wrapper — which getattr's default does NOT swallow.
+            try:
+                worker = getattr(self, "worker_thread", None)
+            except RuntimeError:
+                worker = None
+            if worker is not None:
+                # Suppressed so a dead worker handle can never cost us the gate
+                # release below — a hung worker is worse than a missed cancel.
+                with contextlib.suppress(RuntimeError):
+                    worker.cancel()
+        self._curation_result = selection
+        self._curation_event.set()
+        if dialog is not None:
+            # Schedule the window for deletion so its Qt widget tree (table,
+            # QTextBrowser, embedded SubtitlePlayerWidget + mpv core) is freed
+            # deterministically rather than accumulating per mining session
             # until GC — OVH-016 / Issue #55 multimedia teardown.
-            # Guard for the case where dialog construction raised before the
-            # name was bound (NameError would be silently swallowed otherwise).
-            with contextlib.suppress(NameError, AttributeError):
+            with contextlib.suppress(RuntimeError):
                 dialog.deleteLater()
+
+    def _on_curation_dialog_destroyed(self, presentation: int, _obj: object = None) -> None:
+        """Guarded fallback for a curator destroyed without a decision.
+
+        Deliberately passes ``dialog=None``: the C++ object is already gone, so
+        touching it would raise. Only reaches a real release when the window
+        vanished before ``finished`` ever fired (its parent tab was destroyed
+        mid-review); after a normal accept/reject the stamp no longer matches
+        and this is a no-op.
+        """
+        self._resolve_curation(None, presentation, QDialog.DialogCode.Rejected)
 
     def shutdown(self) -> None:
         """Cancel any open curation dialog and poison the gate (OVH-003).
@@ -629,14 +732,21 @@ class MiningTabBase(QWidget):
                     self._leaked_runs.remove((worker, processor))
 
     def _cancel_active_curation_dialog(self) -> None:
-        """Reject any open curation dialog so the worker doesn't hang on cancel.
+        """Reject any open curation window so the worker doesn't hang on cancel.
 
-        Call from each tab's ``_on_cancel_clicked``. ``reject()`` triggers the
-        dialog's exec to return Rejected, whose ``finally`` sets the event and the
-        worker resumes with ``None`` → orchestrator returns a cancelled result.
-        Also sets ``_curation_cancelled`` so a cancel that arrives before the
-        dialog is built is remembered by :meth:`_on_curation_requested`.
+        Call from each tab's ``_on_cancel_clicked``. ``reject()`` emits
+        ``finished`` synchronously, which runs :meth:`_resolve_curation`: the
+        worker is cancelled, the event is set, and ``_curation_bridge`` resumes
+        with ``None`` → orchestrator returns a cancelled result. Also sets
+        ``_curation_cancelled`` so a cancel that arrives before the window is
+        built is remembered by :meth:`_on_curation_requested`.
+
+        ``RuntimeError`` is suppressed for the window whose C++ object has
+        already gone: its ``destroyed`` fallback has released the gate anyway,
+        and a raise here would abort the caller's cancel/teardown sequence.
         """
         self._curation_cancelled = True
-        if self._active_curation_dialog is not None:
-            self._active_curation_dialog.reject()
+        dialog = self._active_curation_dialog
+        if dialog is not None:
+            with contextlib.suppress(RuntimeError):
+                dialog.reject()
