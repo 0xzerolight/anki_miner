@@ -36,6 +36,7 @@ from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.widgets.base import install_animated_tab_bar
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
 from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
@@ -111,6 +112,7 @@ class ReadingTab(QWidget):
         )
 
         self._inner_tabs = QTabWidget()
+        install_animated_tab_bar(self._inner_tabs)
         self._inner_tabs.addTab(
             self.manga_tab,
             QCoreApplication.translate("MainWindow", "Manga"),

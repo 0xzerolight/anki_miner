@@ -17,6 +17,7 @@ import pytest
 pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.widgets.base import AnimatedTabBar
 from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 from anki_miner.gui.workers.backfill_worker import BackfillApplyWorker, BackfillScanWorker
 
@@ -101,6 +102,12 @@ def test_backfill_tab_is_fourth(qtbot, tmp_path):
     """backfill_tab is the widget at index 3."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     assert tab._inner_tabs.widget(3) is tab.backfill_tab
+
+
+def test_the_sub_tab_underline_slides(qtbot, tmp_path):
+    """Sub-tabs are navigation too -- see tests/unit/gui/test_animated_tab_bar.py."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    assert isinstance(tab._inner_tabs.tabBar(), AnimatedTabBar)
 
 
 # ---------------------------------------------------------------------------

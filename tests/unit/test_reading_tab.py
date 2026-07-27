@@ -33,6 +33,7 @@ import pytest
 pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.widgets.base import AnimatedTabBar
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
 from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
@@ -91,6 +92,10 @@ class TestInnerTabs:
 
     def test_text_tab_is_fourth(self, tab):
         assert tab._inner_tabs.widget(3) is tab.text_tab
+
+    def test_the_sub_tab_underline_slides(self, tab):
+        """Sub-tabs are navigation too -- see tests/unit/gui/test_animated_tab_bar.py."""
+        assert isinstance(tab._inner_tabs.tabBar(), AnimatedTabBar)
 
     def test_children_are_real_classes(self, tab):
         assert isinstance(tab.manga_tab, ReadingMangaTab)

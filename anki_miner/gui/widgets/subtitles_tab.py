@@ -26,6 +26,7 @@ from PyQt6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
+from anki_miner.gui.widgets.base import install_animated_tab_bar
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
@@ -58,6 +59,7 @@ class SubtitlesTab(QWidget):
         self.condense_tab = CondenseTab(config, suppress_optional_startup=suppress_optional_startup)
 
         self._inner_tabs = QTabWidget()
+        install_animated_tab_bar(self._inner_tabs)
         self._inner_tabs.addTab(
             self.generate_tab,
             QCoreApplication.translate("MainWindow", "Generate"),
