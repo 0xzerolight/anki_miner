@@ -29,6 +29,10 @@ class ProgressWidget(QWidget):
         self._start_time = None
         self._items_processed = 0
         self._total_items = 0
+        # Set by freeze(): the bar has stopped believing anything new about
+        # where the run will get to. Cleared by reset() for the next run.
+        self._frozen = False
+        self._last_percent = 0
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -88,6 +92,11 @@ class ProgressWidget(QWidget):
             total: Maximum progress value
             description: Optional description text
         """
+        if self._frozen:
+            if description:
+                self.status_label.setText(description)
+            return
+
         self._items_processed = current
         self._total_items = total
 
@@ -98,6 +107,7 @@ class ProgressWidget(QWidget):
         if total > 0:
             # Calculate percentage
             percentage = int((current / total) * 100)
+            self._last_percent = percentage
             self.progress_bar.setValue(percentage)
 
         if description:
@@ -120,9 +130,15 @@ class ProgressWidget(QWidget):
                 (the pipeline's terminal ``on_progress(100, "")`` must not
                 blank the last meaningful label)
         """
+        if self._frozen:
+            if status:
+                self.status_label.setText(status)
+            return
+
         percent = min(max(percent, 0), 100)
         self._items_processed = percent
         self._total_items = 100
+        self._last_percent = percent
 
         if self._start_time is None and percent > 0:
             self._start_time = time()
@@ -142,23 +158,29 @@ class ProgressWidget(QWidget):
         items_total: int,
         status: str | None = None,
     ) -> None:
-        """Compose per-item progress into whole-run percent (one bar per run).
+        """Show finished items out of total. ``item_pct`` is deliberately ignored.
 
-        ``overall = ((items_done + item_pct/100) / items_total) * 100`` — the
-        single home of the composition formula; tabs track their own counters
-        but never restate the math.
+        This used to be ``((items_done + item_pct/100) / items_total) * 100``,
+        which meant the bar's position depended on how far through the current
+        item the app *believed* it was. That belief came from hard-coded stage
+        weights, so a run that flew through five short files and then sat for an
+        hour on a long one looked frozen. Only ``items_done / items_total`` is
+        actually known, so only that is drawn; what the current item is doing is
+        said in words instead.
+
+        ``item_pct`` is kept in the signature because Deck Builder (D3, frozen)
+        still passes it, and dropping it silently at this one place is what
+        stops it fabricating a fill.
 
         Args:
             items_done: Items fully finished so far
-            item_pct: Current item's own progress percent (clamped 0-100)
+            item_pct: Ignored. See above.
             items_total: Total items in the run; ``<= 0`` is a no-op
             status: Optional status text (falsy leaves the label alone)
         """
         if items_total <= 0:
             return
-        item_frac = min(max(item_pct, 0), 100) / 100
-        overall = int(((items_done + item_frac) / items_total) * 100)
-        self.set_percent(overall, status)
+        self.set_percent(int((items_done / items_total) * 100), status)
 
     def show_completion(self, message: str) -> None:
         """Pin the bar at 100%, show a completion summary, freeze stats.
@@ -193,7 +215,10 @@ class ProgressWidget(QWidget):
         Args:
             value: Current progress value
         """
+        if self._frozen:
+            return
         self._items_processed = value
+        self._last_percent = value
         self.progress_bar.setValue(value)
         self._update_stats()
 
@@ -209,6 +234,8 @@ class ProgressWidget(QWidget):
         ``set_indeterminate`` would leave ``setMaximum(0)`` in place,
         which Qt renders as a looping busy indicator.
         """
+        self._frozen = False
+        self._last_percent = 0
         self.progress_bar.setMaximum(100)
         self.progress_bar.setValue(0)
         self.status_label.setText(self.tr("Ready"))
@@ -219,9 +246,27 @@ class ProgressWidget(QWidget):
 
     def set_indeterminate(self) -> None:
         """Set progress bar to indeterminate mode (busy indicator)."""
+        if self._frozen:
+            return
         self.progress_bar.setMinimum(0)
         self.progress_bar.setMaximum(0)
         self._start_time = None
+
+    def freeze(self) -> None:
+        """Pin the bar at its last true value and ignore later progress.
+
+        Used when a run is cancelled. Everything the run reports from here on is
+        about work it is abandoning, so continuing to draw it would show the bar
+        advancing towards a finish that is not going to happen -- and a bar that
+        then vanishes back to zero is what makes a cancel feel like a crash.
+
+        A marquee is returned to determinate: leaving it sweeping says work is
+        still under way, which is the one thing a cancelled run must not imply.
+        Words are unaffected; ``reset()`` thaws it for the next run.
+        """
+        self._frozen = True
+        self.progress_bar.setMaximum(100)
+        self.progress_bar.setValue(self._last_percent)
 
     def set_determinate(self, maximum: int = 100) -> None:
         """Set progress bar to determinate mode.

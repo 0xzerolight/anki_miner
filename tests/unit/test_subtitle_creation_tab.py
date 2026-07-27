@@ -928,25 +928,24 @@ def test_file_finished_still_logs_done_for_success(qtbot, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Intra-file progress composition (progress overhaul): the real ASR fraction
-# moves the whole-run bar instead of being discarded.
+# Intra-file progress (D18): the ASR fraction is stated in words; the bar
+# counts finished files, because files are not interchangeable in length.
 # ---------------------------------------------------------------------------
 
 
-def test_file_progress_composes_intra_file_fraction(qtbot, tmp_path):
+def test_file_progress_states_the_fraction_without_moving_the_bar(qtbot, tmp_path):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     tab._total_files = 2
     tab._on_file_progress(0, 50, "Transcribing: 50%")
-    # (0 files done + 0.5) / 2 = 25%
-    assert tab.progress_widget.progress_bar.value() == 25
-    assert "Transcribing" in tab.progress_widget.status_label.text()
+    assert tab.progress_widget.progress_bar.value() == 0
+    assert "Transcribing: 50%" in tab.progress_widget.status_label.text()
 
 
-def test_file_finished_advance_is_monotone_with_composition(qtbot, tmp_path):
+def test_file_finished_advance_is_monotone(qtbot, tmp_path):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     tab._total_files = 2
     tab._on_file_progress(0, 90, "Transcribing: 90%")
-    assert tab.progress_widget.progress_bar.value() == 45
+    assert tab.progress_widget.progress_bar.value() == 0
     tab._on_file_finished(0, None, None)
     assert tab.progress_widget.progress_bar.value() == 50
     tab._on_file_progress(1, 0, "Extracting audio: b.mkv")
@@ -962,13 +961,14 @@ def test_queue_finished_success_pins_summary(qtbot, tmp_path):
     assert tab.progress_widget.status_label.text() == "Complete — 3 files processed"
 
 
-def test_queue_finished_cancelled_resets(qtbot, tmp_path):
+def test_queue_finished_cancelled_keeps_the_frozen_bar(qtbot, tmp_path):
+    """D22: how far the run got is exactly what the user stopped it to learn."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     tab._total_files = 3
     tab.progress_widget.set_percent(40)
     tab._cancelled = True
     tab._on_queue_finished()
-    assert tab.progress_widget.progress_bar.value() == 0
+    assert tab.progress_widget.progress_bar.value() == 40
     assert tab.progress_widget.status_label.text() == "Cancelled"
 
 

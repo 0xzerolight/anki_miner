@@ -13,7 +13,8 @@ signals to subclasses):
 
 * ``item_started(int)`` — idx, fired once before an item is mined. Items removed
   mid-run via :meth:`try_skip_item` are silently skipped: no signals for them.
-* ``item_progress(int, str, int)`` — idx, label, pct.
+* ``item_progress(int, str)`` — idx, label. Text only: an item's own completion
+  fraction is not knowable, so none is published.
 * ``item_finished(int, object, object, int)`` — idx, result-or-None,
   error-string-or-None, attempts. Fires exactly once per item that runs.
 * ``queue_finished()`` — fires once at the bottom of ``run()`` unless a subclass
@@ -77,8 +78,9 @@ class SequentialQueueWorker(ProcessorOwningWorker, Generic[ItemT]):
 
     # Per-item index; emitted once before that item is mined.
     item_started = pyqtSignal(int)
-    # (idx, label, pct). pct == -1 signals indeterminate progress.
-    item_progress = pyqtSignal(int, str, int)
+    # (idx, label). No percentage: the queue bar counts finished items, and the
+    # label carries the stage plus the true count inside it.
+    item_progress = pyqtSignal(int, str)
     # (idx, result|None, error|None, attempts). Fires exactly once per item
     # that runs to completion (success or terminal failure).
     item_finished = pyqtSignal(int, object, object, int)

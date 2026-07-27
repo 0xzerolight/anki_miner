@@ -160,9 +160,10 @@ class _ToolTabBase(QWidget):
     # ------------------------------------------------------------------
 
     def _on_file_progress(self, idx: int, pct: int, message: str) -> None:
-        # Compose the intra-file fraction into the whole-run bar so long files
-        # show live movement, not a bar frozen per file.
-        self.progress_widget.set_composed(idx, pct, self._item_total(), message)
+        # The bar counts finished files; the intra-file percentage a tool
+        # reports is shown in the message instead of being folded into the bar,
+        # where it made a long file look like a stalled run.
+        self.progress_widget.set_composed(idx, 0, self._item_total(), message)
 
     def _on_file_finished(self, idx: int, out_path: object, error_str: object) -> None:
         # Whole-file advance in the same percent unit system as set_composed
@@ -195,7 +196,8 @@ class _ToolTabBase(QWidget):
         self.cancel_button.setText(self._strings.cancel)
         self.cancel_button.setEnabled(True)
         if self._cancelled or outcome is TerminalOutcome.CANCELLED:
-            self.progress_widget.reset()
+            # No reset(): the frozen bar still says how many files got done
+            # before the user stopped it.
             self.progress_widget.set_status(self._strings.cancelled)
         elif outcome in (TerminalOutcome.PARTIAL, TerminalOutcome.FAILED):
             self.progress_widget.reset()
@@ -218,11 +220,14 @@ class _ToolTabBase(QWidget):
     # ------------------------------------------------------------------
 
     def _on_cancel(self) -> None:
+        """Cancel the run: one verb, no prompt, no invented progress after it."""
         self._cancelled = True
         if self.worker_thread is not None:
             self.worker_thread.cancel()
         self.cancel_button.setText(self._strings.cancelling)
         self.cancel_button.setEnabled(False)
+        self.progress_widget.freeze()
+        self.progress_widget.set_status(self._strings.cancelling)
 
     # ------------------------------------------------------------------
     # Close contract

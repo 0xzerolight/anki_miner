@@ -528,7 +528,7 @@ class SingleEpisodeTab(MiningTabBase):
         self.process_button.hide()
         self.timing_button.hide()
         self.tracks_button.hide()
-        self.cancel_button.setText(self.tr("\u25a0 Cancel"))
+        self.cancel_button.setText(self.tr("Cancel"))
         self.cancel_button.setEnabled(True)
         self.cancel_button.show()
 
@@ -597,14 +597,20 @@ class SingleEpisodeTab(MiningTabBase):
         return media_context, self._lookup_fn_from_processor(proc)
 
     def _on_cancel_clicked(self) -> None:
-        """Handle cancel button click."""
+        """Cancel the run: one verb, no prompt, and no invented progress after it.
+
+        The bar freezes where it truly was rather than continuing towards a
+        finish that will not happen, and the button states plainly that the
+        request has been made and is being waited on.
+        """
         self._cancel_requested = True
         self._cancel_active_curation_dialog()
         if self.worker_thread is not None:
             self.worker_thread.cancel()
-        self.cancel_button.setText(self.tr("Cancelling..."))
+        self.cancel_button.setText(self.tr("Cancelling…"))
         self.cancel_button.setEnabled(False)
-        self.progress_widget.set_status(self.tr("Cancelling..."))
+        self.progress_widget.freeze()
+        self.progress_widget.set_status(self.tr("Cancelling…"))
 
     def _restore_buttons(self) -> None:
         """Restore normal button state after processing ends."""
@@ -618,7 +624,9 @@ class SingleEpisodeTab(MiningTabBase):
         # run (and on curation reject), so "Cancelling..." would otherwise be
         # stranded forever.
         if self._cancel_requested:
-            self.progress_widget.reset()
+            # Deliberately no reset(): zeroing the bar at the end of a cancel
+            # erases how far the run actually got, which is the one thing the
+            # user wants to know when they stop something.
             self.progress_widget.set_status(self.tr("Cancelled"))
 
     def _on_processing_finished(self, result) -> None:

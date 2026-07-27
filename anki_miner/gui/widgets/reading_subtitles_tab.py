@@ -54,6 +54,7 @@ from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.models import MiningOutcome, result_error_text
+from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading_queue import ReadingQueueItem
 from anki_miner.utils.i18n import tr_format
 
@@ -419,7 +420,7 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         worker.cancel()
         self.cancel_button.setEnabled(False)
         self.cancel_button.setText(self.tr("Cancelling…"))
-        self.overall_progress_widget.set_status(self.tr("Cancelling…"))
+        self._freeze_run_bar(self.overall_progress_widget)
 
     # ------------------------------------------------------------------
     # Per-item signal slots (READ-ONLY on item state — the worker owns it)
@@ -444,13 +445,8 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         # Status only — the composed whole-run bar never resets between files.
         self.overall_progress_widget.set_status(self._current_item_title)
 
-    def _on_item_progress(self, idx: int, label: str, pct: int) -> None:
-        """Compose the file's percent into the whole-run bar.
-
-        ``idx`` doubles as the count of files already finished (items run
-        sequentially), so the composed value is monotone across file
-        boundaries. ``pct < 0`` holds the bar with a status update.
-        """
+    def _on_item_progress(self, idx: int, label: str) -> None:
+        """Say what the file is doing. The bar counts finished files only."""
         title = getattr(self, "_current_item_title", "")
         status: str | None
         if label and title:
@@ -459,11 +455,8 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
             status = label
         else:
             status = title or None
-        if pct < 0:
-            if status:
-                self.overall_progress_widget.set_status(status)
-            return
-        self.overall_progress_widget.set_composed(idx, pct, len(self._run_items), status)
+        if status:
+            self.overall_progress_widget.set_status(status)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Log the outcome and forward a success result to the presenter.
@@ -503,6 +496,12 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         else:
             message = str(error) if error is not None else result_error_text(result)
             self.log_widget.append_error(tr_format(self.tr("Failed %1: %2."), title, message))
+
+        # The bar's only honest denominator: files that reached a terminal state
+        # out of files in the run. It used to advance from within-file progress
+        # as well, which is where the fabricated fraction came in.
+        done = sum(1 for i in self._run_items if i.status in (ReadyItemStatus.COMPLETED, ReadyItemStatus.ERROR))
+        self.overall_progress_widget.set_composed(done, 0, len(self._run_items))
 
     def _on_queue_finished(self) -> None:
         """Log the whole-run outcome for a multi-file run.

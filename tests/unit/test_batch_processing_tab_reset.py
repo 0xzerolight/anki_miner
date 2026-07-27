@@ -42,13 +42,15 @@ def test_queue_finished_success_pins_summary(tab):
     assert tab.overall_progress_widget.status_label.text() == "Complete — 5 cards created"
 
 
-def test_queue_finished_cancelled_resets_to_cancelled(tab):
-    """Cancelled queue run: reset + "Cancelled", never a success summary."""
+def test_queue_finished_cancelled_keeps_the_frozen_bar(tab):
+    """Cancelled queue run: "Cancelled", never a success summary — and the bar
+    keeps the position the run really reached, because how far it got is the
+    question the user pressed Cancel to answer (D22)."""
     _prime_progress(tab)
     tab._cancel_requested = True
     with patch("anki_miner.gui.widgets.batch_processing_tab.QMessageBox.information"):
         tab._on_queue_finished(total_cards=0)
-    assert tab.overall_progress_widget.progress_bar.value() == 0
+    assert tab.overall_progress_widget.progress_bar.value() == 60
     assert tab.overall_progress_widget.status_label.text() == "Cancelled"
 
 
@@ -89,10 +91,10 @@ def test_run_start_resets_previous_end_state(tab):
 
 
 def test_restore_buttons_recovers_cancelled_quick_run(tab):
-    """Quick-path cancel: result_ready is suppressed, so QThread.finished →
-    _restore_buttons must replace "Cancelling..." with "Cancelled"."""
+    """Quick-path cancel: QThread.finished → _restore_buttons must replace
+    "Cancelling…" with "Cancelled", leaving the bar where it froze."""
     _prime_progress(tab)
     tab._cancel_requested = True
     tab._restore_buttons()
-    assert tab.overall_progress_widget.progress_bar.value() == 0
+    assert tab.overall_progress_widget.progress_bar.value() == 60
     assert tab.overall_progress_widget.status_label.text() == "Cancelled"

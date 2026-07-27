@@ -42,7 +42,7 @@ def test_on_item_failed_sets_error_status(qapp, qtbot, test_config):
 
     calls: list = []
     tab.queue_panel.set_item_status = lambda item_id, status: calls.append((item_id, status))
-    tab._advance_queue_bar = lambda: None
+    tab._advance_queue_bar = lambda item_id: None
 
     tab._on_item_failed("item-42", "boom")
 

@@ -300,11 +300,11 @@ class TestFolderRunSignals:
         # recomposition must not drop it (regression: status-only prefix).
         self._folder_run(tab, tmp_path)
         tab._on_item_started(1)
-        tab._on_item_progress(1, "Fetching definitions", 50)
+        tab._on_item_progress(1, "Fetching definitions")
         text = tab.progress_widget.status_label.text()
         assert "Book 2/3" in text and "Fetching definitions" in text
-        # Composed: (1 + 0.5)/3 of the whole run.
-        assert tab.progress_widget.progress_bar.value() == 50
+        # D18: the bar counts finished books; book 2 being under way is not one.
+        assert tab.progress_widget.progress_bar.value() == 0
 
     def test_errored_item_advances_composed_bar(self, tmp_path, tab):
         from anki_miner.models.mining_queue import ReadyItemStatus
@@ -403,26 +403,23 @@ class TestPerItemSignalsReadOnly:
         assert "Mining: Solo Book" in tab.progress_widget.status_label.text()
         assert tab.progress_widget.progress_bar.maximum() == 100
 
-    def test_item_progress_determinate(self, tmp_path, tab):
+    def test_item_progress_updates_the_line_only(self, tmp_path, tab):
         _run(tab, _book_file(tmp_path), [_make_ref()])
         tab._on_item_started(0)
 
-        tab._on_item_progress(0, "Fetching definitions", 42)
+        tab._on_item_progress(0, "Fetching definitions")
 
-        assert tab.progress_widget.progress_bar.maximum() == 100
-        assert tab.progress_widget.progress_bar.value() == 42
+        assert tab.progress_widget.progress_bar.value() == 0
         assert "Fetching definitions" in tab.progress_widget.status_label.text()
 
-    def test_item_progress_indeterminate(self, tmp_path, tab):
+    def test_item_progress_never_starts_a_marquee(self, tmp_path, tab):
         _run(tab, _book_file(tmp_path), [_make_ref()])
         tab._on_item_started(0)
 
-        tab._on_item_progress(0, "Fetching definitions", 42)
-        tab._on_item_progress(0, "Parsing", -1)
+        tab._on_item_progress(0, "Fetching definitions")
+        tab._on_item_progress(0, "Parsing")
 
-        # pct < 0 holds the composed bar with a status update (no marquee).
         assert tab.progress_widget.progress_bar.maximum() == 100
-        assert tab.progress_widget.progress_bar.value() == 42
         assert "Parsing" in tab.progress_widget.status_label.text()
 
     def test_item_finished_success_logs_and_forwards(self, tmp_path, tab):
@@ -505,7 +502,7 @@ class TestAfterRunCleanup:
     def test_cleanup_restores_buttons_and_bar(self, tmp_path, tab):
         _run(tab, _book_file(tmp_path), [_make_ref()])
         tab._on_item_started(0)
-        tab._on_item_progress(0, "Parsing", -1)
+        tab._on_item_progress(0, "Parsing")
         tab._on_cancel_clicked()
         assert tab.cancel_button.text() == "Cancelling…"
 
@@ -513,7 +510,7 @@ class TestAfterRunCleanup:
 
         assert tab.cancel_button.text() == "Cancel"
         assert tab.cancel_button.isEnabled()
-        assert tab.progress_widget.progress_bar.maximum() == 100  # busy indicator reset
+        assert tab.progress_widget.progress_bar.maximum() == 100  # never left sweeping
         assert tab.progress_widget.status_label.text() == "Cancelled"
         assert tab.worker_thread is None
         assert tab._run_items == []

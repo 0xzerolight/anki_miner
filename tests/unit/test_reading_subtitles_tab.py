@@ -345,20 +345,21 @@ class TestItemSlots:
         assert "Ep01" in status
         assert "1/1" not in status
 
-    def test_item_progress_composes(self, tab, tmp_path):
+    def test_item_progress_names_the_file_without_moving_the_bar(self, tab, tmp_path):
+        """D18: the bar counts finished files; a half-done file is not one."""
         _mine(tab, [_sub_file(tmp_path, "Ep01.srt"), _sub_file(tmp_path, "Ep02.srt")])
         tab._on_item_started(1)
-        tab._on_item_progress(1, "Definitions", 50)
-        # (1 file done + 50%) / 2 files = 75%.
-        assert tab.overall_progress_widget.progress_bar.value() == 75
+        tab._on_item_progress(1, "Definitions")
+        assert tab.overall_progress_widget.progress_bar.value() == 0
+        assert "Definitions" in tab.overall_progress_widget.status_label.text()
 
-    def test_item_progress_negative_pct_holds_bar(self, tab, tmp_path):
+    def test_item_progress_never_starts_a_marquee(self, tab, tmp_path):
         _mine(tab, [_sub_file(tmp_path)])
         tab._on_item_started(0)
-        tab._on_item_progress(0, "Working", 50)
-        before = tab.overall_progress_widget.progress_bar.value()
-        tab._on_item_progress(0, "Still working", -1)
-        assert tab.overall_progress_widget.progress_bar.value() == before
+        tab._on_item_progress(0, "Working")
+        tab._on_item_progress(0, "Still working")
+        assert tab.overall_progress_widget.progress_bar.maximum() == 100
+        assert "Still working" in tab.overall_progress_widget.status_label.text()
 
     def test_item_finished_success_logs_and_forwards(self, tab, tmp_path):
         _mine(tab, [_sub_file(tmp_path)])

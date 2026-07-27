@@ -113,11 +113,21 @@ def test_set_percent_falsy_status_does_not_blank_label(widget):
     assert widget.status_label.text() == "Fetching definitions"
 
 
-def test_set_composed_formula(widget):
-    # item 2 of 4 at 50% -> (2 + 0.5) / 4 = 62%
-    widget.set_composed(2, 50, 4, "Episode 3/4")
-    assert widget.progress_bar.value() == 62
+def test_set_composed_counts_finished_items(widget):
+    """D18: the bar is finished items over total, nothing else."""
+    widget.set_composed(2, 0, 4, "Episode 3/4")
+    assert widget.progress_bar.value() == 50
     assert widget.status_label.text() == "Episode 3/4"
+
+
+def test_set_composed_ignores_the_current_items_own_progress(widget):
+    """A part-done item is not a part-done run: only whole items count.
+
+    Believing otherwise is what made a queue race through five short files and
+    then look frozen for an hour on a long one.
+    """
+    widget.set_composed(2, 99, 4)
+    assert widget.progress_bar.value() == 50
 
 
 def test_set_composed_zero_total_is_noop(widget):
@@ -127,9 +137,54 @@ def test_set_composed_zero_total_is_noop(widget):
     assert widget.status_label.text() != "nope"
 
 
-def test_set_composed_clamps_item_pct(widget):
-    widget.set_composed(0, 150, 2)
-    assert widget.progress_bar.value() == 50  # (0 + 1.0) / 2
+# ---------------------------------------------------------------------------
+# Freezing on cancel (D22)
+# ---------------------------------------------------------------------------
+
+
+def test_freeze_holds_the_last_true_value(widget):
+    widget.set_percent(40, "Extracting media")
+    widget.freeze()
+    assert widget.progress_bar.value() == 40
+
+
+def test_a_frozen_bar_ignores_later_progress(widget):
+    widget.set_percent(40, "Extracting media")
+    widget.freeze()
+
+    widget.set_percent(90)
+    widget.set_composed(9, 0, 10)
+    widget.set_progress(9, 10)
+    widget.set_value(95)
+
+    assert widget.progress_bar.value() == 40
+
+
+def test_a_frozen_bar_still_accepts_words(widget):
+    widget.set_percent(40, "Extracting media")
+    widget.freeze()
+
+    widget.set_status("Cancelled")
+
+    assert widget.status_label.text() == "Cancelled"
+    assert widget.progress_bar.value() == 40
+
+
+def test_freezing_a_marquee_stops_it_spinning(widget):
+    """An indeterminate bar left running after cancel reads as work still going."""
+    widget.set_indeterminate()
+    widget.freeze()
+    assert widget.progress_bar.maximum() == 100
+
+
+def test_reset_thaws_the_bar_for_the_next_run(widget):
+    widget.set_percent(40)
+    widget.freeze()
+
+    widget.reset()
+    widget.set_percent(70)
+
+    assert widget.progress_bar.value() == 70
 
 
 def test_show_completion_pins_100_and_freezes_stats(widget):

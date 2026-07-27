@@ -18,7 +18,7 @@ the stale-gate + factory-build ``run()`` preamble all live on
 :class:`SequentialQueueWorker`; this subclass supplies only the per-item body.
 
 * ``item_started(int)`` — idx, fired before the item is mined.
-* ``item_progress(int, str, int)`` — idx, label, pct.
+* ``item_progress(int, str)`` — idx, label.
 * ``item_finished(int, object, object, int)`` — idx, result-or-None,
   error-string-or-None, attempts. Attempts is always 1 (no retry). Fires
   exactly once per item that runs.

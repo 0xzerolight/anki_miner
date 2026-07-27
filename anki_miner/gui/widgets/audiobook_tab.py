@@ -147,7 +147,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
         )
         self._queue_list_strings = _QueueListStrings(
             cancelling=self.tr("Cancelling…"),
-            stop_all=self.tr("Stop All"),
+            stop_all=self.tr("Cancel"),
             queue_done=self.tr("Queue done: %1 succeeded, %2 failed."),
             mining_n_of_m=self.tr("Mining %1 of %2: %3"),
             mined=self.tr("Mined %1: %2 cards."),
@@ -256,7 +256,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
         self.clear_button.setToolTip(self.tr("Remove every queued item that is not currently mining."))
         self.clear_button.clicked.connect(self._on_clear_clicked)
 
-        self.stop_button = ModernButton(self.tr("Stop All"), variant="secondary")
+        self.stop_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.stop_button.setToolTip(self.tr("Cancel the active run."))
         self.stop_button.clicked.connect(self._on_stop_all_clicked)
 

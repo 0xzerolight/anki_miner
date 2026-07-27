@@ -120,7 +120,10 @@ class _QueueListStrings:
     """
 
     cancelling: str  # "Cancelling…"
-    stop_all: str  # "Stop All"
+    # Every run control in the app reads "Cancel" (D22): one verb, so a user who
+    # wants to stop something never has to work out whether Stop and Cancel mean
+    # different things. The field keeps its name to avoid churning three tabs.
+    stop_all: str  # "Cancel"
     queue_done: str  # "Queue done: %1 succeeded, %2 failed."
     mining_n_of_m: str  # "Mining %1 of %2: %3"
     mined: str  # "Mined %1: %2 cards." / "Mined %1: %2 cards (attempts=%3)."
@@ -473,7 +476,7 @@ class _QueueMiningTabBase(MiningTabBase):
         """Worker ``item_started`` slot. Subclass MUST override."""
         raise NotImplementedError
 
-    def _on_item_progress(self, idx: int, label: str, pct: int) -> None:
+    def _on_item_progress(self, idx: int, label: str) -> None:
         """Worker ``item_progress`` slot. Subclass MUST override."""
         raise NotImplementedError
 
@@ -636,25 +639,38 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
             self._recompute_buttons()
 
     def _reset_run_state(self, total: int) -> None:
-        """Reset the composed-bar counters + per-run success/failure tallies."""
+        """Reset the finished-item counters + per-run success/failure tallies."""
         self._items_total = total
         self._items_done = 0
-        self._item_bar_seen = False
+        self._current_item_label = ""
+        self._current_item_name = ""
         self._run_succeeded = 0
         self._run_failed_count = 0
 
     def _on_stop_all_clicked(self) -> None:
-        """Cancel the active run."""
+        """Cancel the active run: one verb, no prompt, no invented progress after.
+
+        The registry is told the run is cancelling so every surface watching it
+        (the strip above the list, the status bar) freezes the numbers, keeps
+        the clock going, and can name what the wait is on. The bar here freezes
+        for the same reason: it must not keep advancing towards a finish the run
+        is no longer heading for.
+        """
         self._cancel_requested = True
         # Release any open curation dialog first so the blocked worker resumes
         # instead of hanging on _curation_event (Issue #65).
         self._cancel_active_curation_dialog()
+        handle = getattr(self, "_task_handle", None)
+        if handle is not None:
+            handle.cancelling()
         worker = self.worker_thread
         if worker is None:
             return
         worker.cancel()
         self.stop_button.setEnabled(False)
         self.stop_button.setText(self._queue_list_strings.cancelling)
+        self.progress_widget.freeze()
+        self.progress_widget.set_status(self._queue_list_strings.cancelling)
 
     # ------------------------------------------------------------------
     # Per-item signal slots
@@ -714,30 +730,38 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         self._refresh_row(item)
 
         total = len(self._run_items)
-        # Status only — the composed bar never resets between items.
-        self.progress_widget.set_status(
-            tr_format(self._queue_list_strings.mining_n_of_m, idx + 1, total, self._item_started_label(item))
+        # Both held for the whole item, so every within-item line keeps saying
+        # where in the queue it is and which item it is on. The rows are calm now
+        # (D31), so this is the only place naming the item actually being mined.
+        self._current_item_name = self._item_started_label(item)
+        self._current_item_label = tr_format(
+            self._queue_list_strings.mining_n_of_m, idx + 1, total, self._current_item_name
         )
-        # The rows are calm now (D31), so this is the only place that names the
-        # item actually being mined.
-        self._publish_task_position(self._item_started_label(item))
+        self.progress_widget.set_status(self._current_item_label)
+        self._publish_task_position(self._current_item_name)
         self._recompute_buttons()
 
-    def _on_item_progress(self, idx: int, label: str, pct: int) -> None:
-        """Compose the item's percent into the whole-run bar.
+    @staticmethod
+    def _join(prefix: str, detail: str) -> str:
+        """Glue a persistent prefix onto the current detail, dropping either if absent."""
+        if prefix and detail:
+            return f"{prefix} — {detail}"
+        return detail or prefix
 
-        ``pct < 0`` holds the bar at its current value with a status update
-        (marquee only before the first determinate value this run).
+    def _compose_item_status(self, detail: str) -> str:
+        """The in-tab line: which item of how many, then what it is doing."""
+        return self._join(getattr(self, "_current_item_label", ""), detail)
+
+    def _on_item_progress(self, idx: int, label: str) -> None:
+        """Report what the running item is doing. The bar is not involved.
+
+        The bar counts finished items and moves only in :meth:`_on_item_finished`;
+        within-item detail goes to the status line and to the task snapshot the
+        current-job strip renders. The strip prints the queue position itself, so
+        what it is given here is the item's name and its current phase.
         """
-        if pct < 0:
-            if not getattr(self, "_item_bar_seen", False):
-                self.progress_widget.set_indeterminate()
-            self.progress_widget.set_status(label)
-            return
-        self._item_bar_seen = True
-        self.progress_widget.set_composed(
-            getattr(self, "_items_done", 0), pct, getattr(self, "_items_total", 0) or len(self._run_items), label
-        )
+        self.progress_widget.set_status(self._compose_item_status(label))
+        self._publish_task_position(self._join(getattr(self, "_current_item_name", ""), label))
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Update the item with success/error and forward to the presenter."""
@@ -811,7 +835,8 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         self.stop_button.setText(self._queue_list_strings.stop_all)
         self.stop_button.setEnabled(True)
         if getattr(self, "_cancel_requested", False):
-            self.progress_widget.reset()
+            # No reset(): the frozen bar still says how many items got done
+            # before the user stopped it, which is the whole question they have.
             self.progress_widget.set_status(self._queue_list_strings.cancelled)
         elif getattr(self, "_run_failed", False):
             self.progress_widget.reset()

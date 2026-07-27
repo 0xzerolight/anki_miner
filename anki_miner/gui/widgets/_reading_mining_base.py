@@ -213,6 +213,17 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
             self._run_failed_count += 1
         return outcome
 
+    def _freeze_run_bar(self, widget) -> None:
+        """Hold the run bar where it truly was when Cancel was pressed.
+
+        Shared by the four reading sub-tabs' cancel handlers. Everything the run
+        reports from here on concerns work it is abandoning, so the bar must
+        stop advancing — and must not be zeroed at the end either, because how
+        far the run actually got is exactly what the user stopped it to find out.
+        """
+        widget.freeze()
+        widget.set_status(QCoreApplication.translate("ReadingTab", "Cancelling…"))
+
     def _apply_terminal_bar_state(self, widget) -> None:
         """Set the run's terminal bar state: cancel -> failed -> success.
 
@@ -227,7 +238,7 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
             fatal=getattr(self, "_run_failed", False),
         )
         if outcome is TerminalOutcome.CANCELLED:
-            widget.reset()
+            # No reset(): see _freeze_run_bar.
             widget.set_status(QCoreApplication.translate("ReadingTab", "Cancelled"))
         elif outcome in (TerminalOutcome.PARTIAL, TerminalOutcome.FAILED):
             widget.reset()

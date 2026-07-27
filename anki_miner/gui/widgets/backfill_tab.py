@@ -435,8 +435,10 @@ class CardBackfillTab(QWidget):
             self._refresh_checkbox_gates()
 
     def _cancel(self) -> None:
+        """Cancel the run: one verb, no prompt, and the button says it is waiting."""
         if self.worker_thread is not None and self.worker_thread.isRunning():
             self.worker_thread.cancel()
+            self.cancel_button.setEnabled(False)
             self.status_label.setText(self.tr("Cancelling…"))
 
     def _on_progress(self, done: int, total: int) -> None:

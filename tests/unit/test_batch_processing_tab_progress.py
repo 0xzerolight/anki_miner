@@ -55,19 +55,20 @@ def test_pair_started_sets_episode_prefix(tab):
     assert tab.overall_progress_widget.status_label.text() == "Episode 2/4: ep02.mkv"
 
 
-def test_quick_path_composes_episode_sweep(tab):
-    """Per-episode stage percent composes into the whole-run bar with the
-    persistent episode prefix glued onto the stage detail."""
+def test_quick_path_stage_detail_never_moves_the_episode_bar(tab):
+    """D18: the bar counts episodes; a half-done episode is not one of them."""
     tab._on_batch_started(4)
     tab._on_pair_started(1, "ep01.mkv")
-    tab._on_progress_update(50, "Fetching definitions")
-    # (0 done + 50/100) / 4 = 12%
-    assert tab.overall_progress_widget.progress_bar.value() == 12
-    assert tab.overall_progress_widget.status_label.text() == "Episode 1/4: ep01.mkv — Fetching definitions"
+    tab._on_progress_start(50, "Fetching definitions")
+    tab._on_progress_update(25, "Fetching definitions")
+    assert tab.overall_progress_widget.progress_bar.value() == 0
+    assert tab.overall_progress_widget.status_label.text() == (
+        "Episode 1/4: ep01.mkv — Fetching definitions (25 of 50)"
+    )
 
 
 def test_quick_path_empty_stage_detail_keeps_prefix(tab):
-    """finish()'s on_progress(100, "") must not render a dangling 'name — '."""
+    """An empty item description must not render a dangling 'name — '."""
     tab._on_batch_started(2)
     tab._on_pair_started(1, "ep01.mkv")
     tab._on_progress_update(100, "")
@@ -75,13 +76,12 @@ def test_quick_path_empty_stage_detail_keeps_prefix(tab):
 
 
 def test_queue_mode_progress_update_is_status_only(tab):
-    """Queue path: per-episode sweep must not move the series-granular bar."""
+    """Queue path: per-episode detail must not move the series-granular bar."""
     tab._queue_mode = True
     tab._items_total = 2
     tab._items_done = 1
     tab.overall_progress_widget.set_percent(50)
     tab._on_progress_update(10, "Extracting media")
-    # Bar held at 50% (a composed write would have sawtoothed to 55%).
     assert tab.overall_progress_widget.progress_bar.value() == 50
     assert "Extracting media" in tab.overall_progress_widget.status_label.text()
 
