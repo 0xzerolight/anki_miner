@@ -1,5 +1,6 @@
 """Base widget classes for consistent UI patterns."""
 
+from .animated_tab_bar import AnimatedTabBar, install_animated_tab_bar
 from .eliding_label import ElidingLabel
 from .enhanced_dialog import EnhancedDialog
 from .form_panel import FormPanel
@@ -18,6 +19,8 @@ from .sizing import (
 from .status_badge import StatusBadge
 
 __all__ = [
+    "AnimatedTabBar",
+    "install_animated_tab_bar",
     "FormPanel",
     "SettingAnchor",
     "SettingAnchorHost",

@@ -41,6 +41,7 @@ from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
+from anki_miner.gui.widgets.base import install_animated_tab_bar
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
 from anki_miner.gui.widgets.header_widget import HeaderWidget
 from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
@@ -247,6 +248,7 @@ class MainWindow(QMainWindow):
 
         # Create tab widget
         self.tabs = QTabWidget()
+        install_animated_tab_bar(self.tabs)
         self.central_layout.addWidget(self.tabs)
 
         central_widget.setLayout(self.central_layout)

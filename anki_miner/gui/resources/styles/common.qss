@@ -745,6 +745,43 @@ QPushButton:default:pressed {
     background-color: ${color-primary-pressed};
 }
 
+/* ModernButton answers a press with an animated tint it paints itself (see
+   gui/widgets/enhanced/modern_button.py — QSS has no transition property), so
+   the instant swaps above are put back to whatever the button was already
+   showing: one press, one answer. Plain QPushButtons keep their swap.
+
+   Two swaps reach this class under D41 and each gets a rule here: the base
+   one, which is now the quiet control and so covers #secondary and every
+   unmarked button, and the accent one on #primary and Qt's dialog default.
+   #ghost, #danger and #critical need nothing — their id selectors already
+   outrank `QPushButton:pressed` and they never saw it.
+
+   The bare `:pressed` rules carry the *same* specificity as the rules they
+   cancel, so their position in the sheet is what makes them win: a subclass
+   type selector is not stronger than its base, only later. That pins this
+   block between the swaps above and the `:checked` rules below — move it down
+   past `:checked` and a held toggle loses its accent for as long as the finger
+   is down. The `:hover` halves outrank their targets outright and are here
+   because a mouse press is also a hover: dropping the hover colour for the
+   duration of the press would be a second answer of its own. */
+ModernButton:pressed {
+    background-color: transparent;
+}
+
+ModernButton:hover:pressed {
+    background-color: ${color-surface-hover};
+}
+
+ModernButton#primary:pressed,
+ModernButton:default:pressed {
+    background-color: ${color-primary};
+}
+
+ModernButton#primary:hover:pressed,
+ModernButton:default:hover:pressed {
+    background-color: ${color-primary-hover};
+}
+
 /* A checked toggle is state, and state is the other thing accent is for. */
 QPushButton:checked,
 QPushButton#ghost:checked {
@@ -858,6 +895,19 @@ QTabBar::tab:selected {
     color: ${color-text};
     background-color: transparent;
     border-bottom: 3px solid ${color-primary};
+}
+
+/* AnimatedTabBar draws that same 3px indicator itself so it can slide between
+ * tabs (gui/widgets/base/animated_tab_bar.py -- QSS has no transition
+ * property). The border stays, so tab heights do not change; only its colour
+ * goes, and the accent is handed to the painter here rather than looked up
+ * from Python. Plain QTabBars keep the static indicator. */
+AnimatedTabBar {
+    qproperty-accentColour: ${color-primary};
+}
+
+AnimatedTabBar::tab:selected {
+    border-bottom-color: transparent;
 }
 
 /* --- Text Edit / Log --- */

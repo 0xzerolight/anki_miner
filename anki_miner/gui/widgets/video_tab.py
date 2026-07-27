@@ -43,6 +43,7 @@ from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.widgets.base import install_animated_tab_bar
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
@@ -124,6 +125,7 @@ class VideoTab(QWidget):
         )
 
         self._inner_tabs = QTabWidget()
+        install_animated_tab_bar(self._inner_tabs)
         self._inner_tabs.addTab(
             self.single_tab,
             QCoreApplication.translate("MainWindow", "Single"),

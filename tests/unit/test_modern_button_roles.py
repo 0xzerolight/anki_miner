@@ -333,12 +333,20 @@ ACCENT_ROLES = frozenset(
         "QPushButton#ghost:default, QPushButton#danger:default",
         "QPushButton#primary:hover, QPushButton:default:hover",
         "QPushButton#primary:pressed, QPushButton:default:pressed",
+        # ModernButton answers a press with a tint it paints itself, so it puts
+        # the two static swaps above back to the colour the button was already
+        # showing. Same role, same accent, no new spender.
+        "ModernButton#primary:pressed, ModernButton:default:pressed",
+        "ModernButton#primary:hover:pressed, ModernButton:default:hover:pressed",
         # Checked controls.
         "QPushButton:checked, QPushButton#ghost:checked",
         "QPushButton:checked:hover, QPushButton#ghost:checked:hover",
         "QCheckBox::indicator:checked, QRadioButton::indicator:checked",
-        # The navigation indicator.
+        # The navigation indicator. AnimatedTabBar draws the same indicator
+        # itself so it can slide, so the accent is handed to its painter here
+        # instead of being spent on a border it cannot move.
         "QTabBar::tab:selected",
+        "AnimatedTabBar",
         "QListWidget#settings-nav::item:selected",
         # Progress.
         "QProgressBar::chunk",
