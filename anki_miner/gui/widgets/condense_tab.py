@@ -54,7 +54,7 @@ from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog, SubtitleTracksDialog
-from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
+from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
 from anki_miner.gui.workers.condense_worker import CondenseItem, CondenseWorker
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES, list_subtitle_streams
@@ -322,6 +322,9 @@ class CondenseTab(_ToolTabBase):
             file_mode=True,
             file_filter=CONDENSE_MEDIA_FILE_FILTER,
             history_key="tools.condense.inputs",
+            drop_validator=accepts_suffixes(
+                CONDENSE_MEDIA_EXTENSIONS, self.tr("This field takes a video or audio file.")
+            ),
         )
         layout.addWidget(self.media_file_selector)
 
@@ -330,6 +333,7 @@ class CondenseTab(_ToolTabBase):
             file_mode=True,
             file_filter=CONDENSE_SUBTITLE_FILE_FILTER,
             history_key="tools.condense.inputs",
+            drop_validator=accepts_suffixes(CONDENSE_SUBTITLE_EXTENSIONS, self.tr("This field takes a subtitle file.")),
         )
         layout.addWidget(self.subtitle_file_selector)
 

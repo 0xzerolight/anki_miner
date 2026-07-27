@@ -324,3 +324,170 @@ class TestRowsSurviveEveryTextScale:
         dialog = TestKnownWordsIsADataSurface._dialog(qtbot, tmp_path, {"営業部の会議"})
 
         assert dialog.word_list.sizeHintForRow(0) >= dialog.word_list.fontMetrics().height()
+
+
+class TestTheOrderedSurfacesAreDataToo:
+    """The lists and trees D42 reached last: profiles, decks, files, themes.
+
+    Every one of them carries a user-meaningful order -- the order profiles were
+    made in, the order files will be mined in, the theme hierarchy -- so the one
+    rule they must NOT pick up is sorting. What they do pick up is the shared
+    scrolling, the shared row height, and copy-a-row.
+    """
+
+    @staticmethod
+    def _profile_dialog(qtbot, monkeypatch):
+        from anki_miner.gui.utils.profile_store import Profile
+        from anki_miner.gui.widgets.dialogs.profile_manager_dialog import ProfileManagerDialog
+
+        monkeypatch.setattr(
+            "anki_miner.gui.utils.profile_store.ProfileStore.list_profiles",
+            staticmethod(lambda: [Profile(id="default", name="Default"), Profile(id="anime", name="Anime")]),
+        )
+        dialog = ProfileManagerDialog(MagicMock(), lambda: None)
+        qtbot.addWidget(dialog)
+        return dialog
+
+    @staticmethod
+    def _subtitles_tab(qtbot, test_config, tmp_path):
+        from unittest.mock import patch
+
+        from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
+
+        with patch("anki_miner.gui.widgets._reading_mining_base.ReadingQueueWorker"):
+            tab = ReadingSubtitlesTab(config=test_config, processor=MagicMock(), presenter=MagicMock())
+        qtbot.addWidget(tab)
+        first = tmp_path / "ep01.srt"
+        first.touch()
+        tab._add_paths([first])
+        return tab
+
+    @staticmethod
+    def _filtering_panel(qtbot):
+        from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
+
+        panel = FilteringSettingsPanel()
+        qtbot.addWidget(panel)
+        panel.excluded_decks_list.addItem("Core 2k")
+        return panel
+
+    @staticmethod
+    def _theme_tree(qtbot, tmp_path):
+        from anki_miner.gui.widgets.panels.ui_settings_panel import UISettingsPanel
+
+        panel = UISettingsPanel(themes_root=tmp_path / "themes")
+        qtbot.addWidget(panel)
+        return panel
+
+    def test_the_profile_list_scrolls_per_pixel_and_never_sorts(self, qtbot, monkeypatch):
+        from PyQt6.QtWidgets import QAbstractItemView
+
+        dialog = self._profile_dialog(qtbot, monkeypatch)
+        view = dialog.profile_list
+
+        assert view.verticalScrollMode() == QAbstractItemView.ScrollMode.ScrollPerPixel
+        assert view.isSortingEnabled() is False
+        assert [view.item(row).text() for row in range(view.count())][0].startswith("Default")
+
+    def test_a_profile_row_copies(self, qtbot, qapp, monkeypatch):
+        dialog = self._profile_dialog(qtbot, monkeypatch)
+        view = dialog.profile_list
+        view.setCurrentRow(1)
+
+        _trigger_copy(view)
+
+        assert qapp.clipboard().text() == "Anime"
+
+    def test_the_subtitle_queue_keeps_its_mining_order(self, qtbot, test_config, tmp_path):
+        from PyQt6.QtWidgets import QAbstractItemView
+
+        tab = self._subtitles_tab(qtbot, test_config, tmp_path)
+        view = tab.file_list
+
+        assert view.verticalScrollMode() == QAbstractItemView.ScrollMode.ScrollPerPixel
+        assert view.isSortingEnabled() is False
+        assert view.sizeHintForRow(0) >= data_row_height(view)
+
+    def test_a_subtitle_row_copies_its_whole_path(self, qtbot, qapp, test_config, tmp_path):
+        tab = self._subtitles_tab(qtbot, test_config, tmp_path)
+        view = tab.file_list
+        view.item(0).setSelected(True)
+
+        _trigger_copy(view)
+
+        assert qapp.clipboard().text() == str(tmp_path / "ep01.srt")
+
+    def test_the_excluded_deck_list_is_a_data_surface(self, qtbot, qapp):
+        panel = self._filtering_panel(qtbot)
+        view = panel.excluded_decks_list
+        view.setCurrentRow(0)
+
+        _trigger_copy(view)
+
+        assert view.isSortingEnabled() is False
+        assert qapp.clipboard().text() == "Core 2k"
+
+    def test_the_excluded_deck_cap_is_measured_in_rows(self, qtbot):
+        from anki_miner.gui.widgets.panels.filtering_settings_panel import _EXCLUDED_DECK_ROWS
+
+        panel = self._filtering_panel(qtbot)
+        view = panel.excluded_decks_list
+
+        assert view.maximumHeight() == _EXCLUDED_DECK_ROWS * data_row_height(view)
+
+    def test_the_theme_tree_row_height_comes_from_its_font(self, qtbot, tmp_path, font_scale):
+        font_scale(1.0)
+        baseline = self._theme_tree(qtbot, tmp_path)._row_height_px
+
+        font_scale(1.5)
+        grown = self._theme_tree(qtbot, tmp_path)._row_height_px
+
+        assert grown > baseline
+
+    def test_the_theme_tree_never_sorts(self, qtbot, tmp_path):
+        panel = self._theme_tree(qtbot, tmp_path)
+
+        assert panel.tree.isSortingEnabled() is False
+
+    def test_a_theme_row_copies_its_name_and_state_not_its_star_widget(self, qtbot, qapp, tmp_path):
+        panel = self._theme_tree(qtbot, tmp_path)
+        selected = panel.tree.currentItem()
+        assert selected is not None, "a theme is always active, so a row is always current"
+
+        _trigger_copy(panel.tree)
+
+        copied = qapp.clipboard().text()
+        assert selected.text(panel.COL_NAME) in copied
+        assert "★" not in copied and "☆" not in copied
+
+
+class TestTheQueueRowsCopyWhatTheyShow:
+    def test_a_queue_row_serializes_its_own_line(self, qtbot):
+        from anki_miner.gui.widgets.base.queue_row import QueueRowWidget
+
+        row = QueueRowWidget()
+        qtbot.addWidget(row)
+        row.render_row(title="Ep 12", state="Ready", result="42 cards", aside="24:10")
+
+        assert row.copy_text() == "Ep 12\t24:10\tReady\t42 cards"
+
+    def test_an_empty_column_contributes_no_trailing_tab(self, qtbot):
+        from anki_miner.gui.widgets.base.queue_row import QueueRowWidget
+
+        row = QueueRowWidget()
+        qtbot.addWidget(row)
+        row.render_row(title="Ep 12", state="Ready", result="")
+
+        assert row.copy_text() == "Ep 12\tReady"
+
+    def test_the_title_copies_un_elided(self, qtbot):
+        """The row shows ``Ep 12 …``; a copied queue must not."""
+        from anki_miner.gui.widgets.base.queue_row import QueueRowWidget
+
+        long_title = "Shirobako " * 40
+        row = QueueRowWidget()
+        qtbot.addWidget(row)
+        row.setFixedWidth(120)
+        row.render_row(title=long_title, state="Ready", result="")
+
+        assert long_title in row.copy_text()

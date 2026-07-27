@@ -20,6 +20,7 @@ import logging
 from collections.abc import Iterator
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -29,7 +30,6 @@ from PyQt6.QtWidgets import (
     QProgressBar,
     QScrollArea,
     QTableWidget,
-    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -39,7 +39,15 @@ from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.fonts import japanese_cell_font
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
-from anki_miner.gui.utils.qt_helpers import install_no_scroll_on_inputs
+from anki_miner.gui.utils.qt_helpers import (
+    CellRole,
+    configure_data_view,
+    data_row_height,
+    install_copy_rows,
+    install_no_scroll_on_inputs,
+    make_table_item,
+    urls_from_event,
+)
 from anki_miner.gui.widgets.base import (
     PageWidth,
     TaskPublisherMixin,
@@ -64,6 +72,10 @@ logger = logging.getLogger(__name__)
 
 _PREVIEW_ROW_CAP = 500
 _CELL_ELIDE = 120
+#: How much of the plan the preview must always show. Counted in rows rather
+#: than pixels: a flat pixel floor holds fewer and fewer rows as the text scale
+#: grows, which is Issue #102's class of bug rather than its fix.
+PREVIEW_MIN_VISIBLE_ROWS = 8
 
 
 def _set_variant(button: ModernButton, variant: ButtonVariant) -> None:
@@ -106,6 +118,9 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
         self._run_failed = False
         self._build_ui()
         self._refresh_checkbox_gates()
+        # Drops are answered, not swallowed (D50): this screen accepts the drag
+        # only so it can say what it actually works on.
+        self.setAcceptDrops(True)
 
     # ------------------------------------------------------------------
     # UI construction
@@ -176,10 +191,22 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
             [self.tr("Expression"), self.tr("Field"), self.tr("Current"), self.tr("New")]
         )
         self.preview_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.preview_table.setMinimumHeight(240)
+        self.preview_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        # Every column is prose, so ordering is alphabetical either way -- but
+        # a 500-row preview is unreadable without being able to gather one
+        # field's changes together.
+        self.preview_table.setSortingEnabled(True)
+        configure_data_view(self.preview_table)
+        install_copy_rows(self.preview_table)
         header = self.preview_table.horizontalHeader()
         if header is not None:
             header.setStretchLastSection(True)
+            # Sorting is available, but the preview opens in plan order -- the
+            # order the writes will happen in. An indicator-less header sorts
+            # nothing until the user asks; without this, merely enabling sorting
+            # reorders the plan behind their back.
+            header.setSortIndicator(-1, Qt.SortOrder.AscendingOrder)
+        self._apply_preview_height_floor()
         layout.addWidget(self.preview_table, stretch=1)
 
         self.apply_button = ModernButton(self.tr("Apply"), variant="secondary")
@@ -204,6 +231,35 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
         # moves the primary, and the bar is read at press time, so the shortcut
         # follows without knowing the stage itself.
         primary_action_shortcut(self, self.action_bar.trigger_primary)
+
+    def _apply_preview_height_floor(self) -> None:
+        """Floor the preview at whole rows of the font it is actually rendering.
+
+        Issue #102 gave the table a flat 240px floor so the chrome above could
+        not crush it. That floor holds eight rows at the default text size and
+        four at 150%, so the same crushing returns the moment the user scales
+        text. Measuring the floor in rows keeps the guarantee the issue asked
+        for at every scale.
+        """
+        header = self.preview_table.horizontalHeader()
+        header_h = header.sizeHint().height() if header is not None else 0
+        frame = 2 * self.preview_table.frameWidth()
+        self.preview_table.setMinimumHeight(
+            header_h + frame + PREVIEW_MIN_VISIBLE_ROWS * data_row_height(self.preview_table)
+        )
+
+    def changeEvent(self, a0) -> None:  # noqa: N802 - Qt override
+        """Re-derive the preview's row metrics when the UI text size changes.
+
+        Text size applies live, so a row height and a floor computed once at
+        construction are stale from the next Settings save onward.
+        """
+        from PyQt6.QtCore import QEvent
+
+        super().changeEvent(a0)
+        if a0 is not None and a0.type() == QEvent.Type.FontChange and hasattr(self, "preview_table"):
+            configure_data_view(self.preview_table)
+            self._apply_preview_height_floor()
 
     def _create_run_status(self) -> QWidget:
         """The one-line status and thin bar that sit directly above the actions."""
@@ -236,6 +292,53 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
         _set_variant(primary, "primary")
         _set_variant(quiet, "secondary")
         self.action_bar.set_actions(primary, (self.cancel_button, quiet))
+
+    # ------------------------------------------------------------------
+    # Drag and drop (D50): this screen takes no payload, and says so
+    # ------------------------------------------------------------------
+
+    def _drop_refusal(self) -> str:
+        """The one reason this screen gives for refusing a dropped payload."""
+        return self.tr("Card Backfill works on the selected Anki deck.")
+
+    def _may_answer_a_drop(self) -> bool:
+        """Whether the status line is free to carry a drop refusal.
+
+        During a run that line is the only account of what the run is doing, so
+        a stray drag must not overwrite ``Scanning…`` with a note about decks.
+        The drag is simply not accepted then, and the cursor already says no.
+        """
+        return self.worker_thread is None
+
+    def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:  # noqa: N802 - Qt override
+        """Accept the drag so the refusal can be delivered, and state it now.
+
+        Backfill reads the deck the user picked above; there is no file it could
+        take. Accepting only buys the chance to answer -- an ignored drag is the
+        silent non-acceptance D50 exists to remove.
+        """
+        if event is None or not self._may_answer_a_drop():
+            return
+        if not urls_from_event(event):
+            return
+        event.acceptProposedAction()
+        self.status_label.setText(self._drop_refusal())
+
+    def dragLeaveEvent(self, event: QDragLeaveEvent | None) -> None:  # noqa: N802 - Qt override
+        """Take the refusal back down when the drag moves off the screen."""
+        if self.status_label.text() == self._drop_refusal():
+            self.status_label.setText("")
+        if event is not None:
+            event.accept()
+
+    def dropEvent(self, event: QDropEvent | None) -> None:  # noqa: N802 - Qt override
+        """Refuse the payload and point at the control that does the choosing."""
+        if event is None:
+            return
+        if self._may_answer_a_drop():
+            self.status_label.setText(self._drop_refusal())
+            self.deck_combo.setFocus(Qt.FocusReason.OtherFocusReason)
+        event.ignore()
 
     # ------------------------------------------------------------------
     # Gating / config
@@ -351,27 +454,46 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
 
     def _populate_preview(self, plan: BackfillPlan) -> None:
         rows = [(note.expression, change) for note in plan.notes for change in note.changes][:_PREVIEW_ROW_CAP]
-        self.preview_table.setRowCount(len(rows))
-        for row, (expression, change) in enumerate(rows):
-            # Only new_value is raw field markup (HTML/SVG) — strip it for the
-            # cell and show a marker when it has no text nodes (a pitch-accent
-            # SVG). The other three columns are already display-safe: expression
-            # and field_name are plain text, and old_display was _display()-
-            # stripped when the plan was built, so re-stripping it here would
-            # double-truncate.
-            new_display = self._strip_cell(change.new_value)
-            if not new_display and change.new_value:
-                new_display = self.tr("(formatted content)")
-            for col, text in enumerate((expression, change.field_name, change.old_display, new_display)):
-                item = QTableWidgetItem(text[:_CELL_ELIDE] + "…" if len(text) > _CELL_ELIDE else text)
-                item.setToolTip(text)
-                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                if col == 0:
-                    # The Expression is the mined Japanese word; the other three
-                    # columns are field names and field contents. Face only, so
-                    # the row height stays where the density rule put it.
-                    item.setFont(japanese_cell_font())
-                self.preview_table.setItem(row, col, item)
+        # Sorting has to be off while rows are written, or Qt re-orders under
+        # the loop and the cells land on the wrong lines.
+        was_sorting = self.preview_table.isSortingEnabled()
+        self.preview_table.setSortingEnabled(False)
+        try:
+            self.preview_table.setRowCount(len(rows))
+            for row, (expression, change) in enumerate(rows):
+                # Only new_value is raw field markup (HTML/SVG) — strip it for the
+                # cell and show a marker when it has no text nodes (a pitch-accent
+                # SVG). The other three columns are already display-safe: expression
+                # and field_name are plain text, and old_display was _display()-
+                # stripped when the plan was built, so re-stripping it here would
+                # double-truncate.
+                new_display = self._strip_cell(change.new_value)
+                if not new_display and change.new_value:
+                    new_display = self.tr("(formatted content)")
+                for col, text in enumerate((expression, change.field_name, change.old_display, new_display)):
+                    shown = text[:_CELL_ELIDE] + "…" if len(text) > _CELL_ELIDE else text
+                    # The cell prints a truncated value; the copy and the sort
+                    # key are the whole one. Copying a preview row to check what
+                    # is about to be written must not hand back an ellipsis.
+                    item = make_table_item(
+                        shown,
+                        CellRole.TEXT,
+                        sort_value=text,
+                        copy_text=text,
+                        tooltip=text,
+                    )
+                    item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                    if col == 0:
+                        # The Expression is the mined Japanese word; the other three
+                        # columns are field names and field contents. Face only, so
+                        # the row height stays where the density rule put it.
+                        item.setFont(japanese_cell_font())
+                    self.preview_table.setItem(row, col, item)
+        finally:
+            self.preview_table.setSortingEnabled(was_sorting)
+        # Re-enabling sorting resets the vertical header's resize mode, which
+        # drops the shared fixed row height with it.
+        configure_data_view(self.preview_table)
         self.summary_label.setText(self._summary_text(plan, len(rows)))
 
     @staticmethod
