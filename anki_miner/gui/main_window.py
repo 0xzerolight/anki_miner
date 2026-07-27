@@ -41,7 +41,7 @@ from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
-from anki_miner.gui.widgets.base import install_animated_tab_bar
+from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost, install_animated_tab_bar
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
 from anki_miner.gui.widgets.header_widget import HeaderWidget
 from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
@@ -69,7 +69,7 @@ def open_log_folder(log_path: Path) -> None:
     QDesktopServices.openUrl(QUrl.fromLocalFile(str(log_folder)))
 
 
-class MainWindow(QMainWindow):
+class MainWindow(ScreenIssueHost, QMainWindow):
     """Main application window for Anki Miner.
 
     This window provides a tabbed interface for:
@@ -250,6 +250,12 @@ class MainWindow(QMainWindow):
         self.header.profile_changed.connect(self.profile_controller.switch_to)
         self.header.open_profile_manager.connect(self._open_profile_manager)
         self.central_layout.addWidget(self.header)
+
+        # Whole-window issues (system checks, dictionary mutation refusals) sit
+        # under the header, above every tab — the same slot the update banner
+        # uses, because they are statements about the app rather than the page
+        # (D24).
+        self.install_issue_banner(self.central_layout, 1)
 
         # Create tab widget
         self.tabs = QTabWidget()
@@ -489,14 +495,20 @@ class MainWindow(QMainWindow):
         finally:
             panel.release(token)
 
+    def _report_shortcut_failure(self, details: str) -> None:
+        """One place for the desktop-shortcut failure sentence (D24)."""
+        self.show_screen_issue(
+            ScreenIssue(summary=self.tr("The desktop shortcut could not be created."), details=details)
+        )
+
     def prepare_dictionary_mutation(self) -> bool:
         """Stop startup JMdict migration or show the shared refusal dialog."""
         if self.background_tasks.prepare_dictionary_mutation():
             return True
-        QMessageBox.warning(
-            self,
-            self.tr("Dictionary Change Blocked"),
-            self.tr("The startup JMdict migration is still stopping. Wait for it to finish and try again."),
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=self.tr("The startup JMdict migration is still stopping. Wait for it to finish and try again.")
+            )
         )
         return False
 
@@ -674,23 +686,19 @@ class MainWindow(QMainWindow):
             if not show_result or value is None:
                 return
             if not isinstance(value, ShortcutResult):
-                QMessageBox.warning(self, self.tr("Desktop Shortcut"), self.tr("Failed to create desktop shortcut."))
+                self._report_shortcut_failure("")
                 return
             body = "\n".join(value.messages) if value.messages else ""
             if value.success:
                 QMessageBox.information(self, self.tr("Desktop Shortcut"), body or self.tr("Shortcut created."))
             else:
-                QMessageBox.warning(
-                    self,
-                    self.tr("Desktop Shortcut"),
-                    value.error or self.tr("Failed to create desktop shortcut."),
-                )
+                self._report_shortcut_failure(value.error or "")
 
         def on_error(message: str) -> None:
             finish_attempt()
             logger.warning("Desktop shortcut attempt failed: %s", message)
             if show_result:
-                QMessageBox.warning(self, self.tr("Desktop Shortcut"), message)
+                self._report_shortcut_failure(message)
 
         try:
             run_off_thread(self, work, on_done, on_error, on_finished=finish_attempt)
@@ -826,10 +834,14 @@ class MainWindow(QMainWindow):
             # Corrupted anki_fields — surface, don't crash the slot (mirror
             # AnkiProbeController's guarded construction).
             logger.warning("Cannot build AnkiService for restyle: %s", exc)
-            QMessageBox.warning(
-                self,
-                self.tr("Restyle Mined Cards"),
-                tr_format(self.tr("Cannot start restyle — Anki fields are misconfigured: %1"), str(exc)),
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("Restyling cannot start: the Anki field mapping is not usable."),
+                    details=str(exc),
+                    action_id="settings.anki",
+                    action_text=self.tr("Open Anki Settings"),
+                ),
+                action=lambda: self.reveal_capability(CapabilityTarget("settings", "anki")),
             )
             return
         self.status_bar.set_operation(self.tr("Restyling mined cards…"), "info")
@@ -852,7 +864,9 @@ class MainWindow(QMainWindow):
 
         def on_error(message: str) -> None:
             self.status_bar.set_operation(self.tr("Restyle failed"), "error")
-            QMessageBox.warning(self, self.tr("Restyle Mined Cards"), message)
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("The mined cards could not be restyled."), details=message)
+            )
 
         self.background_tasks.start_restyle_cards(service, self.config, on_progress, on_result, on_error)
 
@@ -1040,13 +1054,20 @@ class MainWindow(QMainWindow):
 
         if result.all_passed:
             self.status_bar.set_operation(self.tr("System validation passed"), "success")
+            self.clear_screen_issue()
         elif not silent:
-            # Show validation issues (skip popup during startup auto-check)
+            # A wall of "- component: message" lines was the whole modal. The
+            # sentence says what happened; the component list is the diagnostic
+            # and goes behind Details (D24).
             issues_text = "\n".join([f"- {issue.component}: {issue.message}" for issue in result.issues])
-            QMessageBox.warning(
-                self,
-                self.tr("Validation Issues"),
-                tr_format(self.tr("System validation found issues:\n\n%1"), issues_text),
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("Some system checks need attention."),
+                    details=issues_text,
+                    action_id="settings.open",
+                    action_text=self.tr("Open Settings"),
+                ),
+                action=self._open_settings,
             )
 
     def _set_anki_connection_badge(self, status: str) -> None:
@@ -1357,9 +1378,17 @@ class MainWindow(QMainWindow):
         silent = self._validation_silent
         self._validation_silent = False
 
-        self.status_bar.set_operation(tr_format(self.tr("Validation error: %1"), error_message), "error")
+        self.status_bar.set_operation(self.tr("System check failed. Try again."), "error")
         if not silent:
-            QMessageBox.critical(self, self.tr("Validation Error"), error_message)
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("System check failed. Try again."),
+                    details=error_message,
+                    action_id="validation.retry",
+                    action_text=self.tr("Retry"),
+                ),
+                action=self._run_validation,
+            )
 
     def _maybe_repair_legacy_frequency_source_name(self) -> None:
         """One-time: repair the collapsed "source" label on the legacy source.
@@ -1449,8 +1478,9 @@ class MainWindow(QMainWindow):
         if self._update_banner is None:
             banner = UpdateBanner(info, self)
             banner.skip_requested.connect(self._on_skip_update_requested)
-            # Insert banner after header (index 1).
-            self.central_layout.insertWidget(1, banner)
+            # After the header and the issue banner: a release announcement
+            # never outranks a system problem.
+            self.central_layout.insertWidget(2, banner)
             self._update_banner = banner
         else:
             self._update_banner.update_info(info)

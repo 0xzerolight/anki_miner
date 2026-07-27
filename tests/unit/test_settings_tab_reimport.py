@@ -67,12 +67,11 @@ def stub_worker(monkeypatch):
 
 
 def _capture_warnings(monkeypatch) -> list[tuple[str, str]]:
-    """Capture (title, body) tuples passed to QMessageBox.warning."""
+    """Capture reported screen issues as ``(summary, whole text)`` (D24)."""
     captured: list[tuple[str, str]] = []
     monkeypatch.setattr(
-        QMessageBox,
-        "warning",
-        lambda parent, title, body, *a, **kw: captured.append((title, body)) or 0,
+        "anki_miner.gui.controllers.import_flow_common.report_screen_issue",
+        lambda origin, issue: captured.append((issue.summary, f"{issue.summary}\n{issue.details}".strip())) or True,
     )
     return captured
 
@@ -177,7 +176,7 @@ def test_resource_release_refusal_blocks_worker(tab, monkeypatch, stub_worker, t
 
     tab._dict_import_flow.reimport_dict("test-dict-v1")
 
-    assert any(title == "Re-import Blocked" for title, _ in warnings), warnings
+    assert any("Indexed resources are in use" in summary for summary, _ in warnings), warnings
     stub_worker.assert_not_called()
     stub_worker.repair_factory.assert_not_called()
 

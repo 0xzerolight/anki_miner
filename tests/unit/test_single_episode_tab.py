@@ -100,13 +100,10 @@ def test_override_resets_on_video_path_change(tab):
 
 
 def test_tracks_clicked_warns_when_no_video(tab):
-    with (
-        patch("anki_miner.gui.widgets.single_episode_tab.list_audio_streams") as mock_list,
-        patch("PyQt6.QtWidgets.QMessageBox.warning") as mock_warn,
-    ):
+    with patch("anki_miner.gui.widgets.single_episode_tab.list_audio_streams") as mock_list:
         tab.video_selector.get_path = MagicMock(return_value="")
         tab._on_tracks_clicked()
-        mock_warn.assert_called_once()
+        assert tab.issue_banner().current_issue() is not None
         mock_list.assert_not_called()
 
 
@@ -908,7 +905,7 @@ def test_timing_empty_entries_shows_info_and_reenables(tab, tmp_path, qtbot):
     assert tab.timing_button.isEnabled()
 
 
-def test_timing_parse_error_shows_critical_and_reenables(tab, tmp_path, qtbot):
+def test_timing_parse_error_reports_an_issue_and_reenables(tab, tmp_path, qtbot):
     fake_video = tmp_path / "ep01.mkv"
     fake_video.touch()
     fake_subs = tmp_path / "ep01.ass"
@@ -921,14 +918,11 @@ def test_timing_parse_error_shows_critical_and_reenables(tab, tmp_path, qtbot):
     mock_parser_cls = MagicMock()
     mock_parser_cls.return_value.parse_raw_entries.side_effect = RuntimeError("bad file")
 
-    with (
-        patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
-        patch("PyQt6.QtWidgets.QMessageBox.critical") as mock_crit,
-    ):
+    with patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls):
         tab._on_timing_clicked()
-        qtbot.waitUntil(lambda: mock_crit.called, timeout=3000)
+        qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
 
-    mock_crit.assert_called_once()
+    assert "bad file" in tab.issue_banner().current_issue().details
     assert tab.timing_button.isEnabled()
 
 
@@ -994,7 +988,7 @@ def test_tracks_empty_streams_shows_info_and_reenables(tab, tmp_path, qtbot):
     assert tab.tracks_button.isEnabled()
 
 
-def test_tracks_probe_error_shows_warning_and_reenables(tab, tmp_path, qtbot):
+def test_tracks_probe_error_reports_an_issue_and_reenables(tab, tmp_path, qtbot):
     fake_video = tmp_path / "ep01.mkv"
     fake_video.touch()
     tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
@@ -1005,12 +999,13 @@ def test_tracks_probe_error_shows_warning_and_reenables(tab, tmp_path, qtbot):
             "anki_miner.gui.widgets.single_episode_tab.list_audio_streams",
             side_effect=RuntimeError("ffprobe blew up"),
         ),
-        patch("PyQt6.QtWidgets.QMessageBox.warning") as mock_warn,
     ):
         tab._on_tracks_clicked()
-        qtbot.waitUntil(lambda: mock_warn.called, timeout=3000)
+        qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
 
-    mock_warn.assert_called_once()
+    issue = tab.issue_banner().current_issue()
+    assert issue.summary == "Audio tracks could not be read."
+    assert "ffprobe blew up" in issue.details
     assert tab.tracks_button.isEnabled()
 
 

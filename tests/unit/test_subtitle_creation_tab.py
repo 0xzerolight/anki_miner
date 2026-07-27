@@ -679,8 +679,8 @@ def test_iter_close_workers_returns_active_worker(qtbot, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_model_not_downloaded_shows_dialog_on_generate(qtbot, tmp_path):
-    """When model is not downloaded, Generate prompts the user (QMessageBox)."""
+def test_model_not_downloaded_reports_an_issue_on_generate(qtbot, tmp_path):
+    """A model that is not installed names the real Settings destination (D24, string 2)."""
     config = _make_config(tmp_path)
     video = tmp_path / "episode.mp4"
     video.write_bytes(b"fake")
@@ -692,11 +692,14 @@ def test_model_not_downloaded_shows_dialog_on_generate(qtbot, tmp_path):
         patch(_ENGINE_AVAILABLE, return_value=True),
         patch(_OS_ACCESS, return_value=True),
         patch(_IS_DOWNLOADED, return_value=False),
-        patch("anki_miner.gui.widgets.subtitle_creation_tab.QMessageBox.warning") as mock_warn,
     ):
         tab.generate_button.click()
 
-    mock_warn.assert_called_once()
+    issue = tab.issue_banner().current_issue()
+    assert issue is not None
+    assert "is not installed" in issue.summary
+    assert "Settings → Transcription & Alignment" in issue.summary
+    assert "assert tab.issue_banner().current_issue() is not None"
     # Worker must NOT be started
     assert tab.worker_thread is None
 

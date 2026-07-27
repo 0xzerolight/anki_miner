@@ -108,8 +108,9 @@ def test_first_result_constructs_inserts_and_wires_skip(main_window):
         main_window._on_update_check_result(info)
 
     banner_cls.assert_called_once_with(info, main_window)
-    # Inserted right after the header (index 1).
-    insert.assert_called_once_with(1, fake_banner)
+    # After the header and the screen-issue banner: a release announcement
+    # never outranks a system problem (D24).
+    insert.assert_called_once_with(2, fake_banner)
     # Skip signal wired to the handler.
     fake_banner.skip_requested.connect.assert_called_once_with(main_window._on_skip_update_requested)
     assert main_window._update_banner is fake_banner

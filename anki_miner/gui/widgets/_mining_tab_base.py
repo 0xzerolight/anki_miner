@@ -31,6 +31,7 @@ from PyQt6.QtWidgets import QBoxLayout, QDialog, QWidget
 from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.presenters import GUIProgressCallback
 from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.widgets.base import ScreenIssueHost
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
 from anki_miner.gui.widgets.inline_receipt import InlineReceipt
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
@@ -59,7 +60,7 @@ _WORKER_JOIN_TIMEOUT_MS = 5000
 _LEAKED_RUN_CLOSE_JOIN_MS = 2000
 
 
-class MiningTabBase(QWidget):
+class MiningTabBase(ScreenIssueHost, QWidget):
     """Common scaffolding for the four mining tabs (``SingleEpisodeTab``, ``BatchProcessingTab``, ``DeckBuilderTab``, ``YouTubeTab``).
 
     Subclasses own their layout, their progress widgets, and the bodies of the

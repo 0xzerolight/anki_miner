@@ -317,9 +317,8 @@ def test_single_mode_accepts_audio_only_file(qtbot, tmp_path):
 def test_single_mode_missing_media_warns(qtbot, tmp_path):
     """No media selected → warning, returns []."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
-    with patch(_WARN) as warn:
-        items = tab._collect_items()
-    warn.assert_called_once()
+    items = tab._collect_items()
+    assert tab.issue_banner().current_issue() is not None
     assert items == []
 
 
@@ -327,9 +326,8 @@ def test_single_mode_nonexistent_media_warns(qtbot, tmp_path):
     """Media path that is not a file → warning, returns []."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     tab.media_file_selector.set_path(str(tmp_path / "nope.mkv"))
-    with patch(_WARN) as warn:
-        items = tab._collect_items()
-    warn.assert_called_once()
+    items = tab._collect_items()
+    assert tab.issue_banner().current_issue() is not None
     assert items == []
 
 
@@ -343,9 +341,8 @@ def test_single_mode_nonexistent_sub_warns(qtbot, tmp_path):
     tab.media_file_selector.set_path(str(media))
     tab.subtitle_file_selector.set_path(str(tmp_path / "nope.srt"))
 
-    with patch(_WARN) as warn:
-        items = tab._collect_items()
-    warn.assert_called_once()
+    items = tab._collect_items()
+    assert tab.issue_banner().current_issue() is not None
     assert items == []
 
 
@@ -384,9 +381,8 @@ def test_folder_mode_empty_folder_warns(qtbot, tmp_path):
     tab.folder_mode_button.click()
     tab.media_folder_selector.set_path(str(media_folder))
 
-    with patch(_WARN) as warn:
-        items = tab._collect_items()
-    warn.assert_called_once()
+    items = tab._collect_items()
+    assert tab.issue_banner().current_issue() is not None
     assert items == []
 
 
@@ -394,9 +390,8 @@ def test_folder_mode_missing_media_folder_warns(qtbot, tmp_path):
     """No media folder selected → warning, returns []."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     tab.folder_mode_button.click()
-    with patch(_WARN) as warn:
-        items = tab._collect_items()
-    warn.assert_called_once()
+    items = tab._collect_items()
+    assert tab.issue_banner().current_issue() is not None
     assert items == []
 
 
@@ -474,10 +469,10 @@ def test_folder_mode_subfolder_no_pairs_warns(qtbot, tmp_path):
     tab.media_folder_selector.set_path(str(media_folder))
     tab.subtitle_folder_selector.set_path(str(sub_folder))
 
-    with patch(_FIND_PAIRS, return_value=[]), patch(_WARN) as warn:
+    with patch(_FIND_PAIRS, return_value=[]):
         items = tab._collect_items()
 
-    warn.assert_called_once()
+    assert tab.issue_banner().current_issue() is not None
     assert items == []
 
 
@@ -985,9 +980,9 @@ def test_audio_tracks_clicked_warns_when_no_media(qtbot, tmp_path):
     """No media selected → warning, ffprobe never runs."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     tab.media_file_selector.set_path("")
-    with patch(_LIST_AUDIO) as mock_list, patch(_WARN) as mock_warn:
+    with patch(_LIST_AUDIO) as mock_list:
         tab._on_audio_tracks_clicked()
-    mock_warn.assert_called_once()
+    assert tab.issue_banner().current_issue() is not None
     mock_list.assert_not_called()
 
 

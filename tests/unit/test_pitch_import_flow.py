@@ -78,11 +78,15 @@ def stub_worker(monkeypatch):
 
 
 def _capture_warnings(monkeypatch) -> list[tuple[str, str]]:
+    """Capture reported screen issues as ``(summary, whole text)`` (D24).
+
+    Import failures are no longer modals: they land in the owning panel's
+    banner, so the seam moved from ``QMessageBox.warning`` to the reporter.
+    """
     captured: list[tuple[str, str]] = []
     monkeypatch.setattr(
-        QMessageBox,
-        "warning",
-        lambda parent, title, body, *a, **kw: captured.append((title, body)) or 0,
+        "anki_miner.gui.controllers.import_flow_common.report_screen_issue",
+        lambda origin, issue: captured.append((issue.summary, f"{issue.summary}\n{issue.details}".strip())) or True,
     )
     return captured
 

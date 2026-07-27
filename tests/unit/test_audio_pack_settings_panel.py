@@ -530,11 +530,6 @@ def test_release_callback_blocks_remove(qapp, qtbot, tmp_path, confirm_remove, m
     qtbot.addWidget(panel)
     panel.set_chain((AudioSourceEntry(kind="pack", pack_id="a", enabled=True),))
     panel.set_release_callback(lambda: False)
-    warnings: list[str] = []
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.warning",
-        lambda _parent, _title, body, *a, **kw: warnings.append(body),
-    )
 
     def run_sync(_parent, work, on_success, _on_error):
         on_success(work())
@@ -547,8 +542,10 @@ def test_release_callback_blocks_remove(qapp, qtbot, tmp_path, confirm_remove, m
 
     assert panel.get_chain() == (AudioSourceEntry(kind="pack", pack_id="a", enabled=True),)
     assert pack_dir.exists()
-    assert any("Indexed resources are in use" in body for body in warnings)
-    assert all(task in warnings[0] for task in ("mining", "startup prewarm", "card backfill"))
+    # Reported in place, not in a modal that would sit over the panel (D24).
+    summary = panel.issue_banner().current_issue().summary
+    assert "Indexed resources are in use" in summary
+    assert all(task in summary for task in ("mining", "startup prewarm", "card backfill"))
 
 
 def test_remove_cancelled_keeps_pack_and_chain(qapp, qtbot, monkeypatch, tmp_path):
@@ -604,11 +601,6 @@ def test_remove_foreign_same_name_is_chain_only(qtbot, monkeypatch, tmp_path):
         "anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.question",
         lambda *a, **kw: QMessageBox.StandardButton.Yes,
     )
-    warnings: list[str] = []
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
-        lambda _parent, _title, body, *a, **kw: warnings.append(body),
-    )
     panel = AudioPackSettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     panel.set_chain((AudioSourceEntry(kind="pack", pack_id="foreign", enabled=True),))
@@ -618,7 +610,7 @@ def test_remove_foreign_same_name_is_chain_only(qtbot, monkeypatch, tmp_path):
 
     assert panel.get_chain() == ()
     assert payload.read_text(encoding="utf-8") == "foreign"
-    assert any("left untouched" in body for body in warnings)
+    assert "left in place" in panel.issue_banner().current_issue().summary
 
 
 def test_remove_failed_tombstone_cleanup_keeps_durable_chain_change(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
@@ -936,10 +928,6 @@ def test_right_click_remove_pack_without_meta_uses_chain_only_prompt(
     monkeypatch.setattr(
         "anki_miner.gui.widgets.panels.audio_pack_settings_panel.QMessageBox.question",
         lambda _parent, _title, body, *a, **kw: prompts.append(body) or QMessageBox.StandardButton.Yes,
-    )
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
-        lambda *a, **kw: QMessageBox.StandardButton.Ok,
     )
 
     item = panel._list.item(0)

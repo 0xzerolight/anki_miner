@@ -480,6 +480,25 @@ QWidget#header-widget {
     border-bottom: 1px solid;
 }
 
+/* Screen issue banner (D24): one persistent surface for recoverable problems.
+   Reuses the warning badge endpoints so no theme gains a key: an issue here is
+   by definition survivable, and the error red stays reserved for destruction. */
+QFrame#screen-issue-banner {
+    background-color: ${color-badge-warning-bg};
+    border: 1px solid ${color-warning};
+    border-radius: ${border-radius-default}px;
+}
+
+QFrame#screen-issue-banner QLabel#screen-issue-summary {
+    color: ${color-badge-warning-text};
+    font-size: ${font-size-body-sm}px;
+}
+
+QFrame#screen-issue-banner QLabel#screen-issue-details {
+    color: ${color-badge-warning-text};
+    font-size: ${font-size-caption}px;
+}
+
 /* Update banner */
 QFrame#update-banner {
     border-radius: ${border-radius-default}px;

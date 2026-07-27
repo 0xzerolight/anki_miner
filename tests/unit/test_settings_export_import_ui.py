@@ -117,7 +117,7 @@ class TestImportButton:
         assert received == []
         assert not messageboxes["question"]
 
-    def test_import_malformed_file_shows_critical_no_emit(self, tab, tmp_path, monkeypatch, messageboxes):
+    def test_import_malformed_file_reports_an_issue_and_emits_nothing(self, tab, tmp_path, monkeypatch, messageboxes):
         bad = tmp_path / "broken.json"
         bad.write_text("{not json", encoding="utf-8")
         monkeypatch.setattr(QFileDialog, "getOpenFileName", staticmethod(lambda *a, **k: (str(bad), "")))
@@ -126,10 +126,12 @@ class TestImportButton:
 
         tab.import_settings_button.click()
 
-        assert messageboxes["critical"], "error dialog expected for malformed file"
+        issue = tab.issue_banner().current_issue()
+        assert issue is not None and issue.summary == "Settings could not be imported."
+        assert str(bad) in issue.details, "the path belongs in Details, not the sentence"
         assert received == []
 
-    def test_import_wrong_shape_json_shows_critical_no_emit(self, tab, tmp_path, monkeypatch, messageboxes):
+    def test_import_wrong_shape_json_reports_an_issue_and_emits_nothing(self, tab, tmp_path, monkeypatch, messageboxes):
         bad = tmp_path / "list.json"
         bad.write_text("[1, 2, 3]", encoding="utf-8")
         monkeypatch.setattr(QFileDialog, "getOpenFileName", staticmethod(lambda *a, **k: (str(bad), "")))
@@ -138,5 +140,6 @@ class TestImportButton:
 
         tab.import_settings_button.click()
 
-        assert messageboxes["critical"]
+        issue = tab.issue_banner().current_issue()
+        assert issue is not None and issue.summary == "Settings could not be imported."
         assert received == []

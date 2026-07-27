@@ -49,6 +49,8 @@ from anki_miner.gui.utils.qt_helpers import install_no_scroll_on_inputs
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import (
     PageWidth,
+    ScreenIssue,
+    ScreenIssueHost,
     SettingAnchor,
     SettingAnchorHost,
     configure_scrolled_page,
@@ -105,7 +107,7 @@ class _SavePathPanel(Protocol):
     def contribute(self, config: AnkiMinerConfig) -> AnkiMinerConfig: ...
 
 
-class SettingsTab(SettingAnchorHost, QWidget):
+class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     """Settings tab with category organization.
 
     Uses extracted panel components for cleaner architecture: one panel per
@@ -314,6 +316,12 @@ class SettingsTab(SettingAnchorHost, QWidget):
         # bar. The bottom chrome (update checkbox + Export/Import row) and the
         # panel forms keep the same margins they always had.
         layout.setContentsMargins(SPACING.md, SPACING.sm, SPACING.md, SPACING.md)
+
+        # One banner for the whole tab (D24). Export/import, the known-words
+        # maintenance actions and the AnkiConnect deck probe all report here;
+        # the panels that own a repair of their own (the four chain lists,
+        # Appearance) carry their own nearer banner and are found first.
+        self.install_issue_banner(layout)
 
         # Grouped navigator (D10). Ten equally-weighted tabs carried no
         # hierarchy, and in a long locale at a large text size the strip
@@ -764,10 +772,11 @@ class SettingsTab(SettingAnchorHost, QWidget):
         manual = getattr(self, "_ytdlp_manual_pending", False)
         self._ytdlp_manual_pending = False
         if manual and action in ("failed", "unavailable"):
-            QMessageBox.warning(
-                self,
-                self.tr("yt-dlp update"),
-                message or self.tr("Could not update yt-dlp. Check your connection and retry."),
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("yt-dlp could not be updated. Check your connection and try again."),
+                    details=message,
+                )
             )
 
     def _wrap_in_scroll_area(self, widget: QWidget) -> QScrollArea:
@@ -1282,12 +1291,19 @@ class SettingsTab(SettingAnchorHost, QWidget):
         try:
             GUIConfigManager.export_config(self.config, Path(target))
         except OSError as e:
-            QMessageBox.critical(
-                self,
-                self.tr("Export Failed"),
-                tr_format(self.tr("Could not write %1:\n%2"), target, e),
+            # The path and the errno are what a bug report needs and what a
+            # reader does not: Details, not the sentence (D24).
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("Settings could not be exported."),
+                    details=f"{target}: {e}",
+                    action_id="settings.export-retry",
+                    action_text=self.tr("Retry"),
+                ),
+                action=self._on_export_settings,
             )
             return
+        self.clear_screen_issue()
         QMessageBox.information(
             self,
             self.tr("Settings Exported"),
@@ -1329,12 +1345,17 @@ class SettingsTab(SettingAnchorHost, QWidget):
         try:
             import_result = GUIConfigManager.import_config(Path(source), self.config)
         except (json.JSONDecodeError, TypeError, ValueError, OSError) as e:
-            QMessageBox.critical(
-                self,
-                self.tr("Import Failed"),
-                tr_format(self.tr("Could not import %1:\n%2"), source, e),
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("Settings could not be imported."),
+                    details=f"{source}: {e}",
+                    action_id="settings.import-retry",
+                    action_text=self.tr("Retry"),
+                ),
+                action=self._on_import_settings,
             )
             return
+        self.clear_screen_issue()
         new_config = import_result.config
         # Validate imported subtitle-regex semantics the same way the commit path does.
         # import_config validates the field types but does not compile the pattern, so
@@ -1350,13 +1371,13 @@ class SettingsTab(SettingAnchorHost, QWidget):
                     subtitle_regex_replacement=self.config.subtitle_regex_replacement,
                     use_subtitle_regex_filter=self.config.use_subtitle_regex_filter,
                 )
-                QMessageBox.warning(
-                    self,
-                    self.tr("Invalid Subtitle Regex"),
-                    tr_format(
-                        self.tr("The imported subtitle regex filter was rejected; the previous filter was kept:\n%1"),
-                        e,
-                    ),
+                self.show_screen_issue(
+                    ScreenIssue(
+                        summary=self.tr(
+                            "The imported subtitle regex filter was rejected; your previous filter was kept."
+                        ),
+                        details=str(e),
+                    )
                 )
         # Import can touch any field — full reload, unlike the targeted
         # auto-save commit.
@@ -1629,10 +1650,11 @@ class SettingsTab(SettingAnchorHost, QWidget):
     def _on_retry_missing_audio_error(self, msg: str) -> None:
         """Re-enable the button and surface an unexpected sweep failure."""
         self.audio_panel.set_retry_missing_enabled(True)
-        QMessageBox.warning(
-            self,
-            self.tr("Retry missing expression audio"),
-            tr_format(self.tr("Could not clear the markers: %1"), msg),
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=self.tr("The missing-audio markers could not be cleared."),
+                details=msg,
+            )
         )
 
     def _persist_frequency_chain_change(self, new_chain: tuple[FreqEntry, ...]) -> None:
@@ -1685,11 +1707,15 @@ class SettingsTab(SettingAnchorHost, QWidget):
             # Anki-synced rows are rebuilt from Anki on the next run.
             removed = db.clear(preserve_user=True)
         except Exception as e:  # noqa: BLE001 — surface any DB failure to the user
-            QMessageBox.warning(
-                self, self.tr("Rebuild Known Words DB"), tr_format(self.tr("Could not clear the cache: %1"), e)
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("The known-words cache could not be cleared."),
+                    details=str(e),
+                )
             )
             return
 
+        self.clear_screen_issue()
         QMessageBox.information(
             self,
             self.tr("Rebuild Known Words DB"),
@@ -1704,6 +1730,9 @@ class SettingsTab(SettingAnchorHost, QWidget):
             db = KnownWordDB(self.config.known_words_db_path)
             KnownWordsManagerDialog(db, self).exec()
         except Exception as e:  # noqa: BLE001 — surface any DB failure to the user
-            QMessageBox.warning(
-                self, self.tr("Manage Known Words"), tr_format(self.tr("Could not open the known words list: %1"), e)
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("The known words list could not be opened."),
+                    details=str(e),
+                )
             )

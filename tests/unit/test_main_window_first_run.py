@@ -318,8 +318,6 @@ def test_handler_refuses_when_jmdict_migration_does_not_stop(main_window, monkey
     )
     dialog = MagicMock()
     monkeypatch.setattr(dialog_target, dialog)
-    warning = MagicMock()
-    monkeypatch.setattr(mw_module.QMessageBox, "warning", warning)
     monkeypatch.setattr(mw_module.MainWindow, "update_config", lambda self, cfg, **kw: None)
     main_window._first_run_setup_handled = False
     main_window.config = replace(main_window.config, first_run_setup_done=False)
@@ -327,7 +325,10 @@ def test_handler_refuses_when_jmdict_migration_does_not_stop(main_window, monkey
     getattr(main_window, handler)()
 
     dialog.assert_not_called()
-    warning.assert_called_once()
+    # The refusal is stated on the window rather than in a modal (D24).
+    issue = main_window.issue_banner().current_issue()
+    assert issue is not None
+    assert "still stopping" in issue.summary
 
 
 @pytest.mark.parametrize(

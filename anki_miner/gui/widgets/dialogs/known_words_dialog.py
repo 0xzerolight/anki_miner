@@ -30,6 +30,7 @@ from anki_miner.gui.utils.qt_helpers import (
     install_copy_rows,
 )
 from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.known_words_import import (
@@ -40,7 +41,7 @@ from anki_miner.services.known_words_import import (
 from anki_miner.utils.i18n import tr_format
 
 
-class KnownWordsManagerDialog(QDialog):
+class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
     """View / remove / export / reset the user-curated known words list."""
 
     def __init__(self, known_word_db: KnownWordDB, parent=None):
@@ -115,6 +116,7 @@ class KnownWordsManagerDialog(QDialog):
         layout.addLayout(buttons)
 
         self.setLayout(layout)
+        self.install_issue_banner(layout)
 
     # ------------------------------------------------------------------
     # Data
@@ -256,15 +258,11 @@ class KnownWordsManagerDialog(QDialog):
                 "Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), "
                 "plain word lists (one word per line)."
             )
-        QMessageBox.warning(self, self.tr("Import Failed"), message)
+        self.show_screen_issue(ScreenIssue(summary=message))
 
     def _on_import_failed(self, message: str) -> None:
         self.import_button.setEnabled(True)
-        QMessageBox.warning(
-            self,
-            self.tr("Import Failed"),
-            tr_format(self.tr("Unexpected error while reading the file:\n%1"), message),
-        )
+        self.show_screen_issue(ScreenIssue(summary=self.tr("That file could not be read."), details=message))
 
     def export_to(self, path: Path) -> int:
         """Write the user words to ``path``, one per line (UTF-8). Returns the count."""

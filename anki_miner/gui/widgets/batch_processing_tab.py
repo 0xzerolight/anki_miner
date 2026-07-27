@@ -31,6 +31,7 @@ from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.base import (
     PageWidth,
+    ScreenIssue,
     configure_card_layout,
     configure_scrolled_page,
     field_label_width,
@@ -184,6 +185,7 @@ class BatchProcessingTab(MiningTabBase):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.addWidget(scroll_area)
         self.setLayout(main_layout)
+        self.install_issue_banner(main_layout)
 
         # Set up keyboard shortcuts
         self._setup_shortcuts()
@@ -329,16 +331,16 @@ class BatchProcessingTab(MiningTabBase):
 
         folders = self._get_validated_folders()
         if not folders:
-            QMessageBox.warning(
-                self, self.tr("Invalid Folders"), self.tr("Please select valid video and subtitle folders")
-            )
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose existing video and subtitle folders.")))
             return
 
         video_folder, subtitle_folder = folders
         pairs = self._find_episode_pairs(video_folder, subtitle_folder)
 
         if not pairs:
-            QMessageBox.warning(self, self.tr("No Pairs Found"), self.tr("No matching video/subtitle pairs found"))
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("No subtitle file could be matched to any video file in those folders."))
+            )
             return
 
         self._start_processing_with_pairs(pairs)
@@ -408,16 +410,16 @@ class BatchProcessingTab(MiningTabBase):
         incomplete = self.queue_panel.get_incomplete_items()
         for widget, issue_type in incomplete:
             if issue_type == "invalid":
-                QMessageBox.warning(
-                    self,
-                    self.tr("Invalid Folders"),
-                    tr_format(self.tr("Series '%1' has folders that don't exist. Skipping."), widget.display_name),
+                self.show_screen_issue(
+                    ScreenIssue(
+                        summary=tr_format(self.tr("%1 was skipped: its folders no longer exist."), widget.display_name)
+                    )
                 )
             else:
-                QMessageBox.warning(
-                    self,
-                    self.tr("Incomplete Series"),
-                    tr_format(self.tr("Series '%1' is missing folders. Skipping."), widget.display_name),
+                self.show_screen_issue(
+                    ScreenIssue(
+                        summary=tr_format(self.tr("%1 was skipped: it is missing a folder."), widget.display_name)
+                    )
                 )
 
     def _start_queue_worker(self) -> None:

@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import QToolButton, QTreeWidget, QTreeWidgetItem
 
 from anki_miner.gui.i18n import available_languages
 from anki_miner.gui.resources.styles.theme import REQUIRED_COLOR_KEYS, Theme
+from anki_miner.gui.widgets.base import ScreenIssue
 from anki_miner.gui.widgets.panels.ui_settings_panel import (
     _FAMILY_STAR_PARTIAL_OPACITY,
     _STAR_FILLED,
@@ -303,3 +304,57 @@ class TestManageProfilesButton:
         panel.manage_profiles_btn.click()
 
         assert emitted == [1]
+
+
+class TestThemesFolderFailureIsVisible:
+    """Opening the themes folder used to fail into the log alone (D24, string 12)."""
+
+    def test_a_failed_mkdir_raises_a_screen_issue(self, qtbot, tmp_path, monkeypatch):
+        blocked = tmp_path / "blocked" / "themes"
+        panel = UISettingsPanel(blocked)
+        qtbot.addWidget(panel)
+
+        def _refuse(*args, **kwargs):
+            raise PermissionError(13, "Permission denied")
+
+        monkeypatch.setattr(Path, "mkdir", _refuse)
+        panel._open_themes_folder()
+
+        issue = panel.issue_banner().current_issue()
+        assert issue is not None
+        assert issue.summary == "The themes folder could not be opened."
+        assert "Permission denied" not in issue.summary
+        assert "Permission denied" in issue.details
+        assert str(blocked) in issue.details
+
+    def test_the_repair_opens_the_parent_folder(self, qtbot, tmp_path, monkeypatch):
+        blocked = tmp_path / "blocked" / "themes"
+        panel = UISettingsPanel(blocked)
+        qtbot.addWidget(panel)
+
+        def _refuse(*args, **kwargs):
+            raise PermissionError(13, "Permission denied")
+
+        monkeypatch.setattr(Path, "mkdir", _refuse)
+        opened: list[str] = []
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.panels.ui_settings_panel.QDesktopServices.openUrl",
+            lambda url: opened.append(url.toLocalFile()),
+        )
+        panel._open_themes_folder()
+        panel.issue_banner().action_button.click()
+        assert opened == [str(blocked.parent)]
+
+    def test_a_successful_open_clears_a_stale_issue(self, qtbot, tmp_path, monkeypatch):
+        target = tmp_path / "themes"
+        panel = UISettingsPanel(target)
+        qtbot.addWidget(panel)
+        panel.show_screen_issue(
+            ScreenIssue(summary="The themes folder could not be opened."),
+        )
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.panels.ui_settings_panel.QDesktopServices.openUrl",
+            lambda url: None,
+        )
+        panel._open_themes_folder()
+        assert panel.issue_banner().current_issue() is None

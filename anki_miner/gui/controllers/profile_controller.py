@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, cast
 
 from PyQt6.QtCore import QCoreApplication
-from PyQt6.QtWidgets import QApplication, QMessageBox
+from PyQt6.QtWidgets import QApplication
 
 from anki_miner import __version__
 from anki_miner.config import AnkiMinerConfig
@@ -41,6 +41,7 @@ from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.config_commit import ConfigCommitError
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.profile_store import Profile, ProfileStore
+from anki_miner.gui.widgets.base import ScreenIssue, report_screen_issue
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -113,7 +114,7 @@ class SwitchResult:
     """Outcome of a switch attempt.
 
     ``reason`` is a translated, user-facing message the controller has already
-    shown (``QMessageBox.warning``): it is set on every refusal, and also on a
+    shown as a screen issue: it is set on every refusal, and also on a
     switch that DID happen but could not fully refresh the running window. So
     ``switched`` is the branch callers act on; ``reason`` is only there for
     tests and logs. A plain no-op (already on that profile) carries neither.
@@ -629,19 +630,16 @@ class ProfileController:
         self._header().set_profiles(ProfileStore.list_profiles(), GUIConfigManager.ACTIVE_PROFILE_ID)
 
     def _warn(self, result: SwitchResult) -> None:
-        """Surface a refusal (or a degraded refresh) as the house dialog.
+        """Surface a refusal (or a degraded refresh) on the main window (D24).
 
-        A modal, not the status bar: a switch is usually started from the modal
-        profile manager, where a status-bar line is invisible. The status bar is
-        used only for the informational restart note.
+        Not the status bar, whose line expires: a refused profile switch has to
+        stay readable. Reported on the window rather than in the modal profile
+        manager the switch usually starts from — the banner persists, so it is
+        still there when that dialog closes, and it cannot stop a run.
         """
         if result.reason is None:
             return
-        QMessageBox.warning(
-            self._window,
-            QCoreApplication.translate("ProfileController", "Settings Profiles"),
-            result.reason,
-        )
+        report_screen_issue(self._window, ScreenIssue(summary=result.reason))
 
     @staticmethod
     def _apply_theme() -> None:

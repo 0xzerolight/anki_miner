@@ -61,6 +61,15 @@ def _owned_slot(root: Path) -> Path:
     return slot
 
 
+def _issue(panel: DictionarySettingsPanel):
+    """The screen issue the panel is currently reporting (D24)."""
+    banner = panel.issue_banner()
+    assert banner is not None
+    issue = banner.current_issue()
+    assert issue is not None, "the panel reported no issue"
+    return issue
+
+
 def _wait_remove(panel: DictionarySettingsPanel, qtbot) -> None:
     qtbot.waitUntil(lambda: not panel.has_active_mutation(), timeout=3000)
     for worker in tuple(getattr(panel, "_off_thread_workers", ())):
@@ -111,12 +120,6 @@ def test_pre_save_failure_restores_tombstone_and_reports_intact_after_rescan(
     tmp_path,
 ) -> None:
     canonical = _owned_slot(tmp_path)
-    warnings: list[str] = []
-    monkeypatch.setattr(
-        base_module.QMessageBox,
-        "warning",
-        lambda _parent, _title, body, *args, **kwargs: warnings.append(body),
-    )
     panel = panel_factory(
         tmp_path,
         lambda _chain: ConfigCommitResult.pre_save_failure(OSError("disk full")),
@@ -128,7 +131,7 @@ def test_pre_save_failure_restores_tombstone_and_reports_intact_after_rescan(
     assert canonical.is_dir()
     assert list(tmp_path.glob("slot.tomb-*")) == []
     assert panel.get_chain()[0].dict_id == "slot"
-    assert any("files are intact" in body.lower() for body in warnings)
+    assert "files are intact" in _issue(panel).summary.lower()
 
 
 def test_post_save_refresh_failure_never_restores_and_warns_removal_is_durable(
@@ -138,12 +141,6 @@ def test_post_save_refresh_failure_never_restores_and_warns_removal_is_durable(
     tmp_path,
 ) -> None:
     canonical = _owned_slot(tmp_path)
-    warnings: list[str] = []
-    monkeypatch.setattr(
-        base_module.QMessageBox,
-        "warning",
-        lambda _parent, _title, body, *args, **kwargs: warnings.append(body),
-    )
     panel = panel_factory(
         tmp_path,
         lambda _chain: ConfigCommitResult.post_save_failure(RuntimeError("refresh failed")),
@@ -155,7 +152,7 @@ def test_post_save_refresh_failure_never_restores_and_warns_removal_is_durable(
     assert not canonical.exists()
     assert list(tmp_path.glob("slot.tomb-*")) == []
     assert [entry.kind for entry in panel.get_chain()] == ["jisho"]
-    assert any("removal was saved" in body.lower() for body in warnings)
+    assert "removal is saved" in _issue(panel).summary.lower()
 
 
 def test_rename_failure_is_clean_abort_and_reports_intact_after_rescan(
@@ -165,12 +162,6 @@ def test_rename_failure_is_clean_abort_and_reports_intact_after_rescan(
     tmp_path,
 ) -> None:
     canonical = _owned_slot(tmp_path)
-    warnings: list[str] = []
-    monkeypatch.setattr(
-        base_module.QMessageBox,
-        "warning",
-        lambda _parent, _title, body, *args, **kwargs: warnings.append(body),
-    )
     monkeypatch.setattr(base_module.os, "replace", lambda _src, _dst: (_ for _ in ()).throw(OSError("rename denied")))
     commits: list[tuple[ChainEntry, ...]] = []
     panel = panel_factory(
@@ -185,7 +176,7 @@ def test_rename_failure_is_clean_abort_and_reports_intact_after_rescan(
     assert list(tmp_path.glob("slot.tomb-*")) == []
     assert commits == []
     assert panel.get_chain()[0].dict_id == "slot"
-    assert any("files are intact" in body.lower() for body in warnings)
+    assert "files are intact" in _issue(panel).summary.lower()
 
 
 def test_unowned_chain_only_commit_failure_reports_untouched_files(
@@ -198,12 +189,6 @@ def test_unowned_chain_only_commit_failure_reports_untouched_files(
     canonical.mkdir()
     payload = canonical / "foreign"
     payload.write_text("untouched", encoding="utf-8")
-    warnings: list[str] = []
-    monkeypatch.setattr(
-        base_module.QMessageBox,
-        "warning",
-        lambda _parent, _title, body, *args, **kwargs: warnings.append(body),
-    )
     panel = panel_factory(
         tmp_path,
         lambda _chain: ConfigCommitResult.pre_save_failure(OSError("disk full")),
@@ -214,8 +199,8 @@ def test_unowned_chain_only_commit_failure_reports_untouched_files(
 
     assert payload.read_text(encoding="utf-8") == "untouched"
     assert panel.get_chain()[0].dict_id == "slot"
-    assert any("files are intact" in body.lower() for body in warnings)
-    assert all("partially changed" not in body.lower() for body in warnings)
+    assert "files are intact" in _issue(panel).summary.lower()
+    assert "partly removed" not in _issue(panel).summary.lower()
 
 
 def test_failed_rollback_reports_partial_state_after_rescan(
@@ -225,7 +210,6 @@ def test_failed_rollback_reports_partial_state_after_rescan(
     tmp_path,
 ) -> None:
     canonical = _owned_slot(tmp_path)
-    warnings: list[str] = []
     real_replace = os.replace
 
     def replace_with_partial_rollback(source: Path, destination: Path) -> None:
@@ -237,11 +221,6 @@ def test_failed_rollback_reports_partial_state_after_rescan(
         raise OSError("rollback denied")
 
     monkeypatch.setattr(base_module.os, "replace", replace_with_partial_rollback)
-    monkeypatch.setattr(
-        base_module.QMessageBox,
-        "warning",
-        lambda _parent, _title, body, *args, **kwargs: warnings.append(body),
-    )
     panel = panel_factory(
         tmp_path,
         lambda _chain: ConfigCommitResult.pre_save_failure(OSError("disk full")),
@@ -252,7 +231,7 @@ def test_failed_rollback_reports_partial_state_after_rescan(
 
     assert canonical.is_dir()
     assert len(list(tmp_path.glob("slot.tomb-*"))) == 1
-    assert any("partially changed" in body.lower() for body in warnings)
+    assert "partly removed" in _issue(panel).summary.lower()
 
 
 def test_failed_rollback_reports_deleted_config_pending_after_rescan(
@@ -262,7 +241,6 @@ def test_failed_rollback_reports_deleted_config_pending_after_rescan(
     tmp_path,
 ) -> None:
     canonical = _owned_slot(tmp_path)
-    warnings: list[str] = []
     real_replace = os.replace
 
     def fail_rollback(source: Path, destination: Path) -> None:
@@ -272,11 +250,6 @@ def test_failed_rollback_reports_deleted_config_pending_after_rescan(
         raise OSError("rollback denied")
 
     monkeypatch.setattr(base_module.os, "replace", fail_rollback)
-    monkeypatch.setattr(
-        base_module.QMessageBox,
-        "warning",
-        lambda _parent, _title, body, *args, **kwargs: warnings.append(body),
-    )
     panel = panel_factory(
         tmp_path,
         lambda _chain: ConfigCommitResult.pre_save_failure(OSError("disk full")),
@@ -287,7 +260,7 @@ def test_failed_rollback_reports_deleted_config_pending_after_rescan(
 
     assert not canonical.exists()
     assert len(list(tmp_path.glob("slot.tomb-*"))) == 1
-    assert any("configuration update is pending" in body.lower() for body in warnings)
+    assert "settings update failed" in _issue(panel).summary.lower()
 
 
 def test_tombstone_cleanup_failure_keeps_durable_remove_and_reports_residue(
@@ -297,16 +270,10 @@ def test_tombstone_cleanup_failure_keeps_durable_remove_and_reports_residue(
     tmp_path,
 ) -> None:
     canonical = _owned_slot(tmp_path)
-    warnings: list[str] = []
     monkeypatch.setattr(
         dictionary_module,
         "robust_rmtree",
         lambda _path, **_kwargs: (False, PermissionError("locked")),
-    )
-    monkeypatch.setattr(
-        base_module.QMessageBox,
-        "warning",
-        lambda _parent, _title, body, *args, **kwargs: warnings.append(body),
     )
     panel = panel_factory(
         tmp_path,
@@ -319,7 +286,7 @@ def test_tombstone_cleanup_failure_keeps_durable_remove_and_reports_residue(
     assert not canonical.exists()
     assert len(list(tmp_path.glob("slot.tomb-*"))) == 1
     assert [entry.kind for entry in panel.get_chain()] == ["jisho"]
-    assert any("cleanup is pending" in body.lower() for body in warnings)
+    assert "cleanup will be retried" in _issue(panel).summary.lower()
 
 
 def test_cleanup_dispatch_failure_keeps_durable_remove_and_reports_residue(
@@ -329,16 +296,10 @@ def test_cleanup_dispatch_failure_keeps_durable_remove_and_reports_residue(
     tmp_path,
 ) -> None:
     canonical = _owned_slot(tmp_path)
-    warnings: list[str] = []
     monkeypatch.setattr(
         base_module,
         "run_off_thread",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("thread unavailable")),
-    )
-    monkeypatch.setattr(
-        base_module.QMessageBox,
-        "warning",
-        lambda _parent, _title, body, *args, **kwargs: warnings.append(body),
     )
     panel = panel_factory(
         tmp_path,
@@ -351,4 +312,4 @@ def test_cleanup_dispatch_failure_keeps_durable_remove_and_reports_residue(
     assert not canonical.exists()
     assert len(list(tmp_path.glob("slot.tomb-*"))) == 1
     assert [entry.kind for entry in panel.get_chain()] == ["jisho"]
-    assert any("cleanup is pending" in body.lower() for body in warnings)
+    assert "cleanup will be retried" in _issue(panel).summary.lower()

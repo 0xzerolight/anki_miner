@@ -40,9 +40,10 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.constants import SUBTITLE_FILE_FILTER, VIDEO_FILE_FILTER
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.qt_helpers import reveal_settings
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
-from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, configure_scrolled_page
+from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout, configure_scrolled_page
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.workers.subtitle_retime_worker import SubtitleRetimeWorker
@@ -111,6 +112,7 @@ class SubtitleRetimeTab(_ToolTabBase):
             cancelling=self.tr("Cancelling…"),
             cancelled=self.tr("Cancelled"),
             failed=self.tr("Failed — see log"),
+            run_problem=self.tr("Some files could not be retimed."),
             complete_template=self.tr("Complete — %1 files processed"),
             select_output_folder=self.tr("Select Output Folder"),
             output_default=self.tr("Next to source video"),
@@ -164,6 +166,7 @@ class SubtitleRetimeTab(_ToolTabBase):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.addWidget(scroll_area)
         self.setLayout(main_layout)
+        self.install_issue_banner(main_layout)
 
     def _create_input_section(self) -> QFrame:
         group = QFrame()
@@ -449,11 +452,13 @@ class SubtitleRetimeTab(_ToolTabBase):
         """Open AudioTracksDialog to pick which audio track alass aligns against."""
         video_path = self.video_file_selector.path_or_none()
         if video_path is None:
-            QMessageBox.warning(self, self.tr("No Video File Selected"), self.tr("Select a video file first."))
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a video file first.")))
             return
         video_file = Path(video_path)
         if not video_file.is_file():
-            QMessageBox.warning(self, self.tr("File Not Found"), self.tr("Video file not found: ") + video_path)
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That video file no longer exists."), details=video_path)
+            )
             return
 
         ffprobe_cmd = resolve_ffprobe(self.config)
@@ -508,10 +513,14 @@ class SubtitleRetimeTab(_ToolTabBase):
             except RuntimeError:
                 # Tab torn down while the probe was in flight; nothing to surface.
                 return
-            QMessageBox.warning(
-                self,
-                self.tr("Probe Failed"),
-                self.tr("Failed to detect audio tracks. Check that ffprobe is installed."),
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("Audio tracks could not be read."),
+                    details=msg,
+                    action_id="settings.media",
+                    action_text=self.tr("Open Media Settings"),
+                ),
+                action=lambda: reveal_settings(self, "media"),
             )
 
         run_off_thread(self, _probe, _on_streams, _on_probe_error)
@@ -599,17 +608,11 @@ class SubtitleRetimeTab(_ToolTabBase):
             sub_str = self.subtitle_file_selector.path_or_none()
 
             if video_str is None:
-                QMessageBox.warning(
-                    self,
-                    self.tr("No Video File Selected"),
-                    self.tr("Select a video file before retiming subtitles."),
-                )
+                self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a video file before retiming subtitles.")))
                 return []
             if sub_str is None:
-                QMessageBox.warning(
-                    self,
-                    self.tr("No Subtitle File Selected"),
-                    self.tr("Select a subtitle file before retiming subtitles."),
+                self.show_screen_issue(
+                    ScreenIssue(summary=self.tr("Choose a subtitle file before retiming subtitles."))
                 )
                 return []
 
@@ -617,17 +620,13 @@ class SubtitleRetimeTab(_ToolTabBase):
             sub = Path(sub_str)
 
             if not video.is_file():
-                QMessageBox.warning(
-                    self,
-                    self.tr("File Not Found"),
-                    self.tr("Video file not found: ") + video_str,
+                self.show_screen_issue(
+                    ScreenIssue(summary=self.tr("That video file no longer exists."), details=video_str)
                 )
                 return []
             if not sub.is_file():
-                QMessageBox.warning(
-                    self,
-                    self.tr("File Not Found"),
-                    self.tr("Subtitle file not found: ") + sub_str,
+                self.show_screen_issue(
+                    ScreenIssue(summary=self.tr("That subtitle file no longer exists."), details=sub_str)
                 )
                 return []
 
@@ -639,17 +638,11 @@ class SubtitleRetimeTab(_ToolTabBase):
             sub_folder_str = self.subtitle_folder_selector.path_or_none()
 
             if video_folder_str is None:
-                QMessageBox.warning(
-                    self,
-                    self.tr("No Video Folder Selected"),
-                    self.tr("Select a video folder before retiming subtitles."),
-                )
+                self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a video folder before retiming subtitles.")))
                 return []
             if sub_folder_str is None:
-                QMessageBox.warning(
-                    self,
-                    self.tr("No Subtitle Folder Selected"),
-                    self.tr("Select a subtitle folder before retiming subtitles."),
+                self.show_screen_issue(
+                    ScreenIssue(summary=self.tr("Choose a subtitle folder before retiming subtitles."))
                 )
                 return []
 
@@ -657,17 +650,13 @@ class SubtitleRetimeTab(_ToolTabBase):
             sub_folder = Path(sub_folder_str)
 
             if not video_folder.is_dir():
-                QMessageBox.warning(
-                    self,
-                    self.tr("Folder Not Found"),
-                    self.tr("Video folder not found: ") + video_folder_str,
+                self.show_screen_issue(
+                    ScreenIssue(summary=self.tr("That video folder no longer exists."), details=video_folder_str)
                 )
                 return []
             if not sub_folder.is_dir():
-                QMessageBox.warning(
-                    self,
-                    self.tr("Folder Not Found"),
-                    self.tr("Subtitle folder not found: ") + sub_folder_str,
+                self.show_screen_issue(
+                    ScreenIssue(summary=self.tr("That subtitle folder no longer exists."), details=sub_folder_str)
                 )
                 return []
 
@@ -695,10 +684,10 @@ class SubtitleRetimeTab(_ToolTabBase):
                 )
 
             if not file_pairs:
-                QMessageBox.warning(
-                    self,
-                    self.tr("No Pairs Matched"),
-                    self.tr("No subtitle files could be matched to the video files in the selected folders."),
+                self.show_screen_issue(
+                    ScreenIssue(
+                        summary=self.tr("No subtitle file could be matched to any video file in those folders.")
+                    )
                 )
                 return []
 

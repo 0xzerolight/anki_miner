@@ -137,11 +137,15 @@ def _silence_dialogs(monkeypatch) -> list[tuple[str, str]]:
 
 
 def _capture_warnings(monkeypatch) -> list[tuple[str, str]]:
+    """Capture reported screen issues as ``(summary, whole text)`` (D24).
+
+    Import failures are no longer modals: they land in the owning panel's
+    banner, so the seam moved from ``QMessageBox.warning`` to the reporter.
+    """
     captured: list[tuple[str, str]] = []
     monkeypatch.setattr(
-        QMessageBox,
-        "warning",
-        lambda parent, title, body, *a, **kw: captured.append((title, body)) or 0,
+        "anki_miner.gui.controllers.import_flow_common.report_screen_issue",
+        lambda origin, issue: captured.append((issue.summary, f"{issue.summary}\n{issue.details}".strip())) or True,
     )
     return captured
 
@@ -514,18 +518,13 @@ def test_reimport_all_release_refusal_blocks_workers(tab_for_reimport_all, monke
 
     monkeypatch.setattr(tab.dictionary_panel, "request_resource_release", lambda: False)
 
-    warnings: list[tuple[str, str]] = []
-    monkeypatch.setattr(
-        QMessageBox,
-        "warning",
-        lambda parent, title, body, *a, **kw: warnings.append((title, body)) or 0,
-    )
+    warnings = _capture_warnings(monkeypatch)
 
     tab._dict_import_flow.reimport_all()
 
     stubbed_workers["yomitan_factory"].assert_not_called()
     stubbed_workers["jmdict_factory"].assert_not_called()
-    assert any(title == "Re-import Blocked" for title, _ in warnings), warnings
+    assert any("Indexed resources are in use" in summary for summary, _ in warnings), warnings
 
 
 def test_reimport_all_defers_reassignment_until_native_finished_without_wait(
@@ -594,12 +593,7 @@ def test_reimport_all_refresh_failure_warns_and_restores_controls(
     dicts_root = tab.config.dicts_root
     _make_dict_on_disk(dicts_root, "dict-a", fmt="yomitan", source_name="Dict A")
     tab.dictionary_panel.set_chain((ChainEntry(kind="indexed", dict_id="dict-a", enabled=True),))
-    warnings: list[tuple[str, str]] = []
-    monkeypatch.setattr(
-        QMessageBox,
-        "warning",
-        lambda parent, title, body, *a, **kw: warnings.append((title, body)) or 0,
-    )
+    warnings = _capture_warnings(monkeypatch)
     _silence_dialogs(monkeypatch)
 
     def fail_notify() -> None:
@@ -620,7 +614,7 @@ def test_reimport_all_refresh_failure_warns_and_restores_controls(
     # lands on the event loop, not synchronously at native finished.
     qtbot.waitUntil(lambda: tab.dictionary_panel._reimport_btn.isEnabled(), timeout=3000)
     assert len(warnings) == 1
-    assert warnings[0][0] == "Configuration Update Failed"
+    assert warnings[0][0] == "The import finished, but the settings could not be updated."
     assert "refresh callback failed" in warnings[0][1]
 
 

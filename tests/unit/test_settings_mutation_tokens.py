@@ -411,7 +411,7 @@ def test_modal_worker_start_failure_releases_mutation_token(tab):
             cancel_label="Cancel",
             determinate=True,
             join_noun="test worker",
-            failure_title="Failed",
+            failure_summary="Failed",
             refusal_message="Busy",
             cancelling_label="Cancelling",
             missing_result_message="No result",

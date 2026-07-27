@@ -35,14 +35,13 @@ from PyQt6.QtGui import QShowEvent
 from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
-    QMessageBox,
     QPushButton,
     QWidget,
 )
 
 from anki_miner.gui.utils.config_commit import ConfigCommitResult
 from anki_miner.gui.utils.run_off_thread import run_off_thread
-from anki_miner.gui.widgets.base import FormPanel
+from anki_miner.gui.widgets.base import FormPanel, ScreenIssue, ScreenIssueHost
 from anki_miner.services.store_recovery import make_tombstone_path
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.robust_fs import RmtreeOutcome
@@ -57,19 +56,22 @@ class _ChainPanelStrings:
     Built in each subclass via ``self.tr(...)`` so every literal stays in that
     panel's tr-context (mirroring ``_ToolTabStrings`` in ``_tool_tab_base``).
     The base reads the already-translated strings — it never calls ``tr()``.
+
+    Every failure string here is a *summary*: the sentence and the guidance,
+    with no raw path and no exception text (D24). Those go in the issue's
+    Details, which the base fills from the values it already has.
     """
 
     loading: str
-    remove_failed_title: str
-    # Already-translated ``tr_format`` template: "Could not delete %1:\n%2\n\n…".
-    could_not_delete_template: str
-    files_left_title: str
-    files_left_template: str
-    intact_failure_template: str
-    partial_failure_template: str
-    config_pending_failure_template: str
-    post_save_warning_template: str
-    cleanup_pending_template: str
+    retry_label: str
+    scan_failed_summary: str
+    files_left_summary: str
+    # ``tr_format`` templates whose one substitution is the entry's display name.
+    intact_failure_summary: str
+    partial_failure_summary: str
+    config_pending_failure_summary: str
+    post_save_summary: str
+    cleanup_pending_summary: str
 
 
 @dataclass(frozen=True, eq=False)
@@ -97,7 +99,7 @@ class _RegistryView:
         return self._getter(key)
 
 
-class ChainSettingsPanelBase(FormPanel):
+class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
     """State machine shared by the reorderable chain settings panels.
 
     See the module docstring. Subclasses provide the field layout, the entry
@@ -125,6 +127,9 @@ class ChainSettingsPanelBase(FormPanel):
 
     def __init__(self, title: str, parent: QWidget | None = None) -> None:
         super().__init__(title, parent=parent)
+        # Directly under the panel heading, above the chain list: a scan that
+        # failed is a statement about the list the user is looking at (D24).
+        self.install_issue_banner(self._main_layout, 1)
         self._chain: list[Any] = []
         # Cached registry view (subclass-typed); refreshed on demand instead of
         # per UI tick. The dictionary panel stores a DictionaryRegistry; the
@@ -210,6 +215,9 @@ class ChainSettingsPanelBase(FormPanel):
     def _on_scan_done(self, view: object) -> None:
         self._scan_in_flight = False
         self._view = view
+        # The list is now trustworthy again — that is the only thing that
+        # clears a scan issue.
+        self.clear_screen_issue()
         self._rebuild_list()
         self._finish_scan_mutation()
         if not self._redispatch_pending_scan():
@@ -218,6 +226,17 @@ class ChainSettingsPanelBase(FormPanel):
     def _on_scan_error(self, msg: str) -> None:
         self._scan_in_flight = False
         logger.warning("%s: %s", self._SCAN_ERROR_LABEL, msg)
+        # A failed scan used to log and nothing else, so the panel rendered a
+        # list of rows with no metadata behind them and looked fine (D24).
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=self._strings.scan_failed_summary,
+                details=msg,
+                action_id="chain.rescan",
+                action_text=self._strings.retry_label,
+            ),
+            action=self.refresh_registry,
+        )
         # Render whatever we have (rows without metadata) so the panel isn't
         # stuck on the Loading placeholder.
         self._rebuild_list()
@@ -539,35 +558,30 @@ class ChainSettingsPanelBase(FormPanel):
         self._chain = list(self._chain_after_remove(removed_entry))
         logger.error("Failed to delete %s %s: %s", self._REMOVE_ERROR_NOUN, tombstone, msg)
 
-        def show_warning() -> None:
+        def report() -> None:
             try:
-                QMessageBox.warning(
-                    self,
-                    self._strings.remove_failed_title,
-                    tr_format(
-                        self._strings.cleanup_pending_template,
-                        self._entry_display_name(removed_entry),
-                        tombstone,
-                        msg,
-                    ),
+                self.show_screen_issue(
+                    ScreenIssue(
+                        summary=tr_format(
+                            self._strings.cleanup_pending_summary,
+                            self._entry_display_name(removed_entry),
+                        ),
+                        details=f"{tombstone}: {msg}",
+                    )
                 )
             finally:
                 self._finish_remove_mutation()
 
-        self._rescan_then(show_warning)
+        self._rescan_then(report)
 
     def _warn_files_left(self, target: object) -> None:
-        QMessageBox.warning(
-            self,
-            self._strings.files_left_title,
-            tr_format(self._strings.files_left_template, target),
+        self.show_screen_issue(
+            ScreenIssue(summary=self._strings.files_left_summary, details=str(target)),
         )
 
     def _warn_post_save_failure(self, display: str, msg: str) -> None:
-        QMessageBox.warning(
-            self,
-            self._strings.remove_failed_title,
-            tr_format(self._strings.post_save_warning_template, display, msg),
+        self.show_screen_issue(
+            ScreenIssue(summary=tr_format(self._strings.post_save_summary, display), details=msg),
         )
 
     @staticmethod
@@ -610,24 +624,23 @@ class ChainSettingsPanelBase(FormPanel):
         target = target_dir or self._entry_display_name(removed_entry)
         logger.error("Failed to remove %s %s: %s", self._REMOVE_ERROR_NOUN, target, msg)
 
-        def show_warning() -> None:
+        def report() -> None:
             try:
                 if target_dir is not None and os.path.lexists(target_dir):
                     intact = files_untouched or self._owns_entry_disk_dir(removed_entry, target_dir)
-                    template = (
-                        self._strings.intact_failure_template if intact else self._strings.partial_failure_template
-                    )
+                    template = self._strings.intact_failure_summary if intact else self._strings.partial_failure_summary
                 else:
-                    template = self._strings.config_pending_failure_template
-                QMessageBox.warning(
-                    self,
-                    self._strings.remove_failed_title,
-                    tr_format(template, target, msg),
+                    template = self._strings.config_pending_failure_summary
+                self.show_screen_issue(
+                    ScreenIssue(
+                        summary=tr_format(template, self._entry_display_name(removed_entry)),
+                        details=f"{target}: {msg}",
+                    )
                 )
             finally:
                 self._finish_remove_mutation()
 
-        self._rescan_then(show_warning)
+        self._rescan_then(report)
 
     # ------------------------------------------------------------------
     # Row list

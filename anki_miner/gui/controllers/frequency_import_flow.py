@@ -179,16 +179,12 @@ class FrequencyImportFlow(ModalImportFlowMixin):
             )
 
         def on_success_error(exc: Exception) -> None:
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("FrequencyImportFlow", "Configuration Update Failed"),
-                tr_format(
-                    QCoreApplication.translate(
-                        "FrequencyImportFlow",
-                        "Import completed, but the configuration update failed: %1",
-                    ),
-                    str(exc),
+            self._report_import_issue(
+                QCoreApplication.translate(
+                    "FrequencyImportFlow",
+                    "The import finished, but the settings could not be updated.",
                 ),
+                str(exc),
             )
 
         self._run_modal_import(
@@ -197,7 +193,9 @@ class FrequencyImportFlow(ModalImportFlowMixin):
             cancel_label=QCoreApplication.translate("FrequencyImportFlow", "Cancel"),
             determinate=False,
             join_noun="frequency import worker",
-            failure_title=QCoreApplication.translate("FrequencyImportFlow", "Import Failed"),
+            failure_summary=QCoreApplication.translate(
+                "FrequencyImportFlow", "The frequency source could not be imported."
+            ),
             refusal_message=QCoreApplication.translate(
                 "FrequencyImportFlow", "Another import is still finishing. Wait for it to finish and try again."
             ),
@@ -249,9 +247,8 @@ class FrequencyImportFlow(ModalImportFlowMixin):
 
             def _on_error(message: str) -> None:
                 self._set_import_buttons_enabled(True)
-                QMessageBox.warning(
-                    self._parent,
-                    QCoreApplication.translate("FrequencyImportFlow", "Scan Failed"),
+                self._report_import_issue(
+                    QCoreApplication.translate("FrequencyImportFlow", "That folder could not be scanned."),
                     message,
                 )
 
@@ -277,9 +274,7 @@ class FrequencyImportFlow(ModalImportFlowMixin):
         # metadata falls back to the stable source id instead of the persisted
         # copy's generic "source" stem.
         if not self._panel.request_resource_release():
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("FrequencyImportFlow", "Re-import Blocked"),
+            self._report_import_issue(
                 QCoreApplication.translate(
                     "FrequencyImportFlow",
                     "Indexed resources are in use by mining, startup prewarm, or card backfill. "
@@ -323,7 +318,9 @@ class FrequencyImportFlow(ModalImportFlowMixin):
             cancel_label=QCoreApplication.translate("FrequencyImportFlow", "Cancel"),
             determinate=False,
             join_noun="frequency import worker",
-            failure_title=QCoreApplication.translate("FrequencyImportFlow", "Re-import Failed"),
+            failure_summary=QCoreApplication.translate(
+                "FrequencyImportFlow", "The frequency source could not be re-imported."
+            ),
             refusal_message=QCoreApplication.translate(
                 "FrequencyImportFlow", "Another import is still finishing. Wait for it to finish and try again."
             ),

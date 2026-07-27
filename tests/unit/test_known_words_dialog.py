@@ -283,7 +283,7 @@ class TestImportSlot:
             _start_import(dlg, monkeypatch)
             capture_off_thread["on_done"](error)
             assert dlg.import_button.isEnabled() is True
-            seen.append(message_boxes["warnings"][-1][1])
+            seen.append(dlg.issue_banner().current_issue().summary)
 
         assert db.get_words_by_source("user") == set()
         assert not message_boxes["questions"]
@@ -299,7 +299,9 @@ class TestImportSlot:
         _start_import(dlg, monkeypatch)
         capture_off_thread["on_error"]("boom")
 
-        assert message_boxes["warnings"], "unexpected failure must surface a warning"
+        issue = dlg.issue_banner().current_issue()
+        assert issue is not None, "unexpected failure must be visible"
+        assert "boom" in issue.details
         assert db.get_words_by_source("user") == set()
         assert dlg.import_button.isEnabled() is True
 
