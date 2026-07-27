@@ -179,6 +179,8 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
     # changes; the settings tab persists the three reading_tts_* bools.
     reading_tts_changed = pyqtSignal()
 
+    ANCHOR_NAMESPACE = "audio"
+
     _ROW_CLASS = _PackRow
     _SCAN_ERROR_LABEL = "Audio pack registry scan failed"
     _REMOVE_ERROR_NOUN = "audio pack index folder"
@@ -254,7 +256,8 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(QLabel(self.tr("Top entry is tried first.")))
+        chain_blurb = QLabel(self.tr("Top entry is tried first."))
+        layout.addWidget(chain_blurb)
 
         self._list = QListWidget()
         self._list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
@@ -301,7 +304,19 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         retry_row.addStretch()
         layout.addLayout(retry_row)
 
-        self.add_field("", container)
+        # One stable anchor for the whole chain; row widgets are transient (D13).
+        self.add_field(
+            "",
+            container,
+            anchor="chain",
+            anchor_focus=self._list,
+            anchor_text=lambda: (
+                chain_blurb.text(),
+                self._add_btn.text(),
+                self._add_online_btn.text(),
+                self._retry_missing_btn.text(),
+            ),
+        )
 
         # Sentence TTS for reading sources (manga/novels). Deliberately simpler
         # than the chain editor above: fixed 2-provider order (Google first),
@@ -342,7 +357,20 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         self._reading_tts_hint.setVisible(False)
         tts_layout.addWidget(self._reading_tts_hint)
 
-        self.add_field("", tts_container)
+        # The master toggle and its two providers are one logical setting; index
+        # all three captions so searching a provider name still lands here.
+        self.add_field(
+            "",
+            tts_container,
+            anchor="reading_tts",
+            anchor_focus=self._reading_tts_checkbox,
+            anchor_text=lambda: (
+                self._reading_tts_checkbox.text(),
+                self._reading_tts_google.text(),
+                self._reading_tts_papago.text(),
+                tts_blurb.text(),
+            ),
+        )
         self._sync_reading_tts_enabled_states()
         self.add_stretch()
 

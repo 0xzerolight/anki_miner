@@ -18,6 +18,8 @@ class MediaSettingsPanel(FormPanel):
     - Animated screenshot toggle and parameters
     """
 
+    ANCHOR_NAMESPACE = "media"
+
     def __init__(self, parent=None):
         """Initialize the media settings panel."""
         super().__init__("Media Extraction Settings", parent=parent)

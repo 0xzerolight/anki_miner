@@ -662,6 +662,12 @@ def test_notetype_page_auto_map_stages_fields(qtbot, wiz_config):
 
     assert isinstance(cfg.anki_fields, _types.MappingProxyType)
 
+    # Join the field-check worker Auto-Map started. Without this the queued
+    # result_ready lands in the teardown drain, after the page is being
+    # destroyed — a segfault under load, not a failure.
+    qtbot.waitUntil(lambda: page.warning_label.text() == "", timeout=3000)
+    assert page._warn_worker.wait(3000)
+
 
 def test_field_fetch_latest_selection_runs_after_stale_fetch(qtbot, wiz_config, monkeypatch):
     """Selecting B while A is in flight must fetch and apply B after A finishes."""

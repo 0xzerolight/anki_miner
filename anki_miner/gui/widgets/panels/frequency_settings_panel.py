@@ -119,6 +119,8 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
     add_source_requested = pyqtSignal()
     reimport_source_requested = pyqtSignal(str)
 
+    ANCHOR_NAMESPACE = "frequency"
+
     _ROW_CLASS = _FreqRow
     _SCAN_ERROR_LABEL = "Frequency registry scan failed"
     _REMOVE_ERROR_NOUN = "frequency source folder"
@@ -196,14 +198,13 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(
-            QLabel(
-                self.tr(
-                    "Sources are layered additively — the best (lowest) rank across all "
-                    "enabled sources wins. Top entry breaks ties first."
-                )
+        chain_blurb = QLabel(
+            self.tr(
+                "Sources are layered additively — the best (lowest) rank across all "
+                "enabled sources wins. Top entry breaks ties first."
             )
         )
+        layout.addWidget(chain_blurb)
 
         self._list = QListWidget()
         self._list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
@@ -233,7 +234,14 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
         buttons.addWidget(self._remove_btn)
 
         layout.addLayout(buttons)
-        self.add_field("", container)
+        # One stable anchor for the whole chain; row widgets are transient (D13).
+        self.add_field(
+            "",
+            container,
+            anchor="chain",
+            anchor_focus=self._list,
+            anchor_text=lambda: (chain_blurb.text(), self._add_btn.text()),
+        )
         self.add_stretch()
 
     def set_chain(

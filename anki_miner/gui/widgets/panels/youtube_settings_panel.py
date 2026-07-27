@@ -34,6 +34,8 @@ class YouTubeSettingsPanel(FormPanel):
     - A manual "Update yt-dlp now" trigger + status line
     """
 
+    ANCHOR_NAMESPACE = "youtube"
+
     #: Emitted when the user clicks "Update yt-dlp now". The wiring (SettingsTab
     #: → MainWindow.background_tasks.start_ytdlp_update) lives outside the panel.
     update_ytdlp_requested = pyqtSignal()
@@ -136,7 +138,13 @@ class YouTubeSettingsPanel(FormPanel):
         ytdlp_row.addWidget(self.update_ytdlp_button)
         ytdlp_row.addWidget(self.ytdlp_status_label)
         ytdlp_row.addStretch()
-        self.add_field(self.tr("yt-dlp"), ytdlp_container)
+        self.add_field(
+            self.tr("yt-dlp"),
+            ytdlp_container,
+            anchor="ytdlp_update",
+            anchor_focus=self.update_ytdlp_button,
+            anchor_text=lambda: (self.update_ytdlp_button.text(), self.update_ytdlp_button.toolTip()),
+        )
 
         self.add_stretch()
 

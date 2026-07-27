@@ -52,6 +52,8 @@ class FilteringSettingsPanel(FormPanel):
             Known Words dialog (Issue #42).
     """
 
+    ANCHOR_NAMESPACE = "filtering"
+
     fetch_decks_requested = pyqtSignal()
     rebuild_known_words_requested = pyqtSignal()
     manage_known_words_requested = pyqtSignal()
@@ -143,7 +145,11 @@ class FilteringSettingsPanel(FormPanel):
         self.excluded_decks_list = QListWidget()
         self.excluded_decks_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
         self.excluded_decks_list.setMaximumHeight(140)
-        self.add_widget(self.excluded_decks_list)
+        self.add_widget(
+            self.excluded_decks_list,
+            anchor="excluded_decks",
+            anchor_text=lambda: (excluded_helper.text(),),
+        )
 
         excluded_buttons = QHBoxLayout()
         self.add_deck_button = QPushButton(self.tr("Add Deck…"))
@@ -213,7 +219,9 @@ class FilteringSettingsPanel(FormPanel):
                 )
             )
             self.wordset_checkboxes[info.id] = cb
-            self.add_field("", cb)
+            # Built in a loop, so there is no panel attribute to derive an id
+            # from; the catalog id is the stable name.
+            self.add_field("", cb, anchor=f"wordset_{info.id}")
 
         # Subtitle Text Filtering section (Issue #8)
         self.add_section(self.tr("Subtitle Text Filtering"))
@@ -282,6 +290,8 @@ class FilteringSettingsPanel(FormPanel):
             self.tr("Presets"),
             preset_container,
             helper=self.tr("Click to append a built-in pattern to the regex field above."),
+            anchor="subtitle_regex_presets",
+            anchor_text=lambda: tuple(_preset_labels),
         )
 
         # Deduplication section

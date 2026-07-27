@@ -105,6 +105,8 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
     reimport_all_requested = pyqtSignal()
     rescan_requested = pyqtSignal()
 
+    ANCHOR_NAMESPACE = "dictionaries"
+
     _ROW_CLASS = _ChainRow
     _SCAN_ERROR_LABEL = "Dictionary registry scan failed"
     _REMOVE_ERROR_NOUN = "dictionary folder"
@@ -252,6 +254,8 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
                 "Where indexed dictionaries are stored. Existing dictionaries at "
                 "the old location are not moved automatically."
             ),
+            anchor="storage_folder",
+            anchor_focus=self.dicts_root_selector,
         )
 
         self.add_section(self.tr("Active Dictionaries"))
@@ -259,7 +263,8 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(QLabel(self.tr("Top entry fills the MainDefinition field.")))
+        chain_blurb = QLabel(self.tr("Top entry fills the MainDefinition field."))
+        layout.addWidget(chain_blurb)
 
         self._list = QListWidget()
         self._list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
@@ -303,7 +308,15 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         buttons.addWidget(self._remove_btn)
 
         layout.addLayout(buttons)
-        self.add_field("", container)
+        # One stable anchor for the whole chain. Row widgets are rebuilt on every
+        # scan and reorder, so search must never bind to them (D13).
+        self.add_field(
+            "",
+            container,
+            anchor="chain",
+            anchor_focus=self._list,
+            anchor_text=lambda: (chain_blurb.text(), self._add_btn.text(), self._restore_btn.text()),
+        )
 
         # Pitch accent sources now live in their own Settings → Pitch Accent
         # tab (multi-source first-hit-wins chain), like the frequency sources
