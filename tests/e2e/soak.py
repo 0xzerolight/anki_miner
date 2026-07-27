@@ -187,15 +187,15 @@ def _log_tail(text: str, lines: int = _LOG_TAIL_LINES) -> str:
     return "\n".join(text.splitlines()[-lines:])
 
 
-# Log markers guaranteed to appear in every run (emitted by the presenter in
-# phase 1 + phase 2 of EpisodeProcessor.process_episode). "Step 1/5" is in the
-# show_info call at the top of _phase1_parse; "Step 2/5" at the top of
-# _phase2_filter.
-_LOG_MARKERS_COMMON = ("Step 1/5", "Step 2/5")
+# Log markers guaranteed to appear in every run. The pipeline announces its
+# stage position through ``PresenterProtocol.show_stage``, which GUIPresenter
+# renders as "Step <n> of 5 — <name>"; stage 1 opens _phase1_parse and stage 2
+# opens the known-vocabulary filter.
+_LOG_MARKERS_COMMON = ("Step 1 of 5", "Step 2 of 5")
 
 # Phase-5 creation marker: appears only when the run reached card creation
 # (an all-words-already-known session returns early after phase 2).
-_LOG_MARKER_PROCESS_ONLY = "Step 5/5"
+_LOG_MARKER_PROCESS_ONLY = "Step 5 of 5"
 
 
 def _check_gui_state(
@@ -215,11 +215,11 @@ def _check_gui_state(
     Only called when the run COMPLETED (result captured, no exception) — the
     caller is responsible for guarding.
 
-    ``cards_created`` gates the card-creation-phase assertions (``Step 5/5`` and
+    ``cards_created`` gates the card-creation-phase assertions (``Step 5 of 5`` and
     ``progress_not_stuck``): when all words were already known (``cards_created==0``,
     early return before phase 5) those checks are recorded as data only
     (``ok=True``), not as failures.  The gates fire only when ``cards_created>0``
-    — a run that created cards yet has no Step 5/5 or stuck progress is still
+    — a run that created cards yet has no Step 5 of 5 or stuck progress is still
     a genuine FAIL.
     """
     checks: dict = {}
@@ -251,7 +251,7 @@ def _check_gui_state(
         "desc": "activity log contains at least one line",
     }
 
-    # 3. Common phase markers appear IN ORDER in the log (Step 1/5 then Step 2/5).
+    # 3. Common phase markers appear IN ORDER in the log (Step 1 of 5 then Step 2 of 5).
     # Verify each marker is present AND their indices are strictly increasing.
     marker_indices: list[int] = []
     for marker in _LOG_MARKERS_COMMON:
@@ -276,11 +276,11 @@ def _check_gui_state(
             "desc": "phase markers appear in the log in strictly increasing order",
         }
 
-    # 4. Phase-5 marker: Step 5/5, gated on cards_created > 0: when all words
-    # are already known the pipeline returns early (before phase 5), so Step 5/5
+    # 4. Phase-5 marker: Step 5 of 5, gated on cards_created > 0: when all words
+    # are already known the pipeline returns early (before phase 5), so Step 5 of 5
     # is legitimately absent. Record as data (ok=True) in that case so the
     # early-return path never false-FAILs; a genuine stuck run (cards_created>0
-    # but no Step 5/5) still fails.
+    # but no Step 5 of 5) still fails.
     marker = _LOG_MARKER_PROCESS_ONLY
     key = f"log_contains:{marker}"
     found = marker in log
