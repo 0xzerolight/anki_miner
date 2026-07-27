@@ -332,17 +332,24 @@ def test_handler_refuses_when_jmdict_migration_does_not_stop(main_window, monkey
 
 
 @pytest.mark.parametrize(
-    ("handler", "dialog_target", "token_kind"),
+    ("handler", "dialog_target", "token_kind", "cancels_migration"),
     [
         (
             "_run_setup_wizard_tool",
             "anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard",
             "setup-wizard",
+            # Re-run from Tools: a JMdict migration really can be in flight, and
+            # the wizard's Resources download writes into the same slot.
+            True,
         ),
         (
             "_maybe_offer_first_run_setup",
             "anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard",
             "first-run-setup-wizard",
+            # First run: boot no longer starts the migration ahead of the offer,
+            # so there is nothing to cancel (D26/T12). Boot starting work that
+            # this handler immediately cancelled is the defect that removed it.
+            False,
         ),
     ],
 )
@@ -354,6 +361,7 @@ def test_handler_commits_pending_root_before_config_capture(
     handler,
     dialog_target,
     token_kind,
+    cancels_migration,
 ):
     new_root = tmp_path / "committed-root"
     new_root.mkdir()
@@ -399,7 +407,10 @@ def test_handler_commits_pending_root_before_config_capture(
 
     getattr(main_window, handler)()
 
-    assert order == ["preflight", f"hold:{token_kind}", "cancel", "dialog", "release"]
+    expected = ["preflight", f"hold:{token_kind}"]
+    if cancels_migration:
+        expected.append("cancel")
+    assert order == [*expected, "dialog", "release"]
 
 
 # ---------------------------------------------------------------------------
@@ -559,3 +570,116 @@ def test_first_run_offer_triggers_regardless_of_resource_files(main_window, monk
     main_window._maybe_offer_first_run_setup()
 
     assert calls["run"] == 1
+
+
+# ---------------------------------------------------------------------------
+# The first action, and the one-time optional-boot slot (D26 / T12)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("open_video", [True, False])
+def test_accepted_finish_is_the_only_outcome_that_navigates(main_window, monkeypatch, open_video):
+    from anki_miner.gui.capabilities import CapabilityTarget
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome
+
+    revealed: list[CapabilityTarget] = []
+    monkeypatch.setattr(type(main_window), "reveal_capability", lambda self, target: revealed.append(target))
+    committed: list[object] = []
+    monkeypatch.setattr(type(main_window), "update_config", lambda self, cfg, **kw: committed.append(cfg))
+
+    main_window._commit_setup_wizard_outcome(
+        SetupWizardOutcome(
+            config=main_window.config,
+            consumes_first_run_offer=True,
+            open_video_mining=open_video,
+        ),
+        first_run_offer=True,
+    )
+
+    assert revealed == ([CapabilityTarget("video", "single")] if open_video else [])
+    # The config is committed before the screen that reads it is shown.
+    assert len(committed) == 1
+
+
+def _record_optional_boot_jobs(main_window, monkeypatch):
+    started: list[str] = []
+    for name in ("_run_validation", "_check_for_updates", "_maybe_migrate_jmdict", "_maybe_start_ytdlp_update"):
+        monkeypatch.setattr(type(main_window), name, lambda self, _n=name: started.append(_n))
+    return started
+
+
+def test_optional_boot_work_starts_once_however_many_times_it_is_asked(main_window, monkeypatch):
+    started = _record_optional_boot_jobs(main_window, monkeypatch)
+    main_window._post_setup_boot_started = False
+
+    main_window._start_post_setup_boot_once()
+    main_window._start_post_setup_boot_once()
+
+    assert started == ["_run_validation", "_check_for_updates", "_maybe_migrate_jmdict", "_maybe_start_ytdlp_update"]
+
+
+@pytest.mark.parametrize("consumes", [True, False])
+def test_every_wizard_exit_releases_the_deferred_boot_work(main_window, monkeypatch, consumes):
+    """Skip, Escape and the window close must not leave the app half-booted."""
+    started = _record_optional_boot_jobs(main_window, monkeypatch)
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard",
+        lambda parent, config: _wizard_outcome(config, consumes=consumes),
+    )
+    monkeypatch.setattr(type(main_window), "update_config", lambda self, cfg, **kw: None)
+    main_window.config = replace(main_window.config, first_run_setup_done=False)
+    main_window._first_run_setup_handled = False
+    main_window._post_setup_boot_started = False
+
+    main_window._maybe_offer_first_run_setup()
+
+    assert "_run_validation" in started
+
+
+def test_a_wizard_that_raises_still_releases_the_deferred_boot_work(main_window, monkeypatch):
+    started = _record_optional_boot_jobs(main_window, monkeypatch)
+
+    def boom(parent, config):
+        raise RuntimeError("wizard exploded")
+
+    monkeypatch.setattr("anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard", boom)
+    main_window.config = replace(main_window.config, first_run_setup_done=False)
+    main_window._first_run_setup_handled = False
+    main_window._post_setup_boot_started = False
+
+    main_window._maybe_offer_first_run_setup()
+
+    assert "_run_validation" in started
+
+
+def test_a_mutation_refusal_still_releases_the_deferred_boot_work(main_window, monkeypatch):
+    from contextlib import contextmanager
+
+    started = _record_optional_boot_jobs(main_window, monkeypatch)
+
+    @contextmanager
+    def refuse(_kind):
+        yield False
+
+    monkeypatch.setattr(type(main_window), "_dictionary_mutation_guard", lambda self, kind: refuse(kind))
+    main_window.config = replace(main_window.config, first_run_setup_done=False)
+    main_window._first_run_setup_handled = False
+    main_window._post_setup_boot_started = False
+
+    main_window._maybe_offer_first_run_setup()
+
+    assert "_run_validation" in started
+    # A refusal must not consume the one-time offer either.
+    assert main_window._first_run_setup_handled is False
+
+
+def test_shutdown_starts_no_late_optional_boot_work(main_window, monkeypatch, qtbot):
+    from PyQt6.QtGui import QCloseEvent
+
+    started = _record_optional_boot_jobs(main_window, monkeypatch)
+    monkeypatch.setattr(main_window.background_tasks, "shutdown", lambda tabs: [])
+    main_window.closeEvent(QCloseEvent())
+
+    main_window._start_post_setup_boot_once()
+
+    assert started == []

@@ -109,6 +109,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self._first_run_setup_handled = False
         self._shortcut_work_in_flight = False
         self._boot_committed = False
+        # Optional startup work runs once per launch, behind first-run setup.
+        # Set at close so a wizard exiting during shutdown starts nothing.
+        self._post_setup_boot_started = False
         self._stale_dict_prompt_handled = False
         # Set the first time closeEvent persists geometry + route. A deferred
         # close runs closeEvent again after the window has been hidden, and the
@@ -227,17 +230,42 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if suppress_optional:
             return
 
+        if not self.config.first_run_shortcut_done:
+            QTimer.singleShot(0, self._maybe_create_shortcut_on_first_run)
+
+        # First-run setup goes FIRST, and everything optional waits behind it.
+        # Boot used to start the JMdict migration and then have the wizard
+        # cancel it two lines later, so the very first launch spent its startup
+        # doing work it immediately threw away — and the wizard's own Resources
+        # download writes into the same dictionary slot the migration targets.
+        if not self.config.first_run_setup_done:
+            QTimer.singleShot(0, self._maybe_offer_first_run_setup)
+        else:
+            self._start_post_setup_boot_once()
+
+    def _start_post_setup_boot_once(self) -> None:
+        """Start every optional startup job, at most once per launch.
+
+        The single choke point every first-run exit path funnels through —
+        Finish, Skip, Escape, the window close, an exception, and the mutation
+        guard refusing. Guarded rather than ordered, because those paths cannot
+        all be made to happen exactly once each: the offer can be refused and
+        re-offered, and a refusal must not consume the one-time work either.
+
+        Deliberately not a state machine. It starts the same four jobs
+        ``commit_boot`` always started, in the same order; the only new thing is
+        that it can be called from more than one place and still run once.
+        """
+        if self._post_setup_boot_started:
+            return
+        self._post_setup_boot_started = True
+
         self._validation_silent = True
         self._run_optional_boot_step("startup validation", self._run_validation)
         if self.config.check_for_updates:
             self._run_optional_boot_step("update check", self._check_for_updates)
         self._run_optional_boot_step("JMdict migration", self._maybe_migrate_jmdict)
         self._run_optional_boot_step("yt-dlp update", self._maybe_start_ytdlp_update)
-
-        if not self.config.first_run_shortcut_done:
-            QTimer.singleShot(0, self._maybe_create_shortcut_on_first_run)
-        if not self.config.first_run_setup_done:
-            QTimer.singleShot(0, self._maybe_offer_first_run_setup)
         QTimer.singleShot(0, self._maybe_prompt_stale_dictionaries)
 
     @staticmethod
@@ -909,7 +937,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         *,
         first_run_offer: bool,
     ) -> None:
-        """Merge live one-way flags, then persist one wizard outcome."""
+        """Merge live one-way flags, persist one wizard outcome, then act on it."""
+        from anki_miner.gui.capabilities import CapabilityTarget
+
         live_config = self.config
         setup_done = (
             live_config.first_run_setup_done or outcome.consumes_first_run_offer
@@ -922,6 +952,11 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             first_run_setup_done=setup_done,
         )
         self.update_config(merged)
+        # Strictly after the commit: the screen the user lands on rebuilds from
+        # the config, and taking them there first would show them the setup they
+        # just replaced.
+        if outcome.open_video_mining:
+            self.reveal_capability(CapabilityTarget("video", "single"))
 
     def _restyle_mined_cards(self) -> None:
         """Tools-menu handler: re-apply the built-in glossary styling to already-mined cards.
@@ -999,6 +1034,11 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         file presence, since the wizard's Resources step covers those. The
         wizard's returned partial config is always persisted. Dismissal leaves
         the offer unconsumed; failures are logged and re-offered next launch.
+
+        Optional startup work is deferred behind this and released on *every*
+        exit — including a mutation refusal and an exception — so an interrupted
+        first run leaves the app in a normal booted state rather than one with
+        no validation, no update check and no migration until the next launch.
         """
         from anki_miner.gui.widgets.dialogs.setup_wizard import run_setup_wizard
 
@@ -1009,20 +1049,23 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             return
         self._first_run_setup_handled = True
 
-        with self._dictionary_mutation_guard("first-run-setup-wizard") as ready:
-            if not ready:
-                self._first_run_setup_handled = False
-                return
-            # Boot started the legacy JMdict XML migration just before
-            # scheduling this offer; stop it before the wizard captures config.
-            self.background_tasks.cancel_jmdict_migration()
-
-            try:
-                outcome = run_setup_wizard(self, self.config)
-            except Exception:
-                logger.exception("Setup wizard failed")
-                return
-            self._commit_setup_wizard_outcome(outcome, first_run_offer=True)
+        try:
+            with self._dictionary_mutation_guard("first-run-setup-wizard") as ready:
+                if not ready:
+                    self._first_run_setup_handled = False
+                    return
+                # No cancel_jmdict_migration here any more: boot no longer starts
+                # the migration before this offer, which is the point of the
+                # deferral. The re-runnable Tools entry still cancels, because
+                # there a migration really can be in flight.
+                try:
+                    outcome = run_setup_wizard(self, self.config)
+                except Exception:
+                    logger.exception("Setup wizard failed")
+                    return
+                self._commit_setup_wizard_outcome(outcome, first_run_offer=True)
+        finally:
+            self._start_post_setup_boot_once()
 
     def _maybe_prompt_stale_dictionaries(self) -> None:
         """Dispatch the schema-staleness scan off-thread; prompt in the callback (4.0).
@@ -1430,6 +1473,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # geometry is not what the user left behind. One-shot, so a second close
         # attempt during that poll cannot overwrite the good value (D7).
         self._save_session_state()
+
+        # Claim the one-time optional-boot slot before anything is joined. A
+        # first-run wizard can still be open when the app is asked to quit, and
+        # its exit path would otherwise start a validation, an update check and
+        # a migration into a window that is already shutting down.
+        self._post_setup_boot_started = True
 
         # Flush a pending Settings auto-save FIRST. Ordering is load-bearing:
         # background_tasks.shutdown below fans out to SettingsTab.shutdown,
