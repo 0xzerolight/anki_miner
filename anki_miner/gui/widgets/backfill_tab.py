@@ -280,6 +280,15 @@ class CardBackfillTab(QWidget):
         """The one reason this screen gives for refusing a dropped payload."""
         return self.tr("Card Backfill works on the selected Anki deck.")
 
+    def _may_answer_a_drop(self) -> bool:
+        """Whether the status line is free to carry a drop refusal.
+
+        During a run that line is the only account of what the run is doing, so
+        a stray drag must not overwrite ``Scanning…`` with a note about decks.
+        The drag is simply not accepted then, and the cursor already says no.
+        """
+        return self.worker_thread is None
+
     def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:  # noqa: N802 - Qt override
         """Accept the drag so the refusal can be delivered, and state it now.
 
@@ -287,7 +296,7 @@ class CardBackfillTab(QWidget):
         take. Accepting only buys the chance to answer -- an ignored drag is the
         silent non-acceptance D50 exists to remove.
         """
-        if event is None:
+        if event is None or not self._may_answer_a_drop():
             return
         if not urls_from_event(event):
             return
@@ -305,8 +314,9 @@ class CardBackfillTab(QWidget):
         """Refuse the payload and point at the control that does the choosing."""
         if event is None:
             return
-        self.status_label.setText(self._drop_refusal())
-        self.deck_combo.setFocus(Qt.FocusReason.OtherFocusReason)
+        if self._may_answer_a_drop():
+            self.status_label.setText(self._drop_refusal())
+            self.deck_combo.setFocus(Qt.FocusReason.OtherFocusReason)
         event.ignore()
 
     # ------------------------------------------------------------------

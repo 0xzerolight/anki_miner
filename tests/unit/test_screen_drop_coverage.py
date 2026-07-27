@@ -234,6 +234,18 @@ class TestBackfillRefusesEverything:
         assert backfill_tab.status_label.text() == "Card Backfill works on the selected Anki deck."
         assert backfill_tab.focusWidget() is backfill_tab.deck_combo
 
+    def test_a_run_in_progress_keeps_its_own_status_line(self, backfill_tab, tmp_path):
+        """The status line is the run's only account of itself; a drag cannot take it."""
+        episode = tmp_path / "ep01.mkv"
+        episode.touch()
+        backfill_tab.worker_thread = MagicMock()
+        backfill_tab.status_label.setText("Scanning…")
+
+        _enter(backfill_tab, _mime(urls=(_local(episode),)))
+        _drop(backfill_tab, _mime(urls=(_local(episode),)))
+
+        assert backfill_tab.status_label.text() == "Scanning…"
+
     def test_the_reason_is_taken_back_down_when_the_drag_leaves(self, backfill_tab, tmp_path):
         episode = tmp_path / "ep01.mkv"
         episode.touch()
