@@ -102,14 +102,10 @@ def test_retry_slot_error_reenables_button(tab, tmp_path, monkeypatch):
 
     monkeypatch.setattr(settings_tab_module, "purge_miss_markers", _boom)
 
-    warned: dict[str, object] = {}
-    monkeypatch.setattr(
-        settings_tab_module.QMessageBox,
-        "warning",
-        lambda parent, title, text, *a, **k: warned.update(text=text),
-    )
-
     tab._on_retry_missing_audio()
 
-    assert "disk on fire" in str(warned["text"])
+    issue = tab.issue_banner().current_issue()
+    assert issue is not None
+    assert "disk on fire" not in issue.summary
+    assert "disk on fire" in issue.details
     assert tab.audio_panel._retry_missing_btn.isEnabled()

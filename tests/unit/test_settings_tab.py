@@ -450,16 +450,16 @@ class TestImportInvalidSubtitleRegex:
         try:
             monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **k: (str(source), ""))
             monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
-            warnings: list = []
-            monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: warnings.append(a) or None)
-
             received: list[AnkiMinerConfig] = []
             widget.config_changed.connect(received.append)
 
             widget._on_import_settings()
 
-            # The invalid pattern must surface a warning, not be silently applied.
-            assert len(warnings) == 1
+            # The invalid pattern must surface, not be silently applied — as a
+            # screen issue on Settings now, not a modal (D24).
+            issue = widget.issue_banner().current_issue()
+            assert issue is not None
+            assert "rejected" in issue.summary
             assert len(received) == 1
             # The prior disabled filter stays intact; invalid imported text is not stored.
             assert received[0].use_subtitle_regex_filter is False
