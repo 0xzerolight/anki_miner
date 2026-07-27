@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
@@ -65,6 +66,12 @@ class BatchProcessingTab(MiningTabBase):
 
     #: Tables and queue rows genuinely use the extra width.
     PAGE_WIDTH = PageWidth.DATA
+
+    #: Published so this screen's Cancel gets a live wait clock and the pinned
+    #: bar gets a stage and a progress bar (D17, D22). One id for both paths --
+    #: the screen runs either the folder pairs or the series queue, never both.
+    TASK_ID = "run.batch"
+    TASK_OWNER = CapabilityTarget("video", "batch")
 
     def __init__(
         self,
@@ -379,6 +386,7 @@ class BatchProcessingTab(MiningTabBase):
 
         # Log start
         self.presenter.show_info(tr_format(self.tr("Starting batch processing of %1 episodes..."), len(pairs)))
+        self._publish_task_start(self.tr("Batch mining"), total=len(pairs))
 
         # Tear down the previous run before building a new processor so leaked
         # sqlite handles / Session sockets can't survive into this run (Windows
@@ -449,6 +457,7 @@ class BatchProcessingTab(MiningTabBase):
 
         # Whole series per item on this path, so the receipt counts series.
         self._begin_receipt(self.batch_queue.pending_count, item_noun=self.tr("series"))
+        self._publish_task_start(self.tr("Batch mining"), total=self.batch_queue.pending_count)
 
         curation_cb = self._curation_bridge if self.review_words_checkbox.isChecked() else None
         self.worker_thread = BatchQueueWorkerThread(
@@ -563,6 +572,7 @@ class BatchProcessingTab(MiningTabBase):
     def _on_cancel_clicked(self) -> None:
         """Cancel the run: one verb, no prompt, and no invented progress after it."""
         self._cancel_requested = True
+        self._publish_task_cancelling()
         # Release any open curation dialog first so the worker doesn't hang (Issue #60).
         self._cancel_active_curation_dialog()
         if self.worker_thread is not None:
@@ -633,6 +643,7 @@ class BatchProcessingTab(MiningTabBase):
         # Bar-only advance (no status): keeps the fill correct when a pair
         # errors mid-sweep; monotone with the composed per-episode updates.
         self.overall_progress_widget.set_composed(completed, 0, total)
+        self._publish_task_count(current=completed, total=total or None, detail="")
 
     def _on_item_started(self, item_id: str, display_name: str) -> None:
         """Called when processing starts for an item.
@@ -704,6 +715,7 @@ class BatchProcessingTab(MiningTabBase):
         self._run_terminal_ids.add(item_id)
         self._items_done = len(self._run_terminal_ids)
         self.overall_progress_widget.set_composed(self._items_done, 0, self._items_total)
+        self._publish_task_count(current=self._items_done, total=self._items_total or None, detail="")
 
     def _on_queue_finished(self, total_cards: int) -> None:
         """Called when entire queue finishes.
@@ -801,6 +813,7 @@ class BatchProcessingTab(MiningTabBase):
         that made a long episode look like a stalled batch.
         """
         self._stage_line.on_stage(index, total, name)
+        self._publish_task_stage(index, total, name)
 
     def _on_progress_start(self, total: int, description: str) -> None:
         """Per-episode stage start: status only (the bar counts whole items).

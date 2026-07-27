@@ -968,40 +968,25 @@ class TestRemoveAndClear:
         assert tab._queue.all_items() == []
         assert tab.list_widget.count() == 0
 
-    def test_clear_during_run_preserves_processing(self, tab):
-        item1 = _add_ready_item(tab, "https://youtu.be/v1")
-        _add_ready_item(tab, "https://youtu.be/v2")
-        tab._on_mine_clicked()
-        tab._on_item_started(0)  # item1 -> PROCESSING
-
-        tab._on_clear_clicked()
-
-        remaining = tab._queue.all_items()
-        assert remaining == [item1]
-        assert tab.list_widget.count() == 1
-
-    def test_clear_during_run_skips_dropped_items_in_worker(self, tab):
-        """Mid-run Clear must reach the worker, not just the GUI model (T-23).
-
-        The worker iterates its constructor snapshot, so dropping items from
-        the tab's queue alone still mined them — cards for rows that no
-        longer existed.
-        """
+    def test_clear_during_run_is_a_locked_no_op(self, tab):
+        """D29-A: Mine freezes the list, so Clear leaves every row where it is."""
         item1 = _add_ready_item(tab, "https://youtu.be/v1")
         item2 = _add_ready_item(tab, "https://youtu.be/v2")
-        item3 = _add_ready_item(tab, "https://youtu.be/v3")
         tab._on_mine_clicked()
         tab._on_item_started(0)  # item1 -> PROCESSING
-        worker = tab.worker_thread
 
         tab._on_clear_clicked()
 
-        skipped = [c.args[0] for c in worker.try_skip_item.call_args_list]
-        assert skipped == [item2, item3]  # PROCESSING item1 is preserved
-        assert item1 not in skipped
+        assert tab._queue.all_items() == [item1, item2]
+        assert tab.list_widget.count() == 2
 
-    def test_remove_during_run_skips_item_in_worker(self, tab):
-        """Removing a single row mid-run must also reach the worker (T-23)."""
+    def test_remove_during_run_is_a_locked_no_op(self, tab):
+        """D29-A: neither the GUI model nor the worker is touched mid-run.
+
+        The worker iterates its constructor snapshot, so a mid-run removal only
+        ever hid the row from the user while its cards were still created. The
+        list is frozen instead.
+        """
         _add_ready_item(tab, "https://youtu.be/v1")
         item2 = _add_ready_item(tab, "https://youtu.be/v2")
         tab._on_mine_clicked()
@@ -1010,16 +995,18 @@ class TestRemoveAndClear:
 
         tab._on_remove_clicked(item2)
 
-        worker.try_skip_item.assert_called_once_with(item2)
+        worker.try_skip_item.assert_not_called()
+        assert item2 in tab._queue.all_items()
 
     def test_remove_refused_by_worker_claim_preserves_row(self, tab):
+        """The claim race is still guarded for a removal that reaches _drop_item."""
         _add_ready_item(tab, "https://youtu.be/v1")
         item2 = _add_ready_item(tab, "https://youtu.be/v2")
         tab._on_mine_clicked()
         worker = tab.worker_thread
         worker.try_skip_item.return_value = False
 
-        tab._on_remove_clicked(item2)
+        tab._drop_item(item2)
 
         assert item2 in tab._queue.all_items()
         assert tab.list_widget.count() == 2
@@ -1107,11 +1094,10 @@ class TestIdxSnapshotBug:
         tab._on_item_finished(0, MagicMock(cards_created=2), None, 1)
         assert item_a.status == YouTubeItemStatus.COMPLETED
 
-        # User removes the COMPLETED row for A while the run is still in flight.
+        # The queue is frozen mid-run (D29-A), so the COMPLETED row stays put
+        # and the snapshot the idx signals resolve against is unchanged.
         tab._on_remove_clicked(item_a)
-        # A is gone from the live queue…
-        assert item_a not in tab._queue.all_items()
-        # …but _run_items snapshot still holds all three in order.
+        assert item_a in tab._queue.all_items()
         assert tab._run_items == [item_a, item_b, item_c]
 
         # Worker fires item_started(1) — must land on B, not C.

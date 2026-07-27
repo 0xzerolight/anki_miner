@@ -41,6 +41,7 @@ from anki_miner.gui.widgets.base import (
     PageWidth,
     ScreenIssue,
     ScreenIssueHost,
+    TaskPublisherMixin,
     WorkflowActionBar,
     configure_card_layout,
     install_workflow_shell,
@@ -80,9 +81,12 @@ class _ToolTabStrings:
     complete_template: str
     select_output_folder: str
     output_default: str
+    #: What this tool's run is called on a surface that is not this screen
+    #: (the status bar, the pinned action bar). Empty publishes nothing.
+    task_title: str = ""
 
 
-class _ToolTabBase(ScreenIssueHost, QWidget):
+class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     """Behaviour shared by the file-processing tool tabs. See module docstring."""
 
     # --- Attributes the subclass provides (declared for the type checker) ---
@@ -235,6 +239,23 @@ class _ToolTabBase(ScreenIssueHost, QWidget):
         self.clear_output_button.hide()
 
     # ------------------------------------------------------------------
+    # Run lifecycle
+    # ------------------------------------------------------------------
+
+    def _begin_tool_run(self, total: int) -> None:
+        """Open a run: clear the cancel flag and publish it to the registry.
+
+        Publishing is what gives this screen a live wait-clock and the pinned
+        bar's stage/progress; without it Cancel froze the bar and then went
+        silent (D22, D17).
+
+        Args:
+            total: Real number of files or pairs this run will process.
+        """
+        self._cancelled = False
+        self._publish_task_start(self._strings.task_title, total=total)
+
+    # ------------------------------------------------------------------
     # Worker signal slots
     # ------------------------------------------------------------------
 
@@ -243,6 +264,7 @@ class _ToolTabBase(ScreenIssueHost, QWidget):
         # reports is shown in the message instead of being folded into the bar,
         # where it made a long file look like a stalled run.
         self.progress_widget.set_composed(idx, 0, self._item_total(), message)
+        self._publish_task_count(current=idx, total=self._item_total(), detail=message)
 
     def _on_file_finished(self, idx: int, out_path: object, error_str: object) -> None:
         # Whole-file advance in the same percent unit system as set_composed
@@ -250,6 +272,7 @@ class _ToolTabBase(ScreenIssueHost, QWidget):
         total = self._item_total()
         if total:
             self.progress_widget.set_percent(int((idx + 1) / total * 100))
+        self._publish_task_count(current=idx + 1, total=total or None, detail="")
         if error_str:
             self.log_widget.append_error(str(error_str))
         else:
@@ -269,6 +292,13 @@ class _ToolTabBase(ScreenIssueHost, QWidget):
         )
 
     def _on_queue_finished(self, outcome: object = TerminalOutcome.SUCCESS) -> None:
+        cancelled = self._cancelled or outcome is TerminalOutcome.CANCELLED
+        self._publish_task_finish(
+            self._task_outcome(
+                cancelled=cancelled,
+                failed=outcome in (TerminalOutcome.PARTIAL, TerminalOutcome.FAILED),
+            )
+        )
         self._primary_button.setEnabled(True)
         self.cancel_button.hide()
         # Reset for the next run's cancel button.
@@ -301,6 +331,9 @@ class _ToolTabBase(ScreenIssueHost, QWidget):
     def _on_cancel(self) -> None:
         """Cancel the run: one verb, no prompt, no invented progress after it."""
         self._cancelled = True
+        # Told to the registry first, so every surface watching this run freezes
+        # its numbers and starts the wait clock at the same instant (D22).
+        self._publish_task_cancelling()
         if self.worker_thread is not None:
             self.worker_thread.cancel()
         self.cancel_button.setText(self._strings.cancelling)

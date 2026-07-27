@@ -24,6 +24,7 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING
 
+from PyQt6.QtCore import QT_TRANSLATE_NOOP
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -36,6 +37,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING, TYPOGRAPHY
 from anki_miner.gui.utils.fonts import JAPANESE_BODY, apply_japanese_block_format, apply_japanese_font
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
@@ -72,6 +74,13 @@ class ReadingTextTab(_ReadingMiningTabBase):
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
     PAGE_WIDTH = PageWidth.FORM
+
+    #: Published so this screen's Cancel gets a live wait clock and the
+    #: pinned bar gets a stage and a progress bar (D17, D22).
+    TASK_ID = "queue.reading.text"
+    TASK_OWNER = CapabilityTarget("reading", "text")
+    #: Name this run carries away from this screen.
+    TASK_TITLE = QT_TRANSLATE_NOOP("ReadingTab", "Text mining")
 
     def __init__(
         self,

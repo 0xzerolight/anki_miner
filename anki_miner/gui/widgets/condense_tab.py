@@ -47,6 +47,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import reveal_settings
 from anki_miner.gui.utils.run_off_thread import run_off_thread
@@ -115,6 +116,11 @@ class CondenseTab(_ToolTabBase):
     #: A label beside its control; a wider window buys gutters, not longer inputs.
     PAGE_WIDTH = PageWidth.FORM
 
+    #: Published so this screen's Cancel gets a live wait clock and the
+    #: pinned bar gets a stage and a progress bar (D17, D22).
+    TASK_ID = "tools.condense"
+    TASK_OWNER = CapabilityTarget("subtitles", "condense")
+
     #: Where this tool last wrote — remembered separately from its inputs (D7).
     OUTPUT_HISTORY_KEY = "tools.condense.output"
 
@@ -162,6 +168,7 @@ class CondenseTab(_ToolTabBase):
             complete_template=self.tr("Complete — %1 files processed"),
             select_output_folder=self.tr("Select Output Folder"),
             output_default=self.tr("Next to source"),
+            task_title=self.tr("Audio condensing"),
         )
 
         self._setup_ui()
@@ -774,7 +781,7 @@ class CondenseTab(_ToolTabBase):
             self.log_widget.append_error(self.tr("Output directory is not writable: ") + str(check_dir))
             return
 
-        self._cancelled = False
+        self._begin_tool_run(len(items))
         self._total_files = len(items)
 
         # Single-file mode honors the per-file track picks; folder mode auto-detects.
