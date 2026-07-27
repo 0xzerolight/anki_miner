@@ -39,7 +39,7 @@ from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import reveal_settings
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
-from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
+from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
 from anki_miner.gui.workers.subtitle_gen_worker import SubtitleGenWorker
 from anki_miner.services.asr import _engine, model_manager
 from anki_miner.utils.file_pairing import FilePairMatcher
@@ -201,6 +201,9 @@ class SubtitleCreationTab(_ToolTabBase):
             file_mode=True,
             file_filter=VIDEO_FILE_FILTER,
             history_key="tools.generate.inputs",
+            drop_validator=accepts_suffixes(
+                FilePairMatcher.VIDEO_EXTENSIONS, self.tr("This field takes a video file.")
+            ),
         )
         layout.addWidget(self.file_selector)
 

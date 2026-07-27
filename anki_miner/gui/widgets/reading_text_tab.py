@@ -14,16 +14,19 @@ The worker OWNS the item lifecycle (it sets ``status``/``cards_created``/
 ``error_message`` on the item, on the worker thread, before emitting its
 signals), so this tab's signal slots are READ-ONLY on item state.
 
-No drag-drop overrides: QPlainTextEdit accepts text drops natively. Text
-curation is table-only (the base ``(None, lookup_fn)`` context — only manga
-overrides ``_build_curation_context``).
+No tab-level drag-drop overrides: QPlainTextEdit accepts text drops natively.
+A dragged FILE is refused by :class:`_RefuseFileDrops` rather than inserted as
+its own path (D50). Text curation is table-only (the base ``(None, lookup_fn)``
+context — only manga overrides ``_build_curation_context``).
 """
 
 from __future__ import annotations
 
 import contextlib
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
+from PyQt6.QtCore import QEvent, QObject
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -53,6 +56,46 @@ if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.interfaces.presenter import PresenterProtocol
     from anki_miner.orchestration import EpisodeProcessor
+
+
+class _RefuseFileDrops(QObject):
+    """Let text land in an editor, and refuse a dragged file out loud (D50).
+
+    ``QPlainTextEdit`` accepts a file drag and inserts its path as text, so the
+    drop looks accepted and the user mines a file name. Installed on the editor
+    and its viewport, this eats file drags at every stage -- so the cursor never
+    promises a drop that would be wrong -- and reports the reason once, on
+    release. Plain-text drags are untouched.
+    """
+
+    #: The three stages a file drag reaches. All three are eaten together, or
+    #: the cursor says "yes" right up to the moment the drop is refused.
+    _DRAG_STAGES = (QEvent.Type.DragEnter, QEvent.Type.DragMove, QEvent.Type.Drop)
+
+    def __init__(self, parent: QObject, *, reason: str, report: Callable[[str], None]) -> None:
+        """Initialize the filter.
+
+        Args:
+            parent: Owner; keeps the filter alive as long as the editor.
+            reason: The already-translated sentence shown on refusal.
+            report: Where the reason goes -- the tab's Activity log.
+        """
+        super().__init__(parent)
+        self._reason = reason
+        self._report = report
+
+    def eventFilter(self, obj: QObject | None, event: QEvent | None) -> bool:  # noqa: N802 - Qt override
+        """Eat file drags; pass everything else, including text drags, through."""
+        if event is None or event.type() not in self._DRAG_STAGES:
+            return super().eventFilter(obj, event)
+        mime = getattr(event, "mimeData", None)
+        data = mime() if callable(mime) else None
+        if data is None or not data.hasUrls():
+            return super().eventFilter(obj, event)
+        event.ignore()
+        if event.type() == QEvent.Type.Drop:
+            self._report(self._reason)
+        return True
 
 
 class ReadingTextTab(_ReadingMiningTabBase):
@@ -171,6 +214,18 @@ class ReadingTextTab(_ReadingMiningTabBase):
         self.text_edit = QPlainTextEdit()
         self.text_edit.setPlaceholderText(self.tr("Paste text here…"))
         self.text_edit.setMinimumHeight(140)
+        # Text drops land natively; a dragged FILE used to be inserted as its
+        # own path, which reads as "accepted" and mines a file name (D50). The
+        # filter refuses those and says where files are mined instead.
+        self._file_drop_filter = _RefuseFileDrops(
+            self.text_edit,
+            reason=self.tr("Drop or paste text here; files are not supported."),
+            report=lambda reason: self.log_widget.append_warning(reason),
+        )
+        self.text_edit.installEventFilter(self._file_drop_filter)
+        viewport = self.text_edit.viewport()
+        if viewport is not None:
+            viewport.installEventFilter(self._file_drop_filter)
         # What the user pastes here is the Japanese they came to mine, not
         # interface chrome: the Japanese face, a reading size, and the looser
         # leading (decision D45-B).
