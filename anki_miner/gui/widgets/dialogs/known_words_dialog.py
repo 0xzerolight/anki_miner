@@ -24,7 +24,11 @@ from PyQt6.QtWidgets import (
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
-from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
+from anki_miner.gui.utils.qt_helpers import (
+    add_min_max_buttons,
+    configure_data_view,
+    install_copy_rows,
+)
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.services.known_word_db import KnownWordDB
@@ -83,6 +87,8 @@ class KnownWordsManagerDialog(QDialog):
 
         self.word_list = QListWidget()
         self.word_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
+        configure_data_view(self.word_list)
+        install_copy_rows(self.word_list)
         layout.addWidget(self.word_list)
 
         self.count_label = QLabel()
