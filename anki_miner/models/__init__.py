@@ -4,6 +4,7 @@ from .card_payload import CardPayload
 from .media import MediaData
 from .processing import (
     CANCELLED_ERROR,
+    AnkiWriteState,
     MiningOutcome,
     ProcessingResult,
     TerminalOutcome,
@@ -23,6 +24,7 @@ __all__ = [
     "MediaData",
     "CardPayload",
     "ProcessingResult",
+    "AnkiWriteState",
     "MiningOutcome",
     "TerminalOutcome",
     "classify_result",

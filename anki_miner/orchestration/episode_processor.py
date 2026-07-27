@@ -23,7 +23,14 @@ from PyQt6.QtCore import QCoreApplication
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiMinerException, SetupError
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
-from anki_miner.models import CANCELLED_ERROR, CardPayload, MediaData, ProcessingResult, TokenizedWord
+from anki_miner.models import (
+    CANCELLED_ERROR,
+    AnkiWriteState,
+    CardPayload,
+    MediaData,
+    ProcessingResult,
+    TokenizedWord,
+)
 from anki_miner.models.youtube import FetchedMedia, SubMode
 from anki_miner.orchestration.audio_stage import AudioStage
 from anki_miner.orchestration.stage_weighted_progress import StageWeightedProgress
@@ -34,6 +41,7 @@ from anki_miner.services import (
     SubtitleParserService,
     WordFilterService,
 )
+from anki_miner.services.anki_service import is_transient_anki_transport_error
 from anki_miner.services.definition_service import collect_dictionary_css_entries
 from anki_miner.services.dictionary.card_style_block import attach_card_style_block
 from anki_miner.services.frequency.multi_frequency_service import harmonic_rank, min_rank
@@ -1406,18 +1414,27 @@ class EpisodeProcessor:
         the video-only audio-stream-cache invalidation, the reading occurrence
         floor — lives in the caller's ``body`` closure.
         """
+        # Reset the run-scoped Anki accumulators FIRST — before the pre-flight
+        # gates, which can raise SetupError straight out of this method. A
+        # caller that catches that raise still needs the truth about THIS run:
+        # on a shared processor/service (Batch mines every pair through one
+        # AnkiService) the previous item's confirmed write would otherwise still
+        # be standing, and its ids would be attributed to an item that never got
+        # as far as Anki.
+        #
+        # * last_created_note_ids: the except handlers harvest ONLY IDs created
+        #   during THIS run (OVH-008).
+        # * anki_write_state: nothing has been submitted yet, so the honest
+        #   answer is NO_NOTE_WRITE. create_cards_batch escalates it from here
+        #   and never resets it, so this line is the single run boundary (D30).
+        self.anki_service.last_created_note_ids = []
+        self.anki_service.anki_write_state = AnkiWriteState.NO_NOTE_WRITE
+
         self.check_dictionary_staleness()
         self._preflight_card_target()
         self.check_offline_dictionary()
         run_temp_folder = self._allocate_run_temp_folder()
         keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
-
-        # Reset the partial-IDs accumulator before this run so that if it fails
-        # mid-batch the except handlers harvest ONLY IDs created during THIS run,
-        # not stale IDs left over from a prior run on the same processor instance
-        # (OVH-008). create_cards_batch resets it again at its own start — this
-        # guard is belt-and-suspenders for a failure before phase 5 even runs.
-        self.anki_service.last_created_note_ids = []
 
         # Bridge the caller's cancel_event into this run's cancellation
         # checkpoints for the duration of this call only: the phase checkpoints
@@ -1428,12 +1445,12 @@ class EpisodeProcessor:
         if cancel_event is not None:
             self._external_cancel = cancel_event.is_set
         try:
-            return body(run_temp_folder)
+            return self._stamp_write_provenance(body(run_temp_folder))
         except AnkiMinerException as e:
             ctx.errors.append(str(e))
             partial_ids = list(self.anki_service.last_created_note_ids)
             self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
-            return self._partial_failure_result(ctx, partial_ids)
+            return self._stamp_write_provenance(self._partial_failure_result(ctx, partial_ids), failure=e)
         except MemoryError:
             raise
         except Exception as e:
@@ -1443,7 +1460,7 @@ class EpisodeProcessor:
             self.presenter.show_error(
                 tr_format(QCoreApplication.translate("EpisodeProcessor", "Unexpected error: %1"), str(e))
             )
-            return self._partial_failure_result(ctx, partial_ids)
+            return self._stamp_write_provenance(self._partial_failure_result(ctx, partial_ids), failure=e)
         finally:
             if cancel_event is not None:
                 self._external_cancel = None
@@ -1680,6 +1697,30 @@ class EpisodeProcessor:
             return result
 
         return self._run_pipeline(ctx, cancel_event, _body)
+
+    def _stamp_write_provenance(
+        self,
+        result: ProcessingResult,
+        *,
+        failure: BaseException | None = None,
+    ) -> ProcessingResult:
+        """Record what this run can prove about Anki note writes (D30).
+
+        The single funnel: every ``ProcessingResult`` :meth:`_run_pipeline`
+        hands back — success, early phase return, cancellation, partial failure —
+        passes through here, so none can escape still carrying the dataclass
+        default. Automatic retry consumes these two fields; the pipeline is the
+        last place that can see the live service state and the raised exception
+        before both are flattened into ``errors`` strings.
+
+        Fail closed on the write state: a service whose ``anki_write_state`` is
+        not a real :class:`AnkiWriteState` (a stub, a mock, a string) has proved
+        nothing, so it reports the unsafe answer rather than the retryable one.
+        """
+        state = getattr(self.anki_service, "anki_write_state", None)
+        result.anki_write_state = state if isinstance(state, AnkiWriteState) else AnkiWriteState.NOTE_WRITE_UNCERTAIN
+        result.failure_is_transient = failure is not None and is_transient_anki_transport_error(failure)
+        return result
 
     def _partial_failure_result(self, ctx: _EpisodeContext, partial_ids: list[int]) -> ProcessingResult:
         """Shared except-handler tail: note any partial cards and build the failure result."""
