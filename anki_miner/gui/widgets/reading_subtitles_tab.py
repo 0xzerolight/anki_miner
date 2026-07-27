@@ -47,7 +47,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
-from anki_miner.gui.utils import file_dialogs, session_state
+from anki_miner.gui.utils import file_dialogs, queue_state_store, session_state
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.qt_helpers import (
     configure_data_view,
@@ -55,6 +55,7 @@ from anki_miner.gui.utils.qt_helpers import (
     install_copy_rows,
     urls_from_event,
 )
+from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.base import PageWidth, configure_card_layout
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
@@ -62,6 +63,7 @@ from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.models import MiningOutcome, result_error_text
 from anki_miner.models.mining_queue import ReadyItemStatus
+from anki_miner.models.reading import ReadingSourceRef
 from anki_miner.models.reading_queue import ReadingQueueItem
 from anki_miner.utils.i18n import tr_format
 
@@ -114,6 +116,9 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
     TASK_OWNER = CapabilityTarget("reading", "subtitles")
     #: Name this run carries away from this screen.
     TASK_TITLE = QT_TRANSLATE_NOOP("ReadingTab", "Subtitle mining")
+
+    #: Stable filename for this list's recovery snapshot (D16-C).
+    QUEUE_STATE_KEY = "queue.reading.subtitles"
 
     def __init__(
         self,
@@ -278,6 +283,52 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         """The listed subtitle files, in list order."""
         items = (self.file_list.item(i) for i in range(self.file_list.count()))
         return [Path(item.text()) for item in items if item is not None]
+
+    # ------------------------------------------------------------------
+    # Durable queue contents (D16-C)
+    # ------------------------------------------------------------------
+
+    def queue_snapshot(self) -> QueueSnapshot:
+        """Describe the file list — which IS this screen's queue — as sources.
+
+        Dropping forty subtitle files in is exactly the twenty minutes of
+        assembly D16-C refuses to throw away on quit. Each row is stored as a
+        file-backed :class:`ReadingSourceRef`, so nothing but a path travels.
+        """
+        items = []
+        for index, path in enumerate(self.listed_paths()):
+            source = queue_state_store.reading_source(ReadingSourceRef(kind="subtitle", path=path, title=path.stem))
+            if source is None:
+                continue
+            items.append(
+                QueueItemSnapshot(
+                    item_id=f"{index}:{path.name}",
+                    source=source,
+                    title=path.name,
+                )
+            )
+        return QueueSnapshot(key=self.QUEUE_STATE_KEY, items=tuple(items))
+
+    def restore_queue_snapshot(self, snapshot: QueueSnapshot) -> int:
+        """Refill the list from ``snapshot``, in order; return the row count.
+
+        Files that have since moved are reported in the log rather than listed:
+        a row naming a path that no longer exists would only fail on Mine.
+        Nothing runs — the list comes back and waits.
+        """
+        if self.worker_thread is not None or self.listed_paths():
+            return 0
+        restored: list[Path] = []
+        for row in snapshot.items:
+            ref = queue_state_store.reading_ref_from_source(row.source)
+            if ref is None or ref.path is None:
+                continue
+            if not ref.path.is_file():
+                self.log_widget.append_warning(tr_format(self.tr("File not found: %1"), str(ref.path)))
+                continue
+            restored.append(ref.path)
+        self._add_paths(restored)
+        return len(restored)
 
     def _add_paths(self, paths: list[Path]) -> None:
         """Append subtitle files to the list, skipping duplicates."""

@@ -53,7 +53,9 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils import queue_state_store
 from anki_miner.gui.utils.qt_helpers import urls_from_event
+from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
 from anki_miner.gui.utils.service_factory import create_episode_processor, create_youtube_fetcher
 from anki_miner.gui.widgets._queue_mining_tab_base import (
     _ListQueueMiningTabBase,
@@ -101,6 +103,9 @@ class YouTubeTab(_ListQueueMiningTabBase):
 
     TASK_ID = "queue.youtube"
     TASK_OWNER = CapabilityTarget("video", "youtube")
+
+    #: Stable filename for this queue's recovery snapshot (D16-C).
+    QUEUE_STATE_KEY = "queue.youtube"
 
     def __init__(
         self,
@@ -330,6 +335,78 @@ class YouTubeTab(_ListQueueMiningTabBase):
         if not url:
             return
         self._add_flow.begin(url)
+
+    # ------------------------------------------------------------------
+    # Durable queue contents (D16-C)
+    # ------------------------------------------------------------------
+
+    def queue_snapshot(self) -> QueueSnapshot:
+        """Describe the queue as URLs and outcomes — never as probe results.
+
+        ``video_info`` names formats, a resolved subtitle mode and a fetched
+        workspace. All three are derived from a probe run against a service that
+        may answer differently tomorrow, and the workspace may already have been
+        cleaned up, so none of it is written. The URL is the durable fact; the
+        row is re-probed on restore.
+        """
+        return QueueSnapshot(
+            key=self.QUEUE_STATE_KEY,
+            items=tuple(
+                QueueItemSnapshot(
+                    item_id=item.item_id,
+                    source=queue_state_store.url_source(item.url, title=self._restorable_title(item)),
+                    title=self._restorable_title(item),
+                    status=queue_state_store.status_from_run_state(item.status.value),
+                    error=item.error_message or "",
+                    result_count=item.cards_created,
+                )
+                for item in self._queue.all_items()
+            ),
+        )
+
+    @staticmethod
+    def _restorable_title(item: YouTubeQueueItem) -> str:
+        """The row's label, preferring the probed title over the placeholder."""
+        if item.video_info is not None and item.video_info.title:
+            return str(item.video_info.title)
+        return item.display_title or ""
+
+    def restore_queue_snapshot(self, snapshot: QueueSnapshot) -> int:
+        """Rebuild the queue from ``snapshot`` in order; return the row count.
+
+        Every restored row is re-probed, because that is the only way to learn
+        again what a probe knew. Rows that had already finished are left alone,
+        and a row that was mid-run comes back saying it was interrupted rather
+        than quietly re-entering the run.
+        """
+        if self.worker_thread is not None or self._queue.all_items():
+            return 0
+        restored = 0
+        reprobe: list[YouTubeQueueItem] = []
+        for row in snapshot.items:
+            url = str(row.source.get("url") or "")
+            if not url:
+                continue
+            item = self._queue.add(url)
+            item.item_id = row.item_id
+            item.cards_created = row.result_count
+            item.display_title = row.title or None
+            if row.is_interrupted:
+                item.status = YouTubeItemStatus.ERROR
+                item.error_message = self.tr("Interrupted when Anki Miner closed")
+            elif row.status == queue_state_store.STATUS_COMPLETED:
+                item.status = YouTubeItemStatus.COMPLETED
+            elif row.status == queue_state_store.STATUS_ERROR:
+                item.status = YouTubeItemStatus.ERROR
+                item.error_message = row.error
+            else:
+                reprobe.append(item)
+            self._render_new_item(item)
+            restored += 1
+        for item in reprobe:
+            self._add_flow.retry_probe(item)
+        self._recompute_buttons()
+        return restored
 
     # ------------------------------------------------------------------
     # Drag and drop (D50): one YouTube URL, added the ordinary way

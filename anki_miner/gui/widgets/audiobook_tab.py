@@ -49,6 +49,8 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils import queue_state_store
+from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._queue_mining_tab_base import (
     _ListQueueMiningTabBase,
@@ -117,6 +119,9 @@ class AudiobookTab(_ListQueueMiningTabBase):
 
     TASK_ID = "queue.audiobook"
     TASK_OWNER = CapabilityTarget("audiobook")
+
+    #: Stable filename for this queue's recovery snapshot (D16-C).
+    QUEUE_STATE_KEY = "queue.audiobook"
 
     def __init__(
         self,
@@ -365,6 +370,63 @@ class AudiobookTab(_ListQueueMiningTabBase):
         self.audio_selector.clear()
         self.subtitle_selector.clear()
         self._recompute_buttons()
+
+    # ------------------------------------------------------------------
+    # Durable queue contents (D16-C)
+    # ------------------------------------------------------------------
+
+    def queue_snapshot(self) -> QueueSnapshot:
+        """Describe the queue in terms that survive quitting.
+
+        A pair is two paths, a status and a count. Nothing here is a worker, a
+        processor or a temporary file — the run that owned those is over.
+        """
+        return QueueSnapshot(
+            key=self.QUEUE_STATE_KEY,
+            items=tuple(
+                QueueItemSnapshot(
+                    item_id=item.item_id,
+                    source=queue_state_store.file_pair_source(item.audio_file, item.subtitle_file),
+                    title=item.audio_file.name,
+                    status=queue_state_store.status_from_run_state(item.status.value),
+                    error=item.error_message or "",
+                    result_count=item.cards_created,
+                )
+                for item in self._queue.all_items()
+            ),
+        )
+
+    def restore_queue_snapshot(self, snapshot: QueueSnapshot) -> int:
+        """Rebuild the queue from ``snapshot`` in order; return the row count.
+
+        Nothing starts: rows come back ready, completed or held, and a row that
+        was mid-run comes back saying so. A row whose files have since moved
+        comes back as a failure rather than as a row that would fail on Mine.
+        """
+        if self.worker_thread is not None or self._queue.all_items():
+            return 0
+        restored = 0
+        for row in snapshot.items:
+            source = row.source
+            item = self._queue.add(Path(str(source["audio"])), Path(str(source["subtitle"])))
+            item.item_id = row.item_id
+            item.cards_created = row.result_count
+            missing = row.missing_paths()
+            if missing:
+                item.status = ReadyItemStatus.ERROR
+                item.error_message = tr_format(self.tr("File not found: %1"), str(missing[0]))
+            elif row.is_interrupted:
+                item.status = ReadyItemStatus.ERROR
+                item.error_message = self.tr("Interrupted when Anki Miner closed")
+            elif row.status == queue_state_store.STATUS_COMPLETED:
+                item.status = ReadyItemStatus.COMPLETED
+            elif row.status == queue_state_store.STATUS_ERROR:
+                item.status = ReadyItemStatus.ERROR
+                item.error_message = row.error
+            self._render_new_item(item)
+            restored += 1
+        self._recompute_buttons()
+        return restored
 
     # ------------------------------------------------------------------
     # Per-tab adapters for the shared list-queue lifecycle

@@ -27,9 +27,10 @@ from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
-from anki_miner.gui.utils import result_copy
+from anki_miner.gui.utils import queue_state_store, result_copy
 from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
 from anki_miner.gui.utils.qt_helpers import urls_from_event
+from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.base import (
@@ -74,6 +75,9 @@ class BatchProcessingTab(MiningTabBase):
     #: the screen runs either the folder pairs or the series queue, never both.
     TASK_ID = "run.batch"
     TASK_OWNER = CapabilityTarget("video", "batch")
+
+    #: Stable filename for this queue's recovery snapshot (D16-C).
+    QUEUE_STATE_KEY = "queue.batch"
 
     def __init__(
         self,
@@ -848,6 +852,79 @@ class BatchProcessingTab(MiningTabBase):
             for item in self.batch_queue.get_all_items()
         )
         self.retry_button.setVisible(has_retryable)
+
+    # ------------------------------------------------------------------
+    # Durable queue contents (D16-C)
+    # ------------------------------------------------------------------
+
+    def queue_snapshot(self) -> QueueSnapshot:
+        """Describe the series queue as folder pairs and outcomes.
+
+        ``committed_pair_keys`` is deliberately absent. It is live run
+        provenance owned by W5-T5, and a restored row is an unknown that never
+        retries automatically — persisting a second, weaker copy of the write
+        journal would only create somewhere for the two to disagree.
+        """
+        return QueueSnapshot(
+            key=self.QUEUE_STATE_KEY,
+            items=tuple(
+                QueueItemSnapshot(
+                    item_id=item.id,
+                    source=queue_state_store.folder_pair_source(
+                        item.video_folder, item.subtitle_folder, offset=item.subtitle_offset
+                    ),
+                    title=item.display_name,
+                    status=queue_state_store.status_from_run_state(item.status.value),
+                    retry_count=item.retry_count,
+                    error=item.error_message or "",
+                    result_count=item.cards_created,
+                )
+                for item in self.batch_queue.get_all_items()
+            ),
+        )
+
+    def restore_queue_snapshot(self, snapshot: QueueSnapshot) -> int:
+        """Rebuild the series queue from ``snapshot``; return the row count.
+
+        A row that was mid-run comes back as an error saying so, which is what
+        keeps it out of the next Process Queue: only the user pressing Retry
+        turns it back into a pending row.
+        """
+        if self._is_processing or self.batch_queue.get_all_items():
+            return 0
+        restored = 0
+        for row in snapshot.items:
+            source = row.source
+            video = Path(str(source["video"]))
+            subtitle = Path(str(source["subtitle"]))
+            status = QueueItemStatus.PENDING.value
+            error = ""
+            missing = row.missing_paths()
+            if missing:
+                status = QueueItemStatus.ERROR.value
+                error = tr_format(self.tr("Folder not found: %1"), str(missing[0]))
+            elif row.is_interrupted:
+                status = QueueItemStatus.ERROR.value
+                error = self.tr("Interrupted when Anki Miner closed")
+            elif row.status == queue_state_store.STATUS_COMPLETED:
+                status = QueueItemStatus.COMPLETED.value
+            elif row.status == queue_state_store.STATUS_ERROR:
+                status = QueueItemStatus.ERROR.value
+                error = row.error
+            self.queue_panel.restore_item(
+                item_id=row.item_id,
+                display_name=row.title,
+                video_folder=video,
+                subtitle_folder=subtitle,
+                subtitle_offset=float(source.get("offset", 0.0) or 0.0),
+                status=status,
+                cards_created=row.result_count,
+                retry_count=row.retry_count,
+                error_message=error,
+            )
+            restored += 1
+        self.queue_panel.update_stats()
+        return restored
 
     def _retry_failed_items(self) -> None:
         """Retry failed items in the batch queue."""
