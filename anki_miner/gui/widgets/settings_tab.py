@@ -3,7 +3,7 @@
 import dataclasses
 import json
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from pathlib import Path
 from typing import Protocol, cast, runtime_checkable
@@ -744,6 +744,17 @@ class SettingsTab(SettingAnchorHost, QWidget):
         for host in self.setting_anchor_hosts():
             anchors.extend(host.setting_anchors())
         return tuple(anchors)
+
+    def setting_ignore_reasons(self) -> Mapping[QWidget, str]:
+        """Widgets across Settings deliberately excluded from anchoring.
+
+        Aggregated like :meth:`setting_anchors`, so the two views never disagree
+        about which surfaces were consulted.
+        """
+        reasons: dict[QWidget, str] = dict(super().setting_ignore_reasons())
+        for host in self.setting_anchor_hosts():
+            reasons.update(host.setting_ignore_reasons())
+        return reasons
 
     def trigger_reimport_all(self, only_ids: frozenset[str] | None = None) -> None:
         """Run the Dictionary → Reimport All flow (4.0 migration prompt hook).

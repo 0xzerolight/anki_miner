@@ -113,8 +113,6 @@ def _unanchored(tab: SettingsTab) -> list[str]:
     """Describe every settable control that resolves to no anchor."""
     anchors = tab.setting_anchors()
     reasons = dict(tab.setting_ignore_reasons())
-    for panel in tab.setting_anchor_hosts():
-        reasons.update(panel.setting_ignore_reasons())
 
     missing = []
     for widget in tab.findChildren(QWidget):
