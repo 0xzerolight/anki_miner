@@ -87,8 +87,15 @@ class ShortcutService:
         return False
 
     @staticmethod
-    def _find_executable() -> Path | None:
-        """Locate the anki_miner_gui executable (or frozen binary)."""
+    def resolve_executable() -> Path | None:
+        """Locate the anki_miner_gui executable (or frozen binary).
+
+        Public because two features need the same answer: the desktop shortcut
+        writes it into a launcher, and the restart-to-apply flow (decision D39b)
+        relaunches it. Both must agree, and both must fail closed rather than
+        guess — a shortcut pointing at a vanished AppImage mount and a restart
+        that never comes back are the same bug.
+        """
         # AppImage runtime sets APPIMAGE to the real .appimage path before Python
         # starts. sys.executable inside an AppImage is the ephemeral /tmp/.mount_*
         # FUSE path that vanishes when the app closes, so the APPIMAGE check MUST
@@ -125,7 +132,7 @@ class ShortcutService:
         """Create a desktop shortcut on the current platform."""
         result = ShortcutResult()
 
-        exe_path = cls._find_executable()
+        exe_path = cls.resolve_executable()
         if exe_path is None:
             result.error = (
                 "Could not find 'anki_miner_gui' executable. "

@@ -76,7 +76,7 @@ _MUTATION_KIND = "profile-switch"
 # Sibling field partitions, same idiom: SettingsTab._EXTERNAL_ONLY_FIELDS
 # (settings_tab.py:120), SettingsTab._RESET_PRESERVE_UI (:141) and
 # GUIConfigManager.machine_specific_fields() (config_manager.py:450).
-_BOOT_ONLY_FIELDS = frozenset({"ui_language", "ui_zoom", "stats_db_path", "log_path"})
+_BOOT_ONLY_FIELDS = frozenset({"ui_language", "ui_zoom", "ui_font_scale", "stats_db_path", "log_path"})
 
 
 def _boot_only_values(config: AnkiMinerConfig) -> dict[str, object]:
@@ -89,6 +89,7 @@ def _boot_only_label(field: str) -> str:
     labels = {
         "ui_language": QCoreApplication.translate("ProfileController", "Language"),
         "ui_zoom": QCoreApplication.translate("ProfileController", "Interface scale"),
+        "ui_font_scale": QCoreApplication.translate("ProfileController", "Text size"),
         "stats_db_path": QCoreApplication.translate("ProfileController", "Statistics database"),
         "log_path": QCoreApplication.translate("ProfileController", "Log file"),
     }
@@ -152,11 +153,20 @@ class _ThemeState:
 
     @classmethod
     def of_config(cls, config: AnkiMinerConfig) -> _ThemeState:
+        """Theme state for an incoming profile.
+
+        ``font_scale`` deliberately keeps the *running* process's boot scale
+        rather than the incoming config's: text size is restart-to-apply
+        (D39b-A), so a profile switch must not silently re-style the window.
+        The incoming value is still persisted, still reaches the Text size
+        combo through ``load_from_config``, and is named in the boot-only
+        restart note.
+        """
         return cls(
             active=config.theme,
             favorites=config.theme_favorites,
             user_dir=config.themes_root,
-            font_scale=config.ui_font_scale,
+            font_scale=Theme.get_font_scale(),
         )
 
     def seed(self) -> None:

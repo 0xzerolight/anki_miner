@@ -967,10 +967,12 @@ class TestCommitBoundary:
         saved = json.loads(GUIConfigManager.CONFIG_FILE.read_text(encoding="utf-8"))
         assert saved["active_profile_id"] == "b"
         assert saved["anki_deck_name"] == "Deck B"
+        # Font scale stays on the process's boot value: text size is
+        # restart-to-apply (D39b-A), so a switch persists it without restyling.
         assert (Theme.get_current_mode(), Theme.get_favorites(), Theme.get_font_scale()) == (
             "dark",
             ("dark", "light"),
-            1.25,
+            1.0,
         )
         assert window.header.last_active_id == "b"
 
@@ -1010,7 +1012,8 @@ class TestThemeReseed:
 
         controller.switch_to("b")
 
-        assert seen == [("dark", ("dark", "light"), 1.25)]
+        # Theme and favorites move; the font scale does not (D39b-A).
+        assert seen == [("dark", ("dark", "light"), 1.0)]
 
     def test_apply_to_app_runs_exactly_once_per_switch(self, controller, window, profile_a, profile_b, theme_applies):
         _two_profiles(profile_a, profile_b)
@@ -1166,13 +1169,41 @@ class TestRestartNote:
 
         assert len(window.status_bar.messages) == seen
 
-    def test_live_only_differences_raise_no_note(self, controller, window, profile_a, profile_b):
-        _two_profiles(profile_a, profile_b)
+    def test_live_only_differences_raise_no_note(self, controller, window, profile_a):
+        """Theme and favorites are re-seeded live, so they say nothing.
+
+        ``profile_b`` is deliberately not used here: it also carries a different
+        ``ui_font_scale``, which is boot-only under D39b-A and therefore *does*
+        earn a note (see below).
+        """
+        _seed("a", profile_a, "A")
+        _seed("b", replace(profile_a, theme="dark", theme_favorites=("dark", "light")), "B")
+        _activate("a", profile_a)
         controller.bootstrap()
 
         controller.switch_to("b")
 
         assert window.status_bar.messages == []
+
+    def test_a_different_text_size_names_itself_in_the_note(self, controller, window, profile_a, profile_b):
+        """Text size is restart-to-apply (D39b-A), so a switch must say so.
+
+        The alternative — re-styling the window on a profile switch — is exactly
+        the ~900 ms dead window the decision removes, and it would arrive
+        unrequested in the middle of switching profiles.
+        """
+        _two_profiles(profile_a, profile_b)
+        controller.bootstrap()
+        boot_scale = Theme.get_font_scale()
+
+        controller.switch_to("b")
+
+        assert window.status_bar.messages
+        message, level = window.status_bar.messages[-1]
+        assert "Text size" in message
+        assert level == "info"
+        # And the running process kept the scale it booted with.
+        assert Theme.get_font_scale() == boot_scale
 
     def test_themes_root_is_applied_live_so_it_raises_no_note(self, controller, window, profile_a, tmp_path):
         """``themes_root`` is NOT boot-only: the Theme re-seed applies it.
@@ -1192,8 +1223,8 @@ class TestRestartNote:
         assert Theme._user_dir == incoming_root
         assert window.status_bar.messages == []
 
-    def test_boot_only_fields_are_the_documented_four(self):
-        assert {"ui_language", "ui_zoom", "stats_db_path", "log_path"} == _BOOT_ONLY_FIELDS
+    def test_boot_only_fields_are_the_documented_five(self):
+        assert {"ui_language", "ui_zoom", "ui_font_scale", "stats_db_path", "log_path"} == _BOOT_ONLY_FIELDS
         for name in _BOOT_ONLY_FIELDS:
             assert name in AnkiMinerConfig.__dataclass_fields__
 

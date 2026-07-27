@@ -83,7 +83,7 @@ class TestFindExecutable:
             patch.object(sys, "executable", str(fake_exe)),
             patch.object(sys, "frozen", True, create=True),
         ):
-            result = ShortcutService._find_executable()
+            result = ShortcutService.resolve_executable()
         assert result == fake_exe.resolve()
 
     def test_uses_appimage_env_when_set(self, tmp_path, monkeypatch):
@@ -99,7 +99,7 @@ class TestFindExecutable:
             patch.object(sys, "executable", str(mount_exe)),
             patch.object(sys, "frozen", True, create=True),
         ):
-            result = ShortcutService._find_executable()
+            result = ShortcutService.resolve_executable()
 
         assert result == real_appimage.resolve()
         assert result != mount_exe.resolve()
@@ -113,10 +113,10 @@ class TestFindExecutable:
                 patch.object(sys, "frozen", False),
                 patch("shutil.which", return_value=str(fake_exe)),
             ):
-                result = ShortcutService._find_executable()
+                result = ShortcutService.resolve_executable()
         else:
             with patch("shutil.which", return_value=str(fake_exe)):
-                result = ShortcutService._find_executable()
+                result = ShortcutService.resolve_executable()
 
         assert result == fake_exe.resolve()
 
@@ -125,15 +125,15 @@ class TestFindExecutable:
             # Ensure not frozen
             if hasattr(sys, "frozen"):
                 with patch.object(sys, "frozen", False):
-                    result = ShortcutService._find_executable()
+                    result = ShortcutService.resolve_executable()
             else:
-                result = ShortcutService._find_executable()
+                result = ShortcutService.resolve_executable()
         assert result is None
 
 
 class TestCreateShortcut:
     def test_returns_failure_when_executable_not_found(self):
-        with patch.object(ShortcutService, "_find_executable", return_value=None):
+        with patch.object(ShortcutService, "resolve_executable", return_value=None):
             result = ShortcutService.create_shortcut()
         assert result.success is False
         assert result.error is not None
@@ -145,7 +145,7 @@ class TestCreateShortcut:
         fake_exe.touch()
 
         with (
-            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch.object(ShortcutService, "resolve_executable", return_value=fake_exe),
             patch("sys.platform", "linux"),
             patch("subprocess.run"),
         ):  # avoid update-desktop-database call
@@ -165,7 +165,7 @@ class TestCreateShortcut:
         fake_exe = Path("/home/u/My Apps/AnkiMiner.AppImage")
 
         with (
-            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch.object(ShortcutService, "resolve_executable", return_value=fake_exe),
             patch("sys.platform", "linux"),
             patch("subprocess.run"),
         ):
@@ -180,7 +180,7 @@ class TestCreateShortcut:
         fake_exe = Path("/opt/100%cool/AnkiMiner")
 
         with (
-            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch.object(ShortcutService, "resolve_executable", return_value=fake_exe),
             patch("sys.platform", "linux"),
             patch("subprocess.run"),
         ):
@@ -194,7 +194,7 @@ class TestCreateShortcut:
         fake_exe = tmp_path / "anki_miner_gui"
         fake_exe.touch()
         with (
-            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch.object(ShortcutService, "resolve_executable", return_value=fake_exe),
             patch("sys.platform", "darwin"),
         ):
             result = ShortcutService.create_shortcut()
@@ -212,7 +212,7 @@ class TestCreateShortcut:
 
         completed = MagicMock(returncode=0, stdout=f"CREATED\t{shortcut_path}\n", stderr="")
         with (
-            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch.object(ShortcutService, "resolve_executable", return_value=fake_exe),
             patch("sys.platform", "win32"),
             patch("subprocess.run", return_value=completed) as mock_run,
         ):
@@ -238,7 +238,7 @@ class TestCreateShortcut:
         completed = MagicMock(returncode=0, stdout=f"EXISTS\t{shortcut_path}\n", stderr="")
 
         with (
-            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch.object(ShortcutService, "resolve_executable", return_value=fake_exe),
             patch("sys.platform", "win32"),
             patch("subprocess.run", return_value=completed) as mock_run,
         ):
@@ -267,7 +267,7 @@ class TestCreateShortcut:
         )
 
         with (
-            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch.object(ShortcutService, "resolve_executable", return_value=fake_exe),
             patch("sys.platform", "win32"),
             patch("subprocess.run", return_value=completed) as mock_run,
         ):
@@ -291,7 +291,7 @@ class TestCreateShortcut:
         )
 
         with (
-            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch.object(ShortcutService, "resolve_executable", return_value=fake_exe),
             patch("sys.platform", "win32"),
             patch("subprocess.run", side_effect=failure) as mock_run,
             caplog.at_level("WARNING", logger="anki_miner.services.shortcut_service"),
@@ -319,7 +319,7 @@ class TestWindowsPowerShellQuoting:
         shortcut_path = Path(r"C:\Users\test\Desktop\Anki Miner.lnk")
         completed = MagicMock(returncode=0, stdout=f"CREATED\t{shortcut_path}\n", stderr="")
         with (
-            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch.object(ShortcutService, "resolve_executable", return_value=fake_exe),
             patch("sys.platform", "win32"),
             patch("subprocess.run", return_value=completed) as mock_run,
         ):
@@ -338,7 +338,7 @@ class TestWindowsPowerShellQuoting:
         shortcut_path = Path(r"C:\Users\test\Desktop\Anki Miner.lnk")
         completed = MagicMock(returncode=0, stdout=f"CREATED\t{shortcut_path}\n", stderr="")
         with (
-            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch.object(ShortcutService, "resolve_executable", return_value=fake_exe),
             patch("sys.platform", "win32"),
             patch("subprocess.run", return_value=completed) as mock_run,
         ):
@@ -357,7 +357,7 @@ class TestSubprocessTimeouts:
         fake_exe.touch()
 
         with (
-            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch.object(ShortcutService, "resolve_executable", return_value=fake_exe),
             patch("sys.platform", "linux"),
             patch("subprocess.run") as mock_run,
         ):
@@ -374,7 +374,7 @@ class TestSubprocessTimeouts:
         fake_exe.touch()
 
         with (
-            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch.object(ShortcutService, "resolve_executable", return_value=fake_exe),
             patch("sys.platform", "linux"),
             patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="update-desktop-database", timeout=5)),
         ):
@@ -394,7 +394,7 @@ class TestSubprocessTimeouts:
         shortcut_path = Path(r"C:\Users\test\Desktop\Anki Miner.lnk")
         completed = MagicMock(returncode=0, stdout=f"CREATED\t{shortcut_path}\n", stderr="")
         with (
-            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch.object(ShortcutService, "resolve_executable", return_value=fake_exe),
             patch("sys.platform", "win32"),
             patch("subprocess.run", return_value=completed) as mock_run,
         ):
@@ -411,7 +411,7 @@ class TestSubprocessTimeouts:
         fake_exe.touch()
 
         with (
-            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch.object(ShortcutService, "resolve_executable", return_value=fake_exe),
             patch("sys.platform", "win32"),
             patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="powershell", timeout=5)),
         ):
@@ -431,7 +431,7 @@ class TestSubprocessTimeouts:
         )
 
         with (
-            patch.object(ShortcutService, "_find_executable", return_value=fake_exe),
+            patch.object(ShortcutService, "resolve_executable", return_value=fake_exe),
             patch("sys.platform", "win32"),
             patch("subprocess.run", side_effect=timeout),
             caplog.at_level("WARNING", logger="anki_miner.services.shortcut_service"),
