@@ -621,7 +621,7 @@ class SingleEpisodeTab(MiningTabBase):
         self.tracks_button.show()
         # Cancel recovery lives HERE (QThread.finished always fires), not in
         # the result slot: the worker suppresses result_ready on a cancelled
-        # run (and on curation reject), so "Cancelling..." would otherwise be
+        # run (and on curation reject), so "Cancelling…" would otherwise be
         # stranded forever.
         if self._cancel_requested:
             # Deliberately no reset(): zeroing the bar at the end of a cancel

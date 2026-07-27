@@ -514,7 +514,7 @@ class DeckBuilderTab(MiningTabBase):
             self.worker_thread.cancel()
         self.cancel_button.setText(self.tr("Cancelling…"))
         self.cancel_button.setEnabled(False)
-        self.progress_widget.set_status(self.tr("Cancelling..."))
+        self.progress_widget.set_status(self.tr("Cancelling…"))
         self.log_widget.append_warning(self.tr("Cancelling…"))
 
     # ------------------------------------------------------------------
