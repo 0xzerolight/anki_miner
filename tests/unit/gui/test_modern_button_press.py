@@ -200,6 +200,23 @@ class TestPressFeedback:
 
         assert button.property("pressProgress") == 0.0
 
+    def test_return_on_a_default_button_tints_it(self, qtbot):
+        """Enter activates a default button, so it gets the same feedback.
+
+        Nothing here knows that: the tint follows Qt's ``pressed``, which is
+        also what decides the activation.
+        """
+        button = ModernButton("Mine Episode")
+        qtbot.addWidget(button)
+        button.setDefault(True)
+        button.setFocus()
+        seen: list[float] = []
+        button.pressed.connect(lambda: seen.append(button.property("pressProgress")))
+
+        qtbot.keyPress(button, Qt.Key.Key_Return)
+
+        assert seen and seen[0] > 0.0
+
     def test_return_on_a_non_default_button_does_not_tint(self, qtbot):
         """Return does not activate this button, so it must not claim it did."""
         button = ModernButton("Mine Episode")
