@@ -530,12 +530,21 @@ class DeckBuilderTab(MiningTabBase):
     # ------------------------------------------------------------------
     # Progress slots: composed whole-build bar
     # ------------------------------------------------------------------
-    # Phase 2 runs one process_episode per pair, each wrapping a fresh
-    # StageWeightedProgress that forwards one on_start — the inherited base
-    # slot would set_determinate() and zero the bar at every episode
-    # boundary. Compose instead: bar = (episodes done + episode pct) / total.
+    # Phase 2 runs one process_episode per pair — the inherited base slots
+    # would drive the bar per pipeline stage and zero it at every episode
+    # boundary. Track episodes instead: the bar is episodes done / total.
     # Phase 1 (corpus scan) emits no progress signals at all, so these slots
     # only ever run during the build phase.
+    #
+    # D3 keeps this screen frozen, so these overrides deliberately hold its
+    # existing behaviour: the pipeline's new stage channel updates the words
+    # only, exactly as when there was no stage channel at all.
+
+    def _on_progress_stage(self, index: int, total: int, name: str) -> None:
+        """Status only: the bar here counts episodes, not pipeline stages."""
+        status = f"{self._current_item_label} — {name}" if self._current_item_label else name
+        if status:
+            self.progress_widget.set_status(status)
 
     def _on_progress_start(self, total: int, description: str) -> None:
         status = (

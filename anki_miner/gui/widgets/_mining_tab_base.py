@@ -29,6 +29,7 @@ from PyQt6.QtWidgets import QWidget
 from anki_miner.gui.presenters import GUIProgressCallback
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
+from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils.i18n import tr_format
 
@@ -60,11 +61,12 @@ class MiningTabBase(QWidget):
     Subclasses own their layout, their progress widgets, and the bodies of the
     progress slots and drag-drop event handlers. The base provides:
 
-    - :meth:`_wire_progress_callback` to connect the four signals to the four slots.
+    - :meth:`_wire_progress_callback` to connect the five signals to the five slots.
     - :meth:`_setup_drag_drop` to enable drag-and-drop on the widget.
     - A default :meth:`dragMoveEvent` implementation (identical across all callers).
-    - Default ``_on_progress_*`` slots that drive a single ``self.progress_widget``
-      via the percentage-scaled ``set_progress`` path.
+    - Default ``_on_progress_*`` slots that drive a single ``self.progress_widget``:
+      the bar advances one notch per completed pipeline stage, and everything
+      finer-grained goes to the status line as a true count.
 
     Tabs with one progress widget (``SingleEpisodeTab``, ``DeckBuilderTab``) use the
     defaults as-is. ``BatchProcessingTab`` owns two widgets (overall + current) and
@@ -87,16 +89,18 @@ class MiningTabBase(QWidget):
     # ------------------------------------------------------------------
 
     def _wire_progress_callback(self, callback: GUIProgressCallback) -> None:
-        """Connect the four progress signals to the matching ``_on_progress_*`` slots.
+        """Connect the five progress signals to the matching ``_on_progress_*`` slots.
 
-        The base defines all four slots; subclasses may override them. Signatures
+        The base defines all five slots; subclasses may override them. Signatures
         must match the signals declared on :class:`GUIProgressCallback`:
 
+        - ``stage_signal(int, int, str)`` -> ``_on_progress_stage``
         - ``start_signal(int, str)``      -> ``_on_progress_start``
         - ``progress_signal(int, str)``   -> ``_on_progress_update``
         - ``complete_signal()``           -> ``_on_progress_complete``
         - ``error_signal(str, str)``      -> ``_on_progress_error``
         """
+        callback.stage_signal.connect(self._on_progress_stage)
         callback.start_signal.connect(self._on_progress_start)
         callback.progress_signal.connect(self._on_progress_update)
         callback.complete_signal.connect(self._on_progress_complete)
@@ -106,37 +110,56 @@ class MiningTabBase(QWidget):
     # Progress slot defaults
     # ------------------------------------------------------------------
 
-    def _on_progress_start(self, total: int, description: str) -> None:
-        """Default start slot for single-``progress_widget`` tabs.
+    @property
+    def _stage_line(self) -> QueueMiningProgressAdapter:
+        """Formatter that turns pipeline events into one truthful status line.
 
-        Uses the percentage-scaled ``set_progress`` path (NOT ``set_value``):
-        ``set_determinate`` pins the bar max at 100 and ``set_progress`` converts
-        ``current/total`` to a percentage. Subclasses with more than one item
-        per run (``BatchProcessingTab``, ``DeckBuilderTab``) override these
-        slots.
+        The same object the queue workers use for their row label, reused here
+        so a single-run screen and a queued run word the current phase
+        identically. It formats only; it holds no progress the bar reads.
         """
-        self.progress_widget.set_determinate(total)  # type: ignore[attr-defined]
-        self.progress_widget.set_status(description)  # type: ignore[attr-defined]
+        line = getattr(self, "_stage_line_store", None)
+        if line is None:
+            line = QueueMiningProgressAdapter(0, lambda _idx, label: self._set_progress_status(label))
+            self._stage_line_store = line
+        return line
 
-    def _on_progress_update(self, current: int, item_description: str) -> None:
-        """Default update slot: scale ``current`` against the stored total.
+    def _set_progress_status(self, label: str) -> None:
+        """Where the stage line is written. Overridden by multi-bar tabs."""
+        self.progress_widget.set_status(label)  # type: ignore[attr-defined]
 
-        Passing the raw ``current`` to ``set_value`` would paint the item index
-        as a percentage (clamping to 100% past item 100); ``set_progress``
-        divides by the total first.
+    def _on_progress_stage(self, index: int, total: int, name: str) -> None:
+        """Default stage slot: advance the bar by *completed stages only*.
+
+        ``(index - 1) / total`` is the only whole-run ratio the pipeline can
+        prove. Work inside the stage moves the status line, never the bar —
+        blending a guessed within-stage fraction into it is what made the bar
+        race and then sit.
         """
         widget = self.progress_widget  # type: ignore[attr-defined]
-        widget.set_progress(current, widget.total, item_description)
+        if total > 0:
+            widget.set_percent(int((index - 1) / total * 100))
+        self._stage_line.on_stage(index, total, name)
+
+    def _on_progress_start(self, total: int, description: str) -> None:
+        """Default start slot: name the sub-operation; leave the bar alone.
+
+        Each pipeline stage opens its own ``on_start``, so touching the bar here
+        would reset it several times per run.
+        """
+        self._stage_line.on_start(total, description)
+
+    def _on_progress_update(self, current: int, item_description: str) -> None:
+        """Default update slot: report the true count inside the current stage."""
+        self._stage_line.on_progress(current, item_description)
 
     def _on_progress_complete(self) -> None:
         """Default complete slot.
 
         Deliberately a neutral "Complete" — the previous "<phase> — done" text
-        used a phase frozen at the FIRST stage description (the pipeline's
-        StageWeightedProgress forwards on_start exactly once per run), so it
-        read "Extracting media — done" at the end of every run. The result
-        handlers replace this with a meaningful summary via
-        ``show_completion``.
+        used a phase frozen at the FIRST stage description, so it read
+        "Extracting media — done" at the end of every run. The result handlers
+        replace this with a meaningful summary via ``show_completion``.
         """
         self.progress_widget.set_status(self.tr("Complete"))  # type: ignore[attr-defined]
 

@@ -1,10 +1,9 @@
-"""Regression tests for MiningTabBase default progress slots.
+"""MiningTabBase default progress slots.
 
-Bug: single_episode_tab and deck_builder_tab drove the shared ProgressWidget
-with ``set_value(current)`` — the raw item index painted as a percentage. A
-stage of 70 items pinned the bar at 70%; a 2,401-card deck-builder run clamped
-to 100% after item 100. The fix moves one correct ``set_progress`` body up to
-MiningTabBase so all single-widget tabs scale ``current/total`` first.
+The bar advances one notch per *completed pipeline stage* — the only whole-run
+ratio the pipeline can prove. Work inside a stage moves the status line and
+states its true count there; it never moves the bar, because how long a stage
+takes relative to its neighbours is exactly what nobody knows (D18).
 """
 
 from __future__ import annotations
@@ -33,26 +32,42 @@ def tab(qapp, qtbot):
     w.deleteLater()
 
 
-def test_update_scales_against_total_not_raw_value(tab):
-    """1 of 70 items renders ~1%, not 1 raw unit (and never pins at 70%)."""
-    tab._on_progress_start(70, "Extracting media")
-    tab._on_progress_update(1, "item 1")
-    assert tab.progress_widget.progress_bar.value() == 1
-    tab._on_progress_update(70, "item 70")
-    assert tab.progress_widget.progress_bar.value() == 100
+def test_the_bar_advances_only_on_completed_stages(tab):
+    """Stage 3 of 5 starting means two stages are done: 40%."""
+    tab._on_progress_stage(1, 5, "Parsing subtitles")
+    assert tab.progress_widget.progress_bar.value() == 0
+    tab._on_progress_stage(3, 5, "Extracting media")
+    assert tab.progress_widget.progress_bar.value() == 40
+    tab._on_progress_stage(5, 5, "Creating Anki cards")
+    assert tab.progress_widget.progress_bar.value() == 80
 
 
-def test_large_item_count_does_not_clamp_at_100_early(tab):
-    """Deck-builder regression: 100 of 2,401 must read ~4%, not 100%."""
+def test_work_inside_a_stage_never_moves_the_bar(tab):
+    """The old 70-item stage pinned the bar at 70%; 2,401 items clamped at 100%."""
+    tab._on_progress_stage(3, 5, "Extracting media")
     tab._on_progress_start(2401, "Extracting media")
     tab._on_progress_update(100, "違う")
-    assert tab.progress_widget.progress_bar.value() == 4
-    tab._on_progress_update(1200, "halfway")
-    assert tab.progress_widget.progress_bar.value() == 49
+    assert tab.progress_widget.progress_bar.value() == 40
+    tab._on_progress_update(2401, "last")
+    assert tab.progress_widget.progress_bar.value() == 40
+
+
+def test_within_stage_work_states_its_true_count(tab):
+    tab._on_progress_stage(3, 5, "Extracting media")
+    tab._on_progress_start(2401, "Extracting media")
+    tab._on_progress_update(100, "違う")
+    assert "100 of 2401" in tab.progress_widget.status_label.text()
+
+
+def test_a_stage_start_does_not_reset_the_bar(tab):
+    """Five stages each open their own on_start; the bar must not restart."""
+    tab._on_progress_stage(4, 5, "Fetching definitions")
+    tab._on_progress_start(2401, "Fetching definitions")
+    assert tab.progress_widget.progress_bar.value() == 60
 
 
 def test_progress_bar_max_stays_100(tab):
-    tab._on_progress_start(2401, "Extracting media")
+    tab._on_progress_stage(3, 5, "Extracting media")
     assert tab.progress_widget.progress_bar.maximum() == 100
 
 

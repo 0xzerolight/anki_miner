@@ -15,6 +15,20 @@ class ProgressCallback(Protocol):
     how it will be displayed (CLI progress bar, GUI progress bar, etc).
     """
 
+    def on_stage(self, index: int, total: int, name: str) -> None:
+        """Called when the pipeline enters one of its numbered stages.
+
+        This is the only whole-run position the pipeline actually knows. It
+        replaced the hard-coded stage weights that used to blend every stage
+        into a single invented percentage.
+
+        Args:
+            index: 1-based position of this stage
+            total: How many stages this pipeline has
+            name: The stage's own name, e.g. ``Extracting media``
+        """
+        ...
+
     def on_start(self, total: int, description: str) -> None:
         """Called when an operation starts.
 

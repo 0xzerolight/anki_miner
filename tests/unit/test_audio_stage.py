@@ -437,12 +437,10 @@ class TestExpressionAudio:
         )
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", progress_callback=progress_callback)
 
-        # The raw callback is wrapped by StageWeightedProgress, which forwards
-        # on_progress for every word in the expression-audio loop with the
-        # item_description "Expression audio: <mined_form>".  Filter to only
-        # those calls and assert exactly 3 (one per word) — other on_progress
-        # calls (e.g. the finish() snap to 100 with "") belong to different
-        # stages.
+        # The expression-audio loop forwards on_progress for every word with the
+        # item_description "Expression audio: <mined_form>". Filter to only those
+        # calls and assert exactly 3 (one per word) — other on_progress calls
+        # belong to different stages.
         expr_audio_calls = [
             c for c in progress_callback.on_progress.call_args_list if c.args[1].startswith("Expression audio:")
         ]
@@ -485,13 +483,12 @@ class TestExpressionAudioProgressBand:
         word.expression_reading = reading
         return word
 
-    def test_feature_on_stage_count_matches_bands(self, test_config, mock_services, tmp_path):
-        """Feature ON: on_start call count equals number of registered bands.
+    def test_expression_audio_reports_inside_the_media_stage(self, test_config, mock_services, tmp_path):
+        """Feature ON: expression audio is a sub-operation of stage 3, not a stage.
 
-        With expression_audio active the bands are: extract, expression_audio,
-        definitions, cards = 4.  StageWeightedProgress forwards on_start only
-        once to the inner callback (the global on_start), so we check on_start
-        descriptions to count stage entries instead.
+        Whether it runs is a field-mapping decision, so letting it add a stage
+        would change the denominator the user sees between two runs of the same
+        pipeline. It reports its own true count under stage 3 instead.
         """
         config = self._enabled_config(test_config)
         pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
@@ -500,11 +497,13 @@ class TestExpressionAudioProgressBand:
         fetcher = MagicMock()
         fetcher.fetch_candidates.return_value = None
 
-        # Use a recording callback that counts on_start calls by description
         class _RecordingCallback:
             def __init__(self):
+                self.stages = []
                 self.starts = []
-                self.completes = 0
+
+            def on_stage(self, index, total, name):
+                self.stages.append((index, total, name))
 
             def on_start(self, total, description):
                 self.starts.append(description)
@@ -513,7 +512,7 @@ class TestExpressionAudioProgressBand:
                 pass
 
             def on_complete(self):
-                self.completes += 1
+                pass
 
             def on_error(self, item_description, error_message):
                 pass
@@ -528,27 +527,15 @@ class TestExpressionAudioProgressBand:
         )
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", progress_callback=cb)
 
-        # StageWeightedProgress forwards inner.on_start exactly once — on the
-        # very first stage (extract). Later stages (expression audio,
-        # definitions, cards) advance the band counter and refresh the label via
-        # inner.on_progress (never a second on_start), so cb.starts has exactly
-        # 1 entry regardless of band count. The expression-audio band being
-        # registered is verified indirectly: fetch_candidates was called
-        # (feature ran) AND finish() emitted one on_complete, confirming the
-        # full 4-band sweep completed without band-accounting errors.
-        assert len(cb.starts) == 1
-        assert cb.completes == 1  # from StageWeightedProgress.finish()
+        assert [i for i, _, _ in cb.stages] == [1, 2, 3, 4, 5]
+        assert all(total == 5 for _, total, _ in cb.stages)
+        assert any("expression audio" in d.lower() for d in cb.starts)
 
-        # Cross-check: fetcher was called (expression-audio band ran)
+        # Cross-check: the fetcher really ran under that stage.
         assert fetcher.fetch_candidates.call_count == 1
 
     def test_feature_on_on_start_description_includes_expression_audio(self, test_config, mock_services, tmp_path):
-        """The expression-audio on_start description is passed to the inner callback.
-
-        Because StageWeightedProgress only forwards on_start once (first stage),
-        we pass the raw callback directly to _phase3_extract to inspect all
-        on_start calls without the wrapper.
-        """
+        """The expression-audio on_start description reaches the callback."""
         config = self._enabled_config(test_config)
         pairs = [(self._word("食べる", "たべる"), _make_media("taberu"))]
         _wire_pipeline(mock_services, pairs)
@@ -575,9 +562,8 @@ class TestExpressionAudioProgressBand:
         """Feature ON + empty media_results: band consumed (on_start(0) + on_complete called).
 
         The gate in _phase3_extract must NOT include `media_results` non-empty —
-        otherwise the band is silently skipped and the next stage steals it.
-        We call _phase3_extract directly with a raw callback (bypassing
-        StageWeightedProgress) so every on_start/on_complete lands on our mock.
+        otherwise the sub-operation goes silent instead of declaring a real
+        total of zero. We call _phase3_extract directly with a raw callback.
         """
         config = self._enabled_config(test_config)
 
