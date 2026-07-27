@@ -122,6 +122,8 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # close runs closeEvent again after the window has been hidden, and the
         # hidden window's geometry is not what the user left behind.
         self._session_state_saved = False
+        # Set once closeEvent has committed to quitting — see is_shutting_down.
+        self._close_committed = False
 
         # Load configuration
         self.config = config if config is not None else GUIConfigManager.load_config()
@@ -257,9 +259,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         all be made to happen exactly once each: the offer can be refused and
         re-offered, and a refusal must not consume the one-time work either.
 
-        Deliberately not a state machine. It starts the same four jobs
-        ``commit_boot`` always started, in the same order; the only new thing is
-        that it can be called from more than one place and still run once.
+        Deliberately not a state machine. It starts the same jobs ``commit_boot``
+        always started, in the same order; the only new thing is that it can be
+        called from more than one place and still run once.
         """
         if self._post_setup_boot_started:
             return
@@ -272,6 +274,27 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self._run_optional_boot_step("JMdict migration", self._maybe_migrate_jmdict)
         self._run_optional_boot_step("yt-dlp update", self._maybe_start_ytdlp_update)
         QTimer.singleShot(0, self._maybe_prompt_stale_dictionaries)
+        QTimer.singleShot(0, self._start_prewarm)
+
+    def _start_prewarm(self) -> None:
+        """Warm the shared MeCab tagger and the dictionary chain off-thread.
+
+        The first Mine otherwise builds both on the GUI thread — ``fugashi``
+        plus every installed dictionary's sqlite index — and freezes for
+        seconds. Best-effort: clicking Mine before it finishes simply takes the
+        cold path. ``BackgroundTaskController`` holds the reference so the
+        QThread is not collected mid-run and shutdown can join it.
+
+        Scheduled on the next event-loop turn, so it never blocks the first
+        paint, and from the one-shot boot step, so it never runs *during* the
+        first-run wizard: a zero timer fires inside a modal dialog's nested
+        event loop, and this reads the dictionary slot that wizard replaces.
+        """
+        from anki_miner.gui.workers.prewarm_worker import PrewarmWorker
+
+        worker = PrewarmWorker(self.get_config())
+        self.background_tasks.set_prewarm(worker)
+        worker.start()
 
     @staticmethod
     def _run_optional_boot_step(name: str, step: Callable[[], None]) -> None:
@@ -1494,6 +1517,19 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                 return False
         return True
 
+    def is_shutting_down(self) -> bool:
+        """True once ``closeEvent`` has committed to quitting the application.
+
+        ``QWidget.close()`` reports ``False`` for a close the shutdown policy
+        *deferred* as well as for one that was refused: the deferred arm ignores
+        the event so Qt keeps the window and its still-running QThreads alive,
+        then quits from a poll once the last laggard exits. A caller that reads
+        that ``False`` as "the window is staying" undoes work that should still
+        happen — the restart-to-apply path (D39b) cancelled its own relaunch
+        that way whenever a worker outlived the join grace.
+        """
+        return self._close_committed
+
     def closeEvent(self, event) -> None:
         """Handle window close event.
 
@@ -1511,6 +1547,13 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # geometry is not what the user left behind. One-shot, so a second close
         # attempt during that poll cannot overwrite the good value (D7).
         self._save_session_state()
+
+        # Past this point the application is going, on both arms below: the
+        # immediate one accepts the event, and the deferred one ignores it only
+        # to keep the running QThreads alive until the poll quits. Callers that
+        # asked for the close need to be able to tell those two apart from a
+        # genuine refusal — see is_shutting_down.
+        self._close_committed = True
 
         # Claim the one-time optional-boot slot before anything is joined. A
         # first-run wizard can still be open when the app is asked to quit, and
