@@ -20,7 +20,25 @@ from anki_miner.gui.resources.styles.theme import Theme
 
 
 @pytest.fixture
-def hostile_scale(qapp):
+def pinned_app_stylesheet(qapp):
+    """Save and restore the app stylesheet around the measurements.
+
+    ``sizeHint`` on a POLISHED widget is font-driven, the font comes from the
+    app stylesheet, and every test file on an xdist worker shares one
+    ``QApplication``. ``hostile_scale`` makes the sheet deterministic while a
+    test runs (it applies the theme itself) but never puts the previous one
+    back, so ``hostile_scale`` requests this fixture and finalises inside it.
+    Leaving the theme sheet installed made ``test_sizing_metrics`` fail on the
+    next file the worker picked up: its font-metric assertions grow a widget's
+    own font, and a QSS ``font-size`` overrides that.
+    """
+    previous = qapp.styleSheet()
+    yield
+    qapp.setStyleSheet(previous)
+
+
+@pytest.fixture
+def hostile_scale(qapp, pinned_app_stylesheet):
     """Build widgets at 150% text size, then restore.
 
     apply_to_app is load-bearing: set_font_scale alone leaves the QSS-derived
@@ -229,22 +247,6 @@ class TestHeaderProfileBlockFitsTheWindowMinimum:
         from anki_miner.gui.utils.profile_store import Profile
 
         return [Profile(id="anime", name=first_name), Profile(id="novels", name="Novels")]
-
-    @pytest.fixture
-    def pinned_app_stylesheet(self, qapp):
-        """Save and restore the app stylesheet around the width measurements.
-
-        ``sizeHint`` on a POLISHED widget is font-driven, the font comes from the
-        app stylesheet, and every test file on an xdist worker shares one
-        ``QApplication``. ``hostile_scale`` makes the sheet deterministic while a
-        test runs (it applies the theme itself) but never puts the previous one
-        back. List this fixture BEFORE ``hostile_scale`` in the signature so it
-        finalises after it and the module stops leaking a sheet to its
-        neighbours.
-        """
-        previous = qapp.styleSheet()
-        yield
-        qapp.setStyleSheet(previous)
 
     def test_two_profiles_keep_the_window_minimum_inside_its_own_contract(
         self, qtbot, patch_heavy_init, test_config, pinned_app_stylesheet, hostile_scale
