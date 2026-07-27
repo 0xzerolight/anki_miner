@@ -16,8 +16,12 @@ to be true rather than merely plausible:
 
 from __future__ import annotations
 
+import re
+from pathlib import Path
+
 import pytest
 
+import anki_miner.gui.widgets
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry
 from anki_miner.gui.widgets.base.task_publisher import TaskPublisherMixin
@@ -154,7 +158,18 @@ class TestEveryPublishingScreenCanBeStopped:
         assert inherited == []
 
     def test_the_ledger_covers_every_screen_that_declares_a_task_id(self):
-        """A new publishing screen has to be added here, not silently skipped."""
+        """A new publishing screen has to be added here, not silently skipped.
+
+        Read off the source rather than off the ledger's own imports, so a
+        screen that starts publishing without being listed fails here instead of
+        shipping a Cancel that reaches it and does nothing.
+        """
+        declared = {
+            match.group(1)
+            for path in (Path(anki_miner.gui.widgets.__file__).parent).rglob("*.py")
+            for match in re.finditer(r'^\s*TASK_ID(?::\s*str)?\s*=\s*"([^"]+)"', path.read_text(), re.MULTILINE)
+        }
         listed = {cls.TASK_ID for cls in _publishing_screens()}
-        assert "" not in listed
-        assert len(listed) == len(_publishing_screens())
+        # The recommended-resource session is not a screen and not a mixin; it
+        # honours the same request through its own registry subscription.
+        assert declared - listed == {"resource-download"}
