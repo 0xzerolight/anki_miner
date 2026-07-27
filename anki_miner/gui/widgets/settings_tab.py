@@ -9,14 +9,19 @@ from pathlib import Path
 from typing import Protocol, cast, runtime_checkable
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
+    QAbstractScrollArea,
     QCheckBox,
     QFrame,
     QHBoxLayout,
     QLabel,
+    QListWidget,
+    QListWidgetItem,
     QMessageBox,
     QScrollArea,
-    QTabWidget,
+    QSizePolicy,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -66,6 +71,12 @@ from anki_miner.utils.i18n import tr_format
 # keystroke, short enough that settings apply near-immediately.
 _AUTOSAVE_DEBOUNCE_MS = 1000
 
+# Width budget for the settings navigator, in characters of its own rendered
+# font. Read through font metrics rather than written as a pixel constant so the
+# rail tracks the UI text scale; a destination whose translated name outruns the
+# budget wraps onto a second line instead of pushing the settings off-screen.
+_NAV_WIDTH_CHARS = 16
+
 
 @runtime_checkable
 class _SavePathPanel(Protocol):
@@ -83,9 +94,10 @@ class _SavePathPanel(Protocol):
 class SettingsTab(SettingAnchorHost, QWidget):
     """Settings tab with category organization.
 
-    Uses extracted panel components for cleaner architecture.
-    Each category (Anki, Media, Dictionary, Filtering, YouTube, UI) has its
-    own panel.
+    Uses extracted panel components for cleaner architecture: one panel per
+    destination, reached from a grouped navigator down the side (see
+    :meth:`_build_navigator`). Every setting stays visible; nothing is hidden
+    behind a Basic/Advanced disclosure.
 
     Signals:
         validation_requested: Emitted when validation should be triggered
@@ -265,13 +277,19 @@ class SettingsTab(SettingAnchorHost, QWidget):
         """Set up the user interface."""
         layout = QVBoxLayout()
         layout.setSpacing(SPACING.sm)
-        # Top margin 0 so the sub-tab bar sits flush under the top-level tab bar
-        # like VideoTab/ReadingTab; keep left/right/bottom inset for the bottom
-        # chrome (update checkbox + Export/Import row) and the panel forms.
-        layout.setContentsMargins(SPACING.md, 0, SPACING.md, SPACING.md)
+        # Inset on all four edges: the navigator is a side rail, so unlike the
+        # old sub-tab bar nothing here has to sit flush under the top-level tab
+        # bar. The bottom chrome (update checkbox + Export/Import row) and the
+        # panel forms keep the same margins they always had.
+        layout.setContentsMargins(SPACING.md, SPACING.sm, SPACING.md, SPACING.md)
 
-        # Category tabs
-        self.tab_widget = QTabWidget()
+        # Grouped navigator (D10). Ten equally-weighted tabs carried no
+        # hierarchy, and in a long locale at a large text size the strip
+        # overflowed into scroll arrows that put whole categories out of reach.
+        # A vertical list grows downward and scrolls a row into view on demand,
+        # so every destination stays addressable at any width.
+        self.nav_list = QListWidget()
+        self.pages = QStackedWidget()
 
         # Create panels using extracted components
         self.anki_panel = AnkiSettingsPanel()
@@ -290,33 +308,21 @@ class SettingsTab(SettingAnchorHost, QWidget):
             self.config.use_native_file_dialogs,
         )
 
-        # Add tabs with scroll areas for each panel. Stable string keys are
-        # captured into _subtab_index so callers (MainWindow.reveal_capability,
-        # the Find a Feature browser, theme shortcuts) can jump to a sub-tab by
-        # key rather than a hard-coded index or the translated label.
-        self._subtab_index: dict[str, int] = {
-            "anki": self.tab_widget.addTab(self._wrap_in_scroll_area(self.anki_panel), self.tr("Anki")),
-            "media": self.tab_widget.addTab(self._wrap_in_scroll_area(self.media_panel), self.tr("Media")),
-            "dictionaries": self.tab_widget.addTab(
-                self._wrap_in_scroll_area(self.dictionary_panel), self.tr("Dictionaries")
-            ),
-            "audio": self.tab_widget.addTab(self._wrap_in_scroll_area(self.audio_panel), self.tr("Audio")),
-            "frequency": self.tab_widget.addTab(self._wrap_in_scroll_area(self.frequency_panel), self.tr("Frequency")),
-            "pitch": self.tab_widget.addTab(self._wrap_in_scroll_area(self.pitch_panel), self.tr("Pitch Accent")),
-            "filtering": self.tab_widget.addTab(self._wrap_in_scroll_area(self.filtering_panel), self.tr("Filtering")),
-            "youtube": self.tab_widget.addTab(self._wrap_in_scroll_area(self.youtube_panel), self.tr("YouTube")),
-            "subtitles": self.tab_widget.addTab(self._wrap_in_scroll_area(self.subtitles_panel), self.tr("Subtitles")),
-            "ui": self.tab_widget.addTab(self._wrap_in_scroll_area(self.ui_panel), self.tr("UI")),
-        }
+        self._build_navigator()
         # Retained: _on_settings_subtab_changed and open_ui_subtab key off the
-        # UI index; reading it from the map keeps a single source of truth.
+        # UI page; reading it from the map keeps a single source of truth.
         self._ui_subtab_index = self._subtab_index["ui"]
-        # Reset the theme preview baseline when the user navigates away from the
-        # UI tab so a later visit reverts to their last-chosen theme, not session
-        # start.
-        self.tab_widget.currentChanged.connect(self._on_settings_subtab_changed)
+        # Reset the theme preview baseline when the user navigates away from
+        # Appearance & Language so a later visit reverts to their last-chosen
+        # theme, not session start. Connected after the navigator is populated,
+        # so selecting the first destination can't fire it during construction.
+        self.pages.currentChanged.connect(self._on_settings_subtab_changed)
 
-        layout.addWidget(self.tab_widget)
+        body = QHBoxLayout()
+        body.setSpacing(SPACING.md)
+        body.addWidget(self.nav_list)
+        body.addWidget(self.pages, 1)
+        layout.addLayout(body)
 
         # Updates row — single top-level toggle, no panel needed for one checkbox.
         self.check_for_updates_checkbox = QCheckBox(self.tr("Check for updates on startup"))
@@ -385,6 +391,103 @@ class SettingsTab(SettingAnchorHost, QWidget):
         layout.addLayout(button_layout)
 
         self.setLayout(layout)
+
+    def _build_navigator(self) -> None:
+        """Fill the navigator with five headings over ten destinations (D10).
+
+        Populates ``self.nav_list`` and ``self.pages`` together and records the
+        stable key → page index map in ``_subtab_index``, which callers
+        (``MainWindow.reveal_capability``, the Find a Feature browser, the theme
+        shortcut) address settings by. Display names are presentation only: no
+        navigation path reads a row's text.
+
+        Headings are inert rows — disabled and unselectable — so arrow-key
+        navigation steps over them and no selection can land on one.
+        """
+        self.nav_list.setObjectName("settings-nav")
+        # Wrap rather than elide: a long translated destination name has to stay
+        # readable, and the rail is width-capped just below.
+        self.nav_list.setWordWrap(True)
+        self.nav_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.nav_list.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
+        self.nav_list.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Expanding)
+        self.nav_list.setFrameShape(QFrame.Shape.NoFrame)
+        self.nav_list.ensurePolished()
+        self.nav_list.setMaximumWidth(self.nav_list.fontMetrics().averageCharWidth() * _NAV_WIDTH_CHARS)
+        self.ignore_setting_widget(
+            self.nav_list,
+            "navigation between settings pages, not a setting itself",
+        )
+
+        groups: tuple[tuple[str, tuple[tuple[str, str, QWidget], ...]], ...] = (
+            (
+                self.tr("Cards"),
+                (
+                    ("anki", self.tr("Cards & Anki"), self.anki_panel),
+                    ("media", self.tr("Card Media"), self.media_panel),
+                ),
+            ),
+            (
+                self.tr("Resources"),
+                (
+                    ("dictionaries", self.tr("Dictionaries"), self.dictionary_panel),
+                    ("audio", self.tr("Word Audio"), self.audio_panel),
+                    ("frequency", self.tr("Frequency"), self.frequency_panel),
+                    ("pitch", self.tr("Pitch Accent"), self.pitch_panel),
+                ),
+            ),
+            (
+                self.tr("Mining"),
+                (("filtering", self.tr("Mining Rules"), self.filtering_panel),),
+            ),
+            (
+                self.tr("Integrations"),
+                (
+                    ("youtube", self.tr("YouTube"), self.youtube_panel),
+                    ("subtitles", self.tr("Transcription & Alignment"), self.subtitles_panel),
+                ),
+            ),
+            (
+                self.tr("App"),
+                (("ui", self.tr("Appearance & Language"), self.ui_panel),),
+            ),
+        )
+
+        heading_font = QFont(self.nav_list.font())
+        heading_font.setBold(True)
+        self._subtab_index: dict[str, int] = {}
+        first_destination_row: int | None = None
+        for heading, destinations in groups:
+            item = QListWidgetItem(heading)
+            item.setFlags(Qt.ItemFlag.NoItemFlags)
+            item.setFont(heading_font)
+            self.nav_list.addItem(item)
+            for key, label, panel in destinations:
+                row = QListWidgetItem(label)
+                row.setData(Qt.ItemDataRole.UserRole, key)
+                self.nav_list.addItem(row)
+                self._subtab_index[key] = self.pages.addWidget(self._wrap_in_scroll_area(panel))
+                if first_destination_row is None:
+                    first_destination_row = self.nav_list.count() - 1
+
+        self.nav_list.currentItemChanged.connect(self._on_nav_item_changed)
+        if first_destination_row is not None:
+            self.nav_list.setCurrentRow(first_destination_row)
+
+    def _nav_item(self, key: str) -> QListWidgetItem | None:
+        """The navigator row carrying ``key``, or ``None`` if there is none."""
+        for row in range(self.nav_list.count()):
+            item = self.nav_list.item(row)
+            if item is not None and item.data(Qt.ItemDataRole.UserRole) == key:
+                return item
+        return None
+
+    def _on_nav_item_changed(self, current: QListWidgetItem | None, _previous: QListWidgetItem | None) -> None:
+        """Show the page belonging to the newly selected destination."""
+        key = current.data(Qt.ItemDataRole.UserRole) if current is not None else None
+        index = self._subtab_index.get(key) if key else None
+        if index is not None:
+            self.pages.setCurrentIndex(index)
 
     def _connect_signals(self) -> None:
         """Connect panel signals to tab handlers."""
@@ -709,15 +812,20 @@ class SettingsTab(SettingAnchorHost, QWidget):
             self._loading = False
 
     def open_subtab(self, key: str) -> None:
-        """Switch the settings sub-tab to the one named by ``key``.
+        """Switch the settings navigator to the destination named by ``key``.
 
         ``key`` is a stable identifier from
         :data:`anki_miner.gui.capabilities.SETTINGS_SUBTABS` (e.g. ``"filtering"``,
         ``"anki"``). Unknown keys are ignored so a stale caller can't crash the UI.
+
+        Moves the *selection*, which drives the page through
+        :meth:`_on_nav_item_changed`, and scrolls the row into view so a deep
+        link lands somewhere the user can see they arrived.
         """
-        index = self._subtab_index.get(key)
-        if index is not None:
-            self.tab_widget.setCurrentIndex(index)
+        item = self._nav_item(key)
+        if item is not None:
+            self.nav_list.setCurrentItem(item)
+            self.nav_list.scrollToItem(item)
 
     def setting_anchor_hosts(self) -> tuple[SettingAnchorHost, ...]:
         """Every panel that registers setting anchors, in navigator order."""
@@ -774,17 +882,17 @@ class SettingsTab(SettingAnchorHost, QWidget):
         self.dictionary_panel.set_external_mutation_preflight(callback)
 
     def open_ui_subtab(self) -> None:
-        """Switch the settings sub-tab to UI (language, zoom, text size, themes).
+        """Switch to Appearance & Language (language, zoom, text size, themes).
 
         Thin wrapper over :meth:`open_subtab` kept because MainWindow's
         ``_settings_tab_index`` uses this method name as the capability marker
         that identifies the Settings tab, and the 'All themes…' header sentinel
-        calls it directly.
+        calls it directly. The ``"ui"`` key is unchanged by the D10 rename.
         """
         self.open_subtab("ui")
 
     def _on_settings_subtab_changed(self, index: int) -> None:
-        """Reset the UI panel's theme preview baseline when leaving its sub-tab."""
+        """Reset the UI panel's theme preview baseline when leaving its page."""
         if index != self._ui_subtab_index:
             self.ui_panel.reset_baseline()
 

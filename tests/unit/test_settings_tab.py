@@ -1088,14 +1088,17 @@ class TestConfigChangePanelReload:
 
 
 class TestSubtitlesPanelRegistration:
-    """subtitles_panel is in _save_panels and its tab appears in the Settings tab widget."""
+    """subtitles_panel is in _save_panels and reachable from the Settings navigator."""
 
     def test_subtitles_panel_in_save_panels(self, tab):
         assert tab.subtitles_panel in tab._save_panels
 
-    def test_subtitles_tab_exists(self, tab):
-        tab_titles = [tab.tab_widget.tabText(i) for i in range(tab.tab_widget.count())]
-        assert "Subtitles" in tab_titles
+    def test_subtitles_destination_exists(self, tab):
+        # By stable key, not by displayed name: the navigator label is
+        # "Transcription & Alignment" and translates, the key never does.
+        assert "subtitles" in tab._subtab_index
+        tab.open_subtab("subtitles")
+        assert tab.subtitles_panel in tab.pages.currentWidget().findChildren(type(tab.subtitles_panel))
 
     def test_subtitles_panel_loads_alass_location(self, test_config: AnkiMinerConfig, qtbot, tmp_path):
         alass_path = tmp_path / "alass"

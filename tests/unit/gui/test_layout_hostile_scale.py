@@ -14,6 +14,7 @@ must be set BEFORE the widget is built.
 from __future__ import annotations
 
 import pytest
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.resources.styles.theme import Theme
@@ -345,3 +346,88 @@ class TestHeaderProfileBlockFitsTheWindowMinimum:
         # Vacuity guard: the long name really was in the combo, and elided.
         assert combo.itemData(0) == "anime"
         assert 0 < len(combo.itemText(0)) < len(long_name)
+
+
+class TestSettingsNavigatorKeepsEveryCategoryReachable:
+    """Ten equally-weighted settings tabs overflowed the strip into scroll arrows
+    at this cell, which put whole categories out of reach -- the defect D10's
+    grouped navigator replaces. The assertions below are the falsifiable form of
+    "reachable": every destination selects, shows its own page, and lands with its
+    row inside the navigator's viewport, at 150% text in a locale whose strings run
+    25 characters longer than English.
+
+    Written against the pseudo-locale rather than a real German catalogue on
+    purpose: it is longer than any shipped translation, so a navigator that
+    survives it survives all twelve. It is also why nothing here asserts unclipped
+    label text -- a 34-character unbreakable token is not a translation, and the
+    property that matters is that the category is still selectable.
+    """
+
+    @staticmethod
+    def _settings_tab(qtbot, monkeypatch, test_config):
+        from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
+        from anki_miner.gui.widgets.settings_tab import SettingsTab
+
+        # showEvent fetches deck / note-type names over AnkiConnect; showing the
+        # tab unstubbed opens a real socket and trips the network guard.
+        monkeypatch.setattr(AnkiProbeController, "refresh_name_lists", lambda _self: None)
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        tab.resize(1024, 768)
+        tab.show()
+        qtbot.waitExposed(tab)
+        QApplication.processEvents()
+        return tab
+
+    @staticmethod
+    def _join_workers(tab):
+        tab.shutdown()
+        for worker in tab.iter_close_workers():
+            if worker is not None:
+                worker.wait(3000)
+
+    def test_every_destination_is_reachable(
+        self, qtbot, monkeypatch, test_config, pinned_app_stylesheet, hostile_scale, longer_translations
+    ):
+        from anki_miner.gui.capabilities import SETTINGS_SUBTABS
+
+        tab = self._settings_tab(qtbot, monkeypatch, test_config)
+        nav = tab.nav_list
+
+        for key in sorted(SETTINGS_SUBTABS):
+            tab.open_subtab(key)
+            QApplication.processEvents()
+            item = nav.currentItem()
+            assert item is not None and item.data(Qt.ItemDataRole.UserRole) == key
+            assert tab.pages.currentIndex() == tab._subtab_index[key]
+            rect = nav.visualItemRect(item)
+            # Vacuity guard: an unlaid-out row has an empty rect whose centre
+            # trivially sits inside the viewport.
+            assert rect.height() > 0 and rect.width() > 0, f"{key!r} has no laid-out row"
+            # Centre, not the whole rect: a wrapped two-line row can be taller
+            # than the slack at the viewport edge without being out of reach.
+            assert (
+                nav.viewport().rect().contains(rect.center())
+            ), f"{key!r} lands off-screen at {rect} in viewport {nav.viewport().rect()}"
+
+        self._join_workers(tab)
+
+    def test_the_navigator_leaves_most_of_the_width_to_the_panels(
+        self, qtbot, monkeypatch, test_config, pinned_app_stylesheet, hostile_scale, longer_translations
+    ):
+        from anki_miner.gui.constants import WINDOW_MIN_WIDTH
+
+        tab = self._settings_tab(qtbot, monkeypatch, test_config)
+
+        # Measured against the app's own minimum-window contract, not against
+        # ``tab.width()``: under this pseudo-locale the settings panels demand
+        # ~1600px of their own, so a ratio taken from the realised width would
+        # pass for reasons that have nothing to do with the navigator.
+        assert tab.nav_list.width() * 2 <= WINDOW_MIN_WIDTH, (
+            f"the navigator takes {tab.nav_list.width()}px of the {WINDOW_MIN_WIDTH}px "
+            f"minimum window, leaving the settings themselves the smaller half"
+        )
+        # Vacuity guard: a collapsed rail is not a pass.
+        assert tab.nav_list.width() > 0 and tab.nav_list.isVisible()
+
+        self._join_workers(tab)
