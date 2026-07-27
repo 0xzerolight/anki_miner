@@ -291,11 +291,16 @@ class TestThePicker:
 
 class TestItOwnsNothing:
     def test_it_holds_no_worker_shaped_attribute(self, registry, monitor):
+        """No thread, no event, and nothing that answers to ``cancel()``.
+
+        The registry is excluded by identity because it is the one reference the
+        window is supposed to keep -- and its cancel is a request, not an act.
+        """
         forbidden = (QThread, threading.Thread, threading.Event)
         held = [
             name
             for name, value in vars(monitor).items()
-            if isinstance(value, forbidden) or hasattr(value, "cancel") and not isinstance(value, TaskRegistry)
+            if value is not registry and (isinstance(value, forbidden) or hasattr(value, "cancel"))
         ]
         assert held == []
 
