@@ -6148,6 +6148,13 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
             <numerusform>%n Karten in dieser Sitzung</numerusform>
         </translation>
     </message>
+    <message numerus="yes">
+        <source>%n task(s)</source>
+        <translation>
+            <numerusform>%n Vorgang</numerusform>
+            <numerusform>%n Vorgänge</numerusform>
+        </translation>
+    </message>
     <message>
         <source>Click to view detailed system validation</source>
         <translation>Klicken für detaillierte Systemprüfung</translation>
