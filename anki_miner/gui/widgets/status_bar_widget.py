@@ -12,9 +12,6 @@ from anki_miner.gui.widgets.base import StatusBadge
 #: quietly disappear.
 OPERATION_EXPIRY_MS = 8000
 
-#: Shown when nothing is happening.
-_IDLE_TEXT = "Ready"
-
 
 def _health_presentation(state: bool | None, *, unknown: str, ok: str, failed: str) -> tuple[str, str]:
     """Map a tri-state dependency health value to (badge status, tooltip).
@@ -68,7 +65,7 @@ class StatusBarWidget(QStatusBar):
         self.setContentsMargins(SPACING.sm, 6, SPACING.sm, 6)
 
         # Left section: Current operation
-        self.operation_label = QLabel(self.tr(_IDLE_TEXT))
+        self.operation_label = QLabel(self.tr("Ready"))
         self.operation_label.setObjectName("status-operation")
         operation_font = QFont()
         operation_font.setWeight(QFont.Weight.Medium)
@@ -140,7 +137,9 @@ class StatusBarWidget(QStatusBar):
     def clear_operation(self) -> None:
         """Revert to the idle message. Safe to call repeatedly."""
         self._operation_timer.stop()
-        self._render_operation(self.tr(_IDLE_TEXT), "info")
+        # Literal, not a constant: Qt extracts translatable strings
+        # statically, so tr(SOME_CONST) yields no catalog entry.
+        self._render_operation(self.tr("Ready"), "info")
 
     def _render_operation(self, message: str, level: str) -> None:
         """Paint the operation text and restyle it for its level."""
