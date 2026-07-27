@@ -105,7 +105,9 @@ LEDGER: dict[str, str] = {
     # inline run receipt replaced them, so a finished or cancelled run now
     # states its counts in place instead of raising "Batch Processing Complete"
     # at someone who had just pressed Cancel (D20).
-    "gui/widgets/batch_processing_tab.py::BatchProcessingTab._process_queue": "w5-queue",
+    # `_process_queue`'s "No valid series in the queue to process." was the last
+    # of the three terminal/refusal boxes here; W5-T7 made it a screen issue when
+    # it froze the running queue. The category is down to the two below.
     "gui/widgets/batch_processing_tab.py::BatchProcessingTab._retry_failed_items": "w5-queue",
     "gui/widgets/panels/queue_panel.py::QueuePanel._clear_queue": "w5-queue",
     # --- No "recoverable" entry may ever be added here. See the module docstring.
