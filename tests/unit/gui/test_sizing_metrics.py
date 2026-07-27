@@ -6,9 +6,26 @@ so control geometry tracks the UI text scale instead of drifting out from under 
 pinning literals would just re-create the constant the helpers exist to remove.
 """
 
+import pytest
 from PyQt6.QtWidgets import QFrame, QLabel, QListWidget, QPushButton
 
 from anki_miner.gui.widgets.base.sizing import apply_button_size, metric_row_height
+
+
+@pytest.fixture(autouse=True)
+def _no_app_stylesheet(qapp):
+    """Measure against widget fonts, not against a leaked application stylesheet.
+
+    A QSS ``font-size`` overrides ``setFont``, so if any earlier file on this
+    xdist worker leaves a theme sheet installed, growing a widget's own font
+    changes nothing and these assertions silently stop measuring what they name.
+    Clearing it here makes the file independent of every other file's cleanup
+    rather than dependent on all of them.
+    """
+    previous = qapp.styleSheet()
+    qapp.setStyleSheet("")
+    yield
+    qapp.setStyleSheet(previous)
 
 
 def _enlarge(widget) -> None:
