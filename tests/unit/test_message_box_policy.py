@@ -148,14 +148,6 @@ LEDGER: dict[str, str] = {
     "gui/widgets/dialogs/known_words_dialog.py::KnownWordsManagerDialog._on_import_failed": "recoverable",
     "gui/widgets/dialogs/known_words_dialog.py::KnownWordsManagerDialog._show_import_error": "recoverable",
     "gui/widgets/dialogs/profile_manager_dialog.py::ProfileManagerDialog._warn": "recoverable",
-    "gui/widgets/panels/audio_pack_settings_panel.py::AudioPackSettingsPanel._acquire_release_for_remove": "recoverable",  # noqa: E501
-    "gui/widgets/panels/chain_settings_panel_base.py::ChainSettingsPanelBase._report_cleanup_pending.show_warning": "recoverable",  # noqa: E501
-    "gui/widgets/panels/chain_settings_panel_base.py::ChainSettingsPanelBase._report_remove_failure.show_warning": "recoverable",  # noqa: E501
-    "gui/widgets/panels/chain_settings_panel_base.py::ChainSettingsPanelBase._warn_files_left": "recoverable",
-    "gui/widgets/panels/chain_settings_panel_base.py::ChainSettingsPanelBase._warn_post_save_failure": "recoverable",
-    "gui/widgets/panels/dictionary_settings_panel.py::DictionarySettingsPanel._acquire_release_for_remove": "recoverable",  # noqa: E501
-    "gui/widgets/panels/frequency_settings_panel.py::FrequencySettingsPanel._acquire_release_for_remove": "recoverable",  # noqa: E501
-    "gui/widgets/panels/pitch_settings_panel.py::PitchSettingsPanel._acquire_release_for_remove": "recoverable",
     "gui/widgets/settings_tab.py::SettingsTab._on_manage_known_words": "recoverable",
     "gui/widgets/settings_tab.py::SettingsTab._on_retry_missing_audio_error": "recoverable",
     "gui/widgets/settings_tab.py::SettingsTab.set_ytdlp_status_from_result": "recoverable",

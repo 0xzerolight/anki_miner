@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AudioSourceEntry
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
+from anki_miner.gui.widgets.base import ScreenIssue
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
     ChainSettingsPanelBase,
     _ChainPanelStrings,
@@ -191,30 +192,25 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         self._release_callback: Callable[[], bool] | None = None
         self._strings = _ChainPanelStrings(
             loading=self.tr("Loading…"),
-            remove_failed_title=self.tr("Remove failed"),
-            could_not_delete_template=self.tr("Could not delete %1:\n%2\n\nThe audio pack was not removed."),
-            files_left_title=self.tr("Files left untouched"),
-            files_left_template=self.tr(
-                "The chain entry was removed, but files at %1 were left untouched because "
-                "the folder could not be proven to belong to Anki Miner."
+            retry_label=self.tr("Retry"),
+            scan_failed_summary=self.tr("Installed audio packs could not be checked."),
+            files_left_summary=self.tr(
+                "The audio pack was removed from the chain, but its files were left in place "
+                "because the folder could not be proven to belong to Anki Miner."
             ),
-            intact_failure_template=self.tr("Could not remove %1:\n%2\n\nThe files are intact. Try again."),
-            partial_failure_template=self.tr(
-                "Could not complete removal of %1:\n%2\n\nThe files were partially changed. "
-                "Re-import or repair this audio pack before retrying."
+            intact_failure_summary=self.tr("%1 could not be removed. Its files are intact — try again."),
+            partial_failure_summary=self.tr(
+                "%1 was only partly removed. Re-import or repair this audio pack before retrying."
             ),
-            config_pending_failure_template=self.tr(
-                "Could not restore %1 after its configuration update failed:\n%2\n\n"
-                "The files are no longer in the installed location; a configuration update "
-                "is pending. Restart Anki Miner before retrying."
+            config_pending_failure_summary=self.tr(
+                "%1 could not be restored after its settings update failed. " "Restart Anki Miner before retrying."
             ),
-            post_save_warning_template=self.tr(
-                "Removal of %1 was saved, but Anki Miner could not refresh it:\n%2\n\n"
-                "The removal was saved and will remain after restart."
+            post_save_summary=self.tr(
+                "%1 was removed, but Anki Miner could not refresh it. "
+                "The removal is saved and will remain after a restart."
             ),
-            cleanup_pending_template=self.tr(
-                "%1 was removed, but its tombstone at %2 could not be deleted:\n%3\n\n"
-                "The removal is saved; cleanup is pending and will be retried at startup."
+            cleanup_pending_summary=self.tr(
+                "%1 was removed, but its leftover folder could not be deleted. " "Cleanup will be retried at startup."
             ),
         )
         self._setup_fields()
@@ -574,13 +570,13 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
 
     def _acquire_release_for_remove(self) -> bool:
         if not self.request_resource_release():
-            QMessageBox.warning(
-                self,
-                self.tr("Remove failed"),
-                self.tr(
-                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
-                    "Wait for the active task to finish and try again."
-                ),
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr(
+                        "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                        "Wait for the active task to finish and try again."
+                    )
+                )
             )
             return False
         return True
