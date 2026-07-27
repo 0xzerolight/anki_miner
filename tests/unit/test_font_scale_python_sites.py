@@ -13,6 +13,7 @@ from __future__ import annotations
 import pytest
 
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.utils.qt_helpers import data_row_height
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
 
@@ -25,36 +26,58 @@ def _reset(font_scale: float = 1.0) -> None:
 
 
 @pytest.fixture(autouse=True)
-def _restore_scale():
-    """Always reset the global font scale to 1.0 after each test."""
+def _restore_scale(qapp):
+    """Reset the global font scale to 1.0 after each test, and put the
+    application stylesheet back.
+
+    ``Theme.apply_to_app`` is now needed here (row heights follow the *rendered*
+    font, not a scale multiplier), and a leaked 2.0x stylesheet would override
+    ``setFont`` in every later test on this worker.
+    """
+    stylesheet = qapp.styleSheet()
     yield
     _reset(1.0)
+    qapp.setStyleSheet(stylesheet)
 
 
 class TestCurationRowHeight:
-    """WordCurationDialog row height scales with the global font scale."""
+    """WordCurationDialog row height comes from the shared data-surface rule.
 
-    def test_row_height_at_scale_1_0_equals_base(self, qtbot, make_tokenized_words):
+    It used to be ``32 * Theme.get_font_scale()`` -- a constant that only
+    tracked the scale because it multiplied by it, and that said nothing about
+    the font actually being rendered. Decision D42 replaced it with one rule for
+    every table, list and tree, so what is pinned here is that rule, and that
+    the height still follows the applied text scale.
+    """
+
+    def test_row_height_is_the_shared_rule(self, qtbot, qapp, make_tokenized_words):
         _reset(1.0)
+        Theme.apply_to_app(qapp)
         dlg = WordCurationDialog(make_tokenized_words(3))
         qtbot.addWidget(dlg)
         try:
             vh = dlg.table.verticalHeader()
             assert vh is not None
-            assert vh.defaultSectionSize() == WordCurationDialog._BASE_ROW_HEIGHT  # 32
+            assert vh.defaultSectionSize() == data_row_height(dlg.table)
         finally:
             dlg.deleteLater()
 
-    def test_row_height_doubles_at_scale_2_0(self, qtbot, make_tokenized_words):
+    def test_row_height_grows_with_the_applied_scale(self, qtbot, qapp, make_tokenized_words):
+        _reset(1.0)
+        Theme.apply_to_app(qapp)
+        small = WordCurationDialog(make_tokenized_words(3))
+        qtbot.addWidget(small)
+        baseline = small.table.verticalHeader().defaultSectionSize()
+
         _reset(2.0)
-        dlg = WordCurationDialog(make_tokenized_words(3))
-        qtbot.addWidget(dlg)
+        Theme.apply_to_app(qapp)
+        large = WordCurationDialog(make_tokenized_words(3))
+        qtbot.addWidget(large)
         try:
-            vh = dlg.table.verticalHeader()
-            assert vh is not None
-            assert vh.defaultSectionSize() == round(WordCurationDialog._BASE_ROW_HEIGHT * 2.0)  # 64
+            assert large.table.verticalHeader().defaultSectionSize() > baseline
         finally:
-            dlg.deleteLater()
+            small.deleteLater()
+            large.deleteLater()
 
     def test_make_font_scales_pixel_size(self, qtbot, make_tokenized_words):
         _reset(1.5)

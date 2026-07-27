@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
     QListWidgetItem,
     QMenu,
     QSplitter,
+    QStyle,
     QTableWidget,
     QTableWidgetItem,
     QTextBrowser,
@@ -35,9 +36,15 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.fonts import make_scaled_font
-from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
+from anki_miner.gui.utils.qt_helpers import (
+    CELL_PADDING,
+    CellRole,
+    add_min_max_buttons,
+    configure_data_view,
+    install_copy_rows,
+    make_table_item,
+)
 from anki_miner.gui.utils.run_off_thread import join_tracked_workers, run_off_thread
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.page_image_view import PageImageView, load_page_qimage
@@ -73,27 +80,6 @@ class CurationMediaContext:
     page_units: Mapping[int, ReadingUnit] | None = None  # manga: unit.index -> ReadingUnit
 
 
-class _NumericTableWidgetItem(QTableWidgetItem):
-    """QTableWidgetItem that sorts by a numeric key instead of display text.
-
-    Avoids the default lexicographic sort that places "100" before "20".
-    Missing values use ``inf`` so unranked rows cluster at one end.
-    """
-
-    _SORT_ROLE = Qt.ItemDataRole.UserRole + 1
-
-    def __init__(self, text: str, sort_key: float) -> None:
-        super().__init__(text)
-        self.setData(self._SORT_ROLE, sort_key)
-
-    def __lt__(self, other: QTableWidgetItem) -> bool:
-        own = self.data(self._SORT_ROLE)
-        theirs = other.data(self._SORT_ROLE)
-        if own is None or theirs is None:
-            return super().__lt__(other)
-        return float(own) < float(theirs)
-
-
 class WordCurationDialog(QDialog):
     """Dialog for selecting which words to include in card creation.
 
@@ -109,10 +95,6 @@ class WordCurationDialog(QDialog):
     All panes are optional and backward-compatible; existing callers that pass
     only ``words`` receive the same pure-table behaviour as before.
     """
-
-    # Base table row height at font scale 1.0; scaled with the global UI font
-    # scale so rows grow with the (QSS-driven) cell font instead of clipping it.
-    _BASE_ROW_HEIGHT = 32
 
     def __init__(
         self,
@@ -310,15 +292,18 @@ class WordCurationDialog(QDialog):
         header_view = self.table.horizontalHeader()
         if header_view:
             header_view.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
-            header_view.resizeSection(0, 40)
-            header_view.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-            header_view.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-            header_view.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-            header_view.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
-            header_view.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
-            header_view.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)
+            # The checkbox column holds one indicator and its cell padding, so
+            # it is measured from the style rather than pinned at 40px -- the
+            # indicator grows with the platform and with the text scale.
+            style = self.table.style()
+            indicator = style.pixelMetric(QStyle.PixelMetric.PM_IndicatorWidth) if style is not None else 0
+            header_view.resizeSection(0, indicator + 2 * CELL_PADDING)
+            for column in (1, 2, 3, 5, 6):  # mined form, surface, reading, rank, count
+                header_view.setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
+            header_view.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)  # sentence
 
-        self._apply_fixed_row_height()
+        self._apply_data_surface()
+        install_copy_rows(self.table)
 
         self.table.itemChanged.connect(self._on_item_changed)
 
@@ -483,19 +468,14 @@ class WordCurationDialog(QDialog):
         # picks up the current scale on next open (no live re-scaling needed).
         return make_scaled_font(size, weight)
 
-    def _apply_fixed_row_height(self) -> None:
-        """Set Fixed resize mode, deriving the row height from the global font scale.
+    def _apply_data_surface(self) -> None:
+        """(Re-)apply the shared data-surface configuration to the word table.
 
-        Scaling the base height by ``Theme.get_font_scale()`` tracks the same
-        scale the QSS cell font uses, so enlarged fonts no longer clip. Computed
-        when the (modal, per-open) dialog is built — no live re-scaling needed.
+        Called a second time after each populate because re-enabling sorting
+        resets the vertical header's resize mode to Interactive, which drops the
+        shared Fixed row height.
         """
-        vh = self.table.verticalHeader()
-        if vh:
-            row_h = round(self._BASE_ROW_HEIGHT * Theme.get_font_scale())
-            vh.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
-            vh.setDefaultSectionSize(row_h)
-            vh.setMinimumSectionSize(max(1, row_h - 4))
+        configure_data_view(self.table)
 
     def _populate_table(self) -> None:
         """Fill the table with words, all checked by default."""
@@ -505,7 +485,7 @@ class WordCurationDialog(QDialog):
 
         for row, word in enumerate(self._words):
             # Checkbox column
-            check_item = QTableWidgetItem()
+            check_item = make_table_item("", CellRole.STATE)
             check_item.setFlags(
                 Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
             )
@@ -524,38 +504,60 @@ class WordCurationDialog(QDialog):
             # Reading
             self.table.setItem(row, 3, self._make_readonly_item(word.reading))
 
-            # Sentence (truncated). A trailing "(N)" flags words with N
-            # alternative example sentences the user can pick from.
+            # Sentence, truncated for the cell but copied and hovered in full.
+            # A trailing "(N)" flags words with N alternative example sentences.
             n_candidates = len(word.sentence_candidates)
-            item = self._make_readonly_item(self._sentence_display(word.sentence, n_candidates))
-            item.setToolTip(self._sentence_tooltip(word.sentence, n_candidates))
-            self.table.setItem(row, 4, item)
+            self.table.setItem(
+                row,
+                4,
+                self._make_readonly_item(
+                    self._sentence_display(word.sentence, n_candidates),
+                    tooltip=self._sentence_tooltip(word.sentence, n_candidates),
+                    copy_text=word.sentence,
+                ),
+            )
 
-            # Frequency Rank — sort numerically, not lexically (issue #6)
-            if word.frequency_rank is not None:
-                rank_item = _NumericTableWidgetItem(str(word.frequency_rank), float(word.frequency_rank))
-            else:
-                rank_item = _NumericTableWidgetItem("-", float("inf"))
-            rank_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            self.table.setItem(row, 5, rank_item)
+            # Frequency Rank — sort numerically, not lexically (issue #6).
+            # An unranked word carries inf so it stays last ascending.
+            rank = word.frequency_rank
+            self.table.setItem(
+                row,
+                5,
+                self._make_readonly_item(
+                    "-" if rank is None else str(rank),
+                    role=CellRole.NUMBER,
+                    sort_value=float("inf") if rank is None else float(rank),
+                ),
+            )
 
             # Occurrences — times the word appears in this episode; sort
             # numerically so 15 ranks above 2 (Issue #88).
             occ = word.occurrence_count
-            occ_item = _NumericTableWidgetItem(str(occ), float(occ))
-            occ_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            self.table.setItem(row, 6, occ_item)
+            self.table.setItem(
+                row,
+                6,
+                self._make_readonly_item(str(occ), role=CellRole.NUMBER, sort_value=float(occ)),
+            )
 
         self.table.blockSignals(False)
         self.table.setSortingEnabled(True)
 
         # Re-apply AFTER sorting is re-enabled: re-enabling sorting resets the
-        # vertical-header resize mode to Interactive, which drops the scaled
+        # vertical-header resize mode to Interactive, which drops the shared
         # Fixed row height. Re-applying here keeps it in effect.
-        self._apply_fixed_row_height()
+        self._apply_data_surface()
 
-    def _make_readonly_item(self, text: str) -> QTableWidgetItem:
-        item = QTableWidgetItem(text)
+    def _make_readonly_item(
+        self,
+        text: str,
+        *,
+        role: CellRole = CellRole.TEXT,
+        sort_value: float | str | None = None,
+        tooltip: str | None = None,
+        copy_text: str | None = None,
+    ) -> QTableWidgetItem:
+        """Build a non-editable cell on the shared data-surface contract."""
+        item = make_table_item(text, role, sort_value=sort_value, copy_text=copy_text, tooltip=tooltip)
         item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
         return item
 

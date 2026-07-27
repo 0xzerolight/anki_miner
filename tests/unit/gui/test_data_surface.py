@@ -227,7 +227,6 @@ class TestCuratorGeometryComesFromMetrics:
             end_time=1.0,
             duration=1.0,
             frequency_rank=1200,
-            occurrence_count=9,
         )
         dialog = WordCurationDialog([word])
         qtbot.addWidget(dialog)

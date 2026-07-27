@@ -223,11 +223,17 @@ def _make_curation_words(count: int = 20) -> list[TokenizedWord]:
 
 
 def test_curation_uses_fixed_row_height(qtbot):
-    """Vertical header must use Fixed resize mode with 32px default section size at scale 1.0."""
+    """Vertical header must use Fixed resize mode at the shared row height.
+
+    Fixed is the performance half of the fix: ``ResizeToContents`` asks the
+    delegate for every row in a table that routinely holds thousands. The height
+    itself is the shared data-surface rule (D42), derived from the rendered font
+    rather than the 32px constant this used to pin.
+    """
     from PyQt6.QtWidgets import QHeaderView
 
-    # Pin the global font scale to 1.0: the row height now scales with it
-    # (Issue #63), so the 32px assertion only holds at the unscaled baseline.
+    from anki_miner.gui.utils.qt_helpers import data_row_height
+
     Theme.set_font_scale(1.0)
     dialog = WordCurationDialog(_make_curation_words())
     qtbot.addWidget(dialog)
@@ -235,7 +241,7 @@ def test_curation_uses_fixed_row_height(qtbot):
         v_header = dialog.table.verticalHeader()
         assert v_header is not None
         assert v_header.sectionResizeMode(0) == QHeaderView.ResizeMode.Fixed
-        assert v_header.defaultSectionSize() == 32
+        assert v_header.defaultSectionSize() == data_row_height(dialog.table)
     finally:
         dialog.deleteLater()
 
