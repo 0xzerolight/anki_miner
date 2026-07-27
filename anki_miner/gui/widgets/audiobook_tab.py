@@ -5,12 +5,14 @@ subtitle file, Add validates and queues the pair, and once at least one
 item is READY the user can run *Mine* across the whole queue.
 
 The queue-list lifecycle — Mine/Clear/Stop, the per-item signal slots, the
-terminal-bar summary, worker/processor management, and curation — is shared
-with :class:`~anki_miner.gui.widgets.youtube_tab.YouTubeTab` on
+terminal-bar summary, worker/processor management, curation, and the D28
+selection/filter/search/reorder surface — is shared with
+:class:`~anki_miner.gui.widgets.youtube_tab.YouTubeTab` on
 :class:`~anki_miner.gui.widgets._queue_mining_tab_base._ListQueueMiningTabBase`
 (ARC-008). This tab supplies only the local file-pair Add flow (local pairs
 need no probe stage, so items enter the queue READY), its own layout, and the
-per-tab adapters (worker class, row widget, item labels, status enum).
+per-tab adapters (worker class, row widget, item labels, status enum, filter
+bucket, search text).
 
 Two collaborators:
 

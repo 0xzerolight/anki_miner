@@ -22,9 +22,11 @@ Two layers:
 
 * :class:`_ListQueueMiningTabBase` — the ``QListWidget`` + per-row-widget queue
   UI shared by ``AudiobookTab`` and ``YouTubeTab`` only: the Mine/Clear/Stop
-  lifecycle, the per-item signal slots, the terminal-bar summary, and the
-  queue/row bookkeeping. Reading tabs do NOT extend this — their per-item slots
-  and progress model differ; they keep their own.
+  lifecycle, the per-item signal slots, the terminal-bar summary, the queue/row
+  bookkeeping, and the D28 manipulation surface (selection, filters, search,
+  counter, selection actions, reorder) plus the D31 current-job strip. Reading
+  tabs do NOT extend this — their per-item slots and progress model differ, and
+  Reading→Subtitles has no queue model at all; they keep their own.
 
 The worker OWNS the item lifecycle (it sets ``status``/``cards_created``/
 ``error_message`` on each item, on the worker thread, before emitting its

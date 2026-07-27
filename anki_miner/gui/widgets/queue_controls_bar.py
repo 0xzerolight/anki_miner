@@ -138,18 +138,20 @@ class QueueControlsBar(QWidget):
         self._filter_group = QButtonGroup(self)
         self._filter_group.setExclusive(True)
 
+        labels = {
+            "all": self.tr("All"),
+            "ready": self.tr("Ready"),
+            "running": self.tr("Running"),
+            "failed": self.tr("Failed"),
+            "complete": self.tr("Complete"),
+        }
+
         # Checkable ghost buttons rather than a bespoke chip: ``common.qss``
         # already paints ``QPushButton:checked`` with the accent, which under
         # D41 is exactly what a chosen toggle is meant to look like. A chip
         # style of its own would be a second answer to the same question.
-        for key, label in (
-            ("all", self.tr("All")),
-            ("ready", self.tr("Ready")),
-            ("running", self.tr("Running")),
-            ("failed", self.tr("Failed")),
-            ("complete", self.tr("Complete")),
-        ):
-            button = ModernButton(label, variant="ghost", parent=self)
+        for key in QUEUE_FILTERS:
+            button = ModernButton(labels[key], variant="ghost", parent=self)
             button.setCheckable(True)
             button.setProperty("queueFilter", key)
             apply_button_size(button)

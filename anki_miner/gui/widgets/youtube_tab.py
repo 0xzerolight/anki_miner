@@ -14,12 +14,14 @@ around three collaborators:
   per-row renderer embedded inside a :class:`QListWidget`.
 
 The queue-list lifecycle — Mine/Clear/Stop, the per-item signal slots, the
-terminal-bar summary, worker/processor management, and curation — is shared with
+terminal-bar summary, worker/processor management, curation, and the D28
+selection/filter/search/reorder surface — is shared with
 :class:`~anki_miner.gui.widgets.audiobook_tab.AudiobookTab` on
 :class:`~anki_miner.gui.widgets._queue_mining_tab_base._ListQueueMiningTabBase`
 (ARC-008). This tab adds only the URL/probe/playlist Add flow, the fetcher
 rebuild, and the per-tab adapters (worker class, row widget, item labels, status
-enum, the Add lock while a playlist resolves).
+enum, filter bucket, search text, probe retry, the Add lock while a playlist
+resolves).
 
 Button enable/disable is recomputed on every queue/worker signal by
 :meth:`_recompute_buttons` (base). There is no explicit state enum — the queue
