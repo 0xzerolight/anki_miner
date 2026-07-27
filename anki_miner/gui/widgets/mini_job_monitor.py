@@ -239,6 +239,10 @@ class MiniJobMonitor(QWidget):
         A request and nothing more. This window has no worker to stop and no
         cancellation event to set, and giving it one would put a second route
         into thread teardown behind a button on a floating window.
+
+        No superseded-run check is needed here: ``_watched`` is re-resolved
+        against the registry on every change and on every ``watch`` call, so it
+        already names the run the window is showing or nothing at all.
         """
         if self._watched is None:
             return
