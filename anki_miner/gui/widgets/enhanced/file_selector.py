@@ -407,17 +407,6 @@ class FileSelector(QWidget):
     # visible at all. Now the target states what it will do while the drag is
     # still in the air, and a payload it cannot take is refused with a reason.
 
-    def set_drop_validator(self, validator: DropValidator | None) -> None:
-        """Install (or clear) the consumer rule applied to a dragged path.
-
-        Exists for screens that build their selectors before they know what the
-        rule is -- a mode toggle, a config-driven extension set.
-
-        Args:
-            validator: The rule, or ``None`` to accept any path of the right kind.
-        """
-        self._drop_validator = validator
-
     def _classify_drop(self, event: QDragEnterEvent | QDropEvent) -> tuple[Path | None, str]:
         """Decide what a dragged payload is. Exactly one half of the pair is set.
 

@@ -233,17 +233,6 @@ class TestTheValidatorIsTheConsumersOwn:
 
         assert widget.get_path() == str(anything)
 
-    def test_a_validator_can_be_installed_after_construction(self, qtbot, tmp_path):
-        widget = FileSelector(label="Anything:", file_mode=True)
-        qtbot.addWidget(widget)
-        widget.set_drop_validator(accepts_suffixes((".mkv",), "Video only."))
-        anything = tmp_path / "notes.txt"
-        anything.touch()
-
-        _drop(widget, _mime(QUrl.fromLocalFile(str(anything)).toString()))
-
-        assert widget.get_path() == ""
-
     def test_suffix_matching_is_case_insensitive(self, qtbot, tmp_path):
         widget = FileSelector(
             label="Video File:",
