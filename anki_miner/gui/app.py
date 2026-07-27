@@ -1160,7 +1160,46 @@ def _schedule_installer_smoke(app: QApplication, window: MainWindow) -> None:
 
 @_rollback_workers_on_startup_fault
 def main():
-    """Launch the Anki Miner GUI application."""
+    """Launch the Anki Miner GUI application.
+
+    This is the one place that decides what happens in what order at startup.
+    Several independent features each contribute a small hook here rather than a
+    boot state machine of their own, and the sequence below is the composition
+    of all of them. ``tests/unit/test_boot_order.py`` pins it.
+
+    1. Pre-Qt: scrub the bootloader env, attach the log sink, decode the config,
+       and seed the three settings Qt only reads once — dialog mode, default
+       ``dicts_root``, and ``QT_SCALE_FACTOR`` (whole-UI zoom is therefore
+       restart-to-apply by nature).
+    2. ``QApplication``, then the crash net, then ``initialize_application_fonts``
+       — before the first widget, so every widget is measured against the face it
+       will be drawn with (D44-B).
+    3. Translators, also before the first widget: widgets capture their ``tr()``
+       strings at construction and language is restart-to-apply. The theme is
+       seeded next; a broken local theme must not block an unstyled GUI.
+    4. The single-instance lock, and the destructive store repair that is only
+       safe while we hold it. It is taken *after* the application and the
+       translators because its conflict prompt is a translated modal — the one
+       place the ideal "lock first" order is not available — and *before* any
+       window is composed, which is what the guard is actually for.
+    5. ``compose_main_window``: build the seven tabs, bind them to the task
+       registry, then restore the saved geometry and route (D7). Restoration is
+       last inside that call because the route is addressed by stable key, and
+       still ahead of ``show()`` so the window is never painted at one size and
+       then jumped to another. W1-T7's queue/download **Restore or Discard**
+       offer belongs at the end of this step, for the same two reasons.
+    6. ``commit_boot``: reconcile settings profiles, stamp the version, then
+       either offer first-run setup or release the optional startup work behind
+       it (D26). Boot used to start the JMdict migration and let the wizard
+       cancel it two lines later.
+    7. ``show()``, then the work that is only worth doing once something is on
+       screen: the stall watchdog, the stats load, and the tagger/dictionary
+       prewarm on the next event-loop turn.
+    8. ``app.exec()``. Its result is captured rather than passed straight to
+       ``sys.exit`` so a requested restart (D39b) can release the instance lock
+       and start the replacement only after the loop has returned and this
+       process is finished with its stores.
+    """
     _scrub_pyinstaller_env()
     installer_smoke = os.environ.get("ANKI_MINER_SMOKE") == "installer"
 
