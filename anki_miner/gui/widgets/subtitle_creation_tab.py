@@ -38,7 +38,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.constants import VIDEO_FILE_FILTER
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
-from anki_miner.gui.widgets.base import PageWidth, configure_scrolled_page
+from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, configure_scrolled_page
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.workers.subtitle_gen_worker import SubtitleGenWorker
 from anki_miner.services.asr import _engine, model_manager
@@ -145,8 +145,7 @@ class SubtitleCreationTab(_ToolTabBase):
         group = QFrame()
         group.setObjectName("card")
         layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(layout)
 
         layout.addWidget(SectionHeader(self.tr("Input")))
 
@@ -217,8 +216,7 @@ class SubtitleCreationTab(_ToolTabBase):
         group = QFrame()
         group.setObjectName("card")
         layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(layout)
 
         layout.addWidget(SectionHeader(self.tr("Output")))
 
@@ -265,8 +263,7 @@ class SubtitleCreationTab(_ToolTabBase):
         group = QFrame()
         group.setObjectName("card")
         layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(layout)
 
         layout.addWidget(SectionHeader(self.tr("Actions")))
 

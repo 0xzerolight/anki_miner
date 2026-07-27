@@ -39,7 +39,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
-from anki_miner.gui.widgets.base import PageWidth, configure_scrolled_page
+from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, configure_scrolled_page
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -148,8 +148,7 @@ class ReadingTextTab(_ReadingMiningTabBase):
         card = QFrame()
         card.setObjectName("card")
         card_layout = QVBoxLayout()
-        card_layout.setSpacing(SPACING.sm)
-        card_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(card_layout)
 
         card_layout.addWidget(SectionHeader(title=self.tr("Pasted Text")))
 

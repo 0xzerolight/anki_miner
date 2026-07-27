@@ -47,6 +47,7 @@ from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.base import (
     PageWidth,
+    configure_card_layout,
     configure_scrolled_page,
     field_label_width,
 )
@@ -203,8 +204,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         card = QFrame()
         card.setObjectName("card")
         card_layout = QVBoxLayout()
-        card_layout.setSpacing(SPACING.sm)
-        card_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(card_layout)
 
         card_layout.addWidget(SectionHeader(title=self.tr("Volume")))
 
@@ -242,8 +242,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         card = QFrame()
         card.setObjectName("card")
         card_layout = QVBoxLayout()
-        card_layout.setSpacing(SPACING.sm)
-        card_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(card_layout)
 
         card_layout.addWidget(SectionHeader(title=self.tr("Manga Folder")))
 

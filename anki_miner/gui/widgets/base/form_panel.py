@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base.setting_anchor import SettingAnchorHost, SettingTextProvider
-from anki_miner.gui.widgets.base.sizing import make_label_fit_text
+from anki_miner.gui.widgets.base.sizing import configure_card_layout, make_label_fit_text
 
 
 class FormPanel(SettingAnchorHost, QFrame):
@@ -57,8 +57,7 @@ class FormPanel(SettingAnchorHost, QFrame):
 
         # Main layout
         self._main_layout = QVBoxLayout()
-        self._main_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
-        self._main_layout.setSpacing(SPACING.xs)
+        configure_card_layout(self._main_layout)
 
         # Header
         header_layout = QHBoxLayout()
@@ -95,7 +94,9 @@ class FormPanel(SettingAnchorHost, QFrame):
     def _new_form_layout(self) -> QFormLayout:
         """Build a QFormLayout configured to match panel conventions."""
         layout = QFormLayout()
-        layout.setSpacing(SPACING.xs)
+        # Rows inside one card are more closely related to each other than the
+        # cards are, so their gap is the smaller of the two (D40).
+        layout.setSpacing(SPACING.xxs)
         layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
         layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
         return layout

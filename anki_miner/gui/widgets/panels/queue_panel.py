@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
-from anki_miner.gui.widgets.base import field_label_width
+from anki_miner.gui.widgets.base import configure_card_layout, field_label_width
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.queue_item_widget import QueueItemWidget
 from anki_miner.utils.i18n import tr_format
@@ -55,8 +55,7 @@ class QueuePanel(QFrame):
     def _setup_ui(self) -> None:
         """Set up the user interface."""
         layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(layout)
 
         # Section header with Add button
         header = SectionHeader(title=self.tr("Multi-Series Queue"), action_text=self.tr("Add Series"))

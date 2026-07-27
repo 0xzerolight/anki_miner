@@ -42,7 +42,7 @@ from anki_miner.gui.constants import SUBTITLE_FILE_FILTER, VIDEO_FILE_FILTER
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
-from anki_miner.gui.widgets.base import PageWidth, configure_scrolled_page
+from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, configure_scrolled_page
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.workers.subtitle_retime_worker import SubtitleRetimeWorker
@@ -169,8 +169,7 @@ class SubtitleRetimeTab(_ToolTabBase):
         group = QFrame()
         group.setObjectName("card")
         layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(layout)
 
         layout.addWidget(SectionHeader(self.tr("Input")))
 
@@ -269,8 +268,7 @@ class SubtitleRetimeTab(_ToolTabBase):
         group = QFrame()
         group.setObjectName("card")
         layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(layout)
 
         layout.addWidget(SectionHeader(self.tr("Output")))
 
@@ -351,8 +349,7 @@ class SubtitleRetimeTab(_ToolTabBase):
         group = QFrame()
         group.setObjectName("card")
         layout = QVBoxLayout()
-        layout.setSpacing(SPACING.sm)
-        layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        configure_card_layout(layout)
 
         layout.addWidget(SectionHeader(self.tr("Actions")))
 

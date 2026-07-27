@@ -26,6 +26,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
+    QFrame,
     QLineEdit,
     QTableWidget,
 )
@@ -159,3 +160,71 @@ class TestDataRowsGiveUpTheirSlack:
 
         visible = table.viewport().height() / table.rowHeight(0)
         assert visible >= 9, f"only {visible:.1f} rows in a 300px table"
+
+
+class TestCardsShareOneDensity:
+    """Fourteen screens hand-built the same card and each set its own margins."""
+
+    PAGES = (
+        "SingleEpisodeTab",
+        "BatchProcessingTab",
+        "YouTubeTab",
+        "AudiobookTab",
+        "ReadingMangaTab",
+        "ReadingNovelsTab",
+        "ReadingSubtitlesTab",
+        "ReadingTextTab",
+        "SubtitleCreationTab",
+        "SubtitleRetimeTab",
+        "CondenseTab",
+        "AnalyticsTab",
+        "SettingsTab",
+    )
+
+    @staticmethod
+    def _cards(page) -> list[QFrame]:
+        return [card for card in page.findChildren(QFrame, "card") if card.layout() is not None]
+
+    @pytest.mark.parametrize("name", PAGES)
+    def test_every_card_uses_the_shared_padding(self, qtbot, test_config, quiet_show, name):
+        from tests.unit.gui.test_page_width import _build_page
+
+        page = _build_page(name, test_config)
+        qtbot.addWidget(page)
+
+        cards = self._cards(page)
+        assert cards, f"{name}: no cards to measure"
+        for card in cards:
+            layout = card.layout()
+            margins = layout.contentsMargins()
+            assert (margins.left(), margins.top(), margins.right(), margins.bottom()) == (
+                SPACING.sm,
+                SPACING.sm,
+                SPACING.sm,
+                SPACING.sm,
+            ), f"{name}: a card still sets its own margins"
+            assert layout.spacing() == SPACING.xs, f"{name}: a card still sets its own gap"
+
+    def test_settings_fields_sit_closer_than_cards_do(self, qtbot):
+        """Rows inside one card are more related than the cards are to each
+        other, so their gap is the smaller one."""
+        from anki_miner.gui.widgets.base.form_panel import FormPanel
+
+        panel = FormPanel("Anki")
+        qtbot.addWidget(panel)
+        panel.add_field("Deck", QLineEdit())
+
+        assert panel._form_layout.spacing() == SPACING.xxs
+        assert panel.main_layout.spacing() == SPACING.xs
+
+
+@pytest.fixture
+def quiet_show(monkeypatch):
+    """Silence the pages that fetch from Anki the first time they are shown."""
+    from PyQt6.QtWidgets import QWidget
+
+    from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
+    from anki_miner.gui.widgets.settings_tab import SettingsTab
+
+    monkeypatch.setattr(SettingsTab, "showEvent", lambda self, event: QWidget.showEvent(self, event))
+    monkeypatch.setattr(AnalyticsTab, "refresh_data", lambda self, *a, **k: None)
