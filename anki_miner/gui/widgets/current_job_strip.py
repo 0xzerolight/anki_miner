@@ -11,6 +11,9 @@ drift from the registry. It is bound to one exact ``(task_id, run_token)``:
 another task changing, or a *later* run of the same task, leaves the line
 alone. And it owns no worker, no timer and no cancellation -- those stay with
 the tab that started the run.
+
+The sentence itself lives in :mod:`anki_miner.gui.utils.task_lines`, shared with
+the mini job monitor, so the two cannot describe the same run differently.
 """
 
 from __future__ import annotations
@@ -20,17 +23,13 @@ from typing import TYPE_CHECKING
 from PyQt6.QtWidgets import QHBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.utils.progress_telemetry import format_clock
+from anki_miner.gui.utils.task_lines import CANCEL_EXPLANATION_DELAY_S, format_task_line
 from anki_miner.gui.widgets.base.eliding_label import ElidingLabel
-from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.gui.controllers.task_registry import TaskRegistry, TaskSnapshot
 
-#: How long a cancel has to keep waiting before the strip explains itself. Below
-#: this the worker almost always stops first, and a line that appears and
-#: vanishes within a second is noise.
-CANCEL_EXPLANATION_DELAY_S = 2.0
+__all__ = ["CANCEL_EXPLANATION_DELAY_S", "CurrentJobStrip"]
 
 
 class CurrentJobStrip(QWidget):
@@ -115,59 +114,8 @@ class CurrentJobStrip(QWidget):
         return snapshot
 
     def _render(self, snapshot: TaskSnapshot) -> str:
-        """Compose the line from what the snapshot actually knows.
-
-        Every part is omitted when the registry has no honest value for it --
-        there is no invented phase name and no synthetic percentage.
-
-        The run's title is deliberately *not* the first thing on the line: the
-        strip sits inside the card that already names the queue, and repeating
-        it there would spend the width on something the user is looking at. It
-        stands in only when the run has not yet said anything more specific.
-        """
-        parts: list[str] = []
-
-        if snapshot.cancelling:
-            parts.append(self.tr("Cancelling…"))
-            # Most cancels land within a second, and narrating those reads as
-            # nervousness. Past that, silence starts to look like a hang, so the
-            # wait names whatever the run last said it was doing.
-            if snapshot.cancelling_age_s >= CANCEL_EXPLANATION_DELAY_S:
-                waiting_for = snapshot.detail or snapshot.stage_name
-                parts.append(
-                    tr_format(self.tr("Finishing %1"), waiting_for)
-                    if waiting_for
-                    else self.tr("Finishing the current item")
-                )
-            if snapshot.total:
-                parts.append(tr_format(self.tr("%1 / %2"), snapshot.current, snapshot.total))
-            parts.append(format_clock(snapshot.elapsed_s))
-            return " · ".join(parts)
-
-        if snapshot.stage_name:
-            if snapshot.stage_index is not None and snapshot.stage_total:
-                parts.append(
-                    tr_format(
-                        self.tr("%1 (%2 of %3)"),
-                        snapshot.stage_name,
-                        snapshot.stage_index,
-                        snapshot.stage_total,
-                    )
-                )
-            else:
-                parts.append(snapshot.stage_name)
-
-        if snapshot.detail:
-            parts.append(snapshot.detail)
-
-        if not parts:
-            parts.append(snapshot.title)
-
-        if snapshot.total:
-            parts.append(tr_format(self.tr("%1 / %2"), snapshot.current, snapshot.total))
-
-        parts.append(format_clock(snapshot.elapsed_s))
-        return " · ".join(parts)
+        """Compose the line, through the formatter every task surface shares."""
+        return format_task_line(snapshot)
 
     # ------------------------------------------------------------------
     # Construction
