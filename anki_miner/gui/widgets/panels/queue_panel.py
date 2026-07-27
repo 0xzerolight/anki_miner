@@ -1,10 +1,28 @@
-"""Multi-series queue panel for batch processing."""
+"""Multi-series queue panel for batch processing.
+
+Under D28 this is a list you manipulate, not a stack of cards: rows highlight on
+click, shift-click takes a range, ``Ctrl+A`` selects all, ``Delete`` removes the
+selection, dragging or ``Alt+Up/Down`` reorders, and the shared
+:class:`~anki_miner.gui.widgets.queue_controls_bar.QueueControlsBar` supplies the
+filter chips, search, counter and selection actions the two list queues already
+had. The same bar carries the D29-A lock badge and the two boundary controls
+while a run owns the queue.
+
+The queue *model* is not rebuilt for any of that. Rows bind to persistent
+:class:`~anki_miner.models.batch_queue.QueueItem` identities, because each one
+carries the episode receipts (``committed_pair_keys``) that stop a retry
+re-mining pairs already in Anki. A row whose folders are not both set yet stays
+unbound; it acquires its item the moment they validate, and an edit updates that
+same object.
+"""
+
+from __future__ import annotations
 
 import logging
 from pathlib import Path
 
-from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtGui import QFont
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QFont, QKeySequence
 from PyQt6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -13,27 +31,42 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
     QLabel,
+    QListWidget,
+    QListWidgetItem,
     QMessageBox,
-    QScrollArea,
     QSizePolicy,
     QVBoxLayout,
-    QWidget,
 )
 
 from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
 from anki_miner.gui.widgets.base import configure_card_layout, field_label_width
+from anki_miner.gui.widgets.base.sizing import metric_row_height
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
+from anki_miner.gui.widgets.queue_controls_bar import QueueControlsBar
 from anki_miner.gui.widgets.queue_item_widget import QueueItemWidget
+from anki_miner.models.batch_queue import BatchQueue, QueueItem, QueueItemStatus
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
+#: Rows the queue shows before it scrolls. Measured in rows, not pixels, so it
+#: still holds this many at 1.5x text.
+_VISIBLE_QUEUE_ROWS = 6
+
+#: Row status -> filter chip. The same four words the row badge prints, so the
+#: Failed chip selects exactly the rows reading "Failed".
+_STATUS_BUCKETS = {
+    "pending": "ready",
+    "processing": "running",
+    "error": "failed",
+    "complete": "complete",
+}
+
 
 class QueuePanel(QFrame):
     """Multi-series queue management panel.
-
-    Handles queue display, item management, and statistics.
 
     Signals:
         process_requested: Emitted when user wants to process queue
@@ -41,28 +74,40 @@ class QueuePanel(QFrame):
 
     process_requested = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, queue: BatchQueue | None = None):
         """Initialize the queue panel.
 
         Args:
             parent: Optional parent widget
+            queue: The persistent model the rows bind to. The tab passes its own
+                so removal, reorder and edits mutate one queue rather than the
+                panel keeping a second, divergent copy.
         """
         super().__init__(parent)
         self.setObjectName("card")
-        self.queue_item_widgets = []
+        self.queue = queue if queue is not None else BatchQueue()
+        self.queue_item_widgets: list[QueueItemWidget] = []
+        self._list_items: dict[int, QListWidgetItem] = {}
+        self._items: dict[int, QueueItem] = {}
+        self._filter = "all"
+        self._search = ""
+        self._locked = False
+        self._suppress_row_sync = False
         self._setup_ui()
+
+    # ------------------------------------------------------------------
+    # Construction
+    # ------------------------------------------------------------------
 
     def _setup_ui(self) -> None:
         """Set up the user interface."""
         layout = QVBoxLayout()
         configure_card_layout(layout)
 
-        # Section header with Add button
         header = SectionHeader(title=self.tr("Multi-Series Queue"), action_text=self.tr("Add Series"))
         header.action_clicked.connect(self._add_series)
         layout.addWidget(header)
 
-        # Summary statistics bar
         self.queue_stats_label = QLabel()
         self.queue_stats_label.setObjectName("queue-stats")
         stats_font = QFont()
@@ -72,23 +117,13 @@ class QueuePanel(QFrame):
         self.queue_stats_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         layout.addWidget(self.queue_stats_label)
 
-        # Scrollable area for queue items
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setMinimumHeight(200)
-        scroll_area.setObjectName("queue-scroll")
+        self.queue_controls = QueueControlsBar()
+        layout.addWidget(self.queue_controls)
 
-        # Container widget for queue items
-        self.queue_container = QWidget()
-        self.queue_layout = QVBoxLayout(self.queue_container)
-        self.queue_layout.setContentsMargins(0, 0, 0, 0)
-        self.queue_layout.setSpacing(SPACING.sm)
-        self.queue_layout.addStretch()  # Push items to top
+        self.list_widget = QListWidget()
+        self.list_widget.setObjectName("queue-list")
+        layout.addWidget(self.list_widget)
 
-        scroll_area.setWidget(self.queue_container)
-        layout.addWidget(scroll_area)
-
-        # Queue control buttons
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.sm)
 
@@ -97,22 +132,60 @@ class QueuePanel(QFrame):
         self.process_queue_button.setToolTip(self.tr("Process all series in queue"))
         button_layout.addWidget(self.process_queue_button)
 
-        clear_button = ModernButton(self.tr("Clear All"), variant="ghost")
-        clear_button.clicked.connect(self._clear_queue)
-        clear_button.setToolTip(self.tr("Remove all items from queue"))
-        button_layout.addWidget(clear_button)
+        self.clear_button = ModernButton(self.tr("Clear All"), variant="ghost")
+        self.clear_button.clicked.connect(self._clear_queue)
+        self.clear_button.setToolTip(self.tr("Remove all items from queue"))
+        button_layout.addWidget(self.clear_button)
 
         button_layout.addStretch()
         layout.addLayout(button_layout)
 
         self.setLayout(layout)
 
-        # Update initial stats
+        self._wire_interaction()
         self._update_stats()
 
+    def _wire_interaction(self) -> None:
+        """Turn the plain list into a manipulable one (D28).
+
+        Native list input owns selection and drag; everything here either
+        mirrors that into the embedded row widgets -- ``setItemWidget`` puts an
+        opaque widget over the item, so the row has to be told -- or supplies a
+        verb Qt has no opinion about.
+        """
+        self.list_widget.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
+        self.list_widget.setDragDropMode(QListWidget.DragDropMode.InternalMove)
+        self.list_widget.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.list_widget.setMinimumHeight(_VISIBLE_QUEUE_ROWS * metric_row_height(self.list_widget))
+        self.list_widget.itemSelectionChanged.connect(self._on_selection_changed)
+
+        model = self.list_widget.model()
+        if model is not None:
+            model.rowsMoved.connect(self._on_rows_moved)
+
+        self.queue_controls.filter_changed.connect(self._on_filter_changed)
+        self.queue_controls.search_changed.connect(self._on_search_changed)
+        self.queue_controls.run_selected.connect(self.process_requested.emit)
+        self.queue_controls.retry_selected.connect(self._retry_selected)
+        self.queue_controls.remove_selected.connect(self._remove_selected)
+
+        # Scoped to the list: Delete and the Alt arrows must not fire from the
+        # folder pickers or the offset spinbox on the same screen.
+        widget_only = Qt.ShortcutContext.WidgetShortcut
+        scoped_shortcut(self.list_widget, QKeySequence(Qt.Key.Key_Delete), self._remove_selected, context=widget_only)
+        scoped_shortcut(self.list_widget, QKeySequence("Alt+Up"), lambda: self._move_selection(-1), context=widget_only)
+        scoped_shortcut(
+            self.list_widget, QKeySequence("Alt+Down"), lambda: self._move_selection(1), context=widget_only
+        )
+
+    # ------------------------------------------------------------------
+    # Rows
+    # ------------------------------------------------------------------
+
     def _add_series(self) -> None:
-        """Add a new series to the queue."""
-        # Prompt for series name
+        """Add a new series row to the queue."""
+        if self._locked:
+            return
         name, ok = QInputDialog.getText(
             self,
             self.tr("Add Series"),
@@ -122,29 +195,81 @@ class QueuePanel(QFrame):
         if not ok or not name.strip():
             return
 
-        # Create queue item widget
-        widget = QueueItemWidget(display_name=name, parent=self.queue_container)
-
-        # Connect signals
+        widget = QueueItemWidget(display_name=name, parent=self.list_widget)
         widget.removed.connect(lambda: self._remove_item(widget))
         widget.edited.connect(lambda: self._edit_item(widget))
+        self.register_widget(widget)
 
-        # Add to layout (before the stretch)
-        self.queue_layout.insertWidget(len(self.queue_item_widgets), widget)
+    def register_widget(self, widget: QueueItemWidget) -> None:
+        """Put ``widget`` on the list and bind it if its folders already validate.
+
+        The single entry point for a new row, so nothing can end up on the list
+        without a list item and a filter state.
+        """
+        list_item = QListWidgetItem()
+        list_item.setSizeHint(widget.sizeHint())
+        self.list_widget.addItem(list_item)
+        self.list_widget.setItemWidget(list_item, widget)
+
         self.queue_item_widgets.append(widget)
+        self._list_items[id(widget)] = list_item
+        self._bind_widget(widget)
 
+        list_item.setHidden(not self._row_visible(widget))
         self._update_stats()
 
+    def _bind_widget(self, widget: QueueItemWidget) -> QueueItem | None:
+        """Give ``widget`` its persistent queue item once both folders validate.
+
+        An incomplete row stays unbound rather than acquiring a placeholder item:
+        a ``QueueItem`` is the thing a run and its receipts are addressed by, and
+        one that names no folders would be a row the queue counts but can never
+        mine.
+        """
+        video, subtitle = widget.get_folders()
+        if video is None or subtitle is None:
+            return None
+
+        item = self._items.get(id(widget))
+        if item is None:
+            item = self.queue.add_item(video, subtitle, widget.display_name, widget.subtitle_offset)
+            self._items[id(widget)] = item
+            widget.item_id = item.id
+            return item
+
+        # Edited: same identity, new inputs. The receipts describe episodes that
+        # are no longer this row's, so they go with the folders that produced them.
+        if (item.video_folder, item.subtitle_folder) != (video, subtitle):
+            item.video_folder = video
+            item.subtitle_folder = subtitle
+            self.queue.reset_for_new_inputs(item)
+            widget.set_status("pending")
+        item.display_name = widget.display_name
+        item.subtitle_offset = widget.subtitle_offset
+        return item
+
     def _remove_item(self, widget: QueueItemWidget) -> None:
-        """Remove a queue item widget.
+        """Remove a queue item widget, its row and its model item.
 
         Args:
             widget: Widget to remove
         """
-        if widget in self.queue_item_widgets:
-            self.queue_item_widgets.remove(widget)
-            widget.deleteLater()
-            self._update_stats()
+        if self._locked:
+            return
+        if widget not in self.queue_item_widgets:
+            return
+        self.queue_item_widgets.remove(widget)
+        item = self._items.pop(id(widget), None)
+        if item is not None:
+            self.queue.remove(item)
+        list_item = self._list_items.pop(id(widget), None)
+        if list_item is not None:
+            row = self.list_widget.row(list_item)
+            if row >= 0:
+                # takeItem deletes the QListWidgetItem; Qt destroys the embedded
+                # widget alongside it.
+                self.list_widget.takeItem(row)
+        self._update_stats()
 
     def _edit_item(self, widget: QueueItemWidget) -> None:
         """Edit a queue item's folders and subtitle offset.
@@ -152,7 +277,8 @@ class QueuePanel(QFrame):
         Args:
             widget: Widget to edit
         """
-        # Create simple edit dialog
+        if self._locked:
+            return
         dialog = QDialog(self)
         dialog.setWindowTitle(tr_format(self.tr("Edit: %1"), widget.display_name))
         dialog.setMinimumWidth(600)
@@ -162,31 +288,27 @@ class QueuePanel(QFrame):
         # Shared label-column width so every labeled row lines up.
         label_w = field_label_width(self.tr("Video Folder:"), self.tr("Subtitle Folder:"), self.tr("Subtitle Offset:"))
 
-        # Video folder selector
         video_selector = FileSelector(
             label=self.tr("Video Folder:"),
             file_mode=False,
             label_width=label_w,
             history_key="video.batch.inputs",
         )
-        current_video, _ = widget.get_folders()
+        current_video, current_subtitle = widget.get_folders()
         if current_video:
             video_selector.set_path(str(current_video))
         layout.addWidget(video_selector)
 
-        # Subtitle folder selector
         subtitle_selector = FileSelector(
             label=self.tr("Subtitle Folder:"),
             file_mode=False,
             label_width=label_w,
             history_key="video.batch.inputs",
         )
-        _, current_subtitle = widget.get_folders()
         if current_subtitle:
             subtitle_selector.set_path(str(current_subtitle))
         layout.addWidget(subtitle_selector)
 
-        # Subtitle offset input
         offset_layout = QHBoxLayout()
         offset_label = QLabel(self.tr("Subtitle Offset:"))
         offset_label.setObjectName("field-label")
@@ -202,7 +324,6 @@ class QueuePanel(QFrame):
         offset_layout.addStretch()
         layout.addLayout(offset_layout)
 
-        # Dialog buttons
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         button_box.accepted.connect(dialog.accept)
         button_box.rejected.connect(dialog.reject)
@@ -211,14 +332,12 @@ class QueuePanel(QFrame):
         dialog.setLayout(layout)
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            # Update widget with new paths
             video_path = video_selector.get_path()
             subtitle_path = subtitle_selector.get_path()
 
             if video_path and subtitle_path:
                 widget.set_folders(Path(video_path), Path(subtitle_path))
 
-                # Count episodes (optional enhancement)
                 from anki_miner.utils.file_pairing import FilePairMatcher
 
                 try:
@@ -227,15 +346,21 @@ class QueuePanel(QFrame):
                 except Exception as e:
                     logger.warning(f"Failed to count episodes for {widget.display_name}: {e}")
 
-            # Update subtitle offset
             widget.subtitle_offset = offset_spinbox.value()
+            self._bind_widget(widget)
+            self._apply_view()
+            self._update_stats()
 
     def _clear_queue(self) -> None:
         """Clear all items from the queue."""
+        if self._locked:
+            return
         if not self.queue_item_widgets:
             QMessageBox.information(self, self.tr("Empty Queue"), self.tr("Queue is already empty."))
             return
 
+        # A confirmation, not an error report: this is destructive and
+        # irreversible, which is the one thing D24 still allows a modal for.
         reply = QMessageBox.question(
             self,
             self.tr("Clear Queue"),
@@ -244,16 +369,236 @@ class QueuePanel(QFrame):
         )
 
         if reply == QMessageBox.StandardButton.Yes:
-            for widget in self.queue_item_widgets:
-                widget.deleteLater()
-            self.queue_item_widgets.clear()
+            for widget in list(self.queue_item_widgets):
+                self._remove_item(widget)
+            self.queue.clear()
             self._update_stats()
+
+    # ------------------------------------------------------------------
+    # Selection, filter, search
+    # ------------------------------------------------------------------
+
+    def _widget_at(self, list_item: QListWidgetItem | None) -> QueueItemWidget | None:
+        """Resolve a list row back to its embedded widget."""
+        if list_item is None:
+            return None
+        for widget in self.queue_item_widgets:
+            if self._list_items.get(id(widget)) is list_item:
+                return widget
+        return None
+
+    def selected_widgets(self) -> list[QueueItemWidget]:
+        """Selected, visible rows in the order the list shows them.
+
+        Hidden rows are excluded rather than merely deselected on filter change:
+        a selected action must never reach a row the user cannot see.
+        """
+        selected: list[QueueItemWidget] = []
+        for row in range(self.list_widget.count()):
+            list_item = self.list_widget.item(row)
+            if list_item is None or list_item.isHidden() or not list_item.isSelected():
+                continue
+            widget = self._widget_at(list_item)
+            if widget is not None:
+                selected.append(widget)
+        return selected
+
+    def view_order(self) -> list[QueueItemWidget]:
+        """Rows in the order the list currently shows them."""
+        order: list[QueueItemWidget] = []
+        for row in range(self.list_widget.count()):
+            widget = self._widget_at(self.list_widget.item(row))
+            if widget is not None:
+                order.append(widget)
+        return order
+
+    def _on_selection_changed(self) -> None:
+        """Mirror the view's selection into the rows and the action buttons."""
+        selected = {id(w) for w in self.selected_widgets()}
+        for widget in self.queue_item_widgets:
+            widget.setProperty("queueSelected", id(widget) in selected)
+        self._refresh_selection_actions()
+
+    def _refresh_selection_actions(self) -> None:
+        """Enable each selection verb only where it has something to act on.
+
+        All three are off during a run: the worker mines a snapshot frozen at
+        launch, so mutating the list underneath it would change what the counters
+        and the receipt describe without changing what actually gets mined.
+        """
+        selected = self.selected_widgets()
+        runnable = any(self._items.get(id(w)) is not None for w in selected)
+        retryable = any(w.get_status() == "error" for w in selected)
+        removable = any(w.get_status() != "processing" for w in selected)
+        self.queue_controls.set_actions_enabled(
+            run=runnable and not self._locked,
+            retry=retryable and not self._locked,
+            remove=removable and not self._locked,
+        )
+
+    def _on_filter_changed(self, key: str) -> None:
+        """Adopt a filter chip and re-apply the view."""
+        self._filter = key
+        self._apply_view()
+
+    def _on_search_changed(self, text: str) -> None:
+        """Adopt the search text and re-apply the view."""
+        self._search = text
+        self._apply_view()
+
+    def _row_visible(self, widget: QueueItemWidget) -> bool:
+        """Whether ``widget`` survives both the active chip and the search text."""
+        if self._filter != "all" and _STATUS_BUCKETS.get(widget.get_status(), "ready") != self._filter:
+            return False
+        needle = self._search.strip().casefold()
+        return not needle or needle in widget.display_name.casefold()
+
+    def _apply_view(self) -> None:
+        """Hide the rows the filter and search exclude, and deselect them."""
+        for widget in self.queue_item_widgets:
+            list_item = self._list_items.get(id(widget))
+            if list_item is None:
+                continue
+            visible = self._row_visible(widget)
+            if not visible and list_item.isSelected():
+                list_item.setSelected(False)
+            list_item.setHidden(not visible)
+        self._refresh_counts()
+        self._refresh_selection_actions()
+
+    def _refresh_counts(self) -> None:
+        """Restate the queue's shape. Counts the queue, never the current view."""
+        buckets = [_STATUS_BUCKETS.get(w.get_status(), "ready") for w in self.queue_item_widgets]
+        self.queue_controls.set_counts(
+            total=len(self.queue_item_widgets),
+            ready=buckets.count("ready"),
+            failed=buckets.count("failed"),
+            complete=buckets.count("complete"),
+        )
+
+    def _remove_selected(self) -> None:
+        """Drop the selected rows. A row being mined is left where it is."""
+        for widget in self.selected_widgets():
+            if widget.get_status() == "processing":
+                continue
+            self._remove_item(widget)
+        self._apply_view()
+
+    def _retry_selected(self) -> None:
+        """Return the selected failed rows to pending, keeping their receipts.
+
+        The episode receipts are deliberately preserved: a retry that re-mined
+        pairs already in Anki would duplicate the user's cards, which is exactly
+        what ``committed_pair_keys`` exists to prevent.
+        """
+        for widget in self.selected_widgets():
+            if widget.get_status() != "error":
+                continue
+            widget.set_status("pending")
+            item = self._items.get(id(widget))
+            if item is not None:
+                item.status = QueueItemStatus.PENDING
+                item.error_message = ""
+        self._apply_view()
+
+    # ------------------------------------------------------------------
+    # Reorder
+    # ------------------------------------------------------------------
+
+    def _move_selection(self, delta: int) -> None:
+        """Move every selected row one place up (-1) or down (+1)."""
+        if self._locked:
+            return
+        order = self.view_order()
+        rows = sorted(order.index(w) for w in self.selected_widgets())
+        if not rows:
+            return
+        if delta < 0:
+            if rows[0] == 0:
+                return
+            for row in rows:
+                order[row - 1], order[row] = order[row], order[row - 1]
+        else:
+            if rows[-1] == len(order) - 1:
+                return
+            for row in reversed(rows):
+                order[row + 1], order[row] = order[row], order[row + 1]
+        self._reorder_to(order)
+
+    def _reorder_to(self, order: list[QueueItemWidget]) -> None:
+        """Adopt ``order`` in the list widget and then in the queue model.
+
+        Realised through ``QAbstractItemModel.moveRow`` rather than take/insert:
+        a moved row keeps the widget that was set on it, where a taken item's
+        widget is Qt's to destroy.
+        """
+        model = self.list_widget.model()
+        if model is None:
+            return
+        selected = self.selected_widgets()
+        self._suppress_row_sync = True
+        try:
+            root = self.list_widget.rootIndex()
+            for target, widget in enumerate(order):
+                list_item = self._list_items.get(id(widget))
+                if list_item is None:
+                    continue
+                current = self.list_widget.row(list_item)
+                if current != target:
+                    model.moveRow(root, current, root, target)
+        finally:
+            self._suppress_row_sync = False
+        self._sync_model_order()
+        for widget in selected:
+            list_item = self._list_items.get(id(widget))
+            if list_item is not None:
+                list_item.setSelected(True)
+
+    def _on_rows_moved(self, *_args) -> None:
+        """Adopt the order the user dragged the rows into."""
+        if self._suppress_row_sync:
+            return
+        self._sync_model_order()
+
+    def _sync_model_order(self) -> None:
+        """Rebuild the queue's order from the visible row order.
+
+        Only the bound rows are in the model, so the permutation is taken over
+        those; an unbound row has no identity to place.
+        """
+        self.queue_item_widgets = self.view_order()
+        bound = [self._items[id(w)] for w in self.queue_item_widgets if id(w) in self._items]
+        if len(bound) == len(self.queue.get_all_items()):
+            self.queue.reorder(bound)
+
+    # ------------------------------------------------------------------
+    # Run lock (D29-A)
+    # ------------------------------------------------------------------
+
+    def set_locked(self, locked: bool) -> None:
+        """Freeze the queue for the duration of a run.
+
+        Args:
+            locked: Whether a run currently owns the queue.
+        """
+        self._locked = locked
+        self.clear_button.setEnabled(not locked)
+        self.queue_controls.set_running(locked)
+        drag = QListWidget.DragDropMode.NoDragDrop if locked else QListWidget.DragDropMode.InternalMove
+        self.list_widget.setDragDropMode(drag)
+        self.list_widget.setDragEnabled(not locked)
+        for widget in self.queue_item_widgets:
+            widget.setEnabled(not locked)
+        self._refresh_selection_actions()
+
+    # ------------------------------------------------------------------
+    # Stats
+    # ------------------------------------------------------------------
 
     def _update_stats(self) -> None:
         """Update the queue statistics display."""
         series_count = len(self.queue_item_widgets)
 
-        # Count total episodes and cards
         total_episodes = 0
         total_cards = 0
         for widget in self.queue_item_widgets:
@@ -270,6 +615,7 @@ class QueuePanel(QFrame):
             text = tr_format(self.tr("%1 series - %2 episodes - Ready to process"), series_count, total_episodes)
 
         self.queue_stats_label.setText(text)
+        self._refresh_counts()
 
     # === Public API ===
 
@@ -277,12 +623,26 @@ class QueuePanel(QFrame):
         """Add a series (for external shortcut binding)."""
         self._add_series()
 
+    def runnable_items(self) -> list[QueueItem]:
+        """The bound, runnable rows a Process Queue click should mine.
+
+        The selection when there is one, in the order the list shows it;
+        otherwise every runnable row. A run therefore mines exactly what the user
+        can see it is about to mine (D28, D29-A).
+        """
+        chosen = self.selected_widgets() or self.view_order()
+        items: list[QueueItem] = []
+        for widget in chosen:
+            item = self._items.get(id(widget))
+            if item is None or widget.get_status() == "processing":
+                continue
+            if item.status in (QueueItemStatus.PENDING, QueueItemStatus.ERROR):
+                item.status = QueueItemStatus.PENDING
+                items.append(item)
+        return items
+
     def get_valid_pairs(self) -> list:
         """Get all valid folder pairs for processing.
-
-        The source widget is included so the caller can stamp the created
-        QueueItem.id back onto it (``widget.item_id``), keeping panel rows and
-        worker items addressable by the same id (T-30).
 
         Returns:
             List of tuples:
@@ -305,11 +665,9 @@ class QueuePanel(QFrame):
         for widget in self.queue_item_widgets:
             video, subtitle = widget.get_folders()
             if video and subtitle:
-                # Both paths set - check if they exist on disk
                 if not video.exists() or not subtitle.exists():
                     incomplete.append((widget, "invalid"))
             else:
-                # One or both paths not set
                 incomplete.append((widget, "incomplete"))
         return incomplete
 
@@ -327,6 +685,7 @@ class QueuePanel(QFrame):
             if widget.item_id == item_id:
                 widget.set_status(status)
                 break
+        self._apply_view()
 
     def set_processing_item_complete(self, item_id: str, cards_created: int) -> None:
         """Mark a specific item complete and record its card count.
@@ -345,6 +704,7 @@ class QueuePanel(QFrame):
                 widget.set_cards_created(cards_created)
                 break
         self._update_stats()
+        self._apply_view()
 
     def update_stats(self) -> None:
         """Update queue statistics display (public method)."""
