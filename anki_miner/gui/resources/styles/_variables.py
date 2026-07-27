@@ -4,6 +4,7 @@ This module provides centralized design tokens as frozen dataclasses for:
 - Spacing values
 - Font sizes
 - Border radius values
+- Motion durations (Python-only; Qt stylesheets have no transition property)
 
 Usage in Python:
     from anki_miner.gui.resources.styles._variables import SPACING, FONT_SIZES, BORDER_RADIUS
@@ -19,8 +20,8 @@ Usage in QSS (after substitution):
 Internal-but-tested: this private module (leading underscore) is a stable test surface —
 ``tests/unit/test_variables_font_scale.py`` and ``test_theme_font_scale.py`` import it
 directly for ``get_variable_dict``, which the ``styles`` package facade does NOT re-export
-(only ``SPACING``/``FONT_SIZES``/``BORDER_RADIUS`` are). The underscore stays; do not rename
-it or drop those direct imports to the facade.
+(only ``SPACING``/``FONT_SIZES``/``BORDER_RADIUS``/``MOTION`` are). The underscore stays; do
+not rename it or drop those direct imports to the facade.
 """
 
 from dataclasses import dataclass
@@ -54,6 +55,26 @@ class FontSizes:
 
 
 @dataclass(frozen=True)
+class Motion:
+    """Animation durations in milliseconds.
+
+    One scale, ordered by how far the thing being animated actually travels: a
+    press tint moves nothing, a tab underline crosses the bar. Everything stays
+    at or under 250ms, past which a transition reads as lag rather than polish.
+
+    Deliberately NOT exposed in the QSS variable dict -- Qt stylesheets have no
+    transition property, so motion is applied from Python only (see
+    ``gui/utils/motion.py``).
+    """
+
+    press: int = 70  # Button press tint; must land before the eye leaves the control
+    state: int = 120  # Hover, focus ring, status-pill change, progress catch-up
+    navigation: int = 160  # Tab underline slide; the page itself is already there
+    reveal: int = 220  # Something appearing or expanding in place
+    spinner_cycle: int = 900  # One full rotation of an indeterminate indicator
+
+
+@dataclass(frozen=True)
 class BorderRadius:
     """Border radius values in pixels."""
 
@@ -66,6 +87,7 @@ class BorderRadius:
 SPACING = Spacing()
 FONT_SIZES = FontSizes()
 BORDER_RADIUS = BorderRadius()
+MOTION = Motion()
 
 
 def get_variable_dict(font_scale: float = 1.0) -> dict[str, str]:
