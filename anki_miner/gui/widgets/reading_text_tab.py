@@ -28,7 +28,6 @@ from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFrame,
-    QHBoxLayout,
     QLabel,
     QPlainTextEdit,
     QScrollArea,
@@ -39,7 +38,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
-from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, configure_scrolled_page
+from anki_miner.gui.widgets.base import PageWidth, configure_card_layout
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -130,11 +129,18 @@ class ReadingTextTab(_ReadingMiningTabBase):
         layout.addWidget(self.log_widget, 1)
 
         container.setLayout(layout)
-        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.addWidget(scroll_area)
+        self._install_action_bar(
+            main_layout,
+            scroll_area,
+            container,
+            self.PAGE_WIDTH,
+            primary=self.mine_button,
+            secondary=(self.cancel_button,),
+            log=self.log_widget,
+        )
         self.setLayout(main_layout)
 
     def _progress_header(self, text: str) -> QLabel:
@@ -167,22 +173,16 @@ class ReadingTextTab(_ReadingMiningTabBase):
         self.text_edit.textChanged.connect(self._recompute_buttons)
         card_layout.addWidget(self.text_edit)
 
-        button_row = QHBoxLayout()
-        button_row.setSpacing(SPACING.sm)
-
+        # Mine and Cancel live in the pinned bar (D6), so a long paste cannot
+        # push the run button off the screen.
         self.mine_button = ModernButton(self.tr("Mine"), variant="primary")
         self.mine_button.setToolTip(self.tr("Mine the pasted text into Anki cards."))
         self.mine_button.clicked.connect(self._on_mine_clicked)
-        button_row.addWidget(self.mine_button)
 
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.cancel_button.setToolTip(self.tr("Cancel the active run."))
         self.cancel_button.clicked.connect(self._on_cancel_clicked)
         self.cancel_button.hide()
-        button_row.addWidget(self.cancel_button)
-
-        button_row.addStretch()
-        card_layout.addLayout(button_row)
 
         card.setLayout(card_layout)
         card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)

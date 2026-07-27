@@ -58,7 +58,7 @@ from anki_miner.gui.widgets._queue_mining_tab_base import (
     _QueueListStrings,
     _QueueRunStrings,
 )
-from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, configure_scrolled_page
+from anki_miner.gui.widgets.base import PageWidth, configure_card_layout
 from anki_miner.gui.widgets.current_job_strip import CurrentJobStrip
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
@@ -263,9 +263,9 @@ class YouTubeTab(_ListQueueMiningTabBase):
         self.stop_button.setToolTip(self.tr("Cancel the active run."))
         self.stop_button.clicked.connect(self._on_stop_all_clicked)
 
-        button_row.addWidget(self.mine_button)
+        # Clear acts on the list right above it and stays with it. Mine and
+        # Cancel move to the pinned bar (D6).
         button_row.addWidget(self.clear_button)
-        button_row.addWidget(self.stop_button)
         button_row.addStretch()
         queue_layout.addLayout(button_row)
 
@@ -292,11 +292,18 @@ class YouTubeTab(_ListQueueMiningTabBase):
         layout.addWidget(self.log_widget)
 
         container.setLayout(layout)
-        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.addWidget(scroll_area)
+        self._install_action_bar(
+            main_layout,
+            scroll_area,
+            container,
+            self.PAGE_WIDTH,
+            primary=self.mine_button,
+            secondary=(self.stop_button,),
+            log=self.log_widget,
+        )
         self.setLayout(main_layout)
 
     # ------------------------------------------------------------------

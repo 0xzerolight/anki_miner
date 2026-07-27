@@ -225,6 +225,10 @@ class _QueueMiningTabBase(MiningTabBase):
         Progress reset and button state are intentionally NOT touched here: they
         are per-tab UI concerns owned by the caller.
         """
+        # Before the refusals below, not after: a run turned away for an empty
+        # or unavailable queue says so in the log, and that is one of the
+        # warnings the Activity drawer exists to put back on screen (D6).
+        self._begin_attempt()
         if self.worker_thread is not None:
             return False
         if not items:
@@ -620,6 +624,10 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
             registry: The window's registry. Worker lifetime stays here.
         """
         self._task_registry = registry
+        # The pinned bar follows the screen, not one run, so it binds by task id
+        # and picks up every later run of the same queue (D6).
+        if self.action_bar is not None and self.TASK_ID:
+            self.action_bar.bind_task(registry, self.TASK_ID)
 
     # ------------------------------------------------------------------
     # Run lifecycle

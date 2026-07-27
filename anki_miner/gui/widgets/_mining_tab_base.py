@@ -26,12 +26,12 @@ from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QDragMoveEvent
-from PyQt6.QtWidgets import QBoxLayout, QDialog, QWidget
+from PyQt6.QtWidgets import QAbstractButton, QBoxLayout, QDialog, QScrollArea, QWidget
 
 from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.presenters import GUIProgressCallback
 from anki_miner.gui.utils.run_off_thread import run_off_thread
-from anki_miner.gui.widgets.base import ScreenIssueHost
+from anki_miner.gui.widgets.base import PageWidth, ScreenIssueHost, WorkflowActionBar, install_workflow_shell
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
 from anki_miner.gui.widgets.inline_receipt import InlineReceipt
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
@@ -318,6 +318,58 @@ class MiningTabBase(ScreenIssueHost, QWidget):
     def _receipt_now() -> tuple[float, float]:
         """Return ``(monotonic, wall)`` now. Patched by tests to fix the clock."""
         return monotonic(), time()
+
+    # ------------------------------------------------------------------
+    # Pinned action bar (D6)
+    # ------------------------------------------------------------------
+
+    #: This screen's pinned action bar, or ``None`` on a screen that never
+    #: installs one. Deliberately opt-in rather than built in ``__init__``:
+    #: Deck Builder also subclasses this base and, under D3, is not part of the
+    #: D6 work. Every hook below is a no-op without a bar.
+    action_bar: WorkflowActionBar | None = None
+
+    def _install_action_bar(
+        self,
+        layout: QBoxLayout,
+        scroll: QScrollArea,
+        content: QWidget,
+        kind: PageWidth,
+        *,
+        primary: QAbstractButton | None,
+        secondary: tuple[QAbstractButton, ...] = (),
+        log: QWidget | None = None,
+    ) -> WorkflowActionBar:
+        """Frame this screen's page around a pinned bar and record it.
+
+        ``primary`` and ``secondary`` are the screen's *existing* button
+        objects. They are reparented into the bar, never rebuilt, so their
+        connections, tooltips and shortcuts are untouched — a second Mine button
+        with its own idea of when it is enabled is exactly the bug this avoids.
+
+        Args:
+            layout: The tab's top-level layout.
+            scroll: The page's scroll area, not yet given its widget.
+            content: The column of cards, fully populated.
+            kind: The page's declared ``PAGE_WIDTH``.
+            primary: The screen's task action.
+            secondary: Quieter actions shown before it (Cancel).
+            log: The screen's ``LogWidget``, moved into the Activity drawer.
+        """
+        bar = install_workflow_shell(layout, scroll, content, kind, log=log)
+        bar.set_actions(primary, secondary)
+        self.action_bar = bar
+        return bar
+
+    def _begin_attempt(self) -> None:
+        """Re-arm the Activity drawer's one-shot auto-open. No-op without a bar.
+
+        Called at the top of a primary action, before validation: an attempt
+        refused for a missing file logs its warning without a worker ever
+        starting, and that warning is precisely what the drawer is for.
+        """
+        if self.action_bar is not None:
+            self.action_bar.begin_attempt()
 
     # ------------------------------------------------------------------
     # Drag-and-drop scaffolding

@@ -33,7 +33,6 @@ from anki_miner.gui.widgets.base import (
     PageWidth,
     ScreenIssue,
     configure_card_layout,
-    configure_scrolled_page,
     field_label_width,
     make_label_fit_text,
 )
@@ -178,12 +177,21 @@ class BatchProcessingTab(MiningTabBase):
         self.presenter.error_signal.connect(self.log_widget.append_error)
 
         container.setLayout(layout)
-        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
 
-        # Main layout just holds the scroll area
+        # Scroll, Activity drawer, pinned bar (D6). Process Queue is the run
+        # this screen is for, so it is the pinned action; Process Folder stays
+        # in the quick-processing card with the folders it reads.
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.addWidget(scroll_area)
+        self._install_action_bar(
+            main_layout,
+            scroll_area,
+            container,
+            self.PAGE_WIDTH,
+            primary=self.queue_panel.process_queue_button,
+            secondary=(self.cancel_button,),
+            log=self.log_widget,
+        )
         self.setLayout(main_layout)
         self.install_issue_banner(main_layout)
 
@@ -329,6 +337,7 @@ class BatchProcessingTab(MiningTabBase):
         if self._is_processing:
             return
 
+        self._begin_attempt()
         folders = self._get_validated_folders()
         if not folders:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose existing video and subtitle folders.")))
@@ -482,6 +491,7 @@ class BatchProcessingTab(MiningTabBase):
         if self._is_processing:
             return
 
+        self._begin_attempt()
         valid_pairs = self.queue_panel.get_valid_pairs()
 
         if not valid_pairs:

@@ -41,7 +41,6 @@ from anki_miner.gui.widgets.base import (
     ScreenIssue,
     configure_card_layout,
     configure_expanding_container,
-    configure_scrolled_page,
     field_label_width,
     make_label_fit_text,
 )
@@ -151,6 +150,9 @@ class SingleEpisodeTab(MiningTabBase):
         # Actions section
         from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 
+        # Timing and Tracks stay here beside the fields they act on. Process
+        # Episode and Cancel are moved into the pinned bar below (D6), so the
+        # one action this screen exists for cannot scroll off it.
         actions_header = SectionHeader(self.tr("Actions"))
         layout.addWidget(actions_header)
 
@@ -173,10 +175,8 @@ class SingleEpisodeTab(MiningTabBase):
         self.timing_button.clicked.connect(self._on_timing_clicked)
         self.tracks_button.clicked.connect(self._on_tracks_clicked)
 
-        button_layout.addWidget(self.process_button)
         button_layout.addWidget(self.timing_button)
         button_layout.addWidget(self.tracks_button)
-        button_layout.addWidget(self.cancel_button)
         button_layout.addStretch()
         layout.addLayout(button_layout)
 
@@ -201,12 +201,21 @@ class SingleEpisodeTab(MiningTabBase):
         self.presenter.error_signal.connect(self.log_widget.append_error)
 
         container.setLayout(layout)
-        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
 
-        # Main layout just holds the scroll area
+        # Scroll, Activity drawer, pinned bar (D6). The log moves out of the
+        # scrolled column into the drawer, so it costs nothing until it is
+        # opened.
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.addWidget(scroll_area)
+        self._install_action_bar(
+            main_layout,
+            scroll_area,
+            container,
+            self.PAGE_WIDTH,
+            primary=self.process_button,
+            secondary=(self.cancel_button,),
+            log=self.log_widget,
+        )
         self.setLayout(main_layout)
         self.install_issue_banner(main_layout)
 
@@ -495,6 +504,8 @@ class SingleEpisodeTab(MiningTabBase):
         """Start episode processing."""
         if self._is_processing:
             return
+
+        self._begin_attempt()
 
         # Validate inputs using FileSelector validation
         video_path = self.video_selector.path_or_none()
