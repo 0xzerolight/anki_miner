@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
-from anki_miner.gui.utils import file_dialogs
+from anki_miner.gui.utils import file_dialogs, session_state
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.base import ElidingLabel, make_label_fit_text
 from anki_miner.utils.i18n import tr_format
@@ -48,6 +48,7 @@ class FileSelector(QWidget):
         label_width: int | None = None,
         default_dir: Path | str | None = None,
         optional: bool = False,
+        history_key: str | None = None,
         parent=None,
     ):
         """Initialize the file selector.
@@ -66,6 +67,12 @@ class FileSelector(QWidget):
                 border — for optional resources whose default path simply
                 doesn't exist yet on a clean install (Issue #100). Validity
                 reporting (``path_validated``/``is_valid``) is unchanged.
+            history_key: Stable identifier for the workflow and role this
+                selector serves (e.g. ``"reading.manga.inputs"``). When set,
+                Browse reopens in the folder last ACCEPTED under that key and
+                records each new acceptance there (D7). Selectors without a key
+                behave exactly as before, which is how Settings, profiles and
+                Deck Builder stay out of the history.
             parent: Optional parent widget
         """
         super().__init__(parent)
@@ -76,6 +83,7 @@ class FileSelector(QWidget):
         self._label_width = label_width
         self._default_dir = default_dir
         self._optional = optional
+        self._history_key = history_key
         self._is_valid = False
 
         self._label_text = label
@@ -189,8 +197,20 @@ class FileSelector(QWidget):
         self._on_browse_clicked()
 
     def _on_browse_clicked(self) -> None:
-        """Handle browse button click."""
-        start_dir = resolve_start_dir(self.input.text(), file_mode=self._file_mode, default_dir=self._default_dir)
+        """Handle browse button click.
+
+        A non-empty return is the ONLY thing that moves the remembered folder.
+        Typing, dropping, ``set_path`` and a cancelled dialog are not statements
+        about where the user keeps this kind of file, so they leave it alone.
+        """
+        start_dir = resolve_start_dir(
+            # Never .strip() a filesystem-bound path: a folder whose name ends
+            # in a space is a real folder (the batch-mining core dump).
+            self.path_or_none(),
+            file_mode=self._file_mode,
+            remembered_dir=session_state.remembered_directory(self._history_key),
+            default_dir=self._default_dir,
+        )
         if self._file_mode:
             # File selection
             file_path, _ = file_dialogs.get_open_file_name(
@@ -200,6 +220,7 @@ class FileSelector(QWidget):
                 self._file_filter,
             )
             if file_path:
+                session_state.remember_accepted_path(self._history_key, file_path, file_mode=True)
                 self.input.setText(file_path)
                 self.input.setCursorPosition(0)
                 self.input.setToolTip(file_path)
@@ -211,6 +232,7 @@ class FileSelector(QWidget):
                 start_dir,
             )
             if folder_path:
+                session_state.remember_accepted_path(self._history_key, folder_path, file_mode=False)
                 self.input.setText(folder_path)
                 self.input.setCursorPosition(0)
                 self.input.setToolTip(folder_path)

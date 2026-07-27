@@ -115,6 +115,9 @@ class CondenseTab(_ToolTabBase):
     #: A label beside its control; a wider window buys gutters, not longer inputs.
     PAGE_WIDTH = PageWidth.FORM
 
+    #: Where this tool last wrote — remembered separately from its inputs (D7).
+    OUTPUT_HISTORY_KEY = "tools.condense.output"
+
     config_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
 
     def __init__(
@@ -311,6 +314,7 @@ class CondenseTab(_ToolTabBase):
             label=self.tr("Media File:"),
             file_mode=True,
             file_filter=CONDENSE_MEDIA_FILE_FILTER,
+            history_key="tools.condense.inputs",
         )
         layout.addWidget(self.media_file_selector)
 
@@ -318,6 +322,7 @@ class CondenseTab(_ToolTabBase):
             label=self.tr("Subtitle File:"),
             file_mode=True,
             file_filter=CONDENSE_SUBTITLE_FILE_FILTER,
+            history_key="tools.condense.inputs",
         )
         layout.addWidget(self.subtitle_file_selector)
 
@@ -366,6 +371,7 @@ class CondenseTab(_ToolTabBase):
         self.media_folder_selector = FileSelector(
             label=self.tr("Media Folder:"),
             file_mode=False,
+            history_key="tools.condense.inputs",
         )
         self.media_folder_selector.hide()
         layout.addWidget(self.media_folder_selector)
@@ -373,6 +379,7 @@ class CondenseTab(_ToolTabBase):
         self.subtitle_folder_selector = FileSelector(
             label=self.tr("Subtitle Folder:"),
             file_mode=False,
+            history_key="tools.condense.inputs",
         )
         self.subtitle_folder_selector.hide()
         layout.addWidget(self.subtitle_folder_selector)

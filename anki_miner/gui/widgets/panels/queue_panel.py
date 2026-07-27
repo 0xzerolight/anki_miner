@@ -163,14 +163,24 @@ class QueuePanel(QFrame):
         label_w = field_label_width(self.tr("Video Folder:"), self.tr("Subtitle Folder:"), self.tr("Subtitle Offset:"))
 
         # Video folder selector
-        video_selector = FileSelector(label=self.tr("Video Folder:"), file_mode=False, label_width=label_w)
+        video_selector = FileSelector(
+            label=self.tr("Video Folder:"),
+            file_mode=False,
+            label_width=label_w,
+            history_key="video.batch.inputs",
+        )
         current_video, _ = widget.get_folders()
         if current_video:
             video_selector.set_path(str(current_video))
         layout.addWidget(video_selector)
 
         # Subtitle folder selector
-        subtitle_selector = FileSelector(label=self.tr("Subtitle Folder:"), file_mode=False, label_width=label_w)
+        subtitle_selector = FileSelector(
+            label=self.tr("Subtitle Folder:"),
+            file_mode=False,
+            label_width=label_w,
+            history_key="video.batch.inputs",
+        )
         _, current_subtitle = widget.get_folders()
         if current_subtitle:
             subtitle_selector.set_path(str(current_subtitle))

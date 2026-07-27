@@ -62,6 +62,9 @@ class SubtitleCreationTab(_ToolTabBase):
     #: A label beside its control; a wider window buys gutters, not longer inputs.
     PAGE_WIDTH = PageWidth.FORM
 
+    #: Where this tool last wrote — remembered separately from its inputs (D7).
+    OUTPUT_HISTORY_KEY = "tools.generate.output"
+
     def __init__(
         self,
         config: AnkiMinerConfig,
@@ -197,6 +200,7 @@ class SubtitleCreationTab(_ToolTabBase):
             label=self.tr("Video File:"),
             file_mode=True,
             file_filter=VIDEO_FILE_FILTER,
+            history_key="tools.generate.inputs",
         )
         layout.addWidget(self.file_selector)
 
@@ -204,6 +208,7 @@ class SubtitleCreationTab(_ToolTabBase):
         self.folder_selector = FileSelector(
             label=self.tr("Video Folder:"),
             file_mode=False,
+            history_key="tools.generate.inputs",
         )
         self.folder_selector.hide()
         layout.addWidget(self.folder_selector)

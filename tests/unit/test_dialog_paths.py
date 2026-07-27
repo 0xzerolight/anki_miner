@@ -151,3 +151,93 @@ def test_folder_mode_existing_file_returns_parent(tmp_path: Path) -> None:
     f.touch()
     result = resolve_start_dir(str(f), file_mode=False)
     assert result == str(tmp_path)
+
+
+# ---------------------------------------------------------------------------
+# remembered_dir: the folder last ACCEPTED for this workflow and role (D7)
+# ---------------------------------------------------------------------------
+
+
+def test_remembered_dir_is_used_when_the_field_is_empty(tmp_path: Path) -> None:
+    remembered = tmp_path / "library"
+    remembered.mkdir()
+    assert resolve_start_dir(None, file_mode=True, remembered_dir=remembered) == str(remembered)
+
+
+def test_a_valid_field_path_outranks_the_remembered_dir(tmp_path: Path) -> None:
+    """What you are working on now beats where you were last time."""
+    remembered = tmp_path / "library"
+    remembered.mkdir()
+    current = tmp_path / "current" / "episode.mkv"
+    current.parent.mkdir()
+    current.touch()
+
+    result = resolve_start_dir(str(current), file_mode=True, remembered_dir=remembered)
+
+    assert result == str(current.parent)
+
+
+def test_remembered_dir_outranks_the_configured_default(tmp_path: Path) -> None:
+    """A default is a guess; a remembered folder is evidence."""
+    remembered = tmp_path / "library"
+    default = tmp_path / "configured"
+    remembered.mkdir()
+    default.mkdir()
+
+    result = resolve_start_dir(None, file_mode=False, remembered_dir=remembered, default_dir=default)
+
+    assert result == str(remembered)
+
+
+def test_a_deleted_remembered_dir_falls_through_to_the_default(tmp_path: Path) -> None:
+    default = tmp_path / "configured"
+    default.mkdir()
+
+    result = resolve_start_dir(
+        None,
+        file_mode=False,
+        remembered_dir=tmp_path / "unmounted",
+        default_dir=default,
+    )
+
+    assert result == str(default)
+
+
+def test_a_deleted_remembered_dir_with_no_default_falls_through_to_home(tmp_path: Path) -> None:
+    assert resolve_start_dir(None, file_mode=True, remembered_dir=tmp_path / "gone") == str(Path.home())
+
+
+def test_a_remembered_path_that_is_a_file_is_ignored(tmp_path: Path) -> None:
+    """Only directories are remembered; anything else is not a start dir."""
+    stray = tmp_path / "not-a-folder.srt"
+    stray.touch()
+
+    assert resolve_start_dir(None, file_mode=True, remembered_dir=stray) == str(Path.home())
+
+
+def test_a_remembered_dir_is_never_walked_up_from(tmp_path: Path) -> None:
+    """The ancestor of a folder chosen once is not somewhere the user asked for."""
+    default = tmp_path / "configured"
+    default.mkdir()
+
+    result = resolve_start_dir(
+        None,
+        file_mode=False,
+        remembered_dir=tmp_path / "series" / "season-2",
+        default_dir=default,
+    )
+
+    assert result == str(default)
+
+
+def test_all_four_levels_in_order(tmp_path: Path) -> None:
+    field = tmp_path / "field"
+    remembered = tmp_path / "remembered"
+    default = tmp_path / "default"
+    for d in (field, remembered, default):
+        d.mkdir()
+
+    assert resolve_start_dir(str(field), file_mode=False, remembered_dir=remembered, default_dir=default) == str(field)
+    assert resolve_start_dir(None, file_mode=False, remembered_dir=remembered, default_dir=default) == str(remembered)
+    assert resolve_start_dir(None, file_mode=False, remembered_dir=None, default_dir=default) == str(default)
+    assert resolve_start_dir(None, file_mode=False) == str(Path.home())

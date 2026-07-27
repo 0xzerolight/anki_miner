@@ -1016,6 +1016,12 @@ def compose_main_window(
     # This must come AFTER all addTab calls so self.tabs.count() is final.
     window.setup_tab_shortcuts()
 
+    # Reopen where the last session ended (D7). Also AFTER every addTab: the
+    # saved route is addressed by stable key, so the tab it names has to be
+    # registered before it can be resolved. Still before show(), so the window
+    # is never painted at one size and then jumped to another.
+    window.restore_session_state()
+
     return ComposedApp(window=window, stats_service=stats_service, analytics_tab=analytics_tab)
 
 
