@@ -20,6 +20,8 @@ stylesheet can add to the treatment without this widget growing a palette.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, QRect, QSize, Qt
 from PyQt6.QtGui import QColor, QPainter, QPaintEvent, QPalette
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QWidget
@@ -52,6 +54,69 @@ _SELECTION_BAR_W = 4
 _SELECTION_WASH_ALPHA = 64
 
 
+# The mixin is combined with a QWidget in every concrete row. Declaring that
+# for the type checker only -- rather than actually inheriting QWidget -- keeps
+# the runtime MRO a plain object mixin, which is what PyQt6 requires.
+if TYPE_CHECKING:
+    _SelectionHost = QWidget
+else:
+    _SelectionHost = object
+
+
+class QueueSelectionMixin(_SelectionHost):
+    """Selection a row has to paint for itself, because the view cannot reach it.
+
+    Any row embedded with ``QListWidget.setItemWidget`` sits *over* the item, so
+    the view's own selection paint lands behind an opaque widget whose child
+    labels keep the unselected text colour. Shared by the calm one-line rows and
+    by the batch queue's taller series card, which are otherwise nothing alike
+    but need the identical answer to "is this row selected".
+    """
+
+    _selected = False
+
+    def is_selected(self) -> bool:
+        """Whether this row is currently part of the selection."""
+        return self._selected
+
+    def set_selected(self, selected: bool) -> None:
+        """Mirror the view's selection state onto this row.
+
+        Args:
+            selected: True when the list has this row selected.
+        """
+        if selected == self._selected:
+            return
+        self._selected = selected
+        # Published as a dynamic property so a stylesheet can add to the
+        # treatment without this widget growing a palette of its own.
+        self.setProperty("queueSelected", selected)
+        self.update()
+
+    def paint_queue_selection(self) -> None:
+        """Wash the row and mark its leading edge. No-op when unselected.
+
+        Both colours come from ``QPalette``, which ``Theme.apply_to_app`` writes
+        from each theme's ``table-selected-bg``, so one rule follows all 29
+        themes and this module adds no colour of its own.
+        """
+        if not self._selected:
+            return
+
+        wash = QColor(self.palette().color(QPalette.ColorRole.Highlight))
+        wash.setAlpha(_SELECTION_WASH_ALPHA)
+        # The marker is HighlightedText, not Highlight: the view has usually
+        # already painted Highlight behind the row, and a bar in the same colour
+        # as the thing behind it is not a marker. HighlightedText is the one
+        # colour every theme guarantees to be legible against its selection.
+        marker = self.palette().color(QPalette.ColorRole.HighlightedText)
+
+        painter = QPainter(self)
+        painter.fillRect(self.rect(), wash)
+        painter.fillRect(QRect(0, 0, _SELECTION_BAR_W, self.height()), marker)
+        painter.end()
+
+
 def state_word(bucket: str) -> str:
     """Return the translated state word for a filter *bucket*.
 
@@ -65,7 +130,7 @@ def state_word(bucket: str) -> str:
     return QCoreApplication.translate(_TR_CONTEXT, source) if source else ""
 
 
-class QueueRowWidget(QFrame):
+class QueueRowWidget(QueueSelectionMixin, QFrame):
     """A single queue row: title, optional aside, state word, result count.
 
     Subclasses render a concrete queue item by computing those strings and
@@ -127,22 +192,6 @@ class QueueRowWidget(QFrame):
     # Selection
     # ------------------------------------------------------------------
 
-    def is_selected(self) -> bool:
-        """Whether this row is currently part of the selection."""
-        return self._selected
-
-    def set_selected(self, selected: bool) -> None:
-        """Mirror the view's selection state onto this row.
-
-        Args:
-            selected: True when the list has this row selected.
-        """
-        if selected == self._selected:
-            return
-        self._selected = selected
-        self.setProperty("queueSelected", selected)
-        self.update()
-
     def paintEvent(self, event: QPaintEvent | None) -> None:  # noqa: N802 - Qt override
         """Draw the frame, then the selection treatment under the child labels.
 
@@ -151,21 +200,7 @@ class QueueRowWidget(QFrame):
         so the labels stay on top and legible.
         """
         super().paintEvent(event)
-        if not self._selected:
-            return
-
-        wash = QColor(self.palette().color(QPalette.ColorRole.Highlight))
-        wash.setAlpha(_SELECTION_WASH_ALPHA)
-        # The marker is HighlightedText, not Highlight: the view has usually
-        # already painted Highlight behind the row, and a bar in the same colour
-        # as the thing behind it is not a marker. HighlightedText is the one
-        # colour every theme guarantees to be legible against its selection.
-        marker = self.palette().color(QPalette.ColorRole.HighlightedText)
-
-        painter = QPainter(self)
-        painter.fillRect(self.rect(), wash)
-        painter.fillRect(QRect(0, 0, _SELECTION_BAR_W, self.height()), marker)
-        painter.end()
+        self.paint_queue_selection()
 
     # ------------------------------------------------------------------
     # Geometry

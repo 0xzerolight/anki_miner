@@ -15,11 +15,11 @@ from anki_miner.gui.utils.service_factory import (
     create_episode_processor,
     create_shared_lookup_services,
 )
-from anki_miner.gui.workers._queue_worker_base import queue_preflight_error
+from anki_miner.gui.workers._queue_worker_base import RunBoundaryControls, queue_preflight_error
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.progress import ProgressCallback
-from anki_miner.models.batch_queue import BatchQueue, QueueItemStatus
+from anki_miner.models.batch_queue import BatchQueue, QueueItem, QueueItemStatus
 from anki_miner.orchestration.episode_processor import EpisodeProcessor, require_usable_offline_provider
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.dictionary.registry import stale_dict_reimport_error
@@ -27,7 +27,7 @@ from anki_miner.services.dictionary.registry import stale_dict_reimport_error
 logger = logging.getLogger(__name__)
 
 
-class BatchQueueWorkerThread(ProcessorOwningWorker):
+class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
     """Worker thread for processing multiple folder pairs sequentially.
 
     Inherits thread-safe cancellation from CancellableWorker.
@@ -39,6 +39,9 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
     item_completed = pyqtSignal(str, int)  # item_id, cards_created
     item_failed = pyqtSignal(str, str)  # item_id, error_message
     queue_finished = pyqtSignal(int)  # total_cards_created
+    # The run stopped at a series boundary, and later left it again (D29-A).
+    run_paused = pyqtSignal()
+    run_resumed = pyqtSignal()
 
     def __init__(
         self,
@@ -49,6 +52,7 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
         stats_service=None,
         curation_callback: Callable[[list], list | None] | None = None,
         parent=None,
+        items: list[QueueItem] | None = None,
     ):
         """Initialize the batch queue worker thread.
 
@@ -60,9 +64,16 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
             stats_service: Optional statistics recording service
             curation_callback: Optional callable forwarded to process_episode for word curation
             parent: Optional parent QObject
+            items: The exact series to run, in the order the user arranged them
+                (D29-A). Identities, not copies -- each ``QueueItem`` carries the
+                episode receipts a retry must preserve. ``None`` falls back to
+                every PENDING row, still snapshotted once at ``run()``: polling
+                the live queue between series is what let a mid-run edit change
+                what the run was doing.
         """
         super().__init__(parent)
         self.batch_queue = batch_queue
+        self._requested_items = items
         self.config = config
         self.presenter = presenter
         self.progress_callback = progress_callback
@@ -74,6 +85,9 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
         self._curation_video: Path | None = None
         self._curation_subtitle: Path | None = None
         self._curation_offset: float = 0.0
+        # The series this run will process, frozen at run() start.
+        self._run_items: list[QueueItem] = []
+        self._init_boundary_controls()
 
     @property
     def curation_processor(self) -> EpisodeProcessor | None:
@@ -85,8 +99,13 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
         return self._current_processor
 
     def cancel(self) -> None:
-        """Cancel processing, propagating to the current processor."""
+        """Cancel processing, propagating to the current processor.
+
+        The boundary gate is released unconditionally: a run paused between
+        series would otherwise never see the cancel.
+        """
         super().cancel()
+        self._release_boundary_gate()
         if self._current_processor is not None:
             self._current_processor.cancel()
 
@@ -111,9 +130,12 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
         total_cards = self.batch_queue.total_cards_created
         if not isinstance(total_cards, int):
             total_cards = 0
-        total_items = self.batch_queue.pending_count
+        # Frozen here, before anything runs: from this point the run's item
+        # total, its progress numbers and its receipt all describe the same set
+        # of series, whatever happens to the panel (D29-A).
+        self._run_items = self._snapshot_items()
 
-        self.queue_started.emit(total_items)
+        self.queue_started.emit(len(self._run_items))
 
         try:
             total_cards = self._run_queue(total_cards)
@@ -132,6 +154,17 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
             # or exception) so its sqlite handles / Session don't leak.
             self._close_current_processor()
             self.queue_finished.emit(total_cards)
+
+    def _snapshot_items(self) -> list[QueueItem]:
+        """The exact series this run will process, in order.
+
+        The caller's list when it supplied one; otherwise every PENDING row,
+        read once. Either way the loop below iterates this snapshot rather than
+        re-asking the queue between series.
+        """
+        if self._requested_items is not None:
+            return list(self._requested_items)
+        return [item for item in self.batch_queue.get_all_items() if item.status == QueueItemStatus.PENDING]
 
     def _run_queue(self, total_cards: int) -> int:
         # Schema-staleness pre-loop gate (4.0): if any enabled indexed dict slot
@@ -192,14 +225,19 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
         shared_lookup: SharedLookupServices,
     ) -> int:
         """Run the per-item loop over the run-scoped shared services."""
-        while not self.check_cancelled():
+        for item in self._run_items:
+            if self.check_cancelled():
+                break
+            # Pause / Finish-current land between series, never inside an
+            # episode or a SQLite/ffmpeg call (D29-A).
+            if not self._wait_at_boundary():
+                break
             # Close the previous item's processor before building the next
             # item's, so handles never accumulate across items.
             self._close_current_processor()
 
-            item = self.batch_queue.get_next_pending()
-            if item is None:
-                break  # No more pending items
+            if item.status != QueueItemStatus.PENDING:
+                continue  # already terminal from an earlier run in this session
 
             # OWNERSHIP: during a run, this worker thread owns every QueueItem
             # status/result write, applied synchronously at pick/finish time so
@@ -295,9 +333,9 @@ class BatchQueueWorkerThread(ProcessorOwningWorker):
                     # Cancelled between pairs: the item is partially processed,
                     # neither completed nor failed, so no terminal signal —
                     # falling through used to mark it COMPLETED. Return it to
-                    # PENDING for a future run; cancellation is sticky
-                    # (threading.Event), so the outer while exits before this
-                    # item could be re-picked in this run.
+                    # PENDING for a future run; the loop iterates a frozen
+                    # snapshot and the cancel check at its top ends the run, so
+                    # the item cannot be re-picked here.
                     item.status = QueueItemStatus.PENDING
                 elif failed_pairs:
                     msg = (

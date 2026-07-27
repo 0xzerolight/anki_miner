@@ -26,6 +26,7 @@ from .sizing import (
     page_width_cap,
 )
 from .status_badge import StatusBadge
+from .task_publisher import TaskPublisherMixin
 from .workflow_action_bar import (
     ACTION_BAR_OBJECT_NAME,
     ACTIVITY_DRAWER_OBJECT_NAME,
@@ -52,6 +53,7 @@ __all__ = [
     "SettingAnchorHost",
     "SettingTextProvider",
     "StatusBadge",
+    "TaskPublisherMixin",
     "ElidingLabel",
     "EnhancedDialog",
     "PAGE_SCROLL_OBJECT_NAME",

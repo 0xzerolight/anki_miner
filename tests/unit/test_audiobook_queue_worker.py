@@ -297,7 +297,11 @@ def test_process_episode_kwargs(make_worker, mock_processor):
     assert call.kwargs["audio_only"] is True
     assert call.kwargs["episode_name_override"] == "my_audiobook"
     assert call.kwargs["series_name_override"] == "Audio"
-    assert call.kwargs["curation_callback"] is _curation
+    # Wrapped, not replaced: the attempt-cycle memo makes one curator
+    # decision serve every automatic attempt for this item (D30-B).
+    forwarded = call.kwargs["curation_callback"]
+    assert forwarded is not _curation
+    assert forwarded(["a"]) == ["a"]
 
 
 def test_worker_cancel_event_passed_to_process_episode(make_worker, mock_processor):

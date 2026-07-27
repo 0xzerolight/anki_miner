@@ -28,18 +28,41 @@ class SignalCapture:
         self.calls.append(args)
 
 
-def connect_all(worker: Any) -> dict[str, SignalCapture]:
-    """Wire capture objects to all queue worker signals; return them as a dict."""
+def connect_all(worker: Any, *, direct: bool = False) -> dict[str, SignalCapture]:
+    """Wire capture objects to all queue worker signals; return them as a dict.
+
+    Args:
+        worker: The queue worker whose signals to capture.
+        direct: Force ``DirectConnection``. Needed only when ``run()`` is driven
+            on a real background thread: the default auto-connection would queue
+            every emission onto the main thread's event loop, which a test that
+            simply joins the thread never spins.
+    """
     captures = {
         "started": SignalCapture(),
         "progress": SignalCapture(),
+        "retrying": SignalCapture(),
         "finished": SignalCapture(),
+        "paused": SignalCapture(),
+        "resumed": SignalCapture(),
         "queue_finished": SignalCapture(),
     }
-    worker.item_started.connect(captures["started"])
-    worker.item_progress.connect(captures["progress"])
-    worker.item_finished.connect(captures["finished"])
-    worker.queue_finished.connect(captures["queue_finished"])
+    signals = {
+        "started": worker.item_started,
+        "progress": worker.item_progress,
+        "retrying": worker.item_retrying,
+        "finished": worker.item_finished,
+        "paused": worker.run_paused,
+        "resumed": worker.run_resumed,
+        "queue_finished": worker.queue_finished,
+    }
+    for key, signal in signals.items():
+        if direct:
+            from PyQt6.QtCore import Qt
+
+            signal.connect(captures[key], Qt.ConnectionType.DirectConnection)
+        else:
+            signal.connect(captures[key])
     return captures
 
 

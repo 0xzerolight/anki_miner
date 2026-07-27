@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
@@ -67,6 +68,12 @@ class BatchProcessingTab(MiningTabBase):
     #: Tables and queue rows genuinely use the extra width.
     PAGE_WIDTH = PageWidth.DATA
 
+    #: Published so this screen's Cancel gets a live wait clock and the pinned
+    #: bar gets a stage and a progress bar (D17, D22). One id for both paths --
+    #: the screen runs either the folder pairs or the series queue, never both.
+    TASK_ID = "run.batch"
+    TASK_OWNER = CapabilityTarget("video", "batch")
+
     def __init__(
         self,
         config: AnkiMinerConfig,
@@ -101,6 +108,9 @@ class BatchProcessingTab(MiningTabBase):
         self._items_total = 0
         self._run_terminal_ids: set[str] = set()
         self._current_item_label = ""
+        # The exact series the next queue run will mine, snapshotted from the
+        # panel when Process Queue is pressed.
+        self._run_selection: list = []
 
         # Initialize batch queue
         from anki_miner.models.batch_queue import BatchQueue
@@ -133,9 +143,14 @@ class BatchProcessingTab(MiningTabBase):
         quick_section = self._create_quick_processing_section()
         layout.addWidget(quick_section)
 
-        # Multi-Series Queue Panel (extracted component)
-        self.queue_panel = QueuePanel()
+        # Multi-Series Queue Panel (extracted component). It binds its rows to
+        # THIS queue, so removal, reorder and edits mutate one model rather than
+        # the panel keeping a second, divergent copy (D28).
+        self.queue_panel = QueuePanel(queue=self.batch_queue)
         self.queue_panel.process_requested.connect(self._process_queue)
+        self.queue_panel.queue_controls.pause_requested.connect(self._on_pause_requested)
+        self.queue_panel.queue_controls.resume_requested.connect(self._on_resume_requested)
+        self.queue_panel.queue_controls.finish_current_requested.connect(self._on_finish_current_requested)
         layout.addWidget(self.queue_panel, 1)  # Give it stretch factor
 
         # Issue #60: opt-in per-episode word curation popup (default off).
@@ -383,6 +398,7 @@ class BatchProcessingTab(MiningTabBase):
 
         # Log start
         self.presenter.show_info(tr_format(self.tr("Starting batch processing of %1 episodes..."), len(pairs)))
+        self._publish_task_start(self.tr("Batch mining"), total=len(pairs))
 
         # Tear down the previous run before building a new processor so leaked
         # sqlite handles / Session sockets can't survive into this run (Windows
@@ -451,36 +467,61 @@ class BatchProcessingTab(MiningTabBase):
         # back-to-back-mining freeze: leaked sqlite/Session handles).
         self._teardown_previous_run("batch")
 
+        # The panel's snapshot when Process Queue supplied one; otherwise every
+        # pending row, which is what Retry Failed hands over after resetting
+        # them. Either way the worker is told exactly what it will mine.
+        items = self._run_selection or [
+            item for item in self.batch_queue.get_all_items() if item.status == QueueItemStatus.PENDING
+        ]
+        self._run_selection = []
+
         # Whole series per item on this path, so the receipt counts series.
-        self._begin_receipt(self.batch_queue.pending_count, item_noun=self.tr("series"))
+        self._begin_receipt(len(items), item_noun=self.tr("series"))
+        self._publish_task_start(self.tr("Batch mining"), total=len(items))
 
         curation_cb = self._curation_bridge if self.review_words_checkbox.isChecked() else None
-        self.worker_thread = BatchQueueWorkerThread(
-            self.batch_queue,
-            self.config,
-            self.presenter,
-            self.progress_callback,
-            stats_service=self.stats_service,
-            curation_callback=curation_cb,
-        )
+        # Construct, connect and start under one rollback: the queue is locked
+        # by now (D29-A), and a failure anywhere in here would otherwise leave it
+        # frozen against a run that never began, with no thread whose `finished`
+        # could ever unfreeze it.
+        try:
+            worker = BatchQueueWorkerThread(
+                self.batch_queue,
+                self.config,
+                self.presenter,
+                self.progress_callback,
+                stats_service=self.stats_service,
+                curation_callback=curation_cb,
+                items=items,
+            )
+            self.worker_thread = worker
 
-        self.worker_thread.queue_started.connect(self._on_queue_started)
-        self.worker_thread.item_started.connect(self._on_item_started)
-        self.worker_thread.item_completed.connect(self._on_item_completed)
-        self.worker_thread.item_failed.connect(self._on_item_failed)
-        self.worker_thread.queue_finished.connect(self._on_queue_finished)
-        # Run-level fatals (stale-dict gate, processor-build failure) emit
-        # error THEN queue_finished — without the flag the terminal handler
-        # would read "Complete — 0 cards created" on a failed run.
-        self.worker_thread.error.connect(self._on_queue_worker_error)
-        # Safety net (G1): restore the action buttons once the thread ends. The
-        # quick (manual-pair) path already wires this; without it a caught
-        # run-level failure (stale-dict gate, AnkiService construction) leaves
-        # the buttons stranded in the running state.
-        self.worker_thread.finished.connect(self._restore_buttons)
-        self.worker_thread.finished.connect(self._on_run_thread_finished)
+            worker.queue_started.connect(self._on_queue_started)
+            worker.item_started.connect(self._on_item_started)
+            worker.item_completed.connect(self._on_item_completed)
+            worker.item_failed.connect(self._on_item_failed)
+            worker.queue_finished.connect(self._on_queue_finished)
+            worker.run_paused.connect(self._on_run_paused)
+            worker.run_resumed.connect(self._on_run_resumed)
+            # Run-level fatals (stale-dict gate, processor-build failure) emit
+            # error THEN queue_finished — without the flag the terminal handler
+            # would read "Complete — 0 cards created" on a failed run.
+            worker.error.connect(self._on_queue_worker_error)
+            # Safety net (G1): restore the action buttons once the thread ends.
+            # The quick (manual-pair) path already wires this; without it a
+            # caught run-level failure (stale-dict gate, AnkiService
+            # construction) leaves the buttons stranded in the running state.
+            worker.finished.connect(self._restore_buttons)
+            worker.finished.connect(self._on_run_thread_finished)
 
-        self.worker_thread.start()
+            worker.start()
+        except Exception as exc:  # noqa: BLE001 - the run never began; surface and recover
+            logger.exception("BatchProcessingTab failed to start the queue worker")
+            self.worker_thread = None
+            self._run_failed = True
+            self._on_queue_worker_error(str(exc))
+            self._restore_buttons()
+            self._on_run_thread_finished()
 
     def _build_curation_context(
         self,
@@ -504,22 +545,17 @@ class BatchProcessingTab(MiningTabBase):
             return
 
         self._begin_attempt()
-        valid_pairs = self.queue_panel.get_valid_pairs()
+        # The rows themselves are the model now: each one bound to a persistent
+        # QueueItem when its folders validated. The queue is NOT rebuilt here --
+        # doing so would mint new identities and lose the episode receipts that
+        # stop a retry re-mining pairs already in Anki (D28, D30).
+        self._run_selection = self.queue_panel.runnable_items()
 
-        if not valid_pairs:
-            QMessageBox.information(self, self.tr("Empty Queue"), self.tr("No valid series in queue to process"))
+        if not self._run_selection:
+            self.show_screen_issue(ScreenIssue(summary=self.tr("No valid series in the queue to process.")))
             return
 
         self._warn_incomplete_items()
-
-        # Populate batch queue from widgets (includes per-item subtitle offset).
-        # Stamp each created QueueItem's id onto its source widget so status
-        # and card-count updates from the worker address the right row, even
-        # when two rows share a display_name (T-30).
-        self.batch_queue.clear()
-        for video_folder, subtitle_folder, display_name, subtitle_offset, widget in valid_pairs:
-            item = self.batch_queue.add_item(video_folder, subtitle_folder, display_name, subtitle_offset)
-            widget.item_id = item.id
 
         # Prepare UI for processing
         self._is_processing = True
@@ -527,7 +563,7 @@ class BatchProcessingTab(MiningTabBase):
         self._begin_run(queue_mode=True)
         self._show_cancel_state()
         self.presenter.show_info(
-            tr_format(self.tr("Starting queue processing (%1 series)..."), self.batch_queue.pending_count)
+            tr_format(self.tr("Starting queue processing (%1 series)..."), len(self._run_selection))
         )
 
         # Start worker (creates processors per-item with subtitle offset)
@@ -549,6 +585,9 @@ class BatchProcessingTab(MiningTabBase):
         self.cancel_button.setEnabled(True)
         self.cancel_button.show()
         self.queue_panel.set_buttons_enabled(False)
+        # D29-A: the list is frozen for the duration, so the progress numbers,
+        # the lock state and the receipt all describe the same set of series.
+        self.queue_panel.set_locked(True)
 
     def _restore_buttons(self) -> None:
         """Restore normal button state after processing ends."""
@@ -556,6 +595,7 @@ class BatchProcessingTab(MiningTabBase):
         self.cancel_button.hide()
         self.process_pairs_button.show()
         self._set_buttons_enabled(True)
+        self.queue_panel.set_locked(False)
         # Cancel recovery: the Quick-path worker suppresses result_ready on a
         # cancelled run, so QThread.finished (always fires) is the only safe
         # place to replace "Cancelling…". Idempotent for the queue path,
@@ -567,6 +607,7 @@ class BatchProcessingTab(MiningTabBase):
     def _on_cancel_clicked(self) -> None:
         """Cancel the run: one verb, no prompt, and no invented progress after it."""
         self._cancel_requested = True
+        self._publish_task_cancelling()
         # Release any open curation dialog first so the worker doesn't hang (Issue #60).
         self._cancel_active_curation_dialog()
         if self.worker_thread is not None:
@@ -575,6 +616,56 @@ class BatchProcessingTab(MiningTabBase):
         self.cancel_button.setEnabled(False)
         self.overall_progress_widget.freeze()
         self.overall_progress_widget.set_status(self.tr("Cancelling…"))
+
+    # ------------------------------------------------------------------
+    # Boundary controls (D29-A)
+    # ------------------------------------------------------------------
+
+    def _boundary_worker(self) -> BatchQueueWorkerThread | None:
+        """The active queue worker, or None on the folder-pairs path.
+
+        Only the series queue has boundaries: a Quick run is one list of
+        episodes inside one worker, with nothing to pause between.
+        """
+        worker = self.worker_thread
+        from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread as _QueueWorker
+
+        return worker if isinstance(worker, _QueueWorker) else None
+
+    def _on_pause_requested(self) -> None:
+        """Ask the run to stop at the next series boundary."""
+        worker = self._boundary_worker()
+        if worker is None:
+            return
+        worker.request_pause_after_current()
+        self.queue_panel.queue_controls.pause_button.setEnabled(False)
+
+    def _on_resume_requested(self) -> None:
+        """Let a paused run carry on."""
+        worker = self._boundary_worker()
+        if worker is not None:
+            worker.resume()
+
+    def _on_finish_current_requested(self) -> None:
+        """Let the series being mined finish, then end the run.
+
+        Distinct from Cancel, which abandons the series in flight. Neither asks
+        for confirmation (D22, D24).
+        """
+        worker = self._boundary_worker()
+        if worker is None:
+            return
+        worker.request_stop_after_current()
+        self.queue_panel.queue_controls.finish_button.setEnabled(False)
+        self.queue_panel.queue_controls.pause_button.setEnabled(False)
+
+    def _on_run_paused(self) -> None:
+        """Report where the run stopped, and offer to continue from there."""
+        self.queue_panel.queue_controls.set_paused(True, done=self._items_done, total=self._items_total)
+
+    def _on_run_resumed(self) -> None:
+        """Return the badge and the button to their running state."""
+        self.queue_panel.queue_controls.set_paused(False)
 
     def _begin_run(self, queue_mode: bool) -> None:
         """Reset the bar, flags, and per-run counters at run start."""
@@ -637,6 +728,7 @@ class BatchProcessingTab(MiningTabBase):
         # Bar-only advance (no status): keeps the fill correct when a pair
         # errors mid-sweep; monotone with the composed per-episode updates.
         self.overall_progress_widget.set_composed(completed, 0, total)
+        self._publish_task_count(current=completed, total=total or None, detail="")
 
     def _on_item_started(self, item_id: str, display_name: str) -> None:
         """Called when processing starts for an item.
@@ -708,6 +800,7 @@ class BatchProcessingTab(MiningTabBase):
         self._run_terminal_ids.add(item_id)
         self._items_done = len(self._run_terminal_ids)
         self.overall_progress_widget.set_composed(self._items_done, 0, self._items_total)
+        self._publish_task_count(current=self._items_done, total=self._items_total or None, detail="")
 
     def _on_queue_finished(self, total_cards: int) -> None:
         """Called when entire queue finishes.
@@ -805,6 +898,7 @@ class BatchProcessingTab(MiningTabBase):
         that made a long episode look like a stalled batch.
         """
         self._stage_line.on_stage(index, total, name)
+        self._publish_task_stage(index, total, name)
 
     def _on_progress_start(self, total: int, description: str) -> None:
         """Per-episode stage start: status only (the bar counts whole items).

@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QCursor, QFont
+from PyQt6.QtGui import QCursor, QFont, QPaintEvent
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -16,10 +16,11 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.constants import PATH_MAX_DISPLAY_LENGTH
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.widgets.base.queue_row import QueueSelectionMixin
 from anki_miner.utils.i18n import tr_format
 
 
-class QueueItemWidget(QFrame):
+class QueueItemWidget(QueueSelectionMixin, QFrame):
     """Enhanced queue item widget with card-based design.
 
     Features:
@@ -34,10 +35,13 @@ class QueueItemWidget(QFrame):
     Signals:
         removed: When user clicks remove button
         edited: When user clicks edit button
+        size_changed: The row's height changed (expand/collapse), so the list
+            item hosting it needs a fresh size hint.
     """
 
     removed = pyqtSignal()
     edited = pyqtSignal()
+    size_changed = pyqtSignal()
 
     def __init__(self, display_name: str = "", parent=None):
         """Initialize the queue item widget.
@@ -257,6 +261,8 @@ class QueueItemWidget(QFrame):
         """Toggle the expanded/collapsed state."""
         self._is_expanded = not self._is_expanded
         self.body_widget.setVisible(self._is_expanded)
+        self.adjustSize()
+        self.size_changed.emit()
 
     def _update_status_badge(self) -> None:
         """Update the status badge display."""
@@ -344,15 +350,35 @@ class QueueItemWidget(QFrame):
         # Try to keep the end of the path (more informative)
         return "..." + path[-(max_length - 3) :]
 
+    def paintEvent(self, event: QPaintEvent | None) -> None:  # noqa: N802 - Qt override
+        """Draw the card, then its selection treatment under the child labels.
+
+        The row sits over its list item via ``setItemWidget``, so the view's own
+        selection paint never reaches the user (D28).
+        """
+        super().paintEvent(event)
+        self.paint_queue_selection()
+
     def mousePressEvent(self, event) -> None:
-        """Handle mouse press for toggling expansion.
+        """Let the click through so the list can select this row (D28).
+
+        This row sits on a ``QListWidget`` via ``setItemWidget``, which means it
+        covers the item completely: a press it consumes never reaches the view,
+        and the row cannot be selected at all. Expanding moved to double-click,
+        which is the gesture that does not compete with selecting.
 
         Args:
             event: Mouse event
         """
-        # Only toggle on main card area, not on buttons
-        if event.button() == Qt.MouseButton.LeftButton:
-            # Check if click was on a button
-            widget = self.childAt(event.pos())
-            if not isinstance(widget, QPushButton):
-                self.toggle_expanded()
+        event.ignore()
+
+    def mouseDoubleClickEvent(self, event) -> None:
+        """Toggle the details on a double-click of the card area.
+
+        Args:
+            event: Mouse event
+        """
+        if event.button() == Qt.MouseButton.LeftButton and not isinstance(self.childAt(event.pos()), QPushButton):
+            self.toggle_expanded()
+            return
+        event.ignore()

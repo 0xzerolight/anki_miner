@@ -93,6 +93,53 @@ class BatchQueue:
         """
         return self._items.copy()
 
+    def remove(self, item: QueueItem) -> bool:
+        """Drop ``item`` from the queue, keeping every other identity intact.
+
+        Identity is load-bearing: a ``QueueItem`` carries the episode receipts
+        (``committed_pair_keys``) that stop a retry re-mining pairs already in
+        Anki, so rows are removed rather than the list rebuilt.
+
+        Returns:
+            True when the item was present.
+        """
+        for index, existing in enumerate(self._items):
+            if existing is item:
+                del self._items[index]
+                return True
+        return False
+
+    def reorder(self, order: list[QueueItem]) -> None:
+        """Adopt ``order``, which must be a permutation of the current items.
+
+        Refused rather than partially applied: a reorder that dropped or
+        duplicated an identity would take its receipts with it.
+        """
+        if len(order) != len(self._items):
+            raise ValueError("reorder requires every queue item exactly once")
+        existing = {id(item) for item in self._items}
+        seen: set[int] = set()
+        for item in order:
+            key = id(item)
+            if key not in existing or key in seen:
+                raise ValueError("reorder requires every queue item exactly once")
+            seen.add(key)
+        self._items = list(order)
+
+    @staticmethod
+    def reset_for_new_inputs(item: QueueItem) -> None:
+        """Discard ``item``'s run history because its folders changed.
+
+        The episode receipts say which pairs are already in Anki. Once the
+        folders are different they describe work that is no longer this item's,
+        so keeping them would silently skip episodes the user just pointed at.
+        """
+        item.status = QueueItemStatus.PENDING
+        item.cards_created = 0
+        item.error_message = ""
+        item.retry_count = 0
+        item.committed_pair_keys = set()
+
     def clear(self) -> None:
         """Clear all items from queue."""
         self._items.clear()

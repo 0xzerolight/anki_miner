@@ -31,7 +31,7 @@ import contextlib
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, Qt
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -45,6 +45,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils import file_dialogs, session_state
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
@@ -97,6 +98,13 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
     PAGE_WIDTH = PageWidth.FORM
+
+    #: Published so this screen's Cancel gets a live wait clock and the
+    #: pinned bar gets a stage and a progress bar (D17, D22).
+    TASK_ID = "queue.reading.subtitles"
+    TASK_OWNER = CapabilityTarget("reading", "subtitles")
+    #: Name this run carries away from this screen.
+    TASK_TITLE = QT_TRANSLATE_NOOP("ReadingTab", "Subtitle mining")
 
     def __init__(
         self,

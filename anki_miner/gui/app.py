@@ -906,7 +906,8 @@ def compose_main_window(
     # The two list queues publish their runs to the window's task registry, so
     # each one's current-job strip has a snapshot to render and the status bar
     # can name a queue run the user has navigated away from. Worker lifetime is
-    # unaffected: it stays with the tab.
+    # unaffected: it stays with the tab. Every other screen that runs work is
+    # bound in one place further down, once its tab exists.
     video_tab.youtube_tab.bind_task_registry(window.task_registry)
     audiobook_tab.bind_task_registry(window.task_registry)
 
@@ -1012,6 +1013,28 @@ def compose_main_window(
     # write-subs) by emitting config_changed; route it through window.update_config
     # so condenser_* land in gui_config.json and survive restart.
     subtitles_tab.condense_tab.config_changed.connect(window.update_config)
+
+    # --- task-registry publication (W5) -----------------------------------
+    # Until now only the two list queues published, so only they had the
+    # ticking wait clock and the "Finishing <phase>" explanation behind Cancel,
+    # and only their pinned bars showed a stage. Every remaining screen that
+    # runs work is bound here, in one place, once its tab exists. Binding is
+    # inert on a screen that declares no TASK_ID, and it never touches worker
+    # ownership -- that stays on the screen that started the run.
+    for screen in (
+        video_tab.single_tab,
+        video_tab.batch_tab,
+        reading_tab.manga_tab,
+        reading_tab.novels_tab,
+        reading_tab.subtitles_tab,
+        reading_tab.text_tab,
+        subtitles_tab.generate_tab,
+        subtitles_tab.retime_tab,
+        subtitles_tab.condense_tab,
+        subtitles_tab.backfill_tab,
+    ):
+        screen.bind_task_registry(window.task_registry)
+    # --- end task-registry publication ------------------------------------
 
     # All tabs are now registered — create the count-driven Ctrl+N shortcuts.
     # This must come AFTER all addTab calls so self.tabs.count() is final.

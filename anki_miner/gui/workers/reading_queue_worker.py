@@ -2,8 +2,9 @@
 
 Drives a list of :class:`ReadingQueueItem` (manga volumes / novel files)
 through mining one at a time. Structurally a mirror of
-:class:`AudiobookQueueWorker`: no fetch/probe stage, no retry, no workspace
-allocation. The one structural addition is the per-item *load* step — a
+:class:`AudiobookQueueWorker`: no fetch/probe stage and no workspace
+allocation, sharing the base's bounded automatic retry (D30-B). The one
+structural addition is the per-item *load* step — a
 reading source is a ref that must be resolved to a :class:`ReadingDocument`
 via ``detector.load`` before mining. A load failure (DRM, invalid source,
 parse error) ends only that item; the queue continues.
@@ -20,8 +21,7 @@ the stale-gate + factory-build ``run()`` preamble all live on
 * ``item_started(int)`` — idx, fired before the item is mined.
 * ``item_progress(int, str)`` — idx, label.
 * ``item_finished(int, object, object, int)`` — idx, result-or-None,
-  error-string-or-None, attempts. Attempts is always 1 (no retry). Fires
-  exactly once per item that runs.
+  error-string-or-None, attempts. Fires exactly once per item that runs.
 * ``queue_finished()`` — fires once at the bottom of ``run()``. A cancel
   mid-mine propagates via the worker's ``_cancel_event`` (handed to
   ``process_reading`` as ``cancel_event``): the processor's next checkpoint
@@ -43,7 +43,7 @@ from collections.abc import Callable
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
-from anki_miner.gui.workers._queue_worker_base import SequentialQueueWorker
+from anki_miner.gui.workers._queue_worker_base import AttemptOutcome, SequentialQueueWorker
 from anki_miner.models import MiningOutcome, classify_result, result_error_text
 from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading import ReadingDocument
@@ -98,25 +98,31 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
         """Load + mine one item, owning its READY→PROCESSING→COMPLETED/ERROR
         lifecycle. Never aborts the queue early (returns False)."""
         self.item_started.emit(idx)
+        outcome, attempts = self._attempt_cycle(idx, lambda: self._attempt_once(idx, item))
+        if outcome.error is not None:
+            self._fail_item(idx, item, outcome.error, attempts)
+        else:
+            self._record_result(idx, item, outcome.result, attempts)
+        return False
+
+    def _attempt_once(self, idx: int, item: ReadingQueueItem) -> AttemptOutcome:
+        """Run one load + mine attempt, classifying whether it may be repeated."""
         try:
-            result = self._mine_one(idx, item)
+            return self._classify_return(self._mine_one(idx, item))
         except SetupError as exc:
             # The load step and process_reading raise SetupError with a
             # crafted, user-facing message (DRM, invalid source, note-type
             # misconfig); surface it verbatim rather than type-prefixed.
             logger.warning("ReadingQueueWorker item %d setup error: %s", idx, exc)
-            self._fail_item(idx, item, str(exc))
+            return self._classify_exception(exc, message=str(exc))
         except Exception as exc:  # noqa: BLE001 - surface any failure to GUI
             logger.exception("ReadingQueueWorker item %d failed", idx)
-            self._fail_item(idx, item, f"{type(exc).__name__}: {exc}")
-        else:
-            self._record_result(idx, item, result)
-        return False
+            return self._classify_exception(exc)
 
     def _mark_item_claimed(self, item: ReadingQueueItem) -> None:
         item.status = ReadyItemStatus.PROCESSING
 
-    def _record_result(self, idx: int, item: ReadingQueueItem, result: object) -> None:
+    def _record_result(self, idx: int, item: ReadingQueueItem, result: object, attempts: int = 1) -> None:
         """Route a non-raising ``process_reading`` return by its outcome.
 
         ``process_reading`` never raises on a failed or Stopped-mid-mine run; it
@@ -132,24 +138,24 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
             item.status = ReadyItemStatus.COMPLETED
             item.cards_created = cards
             item.error_message = None
-            self.item_finished.emit(idx, result, None, 1)
+            self.item_finished.emit(idx, result, None, attempts)
         elif outcome is MiningOutcome.CANCELLED:
             item.status = ReadyItemStatus.READY
             item.cards_created = cards
             item.error_message = None
-            self.item_finished.emit(idx, result, None, 1)
+            self.item_finished.emit(idx, result, None, attempts)
         else:
             message = result_error_text(result)
             item.status = ReadyItemStatus.ERROR
             item.cards_created = cards
             item.error_message = message
-            self.item_finished.emit(idx, None, message, 1)
+            self.item_finished.emit(idx, None, message, attempts)
 
-    def _fail_item(self, idx: int, item: ReadingQueueItem, message: str) -> None:
+    def _fail_item(self, idx: int, item: ReadingQueueItem, message: str, attempts: int = 1) -> None:
         """Record a per-item failure on the item and via ``item_finished``."""
         item.status = ReadyItemStatus.ERROR
         item.error_message = message
-        self.item_finished.emit(idx, None, message, 1)
+        self.item_finished.emit(idx, None, message, attempts)
 
     def _mine_one(self, idx: int, item: ReadingQueueItem) -> object:
         """Load and mine a single reading source.
@@ -174,7 +180,7 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
         return self._processor.process_reading(
             document,
             progress_callback=mining_cb,
-            curation_callback=self._curation_callback,
+            curation_callback=self._active_curation_callback,
             # Bridge Stop mid-mine into the processor's phase checkpoints.
             # Must be the event, NOT processor.cancel(): the sticky
             # _cancelled flag poisons the shared processor across runs.

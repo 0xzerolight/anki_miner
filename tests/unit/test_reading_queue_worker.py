@@ -350,7 +350,11 @@ def test_process_reading_kwargs(make_worker, mock_processor, fake_load):
 
     call = mock_processor.process_reading.call_args
     assert call.args == (doc,)
-    assert call.kwargs["curation_callback"] is _curation
+    # Wrapped, not replaced: the attempt-cycle memo makes one curator
+    # decision serve every automatic attempt for this item (D30-B).
+    forwarded = call.kwargs["curation_callback"]
+    assert forwarded is not _curation
+    assert forwarded(["a"]) == ["a"]
     assert "progress_callback" in call.kwargs
     assert call.kwargs["cancel_event"] is worker._cancel_event
     # Reading path passes no video-only kwargs.

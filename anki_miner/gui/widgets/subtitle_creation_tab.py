@@ -34,6 +34,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.constants import VIDEO_FILE_FILTER
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import reveal_settings
@@ -61,6 +62,11 @@ class SubtitleCreationTab(_ToolTabBase):
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
     PAGE_WIDTH = PageWidth.FORM
+
+    #: Published so this screen's Cancel gets a live wait clock and the
+    #: pinned bar gets a stage and a progress bar (D17, D22).
+    TASK_ID = "tools.generate"
+    TASK_OWNER = CapabilityTarget("subtitles", "generate")
 
     #: Where this tool last wrote — remembered separately from its inputs (D7).
     OUTPUT_HISTORY_KEY = "tools.generate.output"
@@ -96,6 +102,7 @@ class SubtitleCreationTab(_ToolTabBase):
             complete_template=self.tr("Complete — %1 files processed"),
             select_output_folder=self.tr("Select Output Folder"),
             output_default=self.tr("Next to source video"),
+            task_title=self.tr("Subtitle generation"),
         )
 
         self._setup_ui()
@@ -371,7 +378,7 @@ class SubtitleCreationTab(_ToolTabBase):
             return
 
         # Build and start worker
-        self._cancelled = False
+        self._begin_tool_run(len(video_files))
         self._total_files = len(video_files)
         self.log_widget.clear_log()
         self.progress_widget.reset()

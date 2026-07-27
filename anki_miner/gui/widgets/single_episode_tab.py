@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.constants import (
     SUBTITLE_FILE_FILTER,
     SUBTITLE_OFFSET_MAX,
@@ -76,6 +77,11 @@ class SingleEpisodeTab(MiningTabBase):
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
     PAGE_WIDTH = PageWidth.FORM
+
+    #: Published so this screen's Cancel gets a live wait clock and the pinned
+    #: bar gets a stage and a progress bar (D17, D22).
+    TASK_ID = "run.single"
+    TASK_OWNER = CapabilityTarget("video", "single")
 
     # Test-only seam: emitted synchronously (same-thread DIRECT connection) with
     # the freshly built worker JUST BEFORE ``.start()`` so a test driver can
@@ -595,6 +601,8 @@ class SingleEpisodeTab(MiningTabBase):
             logger.debug("processor built for %s (worker thread)", video_file)
             return proc
 
+        self._publish_task_start(self.tr("Single episode"))
+
         # Create and start worker thread
         curation_cb = self._curation_bridge
         self.worker_thread = EpisodeWorkerThread(
@@ -652,6 +660,7 @@ class SingleEpisodeTab(MiningTabBase):
         request has been made and is being waited on.
         """
         self._cancel_requested = True
+        self._publish_task_cancelling()
         self._cancel_active_curation_dialog()
         if self.worker_thread is not None:
             self.worker_thread.cancel()

@@ -41,12 +41,20 @@ QUEUE_FILTERS: tuple[str, ...] = ("all", "ready", "running", "failed", "complete
 class QueueControlsBar(QWidget):
     """Filter chips, a search box, a live counter, and the selection actions.
 
+    While a run is active it also carries the D29-A run row: the *Queue locked
+    while processing.* badge and the two boundary controls. They live here
+    rather than beside Mine because they are statements about the list directly
+    below them — what can still be done to it, and where it will stop.
+
     Signals:
         filter_changed: The chosen filter key, one of :data:`QUEUE_FILTERS`.
         search_changed: The current search text.
         run_selected: Mine the selected rows.
         retry_selected: Return the selected failed rows to Ready and mine them.
         remove_selected: Drop the selected rows from the queue.
+        pause_requested: Stop cleanly after the item currently being mined.
+        resume_requested: Continue a paused run.
+        finish_current_requested: Let the current item finish, then end the run.
     """
 
     filter_changed = pyqtSignal(str)
@@ -54,6 +62,9 @@ class QueueControlsBar(QWidget):
     run_selected = pyqtSignal()
     retry_selected = pyqtSignal()
     remove_selected = pyqtSignal()
+    pause_requested = pyqtSignal()
+    resume_requested = pyqtSignal()
+    finish_current_requested = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Build the bar with All active, an empty search and zeroed counts.
@@ -63,9 +74,12 @@ class QueueControlsBar(QWidget):
         """
         super().__init__(parent)
         self.filter_buttons: dict[str, ModernButton] = {}
+        self._paused = False
+        self._running = False
         self._setup_ui()
         self.set_counts(total=0, ready=0, failed=0, complete=0)
         self.set_actions_enabled(run=False, retry=False, remove=False)
+        self.set_running(False)
 
     # ------------------------------------------------------------------
     # Public API
@@ -113,18 +127,62 @@ class QueueControlsBar(QWidget):
         self.retry_button.setEnabled(retry)
         self.remove_button.setEnabled(remove)
 
+    def set_running(self, running: bool) -> None:
+        """Freeze the queue for the duration of a run, and offer where to stop.
+
+        D29-A. The run works from a snapshot taken when Mine was pressed, so a
+        list that stayed editable underneath it was describing a different run
+        from the one the progress numbers, the lock state and the final receipt
+        were about. Locking is what lets all three be true at once.
+
+        Args:
+            running: Whether a run currently owns the queue.
+        """
+        self._running = running
+        if not running:
+            self._paused = False
+        self.lock_label.setVisible(running)
+        self.pause_button.setVisible(running)
+        self.finish_button.setVisible(running)
+        if running:
+            self.pause_button.setEnabled(True)
+            self.finish_button.setEnabled(True)
+            self.pause_button.setText(self.tr("Pause after current item"))
+            self.lock_label.setText(self.tr("Queue locked while processing."))
+
+    def set_paused(self, paused: bool, *, done: int = 0, total: int = 0) -> None:
+        """Report that the run is sitting at an item boundary, and offer Resume.
+
+        Args:
+            paused: Whether the run is currently parked.
+            done: Items finished before the pause landed.
+            total: Items in the run.
+        """
+        self._paused = paused
+        self.pause_button.setText(self.tr("Resume") if paused else self.tr("Pause after current item"))
+        self.pause_button.setEnabled(True)
+        if paused:
+            self.lock_label.setText(tr_format(self.tr("Paused after %1 of %2"), done, total))
+        else:
+            self.lock_label.setText(self.tr("Queue locked while processing."))
+
+    def is_paused(self) -> bool:
+        """Whether the bar is currently offering Resume rather than Pause."""
+        return self._paused
+
     # ------------------------------------------------------------------
     # Construction
     # ------------------------------------------------------------------
 
     def _setup_ui(self) -> None:
-        """Lay out the filter/search line above the selection-action line."""
+        """Lay out filter/search, then the selection actions, then the run row."""
         outer = QVBoxLayout()
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(SPACING.xs)
 
         outer.addLayout(self._build_filter_row())
         outer.addLayout(self._build_action_row())
+        outer.addLayout(self._build_run_row())
 
         self.setLayout(outer)
 
@@ -200,3 +258,39 @@ class QueueControlsBar(QWidget):
         row.addStretch()
 
         return row
+
+    def _build_run_row(self) -> QHBoxLayout:
+        """The lock badge and the two places a run can be told to stop (D29-A).
+
+        Cancel is deliberately absent: it is one verb, it lives with the run's
+        primary action, and it takes no prompt (D22). These two are the calmer
+        answers — stop between items, or stop after this one.
+        """
+        row = QHBoxLayout()
+        row.setSpacing(SPACING.xs)
+
+        self.lock_label = QLabel()
+        self.lock_label.setObjectName("queue-lock-badge")
+        row.addWidget(self.lock_label)
+
+        self.pause_button = ModernButton(self.tr("Pause after current item"), variant="secondary")
+        self.pause_button.setToolTip(self.tr("Stop cleanly once the item being mined is finished."))
+        self.pause_button.clicked.connect(self._on_pause_clicked)
+
+        self.finish_button = ModernButton(self.tr("Finish current, then stop"), variant="ghost")
+        self.finish_button.setToolTip(self.tr("Let the current item finish, then end the run."))
+        self.finish_button.clicked.connect(self.finish_current_requested.emit)
+
+        for button in (self.pause_button, self.finish_button):
+            apply_button_size(button)
+            row.addWidget(button)
+        row.addStretch()
+
+        return row
+
+    def _on_pause_clicked(self) -> None:
+        """One button, two verbs — whichever the run is not already doing."""
+        if self._paused:
+            self.resume_requested.emit()
+        else:
+            self.pause_requested.emit()

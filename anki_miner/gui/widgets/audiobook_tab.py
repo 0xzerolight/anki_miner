@@ -143,6 +143,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
             run_starting=self.tr("%1 run starting — %2 items."),
             mine_label=self.tr("Mine"),
             task_title=self.tr("Audio queue"),
+            retrying=self.tr("Attempt %1 of %2 · retrying in %3s"),
         )
         self._queue_list_strings = _QueueListStrings(
             cancelling=self.tr("Cancelling…"),

@@ -32,7 +32,13 @@ from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.presenters import GUIProgressCallback
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.run_off_thread import run_off_thread
-from anki_miner.gui.widgets.base import PageWidth, ScreenIssueHost, WorkflowActionBar, install_workflow_shell
+from anki_miner.gui.widgets.base import (
+    PageWidth,
+    ScreenIssueHost,
+    TaskPublisherMixin,
+    WorkflowActionBar,
+    install_workflow_shell,
+)
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
 from anki_miner.gui.widgets.inline_receipt import InlineReceipt
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
@@ -61,7 +67,7 @@ _WORKER_JOIN_TIMEOUT_MS = 5000
 _LEAKED_RUN_CLOSE_JOIN_MS = 2000
 
 
-class MiningTabBase(ScreenIssueHost, QWidget):
+class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     """Common scaffolding for the four mining tabs (``SingleEpisodeTab``, ``BatchProcessingTab``, ``DeckBuilderTab``, ``YouTubeTab``).
 
     Subclasses own their layout, their progress widgets, and the bodies of the
@@ -146,6 +152,7 @@ class MiningTabBase(ScreenIssueHost, QWidget):
         if total > 0:
             widget.set_percent(int((index - 1) / total * 100))
         self._stage_line.on_stage(index, total, name)
+        self._publish_task_stage(index, total, name)
 
     def _on_progress_start(self, total: int, description: str) -> None:
         """Default start slot: name the sub-operation; leave the bar alone.
@@ -267,10 +274,12 @@ class MiningTabBase(ScreenIssueHost, QWidget):
         worker = getattr(self, "worker_thread", None)
         if sender is not None and worker is not None and sender is not worker:
             return
-        self._finish_receipt(
-            cancelled=bool(getattr(self, "_cancel_requested", False)),
-            fatal=bool(getattr(self, "_run_failed", False)),
-        )
+        cancelled = bool(getattr(self, "_cancel_requested", False))
+        fatal = bool(getattr(self, "_run_failed", False))
+        self._finish_receipt(cancelled=cancelled, fatal=fatal)
+        # The published run closes on the same thread-end signal, so the status
+        # bar and the pinned bar stop describing a run that has ended.
+        self._publish_task_finish(self._task_outcome(cancelled=cancelled, failed=fatal))
 
     def _finish_receipt(self, *, cancelled: bool = False, fatal: bool = False) -> None:
         """Seal the run and show its receipt. Idempotent; safe on every path.

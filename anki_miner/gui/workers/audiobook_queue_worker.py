@@ -1,9 +1,11 @@
 """Queue worker that mines multiple audiobook file pairs sequentially.
 
 Drives a list of :class:`AudiobookQueueItem` through mining one at a time.
-Unlike the YouTube queue worker there is no fetch/probe stage, no retry
-(retry-once existed only for network fetch errors), and no workspace
-allocation: ``process_episode`` owns its own temp folder for local files.
+Unlike the YouTube queue worker there is no fetch/probe stage and no
+workspace allocation: ``process_episode`` owns its own temp folder for local
+files. It does share the base's bounded automatic retry (D30-B), which here can
+only ever fire for a source-proven transient AnkiConnect transport failure that
+still proves ``NO_NOTE_WRITE``.
 
 Signal shapes, ctor validation, the ``try_skip_item`` channel,
 ``curation_processor``, and the stale-gate + factory-build ``run()`` preamble
@@ -14,8 +16,7 @@ per-item body.
   mid-run via :meth:`skip_item` are silently skipped.
 * ``item_progress(int, str)`` — idx, label.
 * ``item_finished(int, object, object, int)`` — idx, result-or-None,
-  error-string-or-None, attempts. Attempts is always 1 (no retry). Fires
-  exactly once per item that runs.
+  error-string-or-None, attempts. Fires exactly once per item that runs.
 * ``queue_finished()`` — fires once at the bottom of ``run()``. There is no
   early-return suppression path here: YouTube suppresses it only on mid-fetch
   cancellation, and there is no fetch stage. A cancel mid-mine propagates via
@@ -34,7 +35,7 @@ from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
-from anki_miner.gui.workers._queue_worker_base import SequentialQueueWorker
+from anki_miner.gui.workers._queue_worker_base import AttemptOutcome, SequentialQueueWorker
 from anki_miner.models.audiobook_queue import AudiobookQueueItem
 from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.orchestration import EpisodeProcessor
@@ -85,14 +86,20 @@ class AudiobookQueueWorker(SequentialQueueWorker[AudiobookQueueItem]):
     def _run_item(self, idx: int, item: AudiobookQueueItem) -> bool:
         """Mine one item, emitting item_started + item_finished. Never aborts early."""
         self.item_started.emit(idx)
+        outcome, attempts = self._attempt_cycle(idx, lambda: self._attempt_once(idx, item))
+        if outcome.error is None:
+            self.item_finished.emit(idx, outcome.result, None, attempts)
+        else:
+            self.item_finished.emit(idx, None, outcome.error, attempts)
+        return False
+
+    def _attempt_once(self, idx: int, item: AudiobookQueueItem) -> AttemptOutcome:
+        """Run one mining attempt, classifying whether it may be repeated."""
         try:
-            result = self._mine_one(idx, item)
+            return self._classify_return(self._mine_one(idx, item))
         except Exception as exc:  # noqa: BLE001 - surface any failure to GUI
             logger.exception("AudiobookQueueWorker item %d failed", idx)
-            self.item_finished.emit(idx, None, f"{type(exc).__name__}: {exc}", 1)
-        else:
-            self.item_finished.emit(idx, result, None, 1)
-        return False
+            return self._classify_exception(exc)
 
     def _mark_item_claimed(self, item: AudiobookQueueItem) -> None:
         item.status = ReadyItemStatus.PROCESSING
@@ -120,7 +127,7 @@ class AudiobookQueueWorker(SequentialQueueWorker[AudiobookQueueItem]):
             item.subtitle_file,
             audio_only=True,
             progress_callback=mining_cb,
-            curation_callback=self._curation_callback,
+            curation_callback=self._active_curation_callback,
             episode_name_override=item.audio_file.stem,
             series_name_override="Audio",
             # Bridge Stop mid-mine into the processor's phase checkpoints.

@@ -35,11 +35,17 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.fonts import japanese_cell_font
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import install_no_scroll_on_inputs
-from anki_miner.gui.widgets.base import PageWidth, capped_page_column, install_workflow_shell
+from anki_miner.gui.widgets.base import (
+    PageWidth,
+    TaskPublisherMixin,
+    capped_page_column,
+    install_workflow_shell,
+)
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.enhanced.modern_button import ButtonVariant
 from anki_miner.gui.workers.backfill_worker import BackfillApplyWorker, BackfillScanWorker
@@ -76,11 +82,17 @@ def _set_variant(button: ModernButton, variant: ButtonVariant) -> None:
         style.polish(button)
 
 
-class CardBackfillTab(QWidget):
+class CardBackfillTab(TaskPublisherMixin, QWidget):
     """Scan → preview table → Apply, over the configured note type."""
 
     #: Tables and queue rows genuinely use the extra width.
     PAGE_WIDTH = PageWidth.DATA
+
+    #: Published so this screen's Cancel gets a live wait clock and the pinned
+    #: bar gets progress and a clock (D17, D22). Scan and Apply are two runs of
+    #: the same screen, so they share one id and supersede each other.
+    TASK_ID = "tools.backfill"
+    TASK_OWNER = CapabilityTarget("subtitles", "backfill")
 
     def __init__(self, config: AnkiMinerConfig, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -89,6 +101,9 @@ class CardBackfillTab(QWidget):
         self._plan: BackfillPlan | None = None
         self._decks_requested = False
         self._deck_worker: SingleCallWorker | None = None
+        # Set by the error slot, read when the thread ends: an error arrives
+        # before ``finished``, which is where the run is closed out.
+        self._run_failed = False
         self._build_ui()
         self._refresh_checkbox_gates()
 
@@ -323,6 +338,7 @@ class CardBackfillTab(QWidget):
         worker.finished.connect(self._on_worker_finished)
         self.worker_thread = worker
         self._set_running(True)
+        self._publish_task_start(self.tr("Card backfill scan"))
         self.status_label.setText(self.tr("Scanning…"))
         worker.start()
 
@@ -444,6 +460,7 @@ class CardBackfillTab(QWidget):
         worker.finished.connect(self._on_worker_finished)
         self.worker_thread = worker
         self._set_running(True)
+        self._publish_task_start(self.tr("Card backfill"), total=len(plan.notes))
         self.status_label.setText(self.tr("Applying…"))
         worker.start()
 
@@ -495,6 +512,7 @@ class CardBackfillTab(QWidget):
     def _cancel(self) -> None:
         """Cancel the run: one verb, no prompt, and the button says it is waiting."""
         if self.worker_thread is not None and self.worker_thread.isRunning():
+            self._publish_task_cancelling()
             self.worker_thread.cancel()
             self.cancel_button.setEnabled(False)
             self.status_label.setText(self.tr("Cancelling…"))
@@ -503,11 +521,16 @@ class CardBackfillTab(QWidget):
         if total:
             self.progress_bar.setRange(0, total)
             self.progress_bar.setValue(done)
+        self._publish_task_count(current=done, total=total or None, detail="")
 
     def _on_worker_error(self, message: str) -> None:
+        self._run_failed = True
         self._set_running(False)
         self.status_label.setText(message)
 
     def _on_worker_finished(self) -> None:
         self._set_running(False)
+        cancelled = self.worker_thread is not None and self.worker_thread.is_cancelled
+        self._publish_task_finish(self._task_outcome(cancelled=cancelled, failed=self._run_failed))
+        self._run_failed = False
         self.worker_thread = None

@@ -28,17 +28,16 @@ def panel(qapp, qtbot):
 def _add_widget(panel, display_name, item_id, video=None, subtitle=None, offset=0.0):
     """Add a configured QueueItemWidget directly to the panel.
 
-    Mirrors what _add_series + the queue-population path do, without driving
-    the QInputDialog: create the widget, stamp its item_id, set folders, and
-    register it with the panel's layout/list.
+    Mirrors what _add_series does without driving the QInputDialog: create the
+    widget, set its folders, register it on the list, then force the item id the
+    test addresses it by (registration binds a real one when the folders exist).
     """
-    widget = QueueItemWidget(display_name=display_name, parent=panel.queue_container)
-    widget.item_id = item_id
+    widget = QueueItemWidget(display_name=display_name, parent=panel.list_widget)
     if video is not None and subtitle is not None:
         widget.set_folders(video, subtitle)
     widget.subtitle_offset = offset
-    panel.queue_layout.insertWidget(len(panel.queue_item_widgets), widget)
-    panel.queue_item_widgets.append(widget)
+    panel.register_widget(widget)
+    widget.item_id = item_id
     panel._update_stats()
     return widget
 
