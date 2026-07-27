@@ -176,6 +176,28 @@ def test_retrying_two_failures_after_eight_successes_counts_zero_of_two(batch):
     assert batch.overall_progress_widget.progress_bar.value() == 100
 
 
+def test_a_cancelled_batch_reports_its_cards_without_a_dialog(batch, monkeypatch):
+    """The worker now hands over what it did on every exit; the tab must show
+    that without popping "Batch Processing Complete" at someone who cancelled."""
+    from PyQt6.QtWidgets import QMessageBox
+
+    for name in ("information", "warning"):
+        monkeypatch.setattr(
+            QMessageBox,
+            name,
+            MagicMock(side_effect=AssertionError(f"QMessageBox.{name} after Cancel")),
+        )
+    batch._on_batch_started(4)
+    batch._on_cancel_clicked()
+
+    batch._on_processing_finished([MagicMock(cards_created=7, success=True)])
+
+    log = batch.log_widget.text_edit.toPlainText()
+    assert "1 of 4 episodes finished" in log
+    assert "7 cards created" in log
+    assert "Complete" not in batch.overall_progress_widget.status_label.text()
+
+
 def test_the_same_item_reported_twice_is_counted_once(batch):
     batch.queue_panel.set_item_status = lambda item_id, status: None
     batch.queue_panel.set_processing_item_complete = lambda item_id, cards: None

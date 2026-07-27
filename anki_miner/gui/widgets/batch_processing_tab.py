@@ -802,18 +802,29 @@ class BatchProcessingTab(MiningTabBase):
         """
         self._restore_buttons()
 
-        # result_ready is suppressed on cancelled runs, so this is the
-        # success-side terminal handler (cancel recovery is in
-        # _restore_buttons); still guard against a late cancel race.
-        if not self._cancel_requested:
-            self.overall_progress_widget.show_completion(
-                tr_format(self.tr("Complete — %1 cards created"), sum(r.cards_created for r in results))
+        total_cards = sum(r.cards_created for r in results)
+
+        # A cancelled run reports what it managed to do — the worker now hands
+        # its accumulated results over on every exit, so cards already written
+        # to Anki are never silently dropped. It reports them in the log, not a
+        # dialog: a modal announcing "Complete" is the last thing someone who
+        # just pressed Cancel wants, and D24 keeps interruptions for problems.
+        if self._cancel_requested:
+            self.log_widget.append_info(
+                tr_format(
+                    self.tr("Cancelled — %1 of %2 episodes finished, %3 cards created"),
+                    len(results),
+                    self._items_total or len(results),
+                    total_cards,
+                )
             )
+            return
+
+        self.overall_progress_widget.show_completion(tr_format(self.tr("Complete — %1 cards created"), total_cards))
 
         # Show summary; failed episodes are returned as results with errors
         # populated (process_episode never raises), so count them explicitly
         # instead of presenting every finish as a success (Issue #51).
-        total_cards = sum(r.cards_created for r in results)
         failed = sum(1 for r in results if not r.success)
         summary = tr_format(self.tr("Processed %1 episodes\nTotal cards created: %2"), len(results), total_cards)
         if failed > 0:
