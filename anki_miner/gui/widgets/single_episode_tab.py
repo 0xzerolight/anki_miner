@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QKeySequence, QShortcut
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QKeySequence
 from PyQt6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -31,6 +31,7 @@ from anki_miner.gui.constants import (
 )
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
 from anki_miner.gui.utils.qt_helpers import reveal_settings, urls_from_event
 from anki_miner.gui.utils.recent_files import RecentFilesManager
 from anki_miner.gui.utils.run_off_thread import run_off_thread
@@ -223,14 +224,16 @@ class SingleEpisodeTab(MiningTabBase):
         self._setup_shortcuts()
 
     def _setup_shortcuts(self) -> None:
-        """Set up tab-specific keyboard shortcuts."""
-        # Ctrl+O: Browse video file
-        browse_shortcut = QShortcut(QKeySequence("Ctrl+O"), self)
-        browse_shortcut.activated.connect(self.video_selector.browse)
+        """Set up tab-specific keyboard shortcuts.
 
-        # Ctrl+Return: Process episode
-        process_shortcut = QShortcut(QKeySequence("Ctrl+Return"), self)
-        process_shortcut.activated.connect(self._on_process_clicked)
+        Ctrl+O only. Ctrl+Enter is installed by ``_install_action_bar``, which
+        routes it through the pinned primary button; the copy that used to live
+        here called ``_on_process_clicked`` directly, so it ignored whether the
+        button was enabled and could start a second run over a first.
+        """
+        # Ctrl+O: browse for the video. Scoped, because Batch owns Ctrl+O too
+        # and both pages live in one window -- unscoped, the hidden one could win.
+        scoped_shortcut(self, QKeySequence("Ctrl+O"), self.video_selector.browse)
 
         # Set accessibility properties
         self._setup_accessibility()

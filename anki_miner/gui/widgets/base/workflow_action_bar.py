@@ -138,6 +138,32 @@ class WorkflowActionBar(QWidget):
         if primary is not None:
             self._action_layout.addWidget(primary)
 
+    def current_primary(self) -> QAbstractButton | None:
+        """The button the bar is showing as this screen's primary action.
+
+        Read rather than remembered, so a screen that swaps its primary with its
+        stage is answered from whatever it swapped to.
+        """
+        return self._primary
+
+    def trigger_primary(self) -> None:
+        """Press the current primary action, if it is there to be pressed.
+
+        The button object, never the slot behind it. Going through ``click()``
+        is what makes ``Ctrl+Enter`` mean exactly what the mouse means: Card
+        Backfill's shortcut follows Scan to Apply as the stage moves, the
+        Reading tabs' follows whichever verb their mode is showing, and a run
+        already in flight -- which disables the button -- cannot be started a
+        second time from the keyboard.
+
+        ``isHidden`` rather than ``isVisible``: this asks about the button's own
+        state, and a screen behind another tab has to answer it too.
+        """
+        primary = self._primary
+        if primary is None or primary.isHidden() or not primary.isEnabled():
+            return
+        primary.click()
+
     # ------------------------------------------------------------------
     # Activity drawer
     # ------------------------------------------------------------------
