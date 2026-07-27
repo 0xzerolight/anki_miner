@@ -157,7 +157,7 @@ class _FakeWindow:
 
 @pytest.fixture(autouse=True)
 def theme_applies(monkeypatch, qapp):
-    """Record ``Theme.apply_to_app`` instead of paying the ~870 ms repolish.
+    """Record ``Theme.apply_to_app`` instead of paying the 1647 ms repolish.
 
     Takes ``qapp`` so ``QApplication.instance()`` is never None — the controller
     skips the repaint without one, which would make the call-count assertions
