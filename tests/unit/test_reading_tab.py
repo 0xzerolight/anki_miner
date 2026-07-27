@@ -198,6 +198,22 @@ class TestOpenSubtab:
 
 
 # ---------------------------------------------------------------------------
+# current_subtab_key — the inverse, used to resume the last session (D7)
+# ---------------------------------------------------------------------------
+
+
+class TestCurrentSubtabKey:
+    @pytest.mark.parametrize("key", ["manga", "novels", "subtitles", "text"])
+    def test_round_trips_with_open_subtab(self, tab, key):
+        tab.open_subtab(key)
+
+        assert tab.current_subtab_key() == key
+
+    def test_reports_the_default_subtab(self, tab):
+        assert tab.current_subtab_key() == "manga"
+
+
+# ---------------------------------------------------------------------------
 # update_config fan-out
 # ---------------------------------------------------------------------------
 

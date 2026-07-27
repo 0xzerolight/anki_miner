@@ -154,6 +154,20 @@ class ReadingTab(QWidget):
         if index is not None:
             self._inner_tabs.setCurrentIndex(index)
 
+    def current_subtab_key(self) -> str | None:
+        """The stable key of the sub-tab on show, or ``None`` if unmappable.
+
+        The inverse of :meth:`open_subtab`, used to persist where the user was
+        (D7). Returns the key, never the index or the translated label: the
+        index moves when tabs are reordered and the label moves with the UI
+        language, and either would resume the wrong screen.
+        """
+        current = self._inner_tabs.currentIndex()
+        for key, index in self._subtab_index.items():
+            if index == current:
+                return key
+        return None
+
     # ------------------------------------------------------------------
     # Config refresh
     # ------------------------------------------------------------------
