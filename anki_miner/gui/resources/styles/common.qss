@@ -676,6 +676,20 @@ QPushButton:disabled {
     color: ${color-text-on-primary};
 }
 
+/* ModernButton paints its own press feedback (an animated tint, see
+ * gui/widgets/enhanced/modern_button.py -- QSS has no transition property), so
+ * the instant swap above is put back to the resting colour for that class:
+ * one press should get one answer. These two rules are later than, and no
+ * weaker than, QPushButton:pressed; the id-selected variants (#secondary,
+ * #ghost, #danger) already outrank both and never saw the swap at all. */
+ModernButton:pressed {
+    background-color: ${color-primary};
+}
+
+ModernButton:hover:pressed {
+    background-color: ${color-primary-hover};
+}
+
 QPushButton#secondary {
     background-color: transparent;
     color: ${color-primary};
