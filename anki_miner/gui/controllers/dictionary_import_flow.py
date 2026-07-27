@@ -193,16 +193,12 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             )
 
         def on_success_error(exc: Exception) -> None:
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("DictionaryImportFlow", "Configuration Update Failed"),
-                tr_format(
-                    QCoreApplication.translate(
-                        "DictionaryImportFlow",
-                        "Import completed, but the configuration update failed: %1",
-                    ),
-                    str(exc),
+            self._report_import_issue(
+                QCoreApplication.translate(
+                    "DictionaryImportFlow",
+                    "The import finished, but the settings could not be updated.",
                 ),
+                str(exc),
             )
 
         self._run_modal_import(
@@ -211,7 +207,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             cancel_label=QCoreApplication.translate("DictionaryImportFlow", "Cancel"),
             determinate=True,
             join_noun="dictionary import worker",
-            failure_title=QCoreApplication.translate("DictionaryImportFlow", "Import Failed"),
+            failure_summary=QCoreApplication.translate("DictionaryImportFlow", "The dictionary could not be imported."),
             refusal_message=QCoreApplication.translate(
                 "DictionaryImportFlow", "Another import is still finishing. Wait for it to finish and try again."
             ),
@@ -293,9 +289,8 @@ class DictionaryImportFlow(ModalImportFlowMixin):
 
             def _on_error(message: str) -> None:
                 self._set_import_buttons_enabled(True)
-                QMessageBox.warning(
-                    self._parent,
-                    QCoreApplication.translate("DictionaryImportFlow", "Invalid Zip"),
+                self._report_import_issue(
+                    QCoreApplication.translate("DictionaryImportFlow", "That folder could not be scanned."),
                     message,
                 )
 
@@ -304,9 +299,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
 
         source_path, source_kind, recoverable = _scan_result
         if not recoverable:
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("DictionaryImportFlow", "No Recoverable Source"),
+            self._report_import_issue(
                 tr_format(
                     QCoreApplication.translate(
                         "DictionaryImportFlow",
@@ -319,9 +312,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             return
 
         if not self._panel.request_resource_release():
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("DictionaryImportFlow", "Re-import Blocked"),
+            self._report_import_issue(
                 QCoreApplication.translate(
                     "DictionaryImportFlow",
                     "Indexed resources are in use by mining, startup prewarm, or card backfill. "
@@ -371,7 +362,9 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             cancel_label=QCoreApplication.translate("DictionaryImportFlow", "Cancel"),
             determinate=True,
             join_noun="dictionary import worker",
-            failure_title=QCoreApplication.translate("DictionaryImportFlow", "Re-import Failed"),
+            failure_summary=QCoreApplication.translate(
+                "DictionaryImportFlow", "The dictionary could not be re-imported."
+            ),
             refusal_message=QCoreApplication.translate(
                 "DictionaryImportFlow", "Another import is still finishing. Wait for it to finish and try again."
             ),
@@ -390,9 +383,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         trace_id = _begin_import_trace("JMdict reimport")
         xml = self._get_config().jmdict_path
         if not xml.exists():
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("DictionaryImportFlow", "JMdict not found"),
+            self._report_import_issue(
                 tr_format(
                     QCoreApplication.translate(
                         "DictionaryImportFlow", "No JMdict XML at %1. Download from EDRDG and place it there."
@@ -407,9 +398,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         # (Issue #32 — same root cause as #30). Without this, the rename
         # at yomitan_importer.py:215 fails with "Access denied" on Windows.
         if not self._panel.request_resource_release():
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("DictionaryImportFlow", "Re-import Blocked"),
+            self._report_import_issue(
                 QCoreApplication.translate(
                     "DictionaryImportFlow",
                     "Indexed resources are in use by mining, startup prewarm, or card backfill. "
@@ -442,7 +431,9 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             cancel_label=QCoreApplication.translate("DictionaryImportFlow", "Cancel"),
             determinate=True,
             join_noun="dictionary import worker",
-            failure_title=QCoreApplication.translate("DictionaryImportFlow", "Reimport Failed"),
+            failure_summary=QCoreApplication.translate(
+                "DictionaryImportFlow", "The dictionaries could not be re-imported."
+            ),
             refusal_message=QCoreApplication.translate(
                 "DictionaryImportFlow", "Another import is still finishing. Wait for it to finish and try again."
             ),
@@ -529,9 +520,8 @@ class DictionaryImportFlow(ModalImportFlowMixin):
 
             def _on_error(message: str) -> None:
                 self._set_import_buttons_enabled(True)
-                QMessageBox.warning(
-                    self._parent,
-                    QCoreApplication.translate("DictionaryImportFlow", "Scan Failed"),
+                self._report_import_issue(
+                    QCoreApplication.translate("DictionaryImportFlow", "That folder could not be scanned."),
                     message,
                 )
 
@@ -560,9 +550,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         # denied" while a DefinitionService still holds its read-only
         # connection open (Issue #32; same hook as the remove flow in #30).
         if not self._panel.request_resource_release():
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("DictionaryImportFlow", "Re-import Blocked"),
+            self._report_import_issue(
                 QCoreApplication.translate(
                     "DictionaryImportFlow",
                     "Indexed resources are in use by mining, startup prewarm, or card backfill. "
@@ -652,16 +640,12 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             exc: Exception,
             _result: _ChainedImportResult[tuple[str, str, str, Path]],
         ) -> None:
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("DictionaryImportFlow", "Configuration Update Failed"),
-                tr_format(
-                    QCoreApplication.translate(
-                        "DictionaryImportFlow",
-                        "Import completed, but the configuration update failed: %1",
-                    ),
-                    str(exc),
+            self._report_import_issue(
+                QCoreApplication.translate(
+                    "DictionaryImportFlow",
+                    "The import finished, but the settings could not be updated.",
                 ),
+                str(exc),
             )
 
         self._run_chained_imports(
@@ -672,7 +656,9 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             cancelling_label=QCoreApplication.translate("DictionaryImportFlow", "Cancelling…"),
             determinate=True,
             join_noun="dictionary import worker",
-            failure_title=QCoreApplication.translate("DictionaryImportFlow", "Reimport Failed"),
+            failure_summary=QCoreApplication.translate(
+                "DictionaryImportFlow", "The dictionaries could not be re-imported."
+            ),
             missing_result_message=QCoreApplication.translate(
                 "DictionaryImportFlow", "The import worker finished without a completion result."
             ),
@@ -707,9 +693,8 @@ class DictionaryImportFlow(ModalImportFlowMixin):
 
             def _on_error(message: str) -> None:
                 self._set_import_buttons_enabled(True)
-                QMessageBox.warning(
-                    self._parent,
-                    QCoreApplication.translate("DictionaryImportFlow", "Scan Failed"),
+                self._report_import_issue(
+                    QCoreApplication.translate("DictionaryImportFlow", "That folder could not be scanned."),
                     message,
                 )
 

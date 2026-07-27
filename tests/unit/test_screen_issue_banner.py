@@ -184,6 +184,15 @@ class TestReporting:
     def test_reporting_with_no_origin_says_so(self):
         assert report_screen_issue(None, FFMPEG) is False
 
+    def test_a_non_widget_origin_terminates_instead_of_hanging(self):
+        """A test double answers parentWidget() with another double, forever."""
+
+        class _Endless:
+            def parentWidget(self):  # noqa: N802 (Qt API shape)
+                return _Endless()
+
+        assert report_screen_issue(_Endless(), FFMPEG) is False  # type: ignore[arg-type]
+
     def test_clearing_through_a_child_clears_the_host(self, qtbot):
         screen = _Screen()
         qtbot.addWidget(screen)

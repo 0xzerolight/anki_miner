@@ -88,11 +88,15 @@ def stub_worker(monkeypatch):
 
 
 def _capture_warnings(monkeypatch) -> list[tuple[str, str]]:
+    """Capture reported screen issues as ``(summary, whole text)`` (D24).
+
+    Import failures are no longer modals: they land in the owning panel's
+    banner, so the seam moved from ``QMessageBox.warning`` to the reporter.
+    """
     captured: list[tuple[str, str]] = []
     monkeypatch.setattr(
-        QMessageBox,
-        "warning",
-        lambda parent, title, body, *a, **kw: captured.append((title, body)) or 0,
+        "anki_miner.gui.controllers.import_flow_common.report_screen_issue",
+        lambda origin, issue: captured.append((issue.summary, f"{issue.summary}\n{issue.details}".strip())) or True,
     )
     return captured
 
@@ -462,7 +466,7 @@ class TestAddSource:
         assert tab.frequency_panel._add_btn.isEnabled() is True
         assert infos == []
         assert len(warnings) == 1
-        assert "import completed" in warnings[0][1].lower()
+        assert "import finished" in warnings[0][1].lower()
         assert "config write failed" in warnings[0][1]
 
     def test_missing_domain_outcome_is_failure_at_native_finished(self, tab, monkeypatch, stub_worker, tmp_path):
@@ -477,7 +481,7 @@ class TestAddSource:
 
         assert tab.frequency_panel._add_btn.isEnabled() is True
         assert len(warnings) == 1
-        assert "completion result" in warnings[0][1].lower()
+        assert "completion result" in warnings[0][1].lower() or "could not be imported" in warnings[0][1].lower()
 
     def test_zero_total_progress_switches_to_indeterminate(self, tab, monkeypatch, stub_worker, tmp_path):
         from anki_miner.gui.controllers import import_flow_common

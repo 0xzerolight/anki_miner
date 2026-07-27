@@ -234,7 +234,7 @@ def _run(
         cancelling_label="Cancelling…",
         determinate=True,
         join_noun="test import worker",
-        failure_title="Import Failed",
+        failure_summary="Import Failed",
         missing_result_message="Missing result",
         trace_id="trace123",
         on_finished=on_finished or results.append,

@@ -219,9 +219,14 @@ def _find_host(origin: QWidget | None) -> ScreenIssueHost | None:
 
     Nearest, not outermost: a dialog that hosts its own banner keeps its own
     failures, and only a screen with a banner actually installed can take them.
+
+    The walk is typed at every step, not just at entry. Controllers hand this
+    whatever parent they were constructed with, and a test double answers
+    ``parentWidget()`` with another double forever — an untyped loop hangs the
+    process rather than failing. A non-widget simply has no screen.
     """
-    widget: QWidget | None = origin
-    while widget is not None:
+    widget: object = origin
+    while isinstance(widget, QWidget):
         if isinstance(widget, ScreenIssueHost) and widget.issue_banner() is not None:
             return widget
         widget = widget.parentWidget()

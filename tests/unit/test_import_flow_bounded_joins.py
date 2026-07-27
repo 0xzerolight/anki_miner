@@ -209,9 +209,8 @@ class TestFrequencyBoundedJoin:
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
         warnings: list[tuple[str, str]] = []
         monkeypatch.setattr(
-            QMessageBox,
-            "warning",
-            lambda _parent, title, body, *a, **kw: warnings.append((title, body)) or 0,
+            "anki_miner.gui.controllers.import_flow_common.report_screen_issue",
+            lambda origin, issue: warnings.append((issue.summary, f"{issue.summary}\n{issue.details}".strip())) or True,
         )
 
         flow = tab._frequency_import_flow

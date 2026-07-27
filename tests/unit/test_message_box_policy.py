@@ -32,9 +32,10 @@ The permissible categories:
     Owned by another workstream's surface (background download outcomes; queue
     rows and run receipts). Classified here, migrated there.
 ``recoverable``
-    The migration backlog: a recoverable failure still reported as a modal.
-    Every one of these is a run-stopper on an unattended batch. The backlog only
-    shrinks — nothing may be added to it.
+    A recoverable failure still reported as a modal — a run-stopper on an
+    unattended batch. **The ledger holds none, and must never hold one again**:
+    :func:`test_no_recoverable_modal_remains` is the assertion that makes the
+    category unusable rather than a place to park new work.
 """
 
 from __future__ import annotations
@@ -105,28 +106,7 @@ LEDGER: dict[str, str] = {
     "gui/widgets/batch_processing_tab.py::BatchProcessingTab._process_queue": "w5-queue",
     "gui/widgets/batch_processing_tab.py::BatchProcessingTab._retry_failed_items": "w5-queue",
     "gui/widgets/panels/queue_panel.py::QueuePanel._clear_queue": "w5-queue",
-    # --- Migration backlog: recoverable failures still shown as modals -------
-    "gui/controllers/audio_pack_import_flow.py::AudioPackImportFlow.add_pack": "recoverable",
-    "gui/controllers/audio_pack_import_flow.py::AudioPackImportFlow.add_pack._on_error": "recoverable",
-    "gui/controllers/audio_pack_import_flow.py::AudioPackImportFlow.add_pack.on_finished_error": "recoverable",
-    "gui/controllers/audio_pack_import_flow.py::AudioPackImportFlow.reimport_pack": "recoverable",
-    "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow.add_dict.on_success_error": "recoverable",
-    "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow.reimport_all._on_error": "recoverable",
-    "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow.reimport_all.on_finished_error": "recoverable",
-    "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow.reimport_dict": "recoverable",
-    "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow.reimport_dict._on_error": "recoverable",
-    "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow.reimport_jmdict": "recoverable",
-    "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow.restore_unlisted._on_error": "recoverable",
-    "gui/controllers/frequency_import_flow.py::FrequencyImportFlow.add_source.on_success_error": "recoverable",
-    "gui/controllers/frequency_import_flow.py::FrequencyImportFlow.reimport_source": "recoverable",
-    "gui/controllers/frequency_import_flow.py::FrequencyImportFlow.reimport_source._on_error": "recoverable",
-    "gui/controllers/import_flow_common.py::ModalImportFlowMixin._run_chained_imports.finish_batch.report_error": "recoverable",  # noqa: E501
-    "gui/controllers/import_flow_common.py::ModalImportFlowMixin._run_modal_import": "recoverable",
-    "gui/controllers/import_flow_common.py::ModalImportFlowMixin._run_modal_import.on_thread_finished.finish": "recoverable",  # noqa: E501
-    "gui/controllers/pitch_import_flow.py::PitchImportFlow.add_source.on_success_error": "recoverable",
-    "gui/controllers/pitch_import_flow.py::PitchImportFlow.reimport_source": "recoverable",
-    "gui/controllers/pitch_import_flow.py::PitchImportFlow.reimport_source._on_error": "recoverable",
-    "gui/controllers/profile_controller.py::ProfileController._warn": "recoverable",
+    # --- No "recoverable" entry may ever be added here. See the module docstring.
 }
 
 
@@ -194,6 +174,13 @@ class TestLedgerCoverage:
     def test_every_category_is_a_known_one(self):
         unknown = sorted({category for category in LEDGER.values() if category not in PERMITTED_CATEGORIES})
         assert unknown == []
+
+    def test_no_recoverable_modal_remains(self):
+        """The whole point of D24: a recoverable failure never halts a run."""
+        remaining = sorted(key for key, category in LEDGER.items() if category == "recoverable")
+        assert remaining == [], (
+            "A recoverable failure belongs in a ScreenIssueBanner. " "The 'recoverable' category exists to be empty."
+        )
 
 
 class TestClassification:
