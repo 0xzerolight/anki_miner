@@ -40,6 +40,7 @@ from anki_miner.services.frequency.source_importer import import_frequency_sourc
 from anki_miner.services.pitch_accent.source_importer import import_pitch_source
 from anki_miner.services.resource_downloader import download_to_temp
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.slug import slugify
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -51,6 +52,17 @@ logger = logging.getLogger(__name__)
 # Suffixes the freq/pitch source importers dispatch on; anything else falls
 # back to .zip (the recommended zip-shaped resources are Yomitan zips).
 _FREQ_SUFFIXES = {".zip", ".csv", ".tsv", ".txt"}
+
+
+def _resume_key(spec: ResourceSpec) -> str:
+    """Stable, collision-free resume key for one catalogue resource (D16-C).
+
+    Slugged rather than used verbatim: the key names a file, and a catalogue id
+    is free-form text. Two resources with different ids can never slug to the
+    same key within a kind because the ids themselves are the pinned on-disk
+    slot names, which already have to be distinct.
+    """
+    return f"resource-{slugify(spec.kind, fallback='res')}-{slugify(spec.id, fallback='item')}"
 
 
 def _retype_for_suffix(temp: Path, url: str) -> Path:
@@ -266,6 +278,12 @@ class ResourceDownloadWorker(CancellableWorker):
                     progress=reporter.downloading,
                     cancelled_check=lambda: self.is_cancelled,
                     read_timeout_seconds=1.0,
+                    # The 580-of-600 MB case D16-C exists for. ``spec.id`` is
+                    # the pinned on-disk slot, so it is stable across releases
+                    # and collision-free across the catalogue; the ``kind``
+                    # prefix keeps a dict and a frequency source that somehow
+                    # shared an id apart.
+                    resume_key=_resume_key(spec),
                 )
 
                 if self.check_cancelled():

@@ -165,6 +165,9 @@ def install_alass(
         dest_dir=bin_root,
         progress=progress,
         cancelled_check=cancelled_check,
+        # Keyed on the pinned checksum: an asset bump changes the sha, so the
+        # old partial can never be resumed into the new binary (D16-C).
+        resume_key=f"alass-{spec.sha256[:16]}",
     )
 
     try:

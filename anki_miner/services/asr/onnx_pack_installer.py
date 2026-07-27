@@ -202,6 +202,9 @@ def install_onnx_pack(
         progress=_on_progress if progress is not None else None,
         cancelled_check=cancelled_check,
         max_bytes=_MAX_WHEEL_BYTES,
+        # Keyed on the pinned checksum: a wheel bump changes the sha, so the
+        # old partial can never be resumed into the new wheel (D16-C).
+        resume_key=f"onnx-{spec.sha256[:16]}",
     )
     try:
         if cancel_event is not None and cancel_event.is_set():

@@ -17,6 +17,7 @@ import pytest
 
 from anki_miner.exceptions import SetupError
 from anki_miner.services.asr import ggml_model_installer as gmi
+from tests.unit._resume_key_assert import assert_stable_resume_key as _assert_stable_resume_key
 
 _FAKE_ACOUSTIC = b"lmgg-fake-acoustic-bytes"
 _FAKE_VAD = b"lmgg-fake-vad-bytes"
@@ -52,7 +53,10 @@ def _retarget_vad(monkeypatch, *, real_sha: bool = True) -> gmi._GgmlSpec:
 def _patch_download(monkeypatch, spec: gmi._GgmlSpec, payload: bytes):
     """Patch download_to_temp to write *payload* as the downloaded .part file."""
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, max_bytes=None):
+    def fake_download(
+        url, *, dest_dir, progress=None, cancelled_check=None, max_bytes=None, resume_key=None, resume_root=None
+    ):
+        _assert_stable_resume_key(resume_key)
         assert url == spec.url
         # The cap must clear the largest real file.
         assert max_bytes is not None and max_bytes >= 1300 * 1024 * 1024
@@ -260,7 +264,10 @@ class TestCancel:
         _retarget_acoustic(monkeypatch, "large-v3")
         ev = threading.Event()
 
-        def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, max_bytes=None):
+        def fake_download(
+            url, *, dest_dir, progress=None, cancelled_check=None, max_bytes=None, resume_key=None, resume_root=None
+        ):
+            _assert_stable_resume_key(resume_key)
             dest_dir.mkdir(parents=True, exist_ok=True)
             part = dest_dir / "fake.part"
             part.write_bytes(_FAKE_ACOUSTIC)
