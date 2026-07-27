@@ -114,6 +114,8 @@ class PitchSettingsPanel(ChainSettingsPanelBase):
     add_source_requested = pyqtSignal()
     reimport_source_requested = pyqtSignal(str)
 
+    ANCHOR_NAMESPACE = "pitch"
+
     _ROW_CLASS = _PitchRow
     _SCAN_ERROR_LABEL = "Pitch registry scan failed"
     _REMOVE_ERROR_NOUN = "pitch source folder"
@@ -191,15 +193,14 @@ class PitchSettingsPanel(ChainSettingsPanelBase):
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(
-            QLabel(
-                self.tr(
-                    "Sources are checked top to bottom — the first source with a pitch "
-                    "entry for a word wins. Lower sources only fill words the higher "
-                    "ones miss."
-                )
+        chain_blurb = QLabel(
+            self.tr(
+                "Sources are checked top to bottom — the first source with a pitch "
+                "entry for a word wins. Lower sources only fill words the higher "
+                "ones miss."
             )
         )
+        layout.addWidget(chain_blurb)
 
         self._list = QListWidget()
         self._list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
@@ -229,7 +230,14 @@ class PitchSettingsPanel(ChainSettingsPanelBase):
         buttons.addWidget(self._remove_btn)
 
         layout.addLayout(buttons)
-        self.add_field("", container)
+        # One stable anchor for the whole chain; row widgets are transient (D13).
+        self.add_field(
+            "",
+            container,
+            anchor="chain",
+            anchor_focus=self._list,
+            anchor_text=lambda: (chain_blurb.text(), self._add_btn.text()),
+        )
         self.add_stretch()
 
     def set_chain(

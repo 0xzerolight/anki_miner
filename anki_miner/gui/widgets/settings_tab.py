@@ -3,7 +3,7 @@
 import dataclasses
 import json
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from pathlib import Path
 from typing import Protocol, cast, runtime_checkable
@@ -42,6 +42,7 @@ from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.qt_helpers import install_no_scroll_on_inputs
 from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.widgets.base import SettingAnchor, SettingAnchorHost
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels import (
     AnkiSettingsPanel,
@@ -79,7 +80,7 @@ class _SavePathPanel(Protocol):
     def contribute(self, config: AnkiMinerConfig) -> AnkiMinerConfig: ...
 
 
-class SettingsTab(QWidget):
+class SettingsTab(SettingAnchorHost, QWidget):
     """Settings tab with category organization.
 
     Uses extracted panel components for cleaner architecture.
@@ -106,6 +107,8 @@ class SettingsTab(QWidget):
             Profiles…" button. The window opens the dialog, not this tab: a
             profile switch reloads every panel here from the incoming config.
     """
+
+    ANCHOR_NAMESPACE = "app"
 
     validation_requested = pyqtSignal()
     config_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
@@ -321,6 +324,15 @@ class SettingsTab(QWidget):
             self.tr("When enabled, Anki Miner queries GitHub for new releases on launch.")
         )
         layout.addWidget(self.check_for_updates_checkbox)
+        # Lives on the tab, not in a panel, so it anchors here (D11).
+        self.register_setting(
+            "check_for_updates",
+            self.check_for_updates_checkbox,
+            lambda: (
+                self.check_for_updates_checkbox.text(),
+                self.check_for_updates_checkbox.toolTip(),
+            ),
+        )
 
         # Status row at bottom. The Save Settings button is gone — settings
         # auto-save (debounced) — but its inline "✓ Saved" confirmation stays
@@ -706,6 +718,43 @@ class SettingsTab(QWidget):
         index = self._subtab_index.get(key)
         if index is not None:
             self.tab_widget.setCurrentIndex(index)
+
+    def setting_anchor_hosts(self) -> tuple[SettingAnchorHost, ...]:
+        """Every panel that registers setting anchors, in navigator order."""
+        return (
+            self.anki_panel,
+            self.media_panel,
+            self.dictionary_panel,
+            self.audio_panel,
+            self.frequency_panel,
+            self.pitch_panel,
+            self.filtering_panel,
+            self.youtube_panel,
+            self.subtitles_panel,
+            self.ui_panel,
+        )
+
+    def setting_anchors(self) -> tuple[SettingAnchor, ...]:
+        """Every addressable setting: this tab's own, then each panel's (D11).
+
+        Collected on demand rather than at import, so a search index built by
+        the caller sees whatever translator ``app.py`` installed.
+        """
+        anchors = list(super().setting_anchors())
+        for host in self.setting_anchor_hosts():
+            anchors.extend(host.setting_anchors())
+        return tuple(anchors)
+
+    def setting_ignore_reasons(self) -> Mapping[QWidget, str]:
+        """Widgets across Settings deliberately excluded from anchoring.
+
+        Aggregated like :meth:`setting_anchors`, so the two views never disagree
+        about which surfaces were consulted.
+        """
+        reasons: dict[QWidget, str] = dict(super().setting_ignore_reasons())
+        for host in self.setting_anchor_hosts():
+            reasons.update(host.setting_ignore_reasons())
+        return reasons
 
     def trigger_reimport_all(self, only_ids: frozenset[str] | None = None) -> None:
         """Run the Dictionary → Reimport All flow (4.0 migration prompt hook).

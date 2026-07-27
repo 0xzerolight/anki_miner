@@ -117,6 +117,8 @@ class _AsrState:
 class SubtitlesSettingsPanel(FormPanel):
     """Settings panel for subtitle generation (ASR) and retiming (alass)."""
 
+    ANCHOR_NAMESPACE = "subtitles"
+
     #: Emitted when the user clicks "Download model"; carries the selected model
     #: name. Wiring (SettingsTab → download flow) lives outside the panel.
     asr_download_requested = pyqtSignal(str)
@@ -275,7 +277,13 @@ class SubtitlesSettingsPanel(FormPanel):
         download_row.addWidget(self.download_model_button)
         download_row.addWidget(self.model_status_label)
         download_row.addStretch()
-        self.add_field(self.tr("Model download"), download_container)
+        self.add_field(
+            self.tr("Model download"),
+            download_container,
+            anchor="model_download",
+            anchor_focus=self.download_model_button,
+            anchor_text=lambda: (self.download_model_button.text(), self.download_model_button.toolTip()),
+        )
         self._add_help(self.tr("Required before subtitle generation can run."))
 
         # Guidance shown only when faster-whisper is not installed. The engine is
@@ -283,7 +291,11 @@ class SubtitlesSettingsPanel(FormPanel):
         # for the user — point them at the one-line pip command instead of
         # surfacing a cryptic ImportError after a dead "Download model" click.
         self._asr_engine_guidance = self._build_engine_guidance()
-        self.add_field("", self._asr_engine_guidance)
+        self.add_field(
+            "",
+            self._asr_engine_guidance,
+            anchor_ignore="conditional install instructions, not a setting",
+        )
 
     def _setup_addons_section(self) -> None:
         """Optional transcription accelerators/quality packs (CUDA / VAD / Vulkan)."""
@@ -320,7 +332,13 @@ class SubtitlesSettingsPanel(FormPanel):
         cuda_row.addWidget(self.cuda_status_label)
         cuda_row.addWidget(self._cuda_guidance_label)
         cuda_row.addStretch()
-        self.add_field(self.tr("GPU acceleration"), cuda_container)
+        self.add_field(
+            self.tr("GPU acceleration"),
+            cuda_container,
+            anchor="gpu_acceleration",
+            anchor_focus=self.download_cuda_button,
+            anchor_text=lambda: (self.download_cuda_button.text(), self.download_cuda_button.toolTip()),
+        )
         # Shown in lockstep with (the inverse of) its guidance label; see _apply_cuda_pack_state.
         self._cuda_help_label = self._add_help(self.tr("Faster transcription on NVIDIA GPUs (CUDA)."))
 
@@ -357,7 +375,13 @@ class SubtitlesSettingsPanel(FormPanel):
         vad_row.addWidget(self.vad_status_label)
         vad_row.addWidget(self._vad_guidance_label)
         vad_row.addStretch()
-        self.add_field(self.tr("Silence removal"), vad_container)
+        self.add_field(
+            self.tr("Silence removal"),
+            vad_container,
+            anchor="silence_removal",
+            anchor_focus=self.download_vad_button,
+            anchor_text=lambda: (self.download_vad_button.text(), self.download_vad_button.toolTip()),
+        )
         # Shown in lockstep with (the inverse of) its guidance label; see _apply_vad_pack_state.
         self._vad_help_label = self._add_help(
             self.tr("Skips music and silence so they are not transcribed as garbage.")
@@ -390,7 +414,14 @@ class SubtitlesSettingsPanel(FormPanel):
             vulkan_row.addWidget(self.download_vulkan_button)
             vulkan_row.addWidget(self.vulkan_status_label)
             vulkan_row.addStretch()
-            self.add_field(self.tr("Vulkan model"), vulkan_container)
+            vulkan_button = self.download_vulkan_button
+            self.add_field(
+                self.tr("Vulkan model"),
+                vulkan_container,
+                anchor="vulkan_model",
+                anchor_focus=vulkan_button,
+                anchor_text=lambda: (vulkan_button.text(), vulkan_button.toolTip()),
+            )
             self._add_help(self.tr("Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan)."))
 
     def _setup_alass_section(self) -> None:
@@ -431,7 +462,14 @@ class SubtitlesSettingsPanel(FormPanel):
             alass_row.addWidget(self.download_alass_button)
             alass_row.addWidget(self.alass_status_label)
             alass_row.addStretch()
-            self.add_field(self.tr("alass download"), alass_container)
+            alass_button = self.download_alass_button
+            self.add_field(
+                self.tr("alass download"),
+                alass_container,
+                anchor="alass_download",
+                anchor_focus=alass_button,
+                anchor_text=lambda: (alass_button.text(), alass_button.toolTip()),
+            )
             self._add_help(self.tr("Needed for retiming unless alass is already on your PATH."))
         else:
             # macOS: no upstream v2.0.0 binary — point users at Homebrew.
@@ -439,7 +477,7 @@ class SubtitlesSettingsPanel(FormPanel):
                 self.tr("No alass binary is published for macOS. Install it with Homebrew:"),
                 _ALASS_BREW_COMMAND,
             )
-            self.add_field("", guidance)
+            self.add_field("", guidance, anchor_ignore="platform install instructions, not a setting")
 
     def _build_engine_guidance(self) -> QWidget:
         """Build the (initially hidden) 'install the ASR engine' guidance block."""

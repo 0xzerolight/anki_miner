@@ -51,6 +51,7 @@ from anki_miner.gui.resources.styles.theme import (
     Theme,
     ThemeGroupEntry,
 )
+from anki_miner.gui.widgets.base import SettingAnchorHost
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.utils.i18n import tr_format
 
@@ -86,7 +87,7 @@ FONT_SCALE_PRESETS = (50, 75, 100, 125, 150, 175, 200)
 ZOOM_PRESETS = (75, 100, 125, 150, 175, 200)
 
 
-class UISettingsPanel(QWidget):
+class UISettingsPanel(SettingAnchorHost, QWidget):
     """Settings panel for UI language, zoom, text size, and theme selection.
 
     Signals:
@@ -103,6 +104,8 @@ class UISettingsPanel(QWidget):
             profile manager. The panel deliberately does not own the dialog —
             switching a profile reloads this very panel.
     """
+
+    ANCHOR_NAMESPACE = "ui"
 
     state_changed = pyqtSignal(str, tuple)
     favorites_changed = pyqtSignal()
@@ -186,7 +189,8 @@ class UISettingsPanel(QWidget):
         # change persists immediately but applies on next launch.
         lang_row = QHBoxLayout()
         lang_row.setSpacing(SPACING.sm)
-        lang_row.addWidget(QLabel(self.tr("Language")))
+        language_label = QLabel(self.tr("Language"))
+        lang_row.addWidget(language_label)
 
         self.language_combo = QComboBox()
         self.language_combo.setObjectName("languageCombo")
@@ -196,6 +200,10 @@ class UISettingsPanel(QWidget):
         # setCurrentIndex in set_language).
         self.language_combo.activated.connect(self._on_language_selected)
         lang_row.addWidget(self.language_combo)
+        # This panel builds its own rows instead of using FormPanel, so every
+        # anchor is registered by hand. Providers read the labels live, so the
+        # index follows the installed translator (see setting_anchor.py).
+        self.register_setting("language", self.language_combo, lambda: (language_label.text(),))
         lang_row.addStretch(1)
         layout.addLayout(lang_row)
 
@@ -225,6 +233,7 @@ class UISettingsPanel(QWidget):
         # _sync_zoom_combo doesn't emit and falsely reveal the restart note.
         self.zoom_combo.activated.connect(self._on_zoom_selected)
         zoom_row.addWidget(self.zoom_combo)
+        self.register_setting("zoom", self.zoom_combo, lambda: (zoom_label.text(), self.zoom_combo.toolTip()))
 
         zoom_row.addStretch(1)
 
@@ -257,6 +266,11 @@ class UISettingsPanel(QWidget):
         # _sync_font_scale_combo, re-triggering the expensive apply.
         self.font_scale_combo.activated.connect(self._on_font_scale_selected)
         font_row.addWidget(self.font_scale_combo)
+        self.register_setting(
+            "text_size",
+            self.font_scale_combo,
+            lambda: (font_label.text(), self.font_scale_combo.toolTip()),
+        )
 
         # Trailing stretch keeps the combo left-aligned next to its label
         # rather than spanning the full row width.
@@ -278,6 +292,11 @@ class UISettingsPanel(QWidget):
         self.native_dialogs_checkbox.setChecked(self._use_native_file_dialogs)
         self.native_dialogs_checkbox.toggled.connect(self._on_native_dialogs_toggled)
         layout.addWidget(self.native_dialogs_checkbox)
+        self.register_setting(
+            "native_file_dialogs",
+            self.native_dialogs_checkbox,
+            lambda: (self.native_dialogs_checkbox.text(), self.native_dialogs_checkbox.toolTip()),
+        )
 
         # Theme selection. The intro explains the tree's star/preview behavior,
         # so it sits just above the tree — the language/zoom/text-size controls
@@ -317,6 +336,9 @@ class UISettingsPanel(QWidget):
 
         self.tree.itemSelectionChanged.connect(self._on_row_selected)
         layout.addWidget(self.tree)
+        # The theme list is one logical setting. Its rows are rebuilt on every
+        # favorite toggle and profile switch, so search anchors the tree itself.
+        self.register_setting("theme", self.tree, lambda: (intro.text(), self.open_folder_btn.text()))
 
         buttons = QHBoxLayout()
         buttons.setSpacing(SPACING.sm)

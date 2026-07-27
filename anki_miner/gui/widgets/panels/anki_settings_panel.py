@@ -141,6 +141,8 @@ class AnkiSettingsPanel(FormPanel):
         test_connection_requested: Emitted when connection test is requested
     """
 
+    ANCHOR_NAMESPACE = "anki"
+
     deck_sync_requested = pyqtSignal()
     notetype_sync_requested = pyqtSignal()
     test_connection_requested = pyqtSignal()
@@ -198,6 +200,7 @@ class AnkiSettingsPanel(FormPanel):
 
         # Deck name with refresh button
         self._add_labeled_field_with_button(
+            anchor="deck_name",
             label_text=self.tr("Deck Name"),
             input_widget_name="deck_combo",
             placeholder=self.tr("Select a deck…"),
@@ -215,6 +218,7 @@ class AnkiSettingsPanel(FormPanel):
 
         # Note type with refresh button
         self._add_labeled_field_with_button(
+            anchor="note_type",
             label_text=self.tr("Note Type"),
             input_widget_name="notetype_combo",
             placeholder=self.tr("Select a note type…"),
@@ -465,7 +469,14 @@ class AnkiSettingsPanel(FormPanel):
         group_layout.addWidget(self._card_type_names_body)
         self._card_type_names_body.setVisible(False)
         self.card_type_names_group.toggled.connect(self._card_type_names_body.setVisible)
-        self.add_widget(self.card_type_names_group)
+        # One logical setting: the four marker names are edited together and
+        # search should land on the group, not on an individual name box.
+        self.add_widget(
+            self.card_type_names_group,
+            anchor="card_type_marker_fields",
+            anchor_focus=self.card_type_word_and_sentence_input,
+            anchor_text=lambda: (self.card_type_names_group.title(),),
+        )
 
     def _add_labeled_field_with_button(
         self,
@@ -477,6 +488,8 @@ class AnkiSettingsPanel(FormPanel):
         button_tooltip: str,
         button_callback,
         helper_text: str = "",
+        *,
+        anchor: str,
     ) -> None:
         """Add a labeled dropdown + inline refresh button as one compact form row.
 
@@ -485,6 +498,9 @@ class AnkiSettingsPanel(FormPanel):
         densified settings panels. Helper text becomes the field's hover tooltip.
 
         Args:
+            anchor: Stable settings-search anchor name. Required because the
+                row's widget is a throwaway container with no panel attribute
+                to derive an id from.
             label_text: Label text (no colon; ``add_field`` appends it)
             input_widget_name: Attribute name for the input widget
             placeholder: Placeholder text for input
@@ -534,7 +550,13 @@ class AnkiSettingsPanel(FormPanel):
         row.addWidget(sync_button)
         setattr(self, button_name, sync_button)
 
-        self.add_field(label_text, container, helper=helper_text)
+        self.add_field(
+            label_text,
+            container,
+            helper=helper_text,
+            anchor=anchor,
+            anchor_focus=input_widget,
+        )
 
     def _on_deck_sync(self) -> None:
         """Handle deck refresh button click.
