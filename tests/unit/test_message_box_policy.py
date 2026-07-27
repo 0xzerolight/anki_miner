@@ -101,8 +101,10 @@ LEDGER: dict[str, str] = {
     # --- Owned by another workstream's surface ------------------------------
     "gui/widgets/dialogs/resource_download_dialog.py::ResourceDownloadSession.start": "w1-download",
     "gui/widgets/dialogs/results_dialog.py::ResultsDialog._on_undo_error": "w5-queue",
-    "gui/widgets/batch_processing_tab.py::BatchProcessingTab._on_processing_finished": "w5-queue",
-    "gui/widgets/batch_processing_tab.py::BatchProcessingTab._on_queue_finished": "w5-queue",
+    # The two terminal Batch boxes that used to sit here are gone: W1-T8's
+    # inline run receipt replaced them, so a finished or cancelled run now
+    # states its counts in place instead of raising "Batch Processing Complete"
+    # at someone who had just pressed Cancel (D20).
     "gui/widgets/batch_processing_tab.py::BatchProcessingTab._process_queue": "w5-queue",
     "gui/widgets/batch_processing_tab.py::BatchProcessingTab._retry_failed_items": "w5-queue",
     "gui/widgets/panels/queue_panel.py::QueuePanel._clear_queue": "w5-queue",
