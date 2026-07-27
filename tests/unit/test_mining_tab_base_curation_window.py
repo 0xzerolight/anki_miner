@@ -36,7 +36,7 @@ MODULE = "anki_miner.gui.widgets._mining_tab_base"
 class _Bare(MiningTabBase):
     config = None
 
-    def _mark_known(self, forms):
+    def _commit_known_words(self, forms):
         return 0
 
     def _restore_buttons(self) -> None:  # used by _teardown_previous_run
@@ -101,6 +101,10 @@ def _fake_dialog_cls(*, show_raises: bool = False):
             if show_raises:
                 raise RuntimeError("presentation failed")
             super().show()
+
+        def force_reject(self):
+            """Stand-in for the real dialog's forced-shutdown path (D34-B)."""
+            self.reject()
 
         def get_selected_words(self):
             self.events.append("get_selected_words")

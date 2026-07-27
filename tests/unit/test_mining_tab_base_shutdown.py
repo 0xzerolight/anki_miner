@@ -31,7 +31,7 @@ class _Bare(MiningTabBase):
 
     config = None
 
-    def _mark_known(self, forms):
+    def _commit_known_words(self, forms):
         return 0
 
 
@@ -125,7 +125,12 @@ class TestMiningTabBaseShutdown:
         assert worker.result is None  # cancelled → None
 
     def test_shutdown_rejects_open_dialog(self, qapp, qtbot):
-        """shutdown() must reject an open curation dialog."""
+        """shutdown() must force-reject an open curation dialog.
+
+        Forced, not plain: the curator refuses a normal reject while a staged
+        Known Words write is in flight (D34-B), and a shutdown that respected
+        that refusal would leave the parked worker unreleased forever.
+        """
         tab = _Bare()
         qtbot.addWidget(tab)
         tab._init_curation_bridge()
@@ -135,7 +140,7 @@ class TestMiningTabBaseShutdown:
 
         tab.shutdown()
 
-        dialog.reject.assert_called_once()
+        dialog.force_reject.assert_called_once()
 
     def test_shutdown_idempotent_when_no_dialog(self, qapp, qtbot):
         """shutdown() must not raise when no dialog is open."""

@@ -26,7 +26,7 @@ MODULE = "anki_miner.gui.widgets._mining_tab_base"
 class _Bare(MiningTabBase):
     config = None
 
-    def _mark_known(self, forms):
+    def _commit_known_words(self, forms):
         return 0
 
 
@@ -71,6 +71,10 @@ def _fake_dialog_cls(*, decision="accept", selection=("picked",)):
                 self.accept()
             elif decision == "reject":
                 self.reject()
+
+        def force_reject(self):
+            """Stand-in for the real dialog's forced-shutdown path (D34-B)."""
+            self.reject()
 
         def get_selected_words(self):
             return list(selection)
@@ -335,7 +339,7 @@ def test_build_curation_context_runs_off_gui_thread(qapp, qtbot):
     class _RecordingTab(MiningTabBase):
         config = None
 
-        def _mark_known(self, forms):
+        def _commit_known_words(self, forms):
             return 0
 
         def _build_curation_context(self):
@@ -368,7 +372,7 @@ def test_cancel_during_off_thread_build_releases_worker_without_dialog(qapp, qtb
     class _SlowTab(MiningTabBase):
         config = None
 
-        def _mark_known(self, forms):
+        def _commit_known_words(self, forms):
             return 0
 
         def _build_curation_context(self):
@@ -447,3 +451,96 @@ def test_reject_without_worker_thread_does_not_raise(qapp, qtbot):
 
     assert tab._curation_result is None
     assert tab._curation_event.is_set()
+
+
+class TestStagedKnownWordsGate:
+    """D34-B — the staged Known Words write gates the whole curation result.
+
+    These drive the REAL ``WordCurationDialog`` behind a REAL parked worker,
+    because the invariant being protected spans both: a failed write must never
+    let the card selection reach the pipeline, and it must never release the
+    parked worker either — the review stays open so the user can retry.
+    """
+
+    def _park(self, tab, qtbot, words):
+        """Start a worker at the curation gate and return it with the live dialog."""
+        worker = _CurationWorker(tab, words)
+        worker.start()
+        qtbot.waitUntil(lambda: tab._active_curation_dialog is not None, timeout=5000)
+        return worker, tab._active_curation_dialog
+
+    def _tab(self, qtbot, commit):
+        tab = _Bare()
+        qtbot.addWidget(tab)
+        tab._init_curation_bridge()
+        tab._commit_known_words = commit
+        return tab
+
+    def test_failed_write_leaves_the_gate_closed_and_leaks_no_selection(self, qapp, qtbot, make_tokenized_words):
+        calls: list[set] = []
+
+        def commit(forms):
+            calls.append(set(forms))
+            raise RuntimeError("known-words DB is locked")
+
+        tab = self._tab(qtbot, commit)
+        worker, dialog = self._park(tab, qtbot, make_tokenized_words(2))
+        try:
+            dialog.table.setCurrentCell(0, 0)
+            dialog._on_add_to_known()
+            dialog.accept()
+            qtbot.waitUntil(lambda: dialog.issue_banner().current_issue() is not None, timeout=5000)
+
+            assert calls, "the commit was never attempted"
+            assert not tab._curation_event.is_set(), "a failed write released the gate"
+            assert not worker.isFinished()
+            assert tab._curation_result is None
+
+            # Cancel after the failure is still a clean cancel: None, once.
+            dialog.reject()
+            assert worker.wait(5000)
+            assert worker.result is None
+        finally:
+            tab.shutdown()
+            worker.wait(5000)
+
+    def test_successful_write_releases_exactly_the_selected_words(self, qapp, qtbot, make_tokenized_words):
+        calls: list[set] = []
+        tab = self._tab(qtbot, lambda forms: calls.append(set(forms)) or len(forms))
+        words = make_tokenized_words(2)
+        worker, dialog = self._park(tab, qtbot, words)
+        try:
+            staged = dialog.table.item(0, 1).text()
+            dialog.table.setCurrentCell(0, 0)
+            dialog._on_add_to_known()
+            dialog.accept()
+
+            # Drained, not waited on: the commit runs off-thread and delivers its
+            # result as a queued signal, so blocking the GUI thread here would
+            # deadlock the very release being asserted.
+            assert _drain_until(worker.isFinished, 5000)
+            assert worker.wait(5000)
+            assert calls == [{staged}]
+            # The staged word is excluded; the other one is the whole result.
+            assert worker.result is not None
+            assert staged not in {w.mined_form for w in worker.result}
+            assert len(worker.result) == len(words) - 1
+        finally:
+            tab.shutdown()
+            worker.wait(5000)
+
+    def test_shutdown_mid_review_discards_the_stage_and_cancels(self, qapp, qtbot, make_tokenized_words):
+        calls: list[set] = []
+        tab = self._tab(qtbot, lambda forms: calls.append(set(forms)) or len(forms))
+        worker, dialog = self._park(tab, qtbot, make_tokenized_words(2))
+        try:
+            dialog.table.setCurrentCell(0, 0)
+            dialog._on_add_to_known()
+
+            tab.shutdown()
+
+            assert worker.wait(5000)
+            assert worker.result is None, "shutdown must cancel, not confirm"
+            assert calls == [], "a stage that was never confirmed must not be written"
+        finally:
+            worker.wait(5000)

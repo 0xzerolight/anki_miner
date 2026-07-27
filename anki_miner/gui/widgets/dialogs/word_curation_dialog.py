@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import contextlib
 import html
 import logging
 from collections import OrderedDict
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -15,7 +17,7 @@ if TYPE_CHECKING:
     from anki_miner.models.reading import ImageRef, ReadingUnit
 
 from PyQt6.QtCore import QPoint, Qt, QTimer
-from PyQt6.QtGui import QColor, QFont, QImage, QKeySequence, QPixmap, QShortcut
+from PyQt6.QtGui import QCloseEvent, QColor, QFont, QImage, QKeySequence, QPixmap, QShortcut
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
@@ -28,7 +30,6 @@ from PyQt6.QtWidgets import (
     QListWidgetItem,
     QMenu,
     QSplitter,
-    QStyle,
     QTableWidget,
     QTableWidgetItem,
     QTextBrowser,
@@ -46,7 +47,6 @@ from anki_miner.gui.utils.fonts import (
 )
 from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import (
-    CELL_PADDING,
     CellRole,
     add_min_max_buttons,
     configure_data_view,
@@ -54,9 +54,11 @@ from anki_miner.gui.utils.qt_helpers import (
     make_table_item,
 )
 from anki_miner.gui.utils.run_off_thread import join_tracked_workers, run_off_thread
+from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.base.sizing import metric_row_height
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.page_image_view import PageImageView, load_page_qimage
+from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.models import TokenizedWord
 from anki_miner.utils.i18n import tr_format
 
@@ -89,7 +91,7 @@ class CurationMediaContext:
     page_units: Mapping[int, ReadingUnit] | None = None  # manga: unit.index -> ReadingUnit
 
 
-class WordCurationDialog(QDialog):
+class WordCurationDialog(ScreenIssueHost, QDialog):
     """Dialog for selecting which words to include in card creation.
 
     Shows a table of words with checkboxes. Users search/filter, include or
@@ -114,16 +116,26 @@ class WordCurationDialog(QDialog):
         words: list[TokenizedWord],
         parent=None,
         *,
-        mark_known_callback: Callable[[set[str]], int] | None = None,
+        commit_known_callback: Callable[[set[str]], int] | None = None,
         media_context: CurationMediaContext | None = None,
         lookup_fn: Callable[[str], list[tuple[str, str]]] | None = None,
     ):
         super().__init__(parent)
         self._words = words
-        # Callback invoked with the set of mined forms when the user adds rows to
-        # the local known/ignore list (Issue #42). Persisted immediately so the
-        # words stick even if the dialog is later cancelled.
-        self._mark_known_callback = mark_known_callback
+        # Known Words are STAGED, not written (D34-B). Add to Known Words marks
+        # rows "Known · pending"; only a successful Confirm calls this callback,
+        # and it is called ON A WORKER THREAD. Cancel, Esc, the window X, the
+        # tab's Cancel button, run teardown and app shutdown all discard the
+        # stage, so no exit that abandons the review leaves a durable trace.
+        # This reverses the immediate write documented against Issue #42.
+        self._commit_known_callback = commit_known_callback
+        self._pending_known_forms: set[str] = set()
+        # Stale-guard for the commit: cancel() silences a worker only if it wins
+        # the race against an already-queued result signal, so every callback
+        # also checks its generation. Bumped by force_reject and by teardown.
+        self._known_commit_gen = 0
+        self._known_commit_running = False
+        self._known_commit_worker: SingleCallWorker | None = None
         self._media_context = media_context
         self._lookup_fn = lookup_fn
 
@@ -250,18 +262,21 @@ class WordCurationDialog(QDialog):
         footer_layout = QHBoxLayout()
         footer_layout.addStretch()
 
-        cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
-        cancel_button.clicked.connect(self.reject)
-        cancel_button.setMinimumWidth(100)
-        footer_layout.addWidget(cancel_button)
+        self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
+        self.cancel_button.clicked.connect(self.reject)
+        self.cancel_button.setMinimumWidth(100)
+        footer_layout.addWidget(self.cancel_button)
 
-        confirm_button = ModernButton(self.tr("Confirm Selection"), variant="primary")
-        confirm_button.clicked.connect(self.accept)
-        confirm_button.setMinimumWidth(140)
-        footer_layout.addWidget(confirm_button)
+        self.confirm_button = ModernButton(self.tr("Confirm Selection"), variant="primary")
+        self.confirm_button.clicked.connect(self.accept)
+        self.confirm_button.setMinimumWidth(140)
+        footer_layout.addWidget(self.confirm_button)
 
         layout.addLayout(footer_layout)
         self.setLayout(layout)
+        # A failed Known Words write is recoverable — the user retries Confirm or
+        # cancels — so it belongs in a banner, never a modal.
+        self.install_issue_banner(layout)
         self._disown_default_button()
         self._setup_shortcuts()
 
@@ -313,12 +328,17 @@ class WordCurationDialog(QDialog):
         self.include_highlighted_button.clicked.connect(self._include_highlighted)
         controls_layout.addWidget(self.include_highlighted_button)
 
-        # Add to local known/ignore list (Issue #42). Acts on the highlighted
+        # Stage rows for the local known/ignore list. Acts on the highlighted
         # rows, or the current row when nothing is highlighted — deliberately NOT
         # all visible rows, to avoid ignoring the whole list by accident.
         self.add_known_button = ModernButton(self.tr("Add to Known Words"), variant="secondary")
         self.add_known_button.clicked.connect(self._on_add_to_known)
-        self.add_known_button.setToolTip(self.tr("Add highlighted rows to your Known Words list — never mined again."))
+        self.add_known_button.setToolTip(
+            self.tr("Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.")
+        )
+        # Nowhere to commit means the verb would silently stage marks that can
+        # never be written, so it is a dead control rather than a lie.
+        self.add_known_button.setEnabled(self._commit_known_callback is not None)
         controls_layout.addWidget(self.add_known_button)
 
         controls_layout.addStretch()
@@ -350,13 +370,13 @@ class WordCurationDialog(QDialog):
 
         header_view = self.table.horizontalHeader()
         if header_view:
-            header_view.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
-            # The checkbox column holds one indicator and its cell padding, so
-            # it is measured from the style rather than pinned at 40px -- the
-            # indicator grows with the platform and with the text scale.
-            style = self.table.style()
-            indicator = style.pixelMetric(QStyle.PixelMetric.PM_IndicatorWidth) if style is not None else 0
-            header_view.resizeSection(0, indicator + 2 * CELL_PADDING)
+            # The include column normally holds one check indicator and its cell
+            # padding, so it is measured from its contents rather than pinned at
+            # 40px -- the indicator grows with the platform and with the text
+            # scale. It also has to fit the "Known · pending" label a staged row
+            # puts there, which is why it is not Fixed: the column widens only
+            # while a stage exists and shrinks back when the marks are discarded.
+            header_view.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
             for column in (1, 2, 3, 5, 6):  # mined form, surface, reading, rank, count
                 header_view.setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
             header_view.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)  # sentence
@@ -1167,6 +1187,9 @@ class WordCurationDialog(QDialog):
         # checks its generation (a plain Python attribute) first.
         self._page_request_gen += 1
         self._lookup_gen += 1
+        self._known_commit_gen += 1
+        self._known_commit_running = False
+        self._cancel_known_commit_worker()
         self._pending_lookup = None
         laggards = join_tracked_workers(self, timeout_ms=200)
         for worker in laggards:
@@ -1322,11 +1345,16 @@ class WordCurationDialog(QDialog):
         return []
 
     def _on_add_to_known(self) -> None:
-        """Add the target rows to the local known/ignore list (Issue #42).
+        """Stage the target rows for the local known/ignore list (D34-B).
 
-        Persists immediately via the callback, then strikes through and unchecks
-        the rows so they are excluded from this run and can't be re-checked.
+        Writes NOTHING. The rows are marked "Known · pending", greyed and
+        excluded from this run; :meth:`accept` commits the stage, and every
+        other exit throws it away with the rest of the review. The previous
+        behaviour wrote immediately, so a Cancel that abandoned the run still
+        excluded those words from every future one.
         """
+        if self._commit_known_callback is None or self._known_commit_running:
+            return
         rows = [row for row in self._known_target_rows() if self._row_is_active(row)]
         if not rows:
             return
@@ -1339,14 +1367,126 @@ class WordCurationDialog(QDialog):
         if not forms:
             return
 
-        if self._mark_known_callback is not None:
-            self._mark_known_callback(forms)
-
+        self._pending_known_forms |= forms
         self.table.blockSignals(True)
         for row in rows:
             self._mark_row_known(row)
         self.table.blockSignals(False)
         self._refresh_summary()
+
+    def pending_known_forms(self) -> set[str]:
+        """Mined forms staged for the known list but not yet written."""
+        return set(self._pending_known_forms)
+
+    # ------------------------------------------------------------------
+    # Confirm / Cancel — the Known Words stage commits here, or nowhere
+    # ------------------------------------------------------------------
+
+    def accept(self) -> None:
+        """Commit the staged Known Words, then release the card selection (D34-B).
+
+        With nothing staged this is the plain dialog accept. With a stage, the
+        write happens FIRST and the dialog stays open until it succeeds: the
+        selection must never reach the pipeline on the back of a write that
+        failed, or the user would get cards for words they just declared known
+        and lose the marks at the same time.
+        """
+        if self._known_commit_running:
+            return  # a second Ctrl+Enter while the write is in flight
+        forms = set(self._pending_known_forms)
+        if not forms or self._commit_known_callback is None:
+            super().accept()
+            return
+        self._begin_known_commit(forms)
+
+    def reject(self) -> None:
+        """Discard the staged marks along with the rest of the review.
+
+        Blocked only while a commit is in flight, where the answer is neither
+        "kept" nor "discarded" yet. Shutdown reaches past this through
+        :meth:`force_reject`.
+        """
+        if self._known_commit_running:
+            return
+        super().reject()
+
+    def closeEvent(self, a0: QCloseEvent | None) -> None:  # noqa: N802 - Qt override
+        """Refuse the window X while a Known Words commit is in flight."""
+        if self._known_commit_running:
+            if a0 is not None:
+                a0.ignore()
+            return
+        super().closeEvent(a0)
+
+    def force_reject(self) -> None:
+        """Reject even mid-commit — the forced path for teardown and shutdown.
+
+        A write already running may still land (it is a single sqlite
+        transaction with no cancellation point), but the review is abandoned
+        and no card selection is released. Bumping the generation is what stops
+        a late success from calling ``accept`` on a dialog nobody is waiting on.
+        """
+        self._known_commit_gen += 1
+        self._known_commit_running = False
+        self._cancel_known_commit_worker()
+        self._set_decision_enabled(True)
+        super().reject()
+
+    def _cancel_known_commit_worker(self) -> None:
+        """Silence the commit worker if it has not emitted yet. Detach is teardown's job."""
+        worker = self._known_commit_worker
+        self._known_commit_worker = None
+        if worker is not None:
+            with contextlib.suppress(RuntimeError):
+                worker.cancel()
+
+    def _set_decision_enabled(self, enabled: bool) -> None:
+        """Enable/disable every control that would resolve or extend the review."""
+        for button in (self.confirm_button, self.cancel_button):
+            button.setEnabled(enabled)
+        self.add_known_button.setEnabled(enabled and self._commit_known_callback is not None)
+
+    def _begin_known_commit(self, forms: set[str]) -> None:
+        """Write the staged forms off the GUI thread; accept only on success."""
+        callback = self._commit_known_callback
+        if callback is None:  # pragma: no cover - guarded by the caller
+            return
+        self.clear_screen_issue()
+        self._known_commit_gen += 1
+        self._known_commit_running = True
+        self._set_decision_enabled(False)
+        gen = self._known_commit_gen
+        self._known_commit_worker = run_off_thread(
+            self,
+            lambda: callback(forms),
+            partial(self._on_known_commit_done, gen),
+            partial(self._on_known_commit_failed, gen),
+        )
+
+    def _on_known_commit_done(self, gen: int, _result: object) -> None:
+        if gen != self._known_commit_gen or self._closing:
+            return
+        self._known_commit_worker = None
+        self._known_commit_running = False
+        self._pending_known_forms.clear()
+        super().accept()
+
+    def _on_known_commit_failed(self, gen: int, message: str) -> None:
+        if gen != self._known_commit_gen or self._closing:
+            return
+        self._known_commit_worker = None
+        self._known_commit_running = False
+        self._set_decision_enabled(True)
+        logger.error("Known Words commit failed, review left open: %s", message)
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=self.tr(
+                    "Your Known Words could not be saved, so no cards were created. "
+                    "Confirm again to retry, or Cancel to discard the pending marks."
+                ),
+                details=message,
+            )
+        )
 
     def _row_is_active(self, row: int) -> bool:
         """Whether a row hasn't already been marked known (checkbox still toggles)."""
@@ -1354,12 +1494,16 @@ class WordCurationDialog(QDialog):
         return item is not None and self._is_checkable(item)
 
     def _mark_row_known(self, row: int) -> None:
-        """Visually mark a row as ignored: strikethrough, grey, unchecked, locked."""
+        """Mark a row staged-known: labelled, struck through, grey, unchecked, locked."""
         check_item = self.table.item(row, 0)
         if check_item:
             check_item.setCheckState(Qt.CheckState.Unchecked)
             # Strip the checkable flag so bulk actions / the S toggle key can't re-include it.
             check_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            # "pending" is the whole point: nothing has been written yet, and
+            # Cancel will discard this. The include column is ResizeToContents,
+            # so it widens to fit the label and shrinks back without it.
+            check_item.setText(self.tr("Known · pending"))
         grey = QColor(128, 128, 128)
         for col in range(1, self.table.columnCount()):
             item = self.table.item(row, col)

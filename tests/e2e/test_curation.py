@@ -23,13 +23,13 @@ class _Bare(MiningTabBase):
     """Minimal concrete tab: just enough to exercise the curation bridge.
 
     Mirrors the ``_Bare`` harness in ``tests/unit/test_mining_tab_base_curation.py``
-    (a ``config`` attribute and a stub ``_mark_known``); the real bridge wiring
+    (a ``config`` attribute and a stub ``_commit_known_words``); the real bridge wiring
     comes from ``_init_curation_bridge()``.
     """
 
     config = None
 
-    def _mark_known(self, forms):  # pragma: no cover - not reached by these tests
+    def _commit_known_words(self, forms):  # pragma: no cover - not reached by these tests
         return 0
 
 
