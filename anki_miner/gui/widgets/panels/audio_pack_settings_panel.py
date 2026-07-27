@@ -5,19 +5,17 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from PyQt6.QtCore import QPoint, Qt, pyqtSignal
+from PyQt6.QtCore import QPoint, pyqtSignal
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
-    QHBoxLayout,
     QLabel,
     QLineEdit,
-    QListWidget,
     QMenu,
     QMessageBox,
-    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -25,7 +23,10 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AudioSourceEntry
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.widgets.base import ScreenIssue
+from anki_miner.gui.widgets.enhanced import ModernButton
+from anki_miner.gui.widgets.panels.chain_priority_list import ChainRowSpec
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
+    ChainListLabels,
     ChainSettingsPanelBase,
     _ChainPanelStrings,
     _RegistryView,
@@ -42,64 +43,6 @@ shutil = robust_fs.shutil
 def _robust_rmtree(target: Path) -> RmtreeOutcome:
     """Panel-local seam for post-commit cleanup."""
     return robust_rmtree(target, mode="outcome")
-
-
-class _PackRow(QWidget):
-    """One row in the chain list: checkbox + label + format/count + repair status."""
-
-    toggled = pyqtSignal()
-
-    def __init__(
-        self,
-        entry: AudioSourceEntry,
-        display_name: str,
-        format_label: str,
-        count: int,
-        *,
-        dir_missing: bool = False,
-        schema_stale: bool = False,
-    ):
-        super().__init__()
-        self.entry = entry
-        self.dir_missing = dir_missing
-        self.schema_stale = schema_stale
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(4, 2, 4, 2)
-
-        self.checkbox = QCheckBox()
-        # Text-less toggle: without an accessible name a screen reader announces
-        # only "check box", and the source it belongs to is conveyed purely by
-        # the sibling QLabel. 11 such toggles were unnamed across the 4 chain panels.
-        self.checkbox.setAccessibleName(tr_format(self.tr("Enable %1"), display_name))
-        self.checkbox.setToolTip(tr_format(self.tr("Enable or disable %1"), display_name))
-        self.checkbox.setChecked(entry.enabled)
-        self.checkbox.stateChanged.connect(lambda _s: self.toggled.emit())
-        layout.addWidget(self.checkbox)
-
-        name_label = QLabel(display_name)
-        layout.addWidget(name_label, 1)
-
-        if format_label:
-            badge = QLabel(format_label)
-            badge.setStyleSheet("color: gray; font-size: 10px;")
-            layout.addWidget(badge)
-
-        if count:
-            count_label = QLabel(tr_format(self.tr("%1 entries"), f"{count:,}"))
-            count_label.setStyleSheet("color: gray; font-size: 10px;")
-            layout.addWidget(count_label)
-
-        if schema_stale:
-            stale_label = QLabel(self.tr("⚠ re-import required (app upgrade)"))
-            stale_label.setStyleSheet("color: #d97706; font-size: 10px;")
-            layout.addWidget(stale_label)
-        elif dir_missing:
-            missing_label = QLabel(self.tr("⚠ folder missing — re-import"))
-            missing_label.setStyleSheet("color: #d97706; font-size: 10px;")
-            layout.addWidget(missing_label)
-
-    def get_enabled(self) -> bool:
-        return self.checkbox.isChecked()
 
 
 class _AddSourceDialog(QDialog):
@@ -182,7 +125,6 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
 
     ANCHOR_NAMESPACE = "audio"
 
-    _ROW_CLASS = _PackRow
     _SCAN_ERROR_LABEL = "Audio pack registry scan failed"
     _REMOVE_ERROR_NOUN = "audio pack index folder"
 
@@ -248,57 +190,40 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
 
     def _setup_fields(self) -> None:
         self.add_section(self.tr("Active Audio Sources"))
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        chain_blurb = QLabel(self.tr("Top entry is tried first."))
-        layout.addWidget(chain_blurb)
-
-        self._list = QListWidget()
-        self._list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
-        self._list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self._list.customContextMenuRequested.connect(self._on_row_context_menu)
-        layout.addWidget(self._list)
-
-        buttons = QHBoxLayout()
-        self._add_btn = QPushButton(self.tr("+ Add Audio Pack…"))
-        self._add_btn.clicked.connect(self.add_pack_requested.emit)
-        buttons.addWidget(self._add_btn)
-
-        self._add_online_btn = QPushButton(self.tr("+ Add Online Source…"))
-        self._add_online_btn.setToolTip(self.tr("Add a custom audio URL source"))
-        self._add_online_btn.clicked.connect(self._on_add_online_source)
-        buttons.addWidget(self._add_online_btn)
-
-        self._up_btn = QPushButton("↑")
-        self._up_btn.setAccessibleName(self.tr("Move up"))
-        self._up_btn.setToolTip(self.tr("Move up in priority"))
-        self._up_btn.clicked.connect(lambda: self.move_up(self._list.currentRow()))
-        buttons.addWidget(self._up_btn)
-
-        self._down_btn = QPushButton("↓")
-        self._down_btn.setAccessibleName(self.tr("Move down"))
-        self._down_btn.setToolTip(self.tr("Move down in priority"))
-        self._down_btn.clicked.connect(lambda: self.move_down(self._list.currentRow()))
-        buttons.addWidget(self._down_btn)
-
-        self._remove_btn = QPushButton(self.tr("Remove"))
-        self._remove_btn.clicked.connect(lambda: self.remove(self._list.currentRow()))
-        buttons.addWidget(self._remove_btn)
-
-        layout.addLayout(buttons)
 
         # Cache-hygiene: clear the record of words JPod101 had no audio for so
         # they are re-requested on the next run (replaces deleting the cache dir
         # by hand). The unlink sweep is dispatched by the settings tab.
-        retry_row = QHBoxLayout()
-        self._retry_missing_btn = QPushButton(self.tr("Retry missing expression audio"))
+        self._retry_missing_btn = ModernButton(self.tr("Retry missing audio"), variant="secondary")
         self._retry_missing_btn.setToolTip(self.tr("Re-try words JapanesePod101 had no audio for on the next run"))
         self._retry_missing_btn.clicked.connect(self.retry_missing_audio_requested.emit)
-        retry_row.addWidget(self._retry_missing_btn)
-        retry_row.addStretch()
-        layout.addLayout(retry_row)
+
+        container = self._build_chain_container(
+            ChainListLabels(
+                explanation=self.tr(
+                    "Sources are tried top to bottom — the first one that has audio " "for a word wins."
+                ),
+                add=self.tr("Add audio source…"),
+                remove=self.tr("Remove audio source"),
+                remove_tooltip=self.tr("Remove the selected audio source"),
+                move_up=self.tr("Move up"),
+                move_up_tooltip=self.tr("Move up in priority"),
+                move_down=self.tr("Move down"),
+                move_down_tooltip=self.tr("Move down in priority"),
+            ),
+            extra_actions=(self._retry_missing_btn,),
+        )
+        # Two ways in, one control: a second primary button beside the first
+        # would say the app has two equally-important task actions here (D41).
+        self._add_menu = QMenu(self._add_btn)
+        self._add_pack_action = QAction(self.tr("Audio Pack…"), self._add_menu)
+        self._add_pack_action.triggered.connect(lambda _checked=False: self.add_pack_requested.emit())
+        self._add_menu.addAction(self._add_pack_action)
+        self._add_online_action = QAction(self.tr("Online Source…"), self._add_menu)
+        self._add_online_action.triggered.connect(lambda _checked=False: self._on_add_online_source())
+        self._add_menu.addAction(self._add_online_action)
+        self._add_btn.setMenu(self._add_menu)
+        self._list.customContextMenuRequested.connect(self._on_row_context_menu)
 
         # One stable anchor for the whole chain; row widgets are transient (D13).
         self.add_field(
@@ -307,9 +232,10 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
             anchor="chain",
             anchor_focus=self._list,
             anchor_text=lambda: (
-                chain_blurb.text(),
+                self._explanation_label.text(),
                 self._add_btn.text(),
-                self._add_online_btn.text(),
+                self._add_pack_action.text(),
+                self._add_online_action.text(),
                 self._retry_missing_btn.text(),
             ),
         )
@@ -412,7 +338,6 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
 
     def _set_mutation_controls_enabled(self, enabled: bool) -> None:
         self._add_btn.setEnabled(enabled)
-        self._add_online_btn.setEnabled(enabled)
 
     def set_chain(
         self,
@@ -428,13 +353,8 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
             self._view = None
         self._rebuild_list()
 
-    def get_chain(self) -> tuple[AudioSourceEntry, ...]:
-        out: list[AudioSourceEntry] = []
-        for i, entry in enumerate(self._chain):
-            row = self._row_widget(i)
-            enabled = row.get_enabled() if row is not None else entry.enabled
-            out.append(AudioSourceEntry(kind=entry.kind, pack_id=entry.pack_id, url=entry.url, enabled=enabled))
-        return tuple(out)
+    def _entry_with_enabled(self, entry: AudioSourceEntry, enabled: bool) -> AudioSourceEntry:
+        return AudioSourceEntry(kind=entry.kind, pack_id=entry.pack_id, url=entry.url, enabled=enabled)
 
     def add_source_entry(self, entry: AudioSourceEntry) -> None:
         """Append an online audio source to the chain and persist immediately.
@@ -466,24 +386,31 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         finally:
             self.release(token)
 
-    def _describe_entry(self, entry: AudioSourceEntry, view: _RegistryView | None) -> tuple[str, str, int, bool, bool]:
-        """Return display, format, count, missing-dir, and stale-schema state."""
+    def _describe_entry(
+        self, entry: AudioSourceEntry, view: _RegistryView | None
+    ) -> tuple[str, str, int | None, bool, bool]:
+        """Return display, format, count, missing-dir, and stale-schema state.
+
+        The count is ``None`` when there is no count to state — an online source
+        has no entries to count, and a pack the registry knows nothing about has
+        none that can be trusted. Zero is a fact; ``None`` is its absence.
+        """
         if entry.kind == "pack":
             meta = view.get(entry.pack_id) if (view is not None and entry.pack_id) else None
             return (
                 meta.source if meta else (entry.pack_id or "(missing)"),
                 meta.format if meta else "",
-                meta.entry_count if meta else 0,
+                meta.entry_count if meta else None,
                 meta is not None and not meta.pack_dir_exists,
                 meta is not None and not meta.schema_ok,
             )
         if entry.kind == "googletts":
-            return self.tr("Google Translate (synthetic TTS)"), "online", 0, False, False
+            return self.tr("Google Translate (synthetic TTS)"), "online", None, False, False
         if entry.kind in ("custom", "custom_json"):
             label = self.tr("Custom JSON") if entry.kind == "custom_json" else self.tr("Custom URL")
-            return (f"{label}: {entry.url}" if entry.url else label), "custom", 0, False, False
+            return (f"{label}: {entry.url}" if entry.url else label), "custom", None, False, False
         # jpod101 (built-in online)
-        return self.tr("JapanesePod101 (online)"), "online", 0, False, False
+        return self.tr("JapanesePod101 (online)"), "online", None, False, False
 
     # ------------------------------------------------------------------
     # Chain-panel hooks
@@ -494,18 +421,26 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         registry.load()
         return _RegistryView(registry.packs.get)
 
-    def _make_row(self, entry: AudioSourceEntry, view: _RegistryView | None) -> QWidget:
+    def _row_spec(self, entry: AudioSourceEntry, view: _RegistryView | None) -> ChainRowSpec:
         display, fmt, count, dir_missing, schema_stale = self._describe_entry(entry, view)
-        row = _PackRow(
-            entry,
-            display,
-            fmt,
-            count,
-            dir_missing=dir_missing,
-            schema_stale=schema_stale,
+        metadata: tuple[str, ...] = (fmt,) if fmt else ()
+        if count is not None:
+            metadata = (*metadata, tr_format(self.tr("%1 entries"), f"{count:,}"))
+        if schema_stale:
+            warning = self.tr("⚠ re-import required (app upgrade)")
+        elif dir_missing:
+            warning = self.tr("⚠ folder missing — re-import")
+        else:
+            warning = ""
+        return ChainRowSpec(
+            entry=entry,
+            title=display,
+            metadata=metadata,
+            enabled_text=self.tr("Enabled"),
+            enabled_accessible_text=tr_format(self.tr("Enable %1"), display),
+            enabled_tooltip=tr_format(self.tr("Enable or disable %1"), display),
+            warning=warning,
         )
-        row.toggled.connect(self._on_row_toggled)
-        return row
 
     def _is_protected_entry(self, entry: AudioSourceEntry) -> bool:
         # default built-in online sources can be disabled but not removed

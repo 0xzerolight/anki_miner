@@ -6,19 +6,26 @@ Hoists the verbatim-identical state machine shared by
 and
 :class:`~anki_miner.gui.widgets.panels.audio_pack_settings_panel.AudioPackSettingsPanel`:
 the lazy first-show registry scan, the off-thread rescan/redispatch dance, the
-reorder (move up/down) and destructive-remove flows, the loading placeholder, and
-the row-list rebuild.
+reorder and destructive-remove flows, the loading placeholder, and the row-list
+rebuild.
+
+Since D13 it also owns what the four panels *look* like: ``_build_chain_container``
+builds the explanation, the drag-reorderable
+:class:`~anki_miner.gui.widgets.panels.chain_priority_list.ChainPriorityList` and
+the one toolbar all four share, so there is a single answer to "where does Add
+go, and what colour is Remove".
 
 Per-panel deltas stay subclass responsibilities via explicit hooks (see the
-"Subclass hooks" section): the field layout (``_setup_fields``), the entry type
-and its ``get_chain``/``set_chain`` marshalling, the off-thread registry factory
-(``_build_view``), row construction (``_make_row``), the context menu, and the
-remove-flow specifics (protected kinds, disk-less removal, confirm/release
-dialogs). All user-facing strings stay bound to each subclass's own ``self.tr``
-context — either textually inside a subclass method or, for the few literals the
-hoisted slots need, via the :class:`_ChainPanelStrings` object each subclass
-builds with ``self.tr(...)`` (the ``_ToolTabStrings`` precedent). The base itself
-makes no ``tr()`` call, so extraction contexts never churn.
+"Subclass hooks" section): the field layout (``_setup_fields``), the entry
+type's ``set_chain`` marshalling and its ``_entry_with_enabled`` clone, the
+off-thread registry factory (``_build_view``), what a row says (``_row_spec``),
+the context menu, and the remove-flow specifics (protected kinds, disk-less
+removal, confirm/release dialogs). All user-facing strings stay bound to each
+subclass's own ``self.tr`` context — either textually inside a subclass method
+or, for the literals the hoisted slots need, via the :class:`_ChainPanelStrings`
+and :class:`ChainListLabels` objects each subclass builds with ``self.tr(...)``
+(the ``_ToolTabStrings`` precedent). The base itself makes no ``tr()`` call, so
+extraction contexts never churn.
 """
 
 from __future__ import annotations
@@ -33,15 +40,23 @@ from typing import Any, ClassVar
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QShowEvent
 from PyQt6.QtWidgets import (
-    QListWidget,
+    QHBoxLayout,
+    QLabel,
     QListWidgetItem,
-    QPushButton,
+    QVBoxLayout,
     QWidget,
 )
 
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.config_commit import ConfigCommitResult
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import FormPanel, ScreenIssue, ScreenIssueHost
+from anki_miner.gui.widgets.enhanced.modern_button import ButtonVariant, ModernButton
+from anki_miner.gui.widgets.panels.chain_priority_list import (
+    ChainPriorityList,
+    ChainRowSpec,
+    ChainSourceRow,
+)
 from anki_miner.services.store_recovery import make_tombstone_path
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.robust_fs import RmtreeOutcome
@@ -72,6 +87,30 @@ class _ChainPanelStrings:
     config_pending_failure_summary: str
     post_save_summary: str
     cleanup_pending_summary: str
+
+
+@dataclass(frozen=True)
+class ChainListLabels:
+    """Per-panel translated strings for the shared list and its toolbar.
+
+    Built in each subclass with ``self.tr(...)``, like :class:`_ChainPanelStrings`
+    -- the base reads already-translated text and never calls ``tr()`` itself.
+
+    ``explanation`` is the one line above the list, and it is *not* the same
+    sentence on every panel: dictionaries, word audio and pitch accent return the
+    first source that has an entry, while frequency layers its sources additively
+    and only uses chain order to break rank ties. Writing one sentence for all
+    four would document a lie on one of them.
+    """
+
+    explanation: str
+    add: str
+    remove: str
+    move_up: str
+    move_down: str
+    remove_tooltip: str = ""
+    move_up_tooltip: str = ""
+    move_down_tooltip: str = ""
 
 
 @dataclass(frozen=True, eq=False)
@@ -113,16 +152,23 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
     chain_changed = pyqtSignal()
 
     # --- Class-level knobs the subclass sets (declared for the type checker) ---
-    _ROW_CLASS: ClassVar[type]
     # WARNING/ERROR log labels (English, not user-facing → not translated).
     _SCAN_ERROR_LABEL: ClassVar[str] = "Registry scan failed"
     _REMOVE_ERROR_NOUN: ClassVar[str] = "folder"
 
-    # --- Instance attributes the subclass builds in _setup_fields ---
-    _list: QListWidget
-    _up_btn: QPushButton
-    _down_btn: QPushButton
-    _remove_btn: QPushButton
+    #: Glyphs on the three square controls. Text-presentation selectors keep the
+    #: bin monochrome next to two monochrome arrows on platforms that offer both.
+    _UP_GLYPH: ClassVar[str] = "↑"
+    _DOWN_GLYPH: ClassVar[str] = "↓"
+    _REMOVE_GLYPH: ClassVar[str] = "\U0001f5d1︎"
+
+    # --- Instance attributes the base builds in _build_chain_container ---
+    _list: ChainPriorityList
+    _explanation_label: QLabel
+    _add_btn: ModernButton
+    _up_btn: ModernButton
+    _down_btn: ModernButton
+    _remove_btn: ModernButton
     _strings: _ChainPanelStrings
 
     def __init__(self, title: str, parent: QWidget | None = None) -> None:
@@ -156,6 +202,98 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         self._remove_mutation_token: MutationToken | None = None
         self._remove_chain_commit: Callable[[tuple[Any, ...]], ConfigCommitResult] | None = None
         self._after_scan_callbacks: list[Callable[[], None]] = []
+        # Set while the base is repopulating the list. Rebuilding removes and
+        # re-adds every row, so anything that reads the *visual* order has to
+        # stand down until the render finishes -- otherwise a rebuild would look
+        # like a reorder and persist a half-built chain.
+        self._rebuilding: bool = False
+
+    # ------------------------------------------------------------------
+    # Shared list + toolbar
+    # ------------------------------------------------------------------
+
+    def _build_chain_container(
+        self,
+        labels: ChainListLabels,
+        *,
+        extra_actions: tuple[ModernButton, ...] = (),
+    ) -> QWidget:
+        """Build the explanation, the drag-reorderable list, and the toolbar.
+
+        This is the whole of D13's "one real list": drag to reorder, small square
+        arrows as the keyboard path onto the same move, one clear primary Add,
+        quiet panel-specific maintenance actions beside it, and exactly one red
+        control -- the trash, an outline rather than a fill because removing a
+        source is reversible by re-importing it (D41).
+
+        Args:
+            labels: This panel's translated strings.
+            extra_actions: Quiet per-panel maintenance buttons, placed after Add.
+
+        Returns:
+            The container to hand to ``add_field``. The caller owns the anchor.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(SPACING.xs)
+
+        self._explanation_label = QLabel(labels.explanation)
+        self._explanation_label.setObjectName("helper-text")
+        self._explanation_label.setWordWrap(True)
+        layout.addWidget(self._explanation_label)
+
+        self._list = ChainPriorityList()
+        self._list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._list.order_changed.connect(self._sync_chain_from_visual_order)
+        layout.addWidget(self._list)
+
+        toolbar = QHBoxLayout()
+        toolbar.setSpacing(SPACING.xs)
+
+        self._add_btn = ModernButton(labels.add, variant="primary")
+        toolbar.addWidget(self._add_btn)
+        for action in extra_actions:
+            toolbar.addWidget(action)
+        toolbar.addStretch()
+
+        self._up_btn = self._make_square_button(
+            self._UP_GLYPH,
+            "secondary",
+            labels.move_up,
+            labels.move_up_tooltip,
+        )
+        self._up_btn.clicked.connect(lambda: self.move_up(self._list.currentRow()))
+        toolbar.addWidget(self._up_btn)
+
+        self._down_btn = self._make_square_button(
+            self._DOWN_GLYPH,
+            "secondary",
+            labels.move_down,
+            labels.move_down_tooltip,
+        )
+        self._down_btn.clicked.connect(lambda: self.move_down(self._list.currentRow()))
+        toolbar.addWidget(self._down_btn)
+
+        self._remove_btn = self._make_square_button(
+            self._REMOVE_GLYPH,
+            "danger",
+            labels.remove,
+            labels.remove_tooltip,
+        )
+        self._remove_btn.clicked.connect(lambda: self.remove(self._list.currentRow()))
+        toolbar.addWidget(self._remove_btn)
+
+        layout.addLayout(toolbar)
+        return container
+
+    @staticmethod
+    def _make_square_button(glyph: str, variant: ButtonVariant, name: str, tooltip: str) -> ModernButton:
+        """One glyph-only control, named for anyone who cannot see the glyph."""
+        button = ModernButton(glyph, variant=variant, square=True)
+        button.setAccessibleName(name)
+        button.setToolTip(tooltip or name)
+        return button
 
     # ------------------------------------------------------------------
     # First-show / refresh lifecycle
@@ -287,20 +425,26 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         # controls explicitly (they act on currentRow(), which would otherwise
         # operate on a transient placeholder); _rebuild_list re-enables them.
         self._set_reorder_controls_enabled(False)
+        self._rebuilding = True
         self._list.setUpdatesEnabled(False)
         try:
             self._list.clear()
             placeholder = QListWidgetItem(self._strings.loading)
+            # NoItemFlags also strips ItemIsDragEnabled, so the placeholder
+            # cannot be dragged into a reorder of a chain it is not part of.
             placeholder.setFlags(Qt.ItemFlag.NoItemFlags)
             self._list.addItem(placeholder)
         finally:
             self._list.setUpdatesEnabled(True)
+            self._rebuilding = False
 
     def _set_reorder_controls_enabled(self, enabled: bool) -> None:
-        """Toggle the move-up/down + remove buttons together."""
+        """Toggle every way to reorder or remove a row, drag included."""
         self._up_btn.setEnabled(enabled)
         self._down_btn.setEnabled(enabled)
         self._remove_btn.setEnabled(enabled)
+        # Dragging is a reorder like any other, so it answers to the same gate.
+        self._list.setDragEnabled(enabled)
 
     # ------------------------------------------------------------------
     # Mutation ownership
@@ -359,11 +503,37 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         enabled = not self.has_active_mutation()
         self._list.setEnabled(enabled)
         self._set_reorder_controls_enabled(enabled)
+        self._set_row_repair_enabled(enabled)
         self._set_mutation_controls_enabled(enabled)
+
+    def _set_row_repair_enabled(self, enabled: bool) -> None:
+        """Toggle every row's optional repair button (e.g. Re-import).
+
+        A second import launched while one is in flight would clobber the
+        panel's single active-import worker and orphan the first one.
+        """
+        for index in range(self._list.count()):
+            row = self._row_widget(index)
+            if row is not None and row.repair_button is not None:
+                row.repair_button.setEnabled(enabled)
 
     # ------------------------------------------------------------------
     # Reorder / toggle
     # ------------------------------------------------------------------
+
+    def get_chain(self) -> tuple[Any, ...]:
+        """Return the chain with live checkbox states folded back in.
+
+        Rows that are not currently rendered (before first show, or while the
+        Loading placeholder is up) fall back to the entry's own flag, so reading
+        the chain mid-scan cannot silently switch every source off.
+        """
+        out: list[Any] = []
+        for index, entry in enumerate(self._chain):
+            row = self._row_widget(index)
+            enabled = row.get_enabled() if row is not None else entry.enabled
+            out.append(self._entry_with_enabled(entry, enabled))
+        return tuple(out)
 
     def _on_row_toggled(self) -> None:
         """Fold the live checkbox states back into ``self._chain`` before emitting.
@@ -379,26 +549,56 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         self.chain_changed.emit()
 
     def move_up(self, index: int) -> None:
-        if self.has_active_mutation():
-            return
-        if index <= 0 or index >= len(self._chain):
-            return
-        # Capture current enabled state before rebuild.
-        self._chain = list(self.get_chain())
-        self._chain[index - 1], self._chain[index] = self._chain[index], self._chain[index - 1]
-        self._rebuild_list()
-        self._list.setCurrentRow(index - 1)
-        self.chain_changed.emit()
+        """Move the row at *index* one place towards the front of the chain."""
+        self._move_row(index, index - 1)
 
     def move_down(self, index: int) -> None:
-        if self.has_active_mutation():
+        """Move the row at *index* one place towards the back of the chain."""
+        self._move_row(index, index + 1)
+
+    def _move_row(self, source: int, target: int) -> None:
+        """Reorder through the model, exactly as a drag does.
+
+        The arrows are the keyboard path onto drag-and-drop, not a second
+        implementation of it: they move the same model row, which raises the
+        same ``rowsMoved``, which lands in the same
+        :meth:`_sync_chain_from_visual_order`. One code path means the two can
+        never disagree about what order was persisted.
+        """
+        if self._rebuilding or self.has_active_mutation():
             return
-        if index < 0 or index >= len(self._chain) - 1:
+        count = self._list.count()
+        if count != len(self._chain):
+            # A placeholder or a half-rendered list: its visual order is not the
+            # chain, so moving a row in it would rebase onto nothing real.
             return
-        self._chain = list(self.get_chain())
-        self._chain[index + 1], self._chain[index] = self._chain[index], self._chain[index + 1]
-        self._rebuild_list()
-        self._list.setCurrentRow(index + 1)
+        if not (0 <= source < count) or not (0 <= target < count) or source == target:
+            return
+        if self._list.move_row(source, target):
+            self._list.setCurrentRow(target)
+
+    def _sync_chain_from_visual_order(self) -> None:
+        """Rebase ``_chain`` onto the order the row widgets are actually in.
+
+        Called once per completed move, whether the user dragged the row or
+        pressed an arrow. Reading the *widgets* rather than recomputing indices
+        is what keeps a row's enabled flag attached to its own entry: each row
+        still holds the exact entry object it was built from, so a move can
+        reorder them but never re-pair them.
+        """
+        if self._rebuilding or self.has_active_mutation():
+            return
+        rows = [self._row_widget(index) for index in range(self._list.count())]
+        if len(rows) != len(self._chain) or any(row is None for row in rows):
+            # The list is not currently showing this chain (placeholder, or a
+            # rejected drop that left a stray item). Re-render from the model
+            # rather than persisting whatever happens to be on screen.
+            self._rebuild_list()
+            return
+        reordered = [self._entry_with_enabled(row.entry, row.get_enabled()) for row in rows if row is not None]
+        if reordered == self._chain:
+            return  # a no-op drop is not an edit
+        self._chain = reordered
         self.chain_changed.emit()
 
     # ------------------------------------------------------------------
@@ -646,17 +846,18 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
     # Row list
     # ------------------------------------------------------------------
 
-    def _row_widget(self, index: int) -> Any:
+    def _row_widget(self, index: int) -> ChainSourceRow | None:
         item = self._list.item(index)
         if item is None:
             return None
         widget = self._list.itemWidget(item)
-        return widget if isinstance(widget, self._ROW_CLASS) else None
+        return widget if isinstance(widget, ChainSourceRow) else None
 
     def _rebuild_list(self) -> None:
         # Suspend repaints across clear+populate so the reorder ↑↓ buttons don't
         # flash on each rebuild. clear() destroys the previous row widgets (and
         # their signal connections), so there is no duplicate-handler risk.
+        self._rebuilding = True
         self._list.setUpdatesEnabled(False)
         try:
             self._list.clear()
@@ -668,13 +869,16 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
             # Settings tab is opened.
             view = self._view  # may be None before first show / scan
             for entry in self._chain:
-                row = self._make_row(entry, view)
+                row = ChainSourceRow(self._row_spec(entry, view))
+                row.toggled.connect(self._on_row_toggled)
+                self._connect_row_repair(row)
                 item = QListWidgetItem()
                 item.setSizeHint(row.sizeHint())
                 self._list.addItem(item)
                 self._list.setItemWidget(item, row)
         finally:
             self._list.setUpdatesEnabled(True)
+            self._rebuilding = False
             self._sync_mutation_controls()
 
     # ------------------------------------------------------------------
@@ -682,24 +886,33 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
     # ------------------------------------------------------------------
 
     def _setup_fields(self) -> None:
-        """Build the panel's fields, including ``self._list`` and the reorder
-        buttons (``_up_btn`` / ``_down_btn`` / ``_remove_btn``)."""
+        """Build the panel's fields, calling ``_build_chain_container`` for the
+        list, its explanation and its toolbar."""
         raise NotImplementedError
 
     def _set_mutation_controls_enabled(self, enabled: bool) -> None:
         """Toggle subclass-specific mutation triggers and root selectors."""
 
-    def get_chain(self) -> tuple[Any, ...]:
-        """Return the chain with live checkbox states folded back in."""
+    def _entry_with_enabled(self, entry: Any, enabled: bool) -> Any:
+        """Return a copy of *entry* carrying *enabled*.
+
+        The entries are frozen dataclasses, so this is how a toggle is folded
+        back into the chain. It is also what makes drag-reordering safe: the
+        enabled flag is read off the row that owns the entry, never off an
+        index into a list that has just moved.
+        """
         raise NotImplementedError
 
     def _build_view(self) -> Any:
         """Construct + load the registry view OFF the GUI thread (no widgets)."""
         raise NotImplementedError
 
-    def _make_row(self, entry: Any, view: Any) -> QWidget:
-        """Build a fully-wired row widget for *entry* (``toggled`` connected)."""
+    def _row_spec(self, entry: Any, view: Any) -> ChainRowSpec:
+        """Describe one row: title, its own metadata, toggle label, repair."""
         raise NotImplementedError
+
+    def _connect_row_repair(self, row: ChainSourceRow) -> None:
+        """Wire a row's optional repair button. Default: nothing to repair."""
 
     def _entry_display_name(self, entry: Any) -> str:
         """Human-readable name for the remove-confirmation prompt."""

@@ -256,6 +256,47 @@ class TestRedMeansDestruction:
         assert Rendered(button).fill == _opaque(colors["disabled"])
 
 
+class TestSquareGlyphControls:
+    """A glyph button pinned to its own height must still show its glyph.
+
+    The global button inset is measured for a word. Applied unchanged to a
+    control whose width is pinned to its height it leaves a negative content
+    box, and the chain editor's arrows and trash render as bare slivers.
+
+    These read geometry, so they cannot use the ``host`` fixture: it calls
+    ``setMinimumSize(160, 40)``, which is precisely the constraint under test.
+    """
+
+    @staticmethod
+    def _polished(qtbot, button: ModernButton) -> ModernButton:
+        qtbot.addWidget(button)
+        button.ensurePolished()
+        button.show()
+        return button
+
+    @pytest.mark.parametrize(("glyph", "variant"), [("↑", "secondary"), ("↓", "secondary"), ("🗑︎", "danger")])
+    def test_the_glyph_is_not_clipped_away(self, qtbot, glyph, variant):
+        button = self._polished(qtbot, ModernButton(glyph, variant=variant, square=True))
+
+        assert button.maximumWidth() >= button.sizeHint().width()
+
+    def test_a_labelled_button_keeps_the_wider_inset(self, qtbot):
+        square = self._polished(qtbot, ModernButton("↑", variant="secondary", square=True))
+        labelled = self._polished(qtbot, ModernButton("↑", variant="secondary"))
+
+        assert labelled.sizeHint().width() > square.sizeHint().width()
+
+    def test_the_shape_is_declared_as_a_property_not_an_object_name(self, qtbot):
+        """The object name already carries the role; squareness is orthogonal."""
+        button = self._polished(qtbot, ModernButton("↑", variant="danger", square=True))
+
+        assert button.property("square") is True
+        assert button.objectName() == "danger"
+
+    def test_only_square_buttons_claim_the_property(self, qtbot):
+        assert self._polished(qtbot, ModernButton("Add dictionary…")).property("square") is None
+
+
 class TestDialogDefaultHierarchy:
     """Enter must land on the task action, and never on destruction."""
 

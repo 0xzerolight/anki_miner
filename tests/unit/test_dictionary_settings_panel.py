@@ -413,24 +413,20 @@ def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, qtbot, tmp_pa
 
     row = panel._row_widget(0)
     assert row is not None
-    assert row.stale is True
-    assert row.reimport_button is not None
+    assert row.warning_text != ""
+    assert row.repair_button is not None
 
-    # ⚠ prefix is on the name label
-    from PyQt6.QtWidgets import QLabel
-
-    labels = row.findChildren(QLabel)
-    label_texts = [lbl.text() for lbl in labels]
-    assert any(t.startswith("⚠ ") and "Stale Yomi" in t for t in label_texts)
-    # italic suffix exists as one of the label texts
-    assert any("re-import to refresh" in t for t in label_texts)
+    # The name stays the name; the staleness is its own labelled fact (D13).
+    assert row.title_label.text() == "Stale Yomi"
+    assert row.warning_label.text().startswith("⚠ ")
+    assert "re-import to refresh" in row.warning_label.text()
 
     emitted: list[str] = []
     panel.reimport_dict_requested.connect(emitted.append)
     jmdict_fired: list[None] = []
     panel.reimport_jmdict_requested.connect(lambda: jmdict_fired.append(None))
 
-    row.reimport_button.click()
+    row.repair_button.click()
     assert emitted == ["stale-yomi"]
     assert jmdict_fired == [], "Yomitan row must not fire the JMdict signal"
 
@@ -458,15 +454,15 @@ def test_stale_jmdict_row_fires_source_first_reimport_signal(qtbot, tmp_path):
 
     row = panel._row_widget(0)
     assert row is not None
-    assert row.stale is True
-    assert row.reimport_button is not None
+    assert row.warning_text != ""
+    assert row.repair_button is not None
 
     jmdict_fired: list[None] = []
     panel.reimport_jmdict_requested.connect(lambda: jmdict_fired.append(None))
     generic_fired: list[str] = []
     panel.reimport_dict_requested.connect(generic_fired.append)
 
-    row.reimport_button.click()
+    row.repair_button.click()
     assert jmdict_fired == []
     assert generic_fired == ["jmdict-english"]
 
@@ -495,8 +491,8 @@ def test_current_schema_row_has_no_stale_ui(qapp, qtbot, tmp_path):
 
     row = panel._row_widget(0)
     assert row is not None
-    assert row.stale is False
-    assert row.reimport_button is None
+    assert row.warning_text == ""
+    assert row.repair_button is None
 
     from PyQt6.QtWidgets import QLabel
 

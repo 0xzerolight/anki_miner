@@ -84,6 +84,18 @@ class TestApplyButtonSize:
         assert button.minimumWidth() == button.minimumHeight()
         assert button.maximumWidth() == button.minimumWidth()
 
+    def test_modern_button_can_ask_for_the_square_shape(self, qtbot):
+        """The chain editor's arrows and trash are glyphs, not labels (D13)."""
+        from anki_miner.gui.widgets.enhanced.modern_button import ModernButton
+
+        glyph = ModernButton("↑", variant="secondary", square=True)
+        labelled = ModernButton("Add dictionary…", variant="primary")
+        qtbot.addWidget(glyph)
+        qtbot.addWidget(labelled)
+
+        assert glyph.maximumWidth() == glyph.minimumWidth() == glyph.minimumHeight()
+        assert labelled.maximumWidth() > labelled.minimumHeight()
+
     def test_non_square_buttons_are_not_width_constrained(self, qtbot):
         button = QPushButton("+ Add Dictionary…")
         qtbot.addWidget(button)
