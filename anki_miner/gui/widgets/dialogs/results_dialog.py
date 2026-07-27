@@ -7,6 +7,7 @@ from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QVBoxLayout
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.utils import result_copy
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import EnhancedDialog
 from anki_miner.gui.widgets.enhanced import StatCard
@@ -62,9 +63,12 @@ class ResultsDialog(EnhancedDialog):
         self.setMinimumWidth(600)
         self.setMinimumHeight(400)
 
-        # Set header based on result
+        # Set header based on result. A successful run states what it produced
+        # rather than congratulating the user for it (D47-B) -- the number is
+        # the thing they opened the dialog to read, and "Success!" made them
+        # find it again in the stat cards below.
         if self.processing_result.success:
-            self.set_header("complete", self.tr("Success!"))
+            self.set_header("complete", result_copy.created_cards(self.processing_result.cards_created))
         else:
             self.set_header("error", self.tr("Completed with Errors"))
 

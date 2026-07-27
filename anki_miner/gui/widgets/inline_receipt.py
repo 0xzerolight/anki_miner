@@ -11,11 +11,11 @@ Being a widget rather than a dialog is the whole point. It cannot steal focus,
 it cannot interrupt, and navigating to another tab and back leaves it exactly
 where it was.
 
-All of the receipt's wording lives here, in one translation context, because it
-is view text; :mod:`~anki_miner.gui.controllers.run_receipt` stays a pure model.
-The count of items is printed only when there is more than one -- a single-item
-screen has nothing to count, and "1 episodes" is how you tell that a template
-was written for the plural case and never checked.
+The summary line's wording lives in :mod:`~anki_miner.gui.utils.result_copy`,
+not here: this widget is one of several surfaces that report a finished run, and
+a formatter copied per surface is a formatter that drifts.
+:mod:`~anki_miner.gui.controllers.run_receipt` stays a pure model, holding the
+numbers and none of the words.
 """
 
 from __future__ import annotations
@@ -26,11 +26,10 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QApplication, QHBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils import result_copy
 from anki_miner.gui.utils.progress_telemetry import format_duration_words
 from anki_miner.gui.widgets.base.eliding_label import ElidingLabel
 from anki_miner.gui.widgets.enhanced import ModernButton
-from anki_miner.models.processing import TerminalOutcome
-from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.gui.controllers.run_receipt import RunReceipt
@@ -98,52 +97,22 @@ class InlineReceipt(QWidget):
     # ------------------------------------------------------------------
 
     def _render(self, receipt: RunReceipt, item_noun: str) -> str:
-        """Compose the summary line for one outcome.
+        """Turn one receipt into its line, via the shared result formatters.
 
-        Two shapes, not one per outcome: a clean run states what it produced, and
-        every other ending states how far it got first. That "3 of 12" is the
-        part the old dialogs threw away.
+        The composition lives in :mod:`~anki_miner.gui.utils.result_copy` so the
+        queue screens, the Batch adapter and this widget cannot end up wording
+        the same run three ways (D47-B). This method stays as the seam that maps
+        a ``RunReceipt``'s fields onto that pure function.
         """
-        duration = format_duration_words(receipt.duration.active_s)
-        multi = receipt.items_total > 1 and bool(item_noun)
-
-        if receipt.outcome is TerminalOutcome.SUCCESS:
-            line = (
-                tr_format(
-                    self.tr("Mining complete — %1 %2, %3 notes added in %4"),
-                    receipt.items_completed,
-                    item_noun,
-                    receipt.notes_added,
-                    duration,
-                )
-                if multi
-                else tr_format(self.tr("Mining complete — %1 notes added in %2"), receipt.notes_added, duration)
-            )
-        else:
-            lead = {
-                TerminalOutcome.CANCELLED: self.tr("Cancelled"),
-                TerminalOutcome.PARTIAL: self.tr("Finished with errors"),
-                TerminalOutcome.FAILED: self.tr("Mining failed"),
-            }[receipt.outcome]
-            line = (
-                tr_format(
-                    self.tr("%1 — %2 of %3 %4 completed; %5 notes added in %6"),
-                    lead,
-                    receipt.items_completed,
-                    receipt.items_total,
-                    item_noun,
-                    receipt.notes_added,
-                    duration,
-                )
-                if multi
-                else tr_format(self.tr("%1 — %2 notes added in %3"), lead, receipt.notes_added, duration)
-            )
-
-        if receipt.duration.suspended:
-            # The clock is active time (D23). Saying so is the difference
-            # between an honest 40 minutes and an unexplained missing hour.
-            line = f"{line} {self.tr('(asleep time excluded)')}"
-        return line
+        return result_copy.run_summary(
+            receipt.outcome,
+            items_completed=receipt.items_completed,
+            items_total=receipt.items_total,
+            item_noun=item_noun,
+            notes_added=receipt.notes_added,
+            duration=format_duration_words(receipt.duration.active_s),
+            suspended=receipt.duration.suspended,
+        )
 
     # ------------------------------------------------------------------
     # Actions

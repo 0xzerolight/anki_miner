@@ -26,6 +26,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.utils import result_copy
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
@@ -665,7 +666,7 @@ class BatchProcessingTab(MiningTabBase):
         """
         self._record_receipt_counts(notes_added=cards_created, failed=False)
         self._advance_queue_bar(item_id)
-        self.presenter.show_success(tr_format(self.tr("Created %1 cards"), cards_created))
+        self.presenter.show_success(result_copy.created_cards(cards_created, self.config.anki_deck_name))
 
         # Update queue panel — address the completed row by id (T-30).
         self.queue_panel.set_processing_item_complete(item_id, cards_created)

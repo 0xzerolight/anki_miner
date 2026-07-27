@@ -41,7 +41,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.constants import LOG_MAX_LINES, LOG_ROTATION_THRESHOLD, MIN_HEIGHT_LOG_WIDGET
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
-from anki_miner.gui.utils import file_dialogs
+from anki_miner.gui.utils import file_dialogs, result_copy
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.fonts import make_scaled_monospace_font
 from anki_miner.gui.utils.run_off_thread import run_off_thread
@@ -436,7 +436,7 @@ class LogWidget(QWidget):
         if clipboard is None:
             return
         clipboard.setText(text)
-        button.setText(self.tr("Copied!"))
+        button.setText(result_copy.copied())
         # Parented to the button rather than QTimer.singleShot: a log widget
         # torn down inside its window takes the pending timer with it, so the
         # restore never fires against a deleted C++ object.
