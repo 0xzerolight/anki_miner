@@ -10,7 +10,7 @@ silently stops tracking the UI text scale, which is exactly how the 2026-07-25
 audit's row-crush and clipped-button findings were produced.
 """
 
-from PyQt6.QtWidgets import QAbstractItemView, QLabel, QPushButton, QSizePolicy, QWidget
+from PyQt6.QtWidgets import QLabel, QPushButton, QSizePolicy, QWidget
 
 from anki_miner.gui.resources.styles import SPACING
 
@@ -108,23 +108,31 @@ def apply_button_size(button: QPushButton, *, square: bool = False) -> None:
         button.setMaximumWidth(height)
 
 
-def metric_row_height(view: QAbstractItemView, *, vertical_padding: int = _ROW_PADDING_Y) -> int:
-    """Return a row height for ``view`` derived from its rendered font.
+def metric_row_height(widget: QWidget, *, vertical_padding: int = _ROW_PADDING_Y) -> int:
+    """Return a row height for ``widget`` derived from its rendered font.
 
-    Item views whose rows are sized from a constant crush their content once the
-    text scale rises (Issue #102's class). Sizing from ``fontMetrics`` keeps a row
-    tall enough for its own glyphs -- including CJK, which is taller than Latin at
-    the same point size.
+    Rows sized from a constant crush their content once the text scale rises
+    (Issue #102's class). Sizing from ``fontMetrics`` keeps a row tall enough for
+    its own glyphs -- including CJK, which is taller than Latin at the same point
+    size.
+
+    Takes any ``QWidget``, not just an item view: queue rows are embedded
+    ``QFrame`` widgets set via ``QListWidget.setItemWidget``, and they must derive
+    their height from the same rule, or the app ends up with two row metrics that
+    disagree at large text scales.
+
+    Uses ``lineSpacing`` rather than ``height`` because it includes the font's
+    leading, which is the correct inter-row measure for a row of text.
 
     Args:
-        view: The item view whose font decides the height.
+        widget: The view or row widget whose font decides the height.
         vertical_padding: Breathing room applied to each edge.
 
     Returns:
         The row height in pixels.
     """
-    view.ensurePolished()
-    return view.fontMetrics().height() + 2 * vertical_padding
+    widget.ensurePolished()
+    return widget.fontMetrics().lineSpacing() + 2 * vertical_padding
 
 
 def configure_expanding_container(widget: QWidget) -> None:

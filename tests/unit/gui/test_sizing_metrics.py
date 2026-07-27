@@ -6,7 +6,7 @@ so control geometry tracks the UI text scale instead of drifting out from under 
 pinning literals would just re-create the constant the helpers exist to remove.
 """
 
-from PyQt6.QtWidgets import QLabel, QListWidget, QPushButton
+from PyQt6.QtWidgets import QFrame, QLabel, QListWidget, QPushButton
 
 from anki_miner.gui.widgets.base.sizing import apply_button_size, metric_row_height
 
@@ -129,6 +129,13 @@ class TestMetricRowHeight:
         roomy = metric_row_height(view, vertical_padding=12)
 
         assert roomy == tight + 24  # padding applies to both edges
+
+    def test_accepts_an_embedded_row_widget(self, qtbot):
+        """Queue rows are QFrames set via setItemWidget, not item views."""
+        row = QFrame()
+        qtbot.addWidget(row)
+
+        assert metric_row_height(row) > 0
 
     def test_japanese_text_still_fits(self, qtbot):
         """CJK glyphs are taller than Latin; the row must clear them too."""
