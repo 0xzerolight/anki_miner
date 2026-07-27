@@ -9,6 +9,7 @@ still reuses :class:`MiningQueue` for storage.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from enum import Enum
 from typing import Generic, TypeVar
 
@@ -61,3 +62,35 @@ class MiningQueue(Generic[ItemT]):
             Shallow copy of the internal items list.
         """
         return self._items.copy()
+
+    def reorder(self, order: Sequence[ItemT]) -> None:
+        """Adopt *order* as the queue's new order.
+
+        The queue is what the run reads its items from, so a reorder that added,
+        dropped or duplicated a row would leave the tab's row map and the frozen
+        ``_run_items`` snapshot describing a queue that no longer exists. Only an
+        exact permutation of the current contents is accepted; anything else is
+        refused and the existing order is left untouched.
+
+        Membership is checked by identity, not equality: queue items are
+        ``eq=False`` dataclasses, and two rows built from the same file pair are
+        two distinct rows.
+
+        Args:
+            order: Every current item, in the order the queue should adopt.
+
+        Raises:
+            ValueError: If *order* is not a permutation of the current items.
+        """
+        if len(order) != len(self._items):
+            raise ValueError("reorder() needs exactly the queue's current items")
+
+        current = {id(item) for item in self._items}
+        seen: set[int] = set()
+        for item in order:
+            key = id(item)
+            if key not in current or key in seen:
+                raise ValueError("reorder() needs a permutation of the queue's current items")
+            seen.add(key)
+
+        self._items = list(order)

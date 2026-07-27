@@ -5,12 +5,14 @@ subtitle file, Add validates and queues the pair, and once at least one
 item is READY the user can run *Mine* across the whole queue.
 
 The queue-list lifecycle — Mine/Clear/Stop, the per-item signal slots, the
-terminal-bar summary, worker/processor management, and curation — is shared
-with :class:`~anki_miner.gui.widgets.youtube_tab.YouTubeTab` on
+terminal-bar summary, worker/processor management, curation, and the D28
+selection/filter/search/reorder surface — is shared with
+:class:`~anki_miner.gui.widgets.youtube_tab.YouTubeTab` on
 :class:`~anki_miner.gui.widgets._queue_mining_tab_base._ListQueueMiningTabBase`
 (ARC-008). This tab supplies only the local file-pair Add flow (local pairs
 need no probe stage, so items enter the queue READY), its own layout, and the
-per-tab adapters (worker class, row widget, item labels, status enum).
+per-tab adapters (worker class, row widget, item labels, status enum, filter
+bucket, search text).
 
 Two collaborators:
 
@@ -45,6 +47,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._queue_mining_tab_base import (
@@ -52,16 +55,21 @@ from anki_miner.gui.widgets._queue_mining_tab_base import (
     _QueueListStrings,
     _QueueRunStrings,
 )
-from anki_miner.gui.widgets.audiobook_queue_item_widget import AudiobookQueueItemWidget
+from anki_miner.gui.widgets.audiobook_queue_item_widget import (
+    AudiobookQueueItemWidget,
+    queue_bucket,
+)
 from anki_miner.gui.widgets.base import (
     PageWidth,
     configure_card_layout,
     configure_scrolled_page,
     field_label_width,
 )
+from anki_miner.gui.widgets.current_job_strip import CurrentJobStrip
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
+from anki_miner.gui.widgets.queue_controls_bar import QueueControlsBar
 from anki_miner.gui.workers.audiobook_queue_worker import AudiobookQueueWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.models.audiobook_queue import AudiobookQueue, AudiobookQueueItem
@@ -98,6 +106,9 @@ class AudiobookTab(_ListQueueMiningTabBase):
     _status_completed = ReadyItemStatus.COMPLETED
     _status_error = ReadyItemStatus.ERROR
 
+    TASK_ID = "queue.audiobook"
+    TASK_OWNER = CapabilityTarget("audiobook")
+
     def __init__(
         self,
         config: AnkiMinerConfig,
@@ -132,6 +143,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
             unavailable=self.tr("Mining unavailable — services not initialized."),
             run_starting=self.tr("%1 run starting — %2 items."),
             mine_label=self.tr("Mine"),
+            task_title=self.tr("Audio queue"),
         )
         self._queue_list_strings = _QueueListStrings(
             cancelling=self.tr("Cancelling…"),
@@ -203,12 +215,20 @@ class AudiobookTab(_ListQueueMiningTabBase):
         add_row.addStretch()
         queue_layout.addLayout(add_row)
 
+        # Filters, search, counter and the selection actions (D28).
+        self.queue_controls = QueueControlsBar()
+        queue_layout.addWidget(self.queue_controls)
+
+        # The one line describing the item actually being mined (D31).
+        self.current_job_strip = CurrentJobStrip()
+        queue_layout.addWidget(self.current_job_strip)
+
         # Queue list
         self.list_widget = QListWidget()
         self.list_widget.setObjectName("audiobook-queue-list")
-        self.list_widget.setSelectionMode(QListWidget.SelectionMode.NoSelection)
         self.list_widget.setUniformItemSizes(False)
         queue_layout.addWidget(self.list_widget, 1)
+        self._wire_queue_interaction()
 
         # Empty-state hint (shown when the list is empty).
         self.empty_label = QLabel(self.tr("Pick an audio file and its subtitle above, then click Add."))
@@ -361,3 +381,11 @@ class AudiobookTab(_ListQueueMiningTabBase):
     def _item_finished_label(self, item: AudiobookQueueItem) -> str:
         """Log label for the per-item finish line."""
         return item.audio_file.name
+
+    def _filter_bucket(self, item: AudiobookQueueItem) -> str:
+        """Map the item's status to a filter chip (shared with the row widget)."""
+        return queue_bucket(item)
+
+    def _search_text(self, item: AudiobookQueueItem) -> str:
+        """Both file names are searchable — a pair is found by either half."""
+        return f"{item.audio_file.name} {item.subtitle_file.name}"

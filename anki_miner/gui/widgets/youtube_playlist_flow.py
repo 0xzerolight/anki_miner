@@ -335,13 +335,31 @@ class PlaylistAddController:
     def _add_single_url(self, url: str) -> None:
         """Queue *url* as a single video and spawn a metadata probe worker."""
         item = self._callbacks.enqueue(url)
-        # The queue model defaults to PENDING; flip to PROBING up-front so the
-        # row widget renders the "(probing...)" hint immediately.
-        item.status = YouTubeItemStatus.PROBING
         self._callbacks.render_new_item(item)
         self._callbacks.clear_url_input()
+        self._start_probe(item)
 
-        probe = YouTubeProbeWorker(self._fetcher, url, parent=self._parent)
+    def retry_probe(self, item: YouTubeQueueItem) -> None:
+        """Probe an already-queued row again (Retry selected, D28).
+
+        A probe failure is retried by probing, not by mining: the row never
+        reached the miner, so the only thing that can change its verdict is
+        another look at the video.
+
+        Args:
+            item: The queued row to re-probe, in place.
+        """
+        self._start_probe(item)
+
+    def _start_probe(self, item: YouTubeQueueItem) -> None:
+        """Put *item* into PROBING and spawn a metadata probe worker for it."""
+        # The queue model defaults to PENDING; flip to PROBING up-front so the
+        # row widget renders the checking state immediately.
+        item.status = YouTubeItemStatus.PROBING
+        item.error_message = None
+        self._callbacks.refresh_row(item)
+
+        probe = YouTubeProbeWorker(self._fetcher, item.url, parent=self._parent)
         probe.probe_done.connect(lambda info, it=item: self._on_probe_done(it, info))
         probe.probe_error.connect(lambda msg, it=item: self._on_probe_error(it, msg))
         probe.finished.connect(lambda pw=probe: self._on_probe_finished(pw))

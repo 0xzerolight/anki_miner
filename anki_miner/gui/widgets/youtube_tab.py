@@ -14,12 +14,14 @@ around three collaborators:
   per-row renderer embedded inside a :class:`QListWidget`.
 
 The queue-list lifecycle — Mine/Clear/Stop, the per-item signal slots, the
-terminal-bar summary, worker/processor management, and curation — is shared with
+terminal-bar summary, worker/processor management, curation, and the D28
+selection/filter/search/reorder surface — is shared with
 :class:`~anki_miner.gui.widgets.audiobook_tab.AudiobookTab` on
 :class:`~anki_miner.gui.widgets._queue_mining_tab_base._ListQueueMiningTabBase`
 (ARC-008). This tab adds only the URL/probe/playlist Add flow, the fetcher
 rebuild, and the per-tab adapters (worker class, row widget, item labels, status
-enum, the Add lock while a playlist resolves).
+enum, filter bucket, search text, probe retry, the Add lock while a playlist
+resolves).
 
 Button enable/disable is recomputed on every queue/worker signal by
 :meth:`_recompute_buttons` (base). There is no explicit state enum — the queue
@@ -48,6 +50,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.service_factory import create_episode_processor, create_youtube_fetcher
 from anki_miner.gui.widgets._queue_mining_tab_base import (
@@ -56,11 +59,13 @@ from anki_miner.gui.widgets._queue_mining_tab_base import (
     _QueueRunStrings,
 )
 from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, configure_scrolled_page
+from anki_miner.gui.widgets.current_job_strip import CurrentJobStrip
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
+from anki_miner.gui.widgets.queue_controls_bar import QueueControlsBar
 from anki_miner.gui.widgets.youtube_playlist_flow import PlaylistAddCallbacks, PlaylistAddController
-from anki_miner.gui.widgets.youtube_queue_item_widget import YouTubeQueueItemWidget
+from anki_miner.gui.widgets.youtube_queue_item_widget import YouTubeQueueItemWidget, queue_bucket
 from anki_miner.gui.workers.youtube_queue_worker import YouTubeQueueWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueue, YouTubeQueueItem
@@ -90,6 +95,9 @@ class YouTubeTab(_ListQueueMiningTabBase):
     _status_processing = YouTubeItemStatus.PROCESSING
     _status_completed = YouTubeItemStatus.COMPLETED
     _status_error = YouTubeItemStatus.ERROR
+
+    TASK_ID = "queue.youtube"
+    TASK_OWNER = CapabilityTarget("video", "youtube")
 
     def __init__(
         self,
@@ -130,6 +138,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
             unavailable=self.tr("Mining unavailable — services not initialized."),
             run_starting=self.tr("%1 run starting — %2 items."),
             mine_label=self.tr("Mine"),
+            task_title=self.tr("YouTube queue"),
         )
         self._queue_list_strings = _QueueListStrings(
             cancelling=self.tr("Cancelling…"),
@@ -209,12 +218,20 @@ class YouTubeTab(_ListQueueMiningTabBase):
         url_row.addWidget(self.add_button)
         queue_layout.addLayout(url_row)
 
+        # Filters, search, counter and the selection actions (D28).
+        self.queue_controls = QueueControlsBar()
+        queue_layout.addWidget(self.queue_controls)
+
+        # The one line describing the item actually being mined (D31).
+        self.current_job_strip = CurrentJobStrip()
+        queue_layout.addWidget(self.current_job_strip)
+
         # Queue list
         self.list_widget = QListWidget()
         self.list_widget.setObjectName("yt-queue-list")
-        self.list_widget.setSelectionMode(QListWidget.SelectionMode.NoSelection)
         self.list_widget.setUniformItemSizes(False)
         queue_layout.addWidget(self.list_widget, 1)
+        self._wire_queue_interaction()
 
         # Empty-state hint (shown when the list is empty).
         self.empty_label = QLabel(self.tr("Paste a YouTube URL above and click Add."))
@@ -331,6 +348,27 @@ class YouTubeTab(_ListQueueMiningTabBase):
     def _item_finished_label(self, item: YouTubeQueueItem) -> str:
         """Log label for the per-item finish line."""
         return item.url
+
+    def _filter_bucket(self, item: YouTubeQueueItem) -> str:
+        """Map the item's status to a filter chip (shared with the row widget)."""
+        return queue_bucket(item)
+
+    def _search_text(self, item: YouTubeQueueItem) -> str:
+        """Search the title once probed, and the URL always."""
+        title = item.video_info.title if item.video_info else (item.display_title or "")
+        return f"{title} {item.url}"
+
+    def _retry_item(self, item: YouTubeQueueItem) -> bool:
+        """Retry a failed row the way it failed.
+
+        A probe failure never reached the miner, so mining it would just fail
+        again for the same reason; it is re-probed instead, and stays out of the
+        retry run.
+        """
+        if item.status == YouTubeItemStatus.PROBE_ERROR:
+            self._add_flow.retry_probe(item)
+            return False
+        return super()._retry_item(item)
 
     def _add_locked(self) -> bool:
         """Also lock Add while a playlist resolve is pending (a second Add

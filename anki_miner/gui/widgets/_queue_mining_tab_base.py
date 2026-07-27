@@ -22,9 +22,11 @@ Two layers:
 
 * :class:`_ListQueueMiningTabBase` — the ``QListWidget`` + per-row-widget queue
   UI shared by ``AudiobookTab`` and ``YouTubeTab`` only: the Mine/Clear/Stop
-  lifecycle, the per-item signal slots, the terminal-bar summary, and the
-  queue/row bookkeeping. Reading tabs do NOT extend this — their per-item slots
-  and progress model differ; they keep their own.
+  lifecycle, the per-item signal slots, the terminal-bar summary, the queue/row
+  bookkeeping, and the D28 manipulation surface (selection, filters, search,
+  counter, selection actions, reorder) plus the D31 current-job strip. Reading
+  tabs do NOT extend this — their per-item slots and progress model differ, and
+  Reading→Subtitles has no queue model at all; they keep their own.
 
 The worker OWNS the item lifecycle (it sets ``status``/``cards_created``/
 ``error_message`` on each item, on the worker thread, before emitting its
@@ -52,17 +54,26 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtWidgets import QListWidgetItem
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QKeySequence
+from PyQt6.QtWidgets import QListWidget, QListWidgetItem
 
+from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskSpec
+from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
 from anki_miner.gui.utils.run_off_thread import join_or_retain, still_running
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
+from anki_miner.gui.widgets.base.sizing import metric_row_height
+from anki_miner.gui.widgets.current_job_strip import CurrentJobStrip
+from anki_miner.gui.widgets.queue_controls_bar import QueueControlsBar
 from anki_miner.models import MiningOutcome, classify_result, result_error_text
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
-    from PyQt6.QtWidgets import QCheckBox, QLabel, QListWidget, QWidget
+    from PyQt6.QtWidgets import QCheckBox, QLabel, QWidget
 
     from anki_miner.config import AnkiMinerConfig
+    from anki_miner.gui.capabilities import CapabilityTarget
+    from anki_miner.gui.controllers.task_registry import TaskHandle, TaskRegistry
     from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
     from anki_miner.gui.widgets.log_widget import LogWidget
     from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -78,6 +89,9 @@ logger = logging.getLogger(__name__)
 # delay while retaining the laggard for deferred close.
 _SHUTDOWN_WAIT_MS = 30_000
 
+#: Rows a queue list shows before it scrolls. Enough to see a batch as a batch.
+_VISIBLE_QUEUE_ROWS = 8
+
 
 @dataclass(frozen=True)
 class _QueueRunStrings:
@@ -91,6 +105,9 @@ class _QueueRunStrings:
     unavailable: str  # "Mining unavailable — services not initialized."
     run_starting: str  # "%1 run starting — %2 items."
     mine_label: str  # "Mine"
+    # Name the run carries in the task registry and the current-job strip.
+    # Only the list-queue tabs publish runs, so it defaults to empty.
+    task_title: str = ""
 
 
 @dataclass(frozen=True)
@@ -484,10 +501,22 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
     terminal-bar summary, and the queue/row bookkeeping that the two list-queue
     tabs shared verbatim. Subclasses supply the concrete queue model, row widget,
     item status enum, per-item labels, and the ``_queue_list_strings``.
+
+    It also owns the D28 manipulation surface -- selection, filters, search,
+    counter, selection actions and reorder -- and the D31 current-job strip.
+    Both are built here rather than per tab because the two tabs differ only in
+    what a row *is*, never in what a queue *does*. A subclass opts in by calling
+    :meth:`_wire_queue_interaction` once its ``list_widget``, ``queue_controls``
+    and ``current_job_strip`` exist.
+
+    Reorder is refused while a run is active. The worker resolves its ``idx``
+    signals against the ``_run_items`` snapshot frozen at launch, so shuffling
+    the queue underneath it would leave a finished item's result on the wrong
+    row.
     """
 
     # --- Attributes a subclass provides (declared for the type checker) ---
-    _queue: Any  # AudiobookQueue | YouTubeQueue (all_items()/remove())
+    _queue: Any  # AudiobookQueue | YouTubeQueue (all_items()/remove()/reorder())
     _row_widgets: dict[Any, Any]
     _list_items: dict[Any, QListWidgetItem]
     list_widget: QListWidget
@@ -497,12 +526,91 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
     clear_button: Any
     stop_button: Any
     progress_widget: ProgressWidget
+    queue_controls: QueueControlsBar
+    current_job_strip: CurrentJobStrip
     _queue_list_strings: _QueueListStrings
 
     # Item-status enum sentinels (subclass sets all four; the base's
     # _status_ready/_status_processing are among them).
     _status_completed: Any = None
     _status_error: Any = None
+
+    #: Stable task id this tab publishes its runs under, and where the run
+    #: lives so a status-bar entry can navigate to it. Subclass sets both.
+    TASK_ID: str = ""
+    TASK_OWNER: CapabilityTarget | None = None
+
+    # ------------------------------------------------------------------
+    # Queue interaction wiring
+    # ------------------------------------------------------------------
+
+    def _wire_queue_interaction(self) -> None:
+        """Turn the plain list into a manipulable one (D28).
+
+        Called by the subclass once ``list_widget``, ``queue_controls`` and
+        ``current_job_strip`` exist. Native list input owns selection and drag;
+        everything here either mirrors that into the row widgets or supplies a
+        verb Qt has no opinion about.
+        """
+        self._queue_filter = "all"
+        self._queue_search = ""
+        self._task_registry: TaskRegistry | None = None
+        self._task_handle: TaskHandle | None = None
+        # Set while this tab is itself moving rows, so the resync slot does not
+        # fight the move it is watching.
+        self._suppress_row_sync = False
+
+        self.list_widget.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
+        self.list_widget.setDragDropMode(QListWidget.DragDropMode.InternalMove)
+        self.list_widget.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.list_widget.itemSelectionChanged.connect(self._on_queue_selection_changed)
+        # A list you can select, filter and reorder has to show enough rows to
+        # be worth doing any of that to. Measured in rows, not pixels, so it
+        # still holds eight of them at 1.5x text.
+        self.list_widget.setMinimumHeight(_VISIBLE_QUEUE_ROWS * metric_row_height(self.list_widget))
+
+        model = self.list_widget.model()
+        if model is not None:
+            model.rowsMoved.connect(self._on_rows_moved)
+
+        self.queue_controls.filter_changed.connect(self._on_queue_filter_changed)
+        self.queue_controls.search_changed.connect(self._on_queue_search_changed)
+        self.queue_controls.run_selected.connect(self._on_run_selected)
+        self.queue_controls.retry_selected.connect(self._on_retry_selected)
+        self.queue_controls.remove_selected.connect(self._on_remove_selected)
+
+        # Scoped to the list itself: Delete and the Alt arrows must not fire
+        # from the URL box or the file pickers on the same screen.
+        widget_only = Qt.ShortcutContext.WidgetShortcut
+        self._delete_shortcut = scoped_shortcut(
+            self.list_widget,
+            QKeySequence(Qt.Key.Key_Delete),
+            self._on_remove_selected,
+            context=widget_only,
+        )
+        scoped_shortcut(
+            self.list_widget,
+            QKeySequence("Alt+Up"),
+            lambda: self._move_selection(-1),
+            context=widget_only,
+        )
+        scoped_shortcut(
+            self.list_widget,
+            QKeySequence("Alt+Down"),
+            lambda: self._move_selection(1),
+            context=widget_only,
+        )
+
+    def bind_task_registry(self, registry: TaskRegistry) -> None:
+        """Publish this tab's runs to the application-wide task registry.
+
+        Optional wiring: a tab constructed without it mines exactly as before,
+        with the current-job strip staying collapsed.
+
+        Args:
+            registry: The window's registry. Worker lifetime stays here.
+        """
+        self._task_registry = registry
 
     # ------------------------------------------------------------------
     # Run lifecycle
@@ -512,10 +620,18 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         """Mine button — runs the whole queue."""
         self._start_run()
 
-    def _start_run(self) -> None:
-        """Launch the worker over the queue's READY items."""
-        ready_items = [i for i in self._queue.all_items() if i.status == self._status_ready]
-        if self._launch_run(ready_items):
+    def _start_run(self, items: list[Any] | None = None) -> None:
+        """Launch the worker over *items*, or over every READY row.
+
+        Args:
+            items: The rows to mine, already filtered to runnable ones. ``None``
+                means the whole queue's READY rows (the Mine button).
+        """
+        runnable = (
+            items if items is not None else [i for i in self._queue.all_items() if i.status == self._status_ready]
+        )
+        if self._launch_run(runnable):
+            self._begin_task(runnable)
             self.progress_widget.reset()
             self._recompute_buttons()
 
@@ -544,6 +660,51 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
     # Per-item signal slots
     # ------------------------------------------------------------------
 
+    def _begin_task(self, items: list[Any]) -> None:
+        """Publish the run that just started, and point the strip at it.
+
+        The strip is bound to this exact run token, so a later run of the same
+        queue -- or any other task in the app -- cannot rename its line.
+        """
+        registry = getattr(self, "_task_registry", None)
+        if registry is None or not self.TASK_ID or self.TASK_OWNER is None:
+            return
+        handle = registry.start(
+            TaskSpec(
+                task_id=self.TASK_ID,
+                title=self._run_strings.task_title,
+                owner=self.TASK_OWNER,
+            )
+        )
+        self._task_handle = handle
+        handle.count(current=0, total=len(items), detail="")
+        self.current_job_strip.bind(registry, handle.task_id, handle.run_token)
+
+    def _publish_task_position(self, detail: str) -> None:
+        """Report which item the run is on. Silent when nothing is bound."""
+        handle = getattr(self, "_task_handle", None)
+        if handle is None:
+            return
+        handle.count(
+            current=getattr(self, "_items_done", 0),
+            total=getattr(self, "_items_total", 0) or len(self._run_items),
+            detail=detail,
+        )
+
+    def _finish_task(self) -> None:
+        """Close the published run with the outcome the terminal bar reports."""
+        handle = getattr(self, "_task_handle", None)
+        if handle is None:
+            return
+        if getattr(self, "_cancel_requested", False):
+            outcome = TaskOutcome.CANCELLED
+        elif getattr(self, "_run_failed", False) or getattr(self, "_run_failed_count", 0):
+            outcome = TaskOutcome.FAILED
+        else:
+            outcome = TaskOutcome.SUCCEEDED
+        handle.finish(outcome)
+        self._task_handle = None
+
     def _on_item_started(self, idx: int) -> None:
         """Mark the item as PROCESSING and update progress text."""
         item = self._item_at(idx)
@@ -557,6 +718,9 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         self.progress_widget.set_status(
             tr_format(self._queue_list_strings.mining_n_of_m, idx + 1, total, self._item_started_label(item))
         )
+        # The rows are calm now (D31), so this is the only place that names the
+        # item actually being mined.
+        self._publish_task_position(self._item_started_label(item))
         self._recompute_buttons()
 
     def _on_item_progress(self, idx: int, label: str, pct: int) -> None:
@@ -617,6 +781,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         self._refresh_row(item)
         self._items_done = getattr(self, "_items_done", 0) + 1
         self.progress_widget.set_composed(self._items_done, 0, getattr(self, "_items_total", 0))
+        self._publish_task_position(label)
         self._recompute_buttons()
 
     def _on_queue_finished(self) -> None:
@@ -642,6 +807,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         — never ``_run_items``, which is already cleared when this runs. Terminal
         precedence: cancel → failed → success.
         """
+        self._finish_task()
         self.stop_button.setText(self._queue_list_strings.stop_all)
         self.stop_button.setEnabled(True)
         if getattr(self, "_cancel_requested", False):
@@ -703,15 +869,232 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         self._row_widgets.pop(item, None)
 
     # ------------------------------------------------------------------
+    # Selection
+    # ------------------------------------------------------------------
+
+    def _selected_items(self) -> list[Any]:
+        """Selected, visible queue items in the order the list shows them.
+
+        Hidden rows are excluded rather than merely deselected on filter change:
+        a selected action must never reach a row the user cannot see.
+        """
+        selected: list[Any] = []
+        reverse = {id(list_item): item for item, list_item in self._list_items.items()}
+        for row in range(self.list_widget.count()):
+            list_item = self.list_widget.item(row)
+            if list_item is None or list_item.isHidden() or not list_item.isSelected():
+                continue
+            item = reverse.get(id(list_item))
+            if item is not None:
+                selected.append(item)
+        return selected
+
+    def _on_queue_selection_changed(self) -> None:
+        """Mirror the view's selection into the rows and the action buttons.
+
+        ``setItemWidget`` puts an opaque widget over the item, so the row has to
+        be told; nothing about the view's own painting reaches it.
+        """
+        selected = set(map(id, self._selected_items()))
+        for item, widget in self._row_widgets.items():
+            widget.set_selected(id(item) in selected)
+        self._refresh_selection_actions()
+
+    def _refresh_selection_actions(self) -> None:
+        """Enable each selection verb only where it has something to act on."""
+        selected = self._selected_items()
+        run_active = self.worker_thread is not None
+        runnable = any(i.status == self._status_ready for i in selected)
+        retryable = any(self._is_retryable(i) for i in selected)
+        removable = any(i.status != self._status_processing for i in selected)
+        self.queue_controls.set_actions_enabled(
+            run=runnable and not run_active,
+            retry=retryable,
+            remove=removable,
+        )
+
+    # ------------------------------------------------------------------
+    # Filter + search
+    # ------------------------------------------------------------------
+
+    def _on_queue_filter_changed(self, key: str) -> None:
+        """Adopt a filter chip and re-apply the view."""
+        self._queue_filter = key
+        self._apply_queue_view()
+
+    def _on_queue_search_changed(self, text: str) -> None:
+        """Adopt the search text and re-apply the view."""
+        self._queue_search = text
+        self._apply_queue_view()
+
+    def _apply_queue_view(self) -> None:
+        """Hide the rows the filter and search exclude, and drop them from the selection."""
+        needle = self._queue_search.strip().casefold()
+        for item, list_item in self._list_items.items():
+            visible = self._row_visible(item, needle)
+            if not visible and list_item.isSelected():
+                list_item.setSelected(False)
+            list_item.setHidden(not visible)
+        self._refresh_queue_counts()
+        self._refresh_selection_actions()
+
+    def _row_visible(self, item: Any, needle: str) -> bool:
+        """Whether *item* survives both the active chip and the search text."""
+        if self._queue_filter != "all" and self._filter_bucket(item) != self._queue_filter:
+            return False
+        return not needle or needle in self._search_text(item).casefold()
+
+    def _refresh_queue_counts(self) -> None:
+        """Restate the queue's shape. Counts the queue, never the current view."""
+        items = self._queue.all_items()
+        buckets = [self._filter_bucket(i) for i in items]
+        self.queue_controls.set_counts(
+            total=len(items),
+            ready=buckets.count("ready"),
+            failed=buckets.count("failed"),
+            complete=buckets.count("complete"),
+        )
+
+    # ------------------------------------------------------------------
+    # Selection actions
+    # ------------------------------------------------------------------
+
+    def _on_run_selected(self) -> None:
+        """Mine the selected runnable rows, in list order."""
+        runnable = [i for i in self._selected_items() if i.status == self._status_ready]
+        if runnable:
+            self._start_run(runnable)
+
+    def _on_retry_selected(self) -> None:
+        """Give the selected failed rows a fresh attempt.
+
+        A mined failure returns to READY -- and therefore to a fresh attempt
+        budget, which the worker allocates per run -- and is mined again right
+        away when nothing else is running. A failure that never got as far as
+        mining is retried by whatever produced it (a YouTube probe), so it is
+        not swept into the run.
+        """
+        reset: list[Any] = []
+        for item in self._selected_items():
+            if not self._is_retryable(item):
+                continue
+            if self._retry_item(item):
+                reset.append(item)
+            self._refresh_row(item)
+        self._apply_queue_view()
+        self._recompute_buttons()
+        if reset and self.worker_thread is None:
+            self._start_run(reset)
+
+    def _on_remove_selected(self) -> None:
+        """Drop the selected rows. A row being mined is left where it is."""
+        for item in self._selected_items():
+            self._on_remove_clicked(item)
+        self._apply_queue_view()
+        self._recompute_buttons()
+
+    def _is_retryable(self, item: Any) -> bool:
+        """Whether Retry has anything to do for *item*."""
+        return self._filter_bucket(item) == "failed"
+
+    def _retry_item(self, item: Any) -> bool:
+        """Return a failed *item* to READY.
+
+        Returns:
+            True when the item is now minable and should join the retry run.
+        """
+        if item.status != self._status_error:
+            return False
+        item.status = self._status_ready
+        item.error_message = None
+        item.cards_created = 0
+        return True
+
+    # ------------------------------------------------------------------
+    # Reorder
+    # ------------------------------------------------------------------
+
+    def _reorder_locked(self) -> bool:
+        """Reorder is refused while a run is consuming its frozen snapshot."""
+        return self.worker_thread is not None
+
+    def _view_order(self) -> list[Any]:
+        """Queue items in the order the list widget currently shows them."""
+        reverse = {id(list_item): item for item, list_item in self._list_items.items()}
+        order: list[Any] = []
+        for row in range(self.list_widget.count()):
+            list_item = self.list_widget.item(row)
+            item = reverse.get(id(list_item)) if list_item is not None else None
+            if item is not None:
+                order.append(item)
+        return order
+
+    def _move_selection(self, delta: int) -> None:
+        """Move every selected row one place up (-1) or down (+1)."""
+        if self._reorder_locked():
+            return
+        order = self._view_order()
+        rows = sorted(order.index(item) for item in self._selected_items())
+        if not rows:
+            return
+        if delta < 0:
+            if rows[0] == 0:
+                return
+            for row in rows:
+                order[row - 1], order[row] = order[row], order[row - 1]
+        else:
+            if rows[-1] == len(order) - 1:
+                return
+            for row in reversed(rows):
+                order[row + 1], order[row] = order[row], order[row + 1]
+        self._reorder_to(order)
+
+    def _reorder_to(self, order: list[Any]) -> None:
+        """Adopt *order* in both the list widget and the queue model.
+
+        Realised through ``QAbstractItemModel.moveRow`` rather than
+        take/insert: a moved row keeps the widget that was set on it, where a
+        taken item's widget is Qt's to destroy.
+        """
+        model = self.list_widget.model()
+        if model is None:
+            return
+        selected = self._selected_items()
+        self._suppress_row_sync = True
+        try:
+            root = self.list_widget.rootIndex()
+            for target, item in enumerate(order):
+                list_item = self._list_items.get(item)
+                if list_item is None:
+                    continue
+                current = self.list_widget.row(list_item)
+                if current != target:
+                    model.moveRow(root, current, root, target)
+        finally:
+            self._suppress_row_sync = False
+        self._queue.reorder(order)
+        for item in selected:
+            list_item = self._list_items.get(item)
+            if list_item is not None:
+                list_item.setSelected(True)
+
+    def _on_rows_moved(self, *_args: Any) -> None:
+        """Adopt the order the user dragged the rows into."""
+        if getattr(self, "_suppress_row_sync", False):
+            return
+        self._queue.reorder(self._view_order())
+
+    # ------------------------------------------------------------------
     # Button recomputation
     # ------------------------------------------------------------------
 
     def _recompute_buttons(self) -> None:
         """Refresh every button's enabled/visible state from the queue + worker.
 
-        Run active → Add/Mine disabled, Stop visible, Clear allowed. Otherwise Add
-        enabled (unless a subclass :meth:`_add_locked`); Mine enabled iff a READY
-        item exists; Clear iff the queue is non-empty; Stop hidden.
+        Run active → Add/Mine disabled, Stop visible, Clear allowed, reorder
+        locked. Otherwise Add enabled (unless a subclass :meth:`_add_locked`);
+        Mine enabled iff a READY item exists; Clear iff the queue is non-empty;
+        Stop hidden.
         """
         items = self._queue.all_items()
         has_items = bool(items)
@@ -729,6 +1112,16 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         else:
             self.stop_button.hide()
 
+        # Reorder must not move rows the worker is resolving idx signals against.
+        drag_mode = QListWidget.DragDropMode.NoDragDrop if run_active else QListWidget.DragDropMode.InternalMove
+        self.list_widget.setDragDropMode(drag_mode)
+        self.list_widget.setDragEnabled(not run_active)
+
+        # Re-apply the view here rather than only on a chip click: a row whose
+        # status changed mid-run has moved bucket, and a narrowed list that kept
+        # showing it would be describing a filter the user did not choose.
+        self._apply_queue_view()
+
         # Empty-state hint vs list visibility.
         self.empty_label.setVisible(not has_items)
 
@@ -737,9 +1130,12 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
     # ------------------------------------------------------------------
 
     def _render_new_item(self, item: Any) -> None:
-        """Create a row widget for ``item`` and add it to the list widget."""
+        """Create a row widget for ``item`` and add it to the list widget.
+
+        Rows carry no remove button of their own (D31): removal is a selection
+        action on the list, so nothing here connects a per-row signal.
+        """
         widget = self._make_row_widget(item)
-        widget.removed.connect(lambda it=item: self._on_remove_clicked(it))
 
         list_item = QListWidgetItem()
         list_item.setSizeHint(widget.sizeHint())
@@ -748,6 +1144,11 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
 
         self._row_widgets[item] = widget
         self._list_items[item] = list_item
+
+        # A new row must obey the filter and search already in force, or Add
+        # would quietly reset the view the user narrowed.
+        list_item.setHidden(not self._row_visible(item, self._queue_search.strip().casefold()))
+        self._refresh_queue_counts()
 
     # ------------------------------------------------------------------
     # Curation bridge
@@ -780,6 +1181,19 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
     def _add_locked(self) -> bool:
         """Return ``True`` to keep the Add button disabled while idle. Default off."""
         return False
+
+    def _filter_bucket(self, item: Any) -> str:
+        """Map *item* to a filter chip. Subclass MUST override.
+
+        One of ``ready``, ``running``, ``failed``, ``complete`` -- the same four
+        words the row prints, so a row reading "Failed" is exactly what the
+        Failed chip selects.
+        """
+        raise NotImplementedError
+
+    def _search_text(self, item: Any) -> str:
+        """Text the queue search matches *item* against. Subclass MUST override."""
+        raise NotImplementedError
 
     def _on_clear_extra(self) -> None:
         """Extra cleanup invoked at the top of :meth:`_on_clear_clicked`. Default no-op."""
