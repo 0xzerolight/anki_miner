@@ -34,6 +34,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.utils.qt_helpers import (
+    CELL_PADDING,
     COPY_ROLE,
     SORT_ROLE,
     CellRole,
@@ -42,13 +43,13 @@ from anki_miner.gui.utils.qt_helpers import (
     add_min_max_buttons,
     configure_data_view,
     configure_table_header,
+    data_row_height,
     hold_numeric_columns,
     install_copy_rows,
     install_no_scroll_on_inputs,
     make_table_item,
     tabular_figures,
 )
-from anki_miner.gui.widgets.base.sizing import metric_row_height
 
 _MIN = Qt.WindowType.WindowMinimizeButtonHint
 _MAX = Qt.WindowType.WindowMaximizeButtonHint
@@ -295,7 +296,18 @@ class TestConfigureDataView:
         header = table.verticalHeader()
         assert header is not None
         assert header.sectionResizeMode(0) == QHeaderView.ResizeMode.Fixed
-        assert header.defaultSectionSize() == metric_row_height(table)
+        assert header.defaultSectionSize() == data_row_height(table)
+
+    def test_a_row_clears_its_text_plus_the_cell_padding(self, qtbot):
+        """The stylesheet pads every cell; a row sized to the bare text clips it."""
+        table = QTableWidget(1, 1)
+        qtbot.addWidget(table)
+
+        configure_data_view(table)
+
+        header = table.verticalHeader()
+        assert header is not None
+        assert header.defaultSectionSize() >= table.fontMetrics().height() + 2 * CELL_PADDING
 
     def test_table_row_height_tracks_the_font(self, qtbot):
         small = QTableWidget(1, 1)
@@ -321,7 +333,7 @@ class TestConfigureDataView:
 
         configure_data_view(view)
 
-        assert view.sizeHintForRow(0) >= metric_row_height(view)
+        assert view.sizeHintForRow(0) >= data_row_height(view)
 
     def test_tree_rows_use_the_same_metric(self, qtbot):
         view = QTreeWidget()
@@ -331,7 +343,7 @@ class TestConfigureDataView:
 
         configure_data_view(view)
 
-        assert view.sizeHintForRow(0) >= metric_row_height(view)
+        assert view.sizeHintForRow(0) >= data_row_height(view)
 
     def test_list_rows_track_the_font(self, qtbot):
         small = QListWidget()

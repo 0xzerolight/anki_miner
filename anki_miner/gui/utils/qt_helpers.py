@@ -45,10 +45,10 @@ SORT_ROLE = Qt.ItemDataRole.UserRole + 1
 #: The full, untruncated value a cell copies. The display text is elided.
 COPY_ROLE = Qt.ItemDataRole.UserRole + 2
 
-#: Horizontal padding a cell carries -- the same token ``QTableWidget::item``
-#: uses in common.qss. Column measurements add it so a fitted column is never one
-#: padding short of the text it must hold.
-_CELL_PADDING_X = SPACING.xs
+#: The padding common.qss gives every data cell, on every edge. Row heights and
+#: column widths are measured *including* it: a row sized to the text alone is a
+#: row that clips its own text once the stylesheet adds the padding back.
+CELL_PADDING = SPACING.xs
 
 
 def urls_from_event(event: QDropEvent | QDragEnterEvent) -> list[QUrl]:
@@ -187,17 +187,22 @@ _ALIGNMENT: dict[CellRole, Qt.AlignmentFlag] = {
 }
 
 
-def _metric_row_height(widget: QWidget) -> int:
-    """Call ``widgets.base.sizing.metric_row_height`` without importing it eagerly.
+def data_row_height(widget: QWidget) -> int:
+    """Return the one row height every data view uses, measured through ``widget``.
 
-    ``widgets/base/__init__`` pulls in ``enhanced_dialog``, which imports this
-    module, so a module-level import here is a genuine cycle -- importing
-    ``qt_helpers`` first fails on ``add_min_max_buttons``. The row-height rule
-    still lives in exactly one place; only the import is deferred.
+    A thin, named application of ``widgets.base.sizing.metric_row_height``: the
+    formula stays in one place, and the padding fed to it is the cell padding the
+    stylesheet will add back, so a row is never sized to its text alone and then
+    made to clip it.
+
+    The import is deferred on purpose. ``widgets/base/__init__`` pulls in
+    ``enhanced_dialog``, which imports this module, so a module-level import here
+    is a real cycle: importing ``qt_helpers`` first fails on
+    ``add_min_max_buttons``.
     """
     from anki_miner.gui.widgets.base.sizing import metric_row_height
 
-    return metric_row_height(widget)
+    return metric_row_height(widget, vertical_padding=CELL_PADDING)
 
 
 def tabular_figures(font: QFont) -> QFont:
@@ -237,7 +242,7 @@ class _MetricRowDelegate(QStyledItemDelegate):
         view = self.parent()
         if not isinstance(view, QWidget):  # defensive; always the view in practice
             return hint
-        return QSize(hint.width(), max(hint.height(), _metric_row_height(view)))
+        return QSize(hint.width(), max(hint.height(), data_row_height(view)))
 
 
 def configure_data_view(view: QAbstractItemView) -> None:
@@ -270,7 +275,7 @@ def configure_data_view(view: QAbstractItemView) -> None:
         view.setTextElideMode(Qt.TextElideMode.ElideRight)
         rows = view.verticalHeader()
         if rows is not None:
-            row_height = _metric_row_height(view)
+            row_height = data_row_height(view)
             rows.setVisible(False)  # the row-number column carries no information
             rows.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
             rows.setMinimumSectionSize(row_height)
@@ -367,7 +372,7 @@ def hold_numeric_columns(table: QTableWidget, columns: Sequence[int]) -> None:
             item = table.item(row, column)
             if item is not None:
                 widest = max(widest, metrics.horizontalAdvance(item.text()))
-        needed = max(widest + 2 * _CELL_PADDING_X, header.sectionSizeHint(column))
+        needed = max(widest + 2 * CELL_PADDING, header.sectionSizeHint(column))
         # Only an already-held column has a width worth preserving; before the
         # first call the section is still stretched to fill and means nothing.
         held = (
