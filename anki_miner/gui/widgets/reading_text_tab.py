@@ -216,7 +216,7 @@ class ReadingTextTab(_ReadingMiningTabBase):
         self.text_edit.setMinimumHeight(140)
         # Text drops land natively; a dragged FILE used to be inserted as its
         # own path, which reads as "accepted" and mines a file name (D50). The
-        # filter refuses those and says where files are mined instead.
+        # filter refuses those and says so in Activity.
         self._file_drop_filter = _RefuseFileDrops(
             self.text_edit,
             reason=self.tr("Drop or paste text here; files are not supported."),
