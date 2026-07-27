@@ -219,7 +219,7 @@ def _run_alass(
     )
     if isinstance(result.error, FileNotFoundError):
         raise AlassNotFoundError(
-            f"alass binary not found: {alass_bin!r}.  Install alass or set its path in Settings → Subtitles."
+            f"alass binary not found: {alass_bin!r}.  Install alass or set its path in Settings → Transcription & Alignment."
         ) from result.error
 
     # --- Evaluate result -------------------------------------------------

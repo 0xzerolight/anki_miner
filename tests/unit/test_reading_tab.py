@@ -9,7 +9,7 @@ worker/processor lifecycle) and the per-sub-tab test modules; this module
 covers only the container:
 
 - Inner ``QTabWidget`` has exactly four tabs: "Manga" (index 0), "Novels" (1),
-  "Subtitles" (2), "Text" (3).
+  "Subtitle Files" (2), "Text" (3).
 - Children are the real sub-tab classes, constructed with the shared presenter /
   stats_service and ``processor=None``.
 - ``update_config`` stores config and fans out to every child.
@@ -78,7 +78,7 @@ class TestInnerTabs:
     def test_inner_tab_labels(self, tab):
         assert tab._inner_tabs.tabText(0) == "Manga"
         assert tab._inner_tabs.tabText(1) == "Novels"
-        assert tab._inner_tabs.tabText(2) == "Subtitles"
+        assert tab._inner_tabs.tabText(2) == "Subtitle Files"
         assert tab._inner_tabs.tabText(3) == "Text"
 
     def test_manga_tab_is_first(self, tab):

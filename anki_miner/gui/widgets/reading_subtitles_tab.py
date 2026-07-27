@@ -21,8 +21,8 @@ file is appended to the list (deduped); a manga/novel drop earns a cross-tab
 hint instead. Subtitle curation is table-only (the base ``(None, None)``
 context — only manga overrides ``_build_curation_context``).
 
-Class name is deliberately ``ReadingSubtitlesTab`` — distinct from the Tools
-main tab's legacy ``SubtitlesTab`` class (whose display name is "Tools").
+Class name is deliberately ``ReadingSubtitlesTab`` — distinct from the Utilities
+main tab's legacy ``SubtitlesTab`` class (whose display name is "Utilities").
 """
 
 from __future__ import annotations

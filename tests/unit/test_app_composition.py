@@ -26,9 +26,9 @@ def test_compose_main_window_returns_tabs_without_committing_boot(
     assert [composed.window.tabs.tabText(index) for index in range(composed.window.tabs.count())] == [
         "Video",
         "Deck Builder",
-        "Audio",
+        "Audiobooks",
         "Reading",
         "Analytics",
-        "Tools",
+        "Utilities",
         "Settings",
     ]

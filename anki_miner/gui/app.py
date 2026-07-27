@@ -901,7 +901,9 @@ def compose_main_window(
         presenter=audiobook_presenter,
         stats_service=stats_service,
     )
-    register_mining_tab(window, audiobook_tab, audiobook_presenter, QCoreApplication.translate("MainWindow", "Audio"))
+    register_mining_tab(
+        window, audiobook_tab, audiobook_presenter, QCoreApplication.translate("MainWindow", "Audiobooks")
+    )
 
     # The two list queues publish their runs to the window's task registry, so
     # each one's current-job strip has a snapshot to render and the status bar
@@ -932,7 +934,7 @@ def compose_main_window(
     analytics_tab = AnalyticsTab(stats_service)
     window.tabs.addTab(analytics_tab, QCoreApplication.translate("MainWindow", "Analytics"))
 
-    # Tools tab (non-mining: no presenter). Nests Generate (SubtitleCreationTab)
+    # Utilities tab (non-mining: no presenter). Nests Generate (SubtitleCreationTab)
     # and Retime (SubtitleRetimeTab) as inner tabs; will host further tools over
     # time. It DOES need config updates so an ASR model switch in Settings reaches
     # the model-downloaded guard and the worker: config_changed is auto-wired by
@@ -942,7 +944,7 @@ def compose_main_window(
         window.get_config(),
         suppress_optional_startup=suppress_optional_startup,
     )
-    window.tabs.addTab(subtitles_tab, QCoreApplication.translate("MainWindow", "Tools"))
+    window.tabs.addTab(subtitles_tab, QCoreApplication.translate("MainWindow", "Utilities"))
 
     settings_tab = SettingsTab(
         window.get_config(),
@@ -1069,10 +1071,10 @@ def _schedule_installer_smoke(app: QApplication, window: MainWindow) -> None:
             expected_titles = [
                 QCoreApplication.translate("MainWindow", "Video"),
                 QCoreApplication.translate("MainWindow", "Deck Builder"),
-                QCoreApplication.translate("MainWindow", "Audio"),
+                QCoreApplication.translate("MainWindow", "Audiobooks"),
                 QCoreApplication.translate("MainWindow", "Reading"),
                 QCoreApplication.translate("MainWindow", "Analytics"),
-                QCoreApplication.translate("MainWindow", "Tools"),
+                QCoreApplication.translate("MainWindow", "Utilities"),
                 QCoreApplication.translate("MainWindow", "Settings"),
             ]
             actual_titles = [window.tabs.tabText(index) for index in range(window.tabs.count())]

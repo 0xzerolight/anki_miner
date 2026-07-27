@@ -123,7 +123,7 @@ class ReadingTab(QWidget):
         )
         self._inner_tabs.addTab(
             self.subtitles_tab,
-            QCoreApplication.translate("MainWindow", "Subtitles"),
+            QCoreApplication.translate("MainWindow", "Subtitle Files"),
         )
         self._inner_tabs.addTab(
             self.text_tab,

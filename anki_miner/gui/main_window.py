@@ -75,10 +75,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
     This window provides a tabbed interface for:
     - Video (container: Single episode / Batch folder / YouTube sub-tabs)
     - Deck Builder (corpus-driven deck assembly)
-    - Audiobook (audio + subtitle pair queue)
+    - Audiobooks (audio + subtitle pair queue)
     - Reading (container: Manga / Novels sub-tabs)
     - Analytics (mining statistics dashboard)
-    - Tools (container: Generate / Retime subtitle sub-tabs)
+    - Utilities (container: Generate / Retime / Condense / Update Notes)
     - Settings (configuration)
 
     Signals:
@@ -296,7 +296,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # Set accessible names for main components
         self.tabs.setAccessibleName(self.tr("Main Tabs"))
         self.tabs.setAccessibleDescription(
-            self.tr("Navigate between Video, Deck Builder, Audio, Reading, Analytics, Tools, and Settings")
+            self.tr("Navigate between Video, Deck Builder, Audiobooks, Reading, Analytics, Utilities, and Settings")
         )
 
         self.header.setAccessibleName(self.tr("Application Header"))
