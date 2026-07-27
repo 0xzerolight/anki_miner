@@ -25,8 +25,15 @@ from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.qt_helpers import configure_table_header
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader, StatCard
-from anki_miner.models.stats import DifficultyEntry, Milestone, MiningSession, OverallStats
+from anki_miner.models.stats import (
+    DifficultyEntry,
+    Milestone,
+    MilestoneKind,
+    MiningSession,
+    OverallStats,
+)
 from anki_miner.services.stats_service import StatsService
+from anki_miner.utils.i18n import tr_format
 
 #: Rows a populated analytics table must show before it reads as "a table".
 MIN_VISIBLE_ROWS = 6
@@ -415,7 +422,21 @@ class AnalyticsTab(QWidget):
         for milestone in milestones:
             self.milestones_layout.addWidget(self._create_milestone_widget(milestone))
 
-    def _create_milestone_widget(self, milestone) -> QWidget:
+    def _milestone_text(self, milestone: Milestone) -> str:
+        """State the milestone as a fact, in the UI language (decision D47).
+
+        The service deliberately ships no wording — rank titles ("Master Miner")
+        were minted outside every ``tr()`` seam and reached translated UIs in
+        English. The count is grouped the same way the dashboard cards group it.
+        """
+        count = f"{milestone.threshold:,}"
+        if milestone.kind is MilestoneKind.SESSIONS:
+            return tr_format(self.tr("%1 mining sessions completed"), count)
+        if milestone.kind is MilestoneKind.SERIES:
+            return tr_format(self.tr("%1 series mined"), count)
+        return tr_format(self.tr("%1 cards created"), count)
+
+    def _create_milestone_widget(self, milestone: Milestone) -> QWidget:
         widget = QWidget()
         layout = QHBoxLayout()
         layout.setContentsMargins(SPACING.xs, SPACING.xxs, SPACING.xs, SPACING.xxs)
@@ -427,24 +448,12 @@ class AnalyticsTab(QWidget):
         status_checkbox.setEnabled(False)
         layout.addWidget(status_checkbox)
 
-        # Name and description
-        info_layout = QVBoxLayout()
-        info_layout.setSpacing(0)
-
-        name_label = QLabel(milestone.name)
-        name_font = QFont()
-        name_font.setPixelSize(FONT_SIZES.body)
-        name_font.setWeight(QFont.Weight.Bold)
-        name_label.setFont(name_font)
-        info_layout.addWidget(name_label)
-
-        desc_label = QLabel(milestone.description)
-        desc_font = QFont()
-        desc_font.setPixelSize(FONT_SIZES.caption)
-        desc_label.setFont(desc_font)
-        info_layout.addWidget(desc_label)
-
-        layout.addLayout(info_layout, 1)
+        fact_label = QLabel(self._milestone_text(milestone))
+        fact_font = QFont()
+        fact_font.setPixelSize(FONT_SIZES.body)
+        fact_font.setWeight(QFont.Weight.Bold)
+        fact_label.setFont(fact_font)
+        layout.addWidget(fact_label, 1)
 
         # Progress bar
         progress_bar = QProgressBar()

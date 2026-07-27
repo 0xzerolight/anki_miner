@@ -155,6 +155,18 @@
         <source>Milestones</source>
         <translation>Marcos</translation>
     </message>
+    <message>
+        <source>%1 mining sessions completed</source>
+        <translation>%1 sessões de mineração concluídas</translation>
+    </message>
+    <message>
+        <source>%1 series mined</source>
+        <translation>%1 séries mineradas</translation>
+    </message>
+    <message>
+        <source>%1 cards created</source>
+        <translation>%1 cartões criados</translation>
+    </message>
 </context><context>
     <name>AnkiConnectPage</name>
     <message>

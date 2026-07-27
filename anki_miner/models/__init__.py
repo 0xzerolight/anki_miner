@@ -14,7 +14,7 @@ from .processing import (
     classify_terminal_outcome,
     result_error_text,
 )
-from .stats import DifficultyEntry, Milestone, MiningSession, OverallStats
+from .stats import DifficultyEntry, Milestone, MilestoneKind, MiningSession, OverallStats
 from .word import LineLemmas, TokenizedWord, WordData
 
 __all__ = [
@@ -37,4 +37,5 @@ __all__ = [
     "OverallStats",
     "DifficultyEntry",
     "Milestone",
+    "MilestoneKind",
 ]

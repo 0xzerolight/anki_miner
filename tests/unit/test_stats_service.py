@@ -4,7 +4,7 @@ import threading
 
 import pytest
 
-from anki_miner.models.stats import MiningSession
+from anki_miner.models.stats import MilestoneKind, MiningSession
 from anki_miner.services.stats_service import StatsService
 
 
@@ -285,12 +285,23 @@ class TestMilestones:
         milestones = service.get_milestones()
         assert all(not m.achieved for m in milestones)
         # First card milestone is 50
+        assert milestones[0].kind is MilestoneKind.CARDS
         assert milestones[0].threshold == 50
-        assert milestones[0].name == "First Steps"
         # First session milestone is 5
+        assert milestones[1].kind is MilestoneKind.SESSIONS
         assert milestones[1].threshold == 5
         # First series milestone is 3
+        assert milestones[2].kind is MilestoneKind.SERIES
         assert milestones[2].threshold == 3
+
+    def test_milestones_carry_no_user_facing_prose(self, service):
+        """D47: wording is the Analytics tab's job, so it can be translated.
+
+        Rank titles used to be minted here as untranslated English literals.
+        """
+        for milestone in service.get_milestones():
+            assert not hasattr(milestone, "name")
+            assert not hasattr(milestone, "description")
 
     def test_advances_to_next_milestone(self, service):
         """After achieving a milestone, should show the next one in that category."""

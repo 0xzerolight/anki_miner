@@ -155,6 +155,18 @@
         <source>Milestones</source>
         <translation>Pencapaian</translation>
     </message>
+    <message>
+        <source>%1 mining sessions completed</source>
+        <translation>%1 sesi mining selesai</translation>
+    </message>
+    <message>
+        <source>%1 series mined</source>
+        <translation>%1 seri di-mining</translation>
+    </message>
+    <message>
+        <source>%1 cards created</source>
+        <translation>%1 kartu dibuat</translation>
+    </message>
 </context><context>
     <name>AnkiConnectPage</name>
     <message>

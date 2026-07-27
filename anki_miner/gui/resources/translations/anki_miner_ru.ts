@@ -155,6 +155,18 @@
         <source>Milestones</source>
         <translation>Достижения</translation>
     </message>
+    <message>
+        <source>%1 mining sessions completed</source>
+        <translation>Завершено сессий майнинга: %1</translation>
+    </message>
+    <message>
+        <source>%1 series mined</source>
+        <translation>Намайнено сериалов: %1</translation>
+    </message>
+    <message>
+        <source>%1 cards created</source>
+        <translation>Создано карточек: %1</translation>
+    </message>
 </context><context>
     <name>AnkiConnectPage</name>
     <message>

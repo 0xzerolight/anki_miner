@@ -155,6 +155,18 @@
         <source>Milestones</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>%1 mining sessions completed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 series mined</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 cards created</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>AnkiConnectPage</name>
     <message>

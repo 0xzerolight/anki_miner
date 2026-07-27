@@ -155,6 +155,18 @@
         <source>Milestones</source>
         <translation>Étapes clés</translation>
     </message>
+    <message>
+        <source>%1 mining sessions completed</source>
+        <translation>%1 sessions d'extraction terminées</translation>
+    </message>
+    <message>
+        <source>%1 series mined</source>
+        <translation>%1 séries extraites</translation>
+    </message>
+    <message>
+        <source>%1 cards created</source>
+        <translation>%1 cartes créées</translation>
+    </message>
 </context><context>
     <name>AnkiConnectPage</name>
     <message>

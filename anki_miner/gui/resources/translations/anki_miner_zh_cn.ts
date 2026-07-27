@@ -155,6 +155,18 @@
         <source>Milestones</source>
         <translation>里程碑</translation>
     </message>
+    <message>
+        <source>%1 mining sessions completed</source>
+        <translation>已完成 %1 次挖词会话</translation>
+    </message>
+    <message>
+        <source>%1 series mined</source>
+        <translation>已挖词 %1 个系列</translation>
+    </message>
+    <message>
+        <source>%1 cards created</source>
+        <translation>已创建 %1 张卡片</translation>
+    </message>
 </context><context>
     <name>AnkiConnectPage</name>
     <message>
