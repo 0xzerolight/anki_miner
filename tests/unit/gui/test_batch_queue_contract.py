@@ -223,3 +223,30 @@ def test_double_click_still_expands_and_re_hints_the_row(panel, tmp_path):
     widget.toggle_expanded()  # expand again
 
     assert list_item.sizeHint().height() > collapsed
+
+
+def test_a_worker_that_never_starts_does_not_strand_the_lock(qtbot, test_config):
+    """D29-A locks the queue before the run begins, so the failure path must unlock.
+
+    Without the rollback the panel stays frozen against a run that never
+    existed, and there is no thread whose ``finished`` could ever release it.
+    """
+    from unittest.mock import MagicMock, patch
+
+    from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
+
+    tab = BatchProcessingTab(test_config, MagicMock(), MagicMock())
+    qtbot.addWidget(tab)
+    tab._show_cancel_state()
+    assert not tab.queue_panel.clear_button.isEnabled()
+
+    with patch(
+        "anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread",
+        side_effect=RuntimeError("no anki fields"),
+    ):
+        tab._start_queue_worker()
+
+    assert tab.worker_thread is None
+    assert tab.queue_panel.clear_button.isEnabled()
+    assert not tab._is_processing
+    tab.deleteLater()

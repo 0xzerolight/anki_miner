@@ -476,35 +476,48 @@ class BatchProcessingTab(MiningTabBase):
         self._publish_task_start(self.tr("Batch mining"), total=len(items))
 
         curation_cb = self._curation_bridge if self.review_words_checkbox.isChecked() else None
-        self.worker_thread = BatchQueueWorkerThread(
-            self.batch_queue,
-            self.config,
-            self.presenter,
-            self.progress_callback,
-            stats_service=self.stats_service,
-            curation_callback=curation_cb,
-            items=items,
-        )
+        # Construct, connect and start under one rollback: the queue is locked
+        # by now (D29-A), and a failure anywhere in here would otherwise leave it
+        # frozen against a run that never began, with no thread whose `finished`
+        # could ever unfreeze it.
+        try:
+            worker = BatchQueueWorkerThread(
+                self.batch_queue,
+                self.config,
+                self.presenter,
+                self.progress_callback,
+                stats_service=self.stats_service,
+                curation_callback=curation_cb,
+                items=items,
+            )
+            self.worker_thread = worker
 
-        self.worker_thread.queue_started.connect(self._on_queue_started)
-        self.worker_thread.item_started.connect(self._on_item_started)
-        self.worker_thread.item_completed.connect(self._on_item_completed)
-        self.worker_thread.item_failed.connect(self._on_item_failed)
-        self.worker_thread.queue_finished.connect(self._on_queue_finished)
-        self.worker_thread.run_paused.connect(self._on_run_paused)
-        self.worker_thread.run_resumed.connect(self._on_run_resumed)
-        # Run-level fatals (stale-dict gate, processor-build failure) emit
-        # error THEN queue_finished — without the flag the terminal handler
-        # would read "Complete — 0 cards created" on a failed run.
-        self.worker_thread.error.connect(self._on_queue_worker_error)
-        # Safety net (G1): restore the action buttons once the thread ends. The
-        # quick (manual-pair) path already wires this; without it a caught
-        # run-level failure (stale-dict gate, AnkiService construction) leaves
-        # the buttons stranded in the running state.
-        self.worker_thread.finished.connect(self._restore_buttons)
-        self.worker_thread.finished.connect(self._on_run_thread_finished)
+            worker.queue_started.connect(self._on_queue_started)
+            worker.item_started.connect(self._on_item_started)
+            worker.item_completed.connect(self._on_item_completed)
+            worker.item_failed.connect(self._on_item_failed)
+            worker.queue_finished.connect(self._on_queue_finished)
+            worker.run_paused.connect(self._on_run_paused)
+            worker.run_resumed.connect(self._on_run_resumed)
+            # Run-level fatals (stale-dict gate, processor-build failure) emit
+            # error THEN queue_finished — without the flag the terminal handler
+            # would read "Complete — 0 cards created" on a failed run.
+            worker.error.connect(self._on_queue_worker_error)
+            # Safety net (G1): restore the action buttons once the thread ends.
+            # The quick (manual-pair) path already wires this; without it a
+            # caught run-level failure (stale-dict gate, AnkiService
+            # construction) leaves the buttons stranded in the running state.
+            worker.finished.connect(self._restore_buttons)
+            worker.finished.connect(self._on_run_thread_finished)
 
-        self.worker_thread.start()
+            worker.start()
+        except Exception as exc:  # noqa: BLE001 - the run never began; surface and recover
+            logger.exception("BatchProcessingTab failed to start the queue worker")
+            self.worker_thread = None
+            self._run_failed = True
+            self._on_queue_worker_error(str(exc))
+            self._restore_buttons()
+            self._on_run_thread_finished()
 
     def _build_curation_context(
         self,
