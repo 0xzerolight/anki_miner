@@ -279,13 +279,18 @@ def japanese_line_spacing(role: str = JAPANESE_BODY) -> int:
     return max(1, round(spacing * TYPOGRAPHY.japanese_leading_percent / 100))
 
 
-def apply_japanese_block_format(document: QTextDocument) -> None:
+def apply_japanese_block_format(document: QTextDocument | None) -> None:
     """Give every block in a document the Japanese leading.
 
     Qt stylesheets have no ``line-height`` property -- the two declarations that
     pretended otherwise were deleted -- so leading is a block format, and it has
     to be reapplied after each ``setPlainText`` because that replaces the blocks.
+
+    ``None`` is accepted because ``QTextEdit.document()`` is typed as optional;
+    a document-less editor simply has no blocks to format.
     """
+    if document is None:
+        return
     # The mode argument is an int, not the enum: the scoped member's ``.value``
     # is what Qt wants here, and passing the member raises.
     proportional = cast(int, QTextBlockFormat.LineHeightTypes.ProportionalHeight.value)

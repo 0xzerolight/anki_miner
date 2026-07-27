@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import pytest
 
+from anki_miner.gui.resources.styles import FONT_SIZES
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.utils.fonts import resolved_families
 from anki_miner.gui.utils.qt_helpers import data_row_height
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
@@ -89,23 +91,39 @@ class TestCurationRowHeight:
             dlg.deleteLater()
 
 
-class TestSubtitleOverlayFont:
-    """SubtitlePlayerWidget overlay font-size scales with the global font scale."""
+class TestSubtitleStripFont:
+    """The subtitle strip is a font and a reserved height, not inline CSS.
 
-    def test_overlay_font_at_scale_1_0(self, qtbot):
+    It used to carry an inline ``font-size: 18px`` stylesheet multiplied by the
+    scale, on a label that was shown and hidden per cue. Decision D45-B made it
+    Japanese content at the feature size, in a strip two lines tall for the
+    whole session, so what is pinned now is the rendered font and the height it
+    reserves.
+    """
+
+    def test_the_strip_uses_the_japanese_face_at_the_feature_size(self, qtbot):
         _reset(1.0)
         widget = SubtitlePlayerWidget()
         qtbot.addWidget(widget)
         try:
-            assert "font-size: 18px" in widget.subtitle_label.styleSheet()
+            font = widget.subtitle_strip.font()
+            assert font.family() == resolved_families().japanese
+            assert font.pixelSize() == FONT_SIZES.japanese_feature
         finally:
             widget.deleteLater()
 
-    def test_overlay_font_doubles_at_scale_2_0(self, qtbot):
+    def test_the_reserved_two_lines_grow_with_the_applied_scale(self, qtbot):
+        _reset(1.0)
+        small = SubtitlePlayerWidget()
+        qtbot.addWidget(small)
+        baseline = small.subtitle_strip.height()
+
         _reset(2.0)
-        widget = SubtitlePlayerWidget()
-        qtbot.addWidget(widget)
+        large = SubtitlePlayerWidget()
+        qtbot.addWidget(large)
         try:
-            assert "font-size: 36px" in widget.subtitle_label.styleSheet()
+            assert large.subtitle_strip.font().pixelSize() == 2 * FONT_SIZES.japanese_feature
+            assert large.subtitle_strip.height() > baseline
         finally:
-            widget.deleteLater()
+            small.deleteLater()
+            large.deleteLater()

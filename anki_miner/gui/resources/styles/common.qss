@@ -210,6 +210,15 @@ QTextEdit#log-widget {
     font-family: ${font-family-mono};
 }
 
+/* The subtitle strip under the player. Frameless, and exactly two lines tall for
+   the whole session (set from Python metrics) so the video never jumps when a
+   cue arrives, wraps onto a second line, or ends. No font-size here: the
+   Japanese content rule above owns it. */
+QTextEdit#subtitle-strip {
+    border: none;
+    padding: ${spacing-xxs}px ${spacing-sm}px;
+}
+
 /* ============== PROGRESS BAR STYLES ============== */
 
 QProgressBar {
@@ -435,6 +444,19 @@ QFrame#card {
 QFrame#divider {
     max-height: 1px;
     border: none;
+}
+
+/* The word curator's detail strip: the focused row restated calmly, one
+   surface below the table. The expression carries the weight because it is the
+   line the eye goes to first; its reading and sentence stay at normal weight
+   below it. Sizes come from the Japanese content rules above. */
+QFrame#curator-detail {
+    border: 1px solid;
+    border-radius: ${border-radius-default}px;
+}
+
+QLabel#curator-detail-expression {
+    font-weight: 600;
 }
 
 /* ============== CUSTOM WIDGET HELPERS ============== */
@@ -1063,6 +1085,14 @@ QToolTip {
     border-color: ${color-tooltip-border};
 }
 
+/* The subtitle strip reads like a tooltip over the video and borrows its keys,
+   so it follows all 29 themes. It used to hardcode rgba(0,0,0,180) on white,
+   which ignored every one of them. */
+QTextEdit#subtitle-strip {
+    background-color: ${color-tooltip-bg};
+    color: ${color-tooltip-text};
+}
+
 /* --- Menus --- */
 
 QMenu {
@@ -1247,6 +1277,11 @@ QFrame#card {
 
 QFrame#divider {
     background-color: ${color-divider};
+}
+
+QFrame#curator-detail {
+    background-color: ${color-surface};
+    border-color: ${color-border};
 }
 
 /* Progress stats */

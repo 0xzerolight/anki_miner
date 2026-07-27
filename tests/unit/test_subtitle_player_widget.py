@@ -85,7 +85,8 @@ class TestInit:
         widget = _widget(qtbot)
         assert widget.play_button.text() == "Play"
         assert widget.position_slider.minimum() == 0
-        assert not widget.subtitle_label.isVisibleTo(widget)
+        # The strip is allocated from construction and empty, not hidden.
+        assert widget.subtitle_strip.toPlainText() == ""
         assert not widget._backend_notice_label.isVisibleTo(widget)
 
 
@@ -342,8 +343,7 @@ class TestObserverSlots:
         widget._on_time_pos(1.5)
         assert widget.position_slider.value() == 1500
         assert widget.time_label.text() == "00:01 / 01:00"
-        assert widget.subtitle_label.isVisibleTo(widget)
-        assert widget.subtitle_label.text() == "こんにちは"
+        assert widget.subtitle_strip.toPlainText() == "こんにちは"
 
     def test_time_pos_respects_scrub_guard(self, qtbot, fake_mpv):
         widget = _widget(qtbot)
@@ -383,12 +383,11 @@ class TestObserverSlots:
         widget._on_eof(True)
         assert widget._at_eof is True
 
-    def test_playback_error_surfaces_in_subtitle_label(self, qtbot, fake_mpv):
+    def test_playback_error_surfaces_in_subtitle_strip(self, qtbot, fake_mpv):
         widget = _widget(qtbot)
         widget.set_source(VIDEO, ENTRIES)
         widget._on_playback_error("demux failure")
-        assert widget.subtitle_label.isVisibleTo(widget)
-        assert "demux failure" in widget.subtitle_label.text()
+        assert "demux failure" in widget.subtitle_strip.toPlainText()
 
     def test_render_failed_shows_audio_still_plays_notice(self, qtbot, fake_mpv):
         widget = _widget(qtbot)
@@ -453,23 +452,22 @@ class TestSubtitleOverlay:
         widget = _widget(qtbot)
         widget.set_source(VIDEO, ENTRIES, offset=1.0)
         widget._update_subtitle(1.5)  # entry starts at 1.0 + offset 1.0 = 2.0
-        assert not widget.subtitle_label.isVisibleTo(widget)
+        assert widget.subtitle_strip.toPlainText() == ""
         widget._update_subtitle(2.5)
-        assert widget.subtitle_label.isVisibleTo(widget)
-        assert widget.subtitle_label.text() == "こんにちは"
+        assert widget.subtitle_strip.toPlainText() == "こんにちは"
 
     def test_set_offset_updates_live(self, qtbot, fake_mpv):
         widget = _widget(qtbot)
         widget.set_source(VIDEO, ENTRIES)
         widget.set_offset(-0.5)
         widget._update_subtitle(0.6)  # 1.0 - 0.5 = 0.5 <= 0.6 <= 2.0
-        assert widget.subtitle_label.isVisibleTo(widget)
+        assert widget.subtitle_strip.toPlainText() == "こんにちは"
 
     def test_overlay_hidden_outside_entries(self, qtbot, fake_mpv):
         widget = _widget(qtbot)
         widget.set_source(VIDEO, ENTRIES)
         widget._update_subtitle(2.7)
-        assert not widget.subtitle_label.isVisibleTo(widget)
+        assert widget.subtitle_strip.toPlainText() == ""
 
 
 class TestFormatTime:
@@ -531,3 +529,79 @@ class TestDeferredLoad:
         widget.set_source(VIDEO, ENTRIES)  # fixture forces has_render_context
         fake_mpv["player"].loadfile.assert_called_once_with(str(VIDEO))
         assert widget._pending_load is None
+
+
+class TestSubtitleStrip:
+    """The strip is two lines tall for the whole session (decision D45-B).
+
+    It used to be a QLabel shown and hidden per cue, so the video jumped every
+    time a line appeared and jumped again when a long line wrapped onto a
+    second one.
+    """
+
+    def test_two_lines_are_reserved_before_any_cue(self, qtbot, fake_mpv):
+        from anki_miner.gui.utils.fonts import JAPANESE_FEATURE, japanese_line_spacing
+
+        widget = _widget(qtbot)
+        assert widget.subtitle_strip.height() >= 2 * japanese_line_spacing(JAPANESE_FEATURE)
+
+    def test_height_never_moves_across_the_whole_cue_cycle(self, qtbot, fake_mpv):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        before = widget.subtitle_strip.height()
+
+        widget._update_subtitle(1.5)  # one short line
+        during = widget.subtitle_strip.height()
+
+        widget._update_subtitle(2.7)  # between cues
+        between = widget.subtitle_strip.height()
+
+        widget.subtitle_entries = [(1.0, 2.5, "これはとても長い字幕の行で、必ず二行以上に折り返されます。" * 2)]
+        widget._update_subtitle(1.5)  # a line that must wrap
+        wrapped = widget.subtitle_strip.height()
+
+        widget._update_subtitle(99.0)  # after the last cue
+        after = widget.subtitle_strip.height()
+
+        assert {during, between, wrapped, after} == {before}
+
+    def test_text_clears_between_cues_but_the_strip_stays(self, qtbot, fake_mpv):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        widget._update_subtitle(1.5)
+        assert widget.subtitle_strip.toPlainText() == "こんにちは"
+        widget._update_subtitle(2.7)
+        assert widget.subtitle_strip.toPlainText() == ""
+        assert widget.subtitle_strip.height() > 0
+
+    def test_the_cue_uses_the_japanese_face_at_the_scaled_feature_size(self, qtbot, fake_mpv):
+        from anki_miner.gui.resources.styles import FONT_SIZES
+        from anki_miner.gui.utils.fonts import make_japanese_font, resolved_families
+
+        widget = _widget(qtbot)
+        font = widget.subtitle_strip.font()
+        assert font.family() == resolved_families().japanese
+        assert font.pixelSize() == make_japanese_font(FONT_SIZES.japanese_feature).pixelSize()
+
+    def test_the_cue_is_plain_text_with_no_generated_markup(self, qtbot, fake_mpv):
+        widget = _widget(qtbot)
+        widget.subtitle_entries = [(1.0, 2.0, "<b>強調</b>")]
+        widget._update_subtitle(1.5)
+        assert widget.subtitle_strip.toPlainText() == "<b>強調</b>"
+        assert "<ruby>" not in widget.subtitle_strip.toHtml()
+
+    def test_the_strip_takes_no_focus_so_space_still_reaches_the_player(self, qtbot, fake_mpv):
+        from PyQt6.QtCore import Qt
+
+        widget = _widget(qtbot)
+        assert widget.subtitle_strip.focusPolicy() == Qt.FocusPolicy.NoFocus
+        assert widget.subtitle_strip.textInteractionFlags() == Qt.TextInteractionFlag.NoTextInteraction
+
+    def test_the_leading_is_the_japanese_leading(self, qtbot, fake_mpv):
+        from anki_miner.gui.resources.styles._variables import TYPOGRAPHY
+
+        widget = _widget(qtbot)
+        widget.subtitle_entries = [(1.0, 2.0, "こんにちは")]
+        widget._update_subtitle(1.5)
+        block = widget.subtitle_strip.document().firstBlock()
+        assert block.blockFormat().lineHeight() == TYPOGRAPHY.japanese_leading_percent

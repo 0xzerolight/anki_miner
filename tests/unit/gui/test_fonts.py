@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import shutil
 import sys
 
@@ -30,6 +31,8 @@ from anki_miner.gui.resources.styles.theme import Theme  # noqa: E402
 from anki_miner.gui.utils import fonts as fonts_module  # noqa: E402
 from anki_miner.gui.utils.fonts import (  # noqa: E402
     BUNDLED_JAPANESE_FILE,
+    JAPANESE_BODY,
+    JAPANESE_FEATURE,
     JAPANESE_PROPERTY,
     apply_japanese_font,
     font_family_variables,
@@ -283,6 +286,17 @@ class TestStylesheetVariables:
                 continue
             for declaration in declarations:
                 assert name not in declaration, declaration
+
+    def test_the_japanese_rules_are_reachable(self):
+        """The old ``*[japanese="true"]`` rule was dead — nothing ever set it.
+
+        These two replace it, and the values the stylesheet selects on are the
+        exact values ``apply_japanese_font`` writes.
+        """
+        source = (get_resource_dir() / "styles" / "common.qss").read_text(encoding="utf-8")
+        selectors = set(re.findall(r'\*\[japanese="([a-z]+)"\]', source))
+        assert selectors == {JAPANESE_BODY, JAPANESE_FEATURE}
+        assert 'japanese="true"' not in source
 
     def test_every_font_family_declaration_comes_from_a_variable(self):
         source = (get_resource_dir() / "styles" / "common.qss").read_text(encoding="utf-8")

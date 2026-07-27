@@ -171,6 +171,21 @@ class TestPreviewTable:
         assert "2" in tab.summary_label.text()  # note count
         assert tab.apply_button.isEnabled()
 
+    def test_the_expression_column_uses_the_japanese_face(self, tab):
+        """The Expression is the mined word; the other three are field data.
+
+        Face only (decision D45-B): a cell font carrying no size resolves
+        against the view's own, so the row height does not move.
+        """
+        from anki_miner.gui.utils.fonts import resolved_families
+
+        tab._on_scan_finished(_plan([_note_plan(1, 1)]))
+        expression = tab.preview_table.item(0, 0)
+        assert expression.font().family() == resolved_families().japanese
+        assert expression.font().pixelSize() == -1
+        for column in (1, 2, 3):
+            assert tab.preview_table.item(0, column).font().family() != resolved_families().japanese
+
     def test_text_free_markup_shows_placeholder(self, tab):
         # A pitch-accent SVG strips to empty text; the New cell must not be blank.
         svg = "<svg viewBox='0 0 1 1'><path d='M0 0'/></svg>"

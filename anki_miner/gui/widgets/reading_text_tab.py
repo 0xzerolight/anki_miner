@@ -37,7 +37,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.resources.styles import FONT_SIZES, SPACING, TYPOGRAPHY
+from anki_miner.gui.utils.fonts import JAPANESE_BODY, apply_japanese_block_format, apply_japanese_font
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, configure_scrolled_page
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
@@ -164,6 +165,12 @@ class ReadingTextTab(_ReadingMiningTabBase):
         self.text_edit = QPlainTextEdit()
         self.text_edit.setPlaceholderText(self.tr("Paste text here…"))
         self.text_edit.setMinimumHeight(140)
+        # What the user pastes here is the Japanese they came to mine, not
+        # interface chrome: the Japanese face, a reading size, and the looser
+        # leading (decision D45-B).
+        apply_japanese_font(self.text_edit, role=JAPANESE_BODY)
+        apply_japanese_block_format(self.text_edit.document())
+        self.text_edit.textChanged.connect(self._keep_japanese_leading)
         self.text_edit.textChanged.connect(self._recompute_buttons)
         card_layout.addWidget(self.text_edit)
 
@@ -299,6 +306,21 @@ class ReadingTextTab(_ReadingMiningTabBase):
     # ------------------------------------------------------------------
     # Button recomputation
     # ------------------------------------------------------------------
+
+    def _keep_japanese_leading(self) -> None:
+        """Restore the Japanese leading after a wholesale text replacement.
+
+        Typing and pasting inherit the block format from the block being split,
+        so nothing is needed there. ``setPlainText`` replaces every block and
+        drops it. The guard makes the common case a single comparison, and stops
+        the re-merge from re-entering through its own ``textChanged``.
+        """
+        document = self.text_edit.document()
+        if document is None:
+            return
+        if document.firstBlock().blockFormat().lineHeight() == TYPOGRAPHY.japanese_leading_percent:
+            return
+        apply_japanese_block_format(document)
 
     def _recompute_buttons(self) -> None:
         """Refresh button state from the worker handle and the text edit.

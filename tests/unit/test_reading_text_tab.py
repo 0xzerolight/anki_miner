@@ -253,3 +253,23 @@ class TestCurationContext:
         ctx, lookup_fn = tab._build_curation_context()
         assert ctx is None
         assert lookup_fn is tab.worker_thread.curation_processor.offline_lookup_fn
+
+
+class TestJapaneseTypography:
+    """What the user pastes here is the Japanese they came to mine (D45-B)."""
+
+    def test_the_paste_box_uses_the_japanese_face_at_a_reading_size(self, tab):
+        from anki_miner.gui.resources.styles import FONT_SIZES
+        from anki_miner.gui.utils.fonts import resolved_families
+
+        font = tab.text_edit.font()
+        assert font.family() == resolved_families().japanese
+        assert font.pixelSize() == FONT_SIZES.japanese_body
+        assert FONT_SIZES.japanese_body > FONT_SIZES.body
+
+    def test_pasted_text_keeps_the_japanese_leading(self, tab):
+        from anki_miner.gui.resources.styles import TYPOGRAPHY
+
+        tab.text_edit.setPlainText("本文です。\n二行目です。")
+        block = tab.text_edit.document().firstBlock()
+        assert block.blockFormat().lineHeight() == TYPOGRAPHY.japanese_leading_percent

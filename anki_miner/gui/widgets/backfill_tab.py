@@ -35,6 +35,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.utils.fonts import japanese_cell_font
 from anki_miner.gui.utils.qt_helpers import install_no_scroll_on_inputs
 from anki_miner.gui.widgets.base import PageWidth, configure_scrolled_page
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
@@ -299,6 +300,11 @@ class CardBackfillTab(QWidget):
                 item = QTableWidgetItem(text[:_CELL_ELIDE] + "…" if len(text) > _CELL_ELIDE else text)
                 item.setToolTip(text)
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                if col == 0:
+                    # The Expression is the mined Japanese word; the other three
+                    # columns are field names and field contents. Face only, so
+                    # the row height stays where the density rule put it.
+                    item.setFont(japanese_cell_font())
                 self.preview_table.setItem(row, col, item)
         self.summary_label.setText(self._summary_text(plan, len(rows)))
 
