@@ -1,7 +1,7 @@
 """Regression tests for the no-scroll protection on the header theme combo.
 
 Issue #99: a wheel over the (unfocused) theme combo switched themes, and every
-switch costs a measured ~870ms whole-app stylesheet repolish. The protection
+switch costs a re-measured 1647 ms whole-app stylesheet repolish. The protection
 was inert because ``install_no_scroll_on_inputs(self)`` ran before
 ``setLayout()`` — at which point the combo is not yet a child of the header, so
 the ``findChildren`` sweep matched nothing.

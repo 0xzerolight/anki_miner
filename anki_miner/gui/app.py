@@ -375,6 +375,25 @@ def _apply_ui_zoom(config: AnkiMinerConfig | None) -> None:
         os.environ["QT_SCALE_FACTOR"] = repr(float(config.ui_zoom))
 
 
+def _configure_qt_application_policy() -> None:
+    """Set the Qt-wide policies that only take effect before ``QApplication``.
+
+    ``AA_UseStyleSheetPropagationInWidgetStyles`` is the load-bearing one.
+    Measured in Qt 6.11: *any* non-empty application stylesheet freezes palette
+    propagation completely — even a rule that matches nothing at all. A
+    ``QApplication.setPalette()`` afterwards reaches no already-polished widget,
+    so everything ``Theme.build_palette()`` assembles stays inert until the next
+    full repolish. This attribute is the only thing that unfreezes it.
+
+    It is verified pixel-identical on the real composed window across all 29
+    shipped themes, so it changes nothing on screen today. What it buys is the
+    precondition for a palette-only theme apply (decision D39-C): without it,
+    dropping the stylesheet re-install would simply stop themes working.
+    """
+    QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseStyleSheetPropagationInWidgetStyles, True)
+
+
 def _ensure_default_dicts_root(config: AnkiMinerConfig | None) -> None:
     """Create the default ``dicts_root`` so a clean install starts valid.
 
@@ -1305,8 +1324,7 @@ def main():
     # QT_SCALE_FACTOR once, at construction). Restart-to-apply by nature.
     _apply_ui_zoom(_early_config)
 
-    # Enable high DPI scaling
-    QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    _configure_qt_application_policy()
 
     # Create application
     app = QApplication(sys.argv)
