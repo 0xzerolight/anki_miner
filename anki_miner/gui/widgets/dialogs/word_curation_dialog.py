@@ -522,6 +522,10 @@ class WordCurationDialog(QDialog):
 
         self.sentence_list = QListWidget()
         self.sentence_list.setWordWrap(True)
+        # Same surface as the word table beside it (D42). Candidates stay in
+        # occurrence order, so sorting is not enabled; copy lifts the sentence.
+        configure_data_view(self.sentence_list)
+        install_copy_rows(self.sentence_list)
         self.sentence_list.setToolTip(
             self.tr("Pick which sentence (and scene) gets mined for this word. Only shown when the word repeats.")
         )

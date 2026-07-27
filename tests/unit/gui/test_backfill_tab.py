@@ -6,9 +6,16 @@ from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QScrollArea
+from PyQt6.QtCore import QEvent, Qt
+from PyQt6.QtGui import QFont, QShortcut
+from PyQt6.QtWidgets import QApplication, QHeaderView, QScrollArea
 
-from anki_miner.gui.widgets.backfill_tab import _PREVIEW_ROW_CAP, CardBackfillTab
+from anki_miner.gui.utils.qt_helpers import data_row_height
+from anki_miner.gui.widgets.backfill_tab import (
+    _PREVIEW_ROW_CAP,
+    PREVIEW_MIN_VISIBLE_ROWS,
+    CardBackfillTab,
+)
 from anki_miner.services.card_backfiller import (
     BackfillOptions,
     BackfillPlan,
@@ -206,6 +213,45 @@ class TestPreviewTable:
         assert len(cell.text()) < 200
         assert len(cell.toolTip()) >= 200
 
+    def test_the_preview_is_a_shared_data_surface(self, tab):
+        """D42: no row-number column, no grid, one metric row height."""
+        tab._on_scan_finished(_plan([_note_plan(1)]))
+
+        header = tab.preview_table.verticalHeader()
+        assert header.isHidden()
+        assert tab.preview_table.showGrid() is False
+        assert header.sectionResizeMode(0) == QHeaderView.ResizeMode.Fixed
+        assert header.defaultSectionSize() == data_row_height(tab.preview_table)
+
+    def test_a_copied_row_carries_the_whole_value_not_the_elided_cell(self, tab, qapp):
+        long_value = "x" * 500
+        plan = _plan([NotePlan(1, "w", (FieldChange("frequency", "Frequency", long_value, long_value),))])
+        tab._on_scan_finished(plan)
+        tab.preview_table.selectRow(0)
+
+        shortcuts = [s for s in tab.preview_table.findChildren(QShortcut) if s.key().toString() == "Ctrl+C"]
+        assert shortcuts, "no copy shortcut installed on the preview"
+        shortcuts[0].activated.emit()
+
+        assert len(tab.preview_table.item(0, 2).text()) < 200  # vacuity guard
+        assert long_value in qapp.clipboard().text()
+
+    def test_sorting_is_offered_but_the_preview_opens_in_plan_order(self, tab):
+        """Enabling sorting must not silently reorder what is about to be written."""
+        plan = _plan([_note_plan(2), _note_plan(1)])
+        tab._on_scan_finished(plan)
+
+        assert tab.preview_table.isSortingEnabled()
+        assert [tab.preview_table.item(row, 0).text() for row in range(2)] == ["word2", "word1"]
+
+    def test_sorting_by_a_column_orders_by_the_underlying_value(self, tab):
+        plan = _plan([_note_plan(2), _note_plan(1)])
+        tab._on_scan_finished(plan)
+
+        tab.preview_table.sortItems(0, Qt.SortOrder.AscendingOrder)
+
+        assert [tab.preview_table.item(row, 0).text() for row in range(2)] == ["word1", "word2"]
+
     def test_empty_plan_state(self, tab):
         tab._on_scan_finished(_plan([]))
         assert tab.preview_table.rowCount() == 0
@@ -264,10 +310,29 @@ class TestPreviewTable:
 
 
 class TestLayoutSizing:
-    """Issue #102: fixed chrome must never crush the preview table."""
+    """Issue #102: fixed chrome must never crush the preview table.
+
+    The floor is stated in rows rather than pixels (D40/D42): 240px held eight
+    rows at the default text size and four at 150%, so a pixel floor re-creates
+    the crushing it was added to prevent.
+    """
+
+    def _rows_that_fit(self, tab) -> float:
+        header = tab.preview_table.horizontalHeader()
+        header_h = header.sizeHint().height() if header is not None else 0
+        usable = tab.preview_table.minimumHeight() - header_h - 2 * tab.preview_table.frameWidth()
+        return usable / data_row_height(tab.preview_table)
 
     def test_preview_table_has_height_floor(self, tab):
-        assert tab.preview_table.minimumHeight() >= 240
+        assert self._rows_that_fit(tab) >= PREVIEW_MIN_VISIBLE_ROWS
+
+    def test_the_floor_still_holds_its_rows_at_a_larger_text_size(self, tab):
+        grown = QFont(tab.preview_table.font())
+        grown.setPointSizeF(grown.pointSizeF() * 1.5)
+        tab.setFont(grown)
+        QApplication.sendEvent(tab, QEvent(QEvent.Type.FontChange))
+
+        assert self._rows_that_fit(tab) >= PREVIEW_MIN_VISIBLE_ROWS
 
     def test_content_wrapped_in_resizable_scroll_area(self, tab):
         scroll = tab.findChild(QScrollArea)
@@ -280,7 +345,7 @@ class TestLayoutSizing:
         tab.show()
         qtbot.waitExposed(tab)
         QApplication.processEvents()
-        assert tab.preview_table.height() >= 240
+        assert tab.preview_table.height() >= tab.preview_table.minimumHeight()
 
 
 class TestApplyFlow:

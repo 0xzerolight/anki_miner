@@ -59,6 +59,7 @@ from anki_miner.gui.resources.styles.theme import (
     ThemeGroupEntry,
     assess_theme_contrast,
 )
+from anki_miner.gui.utils.qt_helpers import configure_data_view, data_row_height, install_copy_rows
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost, SettingAnchorHost
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.utils.i18n import tr_format
@@ -67,8 +68,11 @@ logger = logging.getLogger(__name__)
 
 
 # Single dial that drives row geometry, glyph pixel size, and button bounding
-# box. Bumped from 32 → 36 so the auto-sized star has comfortable headroom.
-_ROW_HEIGHT_PX = 36
+# box -- but read off the rendered font rather than frozen at a constant (D42).
+# The tree used to sit at a flat 36px while its text tracked the UI text scale,
+# so the theme list was the one data view in the app that did not share the
+# shared row height. ``_row_height_px`` below is that dial, re-derived on every
+# rebuild; everything the star cells size themselves from still hangs off it.
 
 # Unicode star glyphs. Routed through the font pipeline so hinting/AA stays
 # sharp at small sizes — no QPainter math, no devicePixelRatio handling.
@@ -176,6 +180,10 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         # for the tri-state family star.
         self._star_buttons: dict[str, QToolButton] = {}
         self._family_records: dict[str, tuple[QTreeWidgetItem, str, list[ThemeGroupEntry]]] = {}
+        # Re-derived from the tree's own font by ``_apply_tree_metrics``; the
+        # seed only has to be positive so a star cell built before the tree
+        # exists cannot divide by nothing.
+        self._row_height_px = 36
 
         self._setup_ui()
         # Seed the language combo after the widgets exist (set_language reads
@@ -341,8 +349,12 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
             header.setSectionResizeMode(self.COL_STAR, QHeaderView.ResizeMode.ResizeToContents)
             header.setStretchLastSection(False)
 
-        # Row min-height keeps the star button vertically centered.
-        self.tree.setStyleSheet(f"QTreeWidget::item {{ padding: 0; min-height: {_ROW_HEIGHT_PX}px; }}")
+        # The theme list is a data view like any other (D42): same scrolling,
+        # same selection, same row height rule. Its order is the theme
+        # hierarchy, so sorting is never enabled.
+        configure_data_view(self.tree)
+        install_copy_rows(self.tree, row_text=self._selected_theme_row_text)
+        self._apply_tree_metrics()
 
         self.tree.itemSelectionChanged.connect(self._on_row_selected)
         layout.addWidget(self.tree)
@@ -391,11 +403,42 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
 
     # ---- Population ------------------------------------------------------
 
+    def _apply_tree_metrics(self) -> None:
+        """Re-derive the tree's row height, and the star sizes hanging off it.
+
+        Called on construction and before every rebuild, so a live text-size
+        change reaches the theme list the next time it is populated rather than
+        leaving it pinned to whatever the font was at app start.
+        """
+        self._row_height_px = data_row_height(self.tree)
+        # Row min-height keeps the star button vertically centered.
+        self.tree.setStyleSheet(f"QTreeWidget::item {{ padding: 0; min-height: {self._row_height_px}px; }}")
+
+    def _selected_theme_row_text(self, _row: int) -> str:
+        """Serialize the selected theme row for a copy.
+
+        The star is a widget, not a cell, so the state is read from the theme
+        model rather than scraped off the button: name, family, and whether the
+        theme is active or favorited. The tree is single-selection, so the row
+        index the shared helper passes is always this one item.
+        """
+        item = self.tree.currentItem()
+        if item is None:
+            return ""
+        key = item.data(self.COL_NAME, Qt.ItemDataRole.UserRole)
+        parent = item.parent()
+        family = parent.text(self.COL_NAME) if parent is not None else ""
+        fields = [item.text(self.COL_NAME), family, item.text(self.COL_STATUS)]
+        if key is not None and key in set(Theme.get_favorites()):
+            fields.append(self.tr("Favorite"))
+        return "\t".join(field for field in fields if field)
+
     def _populate(self) -> None:
         """Rebuild the tree from the current Theme state."""
         groups = Theme.get_themes_grouped()
         favorites = set(Theme.get_favorites())
         active = Theme.get_current_mode()
+        self._apply_tree_metrics()
 
         self.tree.blockSignals(True)
         try:
@@ -467,9 +510,9 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         the font pipeline so it stays sharp without QPainter or
         devicePixelRatio handling.
 
-        Sizing auto-derives from ``_ROW_HEIGHT_PX``: font is 60% of row
+        Sizing auto-derives from ``self._row_height_px``: font is 60% of row
         height, button bounding box is the larger of the glyph's line height
-        and ``_ROW_HEIGHT_PX - 4``. Change the row height constant and the
+        and ``self._row_height_px - 4``. The row height is re-derived from the
         star scales with it — no separate QSS pixel values to keep in sync.
 
         The QToolButton is wrapped in a QWidget+QHBoxLayout so it sits on the
@@ -494,13 +537,13 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         # Button always fits the row (cell padding is zeroed by the scoped
         # QSS rule on `#themesPanelTree`). 1-px margin on each side keeps
         # the button from butting up against the row divider.
-        side = _ROW_HEIGHT_PX - 2
+        side = self._row_height_px - 2
         button.setFixedSize(side, side)
         # 60% of row height gives a readable ★ glyph that fits comfortably
         # inside the button. Set via instance stylesheet so the base
         # `QWidget { font-size: 14px }` rule from common.qss can't override
         # it during a style re-polish.
-        font_px = int(_ROW_HEIGHT_PX * 0.6)
+        font_px = int(self._row_height_px * 0.6)
         button.setStyleSheet(f"font-size: {font_px}px;")
 
         wrapper = QWidget(self.tree)
@@ -536,14 +579,14 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         button.setObjectName("starToggle")
         button.setAutoRaise(True)
         button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        side = _ROW_HEIGHT_PX - 2
+        side = self._row_height_px - 2
         button.setFixedSize(side, side)
 
         keys = [e.key for e in entries]
         favorited_keys = [k for k in keys if k in favorites]
         n_fav = len(favorited_keys)
         n_total = len(keys)
-        font_size = int(_ROW_HEIGHT_PX * 0.6)
+        font_size = int(self._row_height_px * 0.6)
 
         if n_fav == 0:
             button.setText(_STAR_OUTLINE)

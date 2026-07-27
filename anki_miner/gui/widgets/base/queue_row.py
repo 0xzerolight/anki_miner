@@ -123,6 +123,24 @@ class QueueRowWidget(QFrame):
         self.result_label.setText(result)
         self.setToolTip(detail)
 
+    def copy_text(self) -> str:
+        """Return this row as one tab-separated line, for a copy of the queue.
+
+        A queue row is a widget, so the shared data surface has no cells to
+        serialize (D42) and this is what it asks for instead. The line matches
+        what the row shows -- title, aside, state, result -- with the title in
+        its full, un-elided form, because a copied queue that says ``Ep 12 …``
+        is worse than no copy at all. Empty columns are dropped so a row with
+        no result does not copy a trailing tab.
+        """
+        fields = (
+            self.title_label.full_text,
+            self.aside_label.text(),
+            self.state_label.text(),
+            self.result_label.text(),
+        )
+        return "\t".join(field for field in fields if field)
+
     # ------------------------------------------------------------------
     # Selection
     # ------------------------------------------------------------------

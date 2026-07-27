@@ -39,7 +39,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.profile_store import Profile, ProfileStore
-from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
+from anki_miner.gui.utils.qt_helpers import add_min_max_buttons, configure_data_view, install_copy_rows
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.utils.i18n import tr_format
@@ -123,6 +123,10 @@ class ProfileManagerDialog(ScreenIssueHost, QDialog):
         self.profile_list = QListWidget()
         self.profile_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
         self.profile_list.itemSelectionChanged.connect(self._update_buttons)
+        # Profiles are listed in store order, which is the order the user made
+        # them in; sorting is deliberately never enabled here.
+        configure_data_view(self.profile_list)
+        install_copy_rows(self.profile_list)
         layout.addWidget(self.profile_list)
 
         buttons = QHBoxLayout()
