@@ -40,8 +40,7 @@ QLabel#heading3 {
 
 QLabel#caption {
     font-size: ${font-size-caption}px;
-    padding: 4px ${spacing-xs}px;
-    min-height: 20px;
+    padding: 2px ${spacing-xs}px;
     border-radius: ${border-radius-small}px;
 }
 
@@ -52,8 +51,7 @@ QLabel#small {
 }
 
 QLabel#field-label {
-    padding: 4px ${spacing-xs}px;
-    min-height: 22px;
+    padding: ${spacing-xxs}px ${spacing-xs}px;
     border-radius: ${border-radius-small}px;
 }
 
@@ -66,9 +64,12 @@ QLabel#field-label {
 
 /* Every button carries the same 1px box in every role. Only its colour changes,
    so keyboard focus can recolour the border without resizing anything — tabbing
-   along a row of buttons must not reflow the row. */
+   along a row of buttons must not reflow the row.
+
+   No `min-height` (D40): a pixel floor is generous at 100% text and below the
+   glyphs at 150%, so the height is one line of text plus this padding, and it
+   tracks the UI text scale by construction. */
 QPushButton {
-    min-height: 28px;
     padding: ${spacing-xxs}px ${spacing-sm}px;
     border-radius: ${border-radius-default}px;
     font-weight: 500;
@@ -115,8 +116,8 @@ QToolButton#starToggle {
 
 /* ============== INPUT FIELD STYLES ============== */
 
+/* Same rule as the buttons above: height is text plus padding, never a floor. */
 QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
-    min-height: 28px;
     padding: ${spacing-xxs}px ${spacing-sm}px;
     border-radius: ${border-radius-default}px;
     border: 1px solid;
@@ -216,11 +217,15 @@ QTreeWidget {
     gridline-color: transparent;
 }
 
+/* Vertical padding is the smallest step and horizontal is one above it: a row
+   only has to separate itself from the row above, while a column has to be
+   readable as a column. It must stay in step with ``qt_helpers.CELL_PADDING_Y``,
+   which is what sizes the row — when the two disagree the taller one wins and
+   the shorter one clips. */
 QTableWidget::item,
 QListWidget::item,
 QTreeWidget::item {
-    padding: ${spacing-xs}px;
-    min-height: 24px;
+    padding: ${spacing-xxs}px ${spacing-xs}px;
     border: none;
 }
 
@@ -239,7 +244,7 @@ QTreeWidget#themesPanelTree::item {
 }
 
 QHeaderView::section {
-    padding: 10px;
+    padding: ${spacing-xs}px;
     font-weight: 600;
     border: none;
     border-bottom: 1px solid;
@@ -369,7 +374,6 @@ QComboBox QAbstractItemView {
 }
 
 QComboBox QAbstractItemView::item {
-    min-height: ${spacing-xl}px;
     padding: ${spacing-xxs}px ${spacing-sm}px;
     border-radius: ${border-radius-small}px;
 }
@@ -426,7 +430,6 @@ QWidget#log-header {
 QLabel#progress-stats {
     font-size: ${font-size-body-sm}px;
     padding: 2px 0;
-    min-height: 20px;
     font-family: 'JetBrains Mono', 'Consolas', monospace;
 }
 
@@ -556,16 +559,14 @@ QLabel#queue-item-title {
 
 QLabel#queue-item-path {
     font-size: ${font-size-caption}px;
-    padding: 4px ${spacing-xxs}px;
-    min-height: 20px;
+    padding: 2px ${spacing-xxs}px;
     border-radius: ${border-radius-small}px;
 }
 
 QLabel#queue-item-stats {
     font-size: ${font-size-caption}px;
     font-weight: 500;
-    padding: 4px ${spacing-xxs}px;
-    min-height: 20px;
+    padding: 2px ${spacing-xxs}px;
     border-radius: ${border-radius-small}px;
 }
 
@@ -621,8 +622,7 @@ QLabel#validation-status {
 QLabel#helper-text {
     font-size: ${font-size-small}px;
     font-style: italic;
-    padding: 4px ${spacing-xs}px;
-    min-height: 20px;
+    padding: 2px ${spacing-xs}px;
     border-radius: ${border-radius-small}px;
     margin-top: ${spacing-xxs}px;
 }
@@ -630,8 +630,7 @@ QLabel#helper-text {
 /* Output-location value: small muted helper styling but NOT italic */
 QLabel#output-location-value {
     font-size: ${font-size-small}px;
-    padding: 4px ${spacing-xs}px;
-    min-height: 20px;
+    padding: 2px ${spacing-xs}px;
     border-radius: ${border-radius-small}px;
     margin-top: ${spacing-xxs}px;
 }
