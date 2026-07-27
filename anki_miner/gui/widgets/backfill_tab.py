@@ -37,6 +37,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.fonts import japanese_cell_font
+from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import install_no_scroll_on_inputs
 from anki_miner.gui.widgets.base import PageWidth, capped_page_column, install_workflow_shell
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
@@ -183,6 +184,11 @@ class CardBackfillTab(QWidget):
         # 240px preview table.
         outer.insertWidget(outer.count() - 1, capped_page_column(self._create_run_status(), self.PAGE_WIDTH))
         self._sync_action_prominence()
+        # Ctrl+Enter runs whichever verb the stage is showing (D48-B): Scan
+        # before a plan exists, Apply after. `_sync_action_prominence` is what
+        # moves the primary, and the bar is read at press time, so the shortcut
+        # follows without knowing the stage itself.
+        primary_action_shortcut(self, self.action_bar.trigger_primary)
 
     def _create_run_status(self) -> QWidget:
         """The one-line status and thin bar that sit directly above the actions."""

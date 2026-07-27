@@ -36,6 +36,7 @@ from PyQt6.QtWidgets import QFrame, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from anki_miner.gui.utils import file_dialogs, session_state
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
+from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets.base import (
     PageWidth,
@@ -184,6 +185,8 @@ class _ToolTabBase(ScreenIssueHost, QWidget):
         bar = install_workflow_shell(layout, scroll, content, kind, log=self.log_widget)
         bar.set_actions(self._primary_button, (self.cancel_button,))
         self.action_bar = bar
+        # Ctrl+Enter runs the tool, scoped to this page (D48-B).
+        primary_action_shortcut(self, bar.trigger_primary)
         return bar
 
     def _begin_attempt(self) -> None:

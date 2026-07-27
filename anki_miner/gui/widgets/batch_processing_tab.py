@@ -8,7 +8,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont, QKeySequence, QShortcut
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont, QKeySequence
 from PyQt6.QtWidgets import (
     QCheckBox,
     QDoubleSpinBox,
@@ -26,6 +26,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
@@ -199,20 +200,23 @@ class BatchProcessingTab(MiningTabBase):
         self._setup_shortcuts()
 
     def _setup_shortcuts(self) -> None:
-        """Set up tab-specific keyboard shortcuts."""
-        # Ctrl+O: Browse video folder
-        browse_shortcut = QShortcut(QKeySequence("Ctrl+O"), self)
-        browse_shortcut.activated.connect(
-            lambda: (self.video_folder_selector.browse() if hasattr(self, "video_folder_selector") else None)
+        """Set up tab-specific keyboard shortcuts.
+
+        Ctrl+Enter is installed by ``_install_action_bar``, which routes it
+        through the queue's own Process Queue button; the copy that used to live
+        here called ``_process_queue`` directly, so it ignored whether the button
+        was enabled and could start a second run over a first.
+        """
+        # Ctrl+O: browse for the folder. Scoped, because Single owns Ctrl+O too
+        # and both pages live in one window -- unscoped, the hidden one could win.
+        scoped_shortcut(
+            self,
+            QKeySequence("Ctrl+O"),
+            lambda: (self.video_folder_selector.browse() if hasattr(self, "video_folder_selector") else None),
         )
 
-        # Ctrl+Return: Process queue
-        process_shortcut = QShortcut(QKeySequence("Ctrl+Return"), self)
-        process_shortcut.activated.connect(self._process_queue)
-
         # Ctrl+Shift+A: Add series to queue
-        add_series_shortcut = QShortcut(QKeySequence("Ctrl+Shift+A"), self)
-        add_series_shortcut.activated.connect(self.queue_panel.add_series_external)
+        scoped_shortcut(self, QKeySequence("Ctrl+Shift+A"), self.queue_panel.add_series_external)
 
     def _create_quick_processing_section(self) -> QFrame:
         """Create the quick processing section with card styling.

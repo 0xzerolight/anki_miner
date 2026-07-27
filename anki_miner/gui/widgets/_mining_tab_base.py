@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import QAbstractButton, QBoxLayout, QDialog, QScrollArea, Q
 
 from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.presenters import GUIProgressCallback
+from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssueHost, WorkflowActionBar, install_workflow_shell
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
@@ -359,6 +360,11 @@ class MiningTabBase(ScreenIssueHost, QWidget):
         bar = install_workflow_shell(layout, scroll, content, kind, log=log)
         bar.set_actions(primary, secondary)
         self.action_bar = bar
+        # Ctrl+Enter runs whatever the bar is currently showing as primary
+        # (D48-B). Bound here rather than on each screen because the bar already
+        # knows which button that is, and scoped to this page so the screen
+        # behind it cannot answer.
+        primary_action_shortcut(self, bar.trigger_primary)
         return bar
 
     def _begin_attempt(self) -> None:

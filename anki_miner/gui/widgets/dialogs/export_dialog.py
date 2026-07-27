@@ -20,6 +20,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
+from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
@@ -175,6 +176,12 @@ class ExportDialog(ScreenIssueHost, QDialog):
         self._export_btn = ModernButton(self.tr("Export"), variant="primary")
         self._export_btn.clicked.connect(self._on_export)
         self._export_btn.setEnabled(False)
+        # This dialog has a path field, so it must not confirm on bare Return
+        # (D49): Return is how an input method commits kana, and Qt promotes the
+        # first `autoDefault` button in a dialog to the Enter target. A primary
+        # ModernButton keeps autoDefault, so it is declined explicitly here.
+        self._export_btn.setAutoDefault(False)
+        self._export_btn.setDefault(False)
         footer.addWidget(self._export_btn)
 
         layout.addLayout(footer)
@@ -188,6 +195,11 @@ class ExportDialog(ScreenIssueHost, QDialog):
         # Escape to close
         esc = QShortcut(QKeySequence("Esc"), self)
         esc.activated.connect(self.reject)
+
+        # ...and Ctrl+Enter to confirm, which is what replaces the bare-Return
+        # default declined above. Routed through the button so a disabled Export
+        # -- no path chosen yet -- stays disabled from the keyboard too.
+        primary_action_shortcut(self, self._export_btn.click)
 
     # ── Slots ───────────────────────────────────────────────
 

@@ -40,6 +40,11 @@ from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils import file_dialogs, session_state
 from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.utils.config_manager import GUIConfigManager
+from anki_miner.gui.utils.keyboard_shortcuts import (
+    HELP_SEQUENCE,
+    SETTINGS_SEQUENCE,
+    TAB_SEQUENCE_TEMPLATE,
+)
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost, install_animated_tab_bar
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
@@ -327,6 +332,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
         find_feature_action = tools_menu.addAction(self.tr("Find a Feature..."))
         assert find_feature_action is not None
+        # F1 is help everywhere, and "which screen does this?" is the help
+        # question this application can actually answer (D48-B).
+        find_feature_action.setShortcut(QKeySequence(HELP_SEQUENCE))
         find_feature_action.triggered.connect(self._run_capability_browser_tool)
 
         setup_wizard_action = tools_menu.addAction(self.tr("Setup Wizard..."))
@@ -341,9 +349,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         help_menu = menu_bar.addMenu(self.tr("&Help"))
         assert help_menu is not None
 
+        # No shortcut: About is a credits card, not help. F1 belongs to Find a
+        # Feature (D48-B).
         about_action = help_menu.addAction(self.tr("About Anki Miner"))
         assert about_action is not None
-        about_action.setShortcut(QKeySequence("F1"))
         about_action.triggered.connect(self._show_about)
 
         help_menu.addSeparator()
@@ -420,17 +429,14 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         tab count and are created by :meth:`setup_tab_shortcuts`, which app.py
         calls once all tabs have been registered via :func:`register_mining_tab`.
         """
-        # Theme toggle (Ctrl+T)
-        theme_shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
-        theme_shortcut.activated.connect(self._cycle_theme)
-
-        # Settings shortcut (Ctrl+,)
-        settings_shortcut = QShortcut(QKeySequence("Ctrl+,"), self)
+        # Settings (Ctrl+,). The only global binding left, and the only one that
+        # never meant something else first. Ctrl+T (new tab) and Ctrl+Shift+V
+        # (paste as plain text) were dropped under D48-B: both collide with a
+        # binding every desktop already owns, and both had a visible control
+        # doing the same job -- the header's favourites combo, and Settings'
+        # validation button, which still owns the validation run.
+        settings_shortcut = QShortcut(QKeySequence(SETTINGS_SEQUENCE), self)
         settings_shortcut.activated.connect(self._open_settings)
-
-        # System validation (Ctrl+Shift+V)
-        validation_shortcut = QShortcut(QKeySequence("Ctrl+Shift+V"), self)
-        validation_shortcut.activated.connect(self._run_validation)
 
     def setup_tab_shortcuts(self) -> None:
         """Create one Ctrl+N shortcut per registered tab, driven by the live tab count.
@@ -441,7 +447,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         the later tabs unreachable.
         """
         for i in range(1, self.tabs.count() + 1):
-            shortcut = QShortcut(QKeySequence(f"Ctrl+{i}"), self)
+            shortcut = QShortcut(QKeySequence(TAB_SEQUENCE_TEMPLATE.format(number=i)), self)
             shortcut.activated.connect(lambda idx=i - 1: self._switch_to_tab(idx))
 
     def _switch_to_tab(self, index: int) -> None:
@@ -452,20 +458,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         """
         if 0 <= index < self.tabs.count():
             self.tabs.setCurrentIndex(index)
-
-    def _cycle_theme(self) -> None:
-        """Cycle through favorited themes (Ctrl+T)."""
-        new_mode = Theme.cycle_theme()
-
-        # Update combo box to reflect the new theme
-        self.header.update_theme_selector()
-
-        # Apply theme + persist
-        app = QApplication.instance()
-        if isinstance(app, QApplication):
-            Theme.apply_to_app(app, new_mode)
-        if new_mode != self.config.theme:
-            self.update_config(replace(self.config, theme=new_mode))
 
     def _settings_tab_index(self) -> int:
         """Locate the Settings tab by capability (self-healing against tab reorder)."""

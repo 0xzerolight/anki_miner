@@ -227,8 +227,7 @@ class HeaderWidget(QWidget):
             self.theme_combo.setToolTip(
                 tr_format(
                     self.tr(
-                        "Active theme. Top-right shows favorites; pick 'All themes…' to manage them. "
-                        "(Ctrl+T cycles favorites). Installed: %1"
+                        "Active theme. Top-right shows favorites; pick 'All themes…' to manage them. " "Installed: %1"
                     ),
                     tooltip_names,
                 )

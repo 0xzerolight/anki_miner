@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QVBoxLayout, QWidg
 
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.utils.keyboard_shortcuts import SHORTCUT_HELP
 from anki_miner.gui.widgets.base import EnhancedDialog
 from anki_miner.utils.i18n import tr_format
 
@@ -26,13 +27,10 @@ ABOUT_BLURB = QT_TRANSLATE_NOOP(
     "Mine Japanese vocabulary cards from video into Anki — screenshots, " "audio, and definitions, automatically.",
 )
 
-ABOUT_SHORTCUTS: list[tuple[str, str]] = [
-    ("Ctrl+1..7", QT_TRANSLATE_NOOP("AboutDialog", "Switch tabs")),
-    ("Ctrl+T", QT_TRANSLATE_NOOP("AboutDialog", "Cycle favorite themes")),
-    ("Ctrl+,", QT_TRANSLATE_NOOP("AboutDialog", "Open Settings")),
-    ("Ctrl+Shift+V", QT_TRANSLATE_NOOP("AboutDialog", "Run system validation")),
-    ("F1", QT_TRANSLATE_NOOP("AboutDialog", "Show this dialog")),
-]
+#: The keyboard table, re-exported from the module that also supplies the
+#: sequences ``MainWindow`` installs. Two independent literals are what let this
+#: card keep advertising F1 for itself long after F1 had become Help.
+ABOUT_SHORTCUTS = SHORTCUT_HELP
 
 
 class AboutDialog(EnhancedDialog):
