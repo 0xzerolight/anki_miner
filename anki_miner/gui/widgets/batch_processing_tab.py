@@ -680,6 +680,11 @@ class BatchProcessingTab(MiningTabBase):
     def _on_queue_finished(self, total_cards: int) -> None:
         """Called when entire queue finishes.
 
+        The run's summary is no longer a modal box raised from here. It is the
+        inline receipt, sealed when the worker thread ends — the box fired on
+        the cancel path too, congratulating the user on a run they had just
+        stopped (D20).
+
         Args:
             total_cards: Total cards created across all series
         """
@@ -717,10 +722,6 @@ class BatchProcessingTab(MiningTabBase):
             for item in self.batch_queue.get_all_items()
         )
         self.retry_button.setVisible(has_retryable)
-
-        # The run's summary is the inline receipt, sealed when the worker thread
-        # ends. It used to be a modal box here — which fired on the cancel path
-        # too, congratulating the user on a run they had just stopped (D20).
 
     def _retry_failed_items(self) -> None:
         """Retry failed items in the batch queue."""
