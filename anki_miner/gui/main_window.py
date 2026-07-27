@@ -1568,20 +1568,21 @@ class MainWindow(ScreenIssueHost, QMainWindow):
     def open_mini_job_monitor(self) -> None:
         """Show the floating job monitor, building it on first use (D53).
 
-        One parented, modeless instance for the window's lifetime, opened on the
-        run the status strip is already naming so the two windows start out
-        saying the same thing. Closing it hides it: it owns no worker, so there
-        is nothing to cancel on the way out and nothing to rebuild on the way
-        back in.
+        One parented, modeless instance for the window's lifetime. It opens on
+        the run the status strip is already naming, so the two start out saying
+        the same thing -- but only on the first build: reopening must not throw
+        away the job the user went in and picked. Closing it hides it; it owns
+        no worker, so there is nothing to cancel on the way out and nothing to
+        rebuild on the way back in.
         """
         monitor = self._mini_job_monitor
         if monitor is None:
             monitor = MiniJobMonitor(self.task_registry, self)
             monitor.show_main_window_requested.connect(self.reveal_main_window)
             self._mini_job_monitor = monitor
-        displayed = self.status_bar.displayed_run
-        if displayed is not None:
-            monitor.watch(*displayed)
+            displayed = self.status_bar.displayed_run
+            if displayed is not None:
+                monitor.watch(*displayed)
         monitor.show()
         monitor.raise_()
         monitor.activateWindow()

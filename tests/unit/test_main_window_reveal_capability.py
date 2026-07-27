@@ -204,3 +204,21 @@ def test_the_monitor_is_parented_to_the_window(window):
     window.open_mini_job_monitor()
 
     assert window._mini_job_monitor.parent() is window
+
+
+def test_reopening_keeps_the_job_the_user_picked(window):
+    window.task_registry.start(
+        TaskSpec("a", "Mining Samurai Champloo", CapabilityTarget("video", "single")),
+        now=0.0,
+    )
+    second = window.task_registry.start(
+        TaskSpec("dl", "Downloading JMdict", CapabilityTarget("reading", "novels")),
+        now=0.0,
+    )
+    window.open_mini_job_monitor()
+    window._mini_job_monitor.watch("dl", second.run_token)
+    window._mini_job_monitor.close()
+
+    window.open_mini_job_monitor()
+
+    assert window._mini_job_monitor.watched_run == ("dl", second.run_token)
