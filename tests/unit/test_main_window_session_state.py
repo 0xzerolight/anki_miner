@@ -277,6 +277,25 @@ class TestSaveDiscipline:
         assert order[0] == "save_geometry"
         assert "shutdown" in order
 
+    def test_a_deferred_close_saves_before_the_window_is_hidden(self, main_window, monkeypatch, qtbot):
+        """The laggard path hides the window and polls; the save must precede it."""
+        from tests.unit.test_main_window_close import _FakeEpisodeTab
+
+        saved: list[bool] = []
+        monkeypatch.setattr(
+            session_state,
+            "save_geometry",
+            lambda _blob: saved.append(main_window.isVisible()),
+        )
+        main_window.show()
+        qtbot.waitExposed(main_window)
+        main_window.tabs.addTab(_FakeEpisodeTab(worker_running=True, wait_result=False), "Episode")
+
+        event = _trigger_close(main_window)
+
+        event.accept.assert_not_called()  # the close really was deferred...
+        assert saved == [True]  # ...and the save ran while still visible
+
     def test_repeated_close_attempts_save_once(self, main_window, monkeypatch):
         saves: list[object] = []
         monkeypatch.setattr(session_state, "save_geometry", lambda blob: saves.append(blob))
